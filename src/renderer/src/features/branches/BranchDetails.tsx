@@ -6,7 +6,8 @@ import { shortBranchName, spec } from '@shared/domain/specs';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { DetailsHeading } from '../../components/DetailsHeading';
+import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
+import { placeId } from '@shared/domain/place';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import { branchWorkedOn } from '../../components/workingObject';
 import type { MenuEntry } from '../../lib/actions';
@@ -42,7 +43,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} />}
+      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
       author={{ user: branch.owner, date: branch.date }}
       meta={[
         branch.parent && (

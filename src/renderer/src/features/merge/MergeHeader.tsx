@@ -3,6 +3,8 @@ import { useMemo, type ReactNode, type Ref } from 'react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
+import { CommentField } from '../../components/commentEditor/CommentField';
+import { oneLineText } from '../../components/commentEditor/commentFieldText';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { pluralizeAtLeast } from '../../lib/text';
@@ -97,12 +99,14 @@ export function MergeHeader({
 
       {intoServerBranch && (
         <div className={styles.row}>
-          <input
+          <CommentField
+            singleLine
             className={styles.comment}
             value={comment}
-            onChange={(event) => onCommentChange(event.target.value)}
+            // One line, as the field it replaced: pasted lines join. ⌘↵ merges (`hotkey('merge')`).
+            onChange={(text) => onCommentChange(oneLineText(text))}
             placeholder="Changeset comment"
-            aria-label="Changeset comment"
+            label="Changeset comment"
             // Written once the plan is in: the session starts it from the plan's default comment.
             disabled={!plan}
           />

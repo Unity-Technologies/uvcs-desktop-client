@@ -1,10 +1,12 @@
 import { useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
+import { isAppLink } from '@shared/links/parseLink';
 import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
 import { CodeBlock } from './comments/CodeBlock';
 import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
+import { ResolvedReferences } from './comments/ResolvedReferences';
 import styles from './Markdown.module.css';
 
 interface MarkdownProps {
@@ -16,18 +18,26 @@ interface MarkdownProps {
 /** Markdown text (a comment, release notes, an attribute's value) rendered as elements; web links open in the browser. */
 export function Markdown({ text, comment = false }: MarkdownProps) {
   const blocks = useMemo(() => parseMarkdown(text, { comment }), [text, comment]);
-  return <MarkdownBlocks blocks={blocks} copiesSource={comment} />;
+  return (
+    <>
+      {/* A comment shown in full reads its other repositories' objects; a row's chips wait for their cards. */}
+      {comment && <ResolvedReferences blocks={blocks} />}
+      <MarkdownBlocks blocks={blocks} source={comment ? text : undefined} />
+    </>
+  );
 }
 
 interface MarkdownBlocksProps {
   blocks: MarkdownBlock[];
-  copiesSource?: boolean;
+  /** A comment's text as written: copying from it gives back what was written (`copyAsSource`). */
+  source?: string;
 }
 
 /** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
-export function MarkdownBlocks({ blocks, copiesSource = false }: MarkdownBlocksProps) {
+export function MarkdownBlocks({ blocks, source }: MarkdownBlocksProps) {
+  const onCopy = useMemo(() => (source === undefined ? undefined : copyAsSource(source)), [source]);
   return (
-    <div className={`${styles.markdown} selectable`} onCopy={copiesSource ? copyAsSource : undefined}>
+    <div className={`${styles.markdown} selectable`} onCopy={onCopy}>
       {renderBlocks(blocks)}
     </div>
   );
@@ -146,7 +156,7 @@ function MarkdownLink({ url, children }: { url: string; children: ReactNode }) {
         event.preventDefault();
         event.stopPropagation();
         // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
-        if (/^uvcs:/i.test(url)) void import('../app/links/openLink').then(({ openLink }) => openLink(url));
+        if (isAppLink(url)) void import('../app/links/openLink').then(({ openLink }) => openLink(url));
         else void api.system.openExternal(url);
       }}
     >

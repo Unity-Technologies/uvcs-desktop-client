@@ -1,6 +1,6 @@
 import { nameToEmoji } from 'gemoji';
 import type { RepositoryLink } from '@shared/links/link';
-import { parseLink } from '@shared/links/parseLink';
+import { isAppLink, parseLink } from '@shared/links/parseLink';
 
 /**
  * Where a file reference points: the changeset, branch, label or shelve after `#` in `serverpath:/a.cs#cs:12`.
@@ -25,7 +25,7 @@ export type CommentReference =
   | { kind: 'file'; path: string; at: ReferencePoint; repository?: string }
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; name: string; glyph: string }
-  /** A `uvcs://` link to a repository's object or page (docs/features/deep-links.md). */
+  /** A `uvcs://` link (or the official client's `plastic://` one) to a repository's object or page (docs/features/deep-links.md). */
   | { kind: 'link'; link: RepositoryLink };
 
 export interface FoundReference {
@@ -40,8 +40,10 @@ export interface FoundReference {
  * Where a reference may start: anything that can only be one, after a space, a line's start, an opening bracket or an
  * emphasis mark (`_cs:12_`), never inside a word, a path, an address or a time (`ana@acme.com`, `/a/cs:1`,
  * `10:30:00`). Letters and digits of any script count as a word's (`josé@acme.com`).
+ * The app's links read in any case, as `isAppLink` reads them, spelled out letter by letter: the engine of the Node
+ * the app builds with (22) has no regex modifier for case.
  */
-const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|uvcs:\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
+const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|[uU][vV][cC][sS]:\/\/\S+|[pP][lL][aA][sS][tT][iI][cC]:\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
 
 /**
  * What ends a sentence, a bracket or an emphasis rather than a name: `cm` reads none of it as the end of a spec (it
@@ -76,7 +78,7 @@ function readCandidate(candidate: string): { reference: CommentReference; source
   if (candidate.startsWith('@')) return readMention(candidate);
   if (candidate.startsWith(':')) return readEmoji(candidate);
   const source = candidate.replace(TRAILING_PUNCTUATION, '');
-  const reference = source.startsWith('uvcs://') ? readLink(source) : readSpec(source);
+  const reference = isAppLink(source) ? readLink(source) : readSpec(source);
   return reference && { reference, source };
 }
 

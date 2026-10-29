@@ -528,6 +528,20 @@ describe('CmClient commands that end without an exit code', () => {
     expect(logged).toEqual([]);
   });
 
+  it('logs a command that gave up waiting, which is a failure to point at, not a cancellation', async () => {
+    const timer = new AbortController();
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        timer.abort(new DOMException('No answer in time', 'TimeoutError'));
+        throw new Error('The operation was aborted');
+      },
+    });
+
+    await expect(cm.execute(['update'], { signal: timer.signal })).rejects.toThrow('aborted');
+
+    expect(logged).toMatchObject([{ commandLine: 'cm update', exitCode: -1 }]);
+  });
+
   it('logs a pooled command its session stopped', async () => {
     const { cm, logged } = fakeClient({
       answer: () => {

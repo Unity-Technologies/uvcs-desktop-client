@@ -7,6 +7,8 @@ export interface PeopleSeen {
   /** Adds the owners a list shows now, and returns everyone it has shown in the workspace, in the order first seen. */
   /** `place` is the place's id (`placeId`): each place sees its own people. */
   remember: (place: string, list: string, owners: Iterable<string>) => string[];
+  /** Everyone any list of the place has shown, in the order first seen: who a comment can mention (`@`). */
+  everyone: (place: string) => string[];
 }
 
 export function createPeopleSeen(): PeopleSeen {
@@ -18,6 +20,11 @@ export function createPeopleSeen(): PeopleSeen {
       seenByList.set(key, seen);
       for (const owner of owners) seen.add(owner);
       return [...seen];
+    },
+    everyone: (place) => {
+      const people = new Set<string>();
+      for (const [key, seen] of seenByList) if (key.startsWith(`${place}\n`)) for (const person of seen) people.add(person);
+      return [...people];
     },
   };
 }

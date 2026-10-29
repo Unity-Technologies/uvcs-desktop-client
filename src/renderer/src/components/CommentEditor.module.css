@@ -17,29 +17,23 @@ h2 + .editor {
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font: inherit;
-  outline: none;
 }
 
-/* Both fields grow with their text: the summary takes no line ends but wraps, so a long one reads whole. */
+/* Both fields grow with their text, then scroll: the summary takes no line ends but wraps, so a long one reads whole. */
 .summaryField {
   max-height: calc(8 * 1.45em + 12px);
   font-weight: var(--weight-semibold);
   line-height: 1.45;
-  field-sizing: content;
-  resize: none;
 }
 
 .descriptionField {
   min-height: calc(3 * 1.55em + 12px);
   max-height: calc(14 * 1.55em + 12px);
   line-height: 1.55;
-  field-sizing: content;
-  resize: vertical;
 }
 
-.summaryField:focus,
-.descriptionField:focus {
+.summaryField:focus-within,
+.descriptionField:focus-within {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }

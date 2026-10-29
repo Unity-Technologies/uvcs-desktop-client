@@ -1,4 +1,5 @@
-/* A chip sits on the text's line: it never makes a line or a row taller. */
+/* A chip sits on the text's line: it never makes a line or a row taller. Its own line is a little shorter than the
+   text's (1.55 in a comment, 1.5 in the editor), so two chips on consecutive lines keep a gap between their fills. */
 .chip {
   display: inline-flex;
   align-items: baseline;
@@ -9,7 +10,7 @@
   background: var(--accent-soft);
   color: var(--accent-text);
   font-weight: var(--weight-medium);
-  line-height: inherit;
+  line-height: 1.35;
   text-decoration: none;
   white-space: nowrap;
   vertical-align: baseline;
@@ -38,8 +39,11 @@
   text-overflow: ellipsis;
 }
 
+/* The object's id gives way only after its summary (`.summary`), so "v1.4.0" never reads "v1…"; a long one (a
+   branch's nested name, a link's) stops at a width of its own, cut with an ellipsis, and never runs past the chip. */
 .label {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  max-width: min(28ch, 100%);
 }
 
 .repository {
@@ -55,9 +59,10 @@
   font-weight: var(--weight-regular);
 }
 
-.summary::before,
-.repository::before {
-  content: '· ';
+/* Apart from the object's id by a little more than the chip's gap, in a muted weight: no dot between. */
+.summary,
+.repository {
+  margin-left: var(--space-1);
 }
 
 .person {

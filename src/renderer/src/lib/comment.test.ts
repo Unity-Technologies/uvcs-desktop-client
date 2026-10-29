@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, joinComment, shownComment, splitComment, withSummaryText } from './comment';
+import { commentEditorExit, editedComment, editingParts, hasUnsavedEdit, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -104,5 +104,82 @@ describe('shownComment', () => {
 
   it('shows a comment removed as empty until the refresh', () => {
     expect(shownComment('Old comment', { saved: '', replaced: 'Old comment' })).toBe('');
+  });
+});
+
+describe('storedComment', () => {
+  it('leaves out the space a picked suggestion leaves at the end, and blank lines at either end', () => {
+    expect(storedComment('Fixes cs:12 ')).toBe('Fixes cs:12');
+    expect(storedComment('\n\nFixes it\n\n')).toBe('Fixes it');
+  });
+
+  it("keeps the first line's indent: a comment opening with an indented code block stays one", () => {
+    expect(storedComment('    let a = 1;\n    let b = 2;\n')).toBe('    let a = 1;\n    let b = 2;');
+  });
+});
+
+describe('editingParts', () => {
+  it('opens a comment with a title as its title and the rest, as the check-in writes them', () => {
+    expect(editingParts('Fix the switch\n\nKeeps the changes')).toEqual({ summary: 'Fix the switch', description: 'Keeps the changes' });
+    expect(editingParts('Fix the switch\nKeeps the changes')).toEqual({ summary: 'Fix the switch', description: 'Keeps the changes' });
+    expect(editingParts('Arreglo del cambio ñandú 🎉')).toEqual({ summary: 'Arreglo del cambio ñandú 🎉', description: '' });
+  });
+
+  it('opens a comment that starts with a list, a table or code, or an empty one, whole in the description: nothing moves', () => {
+    for (const comment of ['- one\n- two', '| a | b |\n| - | - |\n| 1 | 2 |', '```\nlet a\n```\nAfter', '']) {
+      expect(editingParts(comment)).toEqual({ summary: '', description: comment });
+    }
+  });
+
+  it('saves nothing when nothing was edited, whatever the comment’s shape: line ends, spaces, CRLF', () => {
+    for (const comment of ['Fix\n\nBody', 'Fix\nBody', 'One line', '- one\n- two', '| a |\n| - |', '```\nx\n```', 'Fix\r\n\r\nBody  ', '  Padded title  \nBody', 'Título ñ\n\nCuerpo', '']) {
+      const opened = editingParts(comment);
+      expect(editedComment(comment, opened, opened)).toBe(comment);
+    }
+  });
+
+  it('keeps the other part and the separator the comment had when one part is edited', () => {
+    const comment = 'Fix\nBody';
+    expect(editedComment(comment, editingParts(comment), { summary: 'Fix', description: 'Body, edited' })).toBe('Fix\nBody, edited');
+    const list = '- one\n- two';
+    expect(editedComment(list, editingParts(list), { summary: 'Title', description: list })).toBe('Title\n\n- one\n- two');
+  });
+});
+
+describe('hasUnsavedEdit', () => {
+  const comment = 'Fix\n\nBody';
+  const opened = editingParts(comment);
+
+  it('asks before Esc or Cancel throws away an edit, and closes at once when nothing would change', () => {
+    expect(hasUnsavedEdit(comment, opened, opened)).toBe(false);
+    expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body, edited' })).toBe(true);
+    expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body  ' })).toBe(false);
+  });
+});
+
+describe('recentCommentPick', () => {
+  it('fills the check-in as Edit comment opens a comment, the caret where its text ends', () => {
+    expect(recentCommentPick('Fix the switch\n\nKeeps changes')).toEqual({ parts: { summary: 'Fix the switch', description: 'Keeps changes' }, caretIn: 'description' });
+    expect(recentCommentPick('Fix the switch')).toEqual({ parts: { summary: 'Fix the switch', description: '' }, caretIn: 'summary' });
+  });
+
+  it('keeps a comment that opens with a list whole in the description, its first item no title', () => {
+    expect(recentCommentPick('- one\n- two')).toEqual({ parts: { summary: '', description: '- one\n- two' }, caretIn: 'description' });
+  });
+});
+
+describe('commentEditorExit', () => {
+  it('closes an editor with no edit, however it is left', () => {
+    expect(commentEditorExit(false, 'cancel')).toBe('close');
+    expect(commentEditorExit(false, 'leave')).toBe('close');
+  });
+
+  it('asks before Esc or Cancel throws an edit away (Edit comment, a details panel)', () => {
+    expect(commentEditorExit(true, 'cancel')).toBe('ask');
+  });
+
+  it('keeps the draft of an edit the user left for another row, to find it again on coming back', () => {
+    // A question as a row is clicked would hold the list's selection hostage; nothing typed is lost either way.
+    expect(commentEditorExit(true, 'leave')).toBe('keepDraft');
   });
 });

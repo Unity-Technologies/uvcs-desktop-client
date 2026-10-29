@@ -1,0 +1,93 @@
+import '../../testing/fakeWindow';
+import { describe, expect, it } from 'vitest';
+import type { PressedKey } from '../../lib/shortcuts';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, offersFocusMode } from './focusMode';
+import { EditorState } from '@codemirror/state';
+
+/**
+ * A field's state, `‸` where its caret is. Not `commentEditorTesting`'s: its Markdown loads `@codemirror/view`,
+ * which reads the page's styles as it loads, and `fakeWindow` makes it believe there is a page.
+ */
+function editorState(text: string): EditorState {
+  return EditorState.create({ doc: text.replace('‸', ''), selection: { anchor: text.indexOf('‸') } });
+}
+
+function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
+  return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
+}
+
+const toggleKey = press('f', 'KeyF', { metaKey: true, shiftKey: true });
+
+describe('offersFocusMode', () => {
+  it('offers the larger editor to a comment of many lines, never to a one-line field', () => {
+    expect(offersFocusMode(false)).toBe(true);
+    expect(offersFocusMode(true)).toBe(false);
+  });
+});
+
+describe('focusModeKey', () => {
+  it('goes into the larger editor and back with the same key', () => {
+    expect(focusModeKey(toggleKey, true, { expanded: false, suggesting: false })).toBe('toggle');
+    expect(focusModeKey(toggleKey, true, { expanded: true, suggesting: false })).toBe('toggle');
+  });
+
+  it('takes Ctrl off macOS', () => {
+    expect(focusModeKey(press('f', 'KeyF', { ctrlKey: true, shiftKey: true }), false, { expanded: false, suggesting: false })).toBe('toggle');
+  });
+
+  it('goes back with Esc, once the suggestions are closed', () => {
+    expect(focusModeKey(press('Escape', 'Escape'), true, { expanded: true, suggesting: false })).toBe('collapse');
+    expect(focusModeKey(press('Escape', 'Escape'), true, { expanded: true, suggesting: true })).toBeNull();
+    expect(focusModeKey(press('Escape', 'Escape'), true, { expanded: false, suggesting: false })).toBeNull();
+  });
+
+  it('leaves the larger editor as ⌘↵ saves or checks in, the key going on to do it', () => {
+    expect(focusModeKey(press('Enter', 'Enter', { metaKey: true }), true, { expanded: true, suggesting: false })).toBe('submitting');
+    expect(focusModeKey(press('Enter', 'Enter', { metaKey: true }), true, { expanded: false, suggesting: false })).toBeNull();
+  });
+
+  it('leaves every other key to the text', () => {
+    expect(focusModeKey(press('f', 'KeyF'), true, { expanded: true, suggesting: false })).toBeNull();
+  });
+});
+
+describe('focusModeButton', () => {
+  it('names what it does, the name alone telling whether the larger editor is open', () => {
+    expect(focusModeButton(false)).toEqual({ label: 'Write in a larger editor', icon: 'expand' });
+    expect(focusModeButton(true)).toEqual({ label: 'Back to the field', icon: 'collapse' });
+  });
+});
+
+describe('focusModeParts', () => {
+  const field = { singleLine: false, inGroup: false, groupOpen: false } as const;
+  const none = { offered: false, inFocusMode: false, button: null, toolbar: false, takesTab: false };
+
+  it('gives a one-line field alone nothing', () => {
+    expect(focusModeParts({ ...field, singleLine: true })).toEqual(none);
+  });
+
+  it('gives a comment of many lines outside a group nothing: `CommentField` makes it a group of one', () => {
+    expect(focusModeParts(field)).toEqual(none);
+  });
+
+  it('gives the check-in’s summary the group’s keys only: no button, no toolbar, and Tab goes on to the description', () => {
+    expect(focusModeParts({ ...field, singleLine: true, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true });
+  });
+
+  it('gives the check-in’s description the button, the toolbar and Tab, the group drawing the panel and its hints', () => {
+    expect(focusModeParts({ ...field, inGroup: true })).toEqual({ ...none, offered: true, button: focusModeButton(false) });
+    expect(focusModeParts({ ...field, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, takesTab: true });
+  });
+});
+
+describe('caretOpeningFocusMode', () => {
+  it('puts the caret at a draft’s end when focus mode opens on a field never focused since it was made (a workspace switch, Home and back)', () => {
+    expect(caretOpeningFocusMode(editorState('‸A draft'), false)).toBe('A draft'.length);
+  });
+
+  it('leaves the caret where the user put it, and an empty field as it is', () => {
+    expect(caretOpeningFocusMode(editorState('A dr‸aft'), true)).toBeNull();
+    expect(caretOpeningFocusMode(editorState('‸A draft'), true)).toBeNull();
+    expect(caretOpeningFocusMode(editorState('‸'), false)).toBeNull();
+  });
+});

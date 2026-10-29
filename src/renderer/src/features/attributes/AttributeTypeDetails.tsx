@@ -1,7 +1,7 @@
 import { Tags } from 'lucide-react';
-import type { Place } from '@shared/domain/place';
+import { placeId, type Place } from '@shared/domain/place';
 import type { AttributeType } from '@shared/domain/attribute';
-import { DetailsHeading } from '../../components/DetailsHeading';
+import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { useSettled } from '../../lib/useSettled';
@@ -23,7 +23,7 @@ export function AttributeTypeDetails({ place, type, menu }: AttributeTypeDetails
     <DetailsPanel
       icon={<Tags />}
       kind="Attribute"
-      heading={<DetailsHeading name={type.name} comment={type.comment} onSave={(comment) => saveAttributeComment(place, type, comment)} />}
+      heading={<DetailsHeading name={type.name} comment={type.comment} onSave={(comment) => saveAttributeComment(place, type, comment)} draftKey={commentDraftKey(placeId(place), 'attribute', type.id)} />}
       author={{ user: type.owner, date: type.date }}
       menu={menu}
       properties={[

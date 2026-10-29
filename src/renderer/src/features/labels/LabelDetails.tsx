@@ -1,9 +1,9 @@
 import { FileDiff, Tag } from 'lucide-react';
-import type { Place } from '@shared/domain/place';
+import { placeId, type Place } from '@shared/domain/place';
 import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
-import { DetailsHeading } from '../../components/DetailsHeading';
+import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -30,7 +30,7 @@ export function LabelDetails({ place, label, menu, links = PLAIN_LINKS }: LabelD
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(place, label, comment)} />}
+      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(place, label, comment)} draftKey={commentDraftKey(placeId(place), 'label', label.name)} />}
       author={{ user: label.owner, date: label.date }}
       meta={[
         <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what={copiedWhat('Changeset', 'spec')} />,

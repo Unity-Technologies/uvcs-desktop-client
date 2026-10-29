@@ -62,7 +62,7 @@ export interface MarkdownOptions {
  * The only schemes a link opens: web pages (in the browser) and the app's own links. A mail link shows its text: the
  * app opens nothing else outside it (`openExternal` takes web pages only).
  */
-const OPENED_SCHEMES = /^(https?:|uvcs:)/i;
+const OPENED_SCHEMES = /^(https?:|uvcs:|plastic:)/i;
 
 export function parseMarkdown(source: string, options: MarkdownOptions = {}): MarkdownBlock[] {
   return new MarkdownReader(source, options).blocks();
