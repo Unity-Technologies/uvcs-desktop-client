@@ -4,10 +4,11 @@ import { placeId } from '@shared/domain/place';
 import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueries';
 import { branchSearchQuery, labelSearchQuery, SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository, usePlaceServer } from '../../app/workspace/useWorkspace';
 import { recentChangesetsQuery, suggestedChangesetsQuery } from '../../features/changesets/recentChangesets';
 import { useChangeset } from '../../features/changesets/useChangeset';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
+import { useMemberNames } from '../../features/permissions/permissionsQueries';
 import { peopleSeenIn } from '../people/usePeopleSeen';
 import { changesetToLookUp } from './changesetLookup';
 import {
@@ -38,12 +39,13 @@ const NO_ROWS: SuggestionRow[] = [];
  * list the palette and the views share, under the same query key, only once its trigger is typed. Changesets: the
  * palette's newest 2,000 when cached, else the newest 50 (`suggestedChangesetsQuery`). Branches and labels: the whole
  * list, and the server's search of what is typed until it is read (`listedFrom`). People come from the owners of
- * those lists and everyone the place's lists showed; a changeset past the newest ones is looked up by its number once
+ * those lists, everyone the place's lists showed and the server's users holding what is typed; a changeset past the newest ones is looked up by its number once
  * typing settles, or found by "Search all changesets", which searches only when picked.
  */
 export function useSuggestionRows(query: SuggestionQuery | null): { rows: SuggestionRow[]; reading: boolean; searchAll: (text: string) => void } {
   const place = usePlace();
   const placeRepository = usePlaceRepository();
+  const placeServer = usePlaceServer();
   const kind = query?.kind;
   const typed = query?.text ?? '';
   // The palette's newest 2,000 changesets and every branch and label, as far as the window already read them.
@@ -67,6 +69,9 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const changesetsListed = useListed(changesets, null);
   const shelves = useQuery({ ...recentShelvesQuery(place), enabled: reads.shelves });
   const reviews = useQuery({ ...reviewSummariesQuery(place), enabled: reads.codeReviews });
+  // Someone who never owned anything the lists hold is found only by the server (`cm listusers`), as Permissions finds them.
+  const searchingPeople = reads.searchPeople && placeServer !== undefined;
+  const searchedPeople = useMemberNames(placeServer ?? '', 'user', { filter: term, enabled: searchingPeople });
 
   // Each list read into an index once per read: a key typed walks no object.
   const changesetsIndex = useMemo(() => changesetIndex(changesetsListed.items), [changesetsListed.items]);
@@ -84,9 +89,10 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
             ...(shelves.data ?? []).map((shelve) => shelve.owner),
             ...(reviews.data ?? []).flatMap((review) => [review.owner, review.assignee].filter(Boolean)),
             ...peopleSeenIn(placeId(place)),
+            ...(searchingPeople ? (searchedPeople.data ?? []) : []),
           ])
         : null,
-    [kind, changesetsListed.items, everyBranch.data, everyLabel.data, shelves.data, reviews.data, place],
+    [kind, changesetsListed.items, everyBranch.data, everyLabel.data, shelves.data, reviews.data, place, searchingPeople, searchedPeople.data],
   );
 
   const listed = useMemo(() => {
@@ -102,13 +108,17 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
       case 'codeReview':
         return { suggestions: codeReviewSuggestions(reviewsIndex, typed), reading: reviews.isPending && !reviews.isError, failed: reviews.isError };
       case 'person':
-        return { suggestions: peopleIndex ? personSuggestions(peopleIndex, typed) : [], reading: changesetsListed.reading, failed: changesetsListed.failed };
+        return {
+          suggestions: peopleIndex ? personSuggestions(peopleIndex, typed) : [],
+          reading: changesetsListed.reading || (searchingPeople && searchedPeople.isPending && !searchedPeople.isError),
+          failed: changesetsListed.failed,
+        };
       case 'emoji':
         return { suggestions: emojiSuggestions(typed), reading: false, failed: false };
       default:
         return null;
     }
-  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, placeRepository, changesetsListed, branchesListed, labelsListed, shelves.isPending, shelves.isError, reviews.isPending, reviews.isError]);
+  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, placeRepository, changesetsListed, branchesListed, labelsListed, searchingPeople, searchedPeople.isPending, searchedPeople.isError, shelves.isPending, shelves.isError, reviews.isPending, reviews.isError]);
 
   const lookup = useChangesetLookup(kind === 'changeset' && changesets.data !== undefined ? typed : null, listed?.suggestions ?? []);
   const reading = listed?.reading ?? false;

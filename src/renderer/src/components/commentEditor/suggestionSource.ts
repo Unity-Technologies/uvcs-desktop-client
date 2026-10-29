@@ -39,6 +39,8 @@ export interface SuggestionReads {
   /** The server's search of the branch or label typed (`branchSearchQuery`, `labelSearchQuery`). */
   searchBranches: boolean;
   searchLabels: boolean;
+  /** The server's users holding the name typed (`cm listusers --onlyusers --filter`), for a mention. */
+  searchPeople: boolean;
   shelves: boolean;
   codeReviews: boolean;
 }
@@ -47,7 +49,8 @@ export interface SuggestionReads {
  * What a suggestion list reads (docs/features/rich-comments.md, "Suggestions"): only for its trigger's kind; the
  * newest 50 changesets unless the palette's 2,000 are read already; every branch or label, and until it is read the
  * server's search of the text typed, once it settles (`settled`, as typed) and only when not empty: one find per
- * settled text, never one per key.
+ * settled text, never one per key. A mention searches the server's users the same way, always: the lists only hold
+ * people who own something in them.
  */
 export function suggestionReads(state: { kind: SuggestionKind | undefined; typed: string; settled: string; paletteChangesetsRead: boolean; everyBranchRead: boolean; everyLabelRead: boolean }): SuggestionReads {
   const { kind } = state;
@@ -58,6 +61,7 @@ export function suggestionReads(state: { kind: SuggestionKind | undefined; typed
     everyLabel: kind === 'label',
     searchBranches: kind === 'branch' && searching && !state.everyBranchRead,
     searchLabels: kind === 'label' && searching && !state.everyLabelRead,
+    searchPeople: kind === 'person' && searching,
     shelves: kind === 'shelve',
     codeReviews: kind === 'codeReview',
   };

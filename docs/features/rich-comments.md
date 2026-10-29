@@ -360,8 +360,10 @@ answer shows. Changesets: the palette's newest 2,000 when already read (`recentC
 (`suggestedChangesetsQuery`). `br:fix-10` runs two finds, the search and then every branch; `cs:` then a number two, the newest 50 and then the number. A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
 for as long as the palette's search waits (`useDebouncedValue`, `SERVER_SEARCH_DELAY_MS`): `cs:4207` reads 4207
 alone, never 4 on the way. Words they don't match offer "Search all changesets for …", the palette's on-demand search
-(`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
-showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key
+(`useChangesetSearch`), run only when picked. People are the owners those lists hold, everyone the place's lists
+showed (`peopleSeenIn`), and the server's users holding what is typed once it settles (`searchPeople`: one
+`cm listusers <server> --onlyusers --filter=<text>` per settled text, under the Permissions picker's query key,
+`useMemberNames`), since someone who never owned a changeset, branch or review is in no list. Each list is read into an index once per read and ranked at each key
 (`rankCandidates`: the name typed, then names starting with it, then names holding it, then the rest), the best
 eight shown. What matches is what the kind's view keeps for the same words: its filter's own test (`holdsEveryWord`,
 `matchesWordFilter`) over the texts its row shows (`changesetFilterTexts`, `branchFilterTexts`, `labelFilterTexts`,
