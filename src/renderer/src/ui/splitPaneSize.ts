@@ -10,3 +10,9 @@ export function sizedPaneStyle(horizontal: boolean, size: number, minSize: numbe
   const cap = restMinSize === undefined ? `calc(100% - ${minSize}px)` : `max(${minSize}px, calc(100% - ${restMinSize}px))`;
   return horizontal ? { width: size, maxWidth: cap } : { height: size, maxHeight: cap };
 }
+
+/** What a pane of a split is: gone, kept at its size, or taking the rest (all of it once the other one is gone). */
+export function paneRole(which: 'first' | 'second', sizedPane: 'first' | 'second', hidden: 'first' | 'second' | undefined): 'hidden' | 'sized' | 'rest' {
+  if (which === hidden) return 'hidden';
+  return which === sizedPane && hidden === undefined ? 'sized' : 'rest';
+}

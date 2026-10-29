@@ -5,11 +5,11 @@ const LINES = { side: 'new', first: 120, last: 121 } as const;
 
 describe('browseOpening', () => {
   it('opens on the root with nothing selected', () => {
-    expect(browseOpening({})).toEqual({ selected: null, expand: [], focus: null, fileView: null });
+    expect(browseOpening({})).toEqual({ selected: null, expand: [], focus: null, fileView: null, showsDetails: false });
   });
 
   it('selects an item, its folders opened, in the view every file shares', () => {
-    expect(browseOpening({ focusPath: 'src/ui/a.ts' })).toEqual({ selected: 'src/ui/a.ts', expand: ['src', 'src/ui'], focus: null, fileView: null });
+    expect(browseOpening({ focusPath: 'src/ui/a.ts' })).toEqual({ selected: 'src/ui/a.ts', expand: ['src', 'src/ui'], focus: null, fileView: null, showsDetails: false });
   });
 
   it("shows a file's lines annotated, the page's own choice", () => {
@@ -18,6 +18,7 @@ describe('browseOpening', () => {
       expand: ['src'],
       focus: { path: 'src/a.ts', lines: LINES },
       fileView: 'annotate',
+      showsDetails: true,
     });
   });
 

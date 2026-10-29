@@ -3,6 +3,7 @@ import { Plus, Tags } from 'lucide-react';
 import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -64,6 +65,7 @@ export function AttributesView() {
     <>
       <ViewHeader
         title="Attributes"
+        detailsToggle={<DetailsToggleButton detailsKey="attributes" />}
         count={types && visible.length}
         total={types?.length}
         actions={
@@ -81,7 +83,7 @@ export function AttributesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="attributes"
+        detailsKey="attributes"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load attributes"

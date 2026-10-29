@@ -2,7 +2,7 @@ import { History } from 'lucide-react';
 import { useCallback, useEffect, useMemo } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useOtherRepository, usePlace } from '../../app/workspace/useWorkspace';
-import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
+import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
@@ -43,8 +43,8 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const { data: history, error } = useItemHistory(page.path, page.revision);
   // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
   const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
-  const listWidth = useDetailsWidthStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
-  const setListWidth = useDetailsWidthStore((state) => state.setWidth);
+  const listWidth = useDetailsPaneStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
+  const setListWidth = useDetailsPaneStore((state) => state.setWidth);
   const [view, setView] = usePageRevisionView(page.view);
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);

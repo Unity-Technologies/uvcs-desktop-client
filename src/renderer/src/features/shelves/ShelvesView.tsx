@@ -6,6 +6,8 @@ import { usePlaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { usePlace } from '../../app/workspace/useWorkspace';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -23,7 +25,7 @@ import type { Column } from '../../ui/table/column';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ShelveDetails } from './ShelveDetails';
 import { shelveCopyTexts, shelveMenu } from './shelveMenu';
-import { showShelveChanges } from './shelveOperations';
+import { shelveDiffPage, showShelveChanges } from './shelveOperations';
 import { useShelvesViewStore } from './shelvesViewStore';
 import { useShelves } from './useShelves';
 import { shelveFilterTexts } from './shelveFilterTexts';
@@ -57,12 +59,14 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
+  useShowInFollowingWindow(selected ? shelveDiffPage(selected) : null);
   useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(place, selected) : undefined);
 
   return (
     <>
       <ViewHeader
         title="Shelves"
+        detailsToggle={<DetailsToggleButton detailsKey="shelves" />}
         count={shelves && visible.length}
         total={shelves?.length}
         actions={<ViewRefreshButton fetching={isFetching} />}
@@ -73,7 +77,7 @@ export function ShelvesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="shelves"
+        detailsKey="shelves"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load shelves"

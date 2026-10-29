@@ -11,6 +11,7 @@ export const WORKSPACE_MENU_COMMANDS: readonly string[] = [
   'workspace.openTerminal',
   'workspace.openInFileManager',
   'app.commandLog',
+  'view.details',
   'branch.switch',
   'branch.new',
   'merge.fromBranch',
@@ -21,7 +22,7 @@ export const WORKSPACE_MENU_COMMANDS: readonly string[] = [
  * Those of them a window exploring a repository without a workspace registers too, as every place does
  * (`usePlaceCommands`). The others switch, merge, branch from what the workspace loaded or open its files.
  */
-export const REPOSITORY_MENU_COMMANDS: readonly string[] = ['app.commandLog'];
+export const REPOSITORY_MENU_COMMANDS: readonly string[] = ['app.commandLog', 'view.details'];
 
 /** Whether the menu item runs a command in the focused window, by the place it shows (none: the home screen, or no window). */
 export function isMenuCommandEnabled(commandId: string, shown: Place | undefined): boolean {

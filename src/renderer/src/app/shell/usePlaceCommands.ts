@@ -1,7 +1,8 @@
-import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, RefreshCw, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
+import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, RefreshCw, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
+import { toggleDetailsInFront } from '../../components/detailsInFront';
 import { openOwnRepositoryPermissions } from '../../features/permissions/openPermissions';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
@@ -56,6 +57,15 @@ export function usePlaceCommands(): void {
         icon: ListChecks,
         keywords: ['review', 'reviewed', 'mark'],
         run: () => void setReviewMode(place, !reviewing),
+      },
+      {
+        id: 'view.details',
+        group: 'App',
+        label: 'Hide or show details',
+        icon: PanelRight,
+        keywords: ['panel', 'inspector', 'collapse', 'expand'],
+        shortcut: hotkey('toggleDetails'),
+        run: toggleDetailsInFront,
       },
       { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: goHome },
       {

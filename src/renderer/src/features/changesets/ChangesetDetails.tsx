@@ -1,7 +1,6 @@
 import { FileDiff, GitCommitVertical, House, Tag } from 'lucide-react';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
 import { placeId } from '@shared/domain/place';
@@ -18,7 +17,7 @@ import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
-import { changesetDiffPage, openChangesetDiff, saveChangesetComment } from './changesetOperations';
+import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
 interface ChangesetDetailsProps {
@@ -36,7 +35,6 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
   const { data: workspace } = useWorkspaceInfo();
   const changesetLabels = useLabelsByChangeset().get(changeset.id) ?? [];
   const place = usePlace();
-  useShowInFollowingWindow(changesetDiffPage(changeset));
 
   return (
     <DetailsPanel

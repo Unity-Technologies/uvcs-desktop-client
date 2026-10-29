@@ -3,7 +3,6 @@ import { FileDiff, MessageSquareCode } from 'lucide-react';
 import { Fragment } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -15,7 +14,7 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import { DetailsEmpty } from '../../ui/DetailsSection';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { codeReviewPage, openReview } from './codeReviewOperations';
+import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { copiedWhat } from '../../components/copyMenu';
@@ -23,7 +22,6 @@ import { copiedWhat } from '../../components/copyMenu';
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
   const diffTarget = reviewDiffTarget(review.target);
   const { target } = review;
-  useShowInFollowingWindow(codeReviewPage(review));
 
   return (
     <DetailsPanel

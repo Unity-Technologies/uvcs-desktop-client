@@ -2,6 +2,9 @@ import { GitGraph } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
@@ -14,11 +17,13 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { useBranchExplorerPreferences } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
+import { followedPage } from './followedPage';
 import { GraphDetails } from './details/GraphDetails';
+import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
@@ -51,7 +56,8 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showComments, showAvatars } = preferences;
+  const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
@@ -109,6 +115,7 @@ export function BranchExplorerView() {
     }),
     [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, showComments, showAvatars, reviews],
   );
+  useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
   const goToChangeset = useCallback((id: number) => {
     setSelection({ kind: 'changeset', id });
@@ -208,13 +215,14 @@ export function BranchExplorerView() {
       find,
       fit,
       zoomBy,
-      toggleDetails: () => preferences.set({ detailsOpen: !detailsOpen }),
+      toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY),
       exitFocus: () => setFocus(null),
     });
 
   const header = (
     <ViewHeader
       title="Branch Explorer"
+      detailsToggle={<DetailsToggleButton detailsKey={BRANCH_EXPLORER_DETAILS_KEY} />}
       subtitle={layout && filtered && `${pluralize(filtered.changesets.length, 'changeset')} · ${pluralize(layout.lanes.length, 'branch', 'branches')}`}
       actions={
         <>
@@ -249,7 +257,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails widthKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY} list={<GraphSkeleton />} details={null} />
         </div>
       </>
     );
@@ -262,8 +270,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
           />
@@ -278,8 +285,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
             details={emptyRange}
@@ -296,8 +302,8 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails widthKey="branchExplorer"
-          hideDetails={!detailsOpen}
+        <ListWithDetails
+          detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
           list={
             <GraphCanvas
               ref={canvasRef}

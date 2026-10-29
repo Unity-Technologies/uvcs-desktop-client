@@ -4,6 +4,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ObjectListView } from '../../components/ObjectListView';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EmptyState } from '../../ui/EmptyState';
@@ -38,11 +39,12 @@ import {
 } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 import { changesetMenu } from './changesetMenu';
-import { openChangesetDiff, openRangeDiff } from './changesetOperations';
+import { changesetDiffPage, openChangesetDiff, openRangeDiff } from './changesetOperations';
 import { useChangesets } from './useChangesets';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { changesetCopyTexts } from './changesetMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 const ownerOf = (changeset: Changeset): string => changeset.owner;
@@ -75,6 +77,7 @@ export function ChangesetsView() {
   );
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
+  useShowInFollowingWindow(focused ? changesetDiffPage(focused) : null);
   useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(place, selected[0]!) : undefined);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
@@ -98,7 +101,7 @@ export function ChangesetsView() {
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
   const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
-    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap}>
+    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap} detailsToggle={<DetailsToggleButton detailsKey="changesets" />}>
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
         people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}
@@ -121,7 +124,7 @@ export function ChangesetsView() {
     <>
       {header}
       <ObjectListView
-        widthKey="changesets"
+        detailsKey="changesets"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load changesets"

@@ -1163,7 +1163,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
@@ -1184,6 +1184,17 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
   again. The sort keeps each column's ranks by column id
   (`ColumnSorter`), so a new `sortValue` function costs a number sort, never comparing the rows' text again.
+- **Hiding the details**: every view and page laid out with `ListWithDetails` hides its details and shows them again
+  the same way, remembered per view by its `detailsKey` (`detailsHidden`, `useDetailsPaneStore`): the
+  `DetailsToggleButton` rightmost in its header (`ViewHeader`'s `detailsToggle`; `detailsPanelsHide.test.ts` holds every
+  one to it), ⌘I or Ctrl+I, View ▸ Toggle Details and the palette's "Hide or show details" (`view.details`), which reach
+  the view or page in front, not one hidden under a page (`toggleDetailsInFront`); the Branch Explorer's Space too.
+  Hidden details aren't mounted, so they read nothing, and the list takes the whole view without being mounted again
+  (`SplitPane`'s `hidden`, `paneRole`). What only the details showed moves or comes back: an empty list's first-use
+  state shows under its column titles (`objectListLayout`), a page window keeps following the selection (the view, not
+  its details, calls `useShowInFollowingWindow`), and a link to a file's lines shows Browse repository's details again
+  (`showDetails`). Panes that show a diff beside its files (Changes, Incoming, merge, History, a diff) are not details:
+  they have no toggle.
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check

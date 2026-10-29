@@ -82,6 +82,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('Command &Palette…', 'app.commandPalette', 'CmdOrCtrl+K'),
         commandItem('Command &Log', 'app.commandLog', 'CmdOrCtrl+Shift+L'),
         commandItem('Toggle &Sidebar', 'app.sidebar', 'CmdOrCtrl+\\'),
+        commandItem('Toggle &Details', 'view.details', 'CmdOrCtrl+I'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
         zoomItem('&Actual Size', 'reset', 'CmdOrCtrl+0'),
