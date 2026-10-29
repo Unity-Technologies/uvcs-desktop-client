@@ -173,6 +173,8 @@ describe('refresh scopes', () => {
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted, hidden or described', () => {
     expect(isAffectedByBranchList(key('branches', {}))).toBe(true);
+    // The palette's own copy of the hidden ones.
+    expect(isAffectedByBranchList(key('branches', { onlyHidden: true }))).toBe(true);
     expect(isAffectedByBranchList(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
     expect(isAffectedByBranchList(key('pendingChanges'))).toBe(false);
     expect(isAffectedByBranchList(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
