@@ -1,5 +1,5 @@
 import { fakeApi } from '../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
 vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
@@ -48,6 +48,7 @@ import { groupedMenu, groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, NEEDS_A_WORKSPACE, type MenuWord } from './menuWords';
 import { externalAppsKey } from './externalApps/externalApps';
+import { queryKeys } from '../api/queryKeys';
 import { queryClient } from '../app/queryClient';
 import { workspaceInfoQuery } from '../app/workspace/useWorkspace';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
@@ -350,6 +351,50 @@ describe('the menu grammar', () => {
 
   it.each(Object.entries(EVERY_MENU))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
+  });
+});
+
+/** The object menus that offer the user's tools, each with the objects a tool can run on. */
+const MENUS_WITH_TOOLS = [
+  'branch',
+  'branches',
+  'changeset',
+  'changesetInterval',
+  'label',
+  'labelPair',
+  'shelve',
+  'othersShelve',
+  'leftShelve',
+  'file',
+  'folder',
+  'pendingChange',
+  'history',
+  'diffEntry',
+  'revision',
+  'repositoryBranch',
+  'repositoryChangeset',
+  'repositoryLabel',
+  'repositoryShelve',
+  'repositoryRevision',
+  'repositoryHistory',
+];
+
+describe("the user's tools", () => {
+  const everything = { id: 'tool:1', name: 'Post', program: '/opt/post', args: ['{object}'], targets: ['item', 'changeset', 'branch', 'label', 'shelve'] } as const;
+  beforeEach(() => queryClient.setQueryData(queryKeys.settings, { ...DEFAULT_SETTINGS, tools: [{ ...everything, targets: [...everything.targets] }] }));
+  afterEach(() => queryClient.removeQueries({ queryKey: queryKeys.settings }));
+
+  it.each(MENUS_WITH_TOOLS)('%s: shows them in one "Tools" submenu, with the OS, keeping the grammar order', (name) => {
+    const menu = EVERY_MENU[name]!();
+    const tools = topEntries(menu).filter((entry) => entry.id === 'tools');
+    expect(tools).toHaveLength(1);
+    expect(groupOf(tools[0]!)).toBe('external');
+    const groups = topEntries(menu).map((entry) => MENU_GROUPS.indexOf(groupOf(entry)!));
+    expect(groups).toEqual([...groups].sort((a, b) => a - b));
+  });
+
+  it('leaves them out of a change no longer on disk, which has nothing to run on', () => {
+    expect(topEntries(MENUS.deletedPendingChange!()).map((entry) => entry.id)).not.toContain('tools');
   });
 });
 

@@ -38,6 +38,7 @@ import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
+import { createToolsService } from './toolsService';
 import { createUnityAssetsService } from './unityAssetsService';
 import { createUpdatesService } from './updatesService';
 import { createWindowsService } from './windowsService';
@@ -79,6 +80,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
     system: createSystemService(context, profiles),
+    tools: createToolsService(context, launchApp),
     unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),

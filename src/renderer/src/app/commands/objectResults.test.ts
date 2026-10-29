@@ -13,6 +13,9 @@ import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { changeStatus } from '../../features/pendingChanges/changeTone';
 import { isSubmenu, type Action, type MenuEntry } from '../../lib/actions';
 import { navigation } from '../navigation/navigationStore';
+import { queryKeys } from '../../api/queryKeys';
+import { queryClient } from '../queryClient';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { branchResult, changesetResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
 
 const change: PendingChange = { path: 'src/app.ts', kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' };
@@ -51,6 +54,13 @@ describe('fileResult', () => {
 
     expect(withChange.status).toEqual({ tone: changeStatus(change).tone, title: changeStatus(change).label });
     expect(withoutChange.status).toBeUndefined();
+  });
+
+  it("offers the user's tools for a file without a pending change, as Files does", () => {
+    queryClient.setQueryData(queryKeys.settings, { ...DEFAULT_SETTINGS, tools: [{ id: 'tool:1', name: 'Upload', program: '/opt/upload', args: ['{path}'], targets: ['item'] }] });
+    const menu = fileResult({ path: 'src/other.ts', isDirectory: false }, '/ws', contextFor('')).menu!();
+    queryClient.removeQueries({ queryKey: queryKeys.settings });
+    expect(menu.some((entry) => typeof entry === 'object' && isSubmenu(entry) && entry.id === 'tools')).toBe(true);
   });
 
   it('shows the file in the Files view when run, as its menu’s “Show in Files” does', () => {

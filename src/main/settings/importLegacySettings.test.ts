@@ -169,4 +169,50 @@ describe('importLegacySettings', () => {
       }
     });
   });
+
+  describe('tools and "Open with" programs', () => {
+    const EXTERNAL_TOOLS_CONF = ['# team tools', 'Changeset|Post|C:\\Tools\\post.exe|"@object" @repository'].join('\r\n');
+    const OPEN_WITH_CONF = ['[Hex|Ctrl+H] "C:\\Hex\\hex.exe" @file', '[Hex again] "C:\\Hex\\hex.exe" @file', '[Mine] "C:\\Mine\\mine.exe" @file'].join('\r\n');
+
+    it("become the app's tools and apps on the first run, read without writing the files", () => {
+      const { legacyFolder, openSettings } = setUp({ 'externaltools.conf': EXTERNAL_TOOLS_CONF, 'openwith.conf': OPEN_WITH_CONF });
+      const before = snapshot(legacyFolder);
+      const settings = openSettings();
+
+      importLegacySettings(settings, legacyFolder);
+
+      expect(settings.get()).toMatchObject({
+        legacyToolsImported: true,
+        tools: [{ id: 'tool:imported-1', name: 'Post', program: 'C:\\Tools\\post.exe', args: ['{object}', '{repository}'], targets: ['changeset'] }],
+        customEditors: [
+          { id: 'custom:imported-1', name: 'Hex', executable: 'C:\\Hex\\hex.exe' },
+          { id: 'custom:imported-2', name: 'Mine', executable: 'C:\\Mine\\mine.exe' },
+        ],
+      });
+      expect(snapshot(legacyFolder)).toEqual(before);
+    });
+
+    it('keep the apps the user added, adding each program once', () => {
+      const { legacyFolder, settingsFile, openSettings } = setUp({ 'openwith.conf': OPEN_WITH_CONF });
+      mkdirSync(join(settingsFile, '..'));
+      writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, customEditors: [{ id: 'custom:1', name: 'My hex', executable: 'C:\\Hex\\hex.exe' }] }));
+
+      importLegacySettings(openSettings(), legacyFolder);
+
+      expect(openSettings().get().customEditors).toEqual([
+        { id: 'custom:1', name: 'My hex', executable: 'C:\\Hex\\hex.exe' },
+        { id: 'custom:imported-1', name: 'Mine', executable: 'C:\\Mine\\mine.exe' },
+      ]);
+    });
+
+    it('are imported once, and count as done when there are none', () => {
+      const { legacyFolder, openSettings } = setUp({});
+      importLegacySettings(openSettings(), legacyFolder);
+      expect(openSettings().get()).toMatchObject({ legacyToolsImported: true, tools: [] });
+
+      writeFileSync(join(legacyFolder, 'externaltools.conf'), EXTERNAL_TOOLS_CONF);
+      importLegacySettings(openSettings(), legacyFolder);
+      expect(openSettings().get().tools).toEqual([]);
+    });
+  });
 });

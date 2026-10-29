@@ -1,5 +1,6 @@
 import { EyeClosed, EyeOff, FileClock } from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
+import { workspacePlace } from '@shared/domain/place';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { navigation } from '../../app/navigation/navigationStore';
 import { annotatedHistory } from '../history/annotatedHistory';
@@ -8,6 +9,8 @@ import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
@@ -77,6 +80,7 @@ export function pendingChangeMenu(
       menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: single.path }))),
     lock && menuAction('showInLocks', () => showInLocks(workspacePath, lock)),
     ...(onDisk ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
+    toolsSubmenu(workspacePlace(workspacePath), changes.filter(existsOnDisk).map((change) => toolSubject.item(absolutePath(workspacePath, change.path)))),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
     moveToChangelistSubmenu(workspacePath, changes, changelists),
     filterRulesSubmenu(workspacePath, changes.map((change) => change.path)),

@@ -2,12 +2,13 @@ import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
 import type { MergeToolRule } from '@shared/domain/mergeTools';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 
-export function removeRule(rules: readonly MergeToolRule[], id: string): MergeToolRule[] {
+/** A settings list without one row: a merge rule, a tool. */
+export function removeRule<Row extends { id: string }>(rules: readonly Row[], id: string): Row[] {
   return rules.filter((rule) => rule.id !== id);
 }
 
-/** The row moved one place up (-1) or down (1): earlier rows win. Nothing moves past the ends. */
-export function moveRule(rules: readonly MergeToolRule[], id: string, offset: -1 | 1): MergeToolRule[] {
+/** The row moved one place up (-1) or down (1): earlier merge rules win, earlier tools show first. Nothing moves past the ends. */
+export function moveRule<Row extends { id: string }>(rules: readonly Row[], id: string, offset: -1 | 1): Row[] {
   const from = rules.findIndex((rule) => rule.id === id);
   const to = from + offset;
   if (from < 0 || to < 0 || to >= rules.length) return [...rules];

@@ -324,3 +324,43 @@
   padding-left: 0;
   color: var(--accent-text);
 }
+
+/* Settings › Tools' edit dialog: the program with its Choose… button, what it runs on, and the command it would run
+   on an example. The list of tools is drawn as Settings › Merge's rows (`.rules`). */
+.programRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.programRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolTargets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.toolPreview {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+
+.toolPreviewLabel {
+  flex: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* The arguments' placeholders, each defined by its tooltip. */
+.toolPlaceholders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}

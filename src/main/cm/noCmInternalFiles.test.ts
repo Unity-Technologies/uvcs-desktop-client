@@ -33,7 +33,7 @@ interface Allowance {
 
 const ALLOWED: Record<string, Allowance> = {
   'main/plasticConfig/configFolder.ts': { fileSystem: [], why: 'where the official client keeps its config, for the first-run import' },
-  'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf and client.conf once' },
+  'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf, client.conf, externaltools.conf and openwith.conf once' },
   'main/plasticConfig/recentBranchesConf.ts': { fileSystem: [], names: false, why: 'parses the plasticgui.conf text the first-run import reads' },
   'main/watch/classifyChange.ts': { fileSystem: [], why: 'the files cm rewrites in .plastic are refresh signals for the watcher' },
   'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },

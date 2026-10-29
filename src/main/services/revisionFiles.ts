@@ -1,6 +1,6 @@
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { RepositoryVersion } from '@shared/domain/content';
 import type { Place } from '@shared/domain/place';
@@ -35,14 +35,21 @@ export function revisionFiles(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'
     },
 
     async open(place, version, fileName, editorId) {
-      // Keep the original name so the OS picks the right app; a folder of its own makes it unique, and never
-      // overwrites a copy opened before that an app may still hold.
-      const directory = await mkdtemp(join(tmpdir(), 'uvcs-rev-'));
-      const targetFile = join(directory, fileName);
-      await download(place, version, targetFile);
+      const targetFile = await saveRevisionToTemp(cm, copies, place, version, fileName);
       if (editorId) return openInEditor(targetFile, editorId);
       const error = await shell.openPath(targetFile);
       if (error) throw new Error(error);
     },
   };
+}
+
+/**
+ * Saves a version to a temp file named `fileName`, for an app or a tool to open: the path saved. It keeps the original
+ * name so the OS picks the right app; a folder of its own makes it unique, and never overwrites a copy opened before
+ * that an app may still hold. Only the name's last part counts: the renderer sends it, and `../` would leave the folder.
+ */
+export async function saveRevisionToTemp(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'>, place: Place, version: RepositoryVersion, fileName: string): Promise<string> {
+  const targetFile = join(await mkdtemp(join(tmpdir(), 'uvcs-rev-')), basename(fileName));
+  await saveVersion(cm, copies, place, version, targetFile);
+  return targetFile;
 }

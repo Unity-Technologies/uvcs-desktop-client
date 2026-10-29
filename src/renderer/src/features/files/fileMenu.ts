@@ -7,6 +7,8 @@ import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { showInLocks } from '../locks/showInLocks';
 import { itemPathPermissionsUnavailable, openItemPathPermissions } from '../permissions/openPermissions';
@@ -108,6 +110,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
+    toolsSubmenu(workspacePlace(workspacePath), items.map((item) => toolSubject.item(absolutePath(workspacePath, item.path)))),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
     itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),
