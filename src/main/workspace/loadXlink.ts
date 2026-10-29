@@ -36,21 +36,20 @@ export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId:
  */
 export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: string, xlinkPath: string, context: OperationContext): Promise<XlinkLoad> {
   const { cm } = deps;
-  const load = (step: OperationContext) =>
-    cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath, onOutputLine: step.progressOf(readUpdateProgress) });
+  const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
   const snapshot = await readPendingSnapshot(cm, workspacePath);
   switch (switchApproach(summarizePending(snapshot.changes))) {
     case 'switchAsIs':
-      await load(context);
+      await load();
       return { kind: 'loaded' };
     case 'refuseMerge':
       throw new Error(IN_MERGE);
     case 'undoUnchangedCheckouts':
       await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-      await load(context);
+      await load();
       return { kind: 'loaded' };
     case 'shelveChanges':
-      return loadAroundChanges(deps, workspacePath, snapshot, () => load(context), context);
+      return loadAroundChanges(deps, workspacePath, snapshot, load, context);
   }
 }
 
