@@ -6,6 +6,9 @@ import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { CmError } from '../cm/CmError';
+import type { CommandProgress } from '@shared/domain/operation';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
+import type { ProgressReader } from '../cm/progress/progressReader';
 import { loadXlink } from './loadXlink';
 import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
@@ -44,6 +47,22 @@ describe('Loading a checked-in xlink’s files', () => {
     expect(commands.filter((command) => command.args[0] === 'update')).toMatchObject([
       { via: 'execute', args: ['update', join(workspacePath, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'], options: { cwd: workspacePath, onOutputLine: expect.any(Function) } },
     ]);
+  });
+
+  it('reports the update’s progress as an update or a switch does', async () => {
+    const { deps } = workspaceWith({});
+    const execute = deps.cm.execute;
+    deps.cm.execute = async (args, options) => {
+      if (args[0] === 'update') options?.onOutputLine?.('- Updating       [###.................]  17%   55.68/319.56 MB -   1/506 files');
+      return execute(args, options);
+    };
+    let reported: CommandProgress | null = null;
+    const context = { ...recordingContext().context, progressOf: (reader: ProgressReader) => (line: string) => void (reported = reader(reported, line)) };
+
+    await loadXlink(deps, workspacePath, 'code/lib', context);
+
+    expect(reported).toEqual(readUpdateProgress(null, '- Updating       [###.................]  17%   55.68/319.56 MB -   1/506 files'));
+    expect(reported).toMatchObject({ stage: 'downloading' });
   });
 
   it('puts the pending changes aside before updating, so cm never shelves them itself, and merges them back', async () => {
