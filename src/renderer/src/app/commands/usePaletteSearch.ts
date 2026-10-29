@@ -7,7 +7,7 @@ import { sortChanges } from '../../features/pendingChanges/changeOrder';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
-import { paletteGroups } from './paletteGroups';
+import { paletteBranches, paletteGroups } from './paletteGroups';
 import { isSearching, type PaletteScope } from './paletteScope';
 import type { SearchGroup } from './searchResults';
 import { NOWHERE, usePaletteLists } from './usePaletteLists';
@@ -33,7 +33,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const enabled = shown !== null;
   const place = shown ?? NOWHERE;
   const term = query.trim();
-  const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, labels, changesets, shelves, codeReviews } =
+  const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, hiddenBranches, labels, changesets, shelves, codeReviews } =
     usePaletteLists(shown);
   const server = usePaletteServerSearch(shown, term, scope);
   const { term: serverTerm, branches: foundBranches, labels: foundLabels, shelves: foundShelves, codeReviews: foundCodeReviews } = server;
@@ -44,9 +44,11 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   useRefreshWhenMissing(foundLabels.data, labels.data, place, 'labels');
 
   const fileIndex = useMemo(() => createFuzzyIndex(files.data?.map((entry) => entry.path) ?? []), [files.data]);
-  const branchIndex = useMemo(() => createFuzzyIndex(branches.data?.map((branch) => branch.name) ?? []), [branches.data]);
+  // The hidden branches join once read; until then the visible ones answer.
+  const everyBranch = useMemo(() => branches.data && paletteBranches(branches.data, hiddenBranches.data ?? []), [branches.data, hiddenBranches.data]);
+  const branchIndex = useMemo(() => createFuzzyIndex(everyBranch?.map((branch) => branch.name) ?? []), [everyBranch]);
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
-  const branchWords = useMemo(() => createWordFilterIndex(branches.data?.map((branch) => [branch.name, branch.comment]) ?? []), [branches.data]);
+  const branchWords = useMemo(() => createWordFilterIndex(everyBranch?.map((branch) => [branch.name, branch.comment]) ?? []), [everyBranch]);
   const labelWords = useMemo(() => createWordFilterIndex(labels.data?.map((label) => [label.name, label.comment]) ?? []), [labels.data]);
   const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
@@ -56,7 +58,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     isSearching(
       [
         { section: 'files', waiting: files.isPending },
-        { section: 'branches', waiting: branches.isPending || serverWaits(foundBranches) },
+        { section: 'branches', waiting: branches.isPending || hiddenBranches.isPending || serverWaits(foundBranches) },
         { section: 'labels', waiting: labels.isPending || serverWaits(foundLabels) },
         { section: 'changesets', waiting: changesets.isPending },
         { section: 'shelves', waiting: shelves.isPending || serverWaits(foundShelves) },
@@ -83,7 +85,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
       lists: {
         files: files.data && { items: files.data, index: fileIndex },
         changes,
-        branches: branches.data && { items: branches.data, index: branchIndex, words: branchWords },
+        branches: everyBranch && { items: everyBranch, index: branchIndex, words: branchWords },
         labels: labels.data && { items: labels.data, index: labelIndex, words: labelWords },
         changesets: changesets.data,
         shelves: shelves.data,
@@ -113,7 +115,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     files.data,
     branchIndex,
     branchWords,
-    branches.data,
+    everyBranch,
     labelIndex,
     labelWords,
     labels.data,
