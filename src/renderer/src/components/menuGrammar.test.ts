@@ -362,6 +362,9 @@ const MENUS_WITH_TOOLS = [
   'changesetInterval',
   'label',
   'labelPair',
+  'shelve',
+  'othersShelve',
+  'leftShelve',
   'file',
   'folder',
   'pendingChange',
@@ -371,12 +374,13 @@ const MENUS_WITH_TOOLS = [
   'repositoryBranch',
   'repositoryChangeset',
   'repositoryLabel',
+  'repositoryShelve',
   'repositoryRevision',
   'repositoryHistory',
 ];
 
 describe("the user's tools", () => {
-  const everything = { id: 'tool:1', name: 'Post', program: '/opt/post', args: ['{object}'], targets: ['item', 'changeset', 'branch', 'label'] } as const;
+  const everything = { id: 'tool:1', name: 'Post', program: '/opt/post', args: ['{object}'], targets: ['item', 'changeset', 'branch', 'label', 'shelve'] } as const;
   beforeEach(() => queryClient.setQueryData(queryKeys.settings, { ...DEFAULT_SETTINGS, tools: [{ ...everything, targets: [...everything.targets] }] }));
   afterEach(() => queryClient.removeQueries({ queryKey: queryKeys.settings }));
 

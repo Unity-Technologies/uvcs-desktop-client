@@ -9,6 +9,8 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { editsShelveComment } from './editsShelveComment';
 import { applyShelve, deleteShelve, editShelveComment, shelveDiffPage, showShelveChanges } from './shelveOperations';
@@ -56,6 +58,7 @@ export function shelveMenu(place: Place, shelves: ShelveInfo[], { left = false, 
     workspacePath !== null && menuAction('apply', () => void apply(workspacePath, left), { label: left ? 'Restore' : 'Apply to workspace' }),
     workspacePath !== null && !left && mine && menuAction('applyAndDelete', () => void apply(workspacePath, true)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary })),
+    toolsSubmenu(place, [toolSubject.shelve(shelve)]),
     copySubmenu('Shelve', shelveCopyTexts(place, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     editsShelveComment(shelve, { mine, left }) && menuAction('editComment', () => void editShelveComment(place, shelve)),
     mine &&

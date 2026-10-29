@@ -15,8 +15,8 @@ export interface Tool {
   targets: ToolTarget[];
 }
 
-/** Files and folders, on disk or a revision of one; and the server's objects. */
-export const TOOL_TARGETS = ['item', 'changeset', 'branch', 'label'] as const;
+/** Files and folders, on disk or a revision of one; and the server's objects, shelves among them. */
+export const TOOL_TARGETS = ['item', 'changeset', 'branch', 'label', 'shelve'] as const;
 
 export type ToolTarget = (typeof TOOL_TARGETS)[number];
 
@@ -26,15 +26,17 @@ export const TOOL_TARGET_LABELS: Record<ToolTarget, string> = {
   changeset: 'Changesets',
   branch: 'Branches',
   label: 'Labels',
+  shelve: 'Shelves',
 };
 
 /** What an argument can name, filled in for each object the tool runs on (`toolArgs`); empty where it has none. */
 export const TOOL_PLACEHOLDERS = {
-  '{object}': 'The object: a full path, cs:12, br:/main or lb:v1.0',
+  '{object}': 'The object: a full path, cs:12, br:/main, lb:v1.0 or sh:4',
   '{path}': "A file or folder's full path (a revision's, saved to a temp file)",
   '{changeset}': "A changeset's number",
   '{branch}': "A branch's full name, or a changeset's branch",
   '{label}': "A label's name",
+  '{shelve}': "A shelve's number",
   '{repository}': 'The repository, as name@server',
   '{workspace}': "The workspace's folder",
 } as const;
@@ -48,7 +50,8 @@ export type ToolSubject =
   | { kind: 'revision'; version: RepositoryVersion; fileName: string; repository?: string }
   | { kind: 'changeset'; id: number; branch?: string; repository?: string }
   | { kind: 'branch'; name: string; repository?: string }
-  | { kind: 'label'; name: string; repository?: string };
+  | { kind: 'label'; name: string; repository?: string }
+  | { kind: 'shelve'; id: number; repository?: string };
 
 /** The target a subject is: a revision is a file. */
 export function targetOf(subject: ToolSubject): ToolTarget {

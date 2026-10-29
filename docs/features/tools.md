@@ -7,14 +7,17 @@ opens by itself"). The official client calls them "external tools".
 ## A tool
 
 A tool (`Tool`, `shared/domain/tools.ts`, kept in `AppSettings.tools`) has a name, a program, its arguments and what it
-runs on (`TOOL_TARGETS`): files and folders (on disk, or a revision of one), changesets, branches, labels.
+runs on (`TOOL_TARGETS`): files and folders (on disk, or a revision of one), changesets, branches, labels and shelves
+(a CI run of a shelve; the official client had no shelve tools). Code reviews, attributes and repositories aren't
+targets: a review points at a branch or changeset that has its tools already, an attribute's value belongs to those
+objects, and `{repository}` names the repository from any of them.
 
 - **Arguments are a list**, one argument each, and never go through a shell (`toolArgs`): a placeholder fills one
   argument, so a path with spaces needs no quotes and nothing in a value is read again. Settings edits them on one line,
   as the merge tools' are (`parseArgs`, `formatArgs`).
 - **Placeholders** (`TOOL_PLACEHOLDERS`, filled by `placeholderValues`): `{object}` (a full path, `cs:12`, `br:/main`,
-  `lb:v1.0`: the official client's `@object`), `{path}`, `{changeset}`, `{branch}` (a branch's, or a changeset's
-  branch), `{label}`, `{repository}` (`name@server`: the object's own, else the window's) and `{workspace}` (empty
+  `lb:v1.0`, `sh:4`: the official client's `@object`), `{path}`, `{changeset}`, `{branch}` (a branch's, or a
+  changeset's branch), `{label}`, `{shelve}` (its number), `{repository}` (`name@server`: the object's own, else the window's) and `{workspace}` (empty
   without one). A placeholder that names nothing of the object (`{label}` of a branch) is empty; an unknown `{word}`
   stays as typed.
 - **The program**: `%VAR%` reads an environment variable on every OS, as the official client's did
@@ -33,7 +36,7 @@ Every object's menu has one "Tools ▸" (`toolsSubmenu`, menu word `tools`, grou
 to every object selected, in the user's order, then "Manage tools…" (Settings › Tools). With no tool that applies the
 submenu isn't there, so a user without tools never sees it. The menus that offer it: files and folders (Files),
 pending changes on disk, a diff's and Incoming's changed files (their version: a deleted file's last one), a history's
-and Browse repository's file revisions, changesets (one, or the two of a range), branches and labels, wherever each
+and Browse repository's file revisions, changesets (one, or the two of a range), branches, labels and shelves, wherever each
 shows (`menuGrammar.test.ts`, "the user's tools").
 
 - **One process per object, in order** (`runTool`, `api.tools.run`), started and never waited for, in the workspace's

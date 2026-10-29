@@ -11,6 +11,7 @@ describe('placeholderValues', () => {
       '{changeset}': '',
       '{branch}': '',
       '{label}': '',
+      '{shelve}': '',
       '{repository}': 'game@local',
       '{workspace}': '/work/game',
     });
@@ -28,6 +29,10 @@ describe('placeholderValues', () => {
   it('names a branch and a label by their specs and names', () => {
     expect(placeholderValues({ kind: 'branch', name: '/main/task' }, context)).toMatchObject({ '{object}': 'br:/main/task', '{branch}': '/main/task', '{label}': '' });
     expect(placeholderValues({ kind: 'label', name: 'v1.0' }, context)).toMatchObject({ '{object}': 'lb:v1.0', '{label}': 'v1.0', '{branch}': '' });
+  });
+
+  it('names a shelve by its spec and number', () => {
+    expect(placeholderValues({ kind: 'shelve', id: 4 }, context)).toMatchObject({ '{object}': 'sh:4', '{shelve}': '4', '{changeset}': '', '{branch}': '' });
   });
 
   it("takes the object's own repository over the window's (an xlinked one)", () => {

@@ -21,7 +21,7 @@ you touch:
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
 | `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
-| `features/tools.md`                     | The user's tools: programs run on files, changesets, branches and labels; Settings › Tools; the official client's external tools |
+| `features/tools.md`                     | The user's tools: programs run on files, changesets, branches, labels and shelves; Settings › Tools; the official client's external tools |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |

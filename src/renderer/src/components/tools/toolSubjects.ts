@@ -3,6 +3,7 @@ import type { ChangesetInfo } from '@shared/domain/changeset';
 import type { RepositoryVersion } from '@shared/domain/content';
 import type { LabelInfo } from '@shared/domain/label';
 import type { RevisionRef } from '@shared/domain/revision';
+import type { Shelve } from '@shared/domain/shelve';
 import type { ToolSubject } from '@shared/domain/tools';
 
 /** What a tool runs on, as each menu knows its objects: the repository only where the object names one. */
@@ -22,6 +23,7 @@ export const toolSubject = {
   }),
   branch: ({ name, repository }: Pick<BranchInfo, 'name' | 'repository'>): ToolSubject => ({ kind: 'branch', name, ...withRepository(repository) }),
   label: ({ name, repository }: Pick<LabelInfo, 'name' | 'repository'>): ToolSubject => ({ kind: 'label', name, ...withRepository(repository) }),
+  shelve: ({ id, repository }: Pick<Shelve, 'id' | 'repository'>): ToolSubject => ({ kind: 'shelve', id, ...withRepository(repository) }),
 };
 
 function repositoryOf(version: RepositoryVersion): string | undefined {

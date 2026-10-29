@@ -111,5 +111,7 @@ function exampleOf(target: ToolTarget, workspacePath: string, platform: string):
       return { kind: 'branch', name: '/main/task' };
     case 'label':
       return { kind: 'label', name: 'v1.0' };
+    case 'shelve':
+      return { kind: 'shelve', id: 4 };
   }
 }

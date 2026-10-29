@@ -13,7 +13,7 @@ export interface ToolContext {
 /** Each placeholder's value for one subject; empty where it names nothing of it (`{label}` of a branch). */
 export function placeholderValues(subject: ResolvedSubject, context: ToolContext): Record<ToolPlaceholder, string> {
   const common = { '{repository}': subject.repository ?? context.repository ?? '', '{workspace}': context.workspacePath ?? '' };
-  const none = { '{path}': '', '{changeset}': '', '{branch}': '', '{label}': '' };
+  const none = { '{path}': '', '{changeset}': '', '{branch}': '', '{label}': '', '{shelve}': '' };
   switch (subject.kind) {
     case 'item':
       return { ...common, ...none, '{object}': subject.path, '{path}': subject.path };
@@ -23,6 +23,8 @@ export function placeholderValues(subject: ResolvedSubject, context: ToolContext
       return { ...common, ...none, '{object}': spec.branch(subject.name), '{branch}': subject.name };
     case 'label':
       return { ...common, ...none, '{object}': spec.label(subject.name), '{label}': subject.name };
+    case 'shelve':
+      return { ...common, ...none, '{object}': spec.shelve(subject.id), '{shelve}': String(subject.id) };
   }
 }
 

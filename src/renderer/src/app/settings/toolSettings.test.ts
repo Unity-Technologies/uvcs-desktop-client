@@ -84,6 +84,10 @@ describe('toolPreview', () => {
     expect(toolPreview({ ...NEW_TOOL_DRAFT, program: 'C:\\up.exe', argsText: '{path}', targets: ['item'] }, 'win32')).toBe('up C:\\Users\\me\\wkspaces\\game\\src\\Player.cs');
   });
 
+  it('shows a shelve tool on shelve 4', () => {
+    expect(toolPreview({ ...NEW_TOOL_DRAFT, program: '/opt/ci', argsText: '--shelve={object} {shelve}', targets: ['shelve'] }, 'darwin')).toBe('ci --shelve=sh:4 4');
+  });
+
   it('shows nothing until there is a program and a target', () => {
     expect(toolPreview(NEW_TOOL_DRAFT, 'darwin')).toBeUndefined();
     expect(toolPreview({ ...NEW_TOOL_DRAFT, program: '/opt/post', targets: [] }, 'darwin')).toBeUndefined();
