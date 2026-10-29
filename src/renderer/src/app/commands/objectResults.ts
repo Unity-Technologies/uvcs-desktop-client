@@ -29,8 +29,9 @@ import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
-import { wordMatchQuality } from '../../lib/matchesAllWords';
-import { firstLine } from '../../lib/text';
+import { filterHaystack, wordMatchQuality } from '../../lib/matchesAllWords';
+import { commentLineText, commentText } from '../../lib/comments/commentText';
+import { excerptAroundMatch, type Excerpt } from '../../lib/matchExcerpt';
 import { wordMatchPositions, wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
@@ -88,42 +89,85 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
 }
 
 /**
- * How a name was found: ranked by the fuzzy index, or, for what a server search brought, by the words typed; its
- * highlight marks the same letters.
+ * How an object was found: its name ranked by the fuzzy index, or, for what a server search brought, by the words
+ * typed; or by the words typed in its name and description (`createWordFilterIndex`). Its highlight marks the same
+ * letters.
  */
-export type NameMatch = 'fuzzy' | 'words';
+export type ObjectMatch = 'fuzzy' | 'words' | 'description';
 
-function namePositions(name: string, term: string, match: NameMatch): number[] {
-  return match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term);
+/**
+ * A match in a description ranks a tier below the same match in a name (the name is what a branch or label is known
+ * by): the words together in a description (0.8) tie with the words in a name's folders (0.7), and the name comes first.
+ */
+const DESCRIPTION_MATCH_PENALTY = 0.1;
+
+/**
+ * A hidden branch ranks after a visible one that matches as well, and still before one that matches a tier less well
+ * (half a tier): hidden branches are found, as the user may be on one, but are rarely what is looked for.
+ */
+const HIDDEN_BRANCH_PENALTY = 0.05;
+
+/**
+ * `quality` lowered by `penalty`, rounded to the hundredths the tiers and the penalties are: 0.8 − 0.1 would otherwise
+ * be a hair above a name's 0.7, and 0.7 − 0.05 a hair below 0.65.
+ */
+function lowered(quality: number, penalty: number): number {
+  return Math.round((quality - penalty) * 100) / 100;
 }
 
-export function branchResult(branch: Branch, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
+type MatchShown = Pick<SearchResult, 'labelMatches' | 'detail' | 'detailMatches' | 'quality'>;
+
+/** How a named object's row shows the way it was found; `detail` is what it shows when found by its name. */
+function matchShown(name: string, description: string, detail: string, term: string, match: ObjectMatch): MatchShown {
+  const excerpt = match === 'description' ? excerptAroundMatch(commentText(description), term) : undefined;
+  // Found among the rows holding the words, but the description shows none of them: the name held them all (or they
+  // are only in what the description hides, a link's address), so the row is a name hit.
+  if (excerpt && excerpt.matches.length > 0) return descriptionMatchShown(name, description, term, excerpt);
+  return {
+    labelMatches: match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term),
+    quality: term ? fuzzyMatchQuality(name, term) : undefined,
+    detail,
+    detailMatches: [],
+  };
+}
+
+/**
+ * Found by its description: the description takes the detail's place, cut to keep the match in view, so the row shows
+ * why it matched; the words typed are marked there and in the name.
+ */
+function descriptionMatchShown(name: string, description: string, term: string, excerpt: Excerpt): MatchShown {
+  return {
+    labelMatches: wordMatchPositions(name, term),
+    detail: excerpt.text,
+    detailMatches: excerpt.matches,
+    quality: lowered(wordMatchQuality(filterHaystack([name, description]), term), DESCRIPTION_MATCH_PENALTY),
+  };
+}
+
+export function branchResult(branch: Branch, context: ResultContext, match: ObjectMatch = 'fuzzy'): SearchResult {
   const { term, currentBranch } = context;
+  const shown = matchShown(branch.name, branch.comment, `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`, term, match);
   return {
     id: `branch:${branch.id}`,
     icon: GitBranch,
     label: branch.name,
     labelIsBranch: true,
-    labelMatches: namePositions(branch.name, term, match),
-    quality: term ? fuzzyMatchQuality(branch.name, term) : undefined,
-    detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
-    detailMatches: [],
+    ...shown,
+    quality: branch.isHidden && shown.quality !== undefined ? lowered(shown.quality, HIDDEN_BRANCH_PENALTY) : shown.quality,
     isCurrent: branch.name === currentBranch,
+    isHidden: branch.isHidden,
     menu: () => branchMenu(context.place, [branch], currentBranch),
     run: () => diffBranch(branch),
   };
 }
 
-export function labelResult(label: Label, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
+export function labelResult(label: Label, context: ResultContext, match: ObjectMatch = 'fuzzy'): SearchResult {
   const { term } = context;
   return {
     id: `label:${label.id}`,
     icon: Tag,
     label: label.name,
-    labelMatches: namePositions(label.name, term, match),
-    quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
-    detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
-    detailMatches: [],
+    ...matchShown(label.name, label.comment, `cs:${label.changeset} · ${formatRelativeDate(label.date)}`, term, match),
     menu: () => labelMenu(context.place, [label]),
     run: () => showLabelChanges(label),
   };
@@ -134,7 +178,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
   return {
     id: `changeset:${changeset.id}`,
     icon: GitCommitVertical,
-    label: firstLine(changeset.comment) || '(no comment)',
+    label: commentLineText(changeset.comment) || '(no comment)',
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
@@ -158,7 +202,7 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
   return {
     id: `shelve:${shelve.id}`,
     icon: Archive,
-    label: firstLine(shelve.comment) || '(no comment)',
+    label: commentLineText(shelve.comment) || '(no comment)',
     detail: `sh:${shelve.id} · ${displayName(shelve.owner)} · ${formatRelativeDate(shelve.date)}`,
     detailMatches: specMatches(`sh:${shelve.id}`, term),
     quality: term ? Math.max(wordMatchQuality(shelve.comment, term), wordMatchQuality(`sh:${shelve.id}`, term)) : undefined,
@@ -172,7 +216,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
   return {
     id: `codeReview:${review.id}`,
     icon: MessageSquareCode,
-    label: review.title,
+    label: commentLineText(review.title),
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),

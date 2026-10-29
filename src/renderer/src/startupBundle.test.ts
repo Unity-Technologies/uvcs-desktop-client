@@ -8,19 +8,21 @@ import { VIEWS } from './app/navigation/viewRegistry';
  * What the window loads before its first frame: every module `main.tsx` reaches through static imports, every view
  * and page among them (`viewRegistry`, `pageRegistry`), so each paints its own layout at once (ARCHITECTURE.md "One
  * layout from the first frame"). The heavy libraries stay out of it, each loaded on first use behind a lazy boundary
- * at the leaf that uses it (`FileDiffViewer`, `AnnotationPane`, `FileConflictPanel`, and `LoadedFileDiff`'s viewers):
- * one static import of them from a view, even of a helper, would put megabytes in front of every start.
+ * at the leaf that uses it (`FileDiffViewer`, `AnnotationPane`, `FileConflictPanel`, `LoadedFileDiff`'s viewers, a
+ * comment's `CodeBlock`, and `CommentField`'s editor): one static import of them from a view, even of a helper, would
+ * put megabytes in front of every start.
  */
 const RENDERER_SOURCE = __dirname;
 const SHARED_SOURCE = resolve(__dirname, '../../shared');
 const ENTRY = resolve(RENDERER_SOURCE, 'main.tsx');
 
 /**
- * Pierre's diff viewer, Shiki's grammars under it (reached directly too) and three.js, for 3D models: megabytes the
- * first frame never needs. A new heavy library joins them, and loads behind a lazy boundary at the leaf that uses it.
+ * Pierre's diff viewer, Shiki's grammars under it (reached directly too), three.js, for 3D models, and the comment
+ * editor's CodeMirror (`LiveCommentEditor`) with what turns a paste's HTML into Markdown: megabytes the first frame
+ * never needs. A new heavy library joins them, and loads behind a lazy boundary at the leaf that uses it.
  */
-const HEAVY_PACKAGES = ['@pierre/diffs', 'shiki', 'three'];
-const HEAVY_SCOPES = ['@shikijs/'];
+const HEAVY_PACKAGES = ['@pierre/diffs', 'shiki', 'three', 'hast-util-from-html', 'hast-util-to-mdast', 'mdast-util-to-markdown'];
+const HEAVY_SCOPES = ['@shikijs/', '@codemirror/', '@lezer/'];
 
 /** What a module may import that isn't code: styles, and assets Vite turns into a URL or a string (`?url`, `?raw`). */
 const ASSET = /\.(css|svg|png|jpe?g|gif|webp|json|wasm|txt)$|\?[a-z]+$/;

@@ -26,6 +26,14 @@
   outline: none;
 }
 
+/* A comment's larger editor open in the dialog (`focusModeLayout`) lies over the window, above the dialog: the
+   dialog's centering transform would make it a box inside the dialog, so the dialog is centered by its left edge. */
+.content:has([data-open='overlay']) {
+  left: calc(50% - min(92vw, var(--dialog-width, 460px)) / 2);
+  transform: none;
+  animation: none;
+}
+
 /* Radix focuses the dialog itself when nothing in it takes focus first: never with a ring around the whole dialog. */
 .content:focus-visible {
   box-shadow: var(--shadow-lg);

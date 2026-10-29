@@ -1,3 +1,5 @@
+import { commentHeading } from './comments/commentHeading';
+
 /** A comment read as a title (its first line) and a description (the rest), like a commit message. */
 export interface CommentParts {
   summary: string;
@@ -9,6 +11,28 @@ export function splitComment(comment: string): CommentParts {
   const [summary = '', ...rest] = comment.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').split('\n');
   return { summary: summary.trim(), description: rest.join('\n').replace(/^\s*\n/, '').trimEnd() };
 }
+
+/**
+ * The parts a comment opens in to be edited as a title and a description (the check-in's fields): its title and the
+ * rest when it has one (`commentHeading`'s `titled`, a list's first item aside); whole in the description when it opens
+ * with a list, a table or code, or is empty, so nothing moves into the title. `editedComment` writes them back.
+ */
+export function editingParts(comment: string): CommentParts {
+  const titled = commentHeading(comment).kind === 'titled' && !OPENS_WITH_LIST.test(comment);
+  return titled ? splitComment(comment) : { summary: '', description: comment };
+}
+
+/**
+ * A recent comment picked in the check-in: its parts as Edit comment opens a comment (`editingParts`), and the field
+ * the caret goes to, where its text ends: the description when it has one, else the summary.
+ */
+export function recentCommentPick(comment: string): { parts: CommentParts; caretIn: 'summary' | 'description' } {
+  const parts = editingParts(comment);
+  return { parts, caretIn: parts.description ? 'description' : 'summary' };
+}
+
+/** A comment opening with a list item: the item is no title, though a row shows it as the comment's line. */
+const OPENS_WITH_LIST = /^\s*(?:[-*+]|\d+[.)])\s/;
 
 /** The comment to store: the summary line, then a blank line and the description when there is one. */
 export function joinComment({ summary, description }: CommentParts): string {
@@ -25,7 +49,23 @@ export function editedComment(original: string, opened: CommentParts, draft: Com
   const summary = draft.summary.trim();
   const description = draft.description.replace(/^\s*\n/, '').trimEnd();
   if (!summary || !description) return summary || description;
-  return summary + separatorAfterTitle(original) + description;
+  // A title given to a comment that had none is set off by a blank line, as the check-in writes one.
+  return summary + (opened.summary ? separatorAfterTitle(original) : '\n\n') + description;
+}
+
+/** Whether closing the editor would throw away an edit: what it would save differs from the comment (`storedComment`). */
+export function hasUnsavedEdit(original: string, opened: CommentParts, draft: CommentParts): boolean {
+  return storedComment(editedComment(original, opened, draft)) !== storedComment(original);
+}
+
+/**
+ * What leaving a comment editor does (Edit comment, a details panel's): unedited it closes; Esc or Cancel on an edit
+ * asks first; leaving it for another row keeps the draft, found again on coming back, as a question there would hold
+ * the list's selection hostage and nothing typed is lost either way.
+ */
+export function commentEditorExit(edited: boolean, exit: 'cancel' | 'leave'): 'close' | 'ask' | 'keepDraft' {
+  if (!edited) return 'close';
+  return exit === 'cancel' ? 'ask' : 'keepDraft';
 }
 
 /** One line end when the original's description starts on the line after its title, else a blank line. */
@@ -60,17 +100,11 @@ export function shownComment(comment: string, lastSaved: SavedComment | null): s
   return lastSaved && comment === lastSaved.replaced ? lastSaved.saved : comment;
 }
 
-const BLOCK_SYNTAX = [/^#{1,6}\s+\S/, /^\s*(```|~~~)/, /^\s*>\s?\S/];
-const LIST_ITEM = /^\s*([-*+]|\d+[.)])\s+\S/;
-const INLINE_SYNTAX = [/\[[^\]]+\]\(https?:\/\/[^\s)]+\)/, /\*\*[^*\n]+\*\*/, /`[^`\n]+`/];
-
 /**
- * Whether a text was clearly written as Markdown (headings, fences, quotes, links, bold, code, or a list of several
- * items), so rendering it reads better than showing its characters. Plain prose with a stray `*` stays plain.
+ * A comment written whole (a dialog's) as it is stored: without the blank lines at its ends or the space a picked
+ * suggestion leaves after it. Its first line's indent stays (`trimEnd`, not `trim`): a comment opening with an indented
+ * code block would otherwise lose it.
  */
-export function looksLikeMarkdown(text: string): boolean {
-  const lines = text.split('\n');
-  if (lines.some((line) => BLOCK_SYNTAX.some((pattern) => pattern.test(line)))) return true;
-  if (lines.filter((line) => LIST_ITEM.test(line)).length >= 2) return true;
-  return INLINE_SYNTAX.some((pattern) => pattern.test(text));
+export function storedComment(text: string): string {
+  return text.replace(/^(?:[^\S\n]*\n)+/, '').trimEnd();
 }

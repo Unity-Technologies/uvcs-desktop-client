@@ -34,6 +34,7 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
   }
 
   async function list(place: Place, filter: QueryFilter): Promise<Branch[]> {
+    if (filter.onlyHidden) return (await find(place, filter, ["hidden = 'true'"])).map((branch) => ({ ...branch, isHidden: true }));
     const branches = await findVisibleAndHidden(place, filter, [], filter.includeHidden === true);
     return branches.sort((a, b) => b.date.localeCompare(a.date));
   }

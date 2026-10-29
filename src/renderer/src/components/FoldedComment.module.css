@@ -6,6 +6,15 @@
   min-width: 0;
 }
 
+.comment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+
 .title {
   display: -webkit-box;
   width: 100%;
@@ -33,12 +42,6 @@
   max-height: var(--folded-expanded-max-height);
   overflow: auto;
   mask-image: none;
-}
-
-.plain {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 .toggle {

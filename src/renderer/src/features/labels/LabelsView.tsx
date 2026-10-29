@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
@@ -26,7 +27,6 @@ import { labelFilterTexts, labelsQuery } from './labelFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LabelDetails } from './LabelDetails';
@@ -48,7 +48,7 @@ const COLUMNS: Column<Label>[] = [
   },
   { id: 'changeset', header: 'Changeset', width: 100, sortValue: (label) => label.changeset, render: (label) => <span className="mono">{label.changeset}</span> },
   { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <PathLabel path={label.branch} /> },
-  { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <Highlight text={label.comment} /> },
+  { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <CommentLine comment={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 760, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (label) => label.date, render: (label) => <RelativeTime date={label.date} /> },
 ];

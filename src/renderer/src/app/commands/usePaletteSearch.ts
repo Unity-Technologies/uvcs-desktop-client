@@ -5,8 +5,9 @@ import { isCheckinCandidate } from '../../features/pendingChanges/changeCategori
 // The palette lists changes as the flat list does.
 import { sortChanges } from '../../features/pendingChanges/changeOrder';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
+import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
-import { paletteGroups } from './paletteGroups';
+import { paletteBranches, paletteGroups } from './paletteGroups';
 import { isSearching, type PaletteScope } from './paletteScope';
 import type { SearchGroup } from './searchResults';
 import { NOWHERE, usePaletteLists } from './usePaletteLists';
@@ -21,7 +22,8 @@ export interface PaletteSearch {
 /**
  * Searches the workspace files and the repository objects (branches, labels, changesets, shelves, code reviews)
  * for the command palette, in two layers (the palette ranks the groups against each other, see `rankGroups`):
- * - cached lists, fetched once and refreshed in the background, answer every keystroke instantly and fuzzily;
+ * - cached lists, fetched once and refreshed in the background, answer every keystroke instantly and fuzzily; a
+ *   branch or label is found by the words of its description too, as its own view's filter finds it;
  * - once typing pauses, `cm find ... like` asks the server for what the cache may miss (objects created since, or
  *   beyond the cached limits). Changeset comments take seconds to search on big repositories, so only on demand.
  * Without a search it lists what is at hand: the pending changes, the current, recent and newest branches, the
@@ -31,7 +33,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const enabled = shown !== null;
   const place = shown ?? NOWHERE;
   const term = query.trim();
-  const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, labels, changesets, shelves, codeReviews } =
+  const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, hiddenBranches, labels, changesets, shelves, codeReviews } =
     usePaletteLists(shown);
   const server = usePaletteServerSearch(shown, term, scope);
   const { term: serverTerm, branches: foundBranches, labels: foundLabels, shelves: foundShelves, codeReviews: foundCodeReviews } = server;
@@ -42,8 +44,12 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   useRefreshWhenMissing(foundLabels.data, labels.data, place, 'labels');
 
   const fileIndex = useMemo(() => createFuzzyIndex(files.data?.map((entry) => entry.path) ?? []), [files.data]);
-  const branchIndex = useMemo(() => createFuzzyIndex(branches.data?.map((branch) => branch.name) ?? []), [branches.data]);
+  // The hidden branches join once read; until then the visible ones answer.
+  const everyBranch = useMemo(() => branches.data && paletteBranches(branches.data, hiddenBranches.data ?? []), [branches.data, hiddenBranches.data]);
+  const branchIndex = useMemo(() => createFuzzyIndex(everyBranch?.map((branch) => branch.name) ?? []), [everyBranch]);
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
+  const branchWords = useMemo(() => createWordFilterIndex(everyBranch?.map((branch) => [branch.name, branch.comment]) ?? []), [everyBranch]);
+  const labelWords = useMemo(() => createWordFilterIndex(labels.data?.map((label) => [label.name, label.comment]) ?? []), [labels.data]);
   const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
   const serverWaits = (search: { isFetching: boolean }): boolean => server.searches && (serverTerm !== term || search.isFetching);
@@ -52,7 +58,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     isSearching(
       [
         { section: 'files', waiting: files.isPending },
-        { section: 'branches', waiting: branches.isPending || serverWaits(foundBranches) },
+        { section: 'branches', waiting: branches.isPending || hiddenBranches.isPending || serverWaits(foundBranches) },
         { section: 'labels', waiting: labels.isPending || serverWaits(foundLabels) },
         { section: 'changesets', waiting: changesets.isPending },
         { section: 'shelves', waiting: shelves.isPending || serverWaits(foundShelves) },
@@ -79,8 +85,8 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
       lists: {
         files: files.data && { items: files.data, index: fileIndex },
         changes,
-        branches: branches.data && { items: branches.data, index: branchIndex },
-        labels: labels.data && { items: labels.data, index: labelIndex },
+        branches: everyBranch && { items: everyBranch, index: branchIndex, words: branchWords },
+        labels: labels.data && { items: labels.data, index: labelIndex, words: labelWords },
         changesets: changesets.data,
         shelves: shelves.data,
         codeReviews: codeReviews.data,
@@ -108,8 +114,10 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     fileIndex,
     files.data,
     branchIndex,
-    branches.data,
+    branchWords,
+    everyBranch,
     labelIndex,
+    labelWords,
     labels.data,
     changesets.data,
     shelves.data,

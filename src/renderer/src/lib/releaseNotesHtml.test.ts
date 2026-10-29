@@ -45,7 +45,7 @@ describe('release notes as GitHub renders them', () => {
 
     expect(releaseNotesFromHtml(html)).toEqual([
       { kind: 'paragraph', children: [{ kind: 'emphasis', children: [text('Faster')] }, text(' '), { kind: 'code', text: 'cm find' }] },
-      { kind: 'quote', children: [text('Note')] },
+      { kind: 'quote', children: [{ kind: 'paragraph', children: [text('Note')] }] },
       { kind: 'code', text: 'npm start\nnpm test' },
     ]);
   });

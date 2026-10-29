@@ -6,8 +6,10 @@ import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { TextArea, TextField } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { TextField } from '../../ui/TextField';
 import { validateAttributeName } from './attributeNames';
+import { storedComment } from '../../lib/comment';
 
 export function openCreateAttributeDialog(place: Place): void {
   openDialog((close) => <CreateAttributeDialog place={place} onClose={close} />);
@@ -23,7 +25,7 @@ function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () =
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(place, "Couldn't create the attribute", () => api.attributes.createType(place, trimmed, comment.trim()), isAffectedByAttributes);
+    const created = await runVoidAction(place, "Couldn't create the attribute", () => api.attributes.createType(place, trimmed, storedComment(comment)), isAffectedByAttributes);
     setCreating(false);
     if (created) onClose();
   };
@@ -44,7 +46,7 @@ function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () =
       }
     >
       <TextField label="Name" value={name} placeholder="status" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
-      <TextArea label="Comment" value={comment} placeholder="What the attribute means and its expected values" onChange={(event) => setComment(event.target.value)} />
+      <CommentArea label="Comment" value={comment} placeholder="What the attribute means and its values" onChange={setComment} />
     </Dialog>
   );
 }

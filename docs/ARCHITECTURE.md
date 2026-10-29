@@ -32,6 +32,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
+| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 
 ## How a request flows
 
@@ -74,7 +75,9 @@ you touch:
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
-   logged: it's no failure.
+   logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
+   `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
+   (`repositoriesService`), a workspace's repository (`workspaceRepositories`).
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -557,7 +560,12 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
+Besides `cm`, which talks to the user's own servers, the app reaches the places below, and nothing else. A comment
+can name an object on another server (`cs:4@game@build.example.com:8087`): its chip reads it from that server only
+when it's one the user already works with (one of their profiles, `serverReads`) and only when the chip's card opens,
+on hover or keyboard focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "What a chip
+reads"). A server the user doesn't use is never contacted, as `cm` would sign in there with their own credentials,
+and a comment never makes the app contact another server by being shown.
 There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
@@ -567,9 +575,13 @@ request and never written into `PRIVACY.md` by the change itself.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
+- **The hosts of images a comment links to** (`![alt](https://…)`), only when the image shows: on hover over its chip
+  or when the keyboard focus reaches it (`CommentImage`, docs/features/rich-comments.md "Images").
+  Fetched by the page with no referrer, so the host learns the picture was looked at, never from where.
 
-The page itself reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
-app's own files and `data:`/`blob:` images, so profile pictures reach it from main as data URLs.
+Otherwise the page reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
+app's own files, `data:`/`blob:` images (profile pictures reach it from main as data URLs) and `https:` images for
+those comments; no script, style or connection leaves it.
 
 ## Errors
 
@@ -930,9 +942,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
     the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
-    replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
-    uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    replaces. A heavy library (Pierre, Shiki, three.js, CodeMirror) loads on first use, behind a `lazyComponent` at the
+    leaf that uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
+    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`, `CommentField`'s `LiveCommentEditor`), whose fallback looks
+    as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
@@ -1039,8 +1052,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
-  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
-  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
+  (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
+  comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
@@ -1070,6 +1085,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
   path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
+    the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
+    every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. Each
+    keystroke looks at every row once, those holding the words together as typed first. A description hit ranks a
+    tier below the same match in a name (`DESCRIPTION_MATCH_PENALTY`, `tierBelow`) and shows its description in place
+    of the detail, cut to keep the longest word typed in view (`excerptAroundMatch`); a row whose description shows
+    none of the words (the name held them, or a link's hidden address did) is a name hit, with its usual detail. The
+    words are looked for in the description as written, Markdown and all, as the Branches view's filter does. The
+    owner isn't searched there: a person's name would list every branch they made. Hidden branches are searched too,
+    the user may be on one: `cm find branch` leaves them out of the every-branch list, so the palette reads them apart
+    (`onlyHidden`, one quick `find branch where hidden = 'true'`, cached as slow-changing beside it and refreshed by
+    hiding or unhiding through `isAffectedByBranchList`; `paletteBranches` joins the two). Their rows say "hidden", like "current" and
+    rank half a tier below a visible branch that matches as well (`HIDDEN_BRANCH_PENALTY`; `lowered` rounds both
+    penalties to hundredths).
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
     last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
@@ -1132,13 +1161,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
-  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
+  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; read as Markdown with chips for what it names, features/rich-comments.md; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
-  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch and label
+  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve
   comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
   on, `editsBranchComments`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its
-  changeset, `labelCommentArgs`); shelve comments stay read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
+  changeset, `labelCommentArgs`; a shelve's as the changeset below zero it is, `cm changeset editcomment cs:-<number>`,
+  `shelveCommentArgs`, see `features/shelves-and-switching.md`). Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are

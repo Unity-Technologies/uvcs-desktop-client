@@ -1,12 +1,16 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
+import { Markdown } from '../../../components/Markdown';
+import { CommentLine } from '../../../components/comments/CommentLine';
+import { HoverCard, HoverCardMeta } from '../../../ui/HoverCard';
+import { splitComment } from '../../../lib/comment';
+import { commentLineText, commentText } from '../../../lib/comments/commentText';
 import { displayName } from '../../../lib/userName';
 import { formatRelativeDate } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
 import type { GraphLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 import { useLayoutEffect, useRef } from 'react';
-import { captionCardCorner, captionCardMaxWidth, keepInside } from './captionCard';
-import { summaryOf } from './fitText';
+import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInside } from './captionCard';
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
@@ -37,7 +41,7 @@ const POINTER_TOOLTIP_ROOM = 360;
 const SUBJECT_LINE_HEIGHT = 1.45;
 
 /** Marks the cards the pointer can move into to select and copy their text: the canvas leaves them alone. */
-export const HOVER_CARD_ATTRIBUTE = 'data-hover-card';
+export const CAPTION_CARD_ATTRIBUTE = 'data-hover-card';
 
 export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y, anchor, containerWidth }: GraphTooltipProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -56,28 +60,34 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
       card.style.top = `${corner.top}px`;
     }
     card.style.left = `${keepInside(card.offsetLeft, card.offsetWidth, containerWidth)}px`;
+    const canvasBottom = card.offsetParent?.getBoundingClientRect().bottom ?? window.innerHeight;
+    card.style.maxHeight = `${captionCardMaxHeight(card.getBoundingClientRect().top, canvasBottom)}px`;
   });
 
   if (anchor?.kind === 'caption' && target.kind === 'changeset') {
     const changeset = layout.nodes.get(target.id)?.changeset;
     if (!changeset) return null;
     const maxWidth = captionCardMaxWidth(anchor.x, containerWidth, window.innerWidth);
-    const summary = summaryOf(changeset.comment);
-    const body = changeset.comment.slice(changeset.comment.indexOf(summary) + summary.length).trim();
+    const body = splitComment(changeset.comment).description;
     return (
-      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [HOVER_CARD_ATTRIBUTE]: true }}>
+      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [CAPTION_CARD_ATTRIBUTE]: true }}>
         {/* Same font, size and color as the caption it lays over: a heavier or brighter line would read as the text jumping. */}
         <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
           {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
           <span ref={textOriginRef} className={styles.textOrigin} />
-          {summary}
+          {/* Its references as chips, as the body draws them and a row's first line does. */}
+          <CommentLine comment={changeset.comment} interactive={false} />
         </div>
         {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
-        <div className={styles.meta}>
+        <HoverCardMeta>
           <span className={styles.metaPart}>Changeset {changeset.id}</span> · <span className={styles.metaPart}>{displayName(changeset.owner)}</span> ·{' '}
           <span className={styles.metaPart}>{formatRelativeDate(changeset.date)}</span>
-        </div>
-        {body && <div className={styles.cardBody}>{body}</div>}
+        </HoverCardMeta>
+        {body && (
+          <div className={styles.cardBody}>
+            <Markdown text={body} comment />
+          </div>
+        )}
       </div>
     );
   }
@@ -87,9 +97,7 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
-      <div className={styles.title}>{content.title}</div>
-      {content.body && <div className={styles.body}>{content.body}</div>}
-      {content.meta && <div className={styles.meta}>{content.meta}</div>}
+      <HoverCard title={content.title} body={content.body} meta={content.meta} />
     </div>
   );
 }
@@ -101,7 +109,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       if (!changeset) return null;
       return {
         title: `Changeset ${changeset.id} · ${changeset.branch}`,
-        body: changeset.comment || 'No comment',
+        body: commentText(changeset.comment) || 'No comment',
         meta: `${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
       };
     }
@@ -120,12 +128,12 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       }
       return {
         title: `Label ${target.label.name}`,
-        body: target.label.comment || undefined,
+        body: commentText(target.label.comment) || undefined,
         meta: `Changeset ${target.label.changeset} · ${displayName(target.label.owner)}`,
       };
     case 'codeReview':
       return {
-        title: target.review.title,
+        title: commentLineText(target.review.title),
         body: `Code review ${target.review.id} · ${target.review.status}`,
         meta: 'Click to open the review',
       };

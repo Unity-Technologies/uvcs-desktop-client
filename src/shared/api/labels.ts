@@ -1,6 +1,7 @@
 import type { Label } from '../domain/label';
 import type { Place } from '../domain/place';
 import type { QueryFilter } from '../domain/query';
+import type { OneObjectRead } from './oneObjectRead';
 
 export interface CreateLabelRequest {
   name: string;
@@ -12,7 +13,7 @@ export interface CreateLabelRequest {
 export interface LabelsApi {
   list(place: Place, filter: QueryFilter): Promise<Label[]>;
   /** One label by its name (a light `cm find`), or null when there is none: a link names labels so. */
-  get(place: Place, name: string): Promise<Label | null>;
+  get(place: Place, name: string, read?: OneObjectRead): Promise<Label | null>;
   create(place: Place, request: CreateLabelRequest): Promise<void>;
   rename(place: Place, label: string, newName: string): Promise<void>;
   /** Replaces the label's comment; it can't be emptied. */

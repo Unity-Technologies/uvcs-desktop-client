@@ -1,0 +1,14 @@
+/* Over the selection, above a dialog as the suggestions are. */
+.bar {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}

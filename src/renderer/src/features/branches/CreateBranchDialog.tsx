@@ -6,7 +6,8 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
-import { TextArea, TextField } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { TextField } from '../../ui/TextField';
 import { createBranchAndSwitch } from './branchOperations';
 import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
@@ -16,6 +17,7 @@ import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from '.
 import { StartingPointPicker } from './StartingPointPicker';
 import { newBranchSwitch, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
 import styles from './CreateBranchDialog.module.css';
+import { storedComment } from '../../lib/comment';
 
 /**
  * `origins` holds one starting point, or several to choose from (the first is the default). Resolves with the new
@@ -65,7 +67,7 @@ function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProp
     setCreating(true);
     const created = await createBranchAndSwitch(
       place,
-      { name: fullName, startingPoint: origin.startingPoint, comment },
+      { name: fullName, startingPoint: origin.startingPoint, comment: storedComment(comment) },
       { requested: switchAfter, blockedByMerge, pendingChanges: action ?? undefined, workspaceOn: pending?.preflight.sourceName },
       () => onFinish(fullName),
     );
@@ -99,7 +101,7 @@ function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProp
         hint={name.trim() ? `Full name: ${fullName}` : topLevel ? 'A top-level branch, like /main.' : `A child of ${origin.parentBranch}.`}
         onChange={(event) => setName(event.target.value)}
       />
-      <TextArea label="Comment" value={comment} placeholder="What is this branch for?" onChange={(event) => setComment(event.target.value)} />
+      <CommentArea label="Comment" value={comment} placeholder="What is this branch for?" onChange={setComment} />
       <Checkbox label="Top-level branch" checked={topLevel} onChange={setTopLevel} />
       {offered && <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />}
       {question && (

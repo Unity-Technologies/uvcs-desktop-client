@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatLink, writesAsLink } from './formatLink';
 import type { Link } from './link';
-import { parseLink } from './parseLink';
+import { isAppLink, parseLink } from './parseLink';
 
 const game = { kind: 'repository', server: 'acme@unity', repository: 'game' } as const;
 
@@ -234,5 +234,12 @@ describe('writesAsLink', () => {
     const link = { ...game, object: { kind: 'branch', name: '/main/Mi rama (2)' }, page: { kind: 'diffFile', path: "/it's a file.cs" } } as const;
     expect(writesAsLink(link)).toBe(true);
     expect(parseLink(formatLink(link))).toEqual({ link });
+  });
+});
+
+describe('isAppLink', () => {
+  it('names the schemes the app opens itself: its own and the official client’s, in any case', () => {
+    expect(['uvcs://local/repos/game', 'plastic://local/repos/game', 'PLASTIC://x'].map(isAppLink)).toEqual([true, true, true]);
+    expect(['https://example.com', 'plastic:game', 'cs:12'].map(isAppLink)).toEqual([false, false, false]);
   });
 });

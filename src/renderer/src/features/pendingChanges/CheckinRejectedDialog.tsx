@@ -1,6 +1,7 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { branchLabel } from '../../lib/branchLabels';
-import { fileNameOf, firstLine, formatCountAtLeast, pluralize } from '../../lib/text';
+import { fileNameOf, formatCountAtLeast, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -56,7 +57,7 @@ function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, o
         {shown.map((changeset) => (
           <li key={changeset.id} className={styles.changeset}>
             <Avatar user={changeset.owner} size={18} />
-            <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+            <span className={styles.comment}><CommentLine comment={changeset.comment} placeholder="No comment" /></span>
             <span className={styles.meta}>
               {displayName(changeset.owner)} · cs:{changeset.id}
             </span>
