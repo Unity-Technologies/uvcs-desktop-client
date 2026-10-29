@@ -89,6 +89,7 @@ const windows = new WorkspaceWindows({
   onCloseRequested: (windowId, event) => closing.closeRequested(windowId, event),
 });
 const closing = new ClosingWithWrites({
+  quitting: () => quitting.started(),
   writesRunningIn: (windowId) => windowWrites.runningIn(windows.closingWith(windowId)),
   writesFinishedIn: (windowId) => windowWrites.finishedIn(() => windows.closingWith(windowId)),
   askToCloseWhenDone,

@@ -1,4 +1,6 @@
 export interface ClosingWithWritesDependencies {
+  /** The app is quitting (`Quitting.started`): its windows close with it, and it waited for every operation first. */
+  quitting: () => boolean;
   /** Whether an operation changing a workspace that the window (or a page window it owns) started runs (`WindowWrites`). */
   writesRunningIn: (windowId: number) => boolean;
   /** Settles once none runs, the windows' operations as of each round (`WindowWrites.finishedIn`). */
@@ -14,7 +16,9 @@ export interface ClosingWithWritesDependencies {
  * A window running an operation that changes its workspace (update, switch, checkin, merge, sync…) holds its own
  * close back, on every OS: closing it would hide the operation while it still runs, and, where the app quits with its
  * last window (Windows, Linux), leave it running with no window at all. The user is asked to close the window once
- * the operation finishes, or to keep it. Quitting asks on its own (`Quitting`), and holds the windows open meanwhile.
+ * the operation finishes, or to keep it. Quitting asks on its own (`Quitting`) and goes on only once no operation
+ * runs, so once it began, closes aren't held: the windows it closes were not asked about, and one waiting meanwhile
+ * closes (or is gone) when its operation, finished by then, settles.
  */
 export class ClosingWithWrites {
   /** Windows asking, or waiting for their operation to finish: closing one again meanwhile asks nothing more. */
@@ -24,6 +28,7 @@ export class ClosingWithWrites {
 
   /** The window's `close`, before any other listener sees it (`WorkspaceWindows`' `onCloseRequested`). */
   closeRequested(windowId: number, event: { preventDefault(): void }): void {
+    if (this.dependencies.quitting()) return;
     if (!this.holding.has(windowId) && !this.dependencies.writesRunningIn(windowId)) return;
     event.preventDefault();
     this.dependencies.kept(windowId);

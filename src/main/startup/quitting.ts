@@ -53,6 +53,11 @@ export class Quitting {
     quitStarted();
   }
 
+  /** Whether the quit went on (`before-quit`, not held back): the windows are closing for it. */
+  started(): boolean {
+    return this.quitting;
+  }
+
   /** The last window is closing: where the app quits with it, it's saved now, while it's still open. */
   lastWindowClosing(): void {
     if (this.dependencies.quitsWithLastWindow && !this.quitting) this.dependencies.saveSession({ withViews: false });

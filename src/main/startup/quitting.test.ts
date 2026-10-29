@@ -23,7 +23,7 @@ function setUp({ writing = false, windows = true, answer = true, quitsWithLastWi
     quitting.beforeQuit({ preventDefault: () => void (held = true) });
     return !held;
   };
-  return { dependencies, quit, finishWrites: () => ((writing = false), finishWrites()) };
+  return { dependencies, quitting, quit, finishWrites: () => ((writing = false), finishWrites()) };
 }
 
 /** Lets the awaited steps of the quit run. */
@@ -36,6 +36,18 @@ describe('quitting', () => {
     expect(quit()).toBe(true);
     expect(dependencies.askToQuitWhenDone).not.toHaveBeenCalled();
     expect(dependencies.saveSession).toHaveBeenCalledExactlyOnceWith({ withViews: false });
+  });
+
+  it('has started only once the quit went on, not while an operation holds it back', async () => {
+    const { quitting, quit, finishWrites } = setUp({ writing: true });
+
+    expect(quitting.started()).toBe(false);
+    quit();
+    expect(quitting.started()).toBe(false);
+    finishWrites();
+    await settle();
+    quit();
+    expect(quitting.started()).toBe(true);
   });
 
   it('waits for a running operation once the user agrees, then quits', async () => {
