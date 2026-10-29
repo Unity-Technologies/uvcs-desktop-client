@@ -28,6 +28,8 @@ import { formatRelativeDate } from '../../lib/formatDate';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { filterHaystack, wordMatchQuality } from '../../lib/matchesAllWords';
 import { commentLineText, commentText } from '../../lib/comments/commentText';
@@ -84,6 +86,7 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
     menuAction('history', () => navigation.openPage({ kind: 'history', path: entry.path })),
     !entry.isDirectory && menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: entry.path }))),
     ...openOnDiskEntries({ path: absolutePath(workspacePath, entry.path), isFolder: entry.isDirectory }),
+    toolsSubmenu(workspacePlace(workspacePath), [toolSubject.item(absolutePath(workspacePath, entry.path))]),
     itemCopySubmenu(workspacePath, [entry.path]),
   ]);
 }
