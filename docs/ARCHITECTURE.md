@@ -21,6 +21,7 @@ you touch:
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
 | `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
+| `features/tools.md`                     | The user's tools: programs run on files, changesets, branches and labels; Settings › Tools; the official client's external tools |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
@@ -527,14 +528,14 @@ by name, and never passes it to `cm`.
 `cm` never opens its merge or diff tool, and background work never opens anything. A merge tool opens only when the
 user asks for it on one conflicting file ("Resolve in…") or on each in turn ("Resolve N conflicts in…"), one at a time,
 and the app keeps the decision. An editor or a terminal opens only on the user's "Open in…" or "Open with"
-(docs/features/open-with.md).
+(docs/features/open-with.md), and a tool only when the user picks it (docs/features/tools.md).
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
   server branch hand `cm` each file's decision in a resolutions file (`--fileconflictsresolutionsfile`, docs/features/merge.md).
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
-  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
+  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal or run a tool
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
   only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
   asked for: docs/features/merge.md).
@@ -617,10 +618,11 @@ says it's busy); a file that can't be read as settings is kept aside as `setting
 from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
-there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) and which merge
+there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) which merge
 tool opens which files (client.conf's `<MergeTools>`, `readLegacyMergeTools`, `legacyMergeToolSettings`;
-docs/features/merge.md "Merge tools"). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,
-apart since the merge tools came later) even when it found nothing or couldn't read a file, and never runs again: from
+docs/features/merge.md "Merge tools"), and its external tools and "Open with" programs (`externaltools.conf`,
+`openwith.conf`: docs/features/tools.md). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,
+`legacyToolsImported`, apart since each came later) even when it found nothing or couldn't read a file, and never runs again: from
 then on the app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
@@ -1024,7 +1026,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
-  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS and the user's programs (save a revision, "Tools ▸": docs/features/tools.md), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
