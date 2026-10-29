@@ -15,8 +15,15 @@ import { draftOf, type XlinkDialogTarget, type XlinkDraft } from './xlinkDraft';
 import { createXlink, editXlink, loadXlinkFiles } from './xlinkOperations';
 
 const ws = '/ws';
-/** What a checkin or an update refreshes (`isAffectedByCheckinOrUpdate`). */
-const CHECKIN_OR_UPDATE = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review'];
+/**
+ * Refreshes as a checkin or an update does (`isAffectedByCheckinOrUpdate`), told by what sets it apart without naming
+ * every view, which grow: the changesets and Incoming (an edit of pending changes leaves them), not labels or shelves.
+ */
+function expectCheckinOrUpdateRefreshes(refreshed: readonly string[]): void {
+  expect(refreshed).toEqual(expect.arrayContaining(['changesets', 'incoming', 'explorer', 'pendingChanges']));
+  expect(refreshed).not.toContain('labels');
+  expect(refreshed).not.toContain('shelves');
+}
 const WRITABLE: XlinkTarget = { writable: true, path: '/', changeset: 17, repository: 'lib', server: 'local' };
 const lib = { path: 'code/lib', name: 'lib', xlink: WRITABLE };
 
@@ -47,7 +54,7 @@ describe('Creating an xlink', () => {
     expect(saved).toBe(true);
     expect(fakeApi.calls()).toEqual([{ method: 'xlinks.create', args: [ws, LIB_XLINK, 'Add xlink code/lib', expect.any(String)] }]);
     // Checked in and updated: every view but those a checkin leaves alone.
-    expect(refreshes()).toEqual(CHECKIN_OR_UPDATE);
+    expectCheckinOrUpdateRefreshes(refreshes());
     expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Created xlink code/lib', detail: 'Checked in as changeset 3.' })]);
     expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(ws), path: 'code/lib' });
   });
@@ -81,7 +88,7 @@ describe('Loading a checked-in xlink’s files', () => {
     expect(await loadXlinkFiles(ws, 'code/lib')).toBe(true);
 
     expect(fakeApi.calls()).toEqual([{ method: 'xlinks.load', args: [ws, 'code/lib', expect.any(String)] }]);
-    expect(refreshes()).toEqual(CHECKIN_OR_UPDATE);
+    expectCheckinOrUpdateRefreshes(refreshes());
     expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Loaded the files of xlink code/lib' })]);
   });
 });
