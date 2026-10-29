@@ -2,7 +2,6 @@ import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { loadXlinkArgs } from '../cm/xlinkArgs';
-import { toAbsolutePath } from '../files/workspacePaths';
 import { hasPendingChanges } from '../merge/hasPendingChanges';
 import type { OperationContext } from '../operations/OperationTracker';
 import { moveNewItemsAside } from './moveNewItemsAside';
@@ -23,7 +22,7 @@ const IN_MERGE = 'A merge in progress keeps its files from loading: check the me
 export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId: number };
 
 /**
- * Loads the files of the checked-in xlink at `xlinkPath` (a workspace path) with one `cm update` of its folder
+ * Loads the files of the checked-in xlink at `xlinkPath` (a workspace path) with one `cm update` of the folder holding it
  * (`loadXlinkArgs`), which leaves the other pending changes as they are. When `cm` refuses because of them (its
  * PendingChangesOnSwitchAction asks to shelve or fail), they are moved aside as a switch moves them, never by `cm`:
  * 1. Shelve every change with the official automatic-shelve comment, check the shelve holds them all, and record it
@@ -35,7 +34,7 @@ export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId:
  */
 export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: string, xlinkPath: string, context: OperationContext): Promise<XlinkLoad> {
   const { cm } = deps;
-  const load = () => cm.execute(loadXlinkArgs(toAbsolutePath(workspacePath, xlinkPath)), { cwd: workspacePath });
+  const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath });
   try {
     await load();
     return { kind: 'loaded' };

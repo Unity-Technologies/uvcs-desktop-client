@@ -52,8 +52,11 @@ Editing an xlink checks it out; editing one not checked in yet leaves it added (
 `cm` fills an xlink's folder only from the server's tree: a pending xlink has no files, and no `cm` command loads
 them. So **Create and check in** (`XlinksApi.create`) creates the xlink, checks it in alone with the dialog's comment
 (`checkinCommentOf`: the one typed, or "Add xlink <path>"), and loads its files, one operation. Other pending changes
-stay pending. Updating the workspace wouldn't load them: it is at the changeset the checkin made, so `cm update`
-finds it up to date and reads no tree; updating the xlink's folder does (`loadXlinkArgs`).
+stay pending. Updating the workspace unnamed may not load them: it is at the changeset the checkin made, so
+`cm update` can find it up to date. Updating the folder holding the xlink does (the workspace's root, named, for one at
+the root: `loadXlinkArgs`); its own folder doesn't, as `cm` fails there for an xlink showing a folder of its
+repository ("Can't move  to <folder>") and removes the folder. A partial update brings nothing else in: `cm` refuses
+one while the workspace is out of date.
 
 Before updating a folder, `cm` looks for pending changes in the whole workspace and does as client.conf's
 `PendingChangesOnSwitchAction` says. Unset, as by default, it updates the folder and leaves them as they are. Set to
@@ -95,7 +98,7 @@ write (`changesWorkspace`), except `--show`. Creating also checks in and updates
 | Reads the rules          | `cm xlink --show <path>`                                                 | Edit xlink… on a writable xlink, once       |
 | Creates                  | `cm xlink [-w] [-rs] <path> <folder> <point spec> [rules]`               | Create and check in                         |
 | Checks the new one in    | `cm checkin <path> --all --dependencies -commentsfile=<file>` (`checkinArgs`) | Create and check in, once created      |
-| Loads its files          | `cm update <path> --machinereadable --noinput --dontmerge`               | Create and check in, once checked in; Load its files |
+| Loads its files          | `cm update <folder holding it> --machinereadable --noinput --dontmerge`  | Create and check in, once checked in; Load its files |
 | Points elsewhere         | `cm xlink -e <path> <point spec>`                                        | Save, when the point changed                |
 | Deletes, then adds rules | `cm xlink --deleterules <path> <rules>`, then `--addrules` | Save, when rules changed (one each at most) |
 

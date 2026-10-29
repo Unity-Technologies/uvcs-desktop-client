@@ -7,6 +7,7 @@
 import { fullBranchName, repositoryFolder, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
 import { equalsCondition, findArgs } from './findQuery';
 import { FOUND_LABELS } from './foundObjects';
+import { toAbsolutePath } from '../files/workspacePaths';
 import { TREE_ITEM_FORMAT } from './treeItems';
 
 /** Where an xlink points, as `cm xlink` takes it: a changeset, branch or label spec in its repository (`name@server`). */
@@ -50,15 +51,19 @@ export function deleteXlinkRulesArgs(absolutePath: string, rules: readonly Xlink
 }
 
 /**
- * `cm update` of a checked-in xlink's folder, which loads its files. Updating the workspace wouldn't: it is at the
- * changeset that added the xlink already, so `cm update` finds it up to date and reads no tree. Updating a folder, `cm`
+ * `cm update` of the folder holding a checked-in xlink (the workspace's root, named, for one at the root), which loads
+ * its files. Not the xlink's own folder: for an xlink showing a folder of its repository, `cm` fails there ("Can't move
+ * to <folder>") and removes the folder. Nor the workspace unnamed: it is at the changeset that added the xlink already,
+ * and `cm update` may find it up to date. Updating a folder brings nothing else in: `cm` refuses a partial update while
+ * the workspace is out of date ("Cannot perform a partial update when the workspace is out of date"). Updating a folder, `cm`
  * looks for pending changes in the whole workspace first, and does as client.conf's PendingChangesOnSwitchAction says:
  * with none set, as by default, it updates the folder and leaves them as they are; set to shelve them, it would shelve,
  * undo and merge them back itself, which `--machinereadable` turns into refusing (as a setting to fail does), so the
  * app moves them aside itself (`loadXlink`). `--noinput`: never ask; `--dontmerge`: never open a merge tool.
  */
-export function loadXlinkArgs(absolutePath: string): string[] {
-  return ['update', absolutePath, '--machinereadable', '--noinput', '--dontmerge'];
+export function loadXlinkArgs(workspacePath: string, xlinkPath: string, platform: NodeJS.Platform = process.platform): string[] {
+  const holdingFolder = xlinkPath.split('/').slice(0, -1).join('/');
+  return ['update', toAbsolutePath(workspacePath, holdingFolder, platform), '--machinereadable', '--noinput', '--dontmerge'];
 }
 
 export function showXlinkArgs(absolutePath: string): string[] {
