@@ -30,8 +30,9 @@ export function listedFrom<T>(whole: ListRead<T>, searched: ListRead<T> | null):
 /**
  * Who a mention offers (docs/features/rich-comments.md, "Suggestions"): the people the lists show, and the server's
  * users: every one once Permissions read them all, else those holding the last text searched, kept while the text
- * changes (each key ranks them again, `holdsEveryWord` drops who no longer matches). A search that fails leaves the
- * people seen: it never reads as nobody.
+ * changes (each key ranks them again, `holdsEveryWord` drops who no longer matches). Only the first search reads: a
+ * later one, over the kept answer, adds its names as they come, quietly. A search that fails leaves the people seen:
+ * it never reads as nobody.
  */
 export function peopleListedFrom(seen: Listed<string>, users: { every: readonly string[] | undefined; searched: ListRead<string>; searching: boolean }): Listed<string> {
   const found = users.every ?? users.searched.data ?? NOTHING;
