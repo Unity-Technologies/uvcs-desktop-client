@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listedFrom, suggestionCue, suggestionReads, type ListRead } from './suggestionSource';
+import { listedFrom, peopleListedFrom, suggestionCue, suggestionReads, type ListRead } from './suggestionSource';
 
 const pending: ListRead<string> = { data: undefined, isPending: true, isError: false };
 const failed: ListRead<string> = { data: undefined, isPending: false, isError: true };
@@ -42,7 +42,7 @@ describe('listedFrom, render after render', () => {
 });
 
 describe('suggestionReads', () => {
-  const none = { paletteChangesetsRead: false, everyBranchRead: false, everyLabelRead: false };
+  const none = { paletteChangesetsRead: false, everyBranchRead: false, everyLabelRead: false, everyUserRead: false };
   const reads = (kind: Parameters<typeof suggestionReads>[0]['kind'], typed: string, settled: string, lists = none) => suggestionReads({ kind, typed, settled, ...lists });
 
   it('reads nothing before a trigger is typed, nor for emoji', () => {
@@ -74,5 +74,41 @@ describe('suggestionReads', () => {
     expect(reads('person', 'manuel', 'manu')).toMatchObject({ searchPeople: false });
     expect(reads('person', '', '')).toMatchObject({ searchPeople: false });
     expect(reads('branch', 'manuel', 'manuel')).toMatchObject({ searchPeople: false });
+  });
+
+  it('searches the server’s users only from two letters: one lists almost everyone', () => {
+    expect(reads('person', 'm', 'm')).toMatchObject({ searchPeople: false });
+    expect(reads('person', 'ma', 'ma')).toMatchObject({ searchPeople: true });
+  });
+
+  it('never searches the server’s users once Permissions read every one', () => {
+    expect(reads('person', 'manuel', 'manuel', { ...none, everyUserRead: true })).toMatchObject({ searchPeople: false });
+  });
+});
+
+describe('peopleListedFrom', () => {
+  const seen = { items: ['ana'], reading: false, failed: false };
+  const users = (state: Partial<Parameters<typeof peopleListedFrom>[1]>) => ({ every: undefined, searched: pending, searching: false, ...state });
+
+  it('offers the server’s users holding the text with the people the lists show', () => {
+    expect(peopleListedFrom(seen, users({ searched: read(['manuel.lucio@unity3d.com']), searching: true }))).toEqual({ items: ['ana', 'manuel.lucio@unity3d.com'], reading: false, failed: false });
+  });
+
+  it('keeps the last answer while the text changes, so a name found doesn’t blink out at each key', () => {
+    expect(peopleListedFrom(seen, users({ searched: read(['manuel.lucio@unity3d.com']), searching: false })).items).toContain('manuel.lucio@unity3d.com');
+  });
+
+  it('offers every user once Permissions read them all', () => {
+    expect(peopleListedFrom(seen, users({ every: ['manuel.lucio@unity3d.com', 'zoe'] })).items).toEqual(['ana', 'manuel.lucio@unity3d.com', 'zoe']);
+  });
+
+  it('reads while the search has no answer yet, and only while it searches', () => {
+    expect(peopleListedFrom(seen, users({ searched: pending, searching: true })).reading).toBe(true);
+    expect(peopleListedFrom(seen, users({ searched: pending, searching: false })).reading).toBe(false);
+    expect(peopleListedFrom({ ...seen, reading: true }, users({})).reading).toBe(true);
+  });
+
+  it('still offers the people seen when the server’s users can’t be read, and never says the list failed for it', () => {
+    expect(peopleListedFrom(seen, users({ searched: failed, searching: true }))).toEqual({ items: ['ana'], reading: false, failed: false });
   });
 });
