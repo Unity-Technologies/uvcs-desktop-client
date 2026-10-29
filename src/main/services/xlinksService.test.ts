@@ -59,7 +59,7 @@ describe('Creating an xlink', () => {
     expect(commands).toMatchObject([
       { via: 'query', args: ['xlink', '-w', LIB, '/', 'br:/main@lib@local', 'br:/main/task-br:/main/dev'] },
       { via: 'execute', args: ['checkin', LIB, '--all', '--dependencies', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'], options: { cwd: WORKSPACE } },
-      { via: 'execute', args: ['update', LIB, '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
+      { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
     ]);
     expect(seen.content).toBe('Add the engine');
     expect(existsSync(seen.file)).toBe(false);
@@ -104,7 +104,7 @@ describe('Creating an xlink', () => {
     const service = createXlinksService(serviceContext(workspace.cm), { switchShelves: deps.records, leftChanges: deps.leftChanges });
 
     expect(await service.create(workspacePath, ENGINE, 'c', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3, changesWaitIn: 7 });
-    expect(workspace.updatedFolders).toEqual(['code/lib']);
+    expect(workspace.updatedFolders).toEqual(['code']);
   });
 
 });
@@ -114,7 +114,7 @@ describe('Loading a checked-in xlink’s files', () => {
     const { service, commands } = xlinks({ update: '' });
 
     expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
-    expect(commands).toMatchObject([{ via: 'execute', args: ['update', LIB, '--machinereadable', '--noinput', '--dontmerge'] }]);
+    expect(commands).toMatchObject([{ via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'] }]);
   });
 
   it('fails with what went wrong: nothing exists to tell apart from it', async () => {

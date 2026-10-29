@@ -34,10 +34,10 @@ describe('Loading a checked-in xlink’s files', () => {
 
     expect(await load(deps)).toEqual({ kind: 'loaded' });
 
-    expect(updatedFolders).toEqual(['code/lib']);
+    expect(updatedFolders).toEqual(['code']);
     expect(commands).toMatchObject([
       // `--machinereadable`: a cm set to shelve the changes on update refuses instead, and never shelves them itself.
-      { via: 'execute', args: ['update', join(workspacePath, 'code', 'lib'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: workspacePath } },
+      { via: 'execute', args: ['update', join(workspacePath, 'code'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: workspacePath } },
     ]);
     expect(pending()).toEqual(EDITED_AND_ADDED);
     expect(shelves()).toEqual([]);
@@ -51,7 +51,7 @@ describe('Loading a checked-in xlink’s files', () => {
     // The changes in the way are read once: the shelve takes the same snapshot.
     expect(readsBeforeShelving.filter((command) => command.args.includes('--changelists'))).toHaveLength(1);
 
-    expect(updatedFolders).toEqual(['code/lib']);
+    expect(updatedFolders).toEqual(['code']);
     expect(lines()).toContain(`undo -r ${workspacePath} --symlink`);
     expect(pending()).toEqual(EDITED_AND_ADDED);
     expect(existsSync(join(workspacePath, 'src', 'new.txt'))).toBe(true);
@@ -78,7 +78,7 @@ describe('Loading a checked-in xlink’s files', () => {
     expect(lines()).toContain(`undo --unchanged -r ${workspacePath} --symlink`);
     expect(pending()).toEqual({});
     expect(shelves()).toEqual([]);
-    expect(updatedFolders).toEqual(['code/lib']);
+    expect(updatedFolders).toEqual(['code']);
   });
 
   it('leaves a merge in progress alone, as no shelve can hold it', async () => {
