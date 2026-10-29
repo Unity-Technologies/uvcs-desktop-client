@@ -36,6 +36,7 @@ describe('toolsService', () => {
 
     const saved = launched[0]!.args[0]!;
     expect(fake.lines()).toEqual([`cat revid:45@game@local --file=${saved}`]);
+    expect(fake.commands.map((command) => command.via)).toEqual(['query']);
     expect(basename(saved)).toBe('a.cs');
     expect(await readFile(saved, 'utf8')).toBe('old version');
   });

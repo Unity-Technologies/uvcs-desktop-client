@@ -39,7 +39,7 @@ shows (`menuGrammar.test.ts`, "the user's tools").
 - **One process per object, in order** (`runTool`, `api.tools.run`), started and never waited for, in the workspace's
   folder (where the app starts without one). The first that can't start stops the rest and shows "Couldn't run
   <tool>" with the reason (`runToolOn`). Past `TOOL_RUNS_WITHOUT_ASKING` objects it asks first.
-- **A revision** is saved to a temp file first (`revisionFiles.saveToTemp`, a folder of its own each time, as "Open
+- **A revision** is saved to a temp file first (`saveRevisionToTemp`, a folder of its own each time, as "Open
   this revision" saves it), its path the object. A revision the workspace holds unchanged is copied from the disk; any
   other is one `cm cat`. Nothing else runs `cm`.
 - **The repository** is the object's own (a changed file under an xlink names its xlinked repository:
