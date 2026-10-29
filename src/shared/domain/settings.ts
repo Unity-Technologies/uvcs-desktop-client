@@ -1,4 +1,5 @@
 import { AUTO_APP, type CustomEditor } from './externalApps';
+import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
@@ -81,6 +82,8 @@ export interface AppSettings {
   terminal: string;
   /** Apps the user added to open files in ("Other app…"). */
   customEditors: CustomEditor[];
+  /** Programs the user runs on what they selected, from its menu's "Tools ▸" (Settings › Tools). */
+  tools: Tool[];
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
   /** Where the last page window (a diff in a window of its own) was left; null until one is moved or resized. */
@@ -98,6 +101,11 @@ export interface AppSettings {
    * came first.
    */
   legacyMergeToolsImported: boolean;
+  /**
+   * The official client's external tools (`externaltools.conf`) became `tools`, and its "Open with" programs
+   * (`openwith.conf`) `customEditors` (`importTools`, in `importLegacySettings`), or there were none: never read again.
+   */
+  legacyToolsImported: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -125,9 +133,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   editor: AUTO_APP,
   terminal: AUTO_APP,
   customEditors: [],
+  tools: [],
   windowBounds: null,
   pageWindowBounds: null,
   openWindows: [],
   legacySettingsImported: false,
   legacyMergeToolsImported: false,
+  legacyToolsImported: false,
 };
