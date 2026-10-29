@@ -557,7 +557,11 @@ and toasts name a Git remote by the same rule, its user info dropped (`gitRemote
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
-any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
+any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program. The programs the app starts for the user (custom
+editors, merge tools, tools: `customEditors`, `customMergeTools`, `tools`) live in the settings the renderer writes, so
+a renderer taken over could start a program of its choosing; that is accepted, since each is the user's own choice
+made in the app's UI. Main still holds what reaches them to what the user asked: a tool runs only on the kinds of
+objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`).
 
 ## What leaves the device
 
@@ -618,7 +622,7 @@ says it's busy); a file that can't be read as settings is kept aside as `setting
 from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
-there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) which merge
+there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`), which merge
 tool opens which files (client.conf's `<MergeTools>`, `readLegacyMergeTools`, `legacyMergeToolSettings`;
 docs/features/merge.md "Merge tools"), and its external tools and "Open with" programs (`externaltools.conf`,
 `openwith.conf`: docs/features/tools.md). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,

@@ -105,7 +105,7 @@ describe('merge tools open only on the user’s request', () => {
     ]);
   });
 
-  it('opens editors and terminals only from the catalog behind "Open in…", and the user\'s tools only when picked, wired once', () => {
+  it('opens editors and terminals only from the catalog behind "Open in…", wired once', () => {
     const launching = allSources.filter(({ source }) => /from '[./]*(system\/)?apps\/launchApp'/.test(source)).map(({ file }) => relative(file));
     expect(launching).toEqual(['services/createServices.ts']);
   });

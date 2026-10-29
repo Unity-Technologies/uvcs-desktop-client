@@ -20,7 +20,12 @@ runs on (`TOOL_TARGETS`): files and folders (on disk, or a revision of one), cha
 - **The program**: `%VAR%` reads an environment variable on every OS, as the official client's did
   (`expandEnvironment`; Windows ignores the name's case). A macOS app bundle runs its own program (`appExecutable`), so
   it gets the arguments; `open -a` would hand them to a running copy as files, or drop them. A Windows `.cmd` or `.bat`
-  runs through `cmd.exe`, as an editor's does (`spawnCommand`).
+  runs through `cmd.exe`, as an editor's does (`spawnCommand`), and its arguments lose `"`, `%` and `!`, which cmd
+  would read even inside quotes (a label `v1!` reaches it as `lb:v1`). Any other program starts as itself, with no
+  shell, so on Windows it must be an `.exe` (or `.com`). A script for another interpreter names the interpreter as its
+  program and the script first among its arguments (`powershell.exe`, then `-File C:\ci\build.ps1 {object}`). The
+  official client opened such a script through its file association; one imported as it was doesn't start ("Couldn't
+  run <tool>") until it's set up this way.
 
 ## Running one
 
@@ -37,8 +42,12 @@ shows (`menuGrammar.test.ts`, "the user's tools").
 - **A revision** is saved to a temp file first (`revisionFiles.saveToTemp`, a folder of its own each time, as "Open
   this revision" saves it), its path the object. A revision the workspace holds unchanged is copied from the disk; any
   other is one `cm cat`. Nothing else runs `cm`.
-- **The repository** of an object that doesn't name one is the window's, as last read (`repositoryOfPlace`): building a
-  menu or running a tool reads nothing to find it.
+- **The repository** is the object's own (a changed file under an xlink names its xlinked repository:
+  `toolSubject.version`), else the window's, as last read (`repositoryOfPlace`): building a menu or running a tool reads
+  nothing to find it.
+- **Only what the tool runs on**: main runs nothing when a subject is of a kind the tool wasn't set up for, and a
+  revision's file name keeps only its last part (`saveRevisionToTemp`). A selection that mixes in what a tool can't run
+  on (a folder in Browse repository, a deleted change) runs on the rest.
 
 ## Settings › Tools
 
@@ -59,8 +68,10 @@ On the first run (`importTools`, in `importLegacySettings`; ARCHITECTURE.md "Own
   and `{workspace}`.
 - **`openwith.conf`** (`readLegacyOpenWith`), its "Open with" programs: each becomes an app the user added
   (`customEditors`, docs/features/open-with.md), by its menu name. Its shortcut isn't kept (every shortcut is the app's:
-  `shortcutRegistry`), nor its arguments, which that client never passed. One the app finds itself shows once
-  (`externalAppList`), so importing them all loses nothing and duplicates nothing.
+  `shortcutRegistry`), nor its arguments, which that client never passed. One the app finds at the same place shows
+  once (`externalAppList`): a macOS app, or a Windows program found in its install folder. A Linux program (the app
+  finds editors by their desktop entries) or a Windows editor found on the PATH by its `.cmd` launcher shows twice, the
+  user's under its own name, until they remove it in Settings › Apps.
 
 Not imported: the copy in the official client's install folder, and the one an administrator shares through the
 server's global configuration, which `cm` keeps in its own config folder (`globalconfig/`) and the app doesn't read
