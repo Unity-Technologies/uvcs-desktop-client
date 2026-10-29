@@ -659,9 +659,10 @@ for these names, and holds each module allowed to name them to exactly the file 
 
 ## Profile pictures (Gravatar)
 
-People show as their initials on their own color (`ui/Avatar`, `avatarColorOf`) until the user chooses to see their
-Gravatar pictures. Nothing goes to gravatar.com before that choice: it's a hash of each email address shown, and the
-user decides whether it leaves the machine.
+People show as their initials (`initials`: the first letters of the first two words of the name, or the first two
+letters of a one-word name, as the other UVCS clients show them) on their own color (`ui/Avatar`, `avatarColorOf`)
+until the user chooses to see their Gravatar pictures. Nothing goes to gravatar.com before that choice: it's a hash of
+each email address shown, and the user decides whether it leaves the machine.
 
 - **Off until chosen**: `showGravatar` and `gravatarChoiceAsked` both start false (`shared/domain/gravatarChoice.ts`).
   Pictures show only when both are true (`showsGravatar`), checked in one place, the main process's `system.gravatar`
