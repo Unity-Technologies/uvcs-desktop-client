@@ -35,7 +35,6 @@
 }
 
 .preview {
-  z-index: 900;
   padding: var(--space-1);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);

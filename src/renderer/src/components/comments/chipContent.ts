@@ -1,5 +1,7 @@
 import type { LinkObject, LinkPage, RepositoryLink } from '@shared/links/link';
+import { serverAuthority } from '@shared/links/linkSegments';
 import { branchLabel } from '../../lib/branchLabels';
+import { displayName } from '../../lib/userName';
 import type { CommentReference, ReferencePoint } from '../../lib/comments/commentReferences';
 import { lastSegment } from '../../lib/paths';
 
@@ -25,7 +27,7 @@ export type ChipContent =
       /** The repository it is in, named when it isn't the place's own. */
       repository?: string;
       target: ChipTarget;
-      /** The object as the place's caches hold it, for its summary (`useCachedSummary`): one of the place's own only. */
+      /** The object as the place's caches hold it, for its summary (`useCachedObject`): one of the place's own only. */
       cachedAs?: CommentReference;
     }
   | { kind: 'user'; name: string }
@@ -199,13 +201,73 @@ export function referenceRepository(target: ChipTarget, placeRepository: string)
   return at < 0 ? target.repository : `${target.repository}${placeRepository.slice(at)}`;
 }
 
-/** An object chip's tooltip: what it is, its summary when one was read, and the repository it is in when another. */
-export function chipTip(title: string, summary: string | undefined, repository: string | undefined): { tip: string; sub?: string } {
-  const tip = summary ? `${title}: ${summary}` : title;
-  return repository ? { tip, sub: `In ${repository}` } : { tip };
+/** What the window read of a chip's object (`useCachedObject`): its fields, whichever it has. */
+export interface CachedRecord {
+  comment?: string;
+  /** A code review's. */
+  title?: string;
+  status?: string;
+  owner?: string;
+  date?: string;
+}
+
+/**
+ * A chip's hover card, as the Branch Explorer's (`HoverCard`): the comment read, first, drawn as a comment's line,
+ * then what the object is, who made it and when; what it is alone while nothing read it. Nothing is asked for.
+ */
+export interface ChipCard {
+  /** The comment (a review's title) to lead with; none leads with `title`. */
+  comment?: string;
+  /** The object in words: "Changeset 4". */
+  title: string;
+  meta: string[];
+}
+
+/** Why another repository's object has nothing to show (`remoteObjectQuery`, `serverReads`). */
+export type UnreadObject = { kind: 'missing' } | { kind: 'unreadable' } | { kind: 'unknownServer'; server: string };
+
+/**
+ * `unread`: why another repository's object has nothing to show, which the card says in place of where it is: the
+ * repository has none by that name, it couldn't be read from (no access, out of reach), or it is on a server the user
+ * doesn't work with, which is never read.
+ */
+export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: UnreadObject): ChipCard {
+  const comment = cached?.title || cached?.comment || undefined;
+  const meta = [
+    ...(comment ? [chip.title] : []),
+    ...(cached?.status ? [cached.status] : []),
+    ...(cached?.owner ? [displayName(cached.owner)] : []),
+    ...(cached?.date ? [ago(cached.date)] : []),
+    ...(chip.repository ? [repositoryWords(chip.title, chip.repository, unread)] : []),
+  ];
+  return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
+}
+
+function repositoryWords(title: string, repository: string, unread: UnreadObject | undefined): string {
+  switch (unread?.kind) {
+    case 'missing':
+      return `No ${title.charAt(0).toLowerCase()}${title.slice(1)} in ${repository}`;
+    case 'unreadable':
+      return `Couldn't read it from ${repository}`;
+    case 'unknownServer':
+      return `In ${repository} on ${serverAuthority(unread.server)}, not a server you use`;
+    default:
+      return `In ${repository}`;
+  }
+}
+
+/** A person's card: their name as shown, then as `cm` knows them, unless it reads the same ("Ana" over "ana"). */
+export function personCard(name: string): ChipCard {
+  const title = displayName(name);
+  return { title, meta: title.toLowerCase() === name.toLowerCase() ? [] : [name] };
 }
 
 /** How an emoji is read aloud: its name in words (`white_check_mark` as "white check mark"). */
 export function emojiLabel(name: string): string {
   return name.replace(/_/g, ' ');
+}
+
+/** A chip's name for screen readers: what it shows, read as words (`Changeset 4, Merge request fixes`). */
+export function chipName(title: string, summary: string | undefined): string {
+  return summary ? `${title}, ${summary}` : title;
 }

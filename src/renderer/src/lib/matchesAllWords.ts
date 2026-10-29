@@ -5,11 +5,20 @@ export function queryWords(query: string): string[] {
 
 /** True when every word of the query appears somewhere in the text, in any order and case. For free text like comments. */
 export function matchesAllWords(text: string, query: string): boolean {
-  const words = queryWords(query);
-  if (words.length === 0) return false;
+  return holdsEveryWord(text.toLowerCase(), queryWords(query));
+}
 
-  const haystack = text.toLowerCase();
-  return words.every((word) => haystack.includes(word));
+/**
+ * The words test itself, on a text already lower-cased: what a list's filter and the comment editor's suggestions
+ * (`rankCandidates`, which lower-cases its index once) share, so a word matches in one exactly when in the other.
+ */
+export function holdsEveryWord(lowerCased: string, words: readonly string[]): boolean {
+  return words.length > 0 && words.every((word) => lowerCased.includes(word));
+}
+
+/** How a list's filter joins the texts a row shows before it looks for the words (`matchesWordFilter`). */
+export function filterHaystack(texts: readonly string[]): string {
+  return texts.join('\n');
 }
 
 /**
@@ -17,7 +26,7 @@ export function matchesAllWords(text: string, query: string): boolean {
  * `Highlight` marks the same words in each, so what is marked is what made the row match.
  */
 export function matchesWordFilter(texts: readonly string[], query: string): boolean {
-  return !query.trim() || matchesAllWords(texts.join('\n'), query);
+  return !query.trim() || matchesAllWords(filterHaystack(texts), query);
 }
 
 /** How convincing a word match is, from 0 to 1, on the same scale as `fuzzyMatchQuality`. */

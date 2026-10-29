@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { OWN_PROCESS_READ_TIMEOUT_MS } from './oneObjectRead';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
@@ -116,6 +117,46 @@ describe('changesets', () => {
 describe('changesets of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
   const OUTSIDE = { outsideWorkspaces: true };
+
+  it("finds another repository's changeset for a comment's chip with one find: quick on the place's server, in a process of its own on another", async () => {
+    const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });
+    const service = createChangesetsService(serviceContext(cm));
+
+    expect(await service.find(repositoryPlace('lib@acme@cloud'), 4)).toMatchObject({ id: 4 });
+    await service.find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+
+    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([
+      ['query', "where changesetid = 4 on repository 'lib@acme@cloud'"],
+      ['execute', "where changesetid = 4 on repository 'game@far.example.com:8087'"],
+    ]);
+  });
+
+  it('gives up on another server that never answers after `OWN_PROCESS_READ_TIMEOUT_MS`, killing the process outright', async () => {
+    vi.useFakeTimers();
+    try {
+      // A host that never answers: the read waits on its signal, as a process left running does.
+      const { cm, commands } = fakeCmClient({
+        'find changeset': ({ options }) => new Promise((_, reject) => options.signal?.addEventListener('abort', () => reject(new Error('Killed')))),
+      });
+      const read = createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+      const failed = expect(read).rejects.toThrow('Killed');
+      const { signal, killSignal } = commands[0]!.options;
+      expect(killSignal).toBe('SIGKILL');
+      vi.advanceTimersByTime(OWN_PROCESS_READ_TIMEOUT_MS - 1);
+      expect(signal?.aborted).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(signal?.aborted).toBe(true);
+      expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('finds no changeset by a number the repository has none of, as an answer, not a failure', async () => {
+    const { cm } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
+    expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('art@acme@cloud'), 1201)).toBeNull();
+  });
 
   it('lists and reads them naming the repository, an xlinked one when asked, outside every workspace', async () => {
     const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(7)) });

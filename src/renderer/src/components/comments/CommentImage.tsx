@@ -1,11 +1,8 @@
-import * as RadixPopover from '@radix-ui/react-popover';
 import { Image as ImageIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useRef, type MouseEvent } from 'react';
 import { api } from '../../api/client';
+import { AnchoredCard, useHoverOpen } from './AnchoredCard';
 import styles from './CommentImage.module.css';
-
-/** How long the pointer rests on an image's chip before its picture is fetched and shown. */
-const HOVER_DELAY_MS = 350;
 
 interface CommentImageProps {
   url: string;
@@ -20,36 +17,28 @@ interface CommentImageProps {
  * opens it in the browser.
  */
 export function CommentImage({ url, alt, source }: CommentImageProps) {
-  const [open, setOpen] = useState(false);
-  const timer = useRef<number>(undefined);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const anchor = useRef<HTMLAnchorElement>(null);
+  const { open, handlers } = useHoverOpen();
   const openInBrowser = (event: MouseEvent): void => {
     event.preventDefault();
     event.stopPropagation();
     void api.system.openExternal(url);
   };
-  const show = (): void => {
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(true), HOVER_DELAY_MS);
-  };
-  const hide = (): void => {
-    window.clearTimeout(timer.current);
-    setOpen(false);
-  };
 
   return (
-    <RadixPopover.Root open={open}>
-      <RadixPopover.Anchor asChild>
-        <a href={url} className={styles.chip} data-source={source} onClick={openInBrowser} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
-          <ImageIcon size={13} strokeWidth={2.25} aria-hidden className={styles.icon} />
-          <span className={styles.alt}>{alt || 'Image'}</span>
-        </a>
-      </RadixPopover.Anchor>
-      <RadixPopover.Portal>
-        <RadixPopover.Content className={styles.preview} side="bottom" align="start" sideOffset={6} collisionPadding={8} onOpenAutoFocus={(event) => event.preventDefault()}>
-          <img src={url} alt={alt} referrerPolicy="no-referrer" />
-        </RadixPopover.Content>
-      </RadixPopover.Portal>
-    </RadixPopover.Root>
+    <>
+      <a ref={anchor} href={url} className={styles.chip} data-source={source} onClick={openInBrowser} {...handlers}>
+        <ImageIcon size={13} strokeWidth={2.25} aria-hidden className={styles.icon} />
+        <span className={styles.alt}>{alt || 'Image'}</span>
+      </a>
+      {/* By the chip, as the app's tooltips are: no layer that would take Esc from a dialog around it. */}
+      {open && (
+        <AnchoredCard anchor={anchor}>
+          <div className={styles.preview}>
+            <img src={url} alt={alt} referrerPolicy="no-referrer" />
+          </div>
+        </AnchoredCard>
+      )}
+    </>
   );
 }

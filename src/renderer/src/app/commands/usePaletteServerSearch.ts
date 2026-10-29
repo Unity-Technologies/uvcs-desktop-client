@@ -8,14 +8,27 @@ import { reviewSummariesKey } from '../../features/codeReviews/useCodeReviews';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { queryClient } from '../queryClient';
 import { lacksServerMatch, searchesServerFor } from './paletteGroups';
-import { branchesKey, changesetsKey, labelsKey, shelvesKey } from './paletteQueryKeys';
+import { branchesKey, changesetsKey, labelsKey, shelvesKey } from './paletteQueries';
 import { isInScope, type PaletteScope, type SectionId } from './paletteScope';
 import { NOWHERE } from './usePaletteLists';
 
 /** Room for the loose matches of a case-tolerant server search, which are filtered precisely here. */
 const SERVER_SEARCH_LIMIT = 50;
-const SERVER_SEARCH_DELAY_MS = 300;
+/** How long typing pauses before the server is asked: the palette's search, a comment's changeset lookup. */
+export const SERVER_SEARCH_DELAY_MS = 300;
 const SERVER_SEARCH_STALE_TIME = 60_000;
+
+/** The server's search of branches by name (`cm find branch … like`, `SERVER_SEARCH_LIMIT`), the palette's and the suggestions'. */
+export function branchSearchQuery(place: Place, term: string) {
+  const textFilter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
+  return { queryKey: branchesKey(place, textFilter), queryFn: () => api.branches.list(place, textFilter), staleTime: SERVER_SEARCH_STALE_TIME };
+}
+
+/** The server's search of labels by name, as `branchSearchQuery`. */
+export function labelSearchQuery(place: Place, term: string) {
+  const textFilter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
+  return { queryKey: labelsKey(place, textFilter), queryFn: () => api.labels.list(place, textFilter), staleTime: SERVER_SEARCH_STALE_TIME };
+}
 
 /**
  * Once typing pauses, `cm find ... like` asks the server for what the cached lists may miss (objects created since,
@@ -31,8 +44,8 @@ export function usePaletteServerSearch(shown: Place | null, typed: string, scope
   return {
     term,
     searches,
-    branches: useQuery({ queryKey: branchesKey(place, textFilter), queryFn: () => api.branches.list(place, textFilter), ...server('branches') }),
-    labels: useQuery({ queryKey: labelsKey(place, textFilter), queryFn: () => api.labels.list(place, textFilter), ...server('labels') }),
+    branches: useQuery({ ...branchSearchQuery(place, term), ...server('branches') }),
+    labels: useQuery({ ...labelSearchQuery(place, term), ...server('labels') }),
     shelves: useQuery({ queryKey: shelvesKey(place, textFilter), queryFn: () => api.shelves.list(place, textFilter), ...server('shelves') }),
     codeReviews: useQuery({
       queryKey: reviewSummariesKey(place, term),

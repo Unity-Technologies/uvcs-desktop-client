@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { chipContent, chipTip, emojiLabel, referenceRepository, type ChipContent } from './chipContent';
+import { chipCard, chipContent, chipName, emojiLabel, personCard, referenceRepository, type ChipContent } from './chipContent';
 
 const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
@@ -83,15 +83,71 @@ describe('referenceRepository', () => {
   });
 });
 
-describe('chipTip', () => {
-  it('says what the object is, its summary once read, and its repository when another', () => {
-    expect(chipTip('Changeset 12', undefined, undefined)).toEqual({ tip: 'Changeset 12' });
-    expect(chipTip('Changeset 12', 'Fix the switch', 'art')).toEqual({ tip: 'Changeset 12: Fix the switch', sub: 'In art' });
+describe('chipCard', () => {
+  const ago = (date: string) => `ago(${date})`;
+
+  it('leads with the comment read, then what the object is, who made it and when, as the Branch Explorer’s card', () => {
+    expect(chipCard({ title: 'Changeset 4' }, { comment: 'Merge **cr:44**\n\nMore', owner: 'daniel.penalba@unity3d.com', date: '2026-10-28' }, ago)).toEqual({
+      comment: 'Merge **cr:44**\n\nMore',
+      title: 'Changeset 4',
+      meta: ['Changeset 4', 'Daniel Penalba', 'ago(2026-10-28)'],
+    });
+  });
+
+  it('takes a review’s title and status', () => {
+    expect(chipCard({ title: 'Code review 44' }, { title: 'Review the switch', status: 'Under review', owner: 'ana', date: '2026-10-01' }, ago)).toEqual({
+      comment: 'Review the switch',
+      title: 'Code review 44',
+      meta: ['Code review 44', 'Under review', 'Ana', 'ago(2026-10-01)'],
+    });
+  });
+
+  it('says what the object is alone while nothing read it, and its repository when another', () => {
+    expect(chipCard({ title: 'Changeset 12' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: [] });
+    expect(chipCard({ title: 'Changeset 12', repository: 'art' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: ['In art'] });
+  });
+
+  it('says another repository has no such object, or couldn’t be read from, in place of where it is', () => {
+    expect(chipCard({ title: 'Changeset 1201', repository: 'art' }, undefined, ago, { kind: 'missing' })).toEqual({ title: 'Changeset 1201', meta: ['No changeset 1201 in art'] });
+    expect(chipCard({ title: 'Label v2', repository: 'art' }, undefined, ago, { kind: 'missing' })).toEqual({ title: 'Label v2', meta: ['No label v2 in art'] });
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unreadable' })).toEqual({ title: 'Changeset 4', meta: ["Couldn't read it from art"] });
+  });
+
+  it('names a cloud organization by its name in a link’s form, not cm’s spec', () => {
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unknownServer', server: 'other@cloud' }).meta).toEqual(['In art on other.cloud, not a server you use']);
+  });
+
+  it('names the server of a repository on one the user doesn’t work with, which is never read', () => {
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unknownServer', server: 'attacker.example.com:8087' })).toEqual({
+      title: 'Changeset 4',
+      meta: ['In art on attacker.example.com:8087, not a server you use'],
+    });
+  });
+
+  it('leaves out what an object read has no word for', () => {
+    expect(chipCard({ title: 'Label v1' }, { comment: '', owner: 'ana' }, ago)).toEqual({ title: 'Label v1', meta: ['Ana'] });
+  });
+});
+
+describe('personCard', () => {
+  it('names a person as shown, then as cm knows them', () => {
+    expect(personCard('daniel.penalba@unity3d.com')).toEqual({ title: 'Daniel Penalba', meta: ['daniel.penalba@unity3d.com'] });
+  });
+
+  it('says the name once when both read the same', () => {
+    expect(personCard('ana')).toEqual({ title: 'Ana', meta: [] });
   });
 });
 
 describe('emojiLabel', () => {
   it("reads an emoji's name as words", () => {
     expect(emojiLabel('white_check_mark')).toBe('white check mark');
+  });
+});
+
+describe('chipName', () => {
+  it('reads a chip aloud as it shows, its summary after its name, a pause between', () => {
+    expect(chipName('Changeset 4', 'Merge request fixes')).toBe('Changeset 4, Merge request fixes');
+    expect(chipName('Changeset 4', undefined)).toBe('Changeset 4');
   });
 });

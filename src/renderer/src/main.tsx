@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { preloadCommentEditor } from './components/commentEditor/CommentField';
 import { AppErrorBoundary } from './app/errors/AppErrorBoundary';
 import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
@@ -21,6 +22,9 @@ reportUnexpectedErrors();
 setTimeout(() => {
   void import('@pierre/diffs').then(({ preloadHighlighter }) => preloadHighlighter({ themes: ['pierre-light', 'pierre-dark'], langs: [] }));
 }, 1500);
+
+// And the comment editor's code (CodeMirror), so the first comment field shows it at once, not its plain stand-in.
+setTimeout(preloadCommentEditor, 2500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 exposePageZoom();

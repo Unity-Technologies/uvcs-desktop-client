@@ -8,12 +8,32 @@ export interface FieldChrome {
   error?: string;
 }
 
+interface FieldFrameProps extends FieldChrome {
+  id: string;
+  /** The label's own id, for a field named by `aria-labelledby` (one `htmlFor` can't name: a contenteditable). */
+  labelId?: string;
+  /** A press on the label, for a field `htmlFor` can't focus: it puts the caret in it itself. */
+  onLabelPress?: () => void;
+  children: React.ReactNode;
+}
+
 /** A field's label above it and its error, or else its hint, below. */
-export function FieldFrame({ id, label, hint, error, children }: FieldChrome & { id: string; children: React.ReactNode }) {
+export function FieldFrame({ id, labelId, onLabelPress, label, hint, error, children }: FieldFrameProps) {
   return (
     <div className={styles.field}>
       {label && (
-        <label className={styles.label} htmlFor={id}>
+        <label
+          className={styles.label}
+          htmlFor={id}
+          id={labelId}
+          onMouseDown={
+            onLabelPress &&
+            ((event) => {
+              event.preventDefault();
+              onLabelPress();
+            })
+          }
+        >
           {label}
         </label>
       )}

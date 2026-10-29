@@ -1,0 +1,7 @@
+/* Over dialogs and the suggestion list, as the app's tooltips are (`TooltipLayer.module.css`); the pointer passes
+   through, so leaving the chip closes it. */
+.card {
+  position: fixed;
+  z-index: 1100;
+  pointer-events: none;
+}

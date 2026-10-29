@@ -1,0 +1,271 @@
+.editor {
+  position: relative;
+}
+
+/* Focus mode's button (`useFocusMode`): in the corner, quiet until the field is hovered or focused. */
+.expand {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  z-index: 1;
+}
+
+.editor:hover .expand,
+.editor:focus-within .expand,
+.editor[data-focus-mode] .expand {
+  opacity: 1;
+}
+
+.expand:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.expand:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+/* The text keeps clear of the button. */
+.editor:not([data-single-line]) :global(.cm-editor .cm-content) {
+  padding-right: 22px;
+}
+
+/* In focus mode the button sits at the end of the toolbar's strip: the text, and a code block's box, take the
+   field's whole width, the same inset on both sides. */
+.editor[data-focus-mode] :global(.cm-editor .cm-content) {
+  padding-right: 0;
+}
+
+/* In focus mode the toolbar is the box's top strip, edge to edge: the box's own padding moves onto the text. */
+.editor[data-focus-mode] {
+  padding: 0 !important;
+}
+
+.editor[data-focus-mode] :global(.cm-editor) {
+  padding: var(--space-2) 10px;
+}
+
+/* The corner button, at the strip's end, centered on it, on the strip's tint. */
+.editor[data-focus-mode] .expand {
+  top: 5px;
+  right: 6px;
+  background: none;
+}
+
+.editor[data-focus-mode] .expand:hover {
+  background: var(--bg-hover);
+}
+
+/* CodeMirror inside a comment field's box, in the app's font and tokens. Its own theme is injected at run time with
+   selectors as specific as two classes, so these hold three to come first. */
+.editor :global(.cm-editor) {
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.editor :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+/* Lines wrap, so the text only ever scrolls down: CodeMirror's content keeps the width it had before a scrollbar
+   showed, which would scroll it sideways by the scrollbar's width. */
+.editor :global(.cm-editor .cm-scroller) {
+  font-family: inherit;
+  line-height: inherit;
+  overflow: hidden auto;
+}
+
+/* A one-line field wraps a long title over a few lines and scrolls past them, its scrollbar hidden: a chip's or an
+   emoji's glyph a pixel past the line would show one on a single line. */
+.editor[data-single-line] :global(.cm-editor .cm-scroller) {
+  scrollbar-width: none;
+}
+
+.editor :global(.cm-editor .cm-content) {
+  flex-shrink: 1;
+  min-width: 0;
+  padding: 0;
+  caret-color: var(--text-primary);
+}
+
+.editor :global(.cm-editor .cm-line) {
+  padding: 0;
+}
+
+.editor :global(.cm-editor .cm-placeholder) {
+  color: var(--text-tertiary);
+}
+
+/* Markdown as it reads (`markdownStyle`). */
+.editor :global(.cm-heading1) {
+  font-size: 1.3em;
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-heading2) {
+  font-size: 1.15em;
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-heading3),
+.editor :global(.cm-strong) {
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-emphasis) {
+  font-style: italic;
+}
+
+.editor :global(.cm-strikethrough) {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.editor :global(.cm-inlineCode) {
+  border-radius: var(--radius-sm);
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* Markdown's own marks, where the caret shows them. */
+.editor :global(.cm-markup) {
+  color: var(--text-tertiary);
+}
+
+.editor :global(.cm-linkText),
+.editor :global(.cm-linkText) * {
+  color: var(--accent-text);
+}
+
+.editor :global(.cm-editor .cm-quoteLine) {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.editor :global(.cm-editor .cm-codeLine),
+.editor :global(.cm-editor .cm-codeFirstLine),
+.editor :global(.cm-editor .cm-codeLastLine) {
+  padding: 0 var(--space-3);
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+  /* The field's size, as a shown comment's code block is (`Markdown.module.css`). */
+  font-size: 1em;
+}
+
+.editor :global(.cm-editor .cm-codeFirstLine) {
+  padding-top: var(--space-1);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.editor :global(.cm-editor .cm-codeLastLine) {
+  padding-bottom: var(--space-1);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* A code block's fences and language stay, dimmed, so the code stands out. */
+.editor :global(.cm-fence),
+.editor :global(.cm-fence) * {
+  color: var(--text-tertiary);
+}
+
+.editor :global(.cm-bullet) {
+  display: inline-block;
+  width: 1ch;
+  color: var(--text-secondary);
+}
+
+.editor :global(.cm-task) {
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: -2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* A key (`<kbd>`) as a keycap, as the shown comment draws one (`Markdown.module.css`). */
+.editor :global(.cm-key) {
+  padding: 0 4px;
+  border: 1px solid var(--border-default);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* The word typed after a trigger (`suggestionCue`): the field understood it, whatever the list does. It pulses gently
+   while its list is read; the durations drop to zero with reduced motion, and the pulse with them. */
+.editor :global(.cm-suggestionCue) {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.editor :global(.cm-suggestionCue[data-reading]) {
+  animation: var(--keyframes-pulse) calc(var(--duration-slow) * 2) ease-in-out infinite alternate;
+}
+
+/* A reference selected, shown as typed so typing replaces it. */
+.editor :global(.cm-typedReference) {
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.editor :global(.cm-chip) {
+  cursor: default;
+}
+
+/* A widget a selection covers: the browser's selection paints text, never what's drawn in its place (`selectionCovers`). */
+.editor :global(.cm-selectedWidget) :global(:is(.cm-chip, .cm-task, .cm-bullet)),
+.table[data-selected] {
+  border-radius: var(--radius-sm);
+  background: var(--bg-selected-strong);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* A table away from the caret, as the shown comment draws one (`Markdown.module.css`). */
+.table {
+  max-width: 100%;
+  padding: var(--space-1) 0;
+  overflow-x: auto;
+  cursor: text;
+}
+
+.table table {
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  overflow-wrap: normal;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--bg-subtle);
+  font-weight: var(--weight-semibold);
+}

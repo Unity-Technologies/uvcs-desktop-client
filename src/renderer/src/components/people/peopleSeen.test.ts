@@ -17,4 +17,13 @@ describe('peopleSeen', () => {
     expect(seen.remember('/work/game', 'labels', ['dora'])).toEqual(['dora']);
     expect(seen.remember('/work/game', 'changesets', [])).toEqual(['ana']);
   });
+
+  it('tells everyone the place’s lists showed, each once', () => {
+    const seen = createPeopleSeen();
+    seen.remember('/work/game', 'changesets', ['ana', 'ben']);
+    seen.remember('/work/game', 'labels', ['ben', 'dora']);
+    seen.remember('/work/web', 'changesets', ['carl']);
+
+    expect(seen.everyone('/work/game')).toEqual(['ana', 'ben', 'dora']);
+  });
 });

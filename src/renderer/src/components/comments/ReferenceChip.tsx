@@ -1,22 +1,15 @@
-import { Archive, File, GitBranch, GitCommitVertical, Link2, MessageSquareCode, Tag, type LucideIcon } from 'lucide-react';
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { chipContent, chipTip, emojiLabel, type ChipContent, type ChipIcon } from './chipContent';
-import { useCachedSummary } from './useCachedSummary';
+import { cachedRecordOf, summaryOf } from './cachedSummary';
+import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipContent } from './chipContent';
+import { cardDate, ChipHoverCard } from './ChipHoverCard';
+import { CHIP_ICONS } from './chipIcons';
+import { useCachedObject } from './useCachedObject';
+import { useRemoteObject } from './useRemoteObject';
 import styles from './ReferenceChip.module.css';
-
-const ICONS: Record<ChipIcon, LucideIcon> = {
-  changeset: GitCommitVertical,
-  branch: GitBranch,
-  label: Tag,
-  shelve: Archive,
-  codeReview: MessageSquareCode,
-  file: File,
-  link: Link2,
-};
 
 interface ReferenceChipProps {
   reference: CommentReference;
@@ -44,14 +37,17 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
       );
     case 'user':
       return (
-        <span className={styles.person} data-source={source} data-tip={chip.name}>
-          <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
-          {displayName(chip.name)}
-        </span>
+        <ChipHoverCard card={personCard(chip.name)}>
+          <span className={styles.person} data-source={source} data-tip="">
+            <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
+            {displayName(chip.name)}
+          </span>
+        </ChipHoverCard>
       );
     case 'object':
       return (
         <ObjectChip
+          reference={reference}
           placeRepository={placeRepository}
           cachedAs={chip.cachedAs}
           source={source}
@@ -67,12 +63,15 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
   }
 });
 
-type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & Omit<ReferenceChipProps, 'reference'> & { placeRepository: string | undefined };
+type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 
-function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
-  const summary = useCachedSummary(cachedAs);
-  const Icon = ICONS[icon];
+  const remote = useRemoteObject(reference, placeRepository);
+  const cached = useCachedObject(cachedAs) ?? remote.found;
+  const summary = cached && summaryOf(cached);
+  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unread), [title, repository, cached, remote.unread]);
+  const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.
     event.stopPropagation();
@@ -80,8 +79,8 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
     // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
-  const { tip, sub } = chipTip(title, summary, repository);
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': tip, 'data-tip-sub': sub };
+  // An empty `data-tip`: the app's tooltip of the row or cell around it gives way to the chip's card (`findTip`).
+  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
@@ -90,11 +89,19 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
       {!compact && summary && <span className={styles.summary}>{summary}</span>}
     </>
   );
-  if (!interactive) return <span {...shown}>{content}</span>;
+  if (!interactive) {
+    return (
+      <ChipHoverCard card={card} onOpenChange={remote.cardOpen}>
+        <span {...shown}>{content}</span>
+      </ChipHoverCard>
+    );
+  }
   return (
-    // In a row or a title the row's keys reach the object; only a full comment's chips are tab stops.
-    <a href="#" {...shown} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
-      {content}
-    </a>
+    <ChipHoverCard card={card} onOpenChange={remote.cardOpen}>
+      {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
+      <a href="#" {...shown} aria-label={chipName(title, compact ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+        {content}
+      </a>
+    </ChipHoverCard>
   );
 }

@@ -22,8 +22,11 @@ interface CommentLineProps {
 export const CommentLine = memo(function CommentLine({ comment, interactive = true, placeholder = null }: CommentLineProps) {
   const inlines = useMemo(() => commentLineInlines(comment), [comment]);
   if (inlines.length === 0) return placeholder;
-  return <span onCopy={copyAsSource}>{renderInlines(inlines, interactive)}</span>;
+  return <span onCopy={copyTitleAsSource}>{renderInlines(inlines, interactive)}</span>;
 });
+
+/** A line shows a comment's title only, never all of it: copying from it is a part's copy, with no source to give. */
+const copyTitleAsSource = copyAsSource();
 
 function renderInlines(inlines: readonly MarkdownInline[], interactive: boolean): ReactNode[] {
   return inlines.map((inline, index) => {

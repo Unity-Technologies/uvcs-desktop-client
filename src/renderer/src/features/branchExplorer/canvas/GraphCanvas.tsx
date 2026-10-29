@@ -11,7 +11,8 @@ import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
 import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
-import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
+import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
+import { wheelGoesTo } from './wheelTarget';
 import { graphExtent } from './laneShape';
 import { awayFromNewest, newestEnd } from './newestEnd';
 import { NewestEndButton } from './NewestEndButton';
@@ -211,6 +212,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     if (gesture.kind === 'pinch') return view.pinchZoom(x, y, gesture.factor);
     view.stop();
     view.panBy(gesture.dx, gesture.dy);
+  }, (event) => {
+    const inCaptionCard = event.target instanceof Element && event.target.closest(`[${CAPTION_CARD_ATTRIBUTE}]`) !== null;
+    const kind = wheelGesture(event).kind;
+    return wheelGoesTo({ inCaptionCard, zoom: kind === 'zoomStep' || kind === 'pinch' }) === 'card';
   });
 
   const localPoint = (clientX: number, clientY: number): { x: number; y: number } => {
@@ -235,7 +240,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   };
 
   /** In the hover card the pointer selects and copies its text. */
-  const inHoverCard = (event: React.SyntheticEvent): boolean => (event.target as Element).closest?.(`[${HOVER_CARD_ATTRIBUTE}]`) != null;
+  const inHoverCard = (event: React.SyntheticEvent): boolean => (event.target as Element).closest?.(`[${CAPTION_CARD_ATTRIBUTE}]`) != null;
 
   /** Floating controls over the canvas handle their own pointer events. */
   const onCanvas = (event: React.SyntheticEvent): boolean => event.target === canvasRef.current;

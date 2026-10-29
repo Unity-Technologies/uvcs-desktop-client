@@ -1,0 +1,93 @@
+/* Above a dialog (`Dialog.module.css`), as a combobox's list is (`Combobox.module.css`). */
+.list {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 16px));
+  max-height: 300px;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.option {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 6px 0 9px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* The row the keys are at, as the palette marks its own (`CommandPalette.module.css`): an outline in place of its
+   inset shadow, as the row never takes the focus itself (the field keeps it, `aria-activedescendant`). */
+.option[aria-selected='true'] {
+  background: var(--bg-hover);
+  outline: 1px solid var(--border-default);
+  outline-offset: -1px;
+}
+
+.lead {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+}
+
+.icon {
+  color: var(--accent-text);
+}
+
+.emoji {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', var(--font-ui);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+}
+
+.detail {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+
+.owner {
+  flex: none;
+  max-width: 30%;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+
+.searchAll {
+  color: var(--accent-text);
+}
+
+.note {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  color: var(--text-tertiary);
+}

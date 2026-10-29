@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { EMPTY_SELECTION } from '../../lib/selection';
 import { checkinFromPanel, shelveFromPanel, type PanelCheckin, type WhileRunning } from './submitCheckinPanel';
 
@@ -16,7 +17,7 @@ interface CheckinPanelSubmit {
  * What the check-in panel's button runs, and whether it is running. A check-in waiting for a comment puts the caret in
  * the summary (writing one is the way on); one that made a changeset leaves nothing selected.
  */
-export function useCheckinPanelSubmit(request: PanelCheckin, shelvable: PendingChange[], summaryRef: RefObject<HTMLInputElement | null>): CheckinPanelSubmit {
+export function useCheckinPanelSubmit(request: PanelCheckin, shelvable: PendingChange[], summaryRef: RefObject<CommentFieldHandle | null>): CheckinPanelSubmit {
   const [busy, setBusy] = useState(false);
   const [, setSelection] = useViewSelection('changes');
 

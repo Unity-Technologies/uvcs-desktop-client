@@ -32,7 +32,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images |
+| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 
 ## How a request flows
 
@@ -75,7 +75,9 @@ you touch:
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
-   logged: it's no failure.
+   logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
+   `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
+   (`repositoriesService`), a workspace's repository (`workspaceRepositories`).
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -558,7 +560,12 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the places below, and nothing else.
+Besides `cm`, which talks to the user's own servers, the app reaches the places below, and nothing else. A comment
+can name an object on another server (`cs:4@game@build.example.com:8087`): its chip reads it from that server only
+when it's one the user already works with (one of their profiles, `serverReads`) and only when the chip's card opens,
+on hover or keyboard focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "What a chip
+reads"). A server the user doesn't use is never contacted, as `cm` would sign in there with their own credentials,
+and a comment never makes the app contact another server by being shown.
 There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
@@ -935,9 +942,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
     the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
-    replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
-    uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    replaces. A heavy library (Pierre, Shiki, three.js, CodeMirror) loads on first use, behind a `lazyComponent` at the
+    leaf that uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
+    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`, `CommentField`'s `LiveCommentEditor`), whose fallback looks
+    as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
@@ -1044,8 +1052,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
-  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
-  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
+  (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
+  comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per

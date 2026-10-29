@@ -1,40 +1,12 @@
+/* Where the card (`HoverCard`) opens by the pointer. */
 .tooltip {
   position: absolute;
-  width: max-content;
-  max-width: 340px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface-raised);
-  box-shadow: var(--shadow-md);
   pointer-events: none;
-  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
   z-index: 10;
 }
 
 .tooltip[data-flip='true'] {
   transform: translateX(-100%);
-}
-
-.title {
-  font-weight: 600;
-  font-size: var(--text-sm);
-}
-
-.body {
-  margin-top: 2px;
-  color: var(--text-secondary);
-  white-space: pre-line;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.meta {
-  margin-top: 4px;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
 }
 
 /*
@@ -44,6 +16,8 @@
  */
 .card {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   width: max-content;
   padding: 6px 9px;
   border: 1px solid var(--border-strong);
@@ -70,15 +44,15 @@
   display: inline-block;
 }
 
+/* A long comment scrolls in the card, which stops at the window's bottom (`captionCardMaxHeight`): the pointer can
+   reach it, and a line clamp can't cut Markdown's blocks (a table, code). */
 .cardBody {
+  min-height: 0;
   margin-top: 5px;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   line-height: 1.5;
   white-space: normal;
   overflow-wrap: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 14;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-y: auto;
 }

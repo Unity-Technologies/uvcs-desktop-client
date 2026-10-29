@@ -23,6 +23,11 @@ describe('summaryIn', () => {
     expect(summaryIn([{ id: 12, comment: "The xlinked repository's changeset" }], { kind: 'changeset', id: 12 })).toBeUndefined();
   });
 
+  it("takes the summary of a changeset looked up alone in the place's own repository (a number typed in a comment)", () => {
+    expect(summaryIn([], { kind: 'changeset', id: 1 }, { id: 1, comment: 'Initial project' })).toBe('Initial project');
+    expect(summaryIn([], { kind: 'changeset', id: 2 }, { id: 1, comment: 'Initial project' })).toBeUndefined();
+  });
+
   it('reads each list once, however many chips look in it', () => {
     const { array, reads } = countedArray(Array.from({ length: 1000 }, (_, index) => ({ id: index, comment: `Changeset ${index}` })));
     for (let id = 0; id < 50; id++) summaryIn([array], { kind: 'changeset', id });
