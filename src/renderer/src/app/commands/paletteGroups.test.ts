@@ -17,6 +17,7 @@ import type { ResultContext } from './objectResults';
 import {
   lacksServerMatch,
   MAX_PER_SECTION,
+  paletteBranches,
   paletteGroups,
   searchesServerFor,
   type CachedLists,
@@ -280,6 +281,49 @@ describe('paletteGroups finding branches and labels by their description', () =>
     const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
 
     expect(labelsIn(groups, 'labels')).toEqual(['v1.0']);
+  });
+});
+
+describe('paletteGroups finding hidden branches', () => {
+  const hidden = (id: number, name: string, comment = ''): Branch => ({ ...branch(id, name), comment, isHidden: true });
+  const visible = (id: number, name: string, comment = ''): Branch => ({ ...branch(id, name), comment });
+  const branchResults = (search: Search) => groupsFor(search).find((group) => group.section === 'branches')?.results ?? [];
+  const resolved = hidden(9, '/main/scm1042', 'Resolve owner names in one batch');
+
+  it('finds a hidden branch by its name, its number and its description, marked hidden', () => {
+    for (const term of ['scm1042', '1042', 'owner names']) {
+      const [result] = branchResults({ term, lists: { branches: branches(...paletteBranches([visible(1, '/main/other')], [resolved])) } });
+      expect(result).toMatchObject({ label: '/main/scm1042', isHidden: true });
+    }
+  });
+
+  it('marks only the hidden ones', () => {
+    const results = branchResults({ term: 'task', lists: { branches: branches(...paletteBranches([visible(1, '/main/task')], [])) } });
+
+    expect(results.map((result) => result.isHidden ?? false)).toEqual([false]);
+  });
+
+  it('ranks a hidden branch after a visible one of equal match, by name or by description', () => {
+    const byName = branches(...paletteBranches([visible(1, '/main/a/fix')], [hidden(2, '/main/b/fix')]));
+    const byNameHiddenFirst = branches(hidden(2, '/main/b/fix'), visible(1, '/main/a/fix'));
+    const byDescription = branches(hidden(3, '/main/x', 'Batch the lookups'), visible(4, '/main/y', 'Batch the lookups'));
+
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists: { branches: byName } })), 'branches')).toEqual(['/main/a/fix', '/main/b/fix']);
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists: { branches: byNameHiddenFirst } })), 'branches')).toEqual(['/main/a/fix', '/main/b/fix']);
+    expect(labelsIn(rankGroups(groupsFor({ term: 'batch', lists: { branches: byDescription } })), 'branches')).toEqual(['/main/y', '/main/x']);
+  });
+
+  it('ranks a hidden branch that matches better before a visible one that matches less well', () => {
+    const lists = { branches: branches(visible(1, '/main/fix-later'), hidden(2, '/main/fix')) };
+
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists })), 'branches')).toEqual(['/main/fix', '/main/fix-later']);
+  });
+
+  it('finds the current branch while it is hidden, marked current and hidden, and lists it first without a search', () => {
+    const lists = { branches: branches(...paletteBranches([visible(1, '/main/newer')], [resolved])) };
+
+    expect(branchResults({ term: '1042', currentBranch: '/main/scm1042', lists })[0]).toMatchObject({ isCurrent: true, isHidden: true });
+    expect(branchResults({ currentBranch: '/main/scm1042', lists })[0]).toMatchObject({ label: '/main/scm1042', isCurrent: true, isHidden: true });
   });
 });
 
