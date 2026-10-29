@@ -70,9 +70,9 @@ wait in their shelve, offered by "Welcome back" as "put aside to load an xlink".
 the changes back; one before they are shelved leaves them as they were and says why ("Check them in first" for
 changes inside another xlink).
 
-Waiting for `cm` to refuse, with `--machinereadable`, would have left the changes alone when `cm` would leave them, but
-`--machinereadable` turns the progress bar off, and the refusal's words are localized: any failed update with changes
-pending looked like one.
+Not done: updating with `--machinereadable`, which makes `cm` refuse instead of shelving, and putting changes aside
+only on a refusal. It leaves them alone where `cm`'s setting would, but `--machinereadable` turns the progress bar off,
+and the refusal's words are localized, so any failed update with changes pending reads as one.
 
 Once `cm xlink` made it, the xlink exists whatever comes next: a later step that fails ends the operation with what
 it is now (`CreatedXlink`: not checked in, a pending change to check in from Changes; or checked in without its
