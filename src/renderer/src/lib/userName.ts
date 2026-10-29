@@ -8,9 +8,11 @@ export function displayName(user: string): string {
     .join(' ');
 }
 
+/** `jane.doe` → `JD`; a one-word name gives its first two letters (`danipen` → `DA`), as the other UVCS clients show it. */
 export function initials(user: string): string {
-  const words = displayName(user).split(' ');
-  return ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase() || '?';
+  const [first = [], second] = displayName(user).split(' ').map((word) => Array.from(word));
+  const letters = second ? [first[0], second[0]] : first.slice(0, 2);
+  return letters.join('').toUpperCase() || '?';
 }
 
 /** What a filter matches a user by: the name shown (which `UserLabel` highlights), and the user as stored. */
