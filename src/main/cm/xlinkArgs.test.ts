@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { NewXlink } from '@shared/domain/xlinks';
 import { repositoryFolder } from '@shared/domain/xlinks';
-import { createXlinkArgs, labelChangesetArgs, repositoryFolderArgs, xlinkPointSpec, xlinkRuleArg, xlinkTreeSpec } from './xlinkArgs';
+import { createXlinkArgs, loadXlinkArgs, labelChangesetArgs, repositoryFolderArgs, xlinkPointSpec, xlinkRuleArg, xlinkTreeSpec } from './xlinkArgs';
 import { TREE_ITEM_FORMAT } from './treeItems';
 
 const LIB = join('wk', 'code', 'lib');
@@ -76,5 +76,18 @@ describe('The tree of the repository an xlink points to', () => {
   it('lists one folder at a time, rooted at /', () => {
     expect(repositoryFolderArgs('Assets/Lib', 'cs:4@lib@local')).toEqual(['ls', '/Assets/Lib', '--tree=cs:4@lib@local', TREE_ITEM_FORMAT]);
     expect(repositoryFolderArgs('/', 'cs:4@lib@local')[1]).toBe('/');
+  });
+});
+
+describe('Loading a checked-in xlink’s files', () => {
+  const WORKSPACE = join('wkspaces', 'game');
+
+  // Updating the xlink's own folder fails for one showing a folder of its repository ("Can't move  to <folder>").
+  it('updates the folder holding the xlink, never its own', () => {
+    expect(loadXlinkArgs(WORKSPACE, 'code/lib')).toEqual(['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge']);
+  });
+
+  it('updates the workspace’s root, named, for an xlink at the root', () => {
+    expect(loadXlinkArgs(WORKSPACE, 'lib')[1]).toBe(join(WORKSPACE));
   });
 });

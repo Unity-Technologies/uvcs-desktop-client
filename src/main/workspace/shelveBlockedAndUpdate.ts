@@ -1,5 +1,4 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
-import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { UPDATE_ARGS } from '../cm/updateArgs';
@@ -8,7 +7,7 @@ import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import { shelvedContents } from './pendingSnapshot';
-import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
+import { changesPutBackError, failureReason } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
@@ -62,13 +61,6 @@ export async function shelveBlockedAndUpdate(
     await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
-    throw await updateFailed(deps, workspacePath, record, error, context);
+    throw await changesPutBackError(deps, workspacePath, record, `Couldn't update: ${failureReason(error)}`, context);
   }
-}
-
-/** Puts the shelved files back after a failed undo or update, and says where they are. */
-async function updateFailed(deps: ShelveFlowDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
-  const failure = `Couldn't update: ${failureReason(cause)}`;
-  if (await putBackAfterFailure(deps, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
-  return new Error(`${failure}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
 }

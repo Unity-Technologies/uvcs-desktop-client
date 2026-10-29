@@ -40,6 +40,11 @@ export interface WorkspaceScenario {
   shelvesOnServer?: { id: number; comment: string; changes: Record<string, string> }[];
   /** Branches `cm find branch` finds; every branch of `BRANCH_IDS` by default. */
   knownBranches?: string[];
+  /**
+   * `cm update <folder>` refuses while changes are pending, as a `cm` whose PendingChangesOnSwitchAction asks to shelve
+   * them does with `--machinereadable`; otherwise it updates the folder and leaves them, as by default.
+   */
+  updateRefusesPendingChanges?: boolean;
   fail?: {
     /** `cm shelveset create` leaves this path out of the shelve. */
     shelveMisses?: string;
@@ -56,6 +61,8 @@ export interface WorkspaceScenario {
     shelveConflicts?: number;
     /** Merging a shelve into the workspace fails. */
     shelveMerge?: string;
+    /** `cm update` fails with these words. */
+    update?: string;
   };
   /** A private file the switch finds in the way of a file it writes, and renames `<path>.private.0`. */
   privateInTheWay?: string;
@@ -94,6 +101,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   const privatePaths = new Set<string>(Object.keys(pending).filter((path) => pending[path] === 'PR'));
   const shelves = new Map<number, Shelve>((scenario.shelvesOnServer ?? []).map(({ id, comment, changes }) => [id, { comment, changes, addedContents: {} }]));
   const deletedShelves: number[] = [];
+  /** The folders `cm update` updated, as workspace paths. */
+  const updatedFolders: string[] = [];
   let nextShelveId = 7;
 
   const onDisk = (path: string): string => join(workspacePath, ...path.split('/'));
@@ -152,6 +161,16 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     return '';
   };
 
+  const update = ({ args }: FakeCmCommand): string | CmFailure => {
+    if (fail.update) return cmFails(fail.update);
+    if (scenario.updateRefusesPendingChanges && Object.values(pending).some((codes) => codes !== 'PR')) {
+      return cmFails('The workspace cannot be updated since there are pending changes. Please review the pending changes and retry the operation again.');
+    }
+    const folder = args.slice(1).find((arg) => !arg.startsWith('-'));
+    updatedFolders.push(folder ? relative(folder) : '');
+    return '';
+  };
+
   const mergeShelve = ({ args }: FakeCmCommand): string | CmFailure => {
     const shelve = shelves.get(Number(args[1]!.slice('sh:'.length)))!;
     if (args.includes('--merge')) {
@@ -198,6 +217,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
         .join(''),
     undo,
     switch: switchTo,
+    update,
     merge: mergeShelve,
     'lock list': () =>
       formatOutput(
@@ -224,6 +244,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     shelves: (): number[] => [...shelves.keys()],
     shelveComment: (id: number): string | undefined => shelves.get(id)?.comment,
     deletedShelves,
+    updatedFolders,
     changelists: () => changelists,
   };
 }

@@ -85,7 +85,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),
-    xlinks: createXlinksService(context),
+    xlinks: createXlinksService(context, switching),
   };
 }
 

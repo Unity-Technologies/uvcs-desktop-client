@@ -76,7 +76,7 @@ export interface SwitchShelveRecord {
   source: { spec: string; name: string; objectRef: string };
   target: { spec: string; name: string };
   mode: PendingChangesAction;
-  /** Set when the changes were put aside to update, or shelved away by the user (see `ShelvedChangesReason`); absent: a switch. */
+  /** Set when the changes were put aside to update or to load an xlink, or shelved away by the user (see `ShelvedChangesReason`); absent: a switch. */
   reason?: ShelvedChangesReason;
   createdAt: string;
   /** Workspace paths in the shelve. */
@@ -87,11 +87,12 @@ export interface SwitchShelveRecord {
 }
 
 /**
- * Why the app shelved changes: to switch away, to update past incoming changesets that deleted or moved
- * files changed locally (`cm update` can't merge those), or because the user shelved them away (Shelve undoes what it
- * shelves). Only the first two are left changes, offered by "Welcome back"; all of them are put back the same way.
+ * Why the app shelved changes: to switch away, to update past incoming changesets that deleted or moved files changed
+ * locally (`cm update` can't merge those), to load an xlink's files, which `cm` may refuse with changes pending
+ * (`loadXlink`), or because the user shelved them away (Shelve undoes what it shelves). All but the last are left
+ * changes, offered by "Welcome back"; all of them are put back the same way.
  */
-type ShelvedChangesReason = 'switch' | 'update' | 'shelve';
+type ShelvedChangesReason = 'switch' | 'update' | 'xlink' | 'shelve';
 
 /** Shelved changes waiting for the user on the workspace's current selector. */
 export interface LeftChanges {

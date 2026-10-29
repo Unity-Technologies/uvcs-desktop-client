@@ -31,8 +31,8 @@ import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { listedItems } from './directoryListing';
-import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, type XlinkSurroundings } from './xlinkItem';
-import { createXlink, editXlink } from '../xlinks/xlinkOperations';
+import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, unloadedXlinkOf, type XlinkSurroundings } from './xlinkItem';
+import { createXlink, editXlink, loadXlinkFiles } from '../xlinks/xlinkOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
@@ -93,6 +93,8 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
   const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
+  const unloadedXlink =
+    single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
@@ -102,6 +104,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
+    unloadedXlink && menuAction('loadXlink', () => void loadXlinkFiles(workspacePath, unloadedXlink.path)),
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),

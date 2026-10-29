@@ -1,18 +1,28 @@
+import { existsSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import type { NewXlink } from '@shared/domain/xlinks';
+import { describe, expect, it, vi } from 'vitest';
 import { FOUND_LABELS } from '../cm/foundObjects';
 import { recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
+import { playAlongDependencies } from '../workspace/testing/playAlongDependencies';
+import { playAlongWorkspace } from '../workspace/testing/playAlongWorkspace';
+import type { SwitchContext } from './ServiceContext';
+import { readingFileOption } from './testing/readingFileOption';
+import { serviceContext } from './testing/serviceContext';
 import { createXlinksService } from './xlinksService';
+
+vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }));
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const LIB = join(WORKSPACE, 'code', 'lib');
 
 function xlinks(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createXlinksService({ cm: fake.cm }) };
+  return { ...fake, service: createXlinksService(serviceContext(fake.cm), {} as SwitchContext) };
 }
 
 describe('Reading an xlink’s rules', () => {
@@ -29,28 +39,88 @@ describe('Reading an xlink’s rules', () => {
 });
 
 describe('Creating an xlink', () => {
-  it('runs one quick cm xlink at its folder in the workspace', async () => {
-    const { service, commands } = xlinks({ xlink: '' });
+  const ENGINE: NewXlink = {
+    path: 'code/lib',
+    repository: 'lib@local',
+    point: { kind: 'branch', branch: '/main' },
+    writable: true,
+    relativeServer: false,
+    folder: '/',
+    rules: [{ from: '/main/task', to: '/main/dev' }],
+  };
+  const CHECKED_IN = `CI_START\nAD ${LIB}\nCHANGESET cs:3@br:/main@game@local (mount:'/')\n`;
 
-    await service.create(WORKSPACE, {
-      path: 'code/lib',
-      repository: 'lib@local',
-      point: { kind: 'branch', branch: '/main' },
-      writable: true,
-      relativeServer: false,
-      folder: '/',
-      rules: [{ from: '/main/task', to: '/main/dev' }],
-    });
+  it('creates it, checks in it alone with the comment, and loads its files with an update of its folder', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', CHECKED_IN);
+    const { service, commands } = xlinks({ xlink: '', checkin: answer, update: '' });
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['xlink', '-w', LIB, '/', 'br:/main@lib@local', 'br:/main/task-br:/main/dev'] }]);
+    expect(await service.create(WORKSPACE, ENGINE, 'Add the engine', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3 });
+
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['xlink', '-w', LIB, '/', 'br:/main@lib@local', 'br:/main/task-br:/main/dev'] },
+      { via: 'execute', args: ['checkin', LIB, '--all', '--dependencies', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'], options: { cwd: WORKSPACE } },
+      { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
+    ]);
+    expect(seen.content).toBe('Add the engine');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('fails with cm’s words, as when the folder holding it isn’t controlled', async () => {
-    const { service } = xlinks({ xlink: cmFails(`${join(WORKSPACE, 'code')} is not in a workspace.`) });
+    const { service, commands } = xlinks({ xlink: cmFails(`${join(WORKSPACE, 'code')} is not in a workspace.`) });
 
-    const created = service.create(WORKSPACE, { path: 'code/lib', repository: 'lib@local', point: { kind: 'changeset', changeset: 1 }, writable: false, relativeServer: false, folder: '/', rules: [] });
+    const created = service.create(WORKSPACE, { ...ENGINE, writable: false, rules: [] }, 'c', 'op-1');
 
     await expect(created).rejects.toThrow('is not in a workspace');
+    expect(commands).toHaveLength(1);
+  });
+
+  it('keeps the xlink as a pending change when it can’t be checked in, and says why', async () => {
+    const { service, ran } = xlinks({ xlink: '', checkin: cmFails('The server is unreachable.') });
+
+    expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notCheckedIn', reason: 'The server is unreachable' });
+    expect(ran('update')).toBe(false);
+  });
+
+  it('says its files didn’t load once it is checked in, and why', async () => {
+    const { service } = xlinks({ xlink: '', checkin: CHECKED_IN, update: cmFails('The server is unreachable.'), status: '' });
+
+    expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notLoaded', changesetId: 3, reason: 'The server is unreachable' });
+  });
+
+  it('says so in plain words when cm checks in nothing', async () => {
+    const { service } = xlinks({ xlink: '', checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
+
+    expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notCheckedIn', reason: 'Nothing was checked in' });
+  });
+
+  it('names the shelve the changes put aside to load its files wait in, when they don’t come back on their own', async () => {
+    const workspacePath = join(await mkdtemp(join(tmpdir(), 'uvcs-xlink-create-')), 'wk');
+    const workspace = playAlongWorkspace(workspacePath, { pending: { 'src/a.txt': 'CH' }, updateRefusesPendingChanges: true, fail: { shelveConflicts: 1 } });
+    const { deps } = playAlongDependencies(workspace.cm, workspacePath);
+    // The play-along workspace knows no xlinks: creating and checking in this one answer as cm does.
+    const play = { query: workspace.cm.query.bind(workspace.cm), execute: workspace.cm.execute.bind(workspace.cm) };
+    workspace.cm.query = (args, options) => (args[0] === 'xlink' ? Promise.resolve('') : play.query(args, options));
+    workspace.cm.execute = (args, options) => (args[0] === 'checkin' ? Promise.resolve(CHECKED_IN) : play.execute(args, options));
+    const service = createXlinksService(serviceContext(workspace.cm), { switchShelves: deps.records, leftChanges: deps.leftChanges });
+
+    expect(await service.create(workspacePath, ENGINE, 'c', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3, changesWaitIn: 7 });
+    expect(workspace.updatedFolders).toEqual(['code']);
+  });
+
+});
+
+describe('Loading a checked-in xlink’s files', () => {
+  it('updates its folder alone, as an operation', async () => {
+    const { service, commands } = xlinks({ update: '' });
+
+    expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
+    expect(commands).toMatchObject([{ via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'] }]);
+  });
+
+  it('fails with what went wrong: nothing exists to tell apart from it', async () => {
+    const { service } = xlinks({ update: cmFails('The server is unreachable.'), status: '' });
+
+    await expect(service.load(WORKSPACE, 'code/lib', 'op-1')).rejects.toThrow('The server is unreachable.');
   });
 });
 

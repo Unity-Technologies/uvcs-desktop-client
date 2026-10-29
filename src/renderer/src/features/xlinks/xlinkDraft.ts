@@ -37,12 +37,14 @@ export interface XlinkDraft {
   relativeServer: boolean;
   folder: string;
   rules: RuleRow[];
+  /** A new xlink's checkin comment; empty takes `commentPlaceholder`'s. */
+  comment: string;
 }
 
 export function draftOf(target: XlinkDialogTarget): XlinkDraft {
   if (target.kind === 'create') {
     // An xlink most often follows the other repository's main line: its latest changeset.
-    return { name: '', repository: null, pointKind: 'branch', point: '/main', writable: false, relativeServer: false, folder: '/', rules: [] };
+    return { name: '', repository: null, pointKind: 'branch', point: '/main', writable: false, relativeServer: false, folder: '/', rules: [], comment: '' };
   }
   const { xlink, rules } = target;
   return {
@@ -54,6 +56,7 @@ export function draftOf(target: XlinkDialogTarget): XlinkDraft {
     relativeServer: false,
     folder: xlink.path,
     rules: rules.map((rule, index) => ({ key: index, from: rule.from, to: rule.to, automatic: !rule.userDefined })),
+    comment: '',
   };
 }
 
@@ -105,6 +108,8 @@ export interface XlinkDialogFields {
   title: string;
   description: string;
   saveLabel: string;
+  /** The comment a new xlink is checked in with when none is typed: it names the xlink. */
+  commentPlaceholder: string;
   /** Only a new xlink is named, given its repository and made writable or not: `cm` changes only where one points. */
   isNew: boolean;
   /** Only a read-only xlink shows a folder of its repository (`cm`: "Only xlinks to root (/) are currently supported for writable Xlinks"). */
@@ -164,7 +169,8 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
   return {
     title: isNew ? 'New xlink' : `Edit xlink ${target.name}`,
     description: isNew ? descriptionOfNew(target.directory) : descriptionOfEdited(target),
-    saveLabel: isNew ? 'Create xlink' : 'Save',
+    saveLabel: isNew ? 'Create and check in' : 'Save',
+    commentPlaceholder: isNew ? defaultCommentOf(target.directory, draft) : '',
     isNew,
     showsFolder: isNew && !draft.writable,
     showsRules: draft.writable,
@@ -220,8 +226,20 @@ function descriptionOfEdited({ xlink, added }: Extract<XlinkDialogTarget, { kind
 }
 
 function descriptionOfNew(directory: string): string {
-  return `A folder in /${directory} showing another repository. Its files come once it’s checked in and the workspace updated.`;
+  return `A folder in /${directory} showing another repository. It’s checked in as it’s created, so its files show at once.`;
 }
+
+function defaultCommentOf(directory: string, draft: XlinkDraft): string {
+  const name = draft.name.trim();
+  return name ? `Add xlink ${xlinkPathOf(directory, name)}` : 'Add xlink';
+}
+
+/** The comment the new xlink is checked in with: the one typed, or the one that names it. */
+export function checkinCommentOf(directory: string, draft: XlinkDraft): string {
+  return draft.comment.trim() || defaultCommentOf(directory, draft);
+}
+
+const xlinkPathOf = (directory: string, name: string): string => (directory ? `${directory}/${name}` : name);
 
 /** Where the draft points, once it names a point. */
 export function pointOf({ pointKind, point }: Pick<XlinkDraft, 'pointKind' | 'point'>): XlinkPoint | undefined {
@@ -267,9 +285,8 @@ function ruleProblems(rows: readonly RuleRow[]): Map<number, string> {
 
 /** The xlink to create in `directory`; call once `xlinkDialogFields` finds no problem. */
 export function newXlinkOf(directory: string, draft: XlinkDraft): NewXlink {
-  const name = draft.name.trim();
   return {
-    path: directory ? `${directory}/${name}` : name,
+    path: xlinkPathOf(directory, draft.name.trim()),
     repository: draft.repository!,
     point: pointOf(draft)!,
     writable: draft.writable,

@@ -9,7 +9,7 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import fieldStyles from '../../ui/Field.module.css';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { TextField } from '../../ui/TextField';
+import { TextArea, TextField } from '../../ui/TextField';
 import { PickField } from './PickField';
 import styles from './XlinkDialog.module.css';
 import {
@@ -96,6 +96,7 @@ function XlinkDialog({ target, save, onClose }: { target: XlinkDialogTarget; sav
         <PickField label="Folder of the repository" value={draft.folder} placeholder="/" hint="The xlink shows only this folder." source={fields.folderSource} onChange={(folder) => change({ folder })} />
       )}
       {fields.showsRules && <ExpansionRules draft={draft} fields={fields} update={setDraft} />}
+      {fields.isNew && <TextArea label="Comment" value={draft.comment} placeholder={fields.commentPlaceholder} onChange={(event) => change({ comment: event.target.value })} />}
     </Dialog>
   );
 }
