@@ -27,9 +27,8 @@ export class WindowWrites {
    * The windows are asked again on each round, as the set grows (a page window opened meanwhile).
    */
   async finishedIn(windowIds: () => readonly number[]): Promise<void> {
-    while (this.runningIn(windowIds())) {
-      const running = windowIds().flatMap((windowId) => [...(this.running.get(windowId) ?? [])]);
-      await Promise.allSettled(running);
+    for (let windows = windowIds(); this.runningIn(windows); windows = windowIds()) {
+      await Promise.allSettled(windows.flatMap((windowId) => [...(this.running.get(windowId) ?? [])]));
     }
   }
 }
