@@ -9,6 +9,8 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { serverMergeLabel } from '../../components/mergeMenuLabels';
 import { menuAction, type MenuHost } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { showBranchChangesets } from '../changesets/showBranchChangesets';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
@@ -73,6 +75,7 @@ export function branchMenu(place: Place, branches: BranchInfo[], currentBranch: 
     single && menuAction('changesets', () => showBranchChangesets(place, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
+    toolsSubmenu(place, branches.map(toolSubject.branch)),
     single && copySubmenu('Branch', branchCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(place, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(place, 'branch', single)),

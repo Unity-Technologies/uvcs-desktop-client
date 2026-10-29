@@ -7,6 +7,8 @@ import type { MenuEntry } from '../../lib/actions';
 import { copySubmenu } from '../../components/copyMenu';
 import { openRevisionEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { groupedMenu } from '../../lib/menuGroups';
 import { fileNameOf } from '../../lib/text';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
@@ -47,6 +49,7 @@ export function historyMenu({ place, path, ofWorkspaceFile, otherRepository, ann
       ),
     ...(isFile ? openRevisionEntries((editorId) => openRevision(place, revisionRef(revision), name, editorId)) : []),
     isFile && menuAction('saveAs', () => void saveRevisionAs(place, revisionRef(revision), name)),
+    toolsSubmenu(place, selected.flatMap((selectedRow) => (selectedRow.kind === 'revision' && selectedRow.revision.itemType !== 'directory' ? [toolSubject.revision(revisionRef(selectedRow.revision), name)] : []))),
     revision &&
       copySubmenu('Revision', {
         path,

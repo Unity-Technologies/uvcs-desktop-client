@@ -9,6 +9,8 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, type MenuHost } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
@@ -57,7 +59,7 @@ export function changesetCopyTexts(place: Place, changeset: ChangesetInfo, repos
  */
 export function changesetMenu(context: ChangesetMenuContext, selected: ChangesetInfo[], host: MenuHost = {}): MenuEntry[] {
   if (selected.length === 1) return singleChangesetMenu(context, selected[0]!, host);
-  if (selected.length === 2) return intervalMenu(selected, workspacePathOf(context.place) !== null);
+  if (selected.length === 2) return intervalMenu(context, selected);
   return [];
 }
 
@@ -89,6 +91,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
     !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
+    toolsSubmenu(place, [toolSubject.changeset(changeset, context.repository)]),
     copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), { shortcut: keys.copy, linkShortcut: keys.copyLink }),
     menuAction('editComment', () => void editChangesetComment(place, changeset)),
     menuAction('move', () => void moveChangesetToBranch(place, changeset)),
@@ -96,8 +99,9 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
   ]);
 }
 
-/** Two changesets: their diff, and with a workspace to merge into, cherry picking or subtracting the range. */
-function intervalMenu(selected: ChangesetInfo[], inWorkspace: boolean): MenuEntry[] {
+/** Two changesets: their diff, with a workspace to merge into cherry picking or subtracting the range, and the tools on both. */
+function intervalMenu(context: ChangesetMenuContext, selected: ChangesetInfo[]): MenuEntry[] {
+  const inWorkspace = workspacePathOf(context.place) !== null;
   const [older, newer] = [...selected].sort((a, b) => a.id - b.id) as [ChangesetInfo, ChangesetInfo];
   const range = `${older.id}–${newer.id}`;
   // The interval origin is exclusive; starting at the older changeset's parent includes it.
@@ -107,5 +111,6 @@ function intervalMenu(selected: ChangesetInfo[], inWorkspace: boolean): MenuEntr
     menuAction('diffRange', () => openRangeDiff(older, newer), { label: `Open diff of changesets ${older.id} and ${newer.id}` }),
     inWorkspace && menuAction('cherryPickRange', () => openMerge({ kind: 'cherryPick', ...interval }), { label: `Cherry pick changesets ${range}` }),
     inWorkspace && menuAction('subtractiveRange', () => openMerge({ kind: 'subtractive', ...interval }), { label: `Subtractive merge of changesets ${range}` }),
+    toolsSubmenu(context.place, selected.map((changeset) => toolSubject.changeset(changeset, context.repository))),
   ]);
 }
