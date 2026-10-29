@@ -9,7 +9,7 @@ import { SEPARATOR, type Action, type MenuEntry, type Submenu } from './actions'
  * - `merge`: merging it somewhere: into the workspace, to its parent, to another branch, cherry picks.
  * - `create`: new things from it: a branch, a label, a code review, a file.
  * - `navigate`: other views of it: its history, annotations, repository tree, place in the Branch Explorer.
- * - `external`: the OS: save a copy of a revision.
+ * - `external`: the OS and the user's own programs: save a copy of a revision, "Tools ▸".
  * - `clipboard`: its one "Copy" submenu (names, specs and paths), and Cut and Paste where items move.
  * - `edit`: what it is called, says or is filed under: rename, comments, changelists, ignore rules, hiding.
  * - `danger`: what undoes or deletes it, last.

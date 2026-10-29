@@ -79,6 +79,7 @@ import {
   Trash2,
   Undo2,
   UserPlus,
+  Wrench,
   X,
 } from 'lucide-react';
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
@@ -226,8 +227,9 @@ export const MENU_WORDS = {
   source: word('navigate', ArrowLeftToLine, 'Go to source changeset'),
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
-  // The OS.
+  // The OS, and the user's own programs (docs/features/tools.md).
   saveAs: word('external', Download, 'Save this revision as…'),
+  tools: word('external', Wrench, 'Tools'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),
