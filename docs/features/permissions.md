@@ -33,7 +33,7 @@ can't show.
 | ----------------------- | ------------------------------------------------------------------------------------------- | ------- |
 | Read a list and parents | `cm showacl <spec> --extended`                                                              | `query` |
 | Read the owner          | `cm showowner <spec>`, only when the list the object came from didn't read it (`knownOwner`) | `query` |
-| Groups and users        | `cm listusers <server> --onlygroups` / `--onlyusers` [`--filter=`]                          | `query` |
+| Groups and users        | `cm listusers <server> --onlygroups` / `--onlyusers` [`--filter=`]; mentions too (below)    | `query` |
 | Set an entry            | `cm acl --user=\|--group= -allowed=+a,-b -denied=… -overrideallowed=… -overridedenied=… <spec>` | `query` |
 | Set the owner           | `cm setowner --user=\|--group= <spec>`                                                       | `query` |
 | Remove a secured path   | `cm acl --delete path:…`                                                                    | `query` |
@@ -61,6 +61,9 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
   permissions again and what went through drops out of its changes.
 - **`cm acl --user=` or `--group=` must match** what the member is, and `cm showacl` doesn't say: the server's groups
   (`cm listusers --onlygroups`, once a session) tell them apart (`memberRef`).
+- **A comment's mention searches the same users** (`cm listusers --onlyusers --filter=`, the picker's own query,
+  `useMemberNames`), and reads none once the picker read them all: docs/features/rich-comments.md, "Suggestions"
+  (`searchPeople`).
 - **No `cm` command lists secured paths**, nor a group of branches' branches (only the official client's API does).
   `cm showacl path:/src@…` fails naming the spec ("Incorrect object specification") when the path isn't secured: the
   service then reads the repository's list, the one setting a permission would start from, and the dialog says so.

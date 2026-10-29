@@ -25,7 +25,8 @@ export function ownerNamed(name: string, kind: MemberKind = 'user'): MemberRef {
 
 /**
  * A line of `cm listusers <server> --onlyusers|--onlygroups`: one name, which may hold spaces, read as it arrives
- * (`queryLines`): a big organization lists every member when the picker's search is empty.
+ * (`queryLines`): a big organization lists every member when the picker's search is empty. A comment's mention reads
+ * it filtered (docs/features/rich-comments.md, `searchPeople`).
  */
 export const readMemberName: ReadLine<string> = (line) => line.trim() || undefined;
 
