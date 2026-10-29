@@ -1,5 +1,5 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import { CmError } from '../cm/CmError';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { loadXlinkArgs } from '../cm/xlinkArgs';
 import { hasPendingChanges } from '../merge/hasPendingChanges';
@@ -22,38 +22,34 @@ const IN_MERGE = 'A merge in progress keeps its files from loading: check the me
 export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId: number };
 
 /**
- * Loads the files of the checked-in xlink at `xlinkPath` (a workspace path) with one `cm update` of the folder holding it
- * (`loadXlinkArgs`), which leaves the other pending changes as they are. When `cm` refuses because of them (its
- * PendingChangesOnSwitchAction asks to shelve or fail), they are moved aside as a switch moves them, never by `cm`:
+ * Loads the files of the checked-in xlink at `xlinkPath` (a workspace path) with one `cm update` of the folder holding
+ * it (`loadXlinkArgs`), showing its progress as an update does. `cm` would act on pending changes itself when updating a
+ * folder (its PendingChangesOnSwitchAction may say to shelve them), so it runs only once none are, as a switch does
+ * (`switchApproach`): unchanged checkouts are undone, a merge in progress is left alone, and other changes are moved
+ * aside, never by `cm`:
  * 1. Shelve every change with the official automatic-shelve comment, check the shelve holds them all, and record it
  *    (`reason: 'xlink'`), so "Welcome back" offers them should they not come back.
  * 2. Undo them, move the files they added aside, and load the xlink's files.
  * 3. Merge the shelve back: the workspace is at the changeset it was shelved on, so only a change made under the
  *    xlink's folder meanwhile could conflict.
- * If a step before the files load fails, the changes are put back.
+ * If a step before the files load fails, the changes are put back. Private files are no change in the way.
  */
 export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: string, xlinkPath: string, context: OperationContext): Promise<XlinkLoad> {
   const { cm } = deps;
-  const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath });
-  try {
-    await load();
-    return { kind: 'loaded' };
-  } catch (error) {
-    if (!(error instanceof CmError)) throw error;
-    // Only the pending changes tell `cm`'s refusal apart from any other failure: its words are localized.
-    const snapshot = await readPendingSnapshot(cm, workspacePath);
-    switch (switchApproach(summarizePending(snapshot.changes))) {
-      case 'switchAsIs':
-        throw error;
-      case 'refuseMerge':
-        throw new Error(IN_MERGE);
-      case 'undoUnchangedCheckouts':
-        await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-        await load();
-        return { kind: 'loaded' };
-      case 'shelveChanges':
-        return loadAroundChanges(deps, workspacePath, snapshot, load, error, context);
-    }
+  const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
+  const snapshot = await readPendingSnapshot(cm, workspacePath);
+  switch (switchApproach(summarizePending(snapshot.changes))) {
+    case 'switchAsIs':
+      await load();
+      return { kind: 'loaded' };
+    case 'refuseMerge':
+      throw new Error(IN_MERGE);
+    case 'undoUnchangedCheckouts':
+      await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
+      await load();
+      return { kind: 'loaded' };
+    case 'shelveChanges':
+      return loadAroundChanges(deps, workspacePath, snapshot, load, context);
   }
 }
 
@@ -62,22 +58,15 @@ async function loadAroundChanges(
   workspacePath: string,
   snapshot: PendingChangesSnapshot,
   load: () => Promise<string>,
-  refusal: CmError,
   context: OperationContext,
 ): Promise<XlinkLoad> {
   const { cm, records } = deps;
-  // Any failure to update with changes pending comes here, not only the refusal. When `cm` fails before the changes
-  // are shelved (the server is down), nothing changed and what `cm update` said is the failure to tell; the app's own
-  // reasons the changes can't be shelved ("Check them in first") stay, as they say what to do.
-  const shelve = await asideOrRefusal(refusal, async () => {
-    const workspace = await readWorkspaceIdentity(cm, workspacePath);
-    const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
-    if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
-    context.beginStep('Putting your changes aside', 1, 3);
-    return { workspace, objectRef, created: await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context) };
-  });
-  const { workspace, objectRef } = shelve;
-  const record = newShelveRecord(workspace, shelve.created.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
+  const workspace = await readWorkspaceIdentity(cm, workspacePath);
+  const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
+  if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
+  context.beginStep('Putting your changes aside', 1, 3);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
   records.save(record);
 
   // From here on the changes live in the shelve: a failure puts them back.
@@ -95,12 +84,4 @@ async function loadAroundChanges(
   context.beginStep('Bringing your changes back', 3, 3);
   const broughtBack = await putShelvedChangesBack(cm, deps.leftChanges, workspacePath, record, context).catch(() => false);
   return broughtBack ? { kind: 'loaded' } : { kind: 'changesWaiting', shelveId: record.shelveId };
-}
-
-async function asideOrRefusal<T>(refusal: CmError, step: () => Promise<T>): Promise<T> {
-  try {
-    return await step();
-  } catch (error) {
-    throw error instanceof CmError ? refusal : error;
-  }
 }

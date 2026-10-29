@@ -58,21 +58,21 @@ the root: `loadXlinkArgs`); its own folder doesn't, as `cm` fails there for an x
 repository ("Can't move  to <folder>") and removes the folder. A partial update brings nothing else in: `cm` refuses
 one while the workspace is out of date.
 
-Before updating a folder, `cm` looks for pending changes in the whole workspace and does as client.conf's
-`PendingChangesOnSwitchAction` says. Unset, as by default, it updates the folder and leaves them as they are. Set to
-shelve them, it would shelve, undo and merge them back itself, which the app never lets `cm` do (as
-`switchWithChanges`); `--machinereadable` turns that into refusing, as a setting to fail does. On a refusal
-(`loadXlink`), unchanged checkouts are undone, a merge in progress is left alone (the files don't load), and other
-changes are put aside as a switch puts them: an automatic shelve recorded with `reason: 'xlink'`, undo, added files
-moved aside, the folder updated, the shelve merged back. The workspace didn't move, so only a change under the new
-folder could conflict; changes that don't come back cleanly wait in their shelve, offered by "Welcome back" as "put
-aside to load an xlink". A failure before the files load puts the changes back. The refusal's words are localized,
-so it is told apart only by changes being pending: any failed update with changes pending takes this path. When `cm`
-fails before the changes are shelved (the server is down), nothing changed and the error is what `cm update` said;
-the app's own reasons they can't be shelved (changes inside another xlink: "Check them in first") stay as they are.
+The files load with the progress bar an update or a switch shows (`--forcedetailedprogress`, read by
+`readUpdateProgress`). Before updating a folder, `cm` looks for pending changes in the whole workspace and does as
+client.conf's `PendingChangesOnSwitchAction` says, which may be to shelve, undo and merge them back itself; the app
+never lets `cm` do that (as `switchWithChanges`). So `loadXlink` updates only once nothing is pending, read first
+with a local `cm status`: unchanged checkouts are undone, a merge in progress is left alone (the files don't load),
+and other changes are put aside as a switch puts them: an automatic shelve recorded with `reason: 'xlink'`, undo,
+added files moved aside, the folder updated, the shelve merged back. Private files are no change in the way. The
+workspace didn't move, so only a change under the new folder could conflict; changes that don't come back cleanly
+wait in their shelve, offered by "Welcome back" as "put aside to load an xlink". A failure before the files load puts
+the changes back; one before they are shelved leaves them as they were and says why ("Check them in first" for
+changes inside another xlink).
 
-The files load with no progress bar, "Loading its files" alone: `--forcedetailedprogress`, which prints the bar
-`readUpdateProgress` reads, is turned off by `--machinereadable`, which keeps `cm` from shelving.
+Not done: updating with `--machinereadable`, which makes `cm` refuse instead of shelving, and putting changes aside
+only on a refusal. It leaves them alone where `cm`'s setting would, but `--machinereadable` turns the progress bar off,
+and the refusal's words are localized, so any failed update with changes pending reads as one.
 
 Once `cm xlink` made it, the xlink exists whatever comes next: a later step that fails ends the operation with what
 it is now (`CreatedXlink`: not checked in, a pending change to check in from Changes; or checked in without its
@@ -98,7 +98,7 @@ write (`changesWorkspace`), except `--show`. Creating also checks in and updates
 | Reads the rules          | `cm xlink --show <path>`                                                 | Edit xlink… on a writable xlink, once       |
 | Creates                  | `cm xlink [-w] [-rs] <path> <folder> <point spec> [rules]`               | Create and check in                         |
 | Checks the new one in    | `cm checkin <path> --all --dependencies -commentsfile=<file>` (`checkinArgs`) | Create and check in, once created      |
-| Loads its files          | `cm update <folder holding it> --machinereadable --noinput --dontmerge`  | Create and check in, once checked in; Load its files |
+| Loads its files          | `cm update <folder holding it> --forcedetailedprogress --noinput --dontmerge` | Create and check in, once checked in; Load its files |
 | Points elsewhere         | `cm xlink -e <path> <point spec>`                                        | Save, when the point changed                |
 | Deletes, then adds rules | `cm xlink --deleterules <path> <rules>`, then `--addrules` | Save, when rules changed (one each at most) |
 

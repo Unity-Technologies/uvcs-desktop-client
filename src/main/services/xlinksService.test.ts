@@ -52,14 +52,15 @@ describe('Creating an xlink', () => {
 
   it('creates it, checks in it alone with the comment, and loads its files with an update of its folder', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', CHECKED_IN);
-    const { service, commands } = xlinks({ xlink: '', checkin: answer, update: '' });
+    const { service, commands } = xlinks({ xlink: '', checkin: answer, status: '', update: '' });
 
     expect(await service.create(WORKSPACE, ENGINE, 'Add the engine', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3 });
 
-    expect(commands).toMatchObject([
+    // Besides a local read of the pending changes, none of which are in the way here.
+    expect(commands.filter((command) => command.args[0] !== 'status')).toMatchObject([
       { via: 'query', args: ['xlink', '-w', LIB, '/', 'br:/main@lib@local', 'br:/main/task-br:/main/dev'] },
       { via: 'execute', args: ['checkin', LIB, '--all', '--dependencies', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'], options: { cwd: WORKSPACE } },
-      { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
+      { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
     ]);
     expect(seen.content).toBe('Add the engine');
     expect(existsSync(seen.file)).toBe(false);
@@ -111,13 +112,15 @@ describe('Creating an xlink', () => {
 
 describe('Loading a checked-in xlink’s files', () => {
   it('updates its folder alone, as an operation', async () => {
-    const { service, commands } = xlinks({ update: '' });
+    const { service, commands } = xlinks({ status: '', update: '' });
 
     expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
-    expect(commands).toMatchObject([{ via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge'] }]);
+    expect(commands.filter((command) => command.args[0] !== 'status')).toMatchObject([
+      { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'] },
+    ]);
   });
 
-  it('fails with what went wrong: nothing exists to tell apart from it', async () => {
+  it('fails with what went wrong when nothing was in the way', async () => {
     const { service } = xlinks({ update: cmFails('The server is unreachable.'), status: '' });
 
     await expect(service.load(WORKSPACE, 'code/lib', 'op-1')).rejects.toThrow('The server is unreachable.');
