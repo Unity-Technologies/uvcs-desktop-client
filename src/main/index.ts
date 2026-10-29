@@ -41,6 +41,7 @@ import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { HandedOverDiffs } from './window/HandedOverDiffs';
 import { showProgressOnAppIcon } from './window/showProgressOnAppIcon';
+import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
@@ -65,7 +66,9 @@ const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const repositoryPaths = new RepositoryPathSearch(cm);
-const operations = trackOperations(watchers, showProgressOnAppIcon());
+const appIcon = showProgressOnAppIcon();
+const windowWrites = new WindowWrites();
+const operations = trackOperations(watchers, appIcon, windowWrites);
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
