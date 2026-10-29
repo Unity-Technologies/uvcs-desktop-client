@@ -15,6 +15,8 @@ import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 export interface RevisionFiles {
   /** Asks where to save it, then saves it there: the path saved, or null when the user cancelled. */
   saveAs(place: Place, version: RepositoryVersion, suggestedFileName: string): Promise<string | null>;
+  /** Saves it to a temp file named `fileName`, for an app or a tool to open: the path saved. */
+  saveToTemp(place: Place, version: RepositoryVersion, fileName: string): Promise<string>;
   /** Opens it in the editor `editorId`, or in the OS's app for its type when it's omitted. */
   open(place: Place, version: RepositoryVersion, fileName: string, editorId?: string): Promise<void>;
 }
@@ -26,7 +28,16 @@ export interface RevisionFiles {
 export function revisionFiles(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'>, openInEditor: (path: string, editorId: string) => Promise<void>): RevisionFiles {
   const download = (place: Place, version: RepositoryVersion, targetFile: string): Promise<void> => saveVersion(cm, copies, place, version, targetFile);
 
+  // Keeps the original name so the OS picks the right app; a folder of its own makes it unique, and never overwrites a
+  // copy opened before that an app may still hold.
+  const saveToTemp = async (place: Place, version: RepositoryVersion, fileName: string): Promise<string> => {
+    const targetFile = join(await mkdtemp(join(tmpdir(), 'uvcs-rev-')), fileName);
+    await download(place, version, targetFile);
+    return targetFile;
+  };
+
   return {
+    saveToTemp,
     async saveAs(place, version, suggestedFileName) {
       const { canceled, filePath } = await dialog.showSaveDialog({ title: 'Save revision as', defaultPath: suggestedFileName });
       if (canceled || !filePath) return null;
@@ -35,11 +46,7 @@ export function revisionFiles(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'
     },
 
     async open(place, version, fileName, editorId) {
-      // Keep the original name so the OS picks the right app; a folder of its own makes it unique, and never
-      // overwrites a copy opened before that an app may still hold.
-      const directory = await mkdtemp(join(tmpdir(), 'uvcs-rev-'));
-      const targetFile = join(directory, fileName);
-      await download(place, version, targetFile);
+      const targetFile = await saveToTemp(place, version, fileName);
       if (editorId) return openInEditor(targetFile, editorId);
       const error = await shell.openPath(targetFile);
       if (error) throw new Error(error);
