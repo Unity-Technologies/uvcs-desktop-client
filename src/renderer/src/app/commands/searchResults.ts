@@ -22,6 +22,8 @@ export interface SearchResult {
   status?: { tone: StatusTone; title: string };
   /** The branch the workspace is on. */
   isCurrent?: boolean;
+  /** A hidden branch, which its row says, as the Branches view's details do. */
+  isHidden?: boolean;
   /** Everything else that can be done with it (Tab), the same menu it has in its own view. */
   menu?: () => MenuEntry[];
   run: () => void;

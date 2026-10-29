@@ -33,6 +33,15 @@ export function everyBranchQuery(place: Place) {
   return { queryKey: branchesKey(place, {}), queryFn: () => api.branches.list(place, {}), ...SLOW_CHANGING_QUERY };
 }
 
+/**
+ * The hidden branches, apart from the visible ones `everyBranchQuery` reads (`cm find branch` leaves them out unless
+ * asked): few, so one quick find, and the palette finds them too, the branch the workspace is on among them.
+ */
+export function hiddenBranchesQuery(place: Place) {
+  const filter: QueryFilter = { onlyHidden: true };
+  return { queryKey: branchesKey(place, filter), queryFn: () => api.branches.list(place, filter), ...SLOW_CHANGING_QUERY };
+}
+
 export function everyLabelQuery(place: Place) {
   return { queryKey: labelsKey(place, {}), queryFn: () => api.labels.list(place, {}), ...SLOW_CHANGING_QUERY };
 }

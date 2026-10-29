@@ -95,6 +95,17 @@ describe('branch list', () => {
     ]);
   });
 
+  it('reads only the hidden branches with one quick query when asked for them alone, flagged', async () => {
+    const { service, commands } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, OLD_HIDDEN) });
+
+    const listed = await service.list(IN_WORKSPACE, { onlyHidden: true });
+
+    expect(commands).toMatchObject([
+      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where hidden = 'true' order by date desc"), options: { cwd: WORKSPACE }, readsRecords: true },
+    ]);
+    expect(listed.map((branch) => [branch.name, branch.isHidden])).toEqual([['/main/old', true]]);
+  });
+
   it('filters on the server by date, owners, text and limit, and never by branch', async () => {
     const { service, lines } = branches({ 'find branch': '' });
 

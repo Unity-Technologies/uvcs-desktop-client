@@ -7,7 +7,7 @@ import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
-import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueries';
+import { everyBranchQuery, everyLabelQuery, hiddenBranchesQuery, recentShelvesQuery } from './paletteQueries';
 
 /**
  * A placeholder place, never queried: the palette's hooks key their queries by it on the home screen, where no place
@@ -15,12 +15,14 @@ import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './palette
  */
 export const NOWHERE: Place = repositoryPlace('');
 
+/** The hidden branches, which `cm find branch` leaves out of every other list: a few, read with one quick query. */
 /** Keeps the lists between palette openings, so reopening it never starts from scratch. */
 const CACHE_TIME = 30 * 60_000;
 
 /**
  * The lists the palette answers every keystroke from, fetched once and refreshed in the background: a workspace's
- * files and pending changes, every branch and label, the latest changesets, the recent shelves and code reviews. None
+ * files and pending changes, every branch (the hidden ones apart) and label, the latest changesets, the recent shelves
+ * and code reviews. None
  * on the home screen (no place); a repository explored without a workspace has no files or pending changes.
  */
 export function usePaletteLists(shown: Place | null) {
@@ -37,6 +39,8 @@ export function usePaletteLists(shown: Place | null) {
     workspace: useWorkspaceInfoOf(workspacePath),
     recentBranchGuids: useRecentBranchGuids(path, inWorkspace),
     branches: useQuery({ ...everyBranchQuery(place), ...cached }),
+    // Apart from the visible ones, whose list the switcher and the Branches view share; the user may be on one.
+    hiddenBranches: useQuery({ ...hiddenBranchesQuery(place), ...cached }),
     labels: useQuery({ ...everyLabelQuery(place), ...cached }),
     // Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand.
     changesets: useQuery({ ...cached, ...recentChangesetsQuery(place) }),

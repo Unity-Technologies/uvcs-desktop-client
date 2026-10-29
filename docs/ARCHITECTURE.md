@@ -1085,6 +1085,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
   path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
+    the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
+    every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. Each
+    keystroke looks at every row once, those holding the words together as typed first. A description hit ranks a
+    tier below the same match in a name (`DESCRIPTION_MATCH_PENALTY`, `tierBelow`) and shows its description in place
+    of the detail, cut to keep the longest word typed in view (`excerptAroundMatch`); a row whose description shows
+    none of the words (the name held them, or a link's hidden address did) is a name hit, with its usual detail. The
+    words are looked for in the description as written, Markdown and all, as the Branches view's filter does. The
+    owner isn't searched there: a person's name would list every branch they made. Hidden branches are searched too,
+    the user may be on one: `cm find branch` leaves them out of the every-branch list, so the palette reads them apart
+    (`onlyHidden`, one quick `find branch where hidden = 'true'`, cached as slow-changing beside it and refreshed by
+    hiding or unhiding through `isAffectedByBranchList`; `paletteBranches` joins the two). Their rows say "hidden", like "current" and
+    rank half a tier below a visible branch that matches as well (`HIDDEN_BRANCH_PENALTY`; `lowered` rounds both
+    penalties to hundredths).
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
     last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
