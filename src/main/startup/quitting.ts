@@ -33,7 +33,7 @@ export class Quitting {
   private holding = false;
   /** Quitting to install an update (`restartToInstall`), which then starts the app again. */
   private restarting = false;
-  /** The quit went on (`before-quit`, not held back): the windows closing now were saved already. */
+  /** The quit went on (`before-quit`, not held back) and wasn't cancelled since (a page's unsaved edits): the windows closing now were saved already. */
   private quitting = false;
 
   constructor(private readonly dependencies: QuittingDependencies) {}
@@ -50,7 +50,12 @@ export class Quitting {
     // did (Squirrel.Mac closes the windows before `before-quit`); on macOS, quitting with every window closed saves none.
     else if (!this.restarting && !this.dependencies.quitsWithLastWindow) this.dependencies.saveSession({ withViews: false });
     this.quitting = true;
-    quitStarted();
+    quitStarted(() => (this.quitting = false));
+  }
+
+  /** Whether the quit went on (`before-quit`, not held back): the windows are closing for it. */
+  started(): boolean {
+    return this.quitting;
   }
 
   /** The last window is closing: where the app quits with it, it's saved now, while it's still open. */

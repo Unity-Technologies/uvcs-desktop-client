@@ -10,6 +10,22 @@ import type { BrowserWindowConstructorOptions, TitleBarOverlayOptions } from 'el
 
 type WindowOpenHandler = (details: { url: string }) => { action: string };
 
+/** The event a window's `close` listeners get: one may hold the close back (`preventDefault`). */
+export interface FakeCloseEvent {
+  defaultPrevented: boolean;
+  preventDefault(): void;
+}
+
+/** A `close` event, for a test that emits one itself: `window.emit('close', closeEvent())`. */
+export function closeEvent(): FakeCloseEvent {
+  return {
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true;
+    },
+  };
+}
+
 class FakeWebContents extends EventEmitter {
   readonly sent: unknown[][] = [];
   reloads = 0;
@@ -63,6 +79,9 @@ export class FakeWindow extends EventEmitter {
   }
   static getFocusedWindow(): FakeWindow | null {
     return state.focused;
+  }
+  static fromId(id: number): FakeWindow | null {
+    return state.windows.find((window) => window.id === id) ?? null;
   }
 
   readonly id: number;
@@ -134,8 +153,11 @@ export class FakeWindow extends EventEmitter {
     state.focused = this;
     this.emit('focus');
   }
+  /** Closes the window, unless a `close` listener holds it back. */
   close(): void {
-    this.emit('close');
+    const event = closeEvent();
+    this.emit('close', event);
+    if (event.defaultPrevented) return;
     this.destroyed = true;
     state.windows = state.windows.filter((window) => window !== this);
     if (state.focused === this) state.focused = null;

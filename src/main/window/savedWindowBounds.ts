@@ -57,7 +57,9 @@ export function keepWindowBoundsSaved(window: BrowserWindow, settings: SettingsS
   window.on('resize', saveSoon);
   window.on('maximize', saveSoon);
   window.on('unmaximize', saveSoon);
-  window.on('close', () => {
+  window.on('close', (event) => {
+    // A held close (`ClosingWithWrites`) leaves the window open: its bounds go on being saved as it moves.
+    if (event.defaultPrevented) return;
     clearTimeout(timer);
     save();
   });

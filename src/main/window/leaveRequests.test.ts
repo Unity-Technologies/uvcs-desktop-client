@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { EVENT_CHANNEL } from '@shared/ipc';
-import type { FakeElectron, FakeWindow } from './testing/fakeElectron';
+import { closeEvent, type FakeElectron, type FakeWindow } from './testing/fakeElectron';
 
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
 
@@ -32,7 +32,7 @@ describe('leaving a page with unsaved edits', () => {
 
   it('closes the window once settled, when closing it was held back', async () => {
     const { fakeElectron, window, heldBack, continueLeaving } = await setUp();
-    window.emit('close');
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(true);
@@ -42,12 +42,24 @@ describe('leaving a page with unsaved edits', () => {
 
   it('quits once settled, when quitting was held back', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
-    quitStarted();
-    window.emit('close');
+    quitStarted(() => {});
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(true);
     expect(fakeElectron.app.quits).toBe(1);
+  });
+
+  it('reloads the page once settled, when closing it was held back before reaching the page (an operation runs)', async () => {
+    const { window, heldBack, continueLeaving } = await setUp();
+    const held = closeEvent();
+    held.preventDefault();
+    window.emit('close', held);
+    heldBack();
+
+    continueLeaving(true);
+    expect(window.webContents.reloads).toBe(1);
+    expect(closed(window)).toBe(false);
   });
 
   it('reloads the page once settled, when a reload was held back', async () => {
@@ -59,10 +71,26 @@ describe('leaving a page with unsaved edits', () => {
     expect(closed(window)).toBe(false);
   });
 
+  it('tells who started the quit when the user cancels it, and only then', async () => {
+    const { window, heldBack, quitStarted, continueLeaving } = await setUp();
+    const cancelled = vi.fn();
+    heldBack();
+    continueLeaving(false);
+    quitStarted(cancelled);
+    window.emit('close', closeEvent());
+    heldBack();
+
+    continueLeaving(true);
+    expect(cancelled).not.toHaveBeenCalled();
+    quitStarted(cancelled);
+    continueLeaving(false);
+    expect(cancelled).toHaveBeenCalledOnce();
+  });
+
   it('stays, and stops quitting, when the user cancels', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
-    quitStarted();
-    window.emit('close');
+    quitStarted(() => {});
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(false);

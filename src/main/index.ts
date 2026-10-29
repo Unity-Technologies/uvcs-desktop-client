@@ -1,7 +1,7 @@
 // First: errors nothing else catches are the app's to report from here on, never Electron's native dialog.
 import './errors/installUnexpectedErrorHandlers';
 import { join } from 'node:path';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { readBranchNames } from './cm/branchNames';
@@ -37,10 +37,13 @@ import { isShown, watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { appMenuInstaller, installDockMenu } from './window/appMenu';
+import { askToCloseWhenDone } from './window/askToCloseWhenDone';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
+import { ClosingWithWrites } from './window/closingWithWrites';
 import { followAppTheme } from './window/followAppTheme';
 import { HandedOverDiffs } from './window/HandedOverDiffs';
 import { showProgressOnAppIcon } from './window/showProgressOnAppIcon';
+import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
@@ -65,7 +68,9 @@ const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const repositoryPaths = new RepositoryPathSearch(cm);
-const operations = trackOperations(watchers, showProgressOnAppIcon());
+const appIcon = showProgressOnAppIcon();
+const windowWrites = new WindowWrites();
+const operations = trackOperations(watchers, appIcon, windowWrites);
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -81,6 +86,16 @@ const windows = new WorkspaceWindows({
     repositoryPaths.forget(repository);
   },
   onLastWindowClosing: () => quitting.lastWindowClosing(),
+  onCloseRequested: (windowId, event) => closing.closeRequested(windowId, event),
+  closeLeftBehind: (windowId) => closing.closeLeftBehind(windowId),
+});
+const closing = new ClosingWithWrites({
+  quitting: () => quitting.started(),
+  writesRunningIn: (windowId) => windowWrites.runningIn(windows.closingWith(windowId)),
+  writesFinishedIn: (windowId) => windowWrites.finishedIn(() => windows.closingWith(windowId)),
+  askToCloseWhenDone,
+  kept: (windowId) => appIcon.windowKept(windowId),
+  close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
 });
 const installMenuBar = appMenuInstaller(windows, updates);
 const quitting = new Quitting({
