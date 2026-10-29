@@ -14,6 +14,10 @@ describe('readLegacyOpenWith', () => {
     expect(readLegacyOpenWith('[Hex editor] "/usr/bin/ghex"')).toEqual([{ name: 'Hex editor', executable: '/usr/bin/ghex' }]);
   });
 
+  it('reads a name holding brackets', () => {
+    expect(readLegacyOpenWith('[Editor [beta]] "/opt/editor" @file')).toEqual([{ name: 'Editor [beta]', executable: '/opt/editor' }]);
+  });
+
   it('skips a line with no name or no program', () => {
     expect(readLegacyOpenWith(['[] "/usr/bin/ghex" @file', '[Name] "" @file', 'garbage', ''].join('\n'))).toEqual([]);
   });

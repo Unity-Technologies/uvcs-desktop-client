@@ -8,7 +8,8 @@ import type { CustomEditor } from '@shared/domain/externalApps';
  */
 export function readLegacyOpenWith(conf: string): Omit<CustomEditor, 'id'>[] {
   return conf.split(/\r\n|\r|\n/).flatMap((line) => {
-    const match = /^\s*\[([^\]]*)\]\s*"([^"]*)"/.exec(line);
+    // Greedy up to the last `] "`, as that client reads it: a name can hold brackets ("Editor [beta]").
+    const match = /^\s*\[(.*)\]\s*"([^"]*)"/.exec(line);
     const name = match?.[1]?.split('|')[0]?.trim();
     const executable = match?.[2]?.trim();
     return name && executable ? [{ name, executable }] : [];

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import type { CustomEditor } from '@shared/domain/externalApps';
 import { join } from 'node:path';
 import { DEFAULT_MERGE_TOOL_RULES, SEMANTIC_MERGE_RULE } from '@shared/domain/mergeTools';
 import { readLegacyMergeTools } from '../plasticConfig/clientConfMergeTools';
@@ -52,9 +53,12 @@ function importTools(settings: SettingsStore, legacyConfigFolder: string): void 
   if (current.legacyToolsImported) return;
   const tools = readLegacyTools(readLegacyFile(legacyConfigFolder, 'externaltools.conf')).map((tool, index) => ({ ...tool, id: `tool:imported-${index + 1}` }));
   const added = new Set(current.customEditors.map((editor) => editor.executable));
-  const editors = readLegacyOpenWith(readLegacyFile(legacyConfigFolder, 'openwith.conf'))
-    .filter((editor) => !added.has(editor.executable) && added.add(editor.executable))
-    .map((editor, index) => ({ ...editor, id: `custom:imported-${index + 1}` }));
+  const editors: CustomEditor[] = [];
+  for (const editor of readLegacyOpenWith(readLegacyFile(legacyConfigFolder, 'openwith.conf'))) {
+    if (added.has(editor.executable)) continue;
+    added.add(editor.executable);
+    editors.push({ ...editor, id: `custom:imported-${editors.length + 1}` });
+  }
   settings.update({ legacyToolsImported: true, tools: [...current.tools, ...tools], customEditors: [...current.customEditors, ...editors] });
 }
 
