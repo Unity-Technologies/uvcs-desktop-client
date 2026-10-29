@@ -27,11 +27,15 @@ export class ClosingWithWrites {
   /** Windows the app closes once their operation finishes (`closeLeftBehind`). */
   private readonly leaving = new Set<number>();
 
+  /** The window the app is closing this very turn (`closeLeftBehind`), whose close `closeRequested` lets be. */
+  private closingNow: number | undefined;
+
   constructor(private readonly dependencies: ClosingWithWritesDependencies) {}
 
   /** The window's `close`, before any other listener sees it (`WorkspaceWindows`' `onCloseRequested`). */
   closeRequested(windowId: number, event: { preventDefault(): void }): void {
-    if (this.dependencies.quitting()) return;
+    // A quit isn't held back: it waited for the operations, and a window's question mustn't veto the app's own close.
+    if (this.dependencies.quitting() || this.closingNow === windowId) return;
     if (!this.holding.has(windowId) && !this.dependencies.writesRunningIn(windowId)) return;
     event.preventDefault();
     this.dependencies.kept(windowId);
@@ -44,12 +48,20 @@ export class ClosingWithWrites {
    */
   closeLeftBehind(windowId: number): void {
     if (this.leaving.has(windowId)) return;
-    if (!this.dependencies.writesRunningIn(windowId)) return this.dependencies.close(windowId);
     this.leaving.add(windowId);
-    void this.dependencies.writesFinishedIn(windowId).then(() => {
-      this.leaving.delete(windowId);
+    void this.closeOnceIdle(windowId);
+  }
+
+  /** Waits for every round of operations (one may start as another ends), then closes in the same turn, so none slips in. */
+  private async closeOnceIdle(windowId: number): Promise<void> {
+    while (this.dependencies.writesRunningIn(windowId)) await this.dependencies.writesFinishedIn(windowId);
+    this.closingNow = windowId;
+    try {
       this.dependencies.close(windowId);
-    });
+    } finally {
+      this.closingNow = undefined;
+      this.leaving.delete(windowId);
+    }
   }
 
   private async closeWhenWritesFinish(windowId: number): Promise<void> {

@@ -4,6 +4,8 @@ import { ClosingWithWrites, type ClosingWithWritesDependencies } from './closing
 /** Window 1 closing, with an operation of its own running or not; the user answers `answer` when asked. */
 function setUp({ writing = false, answer = true } = {}) {
   let quitting = false;
+  /** Whether each close the app made went on, rather than held back. */
+  const closesThatWent: boolean[] = [];
   let finishWrites!: () => void;
   const writesFinished = new Promise<void>((resolve) => (finishWrites = resolve));
   const dependencies = {
@@ -12,7 +14,8 @@ function setUp({ writing = false, answer = true } = {}) {
     writesFinishedIn: vi.fn(() => writesFinished),
     askToCloseWhenDone: vi.fn(async () => answer),
     kept: vi.fn(),
-    close: vi.fn(),
+    // As Electron's: the window's close goes through its listeners again.
+    close: vi.fn(() => void closesThatWent.push(close())),
   } satisfies ClosingWithWritesDependencies;
   const closing = new ClosingWithWrites(dependencies);
   /** Closes window 1 as Electron does (`close`): whether the close went on. */
@@ -22,7 +25,7 @@ function setUp({ writing = false, answer = true } = {}) {
     return !held;
   };
   const closeLeftBehind = (): void => closing.closeLeftBehind(1);
-  return { dependencies, close, closeLeftBehind, quit: () => (quitting = true), finishWrites: () => ((writing = false), finishWrites()) };
+  return { dependencies, close, closeLeftBehind, closesThatWent, setWriting: (running: boolean) => (writing = running), quit: () => (quitting = true), finishWrites: () => ((writing = false), finishWrites()) };
 }
 
 /** Lets the awaited steps of the close run. */
@@ -125,5 +128,37 @@ describe('closing a window the app closes itself', () => {
     finishWrites();
     await settle();
     expect(dependencies.close).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it('closes a window that was asking about its own close once its operation finishes, the question still open', async () => {
+    const { closesThatWent, close, closeLeftBehind, finishWrites } = setUp({ writing: true });
+    close();
+    closeLeftBehind();
+
+    finishWrites();
+    await settle();
+    // Both the app's close and the question's close go on (the second finds the window gone).
+    expect(closesThatWent).toEqual([true, true]);
+  });
+
+  it('waits again when another operation started as the last one ended, and never asks', async () => {
+    const { dependencies, closesThatWent, closeLeftBehind, setWriting } = setUp({ writing: true });
+    let rounds = 0;
+    dependencies.writesFinishedIn.mockImplementation(async () => void setWriting(++rounds < 2));
+
+    closeLeftBehind();
+    await settle();
+    expect(dependencies.writesFinishedIn).toHaveBeenCalledTimes(2);
+    expect(closesThatWent).toEqual([true]);
+    expect(dependencies.askToCloseWhenDone).not.toHaveBeenCalled();
+  });
+
+  it("still asks when the user closes the window while the app waits to close it, as its operation runs", async () => {
+    const { dependencies, close, closeLeftBehind } = setUp({ writing: true });
+    closeLeftBehind();
+
+    expect(close()).toBe(false);
+    await settle();
+    expect(dependencies.askToCloseWhenDone).toHaveBeenCalledOnce();
   });
 });
