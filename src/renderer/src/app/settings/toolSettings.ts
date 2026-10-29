@@ -82,10 +82,13 @@ export const TOOL_PLACEHOLDER_HINT = Object.keys(TOOL_PLACEHOLDERS).join(' ');
 export function toolPreview(draft: ToolDraft, platform: string): string | undefined {
   const target = TOOL_TARGETS.find((candidate) => draft.targets.includes(candidate));
   if (draft.program.trim() === '' || !target) return undefined;
-  const workspacePath = platform === 'win32' ? 'C:\\wkspaces\\game' : '/home/me/wkspaces/game';
+  const workspacePath = EXAMPLE_WORKSPACES[platform] ?? EXAMPLE_WORKSPACES.linux!;
   const args = toolArgs(parseArgs(draft.argsText), placeholderValues(exampleOf(target, workspacePath, platform), { repository: 'game@local', workspacePath }));
   return [programName(draft.program.trim()), formatArgs(args)].filter(Boolean).join(' ');
 }
+
+/** Where each OS's users usually keep a workspace, for the example. */
+const EXAMPLE_WORKSPACES: Record<string, string> = { win32: 'C:\\Users\\me\\wkspaces\\game', darwin: '/Users/me/wkspaces/game', linux: '/home/me/wkspaces/game' };
 
 function exampleOf(target: ToolTarget, workspacePath: string, platform: string): ResolvedSubject {
   switch (target) {

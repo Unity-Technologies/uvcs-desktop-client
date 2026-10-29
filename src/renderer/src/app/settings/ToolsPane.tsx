@@ -25,18 +25,20 @@ export function ToolsPane() {
       </p>
       <SettingsGroup title="Tools">
         {tools.length > 0 && (
-          <div className={styles.rules} role="list" aria-label="Tools">
-            {toolRows(tools).map((row, index) => (
-              <div key={row.id} className={styles.rule} role="listitem">
-                <button type="button" className={styles.ruleMain} onClick={edit(tools[index]!)} aria-label={`Edit ${row.name}`}>
-                  <span className={styles.oneLine}>{row.name}</span>
-                  <span className={`${styles.ruleToolDetail} ${styles.oneLine}`}>{row.runsOn}</span>
-                </button>
-                <ActionDropdownMenu entries={toolRowMenu(tools, row.id, edit(tools[index]!), (changed) => void saveTools(changed), () => `tool:${crypto.randomUUID()}`)}>
-                  <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.name}`} />
-                </ActionDropdownMenu>
-              </div>
-            ))}
+          <div className={styles.rulesFrame}>
+            <div className={styles.rules} role="list" aria-label="Tools">
+              {toolRows(tools).map((row, index) => (
+                <div key={row.id} className={styles.rule} role="listitem">
+                  <button type="button" className={styles.ruleMain} onClick={edit(tools[index]!)} aria-label={`Edit ${row.name}`}>
+                    <span className={styles.oneLine}>{row.name}</span>
+                    <span className={`${styles.ruleToolDetail} ${styles.oneLine}`}>{row.runsOn}</span>
+                  </button>
+                  <ActionDropdownMenu entries={toolRowMenu(tools, row.id, edit(tools[index]!), (changed) => void saveTools(changed), () => `tool:${crypto.randomUUID()}`)}>
+                    <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.name}`} />
+                  </ActionDropdownMenu>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <Button size="small" icon={<Plus size={13} />} onClick={() => openToolDialog(null, withTool)}>

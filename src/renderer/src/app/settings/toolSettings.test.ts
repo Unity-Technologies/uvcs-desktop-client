@@ -68,7 +68,8 @@ describe('toolPreview', () => {
     expect(toolPreview({ ...NEW_TOOL_DRAFT, program: '/opt/upload', argsText: '{path} {repository}', targets: ['item'] }, 'linux')).toBe(
       'upload /home/me/wkspaces/game/src/Player.cs game@local',
     );
-    expect(toolPreview({ ...NEW_TOOL_DRAFT, program: 'C:\\up.exe', argsText: '{path}', targets: ['item'] }, 'win32')).toBe('up C:\\wkspaces\\game\\src\\Player.cs');
+    expect(toolPreview({ ...NEW_TOOL_DRAFT, program: '/opt/upload', argsText: '{workspace}', targets: ['item'] }, 'darwin')).toBe('upload /Users/me/wkspaces/game');
+    expect(toolPreview({ ...NEW_TOOL_DRAFT, program: 'C:\\up.exe', argsText: '{path}', targets: ['item'] }, 'win32')).toBe('up C:\\Users\\me\\wkspaces\\game\\src\\Player.cs');
   });
 
   it('shows nothing until there is a program and a target', () => {
