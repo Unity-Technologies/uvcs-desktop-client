@@ -26,6 +26,18 @@ describe('initials', () => {
 
   it('reads letters beyond ASCII', () => {
     expect(initials('ñandú')).toBe('ÑA');
+    expect(initials('\u{1D49C}bc')).toBe('\u{1D49C}B');
+    expect(initials('\u{1D49C}x.bob')).toBe('\u{1D49C}B');
+  });
+
+  it('keeps an accent written as a separate mark with its letter', () => {
+    expect(initials('n\u0303andu\u0301')).toBe('ÑA');
+    expect(initials('n\u0303o.bob')).toBe('ÑB');
+  });
+
+  it('reads a name with extra spaces as its words', () => {
+    expect(initials('Jane  Doe')).toBe('JD');
+    expect(initials(' jane')).toBe('JA');
   });
 
   it('shows a question mark for an empty name', () => {
