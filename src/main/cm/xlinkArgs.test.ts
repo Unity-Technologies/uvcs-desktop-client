@@ -84,7 +84,7 @@ describe('Loading a checked-in xlink’s files', () => {
 
   // Updating the xlink's own folder fails for one showing a folder of its repository ("Can't move  to <folder>").
   it('updates the folder holding the xlink, never its own', () => {
-    expect(loadXlinkArgs(WORKSPACE, 'code/lib')).toEqual(['update', join(WORKSPACE, 'code'), '--machinereadable', '--noinput', '--dontmerge']);
+    expect(loadXlinkArgs(WORKSPACE, 'code/lib')).toEqual(['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge']);
   });
 
   it('updates the workspace’s root, named, for an xlink at the root', () => {

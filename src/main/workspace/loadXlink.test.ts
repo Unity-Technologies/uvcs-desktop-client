@@ -21,30 +21,33 @@ beforeEach(async () => {
   await writeFile(join(workspacePath, 'src', 'new.txt'), 'added\n');
 });
 
+/**
+ * A workspace whose `cm update` refuses while changes are pending: the app must never update with changes in the way,
+ * as `cm` set to shelve them would shelve them itself.
+ */
 function workspaceWith(scenario: WorkspaceScenario) {
-  const workspace = playAlongWorkspace(workspacePath, scenario);
+  const workspace = playAlongWorkspace(workspacePath, { updateRefusesPendingChanges: true, ...scenario });
   return { ...workspace, ...playAlongDependencies(workspace.cm, workspacePath) };
 }
 
 const load = (deps: ReturnType<typeof workspaceWith>['deps']) => loadXlink(deps, workspacePath, 'code/lib', recordingContext().context);
 
 describe('Loading a checked-in xlink’s files', () => {
-  it('updates its folder alone, leaving the other pending changes as they are', async () => {
-    const { deps, commands, pending, updatedFolders, shelves } = workspaceWith({ pending: EDITED_AND_ADDED });
+  it('updates the folder holding it with the progress an update shows, when nothing is pending', async () => {
+    const { deps, commands, updatedFolders, shelves } = workspaceWith({ pending: { 'notes.txt': 'PR' } });
 
     expect(await load(deps)).toEqual({ kind: 'loaded' });
 
     expect(updatedFolders).toEqual(['code']);
-    expect(commands).toMatchObject([
-      // `--machinereadable`: a cm set to shelve the changes on update refuses instead, and never shelves them itself.
-      { via: 'execute', args: ['update', join(workspacePath, 'code'), '--machinereadable', '--noinput', '--dontmerge'], options: { cwd: workspacePath } },
-    ]);
-    expect(pending()).toEqual(EDITED_AND_ADDED);
+    // A private file is no change in the way: nothing is shelved for it.
     expect(shelves()).toEqual([]);
+    expect(commands.filter((command) => command.args[0] === 'update')).toMatchObject([
+      { via: 'execute', args: ['update', join(workspacePath, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'], options: { cwd: workspacePath, onOutputLine: expect.any(Function) } },
+    ]);
   });
 
-  it('puts the changes aside when cm refuses because of them, loads the files, and merges them back', async () => {
-    const { deps, pending, updatedFolders, shelves, deletedShelves, recordOf, lines, commands } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true });
+  it('puts the pending changes aside before updating, so cm never shelves them itself, and merges them back', async () => {
+    const { deps, pending, updatedFolders, shelves, deletedShelves, recordOf, lines, commands } = workspaceWith({ pending: EDITED_AND_ADDED });
 
     expect(await load(deps)).toEqual({ kind: 'loaded' });
     const readsBeforeShelving = commands.slice(0, commands.findIndex((command) => command.args[0] === 'shelveset'));
@@ -61,7 +64,7 @@ describe('Loading a checked-in xlink’s files', () => {
   });
 
   it('shelves the changes put aside as the official client leaves them, so they are found should they not come back', async () => {
-    const { deps, shelveComment, leftChanges, recordOf } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true, fail: { shelveConflicts: 1 } });
+    const { deps, shelveComment, leftChanges, recordOf } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 1 } });
 
     expect(await load(deps)).toEqual({ kind: 'changesWaiting', shelveId: 7 });
 
@@ -71,7 +74,7 @@ describe('Loading a checked-in xlink’s files', () => {
   });
 
   it('undoes checkouts holding no change instead of shelving them', async () => {
-    const { deps, pending, updatedFolders, shelves, lines } = workspaceWith({ pending: { 'src/a.txt': 'CO' }, updateRefusesPendingChanges: true });
+    const { deps, pending, updatedFolders, shelves, lines } = workspaceWith({ pending: { 'src/a.txt': 'CO' } });
 
     expect(await load(deps)).toEqual({ kind: 'loaded' });
 
@@ -82,7 +85,7 @@ describe('Loading a checked-in xlink’s files', () => {
   });
 
   it('leaves a merge in progress alone, as no shelve can hold it', async () => {
-    const { deps, pending, shelves } = workspaceWith({ pending: { 'src/a.txt': 'CH' }, mergingFrom: 3, updateRefusesPendingChanges: true });
+    const { deps, pending, shelves } = workspaceWith({ pending: { 'src/a.txt': 'CH' }, mergingFrom: 3 });
 
     await expect(load(deps)).rejects.toThrow('A merge in progress keeps its files from loading');
     expect(pending()).toEqual({ 'src/a.txt': 'CH' });
@@ -96,18 +99,19 @@ describe('Loading a checked-in xlink’s files', () => {
     expect(shelves()).toEqual([]);
   });
 
-  it('tells what cm update said when the changes in the way can’t even be shelved', async () => {
-    const { deps, pending, lines } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true });
+  it('tells why the changes in the way couldn’t be shelved, loading nothing and leaving them as they were', async () => {
+    const { deps, pending, lines, updatedFolders } = workspaceWith({ pending: EDITED_AND_ADDED });
     const execute = deps.cm.execute;
     deps.cm.execute = async (args, options) => (args[0] === 'shelveset' ? Promise.reject(new CmError('The server is unreachable.', FAILED)) : execute(args, options));
 
-    await expect(load(deps)).rejects.toThrow('The workspace cannot be updated since there are pending changes.');
+    await expect(load(deps)).rejects.toThrow('The server is unreachable.');
     expect(pending()).toEqual(EDITED_AND_ADDED);
     expect(lines().some((line) => line.startsWith('undo'))).toBe(false);
+    expect(updatedFolders).toEqual([]);
   });
 
   it('says what to do when the changes in the way can’t be shelved, leaving them as they were', async () => {
-    const { deps, pending, lines } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true, fail: { shelveMisses: 'src/a.txt' } });
+    const { deps, pending, lines } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveMisses: 'src/a.txt' } });
 
     await expect(load(deps)).rejects.toThrow('Check them in first.');
     expect(pending()).toEqual(EDITED_AND_ADDED);
@@ -115,7 +119,7 @@ describe('Loading a checked-in xlink’s files', () => {
   });
 
   it('puts the changes back when the files don’t load once they are aside', async () => {
-    const { deps, pending, shelves } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true });
+    const { deps, pending, shelves } = workspaceWith({ pending: EDITED_AND_ADDED });
     const execute = deps.cm.execute;
     deps.cm.execute = async (args, options) => {
       if (args[0] === 'update' && Object.keys(pending()).length === 0) throw new Error('The server is unreachable.');
