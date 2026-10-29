@@ -61,6 +61,14 @@ export interface DescribedList<T> extends IndexedList<T> {
   words: WordFilterIndex;
 }
 
+/**
+ * Every branch the palette searches: the visible ones (the list the switcher and the Branches view share), then the
+ * hidden ones, read apart (`onlyHidden`), which the user may be on.
+ */
+export function paletteBranches(visible: readonly Branch[], hidden: readonly Branch[]): Branch[] {
+  return [...visible, ...hidden];
+}
+
 /** The lists read once and kept, which answer every keystroke. Undefined while still loading. */
 export interface CachedLists {
   files?: IndexedList<WorkspacePathEntry>;

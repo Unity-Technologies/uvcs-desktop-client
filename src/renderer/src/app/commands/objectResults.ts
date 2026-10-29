@@ -101,9 +101,18 @@ export type ObjectMatch = 'fuzzy' | 'words' | 'description';
  */
 const DESCRIPTION_MATCH_PENALTY = 0.1;
 
-/** `quality` one tier lower, rounded to the tenths the tiers are: 0.8 − 0.1 would be a hair above a name's 0.7. */
-function tierBelow(quality: number): number {
-  return Math.round((quality - DESCRIPTION_MATCH_PENALTY) * 10) / 10;
+/**
+ * A hidden branch ranks after a visible one that matches as well, and still before one that matches a tier less well
+ * (half a tier): hidden branches are found, as the user may be on one, but are rarely what is looked for.
+ */
+const HIDDEN_BRANCH_PENALTY = 0.05;
+
+/**
+ * `quality` lowered by `penalty`, rounded to the hundredths the tiers and the penalties are: 0.8 − 0.1 would otherwise
+ * be a hair above a name's 0.7, and 0.7 − 0.05 a hair below 0.65.
+ */
+function lowered(quality: number, penalty: number): number {
+  return Math.round((quality - penalty) * 100) / 100;
 }
 
 type MatchShown = Pick<SearchResult, 'labelMatches' | 'detail' | 'detailMatches' | 'quality'>;
@@ -131,19 +140,22 @@ function descriptionMatchShown(name: string, description: string, term: string, 
     labelMatches: wordMatchPositions(name, term),
     detail: excerpt.text,
     detailMatches: excerpt.matches,
-    quality: tierBelow(wordMatchQuality(filterHaystack([name, description]), term)),
+    quality: lowered(wordMatchQuality(filterHaystack([name, description]), term), DESCRIPTION_MATCH_PENALTY),
   };
 }
 
 export function branchResult(branch: Branch, context: ResultContext, match: ObjectMatch = 'fuzzy'): SearchResult {
   const { term, currentBranch } = context;
+  const shown = matchShown(branch.name, branch.comment, `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`, term, match);
   return {
     id: `branch:${branch.id}`,
     icon: GitBranch,
     label: branch.name,
     labelIsBranch: true,
-    ...matchShown(branch.name, branch.comment, `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`, term, match),
+    ...shown,
+    quality: branch.isHidden && shown.quality !== undefined ? lowered(shown.quality, HIDDEN_BRANCH_PENALTY) : shown.quality,
     isCurrent: branch.name === currentBranch,
+    isHidden: branch.isHidden,
     menu: () => branchMenu(context.place, [branch], currentBranch),
     run: () => diffBranch(branch),
   };
