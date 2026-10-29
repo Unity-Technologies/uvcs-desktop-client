@@ -780,7 +780,12 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   brought forward, to close it once the operation finishes or to keep it (`askToCloseWhenDone`); other windows'
   operations never hold it. Its `close` listener comes before the window's others (`onCloseRequested`), which check
   `event.defaultPrevented`: a held close neither saves the session as the last window nor reaches the page's
-  unsaved edits, and the app's icon takes the window back (`windowKept`).
+  unsaved edits, and the app's icon takes the window back (`windowKept`). Closing again while it waits asks nothing
+  more. There is no "Close now anyway": the operation would keep running out of sight (on Windows and Linux with no
+  window at all), and its card already offers Stop where stopping is safe. Once the app is quitting (`Quitting.started`)
+  nothing is held: quitting went on only after the operations finished. A page window its workspace window left behind
+  (the window shows another workspace) is closed by the app, not the user: it asks nothing and stays open while its own
+  operation runs, then closes (`ClosingWithWrites.closeLeftBehind`).
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens runs until it succeeds once; later windows take that answer (`untilSucceeded`), and
