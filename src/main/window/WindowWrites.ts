@@ -22,8 +22,14 @@ export class WindowWrites {
     return windowIds.some((windowId) => this.running.has(windowId));
   }
 
-  /** Settles once none of the windows' operations runs, including any started while waiting; at once when none does. */
-  async finishedIn(windowIds: readonly number[]): Promise<void> {
-    while (this.runningIn(windowIds)) await Promise.allSettled(windowIds.flatMap((windowId) => [...(this.running.get(windowId) ?? [])]));
+  /**
+   * Settles once none of the windows' operations runs, including any started while waiting; at once when none does.
+   * The windows are asked again on each round, as the set grows (a page window opened meanwhile).
+   */
+  async finishedIn(windowIds: () => readonly number[]): Promise<void> {
+    while (this.runningIn(windowIds())) {
+      const running = windowIds().flatMap((windowId) => [...(this.running.get(windowId) ?? [])]);
+      await Promise.allSettled(running);
+    }
   }
 }

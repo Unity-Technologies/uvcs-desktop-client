@@ -44,7 +44,7 @@ describe('WindowWrites', () => {
     const merge = operation();
     writes.started(1, update.finished);
     let done = false;
-    void writes.finishedIn([1, 2]).then(() => (done = true));
+    void writes.finishedIn(() => [1, 2]).then(() => (done = true));
 
     writes.started(2, merge.finished);
     update.succeed();
@@ -55,10 +55,29 @@ describe('WindowWrites', () => {
     expect(done).toBe(true);
   });
 
+  it('waits for a window that joined the set while waiting, such as a page window opened meanwhile', async () => {
+    const writes = new WindowWrites();
+    const update = operation();
+    const pageMerge = operation();
+    writes.started(1, update.finished);
+    const windowIds = [1];
+    let done = false;
+    void writes.finishedIn(() => windowIds).then(() => (done = true));
+
+    windowIds.push(2);
+    writes.started(2, pageMerge.finished);
+    update.succeed();
+    await settle();
+    expect(done).toBe(false);
+    pageMerge.succeed();
+    await settle();
+    expect(done).toBe(true);
+  });
+
   it("settles at once when none of the windows started one, whatever other windows run", async () => {
     const writes = new WindowWrites();
     writes.started(2, operation().finished);
 
-    await expect(writes.finishedIn([1])).resolves.toBeUndefined();
+    await expect(writes.finishedIn(() => [1])).resolves.toBeUndefined();
   });
 });

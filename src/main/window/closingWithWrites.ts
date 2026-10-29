@@ -1,7 +1,7 @@
 export interface ClosingWithWritesDependencies {
   /** Whether an operation changing a workspace that the window (or a page window it owns) started runs (`WindowWrites`). */
   writesRunningIn: (windowId: number) => boolean;
-  /** Settles once none runs (`WindowWrites.finishedIn`). */
+  /** Settles once none runs, the windows' operations as of each round (`WindowWrites.finishedIn`). */
   writesFinishedIn: (windowId: number) => Promise<void>;
   /** Asks, over the window, whether to close it once its operation finishes (`askToCloseWhenDone`); false to keep it. */
   askToCloseWhenDone: (windowId: number) => Promise<boolean>;

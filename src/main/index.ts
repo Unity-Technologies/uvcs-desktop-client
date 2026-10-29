@@ -90,7 +90,7 @@ const windows = new WorkspaceWindows({
 });
 const closing = new ClosingWithWrites({
   writesRunningIn: (windowId) => windowWrites.runningIn(windows.closingWith(windowId)),
-  writesFinishedIn: (windowId) => windowWrites.finishedIn(windows.closingWith(windowId)),
+  writesFinishedIn: (windowId) => windowWrites.finishedIn(() => windows.closingWith(windowId)),
   askToCloseWhenDone,
   kept: (windowId) => appIcon.windowKept(windowId),
   close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
