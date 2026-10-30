@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inlinePictureView, pictureLoadAfter } from './inlinePictureView';
+import { inlinePictureView, pictureEnlarges, pictureLabel, pictureLoadAfter, pictureTitle } from './inlinePictureView';
 
 describe('a picture shown in the text', () => {
   it('holds its place quietly while it loads, then shows itself', () => {
@@ -15,5 +15,33 @@ describe('a picture shown in the text', () => {
     expect(pictureLoadAfter('load', 1280)).toBe('loaded');
     expect(pictureLoadAfter('load', 0)).toBe('failed');
     expect(pictureLoadAfter('error', 0)).toBe('failed');
+  });
+});
+
+describe('clicking a picture shown in the text', () => {
+  it('enlarges it when the text shows it smaller than it is', () => {
+    expect(pictureEnlarges(1280, 586)).toBe(true);
+  });
+
+  it('does nothing when it already shows at its own size, a pixel of rounding aside', () => {
+    expect(pictureEnlarges(420, 420)).toBe(false);
+    expect(pictureEnlarges(420.4, 420)).toBe(false);
+  });
+});
+
+describe("a picture's name", () => {
+  it('offers to enlarge it, by its description, when a click does', () => {
+    expect(pictureLabel('The Tools page in Settings', true)).toBe('Enlarge The Tools page in Settings');
+    expect(pictureLabel('', true)).toBe('Enlarge picture');
+  });
+
+  it('is only its description when a click does nothing', () => {
+    expect(pictureLabel('The Tools page in Settings', false)).toBe('The Tools page in Settings');
+    expect(pictureLabel('', false)).toBe('Picture');
+  });
+
+  it('titles the larger view by its description', () => {
+    expect(pictureTitle('The Tools page in Settings')).toBe('The Tools page in Settings');
+    expect(pictureTitle('')).toBe('Picture');
   });
 });

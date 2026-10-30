@@ -145,11 +145,15 @@ address whose token expires five minutes after the feed is read, long before Wha
 attachment's lasting address, `https://github.com/user-attachments/assets/<id>` (`lastingPictureUrl`).
 
 What's New shows the pictures themselves (`MarkdownBlocks` with `images="inline"`, `InlinePicture`): as wide as the
-note at most and never wider than they are, at their own proportions, framed by a subtle border, opening at full size
-in the browser on a click. While one loads it holds a quiet place of a stable height; one that can't load falls back
-to the chip comments show (`inlinePictureView`), so its description and link stay. Comments keep their chips
-(`CommentImage`, fetched only on hover): anyone may link anything there. Showing the HTML as it comes
-(`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run markup from the network.
+note and 360 pixels tall at most, never larger than they are, at their own proportions, framed by a subtle border. A
+click on one shown smaller than it is (`pictureEnlarges`, measured again as the window resizes: `usePictureEnlarges`)
+shows it larger over the dialog, as large as the window allows (`PictureViewer`): a click, Esc or its close button
+returns, and "Open in Browser" shows it at full size there. How to take a picture that reads at that size, cropped to
+what it shows: the `release-notes` skill, "Pictures and GIFs" (a GIF plays in place, as a picture). While one loads it
+holds a quiet place of a stable height; one that can't load falls back to the chip comments show
+(`inlinePictureView`), so its description and link stay. Comments keep their chips (`CommentImage`, fetched only on
+hover): anyone may link anything there. Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the
+renderer is untrusted and must never run markup from the network.
 
 **Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
 (`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON

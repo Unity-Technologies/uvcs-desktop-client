@@ -27,3 +27,26 @@ export function inlinePictureView(load: PictureLoad): 'placeholder' | 'picture' 
 export function pictureLoadAfter(event: 'load' | 'error', naturalWidth: number): PictureLoad {
   return event === 'load' && naturalWidth > 0 ? 'loaded' : 'failed';
 }
+
+/**
+ * Whether a click enlarges a picture (`PictureViewer`): only when the text shows it smaller than it is, held to the
+ * text's width and a height that keeps a screenshot from filling the dialog (`InlinePicture.module.css`). A picture
+ * already at its own size has nothing more to show; a pixel is left for rounding.
+ */
+export function pictureEnlarges(naturalWidth: number, shownWidth: number): boolean {
+  return naturalWidth - shownWidth > 1;
+}
+
+/** What a picture with no description is called. */
+const UNNAMED_PICTURE = 'Picture';
+
+/** A picture's accessible name: an offer to enlarge it when a click does (`pictureEnlarges`), else what it shows. */
+export function pictureLabel(alt: string, enlarges: boolean): string {
+  if (!enlarges) return alt || UNNAMED_PICTURE;
+  return alt ? `Enlarge ${alt}` : `Enlarge ${UNNAMED_PICTURE.toLowerCase()}`;
+}
+
+/** What the larger view of a picture (`PictureViewer`) is titled for screen readers: what it shows. */
+export function pictureTitle(alt: string): string {
+  return alt || UNNAMED_PICTURE;
+}
