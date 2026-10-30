@@ -252,7 +252,20 @@ function inlinesOfNode(node: HtmlNode): MarkdownInline[] {
 /** A picture from the web; one from any other address (`data:`, a file, a page's own path) is left out. */
 function imageOf(image: HtmlElement): MarkdownInline[] {
   const url = image.attributes.src?.trim() ?? '';
-  return WEB_ADDRESS.test(url) ? [{ kind: 'image', url, alt: image.attributes.alt ?? '' }] : [];
+  return WEB_ADDRESS.test(url) ? [{ kind: 'image', url: lastingPictureUrl(url), alt: image.attributes.alt ?? '' }] : [];
+}
+
+/** A picture uploaded to GitHub as the releases feed signs it: `…/<user>/<n>-<attachment id>.<ext>?jwt=…`. */
+const SIGNED_ATTACHMENT = /^https:\/\/private-user-images\.githubusercontent\.com\/\d+\/\d+-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.\w+\?/i;
+
+/**
+ * The feed's address for a picture uploaded to GitHub carries a token that expires five minutes after the feed was
+ * read, and the notes are read at the check that finds an update, often hours before What's New opens: the picture
+ * is shown from the attachment's own address, which lasts (and leads to the same file).
+ */
+function lastingPictureUrl(url: string): string {
+  const attachment = url.match(SIGNED_ATTACHMENT)?.[1];
+  return attachment ? `https://github.com/user-attachments/assets/${attachment.toLowerCase()}` : url;
 }
 
 /**
