@@ -12,7 +12,10 @@
  * The Release note workflow (`.github/workflows/release-note.yml`) fails a pull request whose section this can't
  * read, so every change either tells users what it delivers or says why it doesn't. It reads Markdown lines rather
  * than parsing Markdown, so it needs no package: only what Node runs as it is.
+ *
+ *   PULL_REQUEST_BODY="$(gh pr view --json body -q .body)" node scripts/build/releaseNote.ts
  */
+import { resolve } from 'node:path';
 
 export const RELEASE_NOTE_KINDS = ['New', 'Improved', 'Fixed'] as const;
 export type ReleaseNoteKind = (typeof RELEASE_NOTE_KINDS)[number];
@@ -82,4 +85,17 @@ function outsideCodeIndexes(lines: string[]): number[] {
     else if (!inCode) indexes.push(index);
   });
   return indexes;
+}
+
+/** What CI prints: the note it read, or what is wrong with it (and a failure). */
+function describeReading(reading: ReleaseNoteReading): string {
+  if ('problem' in reading) return reading.problem;
+  const { note } = reading;
+  return note.kind === 'none' ? `No release note: ${note.reason}` : `${note.kind}: ${note.title}\n\n${note.description}`;
+}
+
+if (import.meta.filename === resolve(process.argv[1] ?? '')) {
+  const reading = readReleaseNote(process.env.PULL_REQUEST_BODY ?? '');
+  console.log(describeReading(reading));
+  if ('problem' in reading) process.exitCode = 1;
 }

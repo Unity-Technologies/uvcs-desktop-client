@@ -1,0 +1,36 @@
+name: Release note
+
+# Every pull request tells the app's users what it delivers, in its body's "## Release note" section, or says why it
+# has nothing to tell them (`readReleaseNote`, scripts/build/releaseNote.ts; how to write one: the release-notes skill).
+# It runs apart from CI so that editing the description checks the note again without building on every OS.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+  # The merge queue waits for every required check on its own commit; the note was checked on the pull request, so
+  # the job below is skipped there, which counts as passing.
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-note-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Release note
+    # Dependabot's updates are left out of the release notes: they write no description.
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The Node .nvmrc pins, which runs the TypeScript script as it is: nothing to install.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Read the release note
+        # The body goes through the environment, never into the command line, where its text would run as shell.
+        env:
+          PULL_REQUEST_BODY: ${{ github.event.pull_request.body }}
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/releaseNote.ts
