@@ -3,13 +3,14 @@ import { releaseNotesMarkdown, type MergedPullRequest } from './releaseNotes';
 
 const CHANGELOG = 'https://github.com/Unity-Technologies/uvcs-desktop-client/compare/v0.2.4...v0.2.5';
 
-function pullRequest(number: number, title: string, note: string, author = 'danipen'): MergedPullRequest {
+/** A pull request as `gh pr view --json number,title,url,body,author` prints it: a bot's login is `app/<name>`. */
+function pullRequest(number: number, title: string, note: string, author: MergedPullRequest['author'] = { login: 'danipen', is_bot: false }): MergedPullRequest {
   return {
     number,
     title,
     url: `https://github.com/Unity-Technologies/uvcs-desktop-client/pull/${number}`,
     body: `## What does this pull request do?\n\nSomething.\n\n## Release note\n\n${note}\n\n## Current behavior\n\nNone.`,
-    author: { login: author },
+    author,
   };
 }
 
@@ -47,7 +48,7 @@ describe("a release's notes", () => {
     const notes = releaseNotesMarkdown(
       [
         pullRequest(170, 'Refactor', 'None: moves code between services.'),
-        pullRequest(171, 'Bump undici', '', 'dependabot[bot]'),
+        pullRequest(171, 'Bump undici from 6.29.0 to 6.29.1', 'Bumps undici.', { login: 'app/dependabot', is_bot: true }),
         pullRequest(172, 'Shelves', '### Fixed: Shelves open\n\nThey open again.'),
       ],
       CHANGELOG,
