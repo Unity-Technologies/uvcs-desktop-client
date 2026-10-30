@@ -2,6 +2,19 @@
 
 One or two sentences, in the product's words.
 
+## Release note
+
+<!--
+What the app's users read in What's New and on the releases page: written for them, not for reviewers, with the
+release-notes skill (.claude/skills/release-notes). One note:
+
+### New: <what users can now do>      (or Improved: / Fixed:)
+
+<A sentence or two: what it is, where to find it; for a fix, what users saw and what happens now.>
+
+Or, when users have nothing to read: "None: <why>". The Release note check fails the pull request otherwise.
+-->
+
 ## Current behavior
 
 What the user sees or the app does today (for performance work, the numbers and how they were measured).
