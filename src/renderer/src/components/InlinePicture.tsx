@@ -1,7 +1,8 @@
-import { useState, type MouseEvent, type SyntheticEvent } from 'react';
+import { useRef, useState, type MouseEvent } from 'react';
 import { CommentImage } from './comments/CommentImage';
-import { inlinePictureView, pictureEnlarges, pictureLoadAfter, type PictureLoad } from './inlinePictureView';
+import { inlinePictureView, pictureLabel, pictureLoadAfter, type PictureLoad } from './inlinePictureView';
 import { openPictureViewer } from './PictureViewer';
+import { usePictureEnlarges } from './usePictureEnlarges';
 import styles from './InlinePicture.module.css';
 
 interface InlinePictureProps {
@@ -20,15 +21,11 @@ interface InlinePictureProps {
  */
 export function InlinePicture({ url, alt, source }: InlinePictureProps) {
   const [load, setLoad] = useState<PictureLoad>('loading');
-  const [enlarges, setEnlarges] = useState(false);
+  const pictureRef = useRef<HTMLImageElement>(null);
+  const enlarges = usePictureEnlarges(pictureRef, load === 'loaded');
   const view = inlinePictureView(load);
   if (view === 'chip') return <CommentImage url={url} alt={alt} source={source} />;
 
-  const loaded = (event: SyntheticEvent<HTMLImageElement>): void => {
-    const picture = event.currentTarget;
-    setLoad(pictureLoadAfter('load', picture.naturalWidth));
-    setEnlarges(pictureEnlarges(picture.naturalWidth, picture.clientWidth));
-  };
   const enlarge = (event: MouseEvent): void => {
     event.stopPropagation();
     openPictureViewer(url, alt);
@@ -40,11 +37,19 @@ export function InlinePicture({ url, alt, source }: InlinePictureProps) {
       className={styles.frame}
       data-loading={view === 'placeholder' || undefined}
       data-tip={alt || undefined}
-      aria-label={alt ? `Enlarge ${alt}` : 'Enlarge picture'}
+      aria-label={pictureLabel(alt, enlarges)}
       disabled={!enlarges}
       onClick={enlarge}
     >
-      <img className={styles.picture} src={url} alt={alt} referrerPolicy="no-referrer" onLoad={loaded} onError={() => setLoad(pictureLoadAfter('error', 0))} />
+      <img
+        ref={pictureRef}
+        className={styles.picture}
+        src={url}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        onLoad={(event) => setLoad(pictureLoadAfter('load', event.currentTarget.naturalWidth))}
+        onError={() => setLoad(pictureLoadAfter('error', 0))}
+      />
     </button>
   );
 }
