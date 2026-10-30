@@ -29,6 +29,20 @@ describe('the notes of an update found', () => {
     expect(releaseNotesOf('  \n', '1.3.0')).toEqual([]);
   });
 
+  it("dates only the update's own release, the one release the feed dates", () => {
+    const notes = [
+      { version: '1.3.0', note: '<p>Shelves</p>' },
+      { version: '1.2.1', note: '<p>A fix</p>' },
+    ];
+    const releaseDate = '2026-10-29T15:48:48.093Z';
+
+    expect(releaseNotesOf(notes, '1.3.0', releaseDate)).toEqual([
+      { version: '1.3.0', html: '<p>Shelves</p>', releaseDate },
+      { version: '1.2.1', html: '<p>A fix</p>' },
+    ]);
+    expect(releaseNotesOf('<p>Shelves</p>', '1.3.0', releaseDate)).toEqual([{ version: '1.3.0', html: '<p>Shelves</p>', releaseDate }]);
+  });
+
   it('has none when the feed sent none', () => {
     expect(releaseNotesOf(null, '1.3.0')).toEqual([]);
     expect(releaseNotesOf(undefined, '1.3.0')).toEqual([]);
