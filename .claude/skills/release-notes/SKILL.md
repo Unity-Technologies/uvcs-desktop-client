@@ -35,8 +35,7 @@ menu of files, changesets, branches, labels and shelves, and open on what you ri
   Choose by what the user gets, not by the branch name: a `feature/` branch that makes an existing view better is
   **Improved**; a `perf/` branch users will feel is **Improved**.
 - The description under it: Markdown. Headings inside it are `####`, never `###` (that starts a note).
-- A picture is the pull request's own screenshot: reference the same file (`![Settings › Tools](./tools.png)`) and
-  `gh pr create --attach ./tools.png` uploads it once for both.
+- A picture goes in only when it adds to what the note says, cropped to what it shows: see "Pictures".
 
 A pull request with nothing for users writes `None:` and the reason, in one line:
 
@@ -70,6 +69,30 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
   feature needs it.
 - **A picture, a table or a snippet only when words aren't enough**: a new view or dialog, a before and after, a
   format the user types (`cs:4821` in a comment). Never a picture of something a sentence says as well.
+
+## Pictures
+
+A picture earns its place only when it shows what the note delivers better than words: a new dialog, menu or panel,
+a before and after, a layout the user has to see. Most fixes and many improvements need none. When in doubt, leave it
+out: a note without a picture reads well; a picture that doesn't help makes the note harder to read.
+
+What's New shows a picture inside the note, as wide as the text (about 600 pixels) and at most 360 pixels tall, and
+a click shows it larger. So a picture must read at that size:
+
+- **Crop it to what the note is about.** A feature in a popup: the popup. A part of a panel: that part. A menu: the
+  menu open, with the row it opened from. Never the whole window, unless the note is about the whole window.
+- **Keep just enough around it to place it**: a strip of the panel or toolbar it belongs to, so the user knows where
+  to look in the app. Not so much that the feature becomes small.
+- **Wider than tall**, or about square: a tall crop is shrunk to 360 pixels high and its text gets hard to read.
+- **Real-looking content**: a sandbox (`scripts/sandboxes/`) with sensible names, the light theme, the pointer out
+  of the way, nothing personal or internal on screen.
+- **Take it with `playwright-cli`** (CLAUDE.md "Seeing the app"): `playwright-cli screenshot <ref>` takes one element,
+  the popup or the panel, already cropped. For a zone that no element bounds, take the window and crop the file.
+- **Name it**: the alt text says what the picture shows (`![The Tools page in Settings](./tools.png)`); it is what a
+  screen reader says and what shows if the picture can't load.
+- **Reuse the pull request's screenshot** when it already is that crop: reference the same file in the note and
+  `gh pr create --attach ./tools.png` uploads it once for both. The pull request's own picture may show more for
+  reviewers; the note's is cropped for users.
 
 ## The words
 
