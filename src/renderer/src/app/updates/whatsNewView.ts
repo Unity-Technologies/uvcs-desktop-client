@@ -1,3 +1,4 @@
+import { formatDay, type DayFormat } from '../../lib/formatDate';
 import type { MarkdownBlock } from '../../lib/markdown';
 import { NOTE_KIND_LABELS, NOTE_KINDS, type NoteKind, type WhatsNewNote, type WhatsNewRelease } from './whatsNewRelease';
 
@@ -21,18 +22,24 @@ export function filterChips(releases: readonly WhatsNewRelease[]): FilterChip[] 
   return present.length < 2 ? [] : [{ filter: 'all', label: 'All', count: notes.length }, ...present];
 }
 
+/** The color of a group's tag (`DetailsBadge`'s tones): new is green, improved blue, fixed amber, the rest grey. */
+export type NoteGroupTone = 'success' | 'accent' | 'warning' | 'neutral';
+
+const KIND_TONES: Record<NoteKind, NoteGroupTone> = { new: 'success', improved: 'accent', fixed: 'warning', other: 'neutral' };
+
 export interface NoteGroup {
   kind: NoteKind;
   label: string;
+  tone: NoteGroupTone;
   notes: WhatsNewNote[];
 }
 
-/** An older release's row, which names it and unfolds its notes. */
+/** A release's row, which names it and unfolds its notes: every release but the update's own has one. */
 export interface ReleaseRow {
   version: string;
   /** How many notes it shows ("6 notes"), empty for notes written as plain Markdown. */
   count: string;
-  /** Whether a click folds and unfolds it: under a filter every release shows its notes, so it only names them. */
+  /** Whether a click folds and unfolds it: not under a filter, nor for the first release shown, which are always open. */
   foldable: boolean;
 }
 
@@ -45,34 +52,56 @@ export interface ReleaseSection {
   groups: NoteGroup[];
 }
 
+/** What the dialog's body shows: its releases, or a quiet line when none has anything to show. */
+export type WhatsNewBody = { kind: 'empty' } | { kind: 'releases'; sections: ReleaseSection[] };
+
+export function whatsNewBody(releases: readonly WhatsNewRelease[], filter: NotesFilter, unfolded: ReadonlySet<string>): WhatsNewBody {
+  const sections = releaseSections(releases, filter, unfolded);
+  return sections.length > 0 ? { kind: 'releases', sections } : { kind: 'empty' };
+}
+
 /**
- * What the dialog's body shows: the update's own release open, under the title that names it, and each older one as a
- * row the user unfolds (`unfolded`, the versions they opened). A filter shows its kind of notes from every release at
- * once, so "Fixed" lists every fix since the running version; the releases with none of them are left out, and so is
- * what a release says outside its notes.
+ * Whether What's New has anything to show, so the update card and About offer it only then: GitHub's notes can hold
+ * nothing but their "Full Changelog" line or their new contributors, both left out.
+ */
+export function hasWhatsNew(releases: readonly WhatsNewRelease[]): boolean {
+  return releases.some(showsSomething);
+}
+
+function showsSomething(release: WhatsNewRelease): boolean {
+  return release.notes.length > 0 || release.intro.length > 0;
+}
+
+/**
+ * The releases the dialog shows: the update's own open, under the title that names it, and each older one as a row
+ * the user unfolds (`unfolded`, the versions they opened). A release with nothing to show is left out; when that's
+ * the update's own, the first release shown opens in its place. A filter shows its kind of notes from every release
+ * at once, so "Fixed" lists every fix since the running version; the releases with none of them are left out, and so
+ * is what a release says outside its notes.
  */
 export function releaseSections(releases: readonly WhatsNewRelease[], filter: NotesFilter, unfolded: ReadonlySet<string>): ReleaseSection[] {
   const newest = releases[0]?.version;
-  return releases.flatMap((release) => {
+  const shown = releases.flatMap((release) => {
     const notes = filter === 'all' ? release.notes : release.notes.filter((note) => note.kind === filter);
-    if (filter !== 'all' && notes.length === 0) return [];
-    const isNewest = release.version === newest;
-    return [
-      {
-        version: release.version,
-        row: isNewest ? null : { version: release.version, count: release.plain ? '' : noteCount(notes.length), foldable: filter === 'all' },
-        open: isNewest || filter !== 'all' || unfolded.has(release.version),
-        intro: filter === 'all' ? release.intro : [],
-        groups: groupsOf(notes),
-      },
-    ];
+    const intro = filter === 'all' ? release.intro : [];
+    return notes.length > 0 || intro.length > 0 ? [{ release, notes, intro }] : [];
+  });
+  return shown.map(({ release, notes, intro }, index) => {
+    const alwaysOpen = filter !== 'all' || index === 0;
+    return {
+      version: release.version,
+      row: release.version === newest ? null : { version: release.version, count: release.plain ? '' : noteCount(notes.length), foldable: !alwaysOpen },
+      open: alwaysOpen || unfolded.has(release.version),
+      intro,
+      groups: groupsOf(notes),
+    };
   });
 }
 
 function groupsOf(notes: readonly WhatsNewNote[]): NoteGroup[] {
   return NOTE_KINDS.flatMap((kind) => {
     const ofKind = notes.filter((note) => note.kind === kind);
-    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], notes: ofKind }] : [];
+    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], tone: KIND_TONES[kind], notes: ofKind }] : [];
   });
 }
 
@@ -88,16 +117,10 @@ export function toggledRelease(unfolded: ReadonlySet<string>, version: string): 
 }
 
 /**
- * The line under the dialog's title: the version running, then the day the update was released, when known.
- * `locale` is the user's (undefined) but for tests.
+ * The line under the dialog's title: the version running, then the day the update was released, when known, in the
+ * user's locale and time zone unless `format` says otherwise (tests).
  */
-export function whatsNewSubtitle(runningVersion: string | undefined, releaseDate: string | null, locale?: string): string[] {
-  const released = releaseDate ? releasedOn(releaseDate, locale) : null;
-  return [runningVersion ? `You have ${runningVersion}` : null, released].filter((part) => part !== null);
-}
-
-function releasedOn(isoDate: string, locale: string | undefined): string | null {
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return null;
-  return `Released ${new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric' }).format(date)}`;
+export function whatsNewSubtitle(runningVersion: string | undefined, releaseDate: string | null, format?: DayFormat): string[] {
+  const day = releaseDate ? formatDay(releaseDate, format) : null;
+  return [runningVersion ? `You have ${runningVersion}` : null, day ? `Released ${day}` : null].filter((part) => part !== null);
 }
