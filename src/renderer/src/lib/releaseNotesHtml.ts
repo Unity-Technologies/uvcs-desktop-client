@@ -277,9 +277,24 @@ function linkOf(link: HtmlElement): MarkdownInline[] {
   const children = inlinesOf(link.children);
   const url = link.attributes.href ?? '';
   if (!WEB_ADDRESS.test(url)) return children;
-  const pictures = children.filter((inline) => inline.kind === 'image');
-  const words = trimmed(merged(children.filter((inline) => inline.kind !== 'image')));
+  const { words, pictures } = picturesTakenOut(children);
   return [...(words.length > 0 ? [{ kind: 'link', url, children: words } as const] : []), ...pictures];
+}
+
+/** A line's pictures, wherever they are in its marks (`<strong><img></strong>`), and the line without them. */
+function picturesTakenOut(inlines: MarkdownInline[]): { words: MarkdownInline[]; pictures: MarkdownInline[] } {
+  const pictures: MarkdownInline[] = [];
+  const words = inlines.flatMap((inline): MarkdownInline[] => {
+    if (inline.kind === 'image') {
+      pictures.push(inline);
+      return [];
+    }
+    if (!('children' in inline)) return [inline];
+    const inner = picturesTakenOut(inline.children);
+    pictures.push(...inner.pictures);
+    return [{ ...inline, children: inner.words }];
+  });
+  return { words: trimmed(merged(words)), pictures };
 }
 
 function textOf(nodes: HtmlNode[]): string {
