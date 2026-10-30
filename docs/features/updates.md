@@ -89,10 +89,10 @@ is asked for.
 
 While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
 (`ReleaseNotesDialog`) that reads like a product's release notes. With nothing to show there is no button
-(`hasWhatsNew`, `useHasWhatsNew`): GitHub's notes can hold only their "Full Changelog" line or new contributors, both
-left out. Should the dialog still open without anything, it says so in one quiet line, "All releases" still in its
-footer (`whatsNewBody`'s `empty`). While About or
-What's New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
+(`hasWhatsNew`, `useHasWhatsNew`, which ask the dialog's own `releaseSections`): GitHub's notes can hold only their
+"Full Changelog" line or new contributors, both left out. Should the dialog still open without anything, it says so
+in one quiet line, "All releases" still in its footer (`whatsNewBody`'s `empty`). While About or What's New is open
+the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
 
 - **Header**: the app's mark, "What's new in <version>", and under it the version running (`appInfoQuery`) and the
   day the update was released (`whatsNewSubtitle`).
@@ -133,9 +133,8 @@ What's New shows the pictures themselves (`MarkdownBlocks` with `images="inline"
 note at most and never wider than they are, at their own proportions, framed by a subtle border, opening at full size
 in the browser on a click. While one loads it holds a quiet place of a stable height; one that can't load falls back
 to the chip comments show (`inlinePictureView`), so its description and link stay. Comments keep their chips
-(`CommentImage`, fetched only on hover): anyone may link anything there.
-Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
-markup from the network.
+(`CommentImage`, fetched only on hover): anyone may link anything there. Showing the HTML as it comes
+(`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run markup from the network.
 
 **Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
 (`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
