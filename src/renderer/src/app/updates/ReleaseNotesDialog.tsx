@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { AppMark } from '../../components/AppMark';
 import { MarkdownBlocks, MarkdownInlines } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
+import { SectionTitle } from '../../ui/SectionTitle';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
@@ -163,10 +164,9 @@ function ReleaseRowHeading({ row, open, onToggle }: { row: ReleaseRow; open: boo
 function NoteGroupView({ group }: { group: NoteGroup }) {
   return (
     <div className={styles.group}>
-      <p className={styles.groupTitle}>
+      <SectionTitle as="h4" count={group.notes.length}>
         {group.label}
-        <span className={styles.groupCount}>{group.notes.length}</span>
-      </p>
+      </SectionTitle>
       {group.notes.map((note, index) => (
         <Note key={index} note={note} />
       ))}
@@ -178,9 +178,9 @@ function Note({ note }: { note: WhatsNewNote }) {
   return (
     <article className={styles.note}>
       {note.title.length > 0 && (
-        <h4 className={styles.noteTitle}>
+        <h5 className={styles.noteTitle}>
           <MarkdownInlines inlines={note.title} />
-        </h4>
+        </h5>
       )}
       {note.description.length > 0 && (
         <div className={styles.description}>
