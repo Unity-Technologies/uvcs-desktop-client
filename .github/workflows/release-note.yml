@@ -20,7 +20,7 @@ concurrency:
 jobs:
   check:
     name: Release note
-    # Dependabot's updates are left out of the release notes: they write no description.
+    # Dependabot's pull requests are left out of the release notes: they update GitHub actions and packages users never see.
     if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
