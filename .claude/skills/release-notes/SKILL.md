@@ -25,7 +25,7 @@ In the pull request's body, the section `## Release note` holds exactly one note
 Add the tools you use every day, like an editor, a script or a build, in **Settings › Tools**. They show up in the
 menu of files, changesets, branches, labels and shelves, and open on what you right-clicked.
 
-![Settings › Tools](./tools.png)
+![The Tools page in Settings](./tools.png)
 ```
 
 - `### <Kind>: <Title>` on the first line. The kind is one of:
@@ -35,7 +35,7 @@ menu of files, changesets, branches, labels and shelves, and open on what you ri
   Choose by what the user gets, not by the branch name: a `feature/` branch that makes an existing view better is
   **Improved**; a `perf/` branch users will feel is **Improved**.
 - The description under it: Markdown. Headings inside it are `####`, never `###` (that starts a note).
-- A picture goes in only when it adds to what the note says, cropped to what it shows: see "Pictures".
+- A picture or a GIF goes in only when it adds to what the note says, cropped to what it shows: see "Pictures and GIFs".
 
 A pull request with nothing for users writes `None:` and the reason, in one line:
 
@@ -70,7 +70,7 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 - **A picture, a table or a snippet only when words aren't enough**: a new view or dialog, a before and after, a
   format the user types (`cs:4821` in a comment). Never a picture of something a sentence says as well.
 
-## Pictures
+## Pictures and GIFs
 
 A picture earns its place only when it shows what the note delivers better than words: a new dialog, menu or panel,
 a before and after, a layout the user has to see. Most fixes and many improvements need none. When in doubt, leave it
@@ -87,12 +87,36 @@ a click shows it larger. So a picture must read at that size:
 - **Real-looking content**: a sandbox (`scripts/sandboxes/`) with sensible names, the light theme, the pointer out
   of the way, nothing personal or internal on screen.
 - **Take it with `playwright-cli`** (CLAUDE.md "Seeing the app"): `playwright-cli screenshot <ref>` takes one element,
-  the popup or the panel, already cropped. For a zone that no element bounds, take the window and crop the file.
+  the popup or the panel, already cropped. For a zone that no element bounds, take the window and crop the file. On a
+  high-density screen (a Retina Mac) the file is twice the size on screen: that's expected and fine, What's New fits it
+  to the note and shows it larger on a click.
 - **Name it**: the alt text says what the picture shows (`![The Tools page in Settings](./tools.png)`); it is what a
   screen reader says and what shows if the picture can't load.
 - **Reuse the pull request's screenshot** when it already is that crop: reference the same file in the note and
   `gh pr create --attach ./tools.png` uploads it once for both. The pull request's own picture may show more for
   reviewers; the note's is cropped for users.
+
+### GIFs
+
+When what the note delivers is a movement, a still can't show it: something that follows the pointer, a drag, an
+animation, a flow of two or three steps, something that now stays in place. Then a short GIF says it at a glance.
+GIFs are welcome there; elsewhere a still reads better, and costs the reader less.
+
+- **The same crop as a picture**, to the zone where it happens, with its context around it.
+- **Short and looping**: three to eight seconds, one action, starting and ending where the user would; no waiting
+  at the start, the pointer moving as a person moves it.
+- **Light**: about 12 frames a second, no wider than about 900 pixels, a few megabytes at most (GitHub takes up to
+  10 MB, and What's New downloads it).
+- **A GIF, never a video file**: What's New shows a GIF as a picture; a video in the note doesn't show there at all.
+- **How**: record with `playwright-cli video-start clip.webm` … `video-stop` (CLAUDE.md "Seeing the app"), then make
+  the GIF with ffmpeg, cropping as you go (`crop=width:height:x:y`, in the recording's pixels):
+
+  ```bash
+  ffmpeg -i clip.webm -vf "crop=900:560:180:120,fps=12,scale='min(900,iw)':-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" -loop 0 clip.gif
+  ```
+
+  Reference it as a picture, `![Dragging a branch onto another to merge it](./merge-drag.gif)`, and attach it with
+  `gh pr create --attach ./merge-drag.gif`.
 
 ## The words
 
