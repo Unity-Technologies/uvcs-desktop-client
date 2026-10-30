@@ -33,7 +33,8 @@ export interface MergedPullRequest {
   title: string;
   url: string;
   body: string;
-  author: { login: string };
+  /** As gh prints it: a bot's login is `app/<name>` (`app/dependabot`), not the `<name>[bot]` of GitHub's REST API. */
+  author: { login: string; is_bot?: boolean };
 }
 
 interface WrittenNote {
@@ -42,14 +43,14 @@ interface WrittenNote {
   description: string;
 }
 
-const DEPENDABOT = 'dependabot[bot]';
+const DEPENDABOT = 'app/dependabot';
 
 export function releaseNotesMarkdown(pullRequests: readonly MergedPullRequest[], changelogUrl: string | null): string {
   const notes: WrittenNote[] = [];
   const untold: MergedPullRequest[] = [];
   for (const pullRequest of pullRequests) {
     if (pullRequest.author.login === DEPENDABOT) continue;
-    const reading = readReleaseNote(pullRequest.body ?? '');
+    const reading = readReleaseNote(pullRequest.body);
     if ('problem' in reading) untold.push(pullRequest);
     else if (reading.note.kind !== 'none') notes.push(reading.note);
   }
