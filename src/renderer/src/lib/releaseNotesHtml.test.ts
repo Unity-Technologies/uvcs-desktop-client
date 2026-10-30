@@ -204,6 +204,20 @@ describe('what never reaches the page', () => {
     ]);
   });
 
+  it('takes a picture out of a link however deep in its marks it is', () => {
+    const html = '<p><a href="https://example.com/page"><strong>See <em><img src="https://example.com/a.png" alt="A"></em> this</strong></a></p>';
+
+    expect(releaseNotesFromHtml(html)).toEqual([
+      {
+        kind: 'paragraph',
+        children: [
+          { kind: 'link', url: 'https://example.com/page', children: [{ kind: 'strong', children: [text('See this')] }] },
+          { kind: 'image', url: 'https://example.com/a.png', alt: 'A' },
+        ],
+      },
+    ]);
+  });
+
   it('leaves out pictures from anywhere but the web', () => {
     const html = '<p>A <img src="x.png"> <img src="data:image/png;base64,AAAA"> <img src="file:///etc/a.png"> <IMG SRC="javascript:alert(1)"> <img alt="none">picture</p>';
 
