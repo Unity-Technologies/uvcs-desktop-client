@@ -33,7 +33,7 @@ interface MarkdownBlocksProps {
   source?: string;
 }
 
-/** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
+/** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesOutline`), rendered as elements. */
 export function MarkdownBlocks({ blocks, source }: MarkdownBlocksProps) {
   const onCopy = useMemo(() => (source === undefined ? undefined : copyAsSource(source)), [source]);
   return (
@@ -41,6 +41,11 @@ export function MarkdownBlocks({ blocks, source }: MarkdownBlocksProps) {
       {renderBlocks(blocks)}
     </div>
   );
+}
+
+/** One line already read into Markdown's marks (a release note's title), for an element of the caller's own. */
+export function MarkdownInlines({ inlines }: { inlines: readonly MarkdownInline[] }) {
+  return <>{renderInlines(inlines)}</>;
 }
 
 function renderBlocks(blocks: readonly MarkdownBlock[]): ReactNode[] {
