@@ -88,7 +88,10 @@ electron-updater's `UpdateInfo.releaseDate`, which its `latest*.yml` holds); the
 is asked for.
 
 While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
-(`ReleaseNotesDialog`) that reads like a product's release notes. With no notes, there is no button. While About or
+(`ReleaseNotesDialog`) that reads like a product's release notes. With nothing to show there is no button
+(`hasWhatsNew`, `useHasWhatsNew`): GitHub's notes can hold only their "Full Changelog" line or new contributors, both
+left out. Should the dialog still open without anything, it says so in one quiet line, "All releases" still in its
+footer (`whatsNewBody`'s `empty`). While About or
 What's New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
 
 - **Header**: the app's mark, "What's new in <version>", and under it the version running (`appInfoQuery`) and the
@@ -105,7 +108,9 @@ What's New is open the update card steps aside (`updateCardOf`): it would repeat
 - **Filter** (`filterChips`): chips for All and each kind the notes hold, with how many notes each has across every
   release the update spans, shown only when the notes hold more than one kind. A kind with no notes has no chip.
 - **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
-  · 6 notes") the user unfolds (`toggledRelease`). A filter shows its kind from every release at once, each older
+  · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the
+  update's own, the first release shown opens in its place, named by its row. Each group's tag takes its kind's tone
+  (`NoteGroup.tone`). A filter shows its kind from every release at once, each older
   release named by its row (no longer a toggle), so "Fixed" lists every fix since the running version; releases with
   none of that kind are left out, and so is what a release says outside its notes. Going back to All keeps the
   releases the user had unfolded.
@@ -117,8 +122,9 @@ from the feed ever reaches the page, cut at its h2 and h3 headings (a heading in
 too): cutting the HTML rather than the blocks keeps a description's h4 to h6 inside its note, as `MarkdownBlock` reads
 h3 to h6 as one level. It keeps headings, paragraphs, lists (a nested list stays under its item,
 `MarkdownListItem.sublist`), quotes, code, tables (GitHub's `<markdown-accessiblity-table>` box and its columns'
-`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures; the link GitHub wraps each
-picture in is left out. Scripts, styles, attributes other than the few it reads, and links and pictures to any other
+`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures. A picture in a link comes out
+beside it, after the link's text (a link inside a link isn't HTML), so the link GitHub wraps each picture in reads as
+the picture alone. Scripts, styles, attributes other than the few it reads, and links and pictures to any other
 address are left out. The feed gives a picture uploaded to GitHub as a `private-user-images.githubusercontent.com`
 address whose token expires five minutes after the feed is read, long before What's New opens, so it is read as the
 attachment's lasting address, `https://github.com/user-attachments/assets/<id>` (`lastingPictureUrl`).
@@ -132,11 +138,11 @@ Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the rende
 markup from the network.
 
 **Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
-(`previewUpdateFeed`, ignored by a packaged app) makes it find the update a JSON file describes, ready at once and
-never installed: `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
+(`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
+file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
 renders (`gh api repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`,
 or `gh api markdown -f mode=gfm -F text=@notes.md` for notes not published yet). Start it with `npm run app:debug`; the
-update card shows about four seconds after launch.
+update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
 
 
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
