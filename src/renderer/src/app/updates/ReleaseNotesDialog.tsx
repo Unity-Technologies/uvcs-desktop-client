@@ -5,11 +5,10 @@ import { api } from '../../api/client';
 import { AppMark } from '../../components/AppMark';
 import { MarkdownBlocks, MarkdownInlines } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
-import { DetailsBadge } from '../../ui/DetailsBadge';
+import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
-import { ToggleChip } from '../../ui/ToggleChip';
 import { appInfoQuery } from '../about/appInfoQuery';
 import { installLabel } from './updateCardStatus';
 import { releaseNotesQuery } from './updateReleaseNotes';
@@ -72,7 +71,7 @@ function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: ()
       {notes ? (
         <WhatsNewBodyView
           body={whatsNewBody(releases, filter, unfolded)}
-          chips={filterSegments(releases)}
+          segments={filterSegments(releases)}
           filter={filter}
           onFilter={setFilter}
           onToggle={(version) => setUnfolded((current) => toggledRelease(current, version))}
@@ -86,17 +85,17 @@ function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: ()
 
 interface WhatsNewBodyViewProps {
   body: WhatsNewBody;
-  chips: FilterSegment[];
+  segments: FilterSegment[];
   filter: NotesFilter;
   onFilter: (filter: NotesFilter) => void;
   onToggle: (version: string) => void;
 }
 
-function WhatsNewBodyView({ body, chips, filter, onFilter, onToggle }: WhatsNewBodyViewProps) {
+function WhatsNewBodyView({ body, segments, filter, onFilter, onToggle }: WhatsNewBodyViewProps) {
   if (body.kind === 'empty') return <p className={styles.empty}>Nothing more to show for this update.</p>;
   return (
     <>
-      <FilterChips chips={chips} filter={filter} onChange={onFilter} />
+      <NotesFilterControl segments={segments} filter={filter} onChange={onFilter} />
       {body.sections.map((section) => (
         <Release key={section.version} section={section} onToggle={() => onToggle(section.version)} />
       ))}
@@ -104,22 +103,25 @@ function WhatsNewBodyView({ body, chips, filter, onFilter, onToggle }: WhatsNewB
   );
 }
 
-function FilterChips({ chips, filter, onChange }: { chips: FilterSegment[]; filter: NotesFilter; onChange: (filter: NotesFilter) => void }) {
-  if (chips.length === 0) return null;
+/** The app's segmented control, as its other views pick what they show: each kind with its count, quietly. */
+function NotesFilterControl({ segments, filter, onChange }: { segments: FilterSegment[]; filter: NotesFilter; onChange: (filter: NotesFilter) => void }) {
+  if (segments.length === 0) return null;
   return (
-    <div className={styles.chips} role="group" aria-label="Show">
-      {chips.map((chip) => (
-        <ToggleChip
-          key={chip.filter}
-          size="small"
-          pressed={chip.filter === filter}
-          onChange={() => onChange(chip.filter)}
-          icon={chip.filter !== 'all' && <span className={styles.swatch} data-kind={chip.filter} aria-hidden />}
-        >
-          {chip.label}
-          <span className={styles.count}>{chip.count}</span>
-        </ToggleChip>
-      ))}
+    <div className={styles.filter}>
+      <SegmentedControl<NotesFilter>
+        label="Show"
+        value={filter}
+        onChange={onChange}
+        segments={segments.map((segment) => ({
+          value: segment.filter,
+          label: (
+            <>
+              {segment.label}
+              <span className={styles.count}>{segment.count}</span>
+            </>
+          ),
+        }))}
+      />
     </div>
   );
 }
@@ -161,9 +163,10 @@ function ReleaseRowHeading({ row, open, onToggle }: { row: ReleaseRow; open: boo
 function NoteGroupView({ group }: { group: NoteGroup }) {
   return (
     <div className={styles.group}>
-      <div>
-        <DetailsBadge tone={group.tone}>{group.label}</DetailsBadge>
-      </div>
+      <p className={styles.groupTitle}>
+        {group.label}
+        <span className={styles.groupCount}>{group.notes.length}</span>
+      </p>
       {group.notes.map((note, index) => (
         <Note key={index} note={note} />
       ))}
