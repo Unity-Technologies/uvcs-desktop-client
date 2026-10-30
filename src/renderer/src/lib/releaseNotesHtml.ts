@@ -269,14 +269,17 @@ function lastingPictureUrl(url: string): string {
 }
 
 /**
- * A web link, or its text when it goes anywhere else. GitHub wraps each picture in a link to the picture itself: a
- * link holding only pictures is those pictures, which open by themselves.
+ * A web link, or its text when it goes anywhere else. The pictures in it come out beside it, after its text: a picture
+ * opens by itself, and a link inside a link isn't HTML. GitHub wraps each picture in a link to the picture itself,
+ * which so reads as the picture alone.
  */
 function linkOf(link: HtmlElement): MarkdownInline[] {
   const children = inlinesOf(link.children);
   const url = link.attributes.href ?? '';
-  if (!WEB_ADDRESS.test(url) || children.every((inline) => inline.kind === 'image')) return children;
-  return [{ kind: 'link', url, children }];
+  if (!WEB_ADDRESS.test(url)) return children;
+  const pictures = children.filter((inline) => inline.kind === 'image');
+  const words = trimmed(merged(children.filter((inline) => inline.kind !== 'image')));
+  return [...(words.length > 0 ? [{ kind: 'link', url, children: words } as const] : []), ...pictures];
 }
 
 function textOf(nodes: HtmlNode[]): string {
