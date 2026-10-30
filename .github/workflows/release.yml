@@ -61,11 +61,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LAST_TAG: ${{ steps.bump.outputs.last_tag }}
           TAG: ${{ steps.bump.outputs.tag }}
-        # The pull requests merged since the last release tag, read from main's merge commits ("Merge pull request #N
-        # from …", as the merge queue writes them) in the order they merged, not from GitHub's pick: release tags
-        # aren't on main (the bump commit is only on its tag). `releaseNotesMarkdown` joins their release notes.
+        # The pull requests merged since the last release tag, read from main's merge commits, not from GitHub's pick:
+        # release tags aren't on main (the bump commit is only on its tag). It relies on the repository's settings:
+        # pull requests merge with a merge commit (the merge queue's "merge" method) and its default message,
+        # "Merge pull request #N from <owner>/<branch>"; matching the owner leaves out the merges kept from the
+        # repository's first home, whose numbers repeat. `releaseNotesMarkdown` joins their release notes.
+        # The tag is already pushed: if this step fails, open the draft by hand or delete the tag before running again.
+        shell: bash
         run: |
-          numbers="$(git log --merges --reverse --format=%s ${LAST_TAG:+$LAST_TAG..}HEAD | sed -nE 's/^Merge pull request #([0-9]+) .*/\1/p')"
+          set -euo pipefail
+          numbers="$(git log --merges --topo-order --reverse --format=%s ${LAST_TAG:+$LAST_TAG..}HEAD \
+            | sed -nE "s|^Merge pull request #([0-9]+) from $GITHUB_REPOSITORY_OWNER/.*|\\1|p" | awk '!seen[$0]++')"
           for number in $numbers; do
             gh pr view "$number" --json number,title,url,body,author
           done | jq -s . > "$RUNNER_TEMP/pull-requests.json"
