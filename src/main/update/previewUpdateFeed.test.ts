@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { UpdateStatus } from '@shared/domain/appUpdate';
 import { AppUpdates } from './AppUpdates';
-import { previewUpdateFeed, previewUpdateOf } from './previewUpdateFeed';
+import { previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
 
 const file = {
   version: '0.2.5',
@@ -23,6 +23,16 @@ describe('a preview update, for seeing What’s New while developing', () => {
         { version: '0.2.4', note: null },
       ],
     });
+  });
+
+  it('is named by its variable only in an unpackaged app, and only when the variable names a file', () => {
+    const env = { UVCS_PREVIEW_UPDATE: '/tmp/update.json' };
+
+    expect(previewUpdateFile(false, env)).toBe('/tmp/update.json');
+    expect(previewUpdateFile(true, env)).toBeUndefined();
+    expect(previewUpdateFile(false, { UVCS_PREVIEW_UPDATE: '' })).toBeUndefined();
+    expect(previewUpdateFile(false, { UVCS_PREVIEW_UPDATE: '  ' })).toBeUndefined();
+    expect(previewUpdateFile(false, {})).toBeUndefined();
   });
 
   it('refuses a file that names no version', () => {
