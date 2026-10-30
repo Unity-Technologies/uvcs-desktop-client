@@ -22,15 +22,9 @@ export function filterSegments(releases: readonly WhatsNewRelease[]): FilterSegm
   return present.length < 2 ? [] : [{ filter: 'all', label: 'All', count: notes.length }, ...present];
 }
 
-/** The color of a group's tag (`DetailsBadge`'s tones): new is green, improved blue, fixed amber, the rest grey. */
-export type NoteGroupTone = 'success' | 'accent' | 'warning' | 'neutral';
-
-const KIND_TONES: Record<NoteKind, NoteGroupTone> = { new: 'success', improved: 'accent', fixed: 'warning', other: 'neutral' };
-
 export interface NoteGroup {
   kind: NoteKind;
   label: string;
-  tone: NoteGroupTone;
   notes: WhatsNewNote[];
 }
 
@@ -98,7 +92,7 @@ export function releaseSections(releases: readonly WhatsNewRelease[], filter: No
 function groupsOf(notes: readonly WhatsNewNote[]): NoteGroup[] {
   return NOTE_KINDS.flatMap((kind) => {
     const ofKind = notes.filter((note) => note.kind === kind);
-    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], tone: KIND_TONES[kind], notes: ofKind }] : [];
+    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], notes: ofKind }] : [];
   });
 }
 

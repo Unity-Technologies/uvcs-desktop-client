@@ -76,18 +76,6 @@ describe("What's New's releases", () => {
     expect(summary([newest, onlyFixes], 'all', unfolded)[1]!.open).toBe(true);
     expect(toggledRelease(unfolded, '0.2.4')).toEqual(new Set());
   });
-
-  it('tones each group by its kind', () => {
-    const [section] = releaseSections([newest, generated], 'all', new Set());
-    const unfoldedGenerated = releaseSections([newest, generated], 'all', new Set(['0.2.3']))[1]!;
-
-    expect(section!.groups.map(({ kind, tone }) => ({ kind, tone }))).toEqual([
-      { kind: 'new', tone: 'success' },
-      { kind: 'improved', tone: 'accent' },
-      { kind: 'fixed', tone: 'warning' },
-    ]);
-    expect(unfoldedGenerated.groups[0]!.tone).toBe('neutral');
-  });
 });
 
 describe('releases with nothing to show', () => {
