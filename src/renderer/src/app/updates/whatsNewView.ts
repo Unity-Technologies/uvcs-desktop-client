@@ -62,14 +62,11 @@ export function whatsNewBody(releases: readonly WhatsNewRelease[], filter: Notes
 
 /**
  * Whether What's New has anything to show, so the update card and About offer it only then: GitHub's notes can hold
- * nothing but their "Full Changelog" line or their new contributors, both left out.
+ * nothing but their "Full Changelog" line or their new contributors, both left out. It asks the dialog's own rule
+ * (`releaseSections`), so the button never opens an empty dialog.
  */
 export function hasWhatsNew(releases: readonly WhatsNewRelease[]): boolean {
-  return releases.some(showsSomething);
-}
-
-function showsSomething(release: WhatsNewRelease): boolean {
-  return release.notes.length > 0 || release.intro.length > 0;
+  return releaseSections(releases, 'all', new Set()).length > 0;
 }
 
 /**
