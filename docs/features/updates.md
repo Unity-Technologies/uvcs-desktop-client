@@ -126,7 +126,8 @@ the update card steps aside (`updateCardOf`): it would repeat them, over the dia
 - **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
   · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the
   update's own, the first release shown opens in its place, named by its row. Each group is titled as the app titles
-  a section (Home's "Recent"): its name, small and uppercase, and how many notes it holds; no color of its own. A
+  a section (`SectionTitle`, as Home's "Recent"): its name, small and uppercase, and how many notes it holds; no color
+  of its own. A
   filter shows its kind from every release at once, each older release named by its row (no longer a toggle), so
   "Fixed" lists every fix since the running version; releases with none of that kind are left out, and so is what a
   release says outside its notes. Going back to All keeps the releases the user had unfolded.
