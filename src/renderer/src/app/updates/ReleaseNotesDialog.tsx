@@ -14,17 +14,18 @@ import { appInfoQuery } from '../about/appInfoQuery';
 import { installLabel } from './updateCardStatus';
 import { releaseNotesQuery } from './updateReleaseNotes';
 import { installUpdate, setReleaseNotesOpen, useUpdateStore } from './updateStore';
-import { whatsNewRelease, type NoteKind, type WhatsNewNote } from './whatsNewRelease';
+import { whatsNewRelease, type WhatsNewNote } from './whatsNewRelease';
 import {
   filterChips,
-  releaseSections,
   toggledRelease,
+  whatsNewBody,
   whatsNewSubtitle,
   type FilterChip,
   type NoteGroup,
   type NotesFilter,
   type ReleaseRow,
   type ReleaseSection,
+  type WhatsNewBody,
 } from './whatsNewView';
 import styles from './ReleaseNotesDialog.module.css';
 
@@ -32,8 +33,6 @@ import styles from './ReleaseNotesDialog.module.css';
 export function openReleaseNotesDialog(version: string): void {
   openDialog((close) => <ReleaseNotesDialog version={version} onClose={close} />);
 }
-
-const KIND_TONES = { new: 'success', improved: 'accent', fixed: 'warning', other: 'neutral' } as const satisfies Record<NoteKind, string>;
 
 function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: () => void }) {
   const { data: notes } = useQuery(releaseNotesQuery(version));
@@ -71,16 +70,37 @@ function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: ()
   return (
     <Dialog icon={<AppMark size={40} />} title={`What's new in ${version}`} description={subtitle || undefined} width={640} onClose={onClose} footer={footer}>
       {notes ? (
-        <>
-          <FilterChips chips={filterChips(releases)} filter={filter} onChange={setFilter} />
-          {releaseSections(releases, filter, unfolded).map((section) => (
-            <Release key={section.version} section={section} onToggle={() => setUnfolded((current) => toggledRelease(current, section.version))} />
-          ))}
-        </>
+        <WhatsNewBodyView
+          body={whatsNewBody(releases, filter, unfolded)}
+          chips={filterChips(releases)}
+          filter={filter}
+          onFilter={setFilter}
+          onToggle={(version) => setUnfolded((current) => toggledRelease(current, version))}
+        />
       ) : (
         <Spinner size={16} />
       )}
     </Dialog>
+  );
+}
+
+interface WhatsNewBodyViewProps {
+  body: WhatsNewBody;
+  chips: FilterChip[];
+  filter: NotesFilter;
+  onFilter: (filter: NotesFilter) => void;
+  onToggle: (version: string) => void;
+}
+
+function WhatsNewBodyView({ body, chips, filter, onFilter, onToggle }: WhatsNewBodyViewProps) {
+  if (body.kind === 'empty') return <p className={styles.empty}>This update's notes are on its release page.</p>;
+  return (
+    <>
+      <FilterChips chips={chips} filter={filter} onChange={onFilter} />
+      {body.sections.map((section) => (
+        <Release key={section.version} section={section} onToggle={() => onToggle(section.version)} />
+      ))}
+    </>
   );
 }
 
@@ -142,7 +162,7 @@ function NoteGroupView({ group }: { group: NoteGroup }) {
   return (
     <div className={styles.group}>
       <div>
-        <DetailsBadge tone={KIND_TONES[group.kind]}>{group.label}</DetailsBadge>
+        <DetailsBadge tone={group.tone}>{group.label}</DetailsBadge>
       </div>
       {group.notes.map((note, index) => (
         <Note key={index} note={note} />

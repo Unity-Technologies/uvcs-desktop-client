@@ -40,6 +40,12 @@
   font-weight: var(--weight-regular);
 }
 
+/* Nothing to show (`whatsNewBody` empty): one quiet line, "All releases" in the footer leads on. */
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
 .release {
   display: flex;
   flex-direction: column;

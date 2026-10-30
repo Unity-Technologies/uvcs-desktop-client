@@ -8,7 +8,7 @@ import { SWEEP, type ProgressBarState } from '../operations/progressBar';
 import { ProgressTrack } from '../operations/ProgressTrack';
 import { openReleaseNotesDialog } from './ReleaseNotesDialog';
 import { installLabel, updateCardOf } from './updateCardStatus';
-import { useUpdateReleaseNotes } from './updateReleaseNotes';
+import { useHasWhatsNew } from './updateReleaseNotes';
 import { installUpdate, putOffUpdate, useUpdateStore } from './updateStore';
 import styles from './UpdateCard.module.css';
 
@@ -18,7 +18,7 @@ const GLIDE_MS = 300;
 /** The corner card of an update downloading, then ready to install until put off (`updateCardOf`). */
 export function UpdateCard() {
   const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion, state.aboutOpen || state.releaseNotesOpen));
-  const hasNotes = useUpdateReleaseNotes().length > 0;
+  const hasNotes = useHasWhatsNew();
   if (!card) return null;
 
   if (card.state === 'downloading') {
