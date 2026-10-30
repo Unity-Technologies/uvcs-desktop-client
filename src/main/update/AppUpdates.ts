@@ -21,6 +21,8 @@ export interface FoundUpdate {
   version: string;
   files: ReleaseFile[];
   releaseNotes?: FeedReleaseNotes;
+  /** When the update was released, as its `latest*.yml` says. */
+  releaseDate?: string;
 }
 
 export interface AppUpdatesDependencies {
@@ -132,8 +134,8 @@ export class AppUpdates {
     else (await this.feed()).quitAndInstall(true, true);
   }
 
-  private async download({ version, files, releaseNotes }: FoundUpdate): Promise<void> {
-    this.notes = releaseNotesOf(releaseNotes, version);
+  private async download({ version, files, releaseNotes, releaseDate }: FoundUpdate): Promise<void> {
+    this.notes = releaseNotesOf(releaseNotes, version, releaseDate);
     this.setStatus({ state: 'downloading', version, percent: 0 });
     this.manualInstall ??= this.dependencies.needsManualInstall();
     if (!(await this.manualInstall)) {

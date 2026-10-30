@@ -23,6 +23,11 @@ export type UpdateStatus =
 export interface ReleaseNotes {
   version: string;
   html: string;
+  /**
+   * When the release was made (ISO 8601), the update's own release only: the feed dates just the update it found
+   * (its `latest*.yml`), not the releases it skips.
+   */
+  releaseDate?: string;
 }
 
 /** What the About dialog shows of the running app. */
@@ -35,4 +40,6 @@ export interface AppInfo {
   documentationUrl: string;
   /** Where to report a problem. */
   issuesUrl: string;
+  /** Every release with its notes (What's New's "All releases"). */
+  releasesUrl: string;
 }
