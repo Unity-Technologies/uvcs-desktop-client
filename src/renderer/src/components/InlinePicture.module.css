@@ -1,6 +1,12 @@
-/* The picture on its own line, as wide as the text at most: `max-width` alone, so a small one is never blown up. */
+/* The picture on its own line, as wide as the text at most: `max-width` alone, so a small one is never blown up. A
+   button, so a click enlarges it (`PictureViewer`), and disabled when it already shows at its own size. */
 .frame {
   display: block;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
   width: fit-content;
   max-width: 100%;
   margin: var(--space-1) 0;
@@ -11,14 +17,22 @@
   cursor: zoom-in;
 }
 
+.frame:disabled {
+  cursor: default;
+}
+
 .frame:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring-visible);
 }
 
+/* No taller than a screenshot should stand in the text, so a tall one doesn't push the notes after it away: its
+   width follows, at its own proportions, and a click shows it whole. */
 .picture {
   display: block;
   max-width: 100%;
+  max-height: 360px;
+  width: auto;
   height: auto;
 }
 
