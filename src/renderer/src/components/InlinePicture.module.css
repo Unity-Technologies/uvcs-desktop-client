@@ -1,0 +1,35 @@
+/* The picture on its own line, as wide as the text at most: `max-width` alone, so a small one is never blown up. */
+.frame {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--space-1) 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  line-height: 0;
+  cursor: zoom-in;
+}
+
+.frame:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.picture {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* While it loads: a quiet box of a stable height across the text's width, the picture hidden until it has a size. */
+.frame[data-loading] {
+  width: 100%;
+  height: 160px;
+  background: var(--bg-subtle);
+  cursor: default;
+}
+
+.frame[data-loading] > .picture {
+  visibility: hidden;
+}
