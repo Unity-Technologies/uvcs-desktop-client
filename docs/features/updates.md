@@ -204,11 +204,12 @@ markup from the network.
 
 A pull request joins main through GitHub's merge queue (`gh pr merge --auto --merge`, or "Merge when ready"): once
 its own CI passes, the queue builds a merge commit of main, the pull requests queued ahead of it and this one, runs the
-required checks (the four `ci.yml` jobs) on it, and merges it only if they pass; if they fail, the pull request leaves
+required checks (the four `ci.yml` jobs, and the Release note check, which skips itself there: it read the pull
+request's note already) on it, and merges it only if they pass; if they fail, the pull request leaves
 the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
 twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
-CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger, without
-which nothing merges.
+CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger of both workflows,
+without which nothing merges.
 
 `.github/workflows/ci.yml` runs on every push to main, every pull request and every merge-queue entry: the tests and the build on macOS
 arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the

@@ -348,10 +348,11 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for, how you verified it and its release note (step 6). A fresh context sees what the author's can't. The reviewer only reads:
-   it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't
-   start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
-   it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
+   the change is for, how you verified it and its release note (written now, with the `release-notes` skill: step 6).
+   A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
+   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch,
+   folder, verification and release note; the agent that started it runs the review, then resumes it (Claude Code:
+   `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
@@ -359,11 +360,12 @@ them on the server, and reading shell command lines cost more to keep right than
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
    message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
-   **Every pull request carries its release note**, written with the `release-notes` skill (`.claude/skills/release-notes`):
-   the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title, then a short description, or
-   `None:` and why users have nothing to read. It is what users read in What's New and on the releases page, so it is
-   written for them, apart from the title and the rest of the body, which are for reviewers: the app's words, never
-   the code's. The Release note check (`readReleaseNote`) fails a pull request without one.
+   **Every pull request carries its release note**, written with the `release-notes` skill
+   (`.claude/skills/release-notes`): the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title,
+   then a short description, or `None:` and why users have nothing to read. It is what users read in What's New and on
+   the releases page, so it is written for them, apart from the title and the rest of the body, which are for
+   reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
+   without one.
    **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
    the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
    One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood

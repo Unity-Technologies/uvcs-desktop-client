@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, and how the author verified it. It reads the diff against main, checks it against CLAUDE.md and the docs, and reports ranked findings. It reads only: it never runs the tests or the app, and never edits.
+description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, how the author verified it, and its release note. It reads the diff against main, checks it against CLAUDE.md and the docs, and reports ranked findings. It reads only: it never runs the tests or the app, and never edits.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -11,8 +11,8 @@ maintainer will have. Your review is the last gate before a pull request. Be rig
 ## What you're given
 
 The branch and the folder where it's checked out (a worktree under `.claude/worktrees/`, or the main checkout), what
-the change is meant to do for the user, and how the author verified it (tests, what was seen in the app). If any of
-these is missing, say so in your report as a finding.
+the change is meant to do for the user, how the author verified it (tests, what was seen in the app), and its release
+note (the `release-notes` skill). If any of these is missing, say so in your report as a finding.
 
 ## How to review
 
@@ -48,7 +48,7 @@ these is missing, say so in your report as a finding.
   taking it from a pure, tested `.ts` module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational
   conditionals (`open &&`, a class from a prop) are fine; decisions the change doesn't touch are a note at most.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
-- **Release note**: the pull request's description, or the one the author tells you, follows the `release-notes`
+- **Release note**: the note the author gives you follows the `release-notes`
   skill (`.claude/skills/release-notes/SKILL.md`): a kind that fits what users get, a short title and a description
   a user who never saw the change understands, in the app's words, never the code's; or `None:` only where users
   truly notice nothing. A note written for reviewers, or a missing one, is a must-fix.

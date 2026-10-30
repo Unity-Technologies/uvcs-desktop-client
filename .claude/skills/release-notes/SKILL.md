@@ -51,7 +51,7 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 
 ## The title
 
-- **What the user gets**, in one short line: aim for 50 to 80 characters, never past 150.
+- **What the user gets**, in one short line: under 80 characters, never past 150.
 - **New** and **Improved** say what the user can now do or see: "Run your own tools on files, changesets and branches",
   "Hide the details panel the same way in every view".
 - **Fixed** says what no longer goes wrong, from what the user saw: "Closing a window no longer stops what it's
