@@ -29,6 +29,10 @@ const NEXT_SECTION = /^##\s/;
 const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
 const NOTE_HEADING = /^###\s+(\w+):\s*(.*?)\s*$/;
 const ANY_NOTE_HEADING = /^###\s/;
+/** A heading a release uses for itself, `#` or `##` (its groups), which a note's description must not hold. */
+const RELEASE_HEADING = /^\s{0,3}#{1,2}(\s|$)/;
+/** The line under a setext heading (`===` or `---` under text), a `#` or `##` heading too. */
+const SETEXT_UNDERLINE = /^\s{0,3}(=+|-+)\s*$/;
 const BARE_NONE = /^None:?$/;
 const NONE = /^None:\s*([\s\S]*)$/;
 const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
@@ -68,6 +72,10 @@ function noteOf(text: string): ReleaseNoteReading {
   if (outsideCode(rest).some((line) => ANY_NOTE_HEADING.test(line))) {
     return { problem: 'The release note holds more than one "###" heading: a pull request has one note, and its description uses "####" for headings.' };
   }
+  if (holdsReleaseHeading(rest)) {
+    return { problem: 'The release note\'s description holds a "#" or "##" heading, which would read as a part of the release: use "####".' };
+  }
+  if (openFenceAtEnd(rest)) return { problem: 'The release note leaves a code block open: close it with the same fence that opened it.' };
   const description = rest.join('\n').trim();
   if (description === '') return { problem: 'The release note has a title but no description: tell users what changed in a sentence or two under it.' };
   return { note: { kind, title, description } };
@@ -82,24 +90,43 @@ function releaseNoteSection(body: string): string | null {
   return lines.slice(start + 1, end).join('\n');
 }
 
+function holdsReleaseHeading(lines: string[]): boolean {
+  const outside = outsideCodeIndexes(lines);
+  return outside.some((index) => {
+    const line = lines[index]!;
+    const above = lines[index - 1];
+    const underlinesText = outside.includes(index - 1) && above !== undefined && above.trim() !== '' && !RELEASE_HEADING.test(above);
+    return RELEASE_HEADING.test(line) || (SETEXT_UNDERLINE.test(line) && underlinesText);
+  });
+}
+
 function outsideCode(lines: string[]): string[] {
   return outsideCodeIndexes(lines).map((index) => lines[index]!);
 }
 
-/**
- * The indexes of the lines outside fenced code blocks, where a "##" line is a heading and not code. As in CommonMark,
- * a fence closes only on the character that opened it, at least as many times: "```" inside "~~~" is code.
- */
 function outsideCodeIndexes(lines: string[]): number[] {
-  const indexes: number[] = [];
+  return scanFences(lines).outside;
+}
+
+function openFenceAtEnd(lines: string[]): boolean {
+  return scanFences(lines).open;
+}
+
+/**
+ * The indexes of the lines outside fenced code blocks, where a "##" line is a heading and not code, and whether a
+ * block is left open at the end. As in CommonMark, a fence closes only on the character that opened it, at least as
+ * many times: "```" inside "~~~" is code.
+ */
+function scanFences(lines: string[]): { outside: number[]; open: boolean } {
+  const outside: number[] = [];
   let openFence: string | null = null;
   lines.forEach((line, index) => {
     const fence = line.match(FENCE)?.[1];
     if (openFence === null && fence) openFence = fence;
     else if (openFence !== null && fence && fence[0] === openFence[0] && fence.length >= openFence.length) openFence = null;
-    else if (openFence === null) indexes.push(index);
+    else if (openFence === null) outside.push(index);
   });
-  return indexes;
+  return { outside, open: openFence !== null };
 }
 
 /** What CI prints: the note it read, or what is wrong with it (and a failure). */

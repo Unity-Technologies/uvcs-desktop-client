@@ -72,6 +72,12 @@ describe('a release note', () => {
     expect(readReleaseNote(body(section))).toEqual({ note: { kind: 'Fixed', title: 'Shelves open', description: 'They open again.' } });
   });
 
+  it('keeps a rule and a heading of its own level and below', () => {
+    const description = 'They open.\n\n---\n\n#### Where\n\nIn the Shelves view.';
+
+    expect(readReleaseNote(body(`### Fixed: Shelves open\n\n${description}`))).toEqual({ note: { kind: 'Fixed', title: 'Shelves open', description } });
+  });
+
   it('keeps the words of other languages and symbols', () => {
     expect(readReleaseNote(body('### Fixed: Árboles con ñ y 日本語 se abren\n\nYa se abren.'))).toEqual({
       note: { kind: 'Fixed', title: 'Árboles con ñ y 日本語 se abren', description: 'Ya se abren.' },
@@ -117,6 +123,16 @@ describe('a release note CI refuses', () => {
 
   it('has a title but no description', () => {
     expect(problem(body('### Fixed: Shelves open'))).toMatch(/description/);
+  });
+
+  it('holds a heading above the note\'s own level, which would read as a group of the release', () => {
+    expect(problem(body('### Fixed: Shelves open\n\n# Why\n\nThey open.'))).toMatch(/####/);
+    expect(problem(body('### Fixed: Shelves open\n\nWhy\n===\n\nThey open.'))).toMatch(/####/);
+    expect(problem(body('### Fixed: Shelves open\n\nWhy\n---\n\nThey open.'))).toMatch(/####/);
+  });
+
+  it('leaves a code block open, which would swallow the rest of the release', () => {
+    expect(problem(body('### Fixed: Shelves open\n\n```\ncm find\n``\n\nThey open.'))).toMatch(/code block/);
   });
 
   it('holds a second note', () => {
