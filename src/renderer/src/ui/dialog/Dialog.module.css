@@ -51,6 +51,15 @@
   min-width: 0;
 }
 
+/* A picture before the title stands beside the title and its description, centered on them. */
+.header[data-icon] {
+  align-items: center;
+}
+
+.header[data-icon] > svg {
+  flex: none;
+}
+
 .title {
   margin: 0;
   font-size: var(--text-lg);
