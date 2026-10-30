@@ -87,6 +87,13 @@ reviewers, in the app's words. The Release note workflow (`.github/workflows/rel
 Dependabot's pull requests are left out. It runs apart from CI so that editing the description checks the note again
 without building on every OS.
 
+The Release workflow joins those notes into the release's description (`releaseNotesMarkdown`,
+`scripts/build/releaseNotes.ts`): `## New`, `## Improved` and `## Fixed`, each note an `###` title and its
+description, in the order the pull requests merged, then `## Other changes` listing by title the pull requests without
+a note it can read (those merged before notes were asked for), and the "**Full Changelog**" link. Notes that say
+`None:` and Dependabot's pull requests are left out. GitHub renders that Markdown on the releases page, and the app
+reads it from the feed for What's New.
+
 Each release's notes are its description on GitHub. electron-updater reads them from the releases feed with the check
 that finds an update (`fullChangelog`, set in `createAppUpdates`: every release between the running version and the
 update, not just the latest), so they cost no request of their own. `AppUpdates` keeps them (`releaseNotesOf` leaves
@@ -107,20 +114,23 @@ Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the rende
 markup from the network.
 
 
-- The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
-  version: it bumps the last release tag's version, commits it on top of main and pushes only the tag `v<version>`
-  (main is protected, so the bump never lands there and main's `package.json` keeps an older version), opens a draft
-  release with generated notes, and builds every OS's installers onto it (`npm run release`). Linux builds in it;
-  macOS and Windows build and sign in a private repository, [uvcs-desktop-client-release-signing](https://github.com/Unity-Technologies/uvcs-desktop-client-release-signing), whose Sign workflow
-  (`sign-release.yml`) the Release run starts for the tag and waits for (its `sign` job, through `SIGNING_REPO_TOKEN`,
-  which may only start and read that repository's workflows). Unity's signing certificates are in Azure Key Vault,
-  which accepts only Unity's networks, and Unity's runners that reach it may serve only private repositories (SSDLC),
-  which this one isn't. The Sign workflow builds this repository's tag with this repository's config and sign hook, and
-  uploads to the same draft; its README lists its secrets. This repository holds no signing secret. The draft's description
-  is what What's New shows: edit it before publishing. Its notes start from the last release tag (`--notes-start-tag`):
-  left to choose, GitHub starts from the newest tag in the new tag's history, and no release tag is there (its bump
-  commit never reaches main), so the notes would repeat every earlier release's changes. Publishing the draft makes the
-  update reach every running app within the hour. Never bump the version by hand.
+- The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns
+  the version: it bumps the last release tag's version, commits it on top of main and pushes only the tag
+  `v<version>` (main is protected, so the bump never lands there and main's `package.json` keeps an older version),
+  opens a draft release with the pull requests' release notes (see "What's New"), and builds every OS's installers
+  onto it (`npm run release`). Linux builds in it; macOS and Windows build and sign in a private repository,
+  [uvcs-desktop-client-release-signing](https://github.com/Unity-Technologies/uvcs-desktop-client-release-signing),
+  whose Sign workflow (`sign-release.yml`) the Release run starts for the tag and waits for (its `sign` job, through
+  `SIGNING_REPO_TOKEN`, which may only start and read that repository's workflows). Unity's signing certificates are
+  in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it may serve only private
+  repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag with this repository's
+  config and sign hook, and uploads to the same draft; its README lists its secrets. This repository holds no
+  signing secret. The draft's description is what What's New shows: edit it before publishing. Its pull requests are
+  those whose merge commits ("Merge pull request #N from <owner>/…", which needs the merge method and its default
+  message) are on main since the last release tag, not GitHub's pick: GitHub starts from the newest tag in the new
+  tag's history, and no release tag is there (its bump commit never reaches main), so the notes would repeat every
+  earlier release's changes. Publishing the draft makes the update reach every running app within the hour. Never
+  bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs. The macOS targets name no architecture, so a run builds

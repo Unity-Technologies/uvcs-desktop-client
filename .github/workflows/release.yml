@@ -2,7 +2,7 @@ name: Release
 
 # One button releases the app: Actions ▸ Release ▸ Run workflow, pick the bump (patch, minor, major), and one run
 #   1. bumps the last release's version, commits it on top of main and pushes only the tag v<version>,
-#   2. opens a draft GitHub release with generated notes,
+#   2. opens a draft GitHub release whose notes join the release notes of the pull requests merged since the last one,
 #   3. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
 #      electron-updater reads (electron-builder.yml's `publish`). Linux builds here; macOS and Windows build and sign
 #      in the private Unity-Technologies/uvcs-desktop-client-release-signing, whose Sign workflow this run starts and
@@ -56,15 +56,29 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
           git push origin "$TAG"
-      - name: Open a draft release with generated notes
+      - name: Open a draft release with the pull requests' release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LAST_TAG: ${{ steps.bump.outputs.last_tag }}
-        # From the last release tag, not GitHub's pick: release tags aren't on main (the bump commit is only on its tag),
-        # so GitHub would start from the last tag that is, and list every release's changes again.
+          TAG: ${{ steps.bump.outputs.tag }}
+        # The pull requests merged since the last release tag, read from main's merge commits, not from GitHub's pick:
+        # release tags aren't on main (the bump commit is only on its tag). It relies on the repository's settings:
+        # pull requests merge with a merge commit (the merge queue's "merge" method) and its default message,
+        # "Merge pull request #N from <owner>/<branch>"; matching the owner leaves out the merges kept from the
+        # repository's first home, whose numbers repeat. `releaseNotesMarkdown` joins their release notes.
+        # The tag is already pushed: if this step fails, open the draft by hand or delete the tag before running again.
+        shell: bash
         run: |
-          gh release create "${{ steps.bump.outputs.tag }}" --draft --generate-notes --title "${{ steps.bump.outputs.tag }}" \
-            ${LAST_TAG:+--notes-start-tag "$LAST_TAG"}
+          set -euo pipefail
+          numbers="$(git log --merges --topo-order --reverse --format=%s ${LAST_TAG:+$LAST_TAG..}HEAD \
+            | sed -nE "s|^Merge pull request #([0-9]+) from $GITHUB_REPOSITORY_OWNER/.*|\\1|p" | awk '!seen[$0]++')"
+          for number in $numbers; do
+            gh pr view "$number" --json number,title,url,body,author
+          done | jq -s . > "$RUNNER_TEMP/pull-requests.json"
+          changelog="${LAST_TAG:+$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$LAST_TAG...$TAG}"
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/releaseNotes.ts \
+            "$RUNNER_TEMP/pull-requests.json" "$changelog" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --draft --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
 
   # Linux builds from the new tag, whose package.json has the new version, and uploads its installer (unsigned: an
   # AppImage carries no signature the OS checks).
