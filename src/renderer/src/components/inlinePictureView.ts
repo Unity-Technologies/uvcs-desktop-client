@@ -27,3 +27,12 @@ export function inlinePictureView(load: PictureLoad): 'placeholder' | 'picture' 
 export function pictureLoadAfter(event: 'load' | 'error', naturalWidth: number): PictureLoad {
   return event === 'load' && naturalWidth > 0 ? 'loaded' : 'failed';
 }
+
+/**
+ * Whether a click enlarges a picture (`PictureViewer`): only when the text shows it smaller than it is, held to the
+ * text's width and a height that keeps a screenshot from filling the dialog (`InlinePicture.module.css`). A picture
+ * already at its own size has nothing more to show; a pixel is left for rounding.
+ */
+export function pictureEnlarges(naturalWidth: number, shownWidth: number): boolean {
+  return naturalWidth - shownWidth > 1;
+}
