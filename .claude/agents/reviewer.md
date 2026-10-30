@@ -48,6 +48,10 @@ these is missing, say so in your report as a finding.
   taking it from a pure, tested `.ts` module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational
   conditionals (`open &&`, a class from a prop) are fine; decisions the change doesn't touch are a note at most.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
+- **Release note**: the pull request's description, or the one the author tells you, follows the `release-notes`
+  skill (`.claude/skills/release-notes/SKILL.md`): a kind that fits what users get, a short title and a description
+  a user who never saw the change understands, in the app's words, never the code's; or `None:` only where users
+  truly notice nothing. A note written for reviewers, or a missing one, is a must-fix.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
 - **Visual validation**: for anything visible, did the author see it in the app as CLAUDE.md "Seeing the app" asks?

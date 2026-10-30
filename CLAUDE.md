@@ -260,6 +260,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
+| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`) |
 | `scripts/build/noInvisibleCharacters.test.ts`               | no source, script or doc holds an invisible formatting character (bidirectional controls, zero-width joiners): an emoji that needs one writes it as an escape |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
@@ -347,7 +348,7 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for and how you verified it. A fresh context sees what the author's can't. The reviewer only reads:
+   the change is for, how you verified it and its release note (step 6). A fresh context sees what the author's can't. The reviewer only reads:
    it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't
    start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
    it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
@@ -358,6 +359,11 @@ them on the server, and reading shell command lines cost more to keep right than
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
    message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   **Every pull request carries its release note**, written with the `release-notes` skill (`.claude/skills/release-notes`):
+   the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title, then a short description, or
+   `None:` and why users have nothing to read. It is what users read in What's New and on the releases page, so it is
+   written for them, apart from the title and the rest of the body, which are for reviewers: the app's words, never
+   the code's. The Release note check (`readReleaseNote`) fails a pull request without one.
    **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
    the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
    One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
