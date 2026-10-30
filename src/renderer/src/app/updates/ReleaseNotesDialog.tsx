@@ -110,7 +110,7 @@ function Release({ section, onToggle }: { section: ReleaseSection; onToggle: () 
       {section.row && <ReleaseRowHeading row={section.row} open={section.open} onToggle={onToggle} />}
       {section.open && (
         <div className={styles.releaseBody}>
-          {section.intro.length > 0 && <MarkdownBlocks blocks={section.intro} />}
+          {section.intro.length > 0 && <MarkdownBlocks blocks={section.intro} images="inline" />}
           {section.groups.map((group) => (
             <NoteGroupView key={group.kind} group={group} />
           ))}
@@ -161,7 +161,7 @@ function Note({ note }: { note: WhatsNewNote }) {
       )}
       {note.description.length > 0 && (
         <div className={styles.description}>
-          <MarkdownBlocks blocks={note.description} />
+          <MarkdownBlocks blocks={note.description} images="inline" />
         </div>
       )}
     </article>
