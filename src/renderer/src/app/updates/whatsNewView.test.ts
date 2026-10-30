@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fullChangelogLine, generatedItem, generatedNotes, group, note, paragraph } from './testing/releaseNotesHtml';
 import { whatsNewRelease, type WhatsNewRelease } from './whatsNewRelease';
-import { filterChips, hasWhatsNew, releaseSections, toggledRelease, whatsNewBody, whatsNewSubtitle } from './whatsNewView';
+import { filterSegments, hasWhatsNew, releaseSections, toggledRelease, whatsNewBody, whatsNewSubtitle } from './whatsNewView';
 
 const newest = whatsNewRelease({
   version: '0.2.5',
@@ -23,19 +23,19 @@ const summary = (releases: WhatsNewRelease[], filter: Parameters<typeof releaseS
 
 describe("What's New's filter", () => {
   it('counts each kind of note across every release, All first, and other changes only when there are some', () => {
-    expect(filterChips([newest, onlyFixes])).toEqual([
+    expect(filterSegments([newest, onlyFixes])).toEqual([
       { filter: 'all', label: 'All', count: 6 },
       { filter: 'new', label: 'New', count: 2 },
       { filter: 'improved', label: 'Improved', count: 1 },
       { filter: 'fixed', label: 'Fixed', count: 3 },
     ]);
-    expect(filterChips([newest, onlyFixes, generated]).at(-1)).toEqual({ filter: 'other', label: 'Other changes', count: 1 });
+    expect(filterSegments([newest, onlyFixes, generated]).at(-1)).toEqual({ filter: 'other', label: 'Other changes', count: 1 });
   });
 
-  it('shows no chips when the notes hold one kind, or none', () => {
-    expect(filterChips([onlyFixes])).toEqual([]);
-    expect(filterChips([generated, plain])).toEqual([]);
-    expect(filterChips([])).toEqual([]);
+  it('shows no filter when the notes hold one kind, or none', () => {
+    expect(filterSegments([onlyFixes])).toEqual([]);
+    expect(filterSegments([generated, plain])).toEqual([]);
+    expect(filterSegments([])).toEqual([]);
   });
 });
 

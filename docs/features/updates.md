@@ -120,7 +120,7 @@ the update card steps aside (`updateCardOf`): it would repeat them, over the dia
   note per pull request, its title without the "by @user in #12" it ends with (`withoutAuthorTail`); their "New
   Contributors" are left out. Notes written any other way show as plain Markdown (`WhatsNewRelease.plain`). The
   closing "**Full Changelog**" line is left out: the footer links to every release instead.
-- **Filter** (`filterChips`): chips for All and each kind the notes hold, with how many notes each has across every
+- **Filter** (`filterSegments`): chips for All and each kind the notes hold, with how many notes each has across every
   release the update spans, shown only when the notes hold more than one kind. A kind with no notes has no chip.
 - **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
   · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the

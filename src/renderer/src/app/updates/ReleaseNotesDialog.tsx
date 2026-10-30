@@ -16,11 +16,11 @@ import { releaseNotesQuery } from './updateReleaseNotes';
 import { installUpdate, setReleaseNotesOpen, useUpdateStore } from './updateStore';
 import { whatsNewRelease, type WhatsNewNote } from './whatsNewRelease';
 import {
-  filterChips,
+  filterSegments,
   toggledRelease,
   whatsNewBody,
   whatsNewSubtitle,
-  type FilterChip,
+  type FilterSegment,
   type NoteGroup,
   type NotesFilter,
   type ReleaseRow,
@@ -72,7 +72,7 @@ function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: ()
       {notes ? (
         <WhatsNewBodyView
           body={whatsNewBody(releases, filter, unfolded)}
-          chips={filterChips(releases)}
+          chips={filterSegments(releases)}
           filter={filter}
           onFilter={setFilter}
           onToggle={(version) => setUnfolded((current) => toggledRelease(current, version))}
@@ -86,7 +86,7 @@ function ReleaseNotesDialog({ version, onClose }: { version: string; onClose: ()
 
 interface WhatsNewBodyViewProps {
   body: WhatsNewBody;
-  chips: FilterChip[];
+  chips: FilterSegment[];
   filter: NotesFilter;
   onFilter: (filter: NotesFilter) => void;
   onToggle: (version: string) => void;
@@ -104,7 +104,7 @@ function WhatsNewBodyView({ body, chips, filter, onFilter, onToggle }: WhatsNewB
   );
 }
 
-function FilterChips({ chips, filter, onChange }: { chips: FilterChip[]; filter: NotesFilter; onChange: (filter: NotesFilter) => void }) {
+function FilterChips({ chips, filter, onChange }: { chips: FilterSegment[]; filter: NotesFilter; onChange: (filter: NotesFilter) => void }) {
   if (chips.length === 0) return null;
   return (
     <div className={styles.chips} role="group" aria-label="Show">

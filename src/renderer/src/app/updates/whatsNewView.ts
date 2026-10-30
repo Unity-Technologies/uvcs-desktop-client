@@ -5,20 +5,20 @@ import { NOTE_KIND_LABELS, NOTE_KINDS, type NoteKind, type WhatsNewNote, type Wh
 /** Which notes What's New shows: every one, or one kind. */
 export type NotesFilter = 'all' | NoteKind;
 
-export interface FilterChip {
+export interface FilterSegment {
   filter: NotesFilter;
   label: string;
   count: number;
 }
 
 /**
- * The chips that filter the notes, each with how many notes it shows across every release the update spans: All,
+ * The segments that filter the notes, each with how many notes it shows across every release the update spans: All,
  * then each kind the notes hold. None when the notes hold fewer than two kinds, where a filter would show the same.
  */
-export function filterChips(releases: readonly WhatsNewRelease[]): FilterChip[] {
+export function filterSegments(releases: readonly WhatsNewRelease[]): FilterSegment[] {
   const notes = releases.flatMap((release) => release.notes);
   const kinds = NOTE_KINDS.map((kind) => ({ filter: kind, label: NOTE_KIND_LABELS[kind], count: notes.filter((note) => note.kind === kind).length }));
-  const present = kinds.filter((chip) => chip.count > 0);
+  const present = kinds.filter((segment) => segment.count > 0);
   return present.length < 2 ? [] : [{ filter: 'all', label: 'All', count: notes.length }, ...present];
 }
 
