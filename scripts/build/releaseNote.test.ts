@@ -39,7 +39,7 @@ describe('a release note', () => {
   });
 
   it('reads a body written on Windows', () => {
-    expect(readReleaseNote(body('### Fixed: Shelves open\r\n\r\nThey open again.').replace(/\n/g, '\r\n'))).toEqual({
+    expect(readReleaseNote(body('### Fixed: Shelves open\n\nThey open again.').replace(/\n/g, '\r\n'))).toEqual({
       note: { kind: 'Fixed', title: 'Shelves open', description: 'They open again.' },
     });
   });
@@ -52,6 +52,26 @@ describe('a release note', () => {
     });
   });
 
+  it('finds the section after code that only shows one', () => {
+    const text = `## How it was implemented\n\n\`\`\`md\n## Release note\n\`\`\`\n\n${body('### Fixed: Shelves open\n\nThey open again.')}`;
+
+    expect(readReleaseNote(text)).toEqual({ note: { kind: 'Fixed', title: 'Shelves open', description: 'They open again.' } });
+  });
+
+  it('keeps a code block written with tildes whole, backticks in it included', () => {
+    const description = 'Type this:\n\n~~~\n```\n## Not a section\n~~~';
+
+    expect(readReleaseNote(body(`### New: Code in comments\n\n${description}`))).toEqual({
+      note: { kind: 'New', title: 'Code in comments', description },
+    });
+  });
+
+  it('reads past comments, whatever they hold', () => {
+    const section = '<!-- ## Not a section\n```\n-->\n### Fixed: Shelves open\n\nThey open again.';
+
+    expect(readReleaseNote(body(section))).toEqual({ note: { kind: 'Fixed', title: 'Shelves open', description: 'They open again.' } });
+  });
+
   it('keeps the words of other languages and symbols', () => {
     expect(readReleaseNote(body('### Fixed: Árboles con ñ y 日本語 se abren\n\nYa se abren.'))).toEqual({
       note: { kind: 'Fixed', title: 'Árboles con ñ y 日本語 se abren', description: 'Ya se abren.' },
@@ -60,7 +80,10 @@ describe('a release note', () => {
 });
 
 describe('a release note CI refuses', () => {
-  const problem = (text: string) => ('problem' in readReleaseNote(text) ? (readReleaseNote(text) as { problem: string }).problem : null);
+  const problem = (text: string) => {
+    const reading = readReleaseNote(text);
+    return 'problem' in reading ? reading.problem : null;
+  };
 
   it('is missing', () => {
     expect(problem('## What does this pull request do?\n\nShelves.')).toMatch(/no "## Release note" section/);
@@ -78,6 +101,16 @@ describe('a release note CI refuses', () => {
     expect(problem(body('Run your own tools in Settings.'))).toMatch(/New:, Improved: or Fixed:/);
   });
 
+  it('writes its kind in other letters', () => {
+    expect(problem(body('### new: Run your own tools\n\nIn Settings.'))).toMatch(/New:, Improved: or Fixed:/);
+  });
+
+  it("still holds the template's placeholders", () => {
+    expect(problem(body('### New: <what users can now do>      (or Improved: / Fixed:)\n\nIn Settings.'))).toMatch(/template/);
+    expect(problem(body('### New: Tools\n\n<A sentence or two: what it is, where to find it.>'))).toMatch(/template/);
+    expect(problem(body('None: <why>'))).toMatch(/template/);
+  });
+
   it('has a kind but no title', () => {
     expect(problem(body('### Fixed:\n\nThey open again.'))).toMatch(/title/);
   });
@@ -93,5 +126,15 @@ describe('a release note CI refuses', () => {
   it('says there is none without saying why', () => {
     expect(problem(body('None:'))).toMatch(/why/);
     expect(problem(body('None'))).toMatch(/why/);
+  });
+
+  it('starts with "None" but is not "None:" and a reason', () => {
+    expect(problem(body('None. '))).toMatch(/New:, Improved: or Fixed:/);
+    expect(problem(body('None of the views flicker now.'))).toMatch(/New:, Improved: or Fixed:/);
+  });
+
+  it('says there is none, and holds a note or more than one paragraph', () => {
+    expect(problem(body('None: tooling\n\n### New: Tools\n\nIn Settings.'))).toMatch(/one line/);
+    expect(problem(body('None: tooling\n\nAnd more.'))).toMatch(/one line/);
   });
 });
