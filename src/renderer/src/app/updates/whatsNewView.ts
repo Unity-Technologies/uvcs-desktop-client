@@ -5,32 +5,26 @@ import { NOTE_KIND_LABELS, NOTE_KINDS, type NoteKind, type WhatsNewNote, type Wh
 /** Which notes What's New shows: every one, or one kind. */
 export type NotesFilter = 'all' | NoteKind;
 
-export interface FilterChip {
+export interface FilterSegment {
   filter: NotesFilter;
   label: string;
   count: number;
 }
 
 /**
- * The chips that filter the notes, each with how many notes it shows across every release the update spans: All,
+ * The segments that filter the notes, each with how many notes it shows across every release the update spans: All,
  * then each kind the notes hold. None when the notes hold fewer than two kinds, where a filter would show the same.
  */
-export function filterChips(releases: readonly WhatsNewRelease[]): FilterChip[] {
+export function filterSegments(releases: readonly WhatsNewRelease[]): FilterSegment[] {
   const notes = releases.flatMap((release) => release.notes);
   const kinds = NOTE_KINDS.map((kind) => ({ filter: kind, label: NOTE_KIND_LABELS[kind], count: notes.filter((note) => note.kind === kind).length }));
-  const present = kinds.filter((chip) => chip.count > 0);
+  const present = kinds.filter((segment) => segment.count > 0);
   return present.length < 2 ? [] : [{ filter: 'all', label: 'All', count: notes.length }, ...present];
 }
-
-/** The color of a group's tag (`DetailsBadge`'s tones): new is green, improved blue, fixed amber, the rest grey. */
-export type NoteGroupTone = 'success' | 'accent' | 'warning' | 'neutral';
-
-const KIND_TONES: Record<NoteKind, NoteGroupTone> = { new: 'success', improved: 'accent', fixed: 'warning', other: 'neutral' };
 
 export interface NoteGroup {
   kind: NoteKind;
   label: string;
-  tone: NoteGroupTone;
   notes: WhatsNewNote[];
 }
 
@@ -98,7 +92,7 @@ export function releaseSections(releases: readonly WhatsNewRelease[], filter: No
 function groupsOf(notes: readonly WhatsNewNote[]): NoteGroup[] {
   return NOTE_KINDS.flatMap((kind) => {
     const ofKind = notes.filter((note) => note.kind === kind);
-    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], tone: KIND_TONES[kind], notes: ofKind }] : [];
+    return ofKind.length > 0 ? [{ kind, label: NOTE_KIND_LABELS[kind], notes: ofKind }] : [];
   });
 }
 

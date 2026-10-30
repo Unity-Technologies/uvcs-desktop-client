@@ -120,15 +120,17 @@ the update card steps aside (`updateCardOf`): it would repeat them, over the dia
   note per pull request, its title without the "by @user in #12" it ends with (`withoutAuthorTail`); their "New
   Contributors" are left out. Notes written any other way show as plain Markdown (`WhatsNewRelease.plain`). The
   closing "**Full Changelog**" line is left out: the footer links to every release instead.
-- **Filter** (`filterChips`): chips for All and each kind the notes hold, with how many notes each has across every
-  release the update spans, shown only when the notes hold more than one kind. A kind with no notes has no chip.
+- **Filter** (`filterSegments`): the app's segmented control (`SegmentedControl`), as its other views pick what they
+  show: All and each kind the notes hold, with how many notes each has across every release the update spans, shown
+  only when the notes hold more than one kind. A kind with no notes has no segment.
 - **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
   · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the
-  update's own, the first release shown opens in its place, named by its row. Each group's tag takes its kind's tone
-  (`NoteGroup.tone`). A filter shows its kind from every release at once, each older
-  release named by its row (no longer a toggle), so "Fixed" lists every fix since the running version; releases with
-  none of that kind are left out, and so is what a release says outside its notes. Going back to All keeps the
-  releases the user had unfolded.
+  update's own, the first release shown opens in its place, named by its row. Each group is titled as the app titles
+  a section (`SectionTitle`, as Home's "Recent"): its name, small and uppercase, and how many notes it holds; no color
+  of its own. A
+  filter shows its kind from every release at once, each older release named by its row (no longer a toggle), so
+  "Fixed" lists every fix since the running version; releases with none of that kind are left out, and so is what a
+  release says outside its notes. Going back to All keeps the releases the user had unfolded.
 - **Footer**: "All releases", the repository's releases page (`AppInfo.releasesUrl`), and "Later" with the install
   button once the update is ready (`installLabel`), or just "Close".
 
