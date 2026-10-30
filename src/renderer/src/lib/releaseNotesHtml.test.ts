@@ -156,6 +156,23 @@ describe('release notes as GitHub renders them', () => {
     ]);
   });
 
+  it("reads a picture the feed signs for a few minutes as the attachment's lasting address", () => {
+    const signed = (id: string) =>
+      `https://private-user-images.githubusercontent.com/20086008/687918303-${id}.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3OTMzNTQ2MDF9.BGSA9zpj`;
+    const id = '3f5c1327-064e-4d31-8e43-c9a8a5f874ce';
+    const html = `<p dir="auto"><a target="_blank" rel="noopener noreferrer nofollow" href="${signed(id)}"><img src="${signed(id)}" alt="Branches" style="max-width: 100%;"></a></p>`;
+
+    expect(releaseNotesFromHtml(html)).toEqual([
+      { kind: 'paragraph', children: [{ kind: 'image', url: `https://github.com/user-attachments/assets/${id}`, alt: 'Branches' }] },
+    ]);
+  });
+
+  it('keeps any other picture on that host as it is', () => {
+    const url = 'https://private-user-images.githubusercontent.com/1/picture.png?jwt=x';
+
+    expect(releaseNotesFromHtml(`<p><img src="${url}" alt="A"></p>`)).toEqual([{ kind: 'paragraph', children: [{ kind: 'image', url, alt: 'A' }] }]);
+  });
+
   it('keeps the link around a picture when the link has text too, and a picture without a description', () => {
     const html = "<p><a href='https://example.com/page'>See <img src='https://example.com/a.png'></a></p>";
 
