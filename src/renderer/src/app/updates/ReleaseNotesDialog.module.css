@@ -1,58 +1,166 @@
+/* The chips stay in view while the notes scroll under them: they sit at the body's top, over its padding. */
+.chips {
+  position: sticky;
+  top: calc(-1 * var(--space-5));
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-5)) 0 calc(-1 * var(--space-2));
+  padding: var(--space-4) 0 var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface-raised);
+}
+
+.swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+}
+
+.swatch[data-kind='new'] {
+  background: var(--status-added);
+}
+
+.swatch[data-kind='improved'] {
+  background: var(--accent-text);
+}
+
+.swatch[data-kind='fixed'] {
+  background: var(--status-changed);
+}
+
+.swatch[data-kind='other'] {
+  background: var(--text-tertiary);
+}
+
+.count {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-regular);
+}
+
 .release {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-/* The releases after the newest are set apart, so an update that skips a few reads as one list. */
-.release + .release {
-  padding-top: var(--space-5);
+/* The releases the update skips read as a list of rows under the newest one's notes. */
+.release[data-older] {
+  gap: var(--space-2);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--border-subtle);
 }
 
-/* The version leads its notes: the notes' own headings stay a step below it. */
-.heading {
+.release[data-older] + .release[data-older] {
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.releaseBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.rowHeading {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-2) var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+button.row:hover {
+  background: var(--bg-hover);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast);
+}
+
+.row[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+.version {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowCount {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.note:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.noteTitle {
   margin: 0;
   color: var(--text-primary);
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 
-.notes h4,
-.notes h5,
-.notes h6 {
-  margin-top: var(--space-2);
+.description {
   color: var(--text-secondary);
+}
+
+/* A description's own headings stay a step below the note's title. */
+.description h4,
+.description h5,
+.description h6 {
+  color: var(--text-primary);
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
 }
 
-/* A release's changes are its list: a little air between them reads better than a dense block. */
-.notes ul,
-.notes ol {
-  gap: var(--space-1);
-}
-
-.notes li::marker {
-  color: var(--text-tertiary);
-}
-
-.changelog {
+.allReleases {
   display: inline-flex;
-  align-self: flex-start;
   align-items: center;
   gap: 2px;
+  margin-right: auto;
+  align-self: center;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   text-decoration: none;
 }
 
-.changelog:hover {
+.allReleases:hover {
   color: var(--accent-text);
   text-decoration: underline;
-}
-
-.notes li > ul,
-.notes li > ol {
-  margin-top: 2px;
 }
