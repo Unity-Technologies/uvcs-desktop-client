@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { releaseNotesFromHtml } from './releaseNotesHtml';
+import { releaseNotesFromHtml, releaseNotesOutline } from './releaseNotesHtml';
 
 const text = (value: string) => ({ kind: 'text', text: value }) as const;
 
@@ -104,14 +104,60 @@ describe('release notes as GitHub renders them', () => {
     ]);
   });
 
-  it('reads a table as a paragraph a row, and a collapsed section as its text', () => {
-    const html = '<table><thead><tr><th>OS</th><th>File</th></tr></thead><tbody><tr><td>macOS</td><td>dmg</td></tr></tbody></table><details><summary>More</summary><p>Hidden</p></details>';
+  it('reads a table as GitHub renders one: in its accessibility box, each column aligned as written', () => {
+    const html = [
+      '<markdown-accessiblity-table><table role="table">',
+      '<thead>\n<tr>\n<th align="left">Key</th>\n<th align="center">Does</th>\n<th>Where</th>\n</tr>\n</thead>',
+      '<tbody>\n<tr>\n<td align="left"><kbd>⌘I</kbd></td>\n<td align="center">Hides the <strong>details</strong></td>\n<td>Every view</td>\n</tr>',
+      '<tr>\n<td align="left">⌘⇧L</td>\n<td align="center">Shows the log</td>\n<td>Ñandú</td>\n</tr>\n</tbody>',
+      '</table></markdown-accessiblity-table>',
+    ].join('\n');
 
     expect(releaseNotesFromHtml(html)).toEqual([
-      { kind: 'paragraph', children: [text('OS File')] },
-      { kind: 'paragraph', children: [text('macOS dmg')] },
+      {
+        kind: 'table',
+        align: ['left', 'center', null],
+        header: [[text('Key')], [text('Does')], [text('Where')]],
+        rows: [
+          [[{ kind: 'code', text: '⌘I' }], [text('Hides the '), { kind: 'strong', children: [text('details')] }], [text('Every view')]],
+          [[text('⌘⇧L')], [text('Shows the log')], [text('Ñandú')]],
+        ],
+      },
+    ]);
+  });
+
+  it("reads a table without a head, its first row as the header, and an alignment from the cell's style", () => {
+    const html = '<table><tr><td style="text-align: right">OS</td><td>File</td></tr><tr><td>macOS</td><td>dmg</td></tr></table>';
+
+    expect(releaseNotesFromHtml(html)).toEqual([
+      { kind: 'table', align: ['right', null], header: [[text('OS')], [text('File')]], rows: [[[text('macOS')], [text('dmg')]]] },
+    ]);
+  });
+
+  it('reads a collapsed section as its text', () => {
+    expect(releaseNotesFromHtml('<details><summary>More</summary><p>Hidden</p></details>')).toEqual([
       { kind: 'paragraph', children: [text('More')] },
       { kind: 'paragraph', children: [text('Hidden')] },
+    ]);
+  });
+
+  it('reads a picture as GitHub renders one: in a link to itself, with a style and its own attributes', () => {
+    const html =
+      '<p dir="auto"><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/0f3b"><img src="https://github.com/user-attachments/assets/0f3b" alt="Settings › Tools" style="max-width: 100%;" data-canonical-src="https://example.com/x.png"></a></p>';
+
+    expect(releaseNotesFromHtml(html)).toEqual([
+      { kind: 'paragraph', children: [{ kind: 'image', url: 'https://github.com/user-attachments/assets/0f3b', alt: 'Settings › Tools' }] },
+    ]);
+  });
+
+  it('keeps the link around a picture when the link has text too, and a picture without a description', () => {
+    const html = "<p><a href='https://example.com/page'>See <img src='https://example.com/a.png'></a></p>";
+
+    expect(releaseNotesFromHtml(html)).toEqual([
+      {
+        kind: 'paragraph',
+        children: [{ kind: 'link', url: 'https://example.com/page', children: [text('See '), { kind: 'image', url: 'https://example.com/a.png', alt: '' }] }],
+      },
     ]);
   });
 
@@ -131,10 +177,16 @@ describe('what never reaches the page', () => {
     ]);
   });
 
-  it('leaves out images, keeping the link around one only when it has text', () => {
-    const html = '<p><a href="https://github.com/user-attachments/assets/1"><img src="https://github.com/user-attachments/assets/1" alt="Screenshot"></a></p><p>A <img src="x.png"> picture</p>';
+  it('leaves out pictures from anywhere but the web', () => {
+    const html = '<p>A <img src="x.png"> <img src="data:image/png;base64,AAAA"> <img src="file:///etc/a.png"> <IMG SRC="javascript:alert(1)"> <img alt="none">picture</p>';
 
     expect(releaseNotesFromHtml(html)).toEqual([{ kind: 'paragraph', children: [text('A picture')] }]);
+  });
+
+  it('reads a link to anywhere but the web around a picture as the picture alone', () => {
+    const html = '<p><a href="javascript:alert(1)"><img src="https://example.com/a.png" alt="A"></a></p>';
+
+    expect(releaseNotesFromHtml(html)).toEqual([{ kind: 'paragraph', children: [{ kind: 'image', url: 'https://example.com/a.png', alt: 'A' }] }]);
   });
 
   it('keeps only web links: any other address reads as its text', () => {
@@ -159,5 +211,63 @@ describe('what never reaches the page', () => {
       { kind: 'paragraph', children: [text('a < b '), { kind: 'strong', children: [text('open')] }] },
       { kind: 'paragraph', children: [text('next')] },
     ]);
+  });
+});
+
+describe('the outline of release notes', () => {
+  it('cuts the notes at their groups and notes, keeping smaller headings, pictures and tables inside a note', () => {
+    const html = [
+      '<p dir="auto">Before any group</p>',
+      '<h2 dir="auto">New</h2>',
+      '<h3 dir="auto">Run your own tools</h3>',
+      '<p dir="auto">In <strong>Settings › Tools</strong>.</p>',
+      '<h4 dir="auto">Placeholders</h4>',
+      '<p dir="auto"><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/1"><img src="https://github.com/user-attachments/assets/1" alt="Tools" style="max-width: 100%;"></a></p>',
+      '<markdown-accessiblity-table><table role="table"><thead><tr><th>Name</th></tr></thead><tbody><tr><td>{path}</td></tr></tbody></table></markdown-accessiblity-table>',
+      '<h5 dir="auto">Smaller</h5>',
+      '<h2 dir="auto">Fixed</h2>',
+    ].join('\n');
+
+    expect(releaseNotesOutline(html)).toEqual([
+      { heading: null, blocks: [{ kind: 'paragraph', children: [text('Before any group')] }] },
+      { heading: { level: 2, children: [text('New')] }, blocks: [] },
+      {
+        heading: { level: 3, children: [text('Run your own tools')] },
+        blocks: [
+          { kind: 'paragraph', children: [text('In '), { kind: 'strong', children: [text('Settings › Tools')] }, text('.')] },
+          { kind: 'heading', level: 3, children: [text('Placeholders')] },
+          { kind: 'paragraph', children: [{ kind: 'image', url: 'https://github.com/user-attachments/assets/1', alt: 'Tools' }] },
+          { kind: 'table', align: [null], header: [[text('Name')]], rows: [[[text('{path}')]]] },
+          { kind: 'heading', level: 3, children: [text('Smaller')] },
+        ],
+      },
+      { heading: { level: 2, children: [text('Fixed')] }, blocks: [] },
+    ]);
+  });
+
+  it("reads a heading in the box GitHub's pages put it in, with its anchor", () => {
+    const html =
+      '<div class="markdown-heading" dir="auto"><h2 tabindex="-1" class="heading-element" dir="auto">Fixed</h2><a id="user-content-fixed" class="anchor" aria-label="Permalink: Fixed" href="#fixed"><svg class="octicon"><path d="M0"></path></svg></a></div>\n<p>Él</p>';
+
+    expect(releaseNotesOutline(html)).toEqual([{ heading: { level: 2, children: [text('Fixed')] }, blocks: [{ kind: 'paragraph', children: [text('Él')] }] }]);
+  });
+
+  it('keeps an h1, and an h4 in a box, inside the part they are in', () => {
+    const html = '<h1>Title</h1><div class="markdown-heading"><h4>Small</h4></div>';
+
+    expect(releaseNotesOutline(html)).toEqual([
+      {
+        heading: null,
+        blocks: [
+          { kind: 'heading', level: 1, children: [text('Title')] },
+          { kind: 'heading', level: 3, children: [text('Small')] },
+        ],
+      },
+    ]);
+  });
+
+  it('is empty for empty notes', () => {
+    expect(releaseNotesOutline('')).toEqual([]);
+    expect(releaseNotesOutline('\n \n')).toEqual([]);
   });
 });
