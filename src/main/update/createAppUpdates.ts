@@ -6,7 +6,7 @@ import { AppUpdates, type AppUpdatesDependencies, type UpdateFeed } from './AppU
 import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
-import { PREVIEW_UPDATE_VARIABLE, previewUpdateFeed, previewUpdateOf } from './previewUpdateFeed';
+import { previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
 import { releaseFileUrl } from './releaseFeed';
 import { removeLeftoverStagingUserId, withoutStagingUserId } from './withoutStagingUserId';
 
@@ -18,7 +18,7 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
   removeLeftoverStagingUserId(app.getPath('userData')).catch((error: unknown) => console.warn('[updates] The old staging user id stays:', error));
 
   // Development only: an unpackaged app has no feed, unless a file describes an update to preview (`PREVIEW_UPDATE_VARIABLE`).
-  const previewFile = app.isPackaged ? undefined : process.env[PREVIEW_UPDATE_VARIABLE];
+  const previewFile = previewUpdateFile(app.isPackaged, process.env);
 
   return new AppUpdates({
     loadFeed: previewFile ? async () => previewUpdateFeed(previewUpdateOf(JSON.parse(await readFile(previewFile, 'utf8')))) : loadAutoUpdater,
@@ -38,6 +38,8 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
       app.quit();
     },
     ...aroundInstalling,
+    // A preview never installs: quitting afterwards must not reopen the windows as a restart to install would.
+    beforeRestart: previewFile ? () => undefined : aroundInstalling.beforeRestart,
     push: (status) => sendEvent('updateStatusChanged', status),
     logFailure: (text) => console.warn(text),
   });

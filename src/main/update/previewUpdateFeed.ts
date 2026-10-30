@@ -9,6 +9,12 @@ import type { FoundUpdate, UpdateFeed } from './AppUpdates';
  */
 export const PREVIEW_UPDATE_VARIABLE = 'UVCS_PREVIEW_UPDATE';
 
+/** The preview file the environment names, for an unpackaged app only; none when the variable is unset or blank. */
+export function previewUpdateFile(isPackaged: boolean, env: Readonly<Record<string, string | undefined>>): string | undefined {
+  const file = env[PREVIEW_UPDATE_VARIABLE]?.trim();
+  return !isPackaged && file ? file : undefined;
+}
+
 /** The update a preview file describes; throws when the file isn't shaped as one. */
 export function previewUpdateOf(json: unknown): FoundUpdate {
   if (!isRecord(json) || typeof json.version !== 'string') throw new Error(`${PREVIEW_UPDATE_VARIABLE}: the file names no "version".`);
@@ -21,7 +27,10 @@ export function previewUpdateOf(json: unknown): FoundUpdate {
   };
 }
 
-/** A feed that finds `update` at once, downloads nothing, and never installs: quitting would only lose the session. */
+/**
+ * A feed that finds `update` at once, downloads nothing, and never installs: quitting would only lose the session.
+ * `createAppUpdates` skips what quitting to install prepares (`beforeRestart`), so the app keeps quitting as usual.
+ */
 export function previewUpdateFeed(update: FoundUpdate): UpdateFeed {
   return {
     checkForUpdates: async () => ({ isUpdateAvailable: true, updateInfo: update }),
