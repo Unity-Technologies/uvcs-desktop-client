@@ -26,26 +26,36 @@ export type ReleaseNoteReading = { note: ReleaseNote } | { problem: string };
 
 const SECTION_HEADING = /^##\s+Release note\s*$/i;
 const NEXT_SECTION = /^##\s/;
-const FENCE = /^\s*(```|~~~)/;
+const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
 const NOTE_HEADING = /^###\s+(\w+):\s*(.*?)\s*$/;
 const ANY_NOTE_HEADING = /^###\s/;
-const NONE = /^None\b:?\s*(.*)$/is;
-const COMMENT = /<!--[\s\S]*?-->/g;
+const BARE_NONE = /^None:?$/;
+const NONE = /^None:\s*([\s\S]*)$/;
+const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+/** What the pull request template asks to be replaced (`.github/pull_request_template.md`). */
+const TEMPLATE_PLACEHOLDER = /<what users can now do>|<A sentence or two\b|<why>/;
 
 const FORMAT = 'Start it with "### New:", "### Improved:" or "### Fixed:" and a title, then a description; or write "None:" and why users have nothing to read.';
 
 export function readReleaseNote(body: string): ReleaseNoteReading {
-  const section = releaseNoteSection(body.replace(/\r\n?/g, '\n'));
+  // Comments go first: what they hold (a "##" line, a fence) is never part of the note.
+  const section = releaseNoteSection(body.replace(/\r\n?/g, '\n').replace(COMMENT, ''));
   if (section === null) return { problem: `The pull request has no "## Release note" section. ${FORMAT}` };
-  const text = section.replace(COMMENT, '').trim();
+  const text = section.trim();
   if (text === '') return { problem: `The release note is empty. ${FORMAT}` };
+  if (TEMPLATE_PLACEHOLDER.test(text)) return { problem: `The release note still holds the template's placeholders in "<…>": replace them. ${FORMAT}` };
+  if (BARE_NONE.test(text)) return { problem: 'The release note says "None" without saying why users have nothing to read.' };
 
   const none = text.match(NONE);
-  if (none) {
-    const reason = none[1]!.trim();
-    return reason ? { note: { kind: 'none', reason } } : { problem: 'The release note says "None" without saying why users have nothing to read.' };
+  return none ? noneOf(none[1]!) : noteOf(text);
+}
+
+/** "None:" and its reason: one line, so a note written under it isn't dropped without a word. */
+function noneOf(reason: string): ReleaseNoteReading {
+  if (/\n\s*\n/.test(reason.trim())) {
+    return { problem: 'A release note that says "None:" gives its reason in one line, and holds no note under it.' };
   }
-  return noteOf(text);
+  return { note: { kind: 'none', reason: reason.trim() } };
 }
 
 function noteOf(text: string): ReleaseNoteReading {
@@ -76,13 +86,18 @@ function outsideCode(lines: string[]): string[] {
   return outsideCodeIndexes(lines).map((index) => lines[index]!);
 }
 
-/** The indexes of the lines outside fenced code blocks, where a "##" line is a heading and not code. */
+/**
+ * The indexes of the lines outside fenced code blocks, where a "##" line is a heading and not code. As in CommonMark,
+ * a fence closes only on the character that opened it, at least as many times: "```" inside "~~~" is code.
+ */
 function outsideCodeIndexes(lines: string[]): number[] {
   const indexes: number[] = [];
-  let inCode = false;
+  let openFence: string | null = null;
   lines.forEach((line, index) => {
-    if (FENCE.test(line)) inCode = !inCode;
-    else if (!inCode) indexes.push(index);
+    const fence = line.match(FENCE)?.[1];
+    if (openFence === null && fence) openFence = fence;
+    else if (openFence !== null && fence && fence[0] === openFence[0] && fence.length >= openFence.length) openFence = null;
+    else if (openFence === null) indexes.push(index);
   });
   return indexes;
 }
