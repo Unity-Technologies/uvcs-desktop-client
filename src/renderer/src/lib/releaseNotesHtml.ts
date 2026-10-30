@@ -201,8 +201,9 @@ function tableOf(table: HtmlElement): MarkdownTable | null {
 function rowsOf(table: HtmlElement): { row: HtmlElement; inHead: boolean }[] {
   const isRow = (node: HtmlNode): node is HtmlElement => typeof node !== 'string' && node.tag === 'tr';
   return table.children.flatMap((node) => {
-    if (isRow(node)) return [{ row: node, inHead: false }];
-    if (typeof node === 'string' || !['thead', 'tbody', 'tfoot'].includes(node.tag)) return [];
+    if (typeof node === 'string') return [];
+    if (node.tag === 'tr') return [{ row: node, inHead: false }];
+    if (!['thead', 'tbody', 'tfoot'].includes(node.tag)) return [];
     return node.children.filter(isRow).map((row) => ({ row, inHead: node.tag === 'thead' }));
   });
 }
