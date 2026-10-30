@@ -117,9 +117,17 @@ from the feed ever reaches the page, cut at its h2 and h3 headings (a heading in
 too): cutting the HTML rather than the blocks keeps a description's h4 to h6 inside its note, as `MarkdownBlock` reads
 h3 to h6 as one level. It keeps headings, paragraphs, lists (a nested list stays under its item,
 `MarkdownListItem.sublist`), quotes, code, tables (GitHub's `<markdown-accessiblity-table>` box and its columns'
-`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures, which show as comments' do
-(`CommentImage`: a chip whose picture shows on hover); the link GitHub wraps each picture in is left out. Scripts,
-styles, attributes other than the few it reads, and links and pictures to any other address are left out.
+`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures; the link GitHub wraps each
+picture in is left out. Scripts, styles, attributes other than the few it reads, and links and pictures to any other
+address are left out. The feed gives a picture uploaded to GitHub as a `private-user-images.githubusercontent.com`
+address whose token expires five minutes after the feed is read, long before What's New opens, so it is read as the
+attachment's lasting address, `https://github.com/user-attachments/assets/<id>` (`lastingPictureUrl`).
+
+What's New shows the pictures themselves (`MarkdownBlocks` with `images="inline"`, `InlinePicture`): as wide as the
+note at most and never wider than they are, at their own proportions, framed by a subtle border, opening at full size
+in the browser on a click. While one loads it holds a quiet place of a stable height; one that can't load falls back
+to the chip comments show (`inlinePictureView`), so its description and link stay. Comments keep their chips
+(`CommentImage`, fetched only on hover): anyone may link anything there.
 Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
 markup from the network.
 
