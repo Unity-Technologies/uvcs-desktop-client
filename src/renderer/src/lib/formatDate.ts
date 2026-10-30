@@ -25,6 +25,19 @@ export function formatDateTime(isoDate: string): string {
   return Number.isNaN(date.getTime()) ? isoDate : dateTimeFormatter.format(date);
 }
 
+/** Where a date is read: the user's locale and time zone (undefined), or the ones given, as tests do. */
+export interface DayFormat {
+  locale?: string;
+  timeZone?: string;
+}
+
+/** A day in words ("October 30, 2026"), as a release is dated; none for a date it can't read. */
+export function formatDay(isoDate: string, { locale, timeZone }: DayFormat = {}): string | null {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric', timeZone }).format(date);
+}
+
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
