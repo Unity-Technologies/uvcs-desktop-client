@@ -93,7 +93,7 @@ interface WhatsNewBodyViewProps {
 }
 
 function WhatsNewBodyView({ body, chips, filter, onFilter, onToggle }: WhatsNewBodyViewProps) {
-  if (body.kind === 'empty') return <p className={styles.empty}>This update's notes are on its release page.</p>;
+  if (body.kind === 'empty') return <p className={styles.empty}>Nothing more to show for this update.</p>;
   return (
     <>
       <FilterChips chips={chips} filter={filter} onChange={onFilter} />
