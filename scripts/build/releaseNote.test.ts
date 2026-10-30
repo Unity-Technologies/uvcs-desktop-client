@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readReleaseNote } from './releaseNote';
 
@@ -67,6 +69,7 @@ describe('a release note CI refuses', () => {
 
   it('is left as the template leaves it', () => {
     expect(problem(body(''))).toMatch(/empty/);
+    expect(problem(readFileSync(join(__dirname, '..', '..', '.github', 'pull_request_template.md'), 'utf8'))).toMatch(/empty/);
   });
 
   it('has no kind, or one that is not New, Improved or Fixed', () => {
