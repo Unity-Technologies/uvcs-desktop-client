@@ -79,6 +79,14 @@ one shows again. A check the window asked for answers in one toast, "Checking…
 
 ## What's New
 
+What users read there is written with each change: every pull request's body has a `## Release note` section, one
+note (`### New:`, `Improved:` or `Fixed:`, a title, then a short Markdown description) or `None:` and why users have
+nothing to read. The `release-notes` skill (`.claude/skills/release-notes`) says how to write one: for users, not
+reviewers, in the app's words. The Release note workflow (`.github/workflows/release-note.yml`) reads the section with
+`readReleaseNote` (`scripts/build/releaseNote.ts`) on every change to the pull request and fails it when it can't;
+Dependabot's pull requests are left out. It runs apart from CI so that editing the description checks the note again
+without building on every OS.
+
 Each release's notes are its description on GitHub. electron-updater reads them from the releases feed with the check
 that finds an update (`fullChangelog`, set in `createAppUpdates`: every release between the running version and the
 update, not just the latest), so they cost no request of their own. `AppUpdates` keeps them (`releaseNotesOf` leaves
