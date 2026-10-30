@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
 import { isAppLink } from '@shared/links/parseLink';
 import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
@@ -7,6 +7,8 @@ import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
 import { ResolvedReferences } from './comments/ResolvedReferences';
+import { InlinePicture } from './InlinePicture';
+import type { MarkdownImages } from './inlinePictureView';
 import styles from './Markdown.module.css';
 
 interface MarkdownProps {
@@ -31,16 +33,27 @@ interface MarkdownBlocksProps {
   blocks: MarkdownBlock[];
   /** A comment's text as written: copying from it gives back what was written (`copyAsSource`). */
   source?: string;
+  /** How pictures show (`MarkdownImages`): as chips, as comments show them, unless the text's are meant to be seen. */
+  images?: MarkdownImages;
 }
 
-/** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
-export function MarkdownBlocks({ blocks, source }: MarkdownBlocksProps) {
+const ImagesContext = createContext<MarkdownImages>('chip');
+
+/** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesOutline`), rendered as elements. */
+export function MarkdownBlocks({ blocks, source, images = 'chip' }: MarkdownBlocksProps) {
   const onCopy = useMemo(() => (source === undefined ? undefined : copyAsSource(source)), [source]);
   return (
-    <div className={`${styles.markdown} selectable`} onCopy={onCopy}>
-      {renderBlocks(blocks)}
-    </div>
+    <ImagesContext.Provider value={images}>
+      <div className={`${styles.markdown} selectable`} onCopy={onCopy}>
+        {renderBlocks(blocks)}
+      </div>
+    </ImagesContext.Provider>
   );
+}
+
+/** One line already read into Markdown's marks (a release note's title), for an element of the caller's own. */
+export function MarkdownInlines({ inlines }: { inlines: readonly MarkdownInline[] }) {
+  return <>{renderInlines(inlines)}</>;
 }
 
 function renderBlocks(blocks: readonly MarkdownBlock[]): ReactNode[] {
@@ -138,11 +151,21 @@ function renderInlines(inlines: readonly MarkdownInline[], compact = false): Rea
           </MarkdownLink>
         );
       case 'image':
-        return <CommentImage key={index} url={inline.url} alt={inline.alt} source={`![${inline.alt}](${inline.url})`} />;
+        return <MarkdownImage key={index} url={inline.url} alt={inline.alt} />;
       case 'reference':
         return <ReferenceChip key={index} reference={inline.reference} source={inline.source} compact={compact} />;
     }
   });
+}
+
+/** A picture as the text around it shows pictures (`MarkdownBlocks`' `images`). */
+function MarkdownImage({ url, alt }: { url: string; alt: string }) {
+  const source = `![${alt}](${url})`;
+  return useContext(ImagesContext) === 'inline' ? (
+    <InlinePicture url={url} alt={alt} source={source} />
+  ) : (
+    <CommentImage url={url} alt={alt} source={source} />
+  );
 }
 
 /** A web or mail link opens outside the app; the app's own links (`uvcs://`) open in it, as a pasted one does. */

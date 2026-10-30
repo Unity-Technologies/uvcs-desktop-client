@@ -11,7 +11,7 @@ import { Spinner } from '../../ui/Spinner';
 import { copyToClipboard } from '../../ui/copyToClipboard';
 import { cmVersionQuery } from '../startup/useCmAvailability';
 import { openReleaseNotesDialog } from '../updates/ReleaseNotesDialog';
-import { foundUpdateVersion, useUpdateReleaseNotes } from '../updates/updateReleaseNotes';
+import { foundUpdateVersion, useHasWhatsNew } from '../updates/updateReleaseNotes';
 import { checkForUpdates, installUpdate, setAboutOpen, useUpdateStore } from '../updates/updateStore';
 import { aboutDetails } from './aboutDetails';
 import { aboutBugReportUrl, featureRequestUrl } from './aboutIssueUrls';
@@ -97,7 +97,7 @@ function UpdateBox() {
   const line = aboutUpdateLine(status);
   const action = aboutUpdateAction(status);
   const version = foundUpdateVersion(status);
-  const hasNotes = useUpdateReleaseNotes().length > 0;
+  const hasNotes = useHasWhatsNew();
 
   return (
     <div className={styles.update}>

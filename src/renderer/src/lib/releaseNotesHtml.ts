@@ -1,18 +1,57 @@
-import type { MarkdownBlock, MarkdownInline, MarkdownList, MarkdownListItem } from './markdown';
+import type { MarkdownBlock, MarkdownInline, MarkdownList, MarkdownListItem, TableAlignment } from './markdown';
+
+/** A part of the notes that a level-2 or level-3 heading opens (`releaseNotesOutline`); the notes before any have none. */
+export interface ReleaseNotesPart {
+  heading: { level: 2 | 3; children: MarkdownInline[] } | null;
+  blocks: MarkdownBlock[];
+}
 
 /**
  * Reads release notes as GitHub renders them (HTML, from the releases feed) into the tree `MarkdownBlocks` renders, so
  * no HTML from the feed ever reaches the page. It keeps what release notes use (headings, paragraphs, lists, quotes,
- * code, emphasis and web links) and reads anything else as its text: images, scripts and styles are left out, and each
- * row of a table is a paragraph.
+ * code, tables, emphasis, web links and web images) and reads anything else as its text: scripts and styles are left
+ * out, and so are images from any other address.
+ *
+ * The notes are cut at their level-2 and level-3 headings, the outline release notes are written in (a group, then
+ * each note in it), everything between two of them read as blocks: smaller headings stay inside their part. The HTML
+ * is cut, not the blocks, because `MarkdownBlock` reads h3 to h6 as one level.
  */
-export function releaseNotesFromHtml(html: string): MarkdownBlock[] {
-  return blocksOf(parseHtml(html));
+export function releaseNotesOutline(html: string): ReleaseNotesPart[] {
+  const parts: ReleaseNotesPart[] = [];
+  let heading: ReleaseNotesPart['heading'] = null;
+  let run: HtmlNode[] = [];
+  const endPart = (): void => {
+    const blocks = blocksOf(run);
+    if (heading || blocks.length > 0) parts.push({ heading, blocks });
+    run = [];
+  };
+
+  for (const node of parseHtml(html)) {
+    const outlineHeading = outlineHeadingOf(node);
+    if (!outlineHeading) {
+      run.push(node);
+      continue;
+    }
+    endPart();
+    heading = { level: outlineHeading.tag === 'h2' ? 2 : 3, children: inlinesOf(outlineHeading.children) };
+  }
+  endPart();
+  return parts;
+}
+
+/** An h2 or h3, alone or in the box GitHub's pages put a heading and its anchor in (`<div class="markdown-heading">`). */
+function outlineHeadingOf(node: HtmlNode): HtmlElement | null {
+  if (typeof node === 'string') return null;
+  if (node.tag === 'h2' || node.tag === 'h3') return node;
+  if (node.tag !== 'div' || !/\bmarkdown-heading\b/.test(node.attributes.class ?? '')) return null;
+  const heading = node.children.find((child): child is HtmlElement => typeof child !== 'string' && /^h[1-6]$/.test(child.tag));
+  return heading?.tag === 'h2' || heading?.tag === 'h3' ? heading : null;
 }
 
 interface HtmlElement {
   tag: string;
-  href: string | null;
+  /** The attributes the notes are read with (`READ_ATTRIBUTES`); any other is dropped as it's read. */
+  attributes: Partial<Record<ReadAttribute, string>>;
   children: HtmlNode[];
 }
 
@@ -22,11 +61,14 @@ const TOKEN = /<!--[\s\S]*?(?:-->|$)|<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^
 const VOID_TAGS = new Set(['area', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 /** Elements whose content is never text to show, read up to their end. */
 const SKIPPED_TAGS = new Set(['script', 'style', 'template', 'svg', 'math']);
-const HREF = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
+const READ_ATTRIBUTES = ['href', 'src', 'alt', 'align', 'style', 'class'] as const;
+type ReadAttribute = (typeof READ_ATTRIBUTES)[number];
+const ATTRIBUTE = /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g;
+const WEB_ADDRESS = /^https?:\/\//i;
 
 /** A forgiving tree of the tags: an end tag closes the nearest open element it names, and one nothing opened is ignored. */
 function parseHtml(html: string): HtmlNode[] {
-  const root: HtmlElement = { tag: '', href: null, children: [] };
+  const root: HtmlElement = { tag: '', attributes: {}, children: [] };
   const open: HtmlElement[] = [root];
   let skipping: string | null = null;
 
@@ -44,7 +86,7 @@ function parseHtml(html: string): HtmlNode[] {
     } else if (SKIPPED_TAGS.has(tag)) {
       if (!attributes!.trimEnd().endsWith('/')) skipping = tag;
     } else {
-      const element: HtmlElement = { tag, href: hrefOf(attributes!), children: [] };
+      const element: HtmlElement = { tag, attributes: attributesOf(attributes!), children: [] };
       open.at(-1)!.children.push(element);
       if (!VOID_TAGS.has(tag)) open.push(element);
     }
@@ -52,9 +94,17 @@ function parseHtml(html: string): HtmlNode[] {
   return root.children;
 }
 
-function hrefOf(attributes: string): string | null {
-  const match = attributes.match(HREF);
-  return match ? decodeEntities(match[1] ?? match[2] ?? match[3]!) : null;
+function attributesOf(source: string): HtmlElement['attributes'] {
+  const attributes: HtmlElement['attributes'] = {};
+  for (const [, rawName, ...values] of source.matchAll(ATTRIBUTE)) {
+    const name = rawName!.toLowerCase();
+    if (isReadAttribute(name) && !(name in attributes)) attributes[name] = decodeEntities(values.find((value) => value !== undefined) ?? '');
+  }
+  return attributes;
+}
+
+function isReadAttribute(name: string): name is ReadAttribute {
+  return (READ_ATTRIBUTES as readonly string[]).includes(name);
 }
 
 const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
@@ -74,8 +124,10 @@ const BLOCK_TAGS = new Set([
   'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul',
 ]);
 
+/** A block element, or an element of GitHub's own around one (`<markdown-accessiblity-table>` around a table). */
 function isBlock(node: HtmlNode): node is HtmlElement {
-  return typeof node !== 'string' && BLOCK_TAGS.has(node.tag);
+  if (typeof node === 'string') return false;
+  return BLOCK_TAGS.has(node.tag) || (node.tag.includes('-') && node.children.some(isBlock));
 }
 
 /** The blocks of a run of nodes: text and inline elements between blocks read as one paragraph. */
@@ -107,6 +159,10 @@ function blocksOfElement(element: HtmlElement): MarkdownBlock[] {
   if (tag === 'p' || tag === 'tr') return withInlines(children, (inlines) => ({ kind: 'paragraph', children: inlines }));
   if (tag === 'blockquote') return withInlines(children, (inlines) => ({ kind: 'quote', children: [{ kind: 'paragraph', children: inlines }] }));
   if (tag === 'pre') return [{ kind: 'code', text: textOf(children).replace(/\n$/, '') }];
+  if (tag === 'table') {
+    const table = tableOf(element);
+    return table ? [table] : [];
+  }
   if (tag === 'ul' || tag === 'ol') {
     const list = listOf(element);
     return list ? [list] : [];
@@ -118,6 +174,45 @@ function blocksOfElement(element: HtmlElement): MarkdownBlock[] {
 function withInlines(nodes: HtmlNode[], block: (inlines: MarkdownInline[]) => MarkdownBlock): MarkdownBlock[] {
   const inlines = inlinesOf(nodes);
   return inlines.length > 0 ? [block(inlines)] : [];
+}
+
+type MarkdownTable = Extract<MarkdownBlock, { kind: 'table' }>;
+
+/** A table: its head's row is its header, or its first row when it has no head (which GitHub never writes). */
+function tableOf(table: HtmlElement): MarkdownTable | null {
+  const rows = rowsOf(table);
+  const headRow = (rows.find((row) => row.inHead) ?? rows[0])?.row;
+  if (!headRow) return null;
+  const header = cellsOf(headRow);
+  return {
+    kind: 'table',
+    align: header.map((cell) => cell.align),
+    header: header.map((cell) => cell.inlines),
+    rows: rows.filter(({ row }) => row !== headRow).map(({ row }) => cellsOf(row).map((cell) => cell.inlines)),
+  };
+}
+
+/** A table's rows, in its head, body and foot or right under it, and whether each is in its head. */
+function rowsOf(table: HtmlElement): { row: HtmlElement; inHead: boolean }[] {
+  const isRow = (node: HtmlNode): node is HtmlElement => typeof node !== 'string' && node.tag === 'tr';
+  return table.children.flatMap((node) => {
+    if (typeof node === 'string') return [];
+    if (node.tag === 'tr') return [{ row: node, inHead: false }];
+    if (!['thead', 'tbody', 'tfoot'].includes(node.tag)) return [];
+    return node.children.filter(isRow).map((row) => ({ row, inHead: node.tag === 'thead' }));
+  });
+}
+
+function cellsOf(row: HtmlElement): { inlines: MarkdownInline[]; align: TableAlignment }[] {
+  return row.children.flatMap((cell) =>
+    typeof cell !== 'string' && (cell.tag === 'th' || cell.tag === 'td') ? [{ inlines: inlinesOf(cell.children), align: alignmentOf(cell) }] : [],
+  );
+}
+
+/** GitHub writes a column's alignment as `align`; other writers put it in the cell's `style`. */
+function alignmentOf(cell: HtmlElement): TableAlignment {
+  const align = (cell.attributes.align ?? cell.attributes.style?.match(/text-align\s*:\s*(\w+)/i)?.[1] ?? '').toLowerCase();
+  return align === 'left' || align === 'center' || align === 'right' ? align : null;
 }
 
 function listOf(element: HtmlElement): MarkdownList | null {
@@ -144,14 +239,62 @@ function inlinesOfNode(node: HtmlNode): MarkdownInline[] {
   if (typeof node === 'string') return [{ kind: 'text', text: node.replace(/[ \t\r\n\f]+/g, ' ') }];
   const { tag, children } = node;
   if (tag === 'br') return [{ kind: 'text', text: ' ' }];
-  if (tag === 'img') return [];
+  if (tag === 'img') return imageOf(node);
   if (tag === 'code' || tag === 'kbd' || tag === 'samp') return [{ kind: 'code', text: textOf(children) }];
   if (tag === 'strong' || tag === 'b') return [{ kind: 'strong', children: inlinesOf(children) }];
   if (tag === 'em' || tag === 'i') return [{ kind: 'emphasis', children: inlinesOf(children) }];
-  if (tag === 'a' && node.href && /^https?:\/\//i.test(node.href)) return [{ kind: 'link', url: node.href, children: inlinesOf(children) }];
+  if (tag === 'a') return linkOf(node);
   // A block inside a line (a paragraph in a list item, a cell in a row) is set apart by a space.
   const inlines = children.flatMap(inlinesOfNode);
   return BLOCK_TAGS.has(tag) ? [{ kind: 'text', text: ' ' }, ...inlines, { kind: 'text', text: ' ' }] : inlines;
+}
+
+/** A picture from the web; one from any other address (`data:`, a file, a page's own path) is left out. */
+function imageOf(image: HtmlElement): MarkdownInline[] {
+  const url = image.attributes.src?.trim() ?? '';
+  return WEB_ADDRESS.test(url) ? [{ kind: 'image', url: lastingPictureUrl(url), alt: image.attributes.alt ?? '' }] : [];
+}
+
+/** A picture uploaded to GitHub as the releases feed signs it: `…/<user>/<n>-<attachment id>.<ext>?jwt=…`. */
+const SIGNED_ATTACHMENT = /^https:\/\/private-user-images\.githubusercontent\.com\/\d+\/\d+-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.\w+\?/i;
+
+/**
+ * The feed's address for a picture uploaded to GitHub carries a token that expires five minutes after the feed was
+ * read, and the notes are read at the check that finds an update, often hours before What's New opens: the picture
+ * is shown from the attachment's own address, which lasts (and leads to the same file).
+ */
+function lastingPictureUrl(url: string): string {
+  const attachment = url.match(SIGNED_ATTACHMENT)?.[1];
+  return attachment ? `https://github.com/user-attachments/assets/${attachment.toLowerCase()}` : url;
+}
+
+/**
+ * A web link, or its text when it goes anywhere else. The pictures in it come out beside it, after its text: a picture
+ * opens by itself, and a link inside a link isn't HTML. GitHub wraps each picture in a link to the picture itself,
+ * which so reads as the picture alone.
+ */
+function linkOf(link: HtmlElement): MarkdownInline[] {
+  const children = inlinesOf(link.children);
+  const url = link.attributes.href ?? '';
+  if (!WEB_ADDRESS.test(url)) return children;
+  const { words, pictures } = picturesTakenOut(children);
+  return [...(words.length > 0 ? [{ kind: 'link', url, children: words } as const] : []), ...pictures];
+}
+
+/** A line's pictures, wherever they are in its marks (`<strong><img></strong>`), and the line without them. */
+function picturesTakenOut(inlines: MarkdownInline[]): { words: MarkdownInline[]; pictures: MarkdownInline[] } {
+  const pictures: MarkdownInline[] = [];
+  const words = inlines.flatMap((inline): MarkdownInline[] => {
+    if (inline.kind === 'image') {
+      pictures.push(inline);
+      return [];
+    }
+    if (!('children' in inline)) return [inline];
+    const inner = picturesTakenOut(inline.children);
+    pictures.push(...inner.pictures);
+    return [{ ...inline, children: inner.words }];
+  });
+  return { words: trimmed(merged(words)), pictures };
 }
 
 function textOf(nodes: HtmlNode[]): string {

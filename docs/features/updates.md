@@ -98,20 +98,65 @@ Each release's notes are its description on GitHub. electron-updater reads them 
 that finds an update (`fullChangelog`, set in `createAppUpdates`: every release between the running version and the
 update, not just the latest), so they cost no request of their own. `AppUpdates` keeps them (`releaseNotesOf` leaves
 out releases with none) and the renderer asks for them once per version (`updates.releaseNotes`,
-`releaseNotesQuery`).
+`releaseNotesQuery`). The update's own release carries the date it was released (`ReleaseNotes.releaseDate`, from
+electron-updater's `UpdateInfo.releaseDate`, which its `latest*.yml` holds); the feed dates no other release, and none
+is asked for.
 
 While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
-(`ReleaseNotesDialog`) with each release's notes, newest first, headed by version when the update skips a few
-(`releaseNotesSections`), and the install button once the update is ready. With no notes, there is no button. GitHub's
-generated notes open with a "What's Changed" heading, which the title already says, so it is left out; their closing
-"**Full Changelog**" link becomes a quiet "Full changelog" line under the release (`changelogUrl`). While About or What's
-New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
+(`ReleaseNotesDialog`) that reads like a product's release notes. With nothing to show there is no button
+(`hasWhatsNew`, `useHasWhatsNew`, which ask the dialog's own `releaseSections`): GitHub's notes can hold only their
+"Full Changelog" line or new contributors, both left out. Should the dialog still open without anything, it says so
+in one quiet line, "All releases" still in its footer (`whatsNewBody`'s `empty`). While About or What's New is open
+the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
 
-GitHub sends the notes as HTML. `releaseNotesFromHtml` reads it into the tree `MarkdownBlocks` renders, so no HTML
-from the feed ever reaches the page: headings, paragraphs, lists (nested ones join their parent), quotes, code,
-emphasis and `http(s)` links, which open in the browser; a nested list stays under its item (`MarkdownListItem.sublist`); images, scripts, styles and any other address are left out.
-Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
-markup from the network.
+- **Header**: the app's mark, "What's new in <version>", and under it the version running (`appInfoQuery`) and the
+  day the update was released (`whatsNewSubtitle`).
+- **Notes** (`whatsNewRelease`): a release written as the Release workflow writes it has groups under level-2
+  headings named exactly New, Improved, Fixed and Other changes (`NOTE_KIND_LABELS`); each note in them is a level-3
+  heading, its title, and everything up to the next h2 or h3 is its description, rendered as full Markdown: smaller
+  headings (a step below the note's title), pictures, tables, code and lists. A list in a group is a note per item;
+  an unknown group is one other change titled by its heading; what comes before the first group is the release's
+  introduction. GitHub's generated notes ("What's Changed", the releases already published) read as other changes, a
+  note per pull request, its title without the "by @user in #12" it ends with (`withoutAuthorTail`); their "New
+  Contributors" are left out. Notes written any other way show as plain Markdown (`WhatsNewRelease.plain`). The
+  closing "**Full Changelog**" line is left out: the footer links to every release instead.
+- **Filter** (`filterChips`): chips for All and each kind the notes hold, with how many notes each has across every
+  release the update spans, shown only when the notes hold more than one kind. A kind with no notes has no chip.
+- **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
+  · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the
+  update's own, the first release shown opens in its place, named by its row. Each group's tag takes its kind's tone
+  (`NoteGroup.tone`). A filter shows its kind from every release at once, each older
+  release named by its row (no longer a toggle), so "Fixed" lists every fix since the running version; releases with
+  none of that kind are left out, and so is what a release says outside its notes. Going back to All keeps the
+  releases the user had unfolded.
+- **Footer**: "All releases", the repository's releases page (`AppInfo.releasesUrl`), and "Later" with the install
+  button once the update is ready (`installLabel`), or just "Close".
+
+GitHub sends the notes as HTML. `releaseNotesOutline` reads it into the tree `MarkdownBlocks` renders, so no HTML
+from the feed ever reaches the page, cut at its h2 and h3 headings (a heading in GitHub's `markdown-heading` box
+too): cutting the HTML rather than the blocks keeps a description's h4 to h6 inside its note, as `MarkdownBlock` reads
+h3 to h6 as one level. It keeps headings, paragraphs, lists (a nested list stays under its item,
+`MarkdownListItem.sublist`), quotes, code, tables (GitHub's `<markdown-accessiblity-table>` box and its columns'
+`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures. A picture in a link comes out
+beside it, after the link's text (a link inside a link isn't HTML), so the link GitHub wraps each picture in reads as
+the picture alone. Scripts, styles, attributes other than the few it reads, and links and pictures to any other
+address are left out. The feed gives a picture uploaded to GitHub as a `private-user-images.githubusercontent.com`
+address whose token expires five minutes after the feed is read, long before What's New opens, so it is read as the
+attachment's lasting address, `https://github.com/user-attachments/assets/<id>` (`lastingPictureUrl`).
+
+What's New shows the pictures themselves (`MarkdownBlocks` with `images="inline"`, `InlinePicture`): as wide as the
+note at most and never wider than they are, at their own proportions, framed by a subtle border, opening at full size
+in the browser on a click. While one loads it holds a quiet place of a stable height; one that can't load falls back
+to the chip comments show (`inlinePictureView`), so its description and link stay. Comments keep their chips
+(`CommentImage`, fetched only on hover): anyone may link anything there. Showing the HTML as it comes
+(`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run markup from the network.
+
+**Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
+(`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
+file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
+renders (`gh api repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`,
+or `gh api markdown -f mode=gfm -F text=@notes.md` for notes not published yet). Start it with `npm run app:debug`; the
+update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
 
 
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns
