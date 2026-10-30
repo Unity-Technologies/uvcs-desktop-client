@@ -1,15 +1,5 @@
 import type { MarkdownBlock, MarkdownInline, MarkdownList, MarkdownListItem, TableAlignment } from './markdown';
 
-/**
- * Reads release notes as GitHub renders them (HTML, from the releases feed) into the tree `MarkdownBlocks` renders, so
- * no HTML from the feed ever reaches the page. It keeps what release notes use (headings, paragraphs, lists, quotes,
- * code, tables, emphasis, web links and web images) and reads anything else as its text: scripts and styles are left
- * out, and so are images from any other address.
- */
-export function releaseNotesFromHtml(html: string): MarkdownBlock[] {
-  return blocksOf(parseHtml(html));
-}
-
 /** A part of the notes that a level-2 or level-3 heading opens (`releaseNotesOutline`); the notes before any have none. */
 export interface ReleaseNotesPart {
   heading: { level: 2 | 3; children: MarkdownInline[] } | null;
@@ -17,9 +7,14 @@ export interface ReleaseNotesPart {
 }
 
 /**
- * The notes cut at their level-2 and level-3 headings, the outline release notes are written in (a group, then each
- * note in it), everything between two of them read as blocks: smaller headings stay inside their part. The HTML is
- * cut, not the blocks, because `MarkdownBlock` reads h3 to h6 as one level.
+ * Reads release notes as GitHub renders them (HTML, from the releases feed) into the tree `MarkdownBlocks` renders, so
+ * no HTML from the feed ever reaches the page. It keeps what release notes use (headings, paragraphs, lists, quotes,
+ * code, tables, emphasis, web links and web images) and reads anything else as its text: scripts and styles are left
+ * out, and so are images from any other address.
+ *
+ * The notes are cut at their level-2 and level-3 headings, the outline release notes are written in (a group, then
+ * each note in it), everything between two of them read as blocks: smaller headings stay inside their part. The HTML
+ * is cut, not the blocks, because `MarkdownBlock` reads h3 to h6 as one level.
  */
 export function releaseNotesOutline(html: string): ReleaseNotesPart[] {
   const parts: ReleaseNotesPart[] = [];

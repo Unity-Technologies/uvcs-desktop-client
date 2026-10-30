@@ -18,7 +18,7 @@ export type UpdateStatus =
 
 /**
  * What changed in one release: its notes on GitHub, as GitHub renders them (HTML, from the releases feed that
- * electron-updater reads anyway). The renderer reads them into elements (`releaseNotesFromHtml`), never as HTML.
+ * electron-updater reads anyway). The renderer reads them into elements (`releaseNotesOutline`), never as HTML.
  */
 export interface ReleaseNotes {
   version: string;

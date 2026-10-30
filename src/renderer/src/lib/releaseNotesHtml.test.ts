@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { releaseNotesFromHtml, releaseNotesOutline } from './releaseNotesHtml';
+import type { MarkdownBlock } from './markdown';
+import { releaseNotesOutline } from './releaseNotesHtml';
+
+/** The notes as one run of blocks, their outline's headings among them: how the notes read outside their outline. */
+function releaseNotesFromHtml(html: string): MarkdownBlock[] {
+  return releaseNotesOutline(html).flatMap(({ heading, blocks }) => (heading ? [{ kind: 'heading', ...heading } as const, ...blocks] : blocks));
+}
 
 const text = (value: string) => ({ kind: 'text', text: value }) as const;
 
