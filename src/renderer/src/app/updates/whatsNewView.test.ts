@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { generatedItem, generatedNotes, group, note, paragraph } from './testing/releaseNotesHtml';
+import { fullChangelogLine, generatedItem, generatedNotes, group, note, paragraph } from './testing/releaseNotesHtml';
 import { whatsNewRelease, type WhatsNewRelease } from './whatsNewRelease';
-import { filterChips, releaseSections, toggledRelease, whatsNewSubtitle } from './whatsNewView';
+import { filterChips, hasWhatsNew, releaseSections, toggledRelease, whatsNewBody, whatsNewSubtitle } from './whatsNewView';
 
 const newest = whatsNewRelease({
   version: '0.2.5',
@@ -76,12 +76,58 @@ describe("What's New's releases", () => {
     expect(summary([newest, onlyFixes], 'all', unfolded)[1]!.open).toBe(true);
     expect(toggledRelease(unfolded, '0.2.4')).toEqual(new Set());
   });
+
+  it('tones each group by its kind', () => {
+    const [section] = releaseSections([newest, generated], 'all', new Set());
+    const unfoldedGenerated = releaseSections([newest, generated], 'all', new Set(['0.2.3']))[1]!;
+
+    expect(section!.groups.map(({ kind, tone }) => ({ kind, tone }))).toEqual([
+      { kind: 'new', tone: 'success' },
+      { kind: 'improved', tone: 'accent' },
+      { kind: 'fixed', tone: 'warning' },
+    ]);
+    expect(unfoldedGenerated.groups[0]!.tone).toBe('neutral');
+  });
+});
+
+describe('releases with nothing to show', () => {
+  const onlyChangelog = whatsNewRelease({ version: '0.2.6', html: fullChangelogLine('0.2.5', '0.2.6') });
+  const onlyNewContributors = whatsNewRelease({
+    version: '0.2.1',
+    html: `<h2>New Contributors</h2>\n<ul><li><a href="https://github.com/ana">@ana</a> made their first contribution</li></ul>\n${fullChangelogLine('0.2.0', '0.2.1')}`,
+  });
+
+  it('are left out, a release after the update with none shown as a row', () => {
+    expect(summary([newest, onlyNewContributors, onlyFixes], 'all').map(({ version }) => version)).toEqual(['0.2.5', '0.2.4']);
+  });
+
+  it("open the first release that has some when the update's own has none, named by its row", () => {
+    expect(summary([onlyChangelog, onlyFixes, generated], 'all')).toEqual([
+      { version: '0.2.4', row: { version: '0.2.4', count: '2 notes', foldable: false }, open: true, intro: 1, groups: ['Fixed: 2'] },
+      { version: '0.2.3', row: { version: '0.2.3', count: '1 note', foldable: true }, open: false, intro: 0, groups: ['Other changes: 1'] },
+    ]);
+  });
+
+  it("make What's New empty when none has any, and offer no What's New", () => {
+    expect(whatsNewBody([onlyChangelog, onlyNewContributors], 'all', new Set())).toEqual({ kind: 'empty' });
+    expect(whatsNewBody([], 'all', new Set())).toEqual({ kind: 'empty' });
+    expect(hasWhatsNew([onlyChangelog, onlyNewContributors])).toBe(false);
+    expect(hasWhatsNew([])).toBe(false);
+  });
+
+  it("offer What's New when any release has something, plain notes too", () => {
+    expect(hasWhatsNew([onlyChangelog, plain])).toBe(true);
+    expect(whatsNewBody([onlyChangelog, plain], 'all', new Set()).kind).toBe('releases');
+  });
 });
 
 describe("What's New's subtitle", () => {
   it('says the version running and the day the update was released', () => {
-    expect(whatsNewSubtitle('0.2.4', '2026-10-30T12:00:00Z', 'en-US')).toEqual(['You have 0.2.4', 'Released October 30, 2026']);
-    expect(whatsNewSubtitle('0.2.4', '2026-10-30T12:00:00Z', 'es-ES')).toEqual(['You have 0.2.4', 'Released 30 de octubre de 2026']);
+    expect(whatsNewSubtitle('0.2.4', '2026-10-30T23:30:00Z', { locale: 'en-US', timeZone: 'UTC' })).toEqual(['You have 0.2.4', 'Released October 30, 2026']);
+    expect(whatsNewSubtitle('0.2.4', '2026-10-30T23:30:00Z', { locale: 'en-US', timeZone: 'Asia/Tokyo' })).toEqual([
+      'You have 0.2.4',
+      'Released October 31, 2026',
+    ]);
   });
 
   it('leaves out what it does not know yet', () => {
