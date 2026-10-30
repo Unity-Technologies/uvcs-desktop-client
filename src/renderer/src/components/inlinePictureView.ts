@@ -36,3 +36,17 @@ export function pictureLoadAfter(event: 'load' | 'error', naturalWidth: number):
 export function pictureEnlarges(naturalWidth: number, shownWidth: number): boolean {
   return naturalWidth - shownWidth > 1;
 }
+
+/** What a picture with no description is called. */
+const UNNAMED_PICTURE = 'Picture';
+
+/** A picture's accessible name: an offer to enlarge it when a click does (`pictureEnlarges`), else what it shows. */
+export function pictureLabel(alt: string, enlarges: boolean): string {
+  if (!enlarges) return alt || UNNAMED_PICTURE;
+  return alt ? `Enlarge ${alt}` : `Enlarge ${UNNAMED_PICTURE.toLowerCase()}`;
+}
+
+/** What the larger view of a picture (`PictureViewer`) is titled for screen readers: what it shows. */
+export function pictureTitle(alt: string): string {
+  return alt || UNNAMED_PICTURE;
+}
