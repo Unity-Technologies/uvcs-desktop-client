@@ -173,13 +173,17 @@ describe('release notes as GitHub renders them', () => {
     expect(releaseNotesFromHtml(`<p><img src="${url}" alt="A"></p>`)).toEqual([{ kind: 'paragraph', children: [{ kind: 'image', url, alt: 'A' }] }]);
   });
 
-  it('keeps the link around a picture when the link has text too, and a picture without a description', () => {
-    const html = "<p><a href='https://example.com/page'>See <img src='https://example.com/a.png'></a></p>";
+  it('reads a link holding text and a picture as the link with its text, then the picture beside it, never one in the other', () => {
+    const html = "<p><a href='https://example.com/page'>See <img src='https://example.com/a.png'> this</a> now</p>";
 
     expect(releaseNotesFromHtml(html)).toEqual([
       {
         kind: 'paragraph',
-        children: [{ kind: 'link', url: 'https://example.com/page', children: [text('See '), { kind: 'image', url: 'https://example.com/a.png', alt: '' }] }],
+        children: [
+          { kind: 'link', url: 'https://example.com/page', children: [text('See this')] },
+          { kind: 'image', url: 'https://example.com/a.png', alt: '' },
+          text(' now'),
+        ],
       },
     ]);
   });
