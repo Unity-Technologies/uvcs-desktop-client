@@ -1,6 +1,8 @@
-/* Over the dialog the picture came from: the dialogs' own dimmed backdrop, the later one on top. */
+/* Over the dialog the picture came from, dimming it as a dialog dims the window: the dialogs' own backdrop, a layer
+   above their content (`Dialog.module.css`, 800 and 801). */
 .overlay {
   composes: overlay from '../ui/dialog/Dialog.module.css';
+  z-index: 802;
 }
 
 /* The whole window: a click anywhere outside the buttons returns to the dialog. */
@@ -15,7 +17,7 @@
   padding: var(--space-6);
   cursor: zoom-out;
   animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
-  z-index: 801;
+  z-index: 803;
   outline: none;
 }
 
