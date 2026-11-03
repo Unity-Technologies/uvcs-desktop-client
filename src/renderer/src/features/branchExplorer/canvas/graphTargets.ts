@@ -94,12 +94,29 @@ const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 /** How far from a link the pointer is still on it: in world px zoomed in, where lines widen too, in screen px zoomed out. */
 const LINE_HIT_DISTANCE = 6;
 
+export interface HitOptions {
+  /** Whether code review chips are their own target, or part of their header. */
+  chips?: boolean;
+  zoom?: number;
+  /** Whether labels are drawn (`detail.labels`): a hidden label can't be hit. */
+  labels?: boolean;
+  /** Whether merge links are drawn (`detail.mergeLinks`): a hidden link can't be hit. */
+  mergeLinks?: boolean;
+  /** Whether branch bands are drawn (`detail.bands`): without, a branch is hit only near its line. */
+  bands?: boolean;
+}
+
 /**
  * Finds what is under a world-space point, most specific first. What moves with the view or is cut to its room
  * (code review chips, branch headers pinned to the edge, comments) is hit where the last frame drew it.
  * Code review chips only react to clicks: for anything else, `chips: false` makes them part of their header.
  */
-export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets | null = null, { chips = true, zoom = 1 } = {}): GraphTarget | null {
+export function hitTest(
+  layout: GraphLayout,
+  point: Point,
+  drawn: DrawnTargets | null = null,
+  { chips = true, zoom = 1, labels = true, mergeLinks = true, bands = true }: HitOptions = {},
+): GraphTarget | null {
   const chip = chips ? drawn?.reviewChips.at(point) : null;
   if (chip) return { kind: 'codeReview', review: chip.item };
   const header = drawn?.branchHeaders.at(point);
@@ -109,11 +126,10 @@ export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets |
   return (
     hitChangeset(layout, point) ??
     hitPending(layout, point) ??
-    hitLabel(layout, point) ??
+    (labels ? hitLabel(layout, point) : null) ??
     (caption ? { kind: 'changeset', id: caption.item.changeset.id } : null) ??
-    hitMergeLink(layout, point, lineHitDistance) ??
-    hitPendingMergeLink(layout, point, lineHitDistance) ??
-    hitLane(layout, point)
+    (mergeLinks ? (hitMergeLink(layout, point, lineHitDistance) ?? hitPendingMergeLink(layout, point, lineHitDistance)) : null) ??
+    hitLane(layout, point, bands ? BAND_HEIGHT / 2 : lineHitDistance)
   );
 }
 
@@ -175,12 +191,15 @@ function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number
   return link ? { kind: 'pendingMergeLink', link } : null;
 }
 
-/** A branch is its band (its header card is hit where it was drawn). */
-function hitLane(layout: GraphLayout, point: Point): GraphTarget | null {
+/**
+ * A branch is its band, or, without bands, its line: `halfHeight` is how far from the line's height it still answers
+ * (its header card is hit where it was drawn).
+ */
+function hitLane(layout: GraphLayout, point: Point, halfHeight: number): GraphTarget | null {
   const row = Math.round((point.y - GRAPH_PADDING.top) / ROW_HEIGHT);
   const lane = layout.lanesByRow.get(row)?.find((candidate) => {
     const shape = laneShape(candidate);
-    return Math.abs(point.y - shape.y) <= BAND_HEIGHT / 2 && point.x >= shape.left && point.x <= shape.right;
+    return Math.abs(point.y - shape.y) <= halfHeight && point.x >= shape.left && point.x <= shape.right;
   });
   return lane ? { kind: 'branch', lane } : null;
 }

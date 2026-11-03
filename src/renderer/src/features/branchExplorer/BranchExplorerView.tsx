@@ -17,7 +17,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -29,6 +29,7 @@ import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
+import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { GraphSkeleton } from './GraphSkeleton';
@@ -56,7 +57,8 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showComments, showAvatars } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
+  const viewOptions = useGraphViewOptions();
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
@@ -110,10 +112,10 @@ export function BranchExplorerView() {
       highlightedAuthors,
       search: searchLit && { ...searchLit, active: activeHit },
       searchQuery: search.shown.trim(),
-      options: { showComments, showAvatars },
+      options: viewOptions,
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, showComments, showAvatars, reviews],
+    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
   );
   useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
@@ -313,7 +315,7 @@ export function BranchExplorerView() {
               onActivate={activate}
               contextMenu={menuFor}
             >
-              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} onOpenOptions={openBranchExplorerOptionsDialog} />
             </GraphCanvas>
           }
           details={

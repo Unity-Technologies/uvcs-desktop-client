@@ -1,6 +1,6 @@
 import { compactNameWidth } from './compactNameWidth';
 import { GHOST_ALPHA, type DrawContext } from './drawContext';
-import { fitBranchName, textWidth } from './fitText';
+import { fitBranchName, shownBranchName, textWidth } from './fitText';
 import { BAND_HEIGHT, ROW_HEIGHT } from './geometry';
 import { branchInk } from './graphPalette';
 import { laneShape, roomBeforeNextLane } from './laneShape';
@@ -34,7 +34,7 @@ export function drawCompactBranchNames(draw: DrawContext): void {
     const right = shape.right * viewport.zoom + viewport.panX;
     const bottom = (shape.y - BAND_HEIGHT / 2) * viewport.zoom + viewport.panY - 3;
     const room = compactNameWidth(left, right, roomBeforeNextLane(scene.layout, lane, shape.left) * viewport.zoom, scene.size.width);
-    const name = fitBranchName(ctx, lane.branch.name, room);
+    const name = fitBranchName(ctx, shownBranchName(lane.branch.name, draw.detail.fullBranchNames), room);
     ctx.globalAlpha = search && !search.litBranches.has(lane.branch.name) ? GHOST_ALPHA : 1;
     drawSearchMarks(draw, name, left, bottom - COMPACT_NAME_HEIGHT / 2 + 1, COMPACT_NAME_HEIGHT + 1);
     ctx.strokeText(name, left, bottom);

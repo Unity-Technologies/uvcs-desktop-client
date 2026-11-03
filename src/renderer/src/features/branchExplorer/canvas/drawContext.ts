@@ -4,14 +4,9 @@ import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
 import type { DrawnBoxes } from './drawnBoxes';
 import type { GraphPalette } from './graphPalette';
+import type { GraphViewOptions } from './graphViewOptions';
 import type { Pen } from './pen';
 import type { Size, Viewport } from './viewport';
-
-/** What the user chose to see in the graph. */
-export interface GraphViewOptions {
-  showComments: boolean;
-  showAvatars: boolean;
-}
 
 /** Everything that affects how the graph looks in one frame. */
 export interface GraphScene {
@@ -82,7 +77,7 @@ export interface VisibleArea {
   lastColumn: number;
 }
 
-/** How much detail fits at the current zoom. */
+/** What to draw: what fits at the current zoom, among what the user chose to see (`GraphViewOptions`). */
 export interface DetailLevel {
   /** Branch headers, labels and other text. */
   text: boolean;
@@ -90,6 +85,16 @@ export interface DetailLevel {
   avatars: boolean;
   /** Opacity of the changeset comments under the nodes; 0 when hidden. */
   captions: number;
+  /** Labels on their changesets (only once `text` shows too). */
+  labels: boolean;
+  /** Branch bands; without them a thin line joins a branch's changesets. */
+  bands: boolean;
+  /** The links from where a branch starts to its first changeset. */
+  branchStarts: boolean;
+  /** Merge links, pending merges' included. */
+  mergeLinks: boolean;
+  /** Whole branch names rather than their last part. */
+  fullBranchNames: boolean;
 }
 
 export interface DrawContext {
@@ -115,6 +120,11 @@ export function detailLevel(zoom: number, options: GraphViewOptions): DetailLeve
     text: zoom >= 0.45,
     avatars: options.showAvatars && zoom >= 0.55,
     captions: options.showComments ? captionAlpha(zoom) : 0,
+    labels: options.showLabels,
+    bands: options.showBranches,
+    branchStarts: options.showBranchStartLinks,
+    mergeLinks: options.showMergeLinks,
+    fullBranchNames: options.fullBranchNames,
   };
 }
 

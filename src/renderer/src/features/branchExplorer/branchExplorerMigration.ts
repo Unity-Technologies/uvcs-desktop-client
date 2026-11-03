@@ -23,3 +23,11 @@ export function hiddenAfterMigration(persisted: unknown, hidden: Record<string, 
   const closed = (persisted as { detailsOpen?: unknown } | undefined)?.detailsOpen === false;
   return closed ? { ...hidden, [detailsKey]: true } : hidden;
 }
+
+/**
+ * The preferences as they start: the remembered ones over the current defaults. A display option added after they
+ * were remembered (`GraphViewOptions`) isn't among them, and starts at its default.
+ */
+export function rememberedPreferences<T extends object>(persisted: unknown, current: T): T {
+  return { ...current, ...((persisted ?? {}) as Partial<T>) };
+}

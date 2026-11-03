@@ -6,9 +6,10 @@ import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { TooltipBubble } from '../../../ui/TooltipBubble';
 import type { GraphLayout } from '../model/layoutGraph';
 import { captionMetrics, captionOnScreen } from './captionCard';
-import type { DrawnTargets, GraphScene } from './drawContext';
+import { detailLevel, type DrawnTargets, type GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
+import { withBranchColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
 import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
@@ -78,7 +79,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const contextTargetRef = useRef<GraphTarget | null>(null);
   /** A viewport change requested before the canvas knew its size; applied on the first resize. */
   const pendingViewRef = useRef<(() => void) | null>(null);
-  const palette = useGraphPalette(containerRef);
+  const themePalette = useGraphPalette(containerRef);
+  /** The theme's palette, with each branch's hue only while the Branch colors option is on. */
+  const palette = themePalette && withBranchColors(themePalette, highlights.options.branchColors);
   /** What the pointer is on, highlighted; the hover card has its own life (`useHoverCard`). */
   const [hovered, setHovered] = useState<GraphTarget | null>(null);
   const hoverCard = useHoverCard<ShownHoverCard>();
@@ -227,7 +230,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
     const viewport = view.viewportRef.current;
-    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom });
+    const { labels, mergeLinks, bands } = detailLevel(viewport.zoom, sceneRef.current.highlights.options);
+    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom, labels, mergeLinks, bands });
   };
 
   /** A changeset's card opens over its caption, in its font and color; any other card by the pointer. */

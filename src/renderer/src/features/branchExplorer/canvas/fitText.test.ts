@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitBranchName, summaryOf } from './fitText';
+import { fitBranchName, shownBranchName, summaryOf } from './fitText';
 
 /** A context whose every character is 1px wide, in a font of its own so the cache never answers for another test. */
 function context(font: string): CanvasRenderingContext2D {
@@ -34,5 +34,17 @@ describe('summaryOf', () => {
   it('skips the blank lines a comment starts with, and reads CRLF as a line end', () => {
     expect(summaryOf('\n  \nFix crash on load\nDetails')).toBe('Fix crash on load');
     expect(summaryOf('Fix crash\r\nDetails')).toBe('Fix crash');
+  });
+});
+
+describe('shownBranchName', () => {
+  it('shows the whole name while full names are on', () => {
+    expect(shownBranchName('/main/sprint/task-12', true)).toBe('/main/sprint/task-12');
+  });
+
+  it('shows only the leaf while they are off, keeping a top-level branch whole', () => {
+    expect(shownBranchName('/main/sprint/task-12', false)).toBe('task-12');
+    expect(shownBranchName('/main/tâche-ñ', false)).toBe('tâche-ñ');
+    expect(shownBranchName('/main', false)).toBe('/main');
   });
 });

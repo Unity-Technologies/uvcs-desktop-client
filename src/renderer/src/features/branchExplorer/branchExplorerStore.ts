@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
-import { hiddenAfterMigration, migrateBranchExplorerPreferences } from './branchExplorerMigration';
+import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf, type GraphViewOptions } from './canvas/graphViewOptions';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
 import type { RevealTarget } from './model/revealTarget';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
 
-export interface BranchExplorerPreferences {
+/** The display options (`GraphViewOptions`) are remembered with the filters; a new one shows until turned off. */
+export interface BranchExplorerPreferences extends GraphViewOptions {
   dateRange: SincePreset;
   hideMergedBranches: boolean;
   showHiddenBranches: boolean;
@@ -23,8 +26,6 @@ export interface BranchExplorerPreferences {
   people: PeoplePick;
   /** Only the changesets that shape the diagram; the linear runs between them collapse into "+N" nodes. */
   structureOnly: boolean;
-  showComments: boolean;
-  showAvatars: boolean;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
   set: (changes: Partial<Omit<BranchExplorerPreferences, 'set'>>) => void;
@@ -40,8 +41,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       visibleBranches: null,
       people: EVERYONE,
       structureOnly: false,
-      showComments: true,
-      showAvatars: true,
+      ...DEFAULT_GRAPH_VIEW_OPTIONS,
       revealRequest: null,
       set,
     }),
@@ -54,6 +54,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
         return migrateBranchExplorerPreferences(persisted, version) as BranchExplorerPreferences;
       },
+      merge: rememberedPreferences,
     },
   ),
 );
@@ -62,4 +63,9 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
 export function showInBranchExplorer(target: RevealTarget): void {
   useBranchExplorerPreferences.getState().set({ revealRequest: target });
   navigation.goToView('branchExplorer');
+}
+
+/** The display options alone, the same object until one of them changes. */
+export function useGraphViewOptions(): GraphViewOptions {
+  return useBranchExplorerPreferences(useShallow(graphViewOptionsOf));
 }

@@ -51,15 +51,17 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
 
   world();
   drawLanes(draw);
-  drawMergeLinks(draw);
-  drawPendingMergeLinks(draw);
+  if (draw.detail.mergeLinks) {
+    drawMergeLinks(draw);
+    drawPendingMergeLinks(draw);
+  }
   drawNodes(draw);
   screen();
   drawCaptions(draw);
 
   if (draw.detail.text) {
     world();
-    drawLabels(draw);
+    if (draw.detail.labels) drawLabels(draw);
     drawBranchHeaders(draw);
     screen();
   } else {
