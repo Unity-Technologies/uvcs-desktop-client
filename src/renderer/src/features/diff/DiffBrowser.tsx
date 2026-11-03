@@ -6,10 +6,12 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
+import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
 import type { TreeFolderRow } from '../../lib/pathTree';
 import { pluralize } from '../../lib/text';
+import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
@@ -18,7 +20,8 @@ import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
-import { entryToFocus } from './diffFocus';
+import { pairedFocus } from './diffFocus';
+import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
 import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneOf } from './diffPane';
@@ -32,6 +35,7 @@ import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 import { publishShownDiffFile } from './shownDiffFile';
+import { useDiffMetaShownFor } from './useDiffMetaShownFor';
 
 const NO_ENTRIES: DiffEntry[] = [];
 
@@ -55,13 +59,31 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const place = usePlace();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
-  const entries = useMemo(() => listedEntries(readEntries), [readEntries]);
+  // A Unity asset's `.meta` rides on its row (`pairDiffMetas`): the list, its counts and its review hold the asset alone.
+  const pairs = useMemo(() => pairDiffMetas(listedEntries(readEntries)), [readEntries]);
+  const entries = pairs.shown;
   const review = useDiffReview(target, entries);
-  const [selection, setSelection] = useState<SelectionState>(() => {
-    const initial = entryToFocus(entries, initialPath);
-    return initial ? singleSelection(diffEntryKey(initial)) : EMPTY_SELECTION;
-  });
-  const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
+  const initialFocus = pairedFocus(pairs, initialPath);
+  const [selection, setSelection] = useState<SelectionState>(() => (initialFocus.entry ? singleSelection(diffEntryKey(initialFocus.entry)) : EMPTY_SELECTION));
+  const focusedAsset = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
+  const [metaShownFor, setMetaShownFor] = useDiffMetaShownFor(focusedAsset?.path);
+  // Seeded once, from the link that opened the diff (`pairedFocus`); later links mount a new browser.
+  const [seededMeta, setSeededMeta] = useState(false);
+  if (!seededMeta && initialFocus.metaShownFor !== null && focusedAsset?.path === initialFocus.metaShownFor) {
+    setSeededMeta(true);
+    setMetaShownFor(initialFocus.metaShownFor);
+  }
+  const focusedMeta = focusedAsset && pairs.metaOf(focusedAsset);
+  // The file whose diff shows: the asset, or its `.meta` while asked for.
+  const focused = focusedAsset && diffedItem(focusedAsset, focusedMeta, metaShownFor);
+  const showsMeta = focused !== focusedAsset;
+  const showMetaOf = (meta: DiffEntry): void => {
+    const assetPath = assetOfMeta(meta.path);
+    const asset = entries.find((entry) => entry.path === assetPath);
+    if (!asset) return;
+    setSelection(singleSelection(diffEntryKey(asset)));
+    setMetaShownFor(asset.path);
+  };
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
@@ -72,7 +94,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), selection.anchor);
   const workspaceRepository = usePlaceRepository();
   // A folder the keyboard (or a click) is on, in a tree.
-  const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
+  const focusedFolder = focusedAsset ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
@@ -84,10 +106,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // The file asked for once the files are read, else the first, before the list paints: something is always selected
   // for the diff pane. A selected file the diff no longer holds (read again after a check-in) gives way the same.
   useLayoutEffect(() => {
-    if (focused || focusedFolder || !firstKey) return;
-    const initial = entryToFocus(entries, initialPath);
+    if (focusedAsset || focusedFolder || !firstKey) return;
+    const initial = pairedFocus(pairs, initialPath).entry;
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
-  }, [focused, focusedFolder, firstKey]);
+  }, [focusedAsset, focusedFolder, firstKey]);
 
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
   const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);
@@ -101,7 +123,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     [linkFocus, focused?.path, annotation === null],
   );
 
-  const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
+  const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focusedAsset !== undefined, folderSelected: focusedFolder !== undefined });
 
   // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
   // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
@@ -123,7 +145,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
           filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries })}
+          contextMenu={(selected) =>
+            diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries, metaOf: pairs.metaOf, onMetaDiff: showMetaOf })
+          }
+          metaOf={pairs.metaOf}
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}
@@ -145,6 +170,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
                     entries={entries}
                     onOpen={(entry) => setSelection(singleSelection(diffEntryKey(entry)))}
                     reviewMarks={review.marks}
+                    showsMeta={showsMeta}
+                    metaToggle={focusedMeta && <MetaDiffButton pressed={showsMeta} onChange={(pressed) => setMetaShownFor(pressed ? focusedAsset!.path : null)} />}
                   />
                 </LineLinksContext.Provider>
               </AssetsPointContext.Provider>
