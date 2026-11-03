@@ -495,7 +495,7 @@ Every line diff (`diff`'s, Pierre's too) compares lines by id, each line's key r
 only within a budget (`boundedLineDiff`, `boundedDiff`): past it, lines found once in each text anchor them (patience
 diff) and what's between is diffed on its own, so a rewritten or much-changed file takes linear time, not minutes.
 While the file is typed into, Pierre re-diffs it itself, with the same `parseDiffOptions`: `pierreLineComparison`
-patches the places Pierre 1.6.1 doesn't (a keystroke's shortcut takes lines equal only when they're the same
+patches the places Pierre 1.6.2 doesn't (a keystroke's shortcut takes lines equal only when they're the same
 text, and text typed back to the original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
 test fails when a Pierre update moves them. `pierreTyping.test.ts` types into diffs of every kind of text (line
 breaks, final line breaks, whitespace, empty sides) under every method, checking after each keystroke that Pierre's
@@ -620,7 +620,7 @@ and groups, whose files come next; a closed one holding a file to review is a st
 
 ## Pierre workarounds
 
-Each place the viewer reaches into Pierre (1.6.1) or `diff` past their public API is one module named for it. Those
+Each place the viewer reaches into Pierre (1.6.2) or `diff` past their public API is one module named for it. Those
 that patch or read internals have a test that fails when an update moves them, and a method they wrap hands Pierre's
 own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
 
@@ -638,7 +638,7 @@ own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as
 - `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
-- `pierreSearchPanel`: the code's menu opens Pierre's search panel, which 1.6.1's `Editor` opens only from its keymap
+- `pierreSearchPanel`: the code's menu opens Pierre's search panel, which 1.6.2's `Editor` opens only from its keymap
   (`openSearchPanel`, `openSearchReplacePanel`, reaching the private `#openSearchPanel(mode)`), by pressing the key
   that opens it on the editor's content element; `pierreSearchPanel.test.ts` checks through Pierre's own
   `resolveEditorCommandFromKeyboardEvent` that the key reaches the command on every OS. The keymap it gives the editors
