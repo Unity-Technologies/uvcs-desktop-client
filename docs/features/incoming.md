@@ -33,6 +33,9 @@ A file selected shows its diff: across the whole update, or what its changeset d
 conflict panel only in "All incoming changes", where conflicts are resolved: the update merges the whole of it. In a
 changeset it shows what that changeset did, its conflict mark still on its row.
 
+A Unity asset's `.meta` is listed with it (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"), unless the meta collides with local
+changes (`pairIncomingMetas`): a conflict is decided on its own, so it keeps its own row.
+
 ## Menus
 
 A file's menu is a diff's (`diffEntryMenu`, on `changedFileMenu`: history, annotate, open or save the revision, Copy),

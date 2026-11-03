@@ -173,7 +173,8 @@ panel's choices, Keep both under the name it was given, else the one the panel s
 ("Directory conflicts" below). A directory conflict holding another directory conflict (a folder added on both sides, a file
 in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
-(ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
+(ARCHITECTURE.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
+is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
 with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
 conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",

@@ -3,6 +3,9 @@
 Everything a text or image diff does (`features/diff`, `features/review`), whichever view shows it. 3D models have
 their own doc: `model-diff.md`.
 
+A Unity asset's `.meta` is listed with it; the `.meta` button in the diff's toolbar shows the meta's diff
+(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`").
+
 A side of any diff that the workspace holds unchanged (the side before of the newest change of a file, the side after
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
 "Revisions on disk".
