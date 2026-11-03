@@ -27,6 +27,10 @@ export interface IncomingFileMenuContext {
   decide: (key: string, decision: FileConflictDecision) => void;
   reset: (key: string) => void;
   resolveIn: (key: string, merger: Merger) => void;
+  /** The Unity `.meta` listed with each asset (`pairIncomingMetas`). */
+  metaOf?: (file: DiffEntry) => DiffEntry | undefined;
+  /** Shows an asset's `.meta` diff ("Open .meta diff"). */
+  onMetaDiff?: (meta: DiffEntry) => void;
 }
 
 /**
@@ -40,6 +44,8 @@ export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMen
   const target = incomingDiffTarget(scope, loadedChangeset, headChangeset);
   const menu = diffEntryMenu(workspacePlace(workspacePath), target, selected, {
     added: conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }),
+    metaOf: context.metaOf,
+    onMetaDiff: context.onMetaDiff,
   });
   return withConflictOpening(menu, conflicts);
 }
