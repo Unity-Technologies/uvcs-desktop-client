@@ -64,6 +64,8 @@ export interface GraphPalette {
   fonts: GraphFonts;
   /** Screen size of the changeset comments, shared with the tooltip that completes them in place. */
   captionFontSize: number;
+  /** Whether each branch takes its own hue (`branchHue`); without, every branch takes the accent's (`withBranchColors`). */
+  branchHues: boolean;
 }
 
 /** Changeset comments: a fixed on-screen size at every zoom, like map labels. */
@@ -123,6 +125,7 @@ export function readGraphPalette(element: Element): GraphPalette {
       ruler: `400 11px ${fontUi}`,
     },
     captionFontSize: CAPTION_FONT_SIZE,
+    branchHues: true,
   };
 }
 
@@ -148,6 +151,24 @@ interface BranchColors {
   headers: Map<number | null, HeaderInks>;
 }
 
+const withoutHues = new WeakMap<GraphPalette, GraphPalette>();
+
+/**
+ * The palette with or without a hue per branch (the Branch colors option). The same object for the same palette, so
+ * the colors it remembers (`colorsOf`) are kept from frame to frame.
+ */
+export function withBranchColors(palette: GraphPalette, on: boolean): GraphPalette {
+  if (on === palette.branchHues) return palette;
+  let other = withoutHues.get(palette);
+  if (!other) withoutHues.set(palette, (other = { ...palette, branchHues: on }));
+  return other;
+}
+
+/** A branch's hue in this palette, null for the accent's. */
+function hueIn(palette: GraphPalette, branchName: string): number | null {
+  return palette.branchHues ? branchHue(branchName) : null;
+}
+
 /** Branch colors are asked for on every frame: each palette remembers the ones it computed. */
 const branchColors = new WeakMap<GraphPalette, BranchColors>();
 
@@ -162,7 +183,7 @@ export function branchColor(palette: GraphPalette, branchName: string): string {
   const { lines } = colorsOf(palette);
   let color = lines.get(branchName);
   if (color === undefined) {
-    const hue = branchHue(branchName);
+    const hue = hueIn(palette, branchName);
     lines.set(branchName, (color = hue === null ? palette.accent : hueToColor(hue, palette.isDark)));
   }
   return color;
@@ -173,7 +194,7 @@ export function branchInk(palette: GraphPalette, branchName: string): string {
   const { inks } = colorsOf(palette);
   let color = inks.get(branchName);
   if (color === undefined) {
-    const hue = branchHue(branchName);
+    const hue = hueIn(palette, branchName);
     inks.set(branchName, (color = hue === null ? palette.accentText : hueToInk(hue, palette.isDark)));
   }
   return color;
@@ -185,7 +206,7 @@ export function branchInk(palette: GraphPalette, branchName: string): string {
  */
 export function headerInks(palette: GraphPalette, branchName: string, current: boolean): HeaderInks {
   const { headers } = colorsOf(palette);
-  const hue = current ? null : branchHue(branchName);
+  const hue = current ? null : hueIn(palette, branchName);
   let inks = headers.get(hue);
   if (inks === undefined) {
     const theme = palette.isDark ? 'dark' : 'light';

@@ -13,6 +13,16 @@ export function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
 }
 
 /**
+ * The branch name the graph shows: the whole name, or only its leaf (`task-12` for `/main/sprint/task-12`) while the
+ * Full branch names option is off. `/main` and other top-level branches keep their slash.
+ */
+export function shownBranchName(name: string, full: boolean): string {
+  if (full) return name;
+  const leafStart = name.lastIndexOf('/') + 1;
+  return leafStart <= 1 ? name : name.slice(leafStart);
+}
+
+/**
  * Shortens a branch name the way `PathLabel` does (`fitPath`): parent branches go from the middle (`/main/…/child/task`)
  * so the leaf stays whole; only a leaf too wide on its own is cut, in its middle (`…/rendering-pi…set-bundles`).
  */

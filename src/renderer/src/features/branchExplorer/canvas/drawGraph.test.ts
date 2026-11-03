@@ -8,6 +8,7 @@ import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
 import { columnX, rowY } from './geometry';
 import type { GraphPalette } from './graphPalette';
+import { DEFAULT_GRAPH_VIEW_OPTIONS } from './graphViewOptions';
 import { centerOn } from './viewport';
 
 // Some authors have a picture, the others their initials.
@@ -89,6 +90,7 @@ const palette: GraphPalette = {
     ruler: FONT,
   },
   captionFontSize: 12,
+  branchHues: true,
 };
 
 const PIXEL_RATIO = 2;
@@ -111,7 +113,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     viewport: centerOn({ zoom: ZOOM, panX: 0, panY: 0 }, columnX(focus.column), rowY(focus.row), size),
     size,
     palette,
-    options: { showComments: false, showAvatars: true },
+    options: { ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false },
     selectedChangeset: focus.changeset.id,
     selectedBranch: lane.branch.name,
     selectedPending: false,

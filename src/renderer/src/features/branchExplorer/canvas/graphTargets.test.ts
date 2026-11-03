@@ -37,6 +37,12 @@ describe('hitTest', () => {
     expect(target).toMatchObject({ kind: 'label', label: { name: 'v1' }, more: [] });
   });
 
+  it('passes over a label tag while labels are hidden', () => {
+    const node = layout.nodes.get(6)!;
+    const target = hitTest(layout, { x: columnX(node.column), y: labelChips(layout, node)[0]!.top + 5 }, null, { labels: false });
+    expect(target).not.toMatchObject({ kind: 'label' });
+  });
+
   it('finds a long label over the columns next to its changeset', () => {
     const labels = [{ name: 'release-candidate-2026-09-long', changeset: 6, owner: '', date: '', comment: '' }];
     const labeled = layoutGraph({ ...sampleHistory(), labels });
@@ -59,6 +65,14 @@ describe('hitTest', () => {
     const to = nodePoint(layout, 6)!;
     const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     expect(hitTest(layout, middle)).toMatchObject({ kind: 'mergeLink' });
+  });
+
+  it('passes over merge links, pending ones included, while they are hidden', () => {
+    const from = nodePoint(layout, 5)!;
+    const to = nodePoint(layout, 6)!;
+    expect(hitTest(layout, { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }, null, { mergeLinks: false })).not.toMatchObject({ kind: 'mergeLink' });
+    const onPending = pointOnCurve(linkCurve(nodePoint(withPending, 7)!, pendingPoint(withPending)!), 0.5);
+    expect(hitTest(withPending, onPending, null, { mergeLinks: false })).not.toMatchObject({ kind: 'pendingMergeLink' });
   });
 
   it('finds a long, flat merge link anywhere along it, and zoomed out within the same screen distance', () => {
