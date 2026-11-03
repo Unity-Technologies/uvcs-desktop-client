@@ -13,7 +13,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
-import { withMetas } from '../../lib/unityMetaPairs';
+import { shownRowsOf, withMetas } from '../../lib/unityMetaPairs';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
@@ -101,15 +101,17 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
   const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton place={workspacePlace(workspacePath)} /> });
-  const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
+  // Each Unity `.meta` rides on its asset's row, paired before filtering so a filter never splits a pair: a row shows
+  // while its asset or its meta matches, and review mode narrows rows, as it counts them (`pairedReviewStatusOf`).
+  const pairs = useMemo(() => pairPendingMetas(sorted), [sorted]);
+  const shownRows = useMemo(() => review.narrow(shownRowsOf(pairs, filtered)), [review.narrow, pairs, filtered]);
+  // What the rows shown hold, metas included: what the check-in boxes and the header's box act on.
+  const changes = useMemo(() => withMetas(shownRows, pairs.metaOf), [shownRows, pairs]);
   const clearFilter = (): void => {
     clearChangeFilter();
     review.showAll();
   };
-  // Each Unity `.meta` rides on its asset's row; what the check-in picks from stays every change, metas included.
-  const pairs = useMemo(() => pairPendingMetas(changes), [changes]);
-  const pairedCount = useMemo(() => pairPendingMetas(sorted).pairedCount, [sorted]);
-  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes: pairs.shown, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
+  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes: shownRows, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
   // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
   const index = useMemo(() => indexPending(sorted), [sorted]);
@@ -159,8 +161,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     setIncluded(workspacePath, pathsCheckedTogether(selected, include, index), include);
   // The header's box with nothing hidden means every file: it ends a prepared changelist instead of growing it.
   const setEveryShownIncluded = (shown: PendingChange[], include: boolean): void => {
-    if (include && changes.length === allChanges.length) includeEverything(workspacePath, shown.map((change) => change.path));
-    else setIncludedChanges(shown, include);
+    const shownWithMetas = withMetas(shown, pairs.metaOf);
+    if (include && changes.length === allChanges.length) includeEverything(workspacePath, shownWithMetas.map((change) => change.path));
+    else setIncludedChanges(shownWithMetas, include);
   };
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void =>
     setIncludedChanges(withMetas(toggled.flatMap(changesUnderRow), pairs.metaOf), include);
@@ -195,7 +198,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           onToggleCollapsed={toggleCollapsed}
           onOpen={(change) => openChange(workspacePath, change)}
           onMoveToChangelist={
-            grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
+            grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, withMetas(moved, pairs.metaOf)) : undefined
           }
           contextMenu={(selected) =>
             pendingChangeMenu(workspacePath, selected, changelists, {
@@ -239,8 +242,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               {review.bar}
             </ListToolbar>
             <ChangesSummaryBar
-              changes={pairs.shown}
-              totalCount={listedCount === undefined ? undefined : listedCount - pairedCount}
+              changes={shownRows}
+              totalCount={listedCount === undefined ? undefined : listedCount - pairs.pairedCount}
               checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, withMetas(selected, pairs.metaOf))}
