@@ -11,7 +11,8 @@ import { ruleMatchesOf, shownRuleMatches, type RuleMatches } from './model/ruleM
  * What the server says each rule's condition matches: one `cm find` per distinct question, asked only when a rule
  * asks one. The key sits under the explorer's own area ('branchExplorer'), so whatever refreshes the graph (a new
  * branch, a label, a checkin, Refresh) asks again too. While a changed rule waits for its answer, the earlier answers
- * keep applying and the new rule takes part once it arrives.
+ * keep applying and the new rule takes part once it arrives. The finds have no range or limit, on purpose: why at
+ * `matchRules`.
  */
 export function useRuleMatches(rules: readonly ExplorerRule[]): RuleMatches {
   const place = usePlace();
