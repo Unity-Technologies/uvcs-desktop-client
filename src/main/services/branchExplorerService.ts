@@ -34,11 +34,10 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
 
   /**
    * One `cm find` per rule, all at once: a rule's condition is the user's own, so `cm` may refuse it, and that rule
-   * alone answers the error while the others still apply.
+   * alone answers the error while the others still apply. The finds have no date range or `limit`, since a rule must
+   * hold for every branch, changeset or label the graph may draw; each prints one field per object it matched
+   * (`ruleMatchFind`), read as records as they arrive, and runs again only on a rule change or a refresh.
    */
-  // A rule's find has no date range or `limit`: its condition is the user's own, and the rule must hold for every
-  // branch, changeset or label the graph may draw. The cost stays small: each find prints one field per object it matched
-  // (ruleMatchFind's --format), read as records as they arrive, and asks again only on a change or a refresh.
   async function matchRules(place: Place, queries: readonly RuleQuery[]): Promise<RuleMatch[]> {
     const { repository, options } = cmPlace(place);
     return Promise.all(
