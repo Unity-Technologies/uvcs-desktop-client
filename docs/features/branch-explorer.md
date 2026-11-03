@@ -34,8 +34,8 @@ nothing invisible answers the pointer. A cut name keeps its tooltip with the ful
 
 The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository
 (`useExplorerRules`, `setRules`), since a condition names that repository's branches and owners. Its decisions live in
-`model/ruleList.ts`: the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`), how a row reads, how the
-list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
+`model/ruleList.ts`: the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`), how a row reads (its
+description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`), how the list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
 (`editExplorerRule`), stacked on the options.
 
 - **Inclusions and exclusions** keep only the branches an inclusion matches, without those an exclusion matches (an
