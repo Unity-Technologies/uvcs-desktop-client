@@ -387,7 +387,7 @@ layouts: `pierreEditorKeymap` gives the editor the registry's key, and Pierre's 
 macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code, Pierre's search box included
 (`editorHasFocusIn`); with Pierre's search panel open, Ctrl+G off macOS is its Find next. Ctrl+H typed in Pierre's
 search box doesn't switch it to Replace on Windows and Linux: the box takes its own keys, and only Pierre's ⌥⌘F
-(Ctrl+Alt+F) does there.
+(Ctrl+Alt+F), or the arrow at the panel's left, does there. That arrow shows and hides the Replace row on every OS.
 
 **Find and Replace** open Pierre's search panel, which `Editor` has no public way to open (`openPierreSearchPanel`, see
 Pierre workarounds): the menu presses the key that opens it on the editor's content element, its modifier held as Pierre
