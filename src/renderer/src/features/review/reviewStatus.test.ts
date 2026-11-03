@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { groupReviewStatus, hasMark, isAllReviewed, needsReview, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
+import { pairUnityMetas } from '../../lib/unityMetaPairs';
+import { groupReviewStatus, hasMark, isAllReviewed, needsReview, pairedReviewStatusOf, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
 
 const statuses: Record<string, ReviewStatus | null> = { a: 'reviewed', b: 'changedSinceReview', d: 'unreviewed', folder: null };
 const statusOf = (item: string): ReviewStatus | null => statuses[item] ?? null;
@@ -55,5 +56,26 @@ describe('isAllReviewed', () => {
     expect(isAllReviewed(true, ['a', 'b'], statusOf)).toBe(false);
     expect(isAllReviewed(true, ['a', 'folder'], statusOf)).toBe(true);
     expect(isAllReviewed(true, ['folder'], statusOf)).toBe(false);
+  });
+});
+
+describe('pairedReviewStatusOf', () => {
+  const marks: Record<string, ReviewStatus | null> = {
+    'a.png': 'reviewed', 'a.png.meta': 'reviewed',
+    'b.png': 'reviewed', 'b.png.meta': 'changedSinceReview',
+    'c.png': 'changedSinceReview', 'c.png.meta': 'unreviewed',
+    'd.png': 'reviewed', 'd.png.meta': null,
+    'e.png.meta': 'unreviewed',
+  };
+  const items = Object.keys(marks);
+  const pairs = pairUnityMetas(items, (path) => path, () => 'changed');
+  const statusOf = pairedReviewStatusOf((path: string) => marks[path] ?? null, pairs);
+
+  it("gives an asset the status of the two that needs review most, and its joined meta none", () => {
+    expect(items.map(statusOf)).toEqual(['reviewed', null, 'changedSinceReview', null, 'unreviewed', null, 'reviewed', null, 'unreviewed']);
+  });
+
+  it('counts a pair once', () => {
+    expect(reviewProgress(items, statusOf)).toEqual({ total: 5, reviewed: 2 });
   });
 });

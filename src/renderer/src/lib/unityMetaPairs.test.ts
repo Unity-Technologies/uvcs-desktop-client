@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetOfMeta, diffedItem, pairUnityMetas, withMetas } from './unityMetaPairs';
+import { assetOfMeta, diffedItem, pairUnityMetas, shownRowsOf, withMetas } from './unityMetaPairs';
 
 interface Item {
   path: string;
@@ -20,6 +20,7 @@ describe('pairUnityMetas', () => {
     expect(paths(pairs.shown)).toEqual(['Assets/Player.png']);
     expect(pairs.metaOf(texture)).toBe(meta);
     expect(pairs.pairedCount).toBe(1);
+    expect([texture, meta].map(pairs.isJoinedMeta)).toEqual([false, true]);
   });
 
   it('pairs a folder with its meta', () => {
@@ -43,6 +44,7 @@ describe('pairUnityMetas', () => {
 
     expect(paths(pairs.shown)).toEqual(['Assets/Enemy.png', 'Assets/Player.png.meta']);
     expect(pairs.metaOf(meta)).toBeUndefined();
+    expect(pairs.isJoinedMeta(meta)).toBe(false);
     expect(pairs.pairedCount).toBe(0);
   });
 
@@ -105,6 +107,22 @@ describe('withMetas', () => {
     const [a, b, c] = pairs.shown;
 
     expect(paths(withMetas([c!, b!, a!], pairs.metaOf))).toEqual(['c.png', 'c.png.meta', 'b.cs', 'a.png', 'a.png.meta']);
+  });
+});
+
+describe('shownRowsOf', () => {
+  const items = [item('a.png'), item('a.png.meta'), item('b.png'), item('b.png.meta'), item('c.cs')];
+  const pairs = pairUnityMetas(items, pathOf, kindOf);
+  const [a, aMeta, b, bMeta, c] = items;
+
+  it("keeps the rows' order, whatever the visible items' order", () => {
+    expect(paths(shownRowsOf(pairs, [c!, bMeta!, a!]))).toEqual(['a.png', 'b.png', 'c.cs']);
+  });
+
+  it('keeps a row for either one alone, and drops it when neither is visible', () => {
+    expect(paths(shownRowsOf(pairs, [aMeta!]))).toEqual(['a.png']);
+    expect(paths(shownRowsOf(pairs, [b!]))).toEqual(['b.png']);
+    expect(shownRowsOf(pairs, [])).toEqual([]);
   });
 });
 
