@@ -56,8 +56,7 @@ export function ruleSections(rules: readonly ExplorerRule[]): RuleSections {
 
 /**
  * A row's second line: its kind when a description titles it, what it matches, and what an inclusion or exclusion
- * takes with it. A built-in format
- * titled by its kind has none: its title already names what it colors.
+ * takes with it. A built-in format titled by its kind has none: its title already names what it colors.
  */
 export function ruleRowDetail(rule: ExplorerRule): string | null {
   const kind = RULE_KIND_LABELS[rule.kind];
