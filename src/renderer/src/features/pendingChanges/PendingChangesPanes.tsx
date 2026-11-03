@@ -301,6 +301,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               workspacePath={workspacePath}
               selectedCount={countSelected(selection.selected, changesByKey)}
               diffChange={focused && diffChange}
+              diffMeta={diffChange && pairs.metaOf(diffChange)}
               focusedFolder={focusedFolder}
               fileSteps={fileSteps}
               reviewMarks={review.marks}
