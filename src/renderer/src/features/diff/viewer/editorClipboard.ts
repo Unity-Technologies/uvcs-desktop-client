@@ -12,7 +12,7 @@ export type ClipboardAction = 'cut' | 'copy' | 'paste';
  * its `copy`, `cut` and `paste` listeners on the editor's content element take the clipboard's multi-caret pieces,
  * copy a bare caret's whole line, and paste in the document's own line breaks (`TextDocument.normalizeEol`).
  *
- * What makes the page's clipboard events land there (Pierre 1.6.1): `Editor.focus()` (`#focus`) puts the window's
+ * What makes the page's clipboard events land there (Pierre 1.6.2): `Editor.focus()` (`#focus`) puts the window's
  * selection inside the content element at once (`#setWindowSelection`), and only moves DOM focus there later
  * (`queueRender`). `document.execCommand('copy' | 'cut')` fires its event where the selection is, so it reaches
  * Pierre's listeners because the selection sits in the content, not because the content has focus yet.

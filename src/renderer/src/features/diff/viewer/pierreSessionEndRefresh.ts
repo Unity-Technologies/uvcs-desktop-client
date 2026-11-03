@@ -1,7 +1,7 @@
 import { DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 
 /**
- * Makes Pierre (1.6.1) refresh a diff's colors after its edit session ends only if the diff is still shown, once the
+ * Makes Pierre (1.6.2) refresh a diff's colors after its edit session ends only if the diff is still shown, once the
  * app has moved on. When the editor detaches (the diff unmounts as another file is selected, or the shown diff is
  * replaced), Pierre settles the session's hunks (`finalizeEditSessionHunks`) and highlights the whole diff again at
  * once (`refreshHighlightedResult`): on the main thread for a diff without a `cacheKey`, as ours are, 1.6 s for
@@ -31,6 +31,6 @@ let installed = false;
 /** The renderer's members this reaches: `refreshHighlightedResult` is public, `diff` private. */
 interface RefreshingRenderer {
   diff: FileDiffMetadata | undefined;
-  /** `rest` is what Pierre may pass, handed on as it is (it takes none in 1.6.1). */
+  /** `rest` is what Pierre may pass, handed on as it is (it takes none in 1.6.2). */
   refreshHighlightedResult(...rest: unknown[]): Promise<void>;
 }

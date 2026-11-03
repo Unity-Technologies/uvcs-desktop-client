@@ -13,7 +13,7 @@ const SEARCH_COMMANDS: Record<SearchPanelMode, { registryId: ShortcutId; command
 };
 
 /**
- * The keys of Pierre's editor (1.6.1) that differ from its own (`dist/editor/command.js`): Replace on the registry's key,
+ * The keys of Pierre's editor (1.6.2) that differ from its own (`dist/editor/command.js`): Replace on the registry's key,
  * Ctrl+H off macOS, where Pierre's Ctrl+Alt+F is AltGr+F on European layouts. Pierre checks these before its own, so
  * its Ctrl+Alt+F still works; only the keys shown change.
  */
@@ -23,7 +23,7 @@ export function pierreEditorKeymap(mac = isMac): EditorKeymap {
 }
 
 /**
- * Opens Pierre's search panel over the text typed into in `container`, in find or replace mode. Pierre 1.6.1's `Editor`
+ * Opens Pierre's search panel over the text typed into in `container`, in find or replace mode. Pierre 1.6.2's `Editor`
  * has no public way to: its keymap runs `openSearchPanel` or `openSearchReplacePanel`, which reach the private
  * `#openSearchPanel(mode)`, from a keydown on its content element (`contenteditable`, in the `diffs-container`'s shadow
  * root). So the menu presses the key that opens it, the one the registry shows (`pierreEditorKeymap`), on that element.
