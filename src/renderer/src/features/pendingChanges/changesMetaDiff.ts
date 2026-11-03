@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
+import type { PendingChange } from '@shared/domain/pendingChanges';
 
 /** The asset whose `.meta` diff Changes shows instead of its own, asked for from its menu ("Open .meta diff"). */
 interface MetaDiffRequest {
@@ -17,4 +19,26 @@ export function requestMetaDiff(workspacePath: string, path: string): void {
 /** Whether the `.meta` diff was asked for this asset of this workspace. */
 export function metaDiffRequestedFor(request: MetaDiffRequest | null, workspacePath: string, path: string): boolean {
   return request !== null && request.workspacePath === workspacePath && request.path === path;
+}
+
+/** What the diff shows: the asset's `.meta` while it is shown for that asset (`metaShownFor`), else the asset. */
+export function diffedChange(change: PendingChange, meta: PendingChange | undefined, metaShownFor: string | null): PendingChange {
+  return meta && metaShownFor === change.path ? meta : change;
+}
+
+/**
+ * The asset whose `.meta` the diff shows: the one a request asks for (`requestMetaDiff`), taken once it shows it, or
+ * the one the diff's own toggle picked. Showing another asset forgets it, so coming back shows the asset's own diff.
+ */
+export function useMetaShownFor(workspacePath: string, path: string): [string | null, (shownFor: string | null) => void] {
+  const request = useMetaDiffRequests((state) => state.request);
+  const [shownFor, setShownFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!metaDiffRequestedFor(request, workspacePath, path)) return;
+    setShownFor(path);
+    useMetaDiffRequests.setState({ request: null });
+  }, [request, workspacePath, path]);
+  // Adjusted while rendering: another asset shown drops it.
+  if (shownFor !== null && shownFor !== path) setShownFor(null);
+  return [shownFor, setShownFor];
 }
