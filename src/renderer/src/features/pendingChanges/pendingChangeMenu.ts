@@ -73,6 +73,9 @@ export function pendingChangeMenu(
   const meta = single ? metaOf(single) : undefined;
   // What changes data acts on the metas too; what views or opens an item takes the asset alone.
   const acted = withMetas(changes, metaOf);
+  // Labels count the rows selected, as the list shows them: a joined meta is part of its asset's row.
+  const joinedMetas = new Set(changes.map(metaOf));
+  const rowCount = (among: readonly PendingChange[]): number => among.filter((change) => !joinedMetas.has(change)).length;
   const lock = single ? locks?.get(single.path) : undefined;
   const privateChanges = acted.filter((change) => categoryOf(change) === 'private');
   const controlledChanges = acted.filter(isControlled);
@@ -86,7 +89,7 @@ export function pendingChangeMenu(
     meta && menuAction('metaDiff', () => requestMetaDiff(workspacePath, single!.path)),
     privateChanges.length > 0 &&
       menuAction('add', () => void addToSourceControl(workspacePath, privateChanges), {
-        label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
+        label: rowCount(privateChanges) === 1 ? 'Add to version control' : `Add ${formatCount(rowCount(privateChanges))} items to version control`,
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkout(workspacePath, checkoutCandidates)),
     single && matchSide && listed && menuAction('searchMatches', () => void searchMatches(workspacePath, single, matchSide, listed)),
@@ -104,7 +107,7 @@ export function pendingChangeMenu(
     moveToChangelistSubmenu(workspacePath, acted, changelists),
     filterRulesSubmenu(workspacePath, acted.map((change) => change.path)),
     controlledChanges.length > 0 &&
-      menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), { label: undoChangesLabel(controlledChanges.length) }),
+      menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), { label: undoChangesLabel(rowCount(controlledChanges)) }),
     privateChanges.length > 0 && menuAction('trash', () => void deletePrivateFiles(workspacePath, privateChanges), { label: `Move to ${TRASH_NAME}…` }),
   ]);
 }
