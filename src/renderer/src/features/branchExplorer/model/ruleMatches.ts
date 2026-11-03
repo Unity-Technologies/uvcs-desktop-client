@@ -13,14 +13,18 @@ export function ruleMatchesOf(queries: readonly RuleQuery[], answers: readonly R
  * answered yet (the rules apply once their answers arrive, never half of them).
  */
 export function matchedBy(rule: ExplorerRule, matches: RuleMatches): ReadonlySet<string> | null {
-  const query = ruleQueryOf(rule);
-  const match = query ? matches.get(ruleQueryKey(query)) : undefined;
+  const match = answerTo(rule, matches);
   return match && 'matched' in match ? new Set(match.matched) : null;
 }
 
 /** Why `cm` refused the rule's condition, to show on its row; null when it didn't. */
 export function ruleError(rule: ExplorerRule, matches: RuleMatches): string | null {
-  const query = ruleQueryOf(rule);
-  const match = query ? matches.get(ruleQueryKey(query)) : undefined;
+  const match = answerTo(rule, matches);
   return match && 'error' in match ? match.error : null;
+}
+
+/** The server's answer to the rule's question; undefined when it asks none, or before the answer arrives. */
+function answerTo(rule: ExplorerRule, matches: RuleMatches): RuleMatch | undefined {
+  const query = ruleQueryOf(rule);
+  return query ? matches.get(ruleQueryKey(query)) : undefined;
 }
