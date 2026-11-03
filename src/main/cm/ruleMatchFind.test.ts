@@ -14,6 +14,16 @@ describe('ruleMatchFind', () => {
     expect(ruleMatchFind({ object: 'label', condition: "name like 'v%'" })[3]).toBe(`--format=${recordFormat(['name'])}`);
   });
 
+  it("leaves the dates in the user's condition as they wrote them: no --dateformat, which would apply to them too", () => {
+    expect(ruleMatchFind({ object: 'changeset', condition: "date >= '2026-01-01'" })).toEqual([
+      'find',
+      'changeset',
+      "where date >= '2026-01-01'",
+      `--format=${recordFormat(['changesetid'])}`,
+      '--nototal',
+    ]);
+  });
+
   it('asks a repository by name when no workspace tells cm which', () => {
     expect(ruleMatchFind({ object: 'label', condition: "name like 'v%'" }, 'game@local')[2]).toBe("where name like 'v%' on repository 'game@local'");
   });
