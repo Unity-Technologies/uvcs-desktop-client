@@ -16,6 +16,8 @@ export interface MetaPairs<T> {
   shown: T[];
   /** The meta that joined this asset, if any. */
   metaOf: (item: T) => T | undefined;
+  /** Whether this item is a meta that joined its asset, so it has no row of its own. */
+  isJoinedMeta: (item: T) => boolean;
   /** How many metas joined an asset: listed counts leave them out. */
   pairedCount: number;
 }
@@ -49,6 +51,7 @@ export function pairUnityMetas<T>(items: readonly T[], pathOf: (item: T) => stri
   return {
     shown: joined.size === 0 ? [...items] : items.filter((item) => !joined.has(item)),
     metaOf: (item) => metas.get(item),
+    isJoinedMeta: (item) => joined.has(item),
     pairedCount: joined.size,
   };
 }
@@ -58,6 +61,19 @@ export function withMetas<T>(items: readonly T[], metaOf: (item: T) => T | undef
   return items.flatMap((item) => {
     const meta = metaOf(item);
     return meta === undefined ? [item] : [item, meta];
+  });
+}
+
+/**
+ * The rows a filter leaves (`visible`, items of the paired list): a row stays while its asset or its meta is visible,
+ * so filtering the list after pairing never splits a pair nor hides a meta that matched alone.
+ */
+export function shownRowsOf<T>(pairs: MetaPairs<T>, visible: readonly T[]): T[] {
+  const kept = new Set(visible);
+  return pairs.shown.filter((row) => {
+    if (kept.has(row)) return true;
+    const meta = pairs.metaOf(row);
+    return meta !== undefined && kept.has(meta);
   });
 }
 
