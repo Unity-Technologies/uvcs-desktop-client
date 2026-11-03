@@ -29,6 +29,7 @@ import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
+import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { GraphSkeleton } from './GraphSkeleton';
@@ -314,7 +315,7 @@ export function BranchExplorerView() {
               onActivate={activate}
               contextMenu={menuFor}
             >
-              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} onOpenOptions={openBranchExplorerOptionsDialog} />
             </GraphCanvas>
           }
           details={

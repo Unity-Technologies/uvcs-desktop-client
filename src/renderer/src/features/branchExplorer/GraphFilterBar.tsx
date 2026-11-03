@@ -7,6 +7,7 @@ import { FilterBar } from '../../ui/FilterBar';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { MenuChip } from '../../ui/ToggleChip';
 import { BranchFilterPopover } from './BranchFilterPopover';
+import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { FocusChip } from './FocusChip';
 import type { GraphFocus } from './model/filterGraph';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
@@ -43,8 +44,7 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
       run: () => set({ structureOnly: !preferences.structureOnly }),
     },
     SEPARATOR,
-    { id: 'comments', label: 'Show comments', icon: check(preferences.showComments), run: () => set({ showComments: !preferences.showComments }) },
-    { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
+    { id: 'displayOptions', label: 'Display options…', run: openBranchExplorerOptionsDialog },
     SEPARATOR,
     { id: 'zoomIn', label: 'Zoom in', shortcut: hotkey('graphZoomIn'), run: () => onZoom(ZOOM_STEP) },
     { id: 'zoomOut', label: 'Zoom out', shortcut: hotkey('graphZoomOut'), run: () => onZoom(1 / ZOOM_STEP) },
