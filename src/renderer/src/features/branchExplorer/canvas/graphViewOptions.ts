@@ -71,7 +71,7 @@ export function graphViewOptionsOf(source: GraphViewOptions): GraphViewOptions {
   return options;
 }
 
-/** Whether the user turned any display option off: the options button marks it. */
+/** Whether any display option differs from its default: Restore defaults is enabled only then. */
 export function hidesAnything(options: GraphViewOptions): boolean {
   return (Object.keys(DEFAULT_GRAPH_VIEW_OPTIONS) as GraphViewOption[]).some((key) => options[key] !== DEFAULT_GRAPH_VIEW_OPTIONS[key]);
 }
