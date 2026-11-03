@@ -52,8 +52,10 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
       return itemHistoryOf(records, revisions, (await workspaceItem)?.revisionId);
     },
 
-    async revertTo(workspacePath, path, changesetId) {
-      await cm.query(['revert', `${toAbsolutePath(workspacePath, path)}#cs:${changesetId}`], { cwd: workspacePath });
+    async revertTo(workspacePath, paths, changesetId) {
+      // `cm revert` takes several revision specs in one call.
+      const specs = paths.map((path) => `${toAbsolutePath(workspacePath, path)}#cs:${changesetId}`);
+      await cm.query(['revert', ...specs], { cwd: workspacePath });
     },
 
     saveRevisionAs: revisions.saveAs,

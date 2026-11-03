@@ -1,3 +1,5 @@
+import type { MetaPairs } from '../../lib/unityMetaPairs';
+
 export type ReviewStatus = 'unreviewed' | 'reviewed' | 'changedSinceReview';
 
 /** How a list tells where each item stands; null for items with nothing to review, such as folders. */
@@ -61,4 +63,23 @@ export function isAllReviewed<T>(on: boolean, items: readonly T[], statusOf: Rev
   if (!on) return false;
   const { total, reviewed } = reviewProgress(items, statusOf);
   return total > 0 && reviewed === total;
+}
+
+/** Worst first: the status of a pair is that of the one that needs review most. */
+const STATUS_RANK: Record<ReviewStatus, number> = { unreviewed: 0, changedSinceReview: 1, reviewed: 2 };
+
+/**
+ * Review status where a Unity asset and its `.meta` are one row (`pairUnityMetas`): the asset stands for both, at the
+ * status of the one that needs review most, and its joined meta has none, so counts, marks and "Hide reviewed" see one
+ * row. Marking the asset marks its meta too (`withMetas`).
+ */
+export function pairedReviewStatusOf<T>(statusOf: ReviewStatusOf<T>, pairs: MetaPairs<T>): ReviewStatusOf<T> {
+  return (item) => {
+    if (pairs.isJoinedMeta(item)) return null;
+    const own = statusOf(item);
+    const meta = pairs.metaOf(item);
+    const metaStatus = meta === undefined ? null : statusOf(meta);
+    if (own === null || metaStatus === null) return own ?? metaStatus;
+    return STATUS_RANK[metaStatus] < STATUS_RANK[own] ? metaStatus : own;
+  };
 }

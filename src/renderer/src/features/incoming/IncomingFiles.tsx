@@ -30,6 +30,8 @@ interface IncomingFilesProps {
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   contextMenu: (files: DiffEntry[]) => MenuEntry[];
+  /** The Unity `.meta` each asset's row stands for too (`pairIncomingMetas`): tagged "+ meta". */
+  metaOf: (file: DiffEntry) => DiffEntry | undefined;
   /** Where a file that collides with local changes stands. */
   markOf: (file: DiffEntry) => ReactNode;
   /** While the filters hide every file: `NoMatches`. */
@@ -37,7 +39,7 @@ interface IncomingFilesProps {
 }
 
 /** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf, noMatches }: IncomingFilesProps) {
+export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, markOf, noMatches }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
@@ -55,7 +57,7 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
           rows={rows}
           tree={tree}
           toggleCollapsed={toggleCollapsed}
-          renderItem={(row, level) => <DiffEntryRow row={row} level={level} tree={tree} extras={row.type === 'file' ? markOf(row.item) : undefined} />}
+          renderItem={(row, level) => <DiffEntryRow row={row} level={level} tree={tree} extras={row.type === 'file' ? markOf(row.item) : undefined} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />}
           groupTip={(group) => INCOMING_GROUP_TIPS[group]}
           query={query}
           filterBar={filterBar}

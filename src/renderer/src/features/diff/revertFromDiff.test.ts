@@ -90,7 +90,7 @@ describe('reverting a file from a diff', () => {
 
     revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [entry()], { workspaceRepository: repository }))!.run();
 
-    expect(await reverted).toEqual([ws, 'src/a.ts', 37]);
+    expect(await reverted).toEqual([ws, ['src/a.ts'], 37]);
     expect(askedDialogs()).toHaveLength(1);
   });
 
@@ -102,7 +102,7 @@ describe('reverting a file from a diff', () => {
 
     expect(fakeApi.argsOf('changesets.get')).toEqual([[workspacePlace(ws), 42]]);
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert src/a.ts to changeset 37, before changeset 42?' }]);
-    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, 'src/a.ts', 37]]);
+    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, ['src/a.ts'], 37]]);
     expect(refreshed()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
   });
 
@@ -112,13 +112,13 @@ describe('reverting a file from a diff', () => {
     await revertFrom(ofChangeset);
 
     expect(fakeApi.methods()).toEqual(['history.revertTo']);
-    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, 'src/a.ts', 37]]);
+    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, ['src/a.ts'], 37]]);
   });
 
   it("reverts a range's file to the range's first changeset", async () => {
     await revertFrom({ kind: 'range', fromSpec: 'cs:12', toSpec: 'cs:20' });
 
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert src/a.ts to changeset 12?' }]);
-    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, 'src/a.ts', 12]]);
+    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, ['src/a.ts'], 12]]);
   });
 });

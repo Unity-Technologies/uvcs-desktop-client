@@ -200,10 +200,10 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   xlink: () => fileMenu(ws, [{ ...file, path: 'lib', name: 'lib', itemType: 'directory', xlink: { writable: true, path: '/', changeset: 4, repository: 'lib', server: 'local' } }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
-  pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
-  deletedPendingChange: () => pendingChangeMenu(ws, [deletedChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
-  privatePendingChange: () => pendingChangeMenu(ws, [privateChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
-  lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
+  pendingChange: () => pendingChangeMenu(ws, [change], [], { inclusion: { isIncluded: () => false, setIncluded: () => {} } }),
+  deletedPendingChange: () => pendingChangeMenu(ws, [deletedChange], [], { listed: [deletedChange, privateChange] }),
+  privatePendingChange: () => pendingChangeMenu(ws, [privateChange], [], { listed: [deletedChange, privateChange] }),
+  lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { inclusion: { isIncluded: () => false, setIncluded: () => {} }, locks: pendingLocks }),
   history: () =>
     historyMenu({ place: workspacePlace(ws), path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,

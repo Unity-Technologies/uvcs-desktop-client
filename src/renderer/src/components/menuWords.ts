@@ -107,6 +107,7 @@ const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): Menu
 export const MENU_WORDS = {
   // What Enter or a double-click does in the app.
   diff: word('primary', FileDiff, 'Open diff'),
+  metaDiff: word('primary', FileDiff, 'Open .meta diff'),
   diffRange: word('primary', FileDiff),
   diffPair: word('primary', GitCompareArrows, 'Compare selected labels'),
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
@@ -126,6 +127,7 @@ export const MENU_WORDS = {
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
   // The words name the app ("Open in Visual Studio Code").
   open: word('open', AppWindow),
+  openMeta: word('open', AppWindow, 'Open .meta'),
   openInEditor: word('open', CodeXml),
   terminal: word('open', SquareTerminal),
   openRevision: word('open', AppWindow),
@@ -203,6 +205,7 @@ export const MENU_WORDS = {
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),
   history: word('navigate', History, 'View history'),
+  metaHistory: word('navigate', History, 'View .meta history'),
   annotate: word('navigate', ScanText, 'Annotate'),
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
   // Lines of code (`lineMenu`): who last changed them, as the diff's newer side has them.
@@ -312,6 +315,7 @@ export const NEEDS_A_WORKSPACE = [
   'newFolder',
   'newXlink',
   'openInEditor',
+  'openMeta',
   'terminal',
   'reveal',
   'openInFileManager',

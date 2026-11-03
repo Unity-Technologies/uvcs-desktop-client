@@ -3,6 +3,9 @@
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
 List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
 
+A Unity asset and its `.meta` are one row (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"): checking, undoing, adding, checking out, moving
+to a changelist and the filter rules take the meta along; "Open .meta" and "Open .meta diff" open the meta alone.
+
 ## Search matches: a move recorded by hand
 
 `cm status` pairs an item deleted from disk with a private one as a local move only when their contents are alike

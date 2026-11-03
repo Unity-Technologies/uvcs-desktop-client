@@ -3,6 +3,9 @@
 Everything a text or image diff does (`features/diff`, `features/review`), whichever view shows it. 3D models have
 their own doc: `model-diff.md`.
 
+A Unity asset's `.meta` is listed with it; the `.meta` button in the diff's toolbar shows the meta's diff
+(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`").
+
 A side of any diff that the workspace holds unchanged (the side before of the newest change of a file, the side after
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
 "Revisions on disk".
@@ -131,7 +134,7 @@ branch whose merge has a purged base.
 A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
 review's of a changeset) or a range of changesets changed has "Revert file to before this change…" in its menu
 (`revertFromDiffEntry`): the file goes back to the diff's older side as a pending change, `history.revertTo` (`cm
-revert <file>#cs:N`) with History's confirmation, which names the changeset it goes back to and, for a changeset's
+revert <file>#cs:N`, a Unity asset's `.meta` in the same command) with History's confirmation, which names the changeset it goes back to and, for a changeset's
 diff, the one it undoes ("Revert src/a.ts to changeset 37, before changeset 42?", `revertItemTo`'s `undoing`). It is
 the native client's "Revert changes" on a diff: undoing what the diff did to the file is what a diff is looked at for,
 and History already reverts to the newer side ("Revert file to this revision…"). Like the native one, it reverts the

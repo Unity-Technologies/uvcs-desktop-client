@@ -29,22 +29,24 @@ interface DiffEntryListProps {
   loading?: boolean;
   /** While the filters hide every file: `NoMatches`. */
   noMatches?: ReactNode;
+  /** The Unity `.meta` each asset's row stands for too (`pairDiffMetas`): tagged "+ meta". */
+  metaOf?: (entry: DiffEntry) => DiffEntry | undefined;
 }
 
 export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 /** The files of a diff, as a list or a tree: filterable, and in review mode marked as they are reviewed, a folder at a time too. */
-export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches }: DiffEntryListProps) {
+export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches, metaOf = () => undefined }: DiffEntryListProps) {
   const { on, statusOf, toggle } = review;
 
   const renderItem = (row: DiffEntryRowItem, level: number) => {
     if (row.type === 'folder') {
       const status = on ? groupReviewStatus(row.items, statusOf) : null;
       const toggleFolder = status && <ReviewToggle folder status={status} partial={partialReviewCount(row.items, statusOf)} onToggle={() => toggle(row.items)} />;
-      return <DiffEntryRow row={row} level={level} tree={tree} extras={toggleFolder} faded={status === 'reviewed'} />;
+      return <DiffEntryRow row={row} level={level} tree={tree} extras={toggleFolder} faded={status === 'reviewed'} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />;
     }
     const status = on ? statusOf(row.item) : null;
-    return <DiffEntryRow row={row} level={level} tree={tree} extras={status && <ReviewToggle status={status} onToggle={() => toggle([row.item])} />} faded={status === 'reviewed'} />;
+    return <DiffEntryRow row={row} level={level} tree={tree} extras={status && <ReviewToggle status={status} onToggle={() => toggle([row.item])} />} faded={status === 'reviewed'} hasMeta={metaOf(row.item) !== undefined} />;
   };
 
   const onItemsKeyDown = (event: KeyboardEvent, selected: DiffEntry[], moveBy: (step: number) => void, focusedIndex: number): boolean => {

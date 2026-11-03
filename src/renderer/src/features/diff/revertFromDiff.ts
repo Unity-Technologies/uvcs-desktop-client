@@ -45,23 +45,33 @@ function changedContent(entry: DiffEntry): boolean {
 /**
  * "Revert file to before this change…" for the one file selected in a diff of the workspace's repository, as the
  * native client's "Revert changes" does: the file goes back to the diff's older side, its later changes undone too.
- * None for several files, a file it can't revert (`canRevertFromDiff`) or a diff with no changeset before it.
+ * The Unity `.meta` listed with it (`meta`, `pairDiffMetas`) goes back with it, where it can be reverted too. None for
+ * several files, a file it can't revert (`canRevertFromDiff`) or a diff with no changeset before it.
  */
-export function revertFromDiffEntry(workspacePath: string, target: DiffTarget, entries: DiffEntry[], workspaceRepository: string | undefined): GroupedEntry | null {
+export function revertFromDiffEntry(
+  workspacePath: string,
+  target: DiffTarget,
+  entries: DiffEntry[],
+  workspaceRepository: string | undefined,
+  meta?: DiffEntry,
+): GroupedEntry | null {
   const entry = entries.length === 1 ? entries[0]! : null;
   const olderSide = olderSideOf(target);
   if (!entry || !olderSide || !canRevertFromDiff(entry, workspaceRepository)) return null;
-  return menuAction('revert', () => void revertToOlderSide(workspacePath, entry.path, olderSide), { label: 'Revert file to before this change…' });
+  const metaPath = meta && canRevertFromDiff(meta, workspaceRepository) ? meta.path : undefined;
+  return menuAction('revert', () => void revertToOlderSide(workspacePath, entry.path, olderSide, metaPath), {
+    label: metaPath === undefined ? 'Revert file to before this change…' : 'Revert file and its .meta to before this change…',
+  });
 }
 
 /**
- * Reverts the file to the older side's changeset, after confirming it by number (`revertItemTo`), and for a changeset's
- * diff the changeset it undoes too.
+ * Reverts the file, and its `.meta` where given, to the older side's changeset, after confirming it by number
+ * (`revertItemTo`), and for a changeset's diff the changeset it undoes too.
  */
-export async function revertToOlderSide(workspacePath: string, path: string, olderSide: OlderSide): Promise<void> {
+export async function revertToOlderSide(workspacePath: string, path: string, olderSide: OlderSide, metaPath?: string): Promise<void> {
   const changesetId = await changesetOf(workspacePath, olderSide);
   const undoing = olderSide.kind === 'parentOf' ? olderSide.changesetId : undefined;
-  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId, undoing);
+  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId, { undoing, metaPath });
 }
 
 async function changesetOf(workspacePath: string, olderSide: OlderSide): Promise<number | undefined> {

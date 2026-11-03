@@ -17,6 +17,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { listedEntries } from '../diff/listedEntries';
+import { pairDiffMetas } from '../diff/diffMetaPairs';
 import { diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
@@ -48,14 +49,19 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const workspaceRepository = usePlaceRepository();
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
   const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
-  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
-  const entries = useMemo(() => diffEntries && listedEntries(diffEntries), [diffEntries]);
+  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files, and
+  // a Unity asset's `.meta` on its asset's row (`pairDiffMetas`).
+  const pairs = useMemo(() => diffEntries && pairDiffMetas(listedEntries(diffEntries)), [diffEntries]);
+  const entries = pairs?.shown;
+  const metaOf = (entry: DiffEntry) => pairs?.metaOf(entry);
+  // "Open .meta diff" opens the diff on the meta, which shows it on its asset's row (`pairedFocus`).
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
   const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`));
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
   const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
   const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
+  const menuOptions = { review, workspaceRepository, diffEntries, metaOf, onMetaDiff: (meta: DiffEntry) => onOpen(meta.path) };
   const view = changedFilesView({ listedCount: entries?.length, matchingCount: visible.length, requested, failed: Boolean(error), collapsed });
 
   const onListKeyDown = (event: KeyboardEvent): void => {
@@ -107,15 +113,15 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, row.items, { review, workspaceRepository, diffEntries })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, row.items, menuOptions)}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>
                 </ActionContextMenu>
               ) : (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, [row.item], { review, workspaceRepository, diffEntries })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, [row.item], menuOptions)}>
                   <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
-                    <DiffEntryRow row={row} tree={tree} />
+                    <DiffEntryRow row={row} tree={tree} hasMeta={metaOf(row.item) !== undefined} />
                   </button>
                 </ActionContextMenu>
               ),

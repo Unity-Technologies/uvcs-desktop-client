@@ -16,37 +16,50 @@ import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
 import { useRequestedLineFocus } from './changesLineFocus';
+import { diffedItem } from '../../lib/unityMetaPairs';
+import { useMetaShownFor } from './changesMetaDiff';
+import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { changeStatus } from './changeTone';
 
 interface ChangeDiffPanelProps {
   workspacePath: string;
   change: PendingChange;
+  /** The Unity `.meta` listed with the asset (`pairPendingMetas`): the diff can show it instead. */
+  meta?: PendingChange;
   /** When the file changed since it was reviewed, the diff can show only that. */
   reviewMark?: ReviewMark;
   /** Instead of the file's path and status, where the page shows them already (Files). */
   title?: ReactNode;
 }
 
-export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownTitle }: ChangeDiffPanelProps) {
+export function ChangeDiffPanel({ workspacePath, change: asset, meta, reviewMark, title: ownTitle }: ChangeDiffPanelProps) {
+  // Per asset, like "Since review": its menu's "Open .meta diff" or the toggle shows the meta, until another asset shows.
+  const [metaShownFor, setMetaShownFor] = useMetaShownFor(workspacePath, asset.path);
+  const change = diffedItem(asset, meta, metaShownFor);
+  const showsMeta = change !== asset;
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
-  const canCompareWithReview = reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
+  const canCompareWithReview = !showsMeta && reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
   const sinceReview = canCompareWithReview && sinceReviewPath === change.path;
   // A link's lines (`…/-/changes/a.cs#L42`, `requestLineFocus`): the diff opens scrolled to them, marked. Changes
   // offers no link of its own: its lines aren't published.
   const requestedLines = useRequestedLineFocus(workspacePath, change.path);
   const lineLinks = useMemo<LineLinks>(() => ({ focus: requestedLines ? { path: change.path, lines: requestedLines } : null, publishes: false }), [requestedLines, change.path]);
 
+  const metaToggle = meta && <MetaDiffButton pressed={showsMeta} onChange={(pressed) => setMetaShownFor(pressed ? asset.path : null)} />;
   const title = ownTitle ?? <DiffFileTitle status={changeStatus(change)} path={change.path} oldPath={change.oldPath} />;
 
   if (change.itemType === 'directory') {
-    return <EmptyState title={change.path} description={`Directory · ${describeKinds(change)}`} />;
+    return <EmptyState title={change.path} description={`Directory · ${describeKinds(change)}`} action={metaToggle} />;
   }
 
   const sources = changeDiffSources(change);
   const original = sinceReview ? { kind: 'reviewSnapshot' as const, path: change.path } : sources.original;
-  const compareControls = canCompareWithReview && (
-    <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? change.path : null)} />
+  const compareControls = (canCompareWithReview || metaToggle) && (
+    <>
+      {canCompareWithReview && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? change.path : null)} />}
+      {metaToggle}
+    </>
   );
 
   return (

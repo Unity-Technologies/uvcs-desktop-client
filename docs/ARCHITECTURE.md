@@ -1340,6 +1340,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
+  - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
+    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`ItemTag`), and leaves the meta out
+    of its counts (`pairUnityMetas`, `lib/unityMetaPairs`: `pairPendingMetas` for Changes, `pairDiffMetas` for a diff
+    and a details panel's changed files, `pairIncomingMetas`, `pairMergeMetas`). A meta joins its asset only when both
+    are listed and changed the same way (the same kinds and changelist in Changes, the same status in a diff), with the
+    name matched exactly as Unity writes it; otherwise it keeps its own row, so nothing that changed alone is hidden. A
+    conflict never joins: each is a decision with its own panel (Incoming keeps a colliding meta apart; the merge page
+    every conflict). Pairing is always on, not tied to a Unity project: a `.meta` beside its asset means Unity.
+    What changes data takes the meta along (`withMetas`): Changes' checkbox, undo, add, checkout, changelists and filter
+    rules; a diff's revert and restore, whose "Restore to…" goes away when the meta comes back too, as an asset moved
+    without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's
+    own: "Open .meta diff" (`metaDiff`), "View .meta history" (`metaHistory`), and in Changes "Open .meta". Selecting
+    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar (`MetaDiffButton`, `diffedItem`) or "Open
+    .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
   badge cut into its bottom-right corner (`FolderXlinkIcon`: one color, the cutout and arrow transparent), in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
