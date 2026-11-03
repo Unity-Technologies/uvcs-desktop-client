@@ -30,6 +30,29 @@ branches (their bands, full names or only the last part, `shownBranchName`; one 
 drawing as a `DetailLevel` gate (`detailLevel`), and a hidden thing is also out of the hit tests (`HitOptions`), so
 nothing invisible answers the pointer. A cut name keeps its tooltip with the full name.
 
+### Advanced filters & format
+
+The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository
+(`useExplorerRules`, `setRules`), since a condition names that repository's branches and owners. Its decisions live in
+`model/ruleList.ts`: the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`), how a row reads, how the
+list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
+(`editExplorerRule`), stacked on the options.
+
+- **Inclusions and exclusions** keep only the branches an inclusion matches, without those an exclusion matches (an
+  exclusion wins), each with the relatives it takes along (`EXPANSION_OPTIONS`: child and parent branches, branches
+  merged into them or they were merged into). They reach the graph as `keptByRules` (`branchesKeptByRules`,
+  `filterGraph`), apart from the quick filters, and unlike those they can hide the workspace branch: the user wrote
+  them. Their order changes nothing.
+- **Formats** color the branches, changesets or labels they match with one of `BRANCH_HUES` (`ruleColors`), applied
+  in order: a later format colors over an earlier one, so only formats move up and down (`moveRule`). The two
+  built-in formats, branches with pending merges and the workspace branch, have no condition.
+
+A condition is a `cm find` condition, as the user writes it. Every enabled rule with one asks the server once per
+distinct question (`ruleQueries`: the same condition twice, or the same rules in another order, is one query) through
+`matchRules`, one `cm find` each, only while some rule asks one; the tab reads the view's own query (`useRuleMatches`),
+so opening it asks nothing more. A condition `cm` refuses fails only its own rule: the row shows `cm`'s error
+(`ruleError`) and the other rules still apply. A disabled rule stays in the list and asks nothing.
+
 ## Loading
 
 While the history is read, the canvas's pane shows the date ruler and a few branches drawn with the graph's own
