@@ -78,7 +78,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   // The list shows each Unity `.meta` change with its asset's; the progress and the merge itself count every item.
   const pairs = useMemo(() => pairMergeMetas(items), [items]);
   const progress = useMemo(() => mergeProgress(fileStates, directory.resolutions, directory.applying), [fileStates, directory.resolutions, directory.applying]);
-  const latest = useRef({ items, progress });
+  const latest = useRef({ items: pairs.shown, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const { mergerFor, othersFor } = useFileMergers();
   const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true });
@@ -95,7 +95,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
   const shown = useDeferredValue(selected);
-  latest.current = { items, progress };
+  latest.current = { items: pairs.shown, progress };
   // A binary's versions are read only while it shows.
   const shownFileKey = shown?.kind === 'fileConflict' ? shown.file.key : undefined;
   useEffect(() => openFile(shownFileKey), [openFile, shownFileKey]);
@@ -128,9 +128,9 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const run = useResolveRun({ states: fileStates, mergerFor, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
-  // Start on the first thing that needs the user, as the list shows them, else on its first row.
+  // Start on the first thing that needs the user, as the list shows them (a `.meta` joined to its asset is never one), else on its first row.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items, progress) ?? inListOrder(pairs.shown)[0]!).key)));
+    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(pairs.shown, progress) ?? inListOrder(pairs.shown)[0]!).key)));
   }, [selectedKey, items, pairs.shown, progress, rowKeyOf]);
 
   // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
