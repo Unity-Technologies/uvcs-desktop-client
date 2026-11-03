@@ -43,6 +43,12 @@ describe('rememberedPreferences', () => {
     expect(started.dateRange).toBe('lastWeek');
   });
 
+  it('starts preferences remembered before the advanced filters with none, keeping the rest', () => {
+    const started = rememberedPreferences({ dateRange: 'lastWeek' }, { ...current, rulesByRepository: {} });
+    expect(started.rulesByRepository).toEqual({});
+    expect(started.dateRange).toBe('lastWeek');
+  });
+
   it('starts with the defaults when nothing was remembered', () => {
     expect(rememberedPreferences(undefined, current)).toEqual(current);
   });

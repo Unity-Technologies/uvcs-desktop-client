@@ -2,7 +2,7 @@ import { EVERYONE } from '../../lib/peopleFilter';
 import { sincePresetOf } from '../../lib/sincePresets';
 import type { BranchExplorerPreferences } from './branchExplorerStore';
 
-type Remembered = Partial<Omit<BranchExplorerPreferences, 'set'>>;
+type Remembered = Partial<Omit<BranchExplorerPreferences, 'set' | 'setRules'>>;
 
 /**
  * The Branch Explorer's remembered preferences of an older version, as this one keeps them. Version 0 had date ranges
