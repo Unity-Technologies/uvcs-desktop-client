@@ -58,6 +58,7 @@ describe('Unity .meta files', () => {
 
   beforeEach(() => {
     dialogs.askedToUndo = [];
+    useNavigation.setState({ pages: [] });
   });
 
   it("undoes the asset's .meta with it, and counts it", async () => {
@@ -81,17 +82,17 @@ describe('Unity .meta files', () => {
     entry(menu, 'metaDiff').run();
     expect(useMetaDiffRequests.getState().request).toEqual({ workspacePath: '/ws', path: 'Assets/Player.png' });
     entry(menu, 'metaHistory').run();
-    expect(useNavigation.getState().page).toEqual({ kind: 'history', path: 'Assets/Player.png.meta' });
+    expect(useNavigation.getState().pages.at(-1)).toEqual({ kind: 'history', path: 'Assets/Player.png.meta' });
   });
 
   it('keeps viewing the asset itself in its own entries', () => {
     entry(pendingChangeMenu('/ws', [asset], [], { metaOf }), 'history').run();
-    expect(useNavigation.getState().page).toEqual({ kind: 'history', path: 'Assets/Player.png' });
+    expect(useNavigation.getState().pages.at(-1)).toEqual({ kind: 'history', path: 'Assets/Player.png' });
   });
 
   it('offers no .meta entries without a .meta, or for several items', () => {
     const metaIds = ['metaDiff', 'metaHistory', 'openMeta'];
-    const offered = (menu: MenuEntry[]) => ids(menu).filter((id) => metaIds.includes(id));
+    const offered = (menu: MenuEntry[]) => ids(menu).filter((id) => id !== undefined && metaIds.includes(id));
     expect(offered(pendingChangeMenu('/ws', [other], [], { metaOf }))).toEqual([]);
     expect(offered(pendingChangeMenu('/ws', [asset, other], [], { metaOf }))).toEqual([]);
     expect(offered(pendingChangeMenu('/ws', [asset], []))).toEqual([]);

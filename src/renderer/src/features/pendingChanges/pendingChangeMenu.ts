@@ -12,6 +12,9 @@ import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { toolsSubmenu } from '../../components/tools/toolsMenu';
 import { toolSubject } from '../../components/tools/toolSubjects';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
+import { openFile } from '../../components/externalApps/externalAppOperations';
+import { withMetas } from '../../lib/unityMetaPairs';
+import { requestMetaDiff } from './changesMetaDiff';
 import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
@@ -53,6 +56,8 @@ export interface PendingChangeMenuContext {
   locks?: PendingLocks;
   /** Every change listed, which Search matches pairs one with. */
   listed?: readonly PendingChange[];
+  /** The Unity `.meta` each listed asset stands for too (`pairPendingMetas`): what changes data takes it along. */
+  metaOf?: (change: PendingChange) => PendingChange | undefined;
 }
 
 /** The context menu for the selected pending changes. */
@@ -60,21 +65,25 @@ export function pendingChangeMenu(
   workspacePath: string,
   changes: PendingChange[],
   changelists: Changelist[],
-  { inclusion, review, locks, listed }: PendingChangeMenuContext = {},
+  { inclusion, review, locks, listed, metaOf = () => undefined }: PendingChangeMenuContext = {},
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 
   const single = changes.length === 1 ? changes[0]! : null;
+  const meta = single ? metaOf(single) : undefined;
+  // What changes data acts on the metas too; what views or opens an item takes the asset alone.
+  const acted = withMetas(changes, metaOf);
   const lock = single ? locks?.get(single.path) : undefined;
-  const privateChanges = changes.filter((change) => categoryOf(change) === 'private');
-  const controlledChanges = changes.filter(isControlled);
+  const privateChanges = acted.filter((change) => categoryOf(change) === 'private');
+  const controlledChanges = acted.filter(isControlled);
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
   const onDisk = single && existsOnDisk(single);
   const matchSide = single && listed ? matchSideOf(single, listed) : null;
 
   return groupedMenu([
-    ...(inclusion ? inclusionEntries(changes, inclusion) : []),
+    ...(inclusion ? inclusionEntries(acted, inclusion) : []),
     review && reviewMenuEntry(changes, review),
+    meta && menuAction('metaDiff', () => requestMetaDiff(workspacePath, single!.path)),
     privateChanges.length > 0 &&
       menuAction('add', () => void addToSourceControl(workspacePath, privateChanges), {
         label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
@@ -86,12 +95,14 @@ export function pendingChangeMenu(
       hasRevisions(single) &&
       canAnnotate(single.itemType) &&
       menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: single.path }))),
+    meta && hasRevisions(meta) && menuAction('metaHistory', () => navigation.openPage({ kind: 'history', path: meta.path })),
     lock && menuAction('showInLocks', () => showInLocks(workspacePath, lock)),
     ...(onDisk ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
+    meta && existsOnDisk(meta) && menuAction('openMeta', () => void openFile(absolutePath(workspacePath, meta.path))),
     toolsSubmenu(workspacePlace(workspacePath), changes.filter(existsOnDisk).map((change) => toolSubject.item(absolutePath(workspacePath, change.path)))),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
-    moveToChangelistSubmenu(workspacePath, changes, changelists),
-    filterRulesSubmenu(workspacePath, changes.map((change) => change.path)),
+    moveToChangelistSubmenu(workspacePath, acted, changelists),
+    filterRulesSubmenu(workspacePath, acted.map((change) => change.path)),
     controlledChanges.length > 0 &&
       menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), { label: undoChangesLabel(controlledChanges.length) }),
     privateChanges.length > 0 && menuAction('trash', () => void deletePrivateFiles(workspacePath, privateChanges), { label: `Move to ${TRASH_NAME}…` }),
