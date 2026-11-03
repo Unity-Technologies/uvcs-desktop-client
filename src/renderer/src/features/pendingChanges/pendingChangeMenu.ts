@@ -40,19 +40,27 @@ interface CheckinInclusion {
   setIncluded: (changes: PendingChange[], included: boolean) => void;
 }
 
+/**
+ * What the list the menu opens in knows beyond the changes. Each is left out where it isn't at hand (the command
+ * palette), and so are the entries it offers.
+ */
+export interface PendingChangeMenuContext {
+  /** Offers to include or exclude the changes: there is a check-in to pick for. */
+  inclusion?: CheckinInclusion;
+  /** Offers to mark the changes reviewed or clear their marks. */
+  review?: ListReview<PendingChange>;
+  /** Offers to show a locked change's lock. */
+  locks?: PendingLocks;
+  /** Every change listed, which Search matches pairs one with. */
+  listed?: readonly PendingChange[];
+}
+
 /** The context menu for the selected pending changes. */
 export function pendingChangeMenu(
   workspacePath: string,
   changes: PendingChange[],
   changelists: Changelist[],
-  /** Offers to include or exclude the changes; left out where there is no check-in to pick for (the command palette). */
-  inclusion?: CheckinInclusion,
-  /** Offers to mark the changes reviewed or clear their marks; left out where there are no marks (the command palette). */
-  review?: ListReview<PendingChange>,
-  /** Offers to show a locked change's lock; left out where the locks aren't read (the command palette). */
-  locks?: PendingLocks,
-  /** Every change listed, which Search matches pairs one with; left out where they aren't at hand (the command palette). */
-  listed?: readonly PendingChange[],
+  { inclusion, review, locks, listed }: PendingChangeMenuContext = {},
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 

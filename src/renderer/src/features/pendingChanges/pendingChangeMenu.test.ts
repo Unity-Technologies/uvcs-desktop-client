@@ -24,14 +24,14 @@ describe('Search matches', () => {
 
   it('is offered on one item deleted from disk, one private item, or one move the detection made', () => {
     const detected: PendingChange = { ...change('src/Gun.cs', ['locallyMoved']), oldPath: 'src/Weapon.cs' };
-    expect(offers(pendingChangeMenu('/ws', [deleted], [], undefined, undefined, undefined, listed))).toBe(true);
-    expect(offers(pendingChangeMenu('/ws', [added], [], undefined, undefined, undefined, listed))).toBe(true);
-    expect(offers(pendingChangeMenu('/ws', [detected], [], undefined, undefined, undefined, [...listed, detected]))).toBe(true);
+    expect(offers(pendingChangeMenu('/ws', [deleted], [], { listed }))).toBe(true);
+    expect(offers(pendingChangeMenu('/ws', [added], [], { listed }))).toBe(true);
+    expect(offers(pendingChangeMenu('/ws', [detected], [], { listed: [...listed, detected] }))).toBe(true);
   });
 
   it('is not offered on several items, on other changes, or where the list is not at hand (the palette)', () => {
-    expect(offers(pendingChangeMenu('/ws', listed, [], undefined, undefined, undefined, listed))).toBe(false);
-    expect(offers(pendingChangeMenu('/ws', [change('src/Map.cs', ['changed'])], [], undefined, undefined, undefined, listed))).toBe(false);
+    expect(offers(pendingChangeMenu('/ws', listed, [], { listed }))).toBe(false);
+    expect(offers(pendingChangeMenu('/ws', [change('src/Map.cs', ['changed'])], [], { listed }))).toBe(false);
     expect(offers(pendingChangeMenu('/ws', [deleted], []))).toBe(false);
   });
 });
