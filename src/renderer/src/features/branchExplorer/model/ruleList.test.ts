@@ -13,7 +13,7 @@ import {
   ruleEditorTitle,
   ruleRowDetail,
   ruleRowTitle,
-  ruleSections,
+  ruleTabBody,
 } from './ruleList';
 
 function rule(kind: ExplorerRuleKind, id: string): ExplorerRule {
@@ -28,12 +28,23 @@ describe('the Add menu', () => {
   });
 });
 
-describe('ruleSections', () => {
-  it('puts the filters apart from the formats, each in its order', () => {
+describe('ruleTabBody', () => {
+  it('shows the empty state while there are no rules', () => {
+    expect(ruleTabBody([])).toEqual({ state: 'empty' });
+  });
+
+  it('puts the filters apart from the formats, each in its order, and says how formats apply', () => {
     const rules = [rule('branchFormat', 'f1'), rule('include', 'i'), rule('currentBranch', 'f2'), rule('exclude', 'e')];
-    const sections = ruleSections(rules);
-    expect(ids(sections.filters)).toEqual(['i', 'e']);
-    expect(ids(sections.formats)).toEqual(['f1', 'f2']);
+    const body = ruleTabBody(rules);
+    expect(body.state === 'list' && body.sections.map((section) => [section.title, section.note, ids(section.rules)])).toEqual([
+      ['Filters', null, ['i', 'e']],
+      ['Formats', 'A later format colors over an earlier one.', ['f1', 'f2']],
+    ]);
+  });
+
+  it('leaves out a section with no rules', () => {
+    const body = ruleTabBody([rule('exclude', 'e')]);
+    expect(body.state === 'list' && body.sections.map((section) => section.title)).toEqual(['Filters']);
   });
 });
 
