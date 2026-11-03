@@ -1,0 +1,121 @@
+import { describe, expect, it } from 'vitest';
+import { assetOfMeta, pairUnityMetas, withMetas } from './unityMetaPairs';
+
+interface Item {
+  path: string;
+  kind: string;
+}
+
+const item = (path: string, kind = 'changed'): Item => ({ path, kind });
+const pathOf = (listed: Item): string => listed.path;
+const kindOf = (listed: Item): string => listed.kind;
+const paths = (items: readonly Item[]): string[] => items.map(pathOf);
+
+describe('pairUnityMetas', () => {
+  it("hides a meta behind its asset when both changed the same way", () => {
+    const texture = item('Assets/Player.png');
+    const meta = item('Assets/Player.png.meta');
+    const pairs = pairUnityMetas([texture, meta], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['Assets/Player.png']);
+    expect(pairs.metaOf(texture)).toBe(meta);
+    expect(pairs.pairedCount).toBe(1);
+  });
+
+  it('pairs a folder with its meta', () => {
+    const folder = item('Assets/Textures', 'added');
+    const meta = item('Assets/Textures.meta', 'added');
+    const pairs = pairUnityMetas([meta, folder], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['Assets/Textures']);
+    expect(pairs.metaOf(folder)).toBe(meta);
+  });
+
+  it('keeps the order of the assets, wherever their metas were listed', () => {
+    const items = [item('b.png.meta'), item('a.png'), item('c.txt'), item('b.png'), item('a.png.meta')];
+
+    expect(paths(pairUnityMetas(items, pathOf, kindOf).shown)).toEqual(['a.png', 'c.txt', 'b.png']);
+  });
+
+  it('lists a meta that changed alone as a change of its own', () => {
+    const meta = item('Assets/Player.png.meta');
+    const pairs = pairUnityMetas([item('Assets/Enemy.png'), meta], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['Assets/Enemy.png', 'Assets/Player.png.meta']);
+    expect(pairs.metaOf(meta)).toBeUndefined();
+    expect(pairs.pairedCount).toBe(0);
+  });
+
+  it('lists the asset and its meta apart when they changed in different ways', () => {
+    const texture = item('Assets/Player.png', 'changed');
+    const pairs = pairUnityMetas([texture, item('Assets/Player.png.meta', 'added')], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['Assets/Player.png', 'Assets/Player.png.meta']);
+    expect(pairs.metaOf(texture)).toBeUndefined();
+  });
+
+  it('matches the name exactly, as Unity writes it', () => {
+    const items = [item('Assets/Player.png'), item('Assets/player.png.meta'), item('Assets/Enemy.png'), item('Assets/Enemy.png.META')];
+
+    expect(pairUnityMetas(items, pathOf, kindOf).shown).toHaveLength(4);
+  });
+
+  it('pairs Windows paths as they are listed', () => {
+    const texture = item('Assets\\Art\\Player.png');
+    const pairs = pairUnityMetas([texture, item('Assets\\Art\\Player.png.meta')], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['Assets\\Art\\Player.png']);
+  });
+
+  it('never hides a meta behind another meta', () => {
+    const meta = item('a.png.meta');
+    const metaOfMeta = item('a.png.meta.meta');
+    const pairs = pairUnityMetas([item('a.png'), meta, metaOfMeta], pathOf, kindOf);
+
+    expect(paths(pairs.shown)).toEqual(['a.png', 'a.png.meta.meta']);
+  });
+
+  it("doesn't take a file named only .meta for a meta", () => {
+    expect(paths(pairUnityMetas([item('.meta')], pathOf, kindOf).shown)).toEqual(['.meta']);
+    expect(paths(pairUnityMetas([item('Assets/.meta'), item('Assets/')], pathOf, kindOf).shown)).toEqual(['Assets/.meta', 'Assets/']);
+  });
+
+  it('leaves a list without metas as it was', () => {
+    const items = [item('a.cs'), item('b.cs')];
+    const pairs = pairUnityMetas(items, pathOf, kindOf);
+
+    expect(pairs.shown).toEqual(items);
+    expect(pairs.pairedCount).toBe(0);
+  });
+
+  it('reads each path once, however long the list', () => {
+    const items = Array.from({ length: 4000 }, (_, index) => item(index % 2 ? `Assets/${index - 1}.png.meta` : `Assets/${index}.png`));
+    let reads = 0;
+    const pairs = pairUnityMetas(items, (listed) => (reads++, listed.path), kindOf);
+
+    expect(pairs.shown).toHaveLength(2000);
+    expect(reads).toBe(4000);
+  });
+});
+
+describe('withMetas', () => {
+  it('adds the metas of the assets, right after each one', () => {
+    const items = [item('a.png'), item('a.png.meta'), item('b.cs'), item('c.png'), item('c.png.meta')];
+    const pairs = pairUnityMetas(items, pathOf, kindOf);
+    const [a, b, c] = pairs.shown;
+
+    expect(paths(withMetas([c!, b!, a!], pairs.metaOf))).toEqual(['c.png', 'c.png.meta', 'b.cs', 'a.png', 'a.png.meta']);
+  });
+});
+
+describe('assetOfMeta', () => {
+  it("names a meta's asset", () => {
+    expect(assetOfMeta('Assets/Player.png.meta')).toBe('Assets/Player.png');
+  });
+
+  it('is null for what is not a meta', () => {
+    expect(assetOfMeta('Assets/Player.png')).toBeNull();
+    expect(assetOfMeta('Assets/.meta')).toBeNull();
+    expect(assetOfMeta('.meta')).toBeNull();
+  });
+});
