@@ -48,7 +48,7 @@ export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): Me
   return withConflictOpening(menu, conflicts);
 }
 
-/** "Open .meta diff", where the page can show it, and "Open .meta history" for an asset's `.meta`. */
+/** "Open .meta diff", where the page can show it, and "View .meta history" for an asset's `.meta`. */
 function metaMenuEntries(meta: MergeItem, onMetaDiff: ((meta: MergeItem) => void) | undefined): GroupedEntry[] {
   const history = menuAction('metaHistory', () => navigation.openPage({ kind: 'history', path: meta.path }));
   return onMetaDiff ? [menuAction('metaDiff', () => onMetaDiff(meta)), history] : [history];

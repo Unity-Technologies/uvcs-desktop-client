@@ -57,7 +57,7 @@ export function diffEntryMenu(
   return changedFileMenu(place, files, [review ? reviewMenuEntry(entries, review) : null, ...metaEntries, revert, ...restore, ...added]);
 }
 
-/** "Open .meta diff", where the list can show it, and "Open .meta history" for an asset's `.meta`. */
+/** "Open .meta diff", where the list can show it, and "View .meta history" for an asset's `.meta`. */
 function metaMenuEntries(target: DiffTarget, meta: DiffEntry, onMetaDiff: ((meta: DiffEntry) => void) | undefined): GroupedEntry[] {
   const history = menuAction('metaHistory', () => navigation.openPage(diffEntryHistory(target, meta)));
   return onMetaDiff ? [menuAction('metaDiff', () => onMetaDiff(meta)), history] : [history];
