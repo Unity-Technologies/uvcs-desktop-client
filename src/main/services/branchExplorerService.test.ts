@@ -5,7 +5,7 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { roundTripDate } from '../cm/findQuery';
 import { formatOutput } from '../cm/testing/cmOutput';
-import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createBranchExplorerService } from './branchExplorerService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -105,5 +105,72 @@ describe('Branch Explorer of a repository explored without a workspace', () => {
     expect(commands.map(({ args }) => args[2])).toEqual(["on repository 'game@local'", "where hidden = 'true' on repository 'game@local'", since, since, since]);
     expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
     expect(await branchNames.resolve(onRepository, [21])).toEqual(new Map([[21, '/main/old']]));
+  });
+});
+
+describe('Branch Explorer rules', () => {
+  function rules() {
+    const fake = fakeCmClient({
+      'find branch': ({ line }) => (line.includes("owner = 'ana'") ? formatOutput(['/main'], ['/main/task1']) : cmFails("Error: Unknown field 'nmae'.")),
+      'find changeset': formatOutput(['5'], ['7']),
+      'find label': formatOutput(['v1.0']),
+    });
+    const branchNames = new BranchNamesCache(async () => []);
+    return { ...fake, service: createBranchExplorerService(serviceContext(fake.cm), { branchNames }) };
+  }
+
+  it('asks one quick find per rule, each read as records, in the workspace', async () => {
+    const { service, commands } = rules();
+
+    await service.matchRules(IN_WORKSPACE, [
+      { object: 'branch', condition: "owner = 'ana'" },
+      { object: 'changeset', condition: "date >= '2026-01-01'" },
+    ]);
+
+    expect(commands.map(({ via, args }) => [via, args[1], args[2]])).toEqual([
+      ['query', 'branch', "where owner = 'ana'"],
+      ['query', 'changeset', "where date >= '2026-01-01'"],
+    ]);
+    expect(commands.every((command) => command.readsRecords && command.options.cwd === WORKSPACE)).toBe(true);
+  });
+
+  it('answers what each rule matched, in the order asked', async () => {
+    const { service } = rules();
+
+    const answers = await service.matchRules(IN_WORKSPACE, [
+      { object: 'label', condition: "name like 'v%'" },
+      { object: 'branch', condition: "owner = 'ana'" },
+      { object: 'changeset', condition: "owner = 'ana'" },
+    ]);
+
+    expect(answers).toEqual([{ matched: ['v1.0'] }, { matched: ['/main', '/main/task1'] }, { matched: ['5', '7'] }]);
+  });
+
+  it('answers the error of a condition cm refuses, and still the others', async () => {
+    const { service } = rules();
+
+    const answers = await service.matchRules(IN_WORKSPACE, [
+      { object: 'branch', condition: "nmae = 'x'" },
+      { object: 'label', condition: "name like 'v%'" },
+    ]);
+
+    expect(answers[0]).toEqual({ error: expect.stringContaining("Unknown field 'nmae'") });
+    expect(answers[1]).toEqual({ matched: ['v1.0'] });
+  });
+
+  it('asks nothing without rules', async () => {
+    const { service, commands } = rules();
+
+    expect(await service.matchRules(IN_WORKSPACE, [])).toEqual([]);
+    expect(commands).toHaveLength(0);
+  });
+
+  it('names the repository when explored without a workspace', async () => {
+    const { service, commands } = rules();
+
+    await service.matchRules(repositoryPlace('game@local'), [{ object: 'label', condition: "name like 'v%'" }]);
+
+    expect(commands[0].args[2]).toBe("where name like 'v%' on repository 'game@local'");
+    expect(commands[0].options.outsideWorkspaces).toBe(true);
   });
 });
