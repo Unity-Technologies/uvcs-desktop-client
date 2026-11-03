@@ -230,8 +230,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
     const viewport = view.viewportRef.current;
-    const { labels, mergeLinks } = detailLevel(viewport.zoom, sceneRef.current.highlights.options);
-    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom, labels, mergeLinks });
+    const { labels, mergeLinks, bands } = detailLevel(viewport.zoom, sceneRef.current.highlights.options);
+    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom, labels, mergeLinks, bands });
   };
 
   /** A changeset's card opens over its caption, in its font and color; any other card by the pointer. */

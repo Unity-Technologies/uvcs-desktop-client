@@ -102,6 +102,8 @@ export interface HitOptions {
   labels?: boolean;
   /** Whether merge links are drawn (`detail.mergeLinks`): a hidden link can't be hit. */
   mergeLinks?: boolean;
+  /** Whether branch bands are drawn (`detail.bands`): without, a branch is hit only near its line. */
+  bands?: boolean;
 }
 
 /**
@@ -113,7 +115,7 @@ export function hitTest(
   layout: GraphLayout,
   point: Point,
   drawn: DrawnTargets | null = null,
-  { chips = true, zoom = 1, labels = true, mergeLinks = true }: HitOptions = {},
+  { chips = true, zoom = 1, labels = true, mergeLinks = true, bands = true }: HitOptions = {},
 ): GraphTarget | null {
   const chip = chips ? drawn?.reviewChips.at(point) : null;
   if (chip) return { kind: 'codeReview', review: chip.item };
@@ -127,7 +129,7 @@ export function hitTest(
     (labels ? hitLabel(layout, point) : null) ??
     (caption ? { kind: 'changeset', id: caption.item.changeset.id } : null) ??
     (mergeLinks ? (hitMergeLink(layout, point, lineHitDistance) ?? hitPendingMergeLink(layout, point, lineHitDistance)) : null) ??
-    hitLane(layout, point)
+    hitLane(layout, point, bands ? BAND_HEIGHT / 2 : lineHitDistance)
   );
 }
 
@@ -189,12 +191,15 @@ function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number
   return link ? { kind: 'pendingMergeLink', link } : null;
 }
 
-/** A branch is its band (its header card is hit where it was drawn). */
-function hitLane(layout: GraphLayout, point: Point): GraphTarget | null {
+/**
+ * A branch is its band, or, without bands, its line: `halfHeight` is how far from the line's height it still answers
+ * (its header card is hit where it was drawn).
+ */
+function hitLane(layout: GraphLayout, point: Point, halfHeight: number): GraphTarget | null {
   const row = Math.round((point.y - GRAPH_PADDING.top) / ROW_HEIGHT);
   const lane = layout.lanesByRow.get(row)?.find((candidate) => {
     const shape = laneShape(candidate);
-    return Math.abs(point.y - shape.y) <= BAND_HEIGHT / 2 && point.x >= shape.left && point.x <= shape.right;
+    return Math.abs(point.y - shape.y) <= halfHeight && point.x >= shape.left && point.x <= shape.right;
   });
   return lane ? { kind: 'branch', lane } : null;
 }

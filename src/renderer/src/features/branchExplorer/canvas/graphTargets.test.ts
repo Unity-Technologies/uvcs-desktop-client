@@ -100,6 +100,15 @@ describe('hitTest', () => {
     expect(hitTest(layout, { x: (a.x + b.x) / 2, y: a.y })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
   });
 
+  it('finds a branch drawn as a line, without its band, only near its line', () => {
+    const a = nodePoint(layout, 2)!;
+    const b = nodePoint(layout, 4)!;
+    const offLine = { x: (a.x + b.x) / 2, y: a.y + 10 };
+    expect(hitTest(layout, offLine)).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+    expect(hitTest(layout, offLine, null, { bands: false })).toBeNull();
+    expect(hitTest(layout, { ...offLine, y: a.y + 3 }, null, { bands: false })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+  });
+
   it('finds a branch from its header card where it was drawn, pinned to the edge or not', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     const shape = laneShape(lane);
