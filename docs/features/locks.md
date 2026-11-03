@@ -11,8 +11,8 @@ branches where they don't. They belong to the server (an on-premises server's `l
 settings) and only its administrators edit them.
 
 - **No `cm` command reads or writes them**: `cm lock` has only `list`, `unlock` and `create`. The official client
-  doesn't edit them either: its Locks view's "Configure lock rules" opens the server's page for them
-  (`OpenConfigureLockRulesPage`), and so does this app.
+  doesn't edit them either: its Locks view's "Configure lock rules" opens the server's page for them, and so does
+  this app.
 - "Lock rules" in the Locks view's header, and "Configure lock rules" in the palette while the view shows, open that
   page in the browser (`openLockRules`, `useLockRulesCommand`). `lockRulesUrl` (`app/account/serverAccount.ts`)
   builds it from the workspace's server, which the window already read, so it costs no `cm` command:
@@ -23,7 +23,7 @@ settings) and only its administrators edit them.
   - the local server (`local`): none, and the button doesn't show.
 - The button's tooltip says where the page opens (`lockRulesPage`): the dashboard or the web admin.
 
-Rejected: a lock rules dialog of the app's own. The rules are reachable only through the server's web API (the web
-admin's `LockRulesControllerV2`, the cloud's `LockRulesController`), which takes its own sign-in rather than `cm`'s:
-the app would have to hold credentials and talk to the server outside `CmClient`. The official client's "add a lock
-rule and check out" (from a file that isn't lockable) goes through the server's API too, and isn't offered.
+Rejected: a lock rules dialog of the app's own. The rules are reachable only through the server's web API (the
+on-premises web admin's, or Unity Cloud's), which takes its own sign-in rather than `cm`'s: the app would have to hold
+credentials and talk to the server outside `CmClient`. The official client's "add a lock rule and check out" (from a
+file that isn't lockable) goes through the server's API too, and isn't offered.
