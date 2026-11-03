@@ -55,14 +55,18 @@ export function ruleSections(rules: readonly ExplorerRule[]): RuleSections {
 }
 
 /**
- * A row's second line: what the rule matches, and what an inclusion or exclusion takes with it. A built-in format
+ * A row's second line: its kind when a description titles it, what it matches, and what an inclusion or exclusion
+ * takes with it. A built-in format
  * titled by its kind has none: its title already names what it colors.
  */
 export function ruleRowDetail(rule: ExplorerRule): string | null {
-  if (!hasCondition(rule.kind) && ruleRowTitle(rule) === RULE_KIND_LABELS[rule.kind]) return null;
-  const matches = hasCondition(rule.kind) ? rule.condition.trim() || 'No condition yet' : RULE_KIND_LABELS[rule.kind];
+  const kind = RULE_KIND_LABELS[rule.kind];
+  // A description hides the kind, which tells an inclusion from an exclusion and a branch format from a label format.
+  const parts = ruleRowTitle(rule) === kind ? [] : [kind];
+  if (hasCondition(rule.kind)) parts.push(rule.condition.trim() || 'No condition yet');
   const taken = EXPANSION_OPTIONS.filter(({ option }) => !isFormatRule(rule) && rule.expansion[option]).map(({ label }) => label.toLowerCase());
-  return taken.length > 0 ? `${matches} · with ${joinWords(taken)}` : matches;
+  if (taken.length > 0) parts.push(`with ${joinWords(taken)}`);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 /** The row's first line: its description, or the kind's name when it has none. */

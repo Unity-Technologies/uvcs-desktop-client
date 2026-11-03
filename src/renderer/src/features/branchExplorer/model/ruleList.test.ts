@@ -44,14 +44,14 @@ describe('a rule row', () => {
   });
 
   it('shows the condition, and what a filter takes with it', () => {
-    const filter = { ...rule('include', 'a'), condition: "owner = 'me'", expansion: { ...NO_EXPANSION, children: true, mergeSources: true } };
+    const filter = { ...rule('include', 'a'), description: '', condition: "owner = 'me'", expansion: { ...NO_EXPANSION, children: true, mergeSources: true } };
     expect(ruleRowDetail(filter)).toBe("owner = 'me' · with child branches and branches merged into them");
     expect(ruleRowDetail({ ...filter, expansion: { ...NO_EXPANSION, parent: true } })).toBe("owner = 'me' · with parent branch");
   });
 
   it('names a built-in format by what it colors under its description, and says when a condition is missing', () => {
     expect(ruleRowDetail({ ...rule('pendingMerges', 'a'), description: 'To merge' })).toBe('Branches with pending merges');
-    expect(ruleRowDetail({ ...rule('exclude', 'a'), condition: ' ' })).toBe('No condition yet');
+    expect(ruleRowDetail({ ...rule('exclude', 'a'), description: '', condition: ' ' })).toBe('No condition yet');
   });
 
   it('names the kind of a rule titled by its description, so an inclusion reads apart from an exclusion', () => {
