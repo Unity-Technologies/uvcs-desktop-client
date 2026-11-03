@@ -6,7 +6,7 @@ import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, shownBranchName, summaryOf, textWidth } from './fitText';
 import { HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop } from './geometry';
-import { branchColor, HEADER_HOVER_TINT, HEADER_TINT, headerInks, type GraphPalette } from './graphPalette';
+import { HEADER_HOVER_TINT, HEADER_TINT, headerColor, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape, roomBeforeNextLane } from './laneShape';
 import { lanesAcross } from './spansInView';
@@ -101,7 +101,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const hovered = scene.hoveredBranch === name;
   const isHit = search?.branches.has(name) ?? false;
   const ghost = search !== null && !search.litBranches.has(name);
-  const color = current ? palette.accent : branchColor(palette, name);
+  const color = headerColor(palette, name, current);
   const inks = headerInks(palette, name, current);
 
   ctx.save();

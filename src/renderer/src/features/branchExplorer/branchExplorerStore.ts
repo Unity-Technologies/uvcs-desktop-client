@@ -8,7 +8,9 @@ import type { SincePreset } from '../../lib/sincePresets';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf, type GraphViewOptions } from './canvas/graphViewOptions';
 import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
+import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
+import { rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
@@ -26,10 +28,17 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
   people: PeoplePick;
   /** Only the changesets that shape the diagram; the linear runs between them collapse into "+N" nodes. */
   structureOnly: boolean;
+  /**
+   * The advanced filters and formats (`ExplorerRule`) of each repository, by its spec: their conditions name that
+   * repository's branches and people, so another one starts with none.
+   */
+  rulesByRepository: RulesByRepository;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
-  set: (changes: Partial<Omit<BranchExplorerPreferences, 'set'>>) => void;
+  set: (changes: Partial<Omit<BranchExplorerPreferences, 'set' | 'setRules'>>) => void;
+  setRules: (repository: string, rules: ExplorerRule[]) => void;
 }
+
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
@@ -42,13 +51,15 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       people: EVERYONE,
       structureOnly: false,
       ...DEFAULT_GRAPH_VIEW_OPTIONS,
+      rulesByRepository: {},
       revealRequest: null,
       set,
+      setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
     }),
     {
       name: 'branch-explorer-preferences',
       version: 2,
-      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
+      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
@@ -63,6 +74,11 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
 export function showInBranchExplorer(target: RevealTarget): void {
   useBranchExplorerPreferences.getState().set({ revealRequest: target });
   navigation.goToView('branchExplorer');
+}
+
+/** The advanced filters and formats of `repository` (none while it isn't known yet), the same array until they change. */
+export function useExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+  return useBranchExplorerPreferences((state) => rulesOf(state.rulesByRepository, repository));
 }
 
 /** The display options alone, the same object until one of them changes. */

@@ -17,7 +17,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -35,6 +35,7 @@ import { GraphSearch } from './GraphSearch';
 import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
+import { NO_RULE_COLORS, ruleColors as ruleColorsOf } from './model/ruleColors';
 import { describeSelection } from './model/describeSelection';
 import { homeTarget } from './model/homeTarget';
 import { pendingBranchOf } from './model/pendingChangeset';
@@ -47,6 +48,7 @@ import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
+import { useRuleMatches } from './useRuleMatches';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
@@ -59,6 +61,8 @@ export function BranchExplorerView() {
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
   const viewOptions = useGraphViewOptions();
+  const rules = useExplorerRules(placeRepository);
+  const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
@@ -89,8 +93,14 @@ export function BranchExplorerView() {
     expanded,
     search: search.shown,
     selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
+    rules,
+    matches: ruleMatches,
   });
 
+  const ruleColors = useMemo(
+    () => (data ? rememberedPerHistory(data, 'ruleColors', [rules, ruleMatches, currentBranch], () => ruleColorsOf(data, rules, ruleMatches, currentBranch)) : NO_RULE_COLORS),
+    [data, rules, ruleMatches, currentBranch],
+  );
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
@@ -311,6 +321,7 @@ export function BranchExplorerView() {
               ref={canvasRef}
               layout={layout}
               highlights={highlights}
+              ruleColors={ruleColors}
               onSelect={select}
               onActivate={activate}
               contextMenu={menuFor}

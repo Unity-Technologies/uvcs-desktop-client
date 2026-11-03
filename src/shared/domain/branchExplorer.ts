@@ -58,3 +58,18 @@ export interface BranchExplorerQuery {
   sinceDate?: string;
   includeHidden: boolean;
 }
+
+/** The objects a Branch Explorer rule asks the server for. */
+export type RuleObject = 'branch' | 'changeset' | 'label';
+
+/** One rule's question: the objects that meet `condition`, a `cm find` condition written without `where`. */
+export interface RuleQuery {
+  object: RuleObject;
+  condition: string;
+}
+
+/**
+ * What one `RuleQuery` found: branch names, changeset ids (as decimal text) or label names; or why `cm` refused it
+ * (a condition with a typo), which the rule shows instead of matching anything.
+ */
+export type RuleMatch = { matched: string[] } | { error: string };

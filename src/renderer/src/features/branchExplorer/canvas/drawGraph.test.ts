@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AVATAR_COLORS } from '../../../lib/avatarColors';
 import { largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
+import { NO_RULE_COLORS } from '../model/ruleColors';
 import { searchGraph, searchHighlight } from '../model/searchGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
@@ -91,6 +92,7 @@ const palette: GraphPalette = {
   },
   captionFontSize: 12,
   branchHues: true,
+  ruleColors: NO_RULE_COLORS,
 };
 
 const PIXEL_RATIO = 2;

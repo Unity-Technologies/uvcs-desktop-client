@@ -20,7 +20,7 @@ const RAW_COLOR = /#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(.*\d%/i;
 const ALLOWED: { file: string; line: RegExp }[] = [
   { file: '*.css', line: /^\s*mask-image:/ },
   { file: 'features/diff/viewer/image/PixelInspector.tsx', line: /const color = `rgba\(\$\{rgba\[0\]\}/ },
-  { file: 'features/branchExplorer/details/BranchName.module.css', line: /background: hsl\(var\(--branch-hue\) \d+% \d+%\);/ },
+  { file: 'features/branchExplorer/HueDot.module.css', line: /background: hsl\(var\(--branch-hue\) \d+% \d+%\);/ },
   { file: 'app/operations/ProgressTrack.module.css', line: /rgba\(255, 255, 255, 0\.35\)/ },
 ];
 
