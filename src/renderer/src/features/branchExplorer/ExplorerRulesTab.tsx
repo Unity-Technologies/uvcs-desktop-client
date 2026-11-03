@@ -19,7 +19,7 @@ import {
   RULE_KIND_LABELS,
   ruleRowDetail,
   ruleRowTitle,
-  ruleSections,
+  ruleTabBody,
 } from './model/ruleList';
 import { useRuleMatches } from './useRuleMatches';
 import styles from './ExplorerRulesTab.module.css';
@@ -32,7 +32,7 @@ interface ExplorerRulesTabProps {
 /** The display options' "Advanced filters & format" tab: the repository's inclusions, exclusions and formats. */
 export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
   const matches = useRuleMatches(rules);
-  const { filters, formats } = ruleSections(rules);
+  const body = ruleTabBody(rules);
   const add = async (rule: ExplorerRule): Promise<void> => {
     const saved = await editExplorerRule(rule, true);
     if (saved) onChange(addRule(rules, saved));
@@ -61,7 +61,7 @@ export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
     </AddRuleMenu>
   );
 
-  if (rules.length === 0) {
+  if (body.state === 'empty') {
     return (
       <EmptyState
         icon={<Filter size={20} />}
@@ -74,19 +74,13 @@ export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
   return (
     <div className={styles.tab}>
       <div className={styles.toolbar}>{addButton}</div>
-      {filters.length > 0 && (
-        <section className={styles.section}>
-          <h3 className={styles.heading}>Filters</h3>
-          <ul className={styles.list}>{filters.map(row)}</ul>
+      {body.sections.map((section) => (
+        <section key={section.title} className={styles.section}>
+          <h3 className={styles.heading}>{section.title}</h3>
+          {section.note && <p className={styles.note}>{section.note}</p>}
+          <ul className={styles.list}>{section.rules.map(row)}</ul>
         </section>
-      )}
-      {formats.length > 0 && (
-        <section className={styles.section}>
-          <h3 className={styles.heading}>Formats</h3>
-          <p className={styles.note}>A later format colors over an earlier one.</p>
-          <ul className={styles.list}>{formats.map(row)}</ul>
-        </section>
-      )}
+      ))}
     </div>
   );
 }

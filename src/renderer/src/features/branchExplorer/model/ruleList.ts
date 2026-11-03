@@ -43,15 +43,24 @@ export function conditionHint(kind: ExplorerRuleKind): string | null {
   return CONDITION_EXAMPLES[kind] ?? null;
 }
 
-export interface RuleSections {
-  /** Inclusions and exclusions: their order changes nothing. */
-  filters: ExplorerRule[];
-  /** Formats, in the order they apply: a later one colors over an earlier one. */
-  formats: ExplorerRule[];
+export interface RuleSection {
+  title: 'Filters' | 'Formats';
+  /** A line under the title on how the section's rules apply, or null. */
+  note: string | null;
+  /** In the order they're kept. The filters' order changes nothing; a later format colors over an earlier one. */
+  rules: ExplorerRule[];
 }
 
-export function ruleSections(rules: readonly ExplorerRule[]): RuleSections {
-  return { filters: rules.filter((rule) => !isFormatRule(rule)), formats: rules.filter(isFormatRule) };
+/** What the tab shows: the empty state, or the sections that have rules (filters, then formats). */
+export type RuleTabBody = { state: 'empty' } | { state: 'list'; sections: RuleSection[] };
+
+export function ruleTabBody(rules: readonly ExplorerRule[]): RuleTabBody {
+  if (rules.length === 0) return { state: 'empty' };
+  const sections: RuleSection[] = [
+    { title: 'Filters', note: null, rules: rules.filter((rule) => !isFormatRule(rule)) },
+    { title: 'Formats', note: 'A later format colors over an earlier one.', rules: rules.filter(isFormatRule) },
+  ];
+  return { state: 'list', sections: sections.filter((section) => section.rules.length > 0) };
 }
 
 /**
