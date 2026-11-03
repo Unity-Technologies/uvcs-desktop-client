@@ -20,6 +20,16 @@ float32, never sees the millions of px of a whole history (jagged circles and pi
 A link is hit within 6 px of the line itself (`distanceToCurve` cuts it into pieces of 8 px at most, however long),
 in screen px when zoomed out.
 
+## Display options
+
+What the graph draws is the user's: the display options (`GraphViewOptions`, kept with the view's preferences in
+`useBranchExplorerPreferences`) open from the button beside the zoom controls (`GraphNavControls`) and from the View
+menu's "Display options…" (`openBranchExplorerOptionsDialog`), which lists them as `GRAPH_VIEW_OPTION_GROUPS` does:
+branches (their bands, full names or only the last part, `shownBranchName`; one color each or the accent's,
+`withBranchColors`), links (branch starts, merges) and changesets (labels, comments, avatars). Each option reaches the
+drawing as a `DetailLevel` gate (`detailLevel`), and a hidden thing is also out of the hit tests (`HitOptions`), so
+nothing invisible answers the pointer. A cut name keeps its tooltip with the full name.
+
 ## Loading
 
 While the history is read, the canvas's pane shows the date ruler and a few branches drawn with the graph's own
