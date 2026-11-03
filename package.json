@@ -41,7 +41,7 @@
     "@lezer/common": "^1.5.4",
     "@lezer/highlight": "^1.2.5",
     "@phosphor-icons/core": "2.1.1",
-    "@pierre/diffs": "^1.6.1",
+    "@pierre/diffs": "^1.6.2",
     "@playwright/cli": "^0.1.22",
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.23",
