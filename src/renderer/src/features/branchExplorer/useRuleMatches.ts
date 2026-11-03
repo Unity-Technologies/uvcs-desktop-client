@@ -5,9 +5,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { ruleQueries, type ExplorerRule } from './model/explorerRules';
-import { ruleMatchesOf, type RuleMatches } from './model/ruleMatches';
-
-const NO_MATCHES: RuleMatches = new Map();
+import { ruleMatchesOf, shownRuleMatches, type RuleMatches } from './model/ruleMatches';
 
 /**
  * What the server says each rule's condition matches: one `cm find` per distinct question, asked only when a rule
@@ -25,5 +23,5 @@ export function useRuleMatches(rules: readonly ExplorerRule[]): RuleMatches {
     placeholderData: (previous) => previous,
     staleTime: SLOW_CHANGING_QUERY.staleTime,
   });
-  return queries.length > 0 && data ? data : NO_MATCHES;
+  return shownRuleMatches(queries.length, data);
 }

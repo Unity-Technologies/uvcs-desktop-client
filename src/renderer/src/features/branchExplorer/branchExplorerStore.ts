@@ -10,6 +10,7 @@ import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPrefe
 import type { BranchChoice } from './model/branchChoice';
 import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
+import { rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
@@ -31,14 +32,13 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
    * The advanced filters and formats (`ExplorerRule`) of each repository, by its spec: their conditions name that
    * repository's branches and people, so another one starts with none.
    */
-  rulesByRepository: Record<string, ExplorerRule[]>;
+  rulesByRepository: RulesByRepository;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
   set: (changes: Partial<Omit<BranchExplorerPreferences, 'set' | 'setRules'>>) => void;
   setRules: (repository: string, rules: ExplorerRule[]) => void;
 }
 
-const NO_RULES: readonly ExplorerRule[] = [];
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
@@ -54,7 +54,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       rulesByRepository: {},
       revealRequest: null,
       set,
-      setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: { ...rulesByRepository, [repository]: rules } })),
+      setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
     }),
     {
       name: 'branch-explorer-preferences',
@@ -78,7 +78,7 @@ export function showInBranchExplorer(target: RevealTarget): void {
 
 /** The advanced filters and formats of `repository` (none while it isn't known yet), the same array until they change. */
 export function useExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
-  return useBranchExplorerPreferences((state) => (repository === undefined ? undefined : state.rulesByRepository[repository]) ?? NO_RULES);
+  return useBranchExplorerPreferences((state) => rulesOf(state.rulesByRepository, repository));
 }
 
 /** The display options alone, the same object until one of them changes. */

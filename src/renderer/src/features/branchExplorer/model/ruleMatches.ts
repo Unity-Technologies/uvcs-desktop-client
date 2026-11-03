@@ -4,6 +4,8 @@ import { ruleQueryKey, ruleQueryOf, type ExplorerRule } from './explorerRules';
 /** The server's answers to `ruleQueries`, by `ruleQueryKey`. */
 export type RuleMatches = ReadonlyMap<string, RuleMatch>;
 
+const NO_MATCHES: RuleMatches = new Map();
+
 export function ruleMatchesOf(queries: readonly RuleQuery[], answers: readonly RuleMatch[]): RuleMatches {
   return new Map(queries.map((query, index) => [ruleQueryKey(query), answers[index] ?? { matched: [] }]));
 }
@@ -27,4 +29,12 @@ export function ruleError(rule: ExplorerRule, matches: RuleMatches): string | nu
 function answerTo(rule: ExplorerRule, matches: RuleMatches): RuleMatch | undefined {
   const query = ruleQueryOf(rule);
   return query ? matches.get(ruleQueryKey(query)) : undefined;
+}
+
+/**
+ * The answers that apply: none once no rule asks a question (the query then keeps its last answer, which must not
+ * color or hide anything) or before the first answer arrives.
+ */
+export function shownRuleMatches(questionCount: number, answered: RuleMatches | undefined): RuleMatches {
+  return questionCount > 0 && answered ? answered : NO_MATCHES;
 }
