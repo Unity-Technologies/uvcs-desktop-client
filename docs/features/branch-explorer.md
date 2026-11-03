@@ -33,9 +33,11 @@ nothing invisible answers the pointer. A cut name keeps its tooltip with the ful
 ### Advanced filters & format
 
 The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository
-(`useExplorerRules`, `setRules`), since a condition names that repository's branches and owners. Its decisions live in
-`model/ruleList.ts`: the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`), how a row reads (its
-description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`), how the list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
+(`useExplorerRules`, `setRules`; `withRules` and `rulesOf` in `model/rulesByRepository.ts`), since a condition names
+that repository's branches and owners. The tab's decisions live in `model/ruleList.ts`: the empty state and the
+Filters and Formats sections (`ruleTabBody`), the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
+how a row reads (its description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`),
+how the list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
 (`editExplorerRule`), stacked on the options.
 
 - **Inclusions and exclusions** keep only the branches an inclusion matches, without those an exclusion matches (an
@@ -51,7 +53,9 @@ A condition is a `cm find` condition, as the user writes it. Every enabled rule 
 distinct question (`ruleQueries`: the same condition twice, or the same rules in another order, is one query) through
 `matchRules`, one `cm find` each, only while some rule asks one; the tab reads the view's own query (`useRuleMatches`),
 so opening it asks nothing more. A condition `cm` refuses fails only its own rule: the row shows `cm`'s error
-(`ruleError`) and the other rules still apply. A disabled rule stays in the list and asks nothing.
+(`ruleError`) and the other rules still apply. A disabled rule stays in the list and asks nothing; once no rule asks
+a question, no earlier answer colors or hides anything (`shownRuleMatches`). A rule's find has no date range or
+`limit`, since it must hold for everything the graph may draw; it prints one field per object matched (`matchRules`).
 
 ## Loading
 
