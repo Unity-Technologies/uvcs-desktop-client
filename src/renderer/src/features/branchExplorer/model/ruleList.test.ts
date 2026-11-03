@@ -49,9 +49,13 @@ describe('a rule row', () => {
     expect(ruleRowDetail({ ...filter, expansion: { ...NO_EXPANSION, parent: true } })).toBe("owner = 'me' · with parent branch");
   });
 
-  it('names a built-in format by what it colors, and says when a condition is missing', () => {
-    expect(ruleRowDetail(rule('pendingMerges', 'a'))).toBe('Branches with pending merges');
+  it('names a built-in format by what it colors under its description, and says when a condition is missing', () => {
+    expect(ruleRowDetail({ ...rule('pendingMerges', 'a'), description: 'To merge' })).toBe('Branches with pending merges');
     expect(ruleRowDetail({ ...rule('exclude', 'a'), condition: ' ' })).toBe('No condition yet');
+  });
+
+  it('has no second line for a built-in format already titled by its kind', () => {
+    expect(ruleRowDetail(rule('currentBranch', 'a'))).toBeNull();
   });
 });
 
