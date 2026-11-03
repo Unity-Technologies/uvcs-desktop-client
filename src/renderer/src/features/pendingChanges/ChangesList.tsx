@@ -48,6 +48,8 @@ interface ChangesListProps {
   /** The row's check and R on the selection; outside review mode, no checks or "changed since review" dots, and R turns it on. */
   review: ListReview<PendingChange>;
   locks: PendingLocks;
+  /** The Unity `.meta` each asset's row stands for too (`pairPendingMetas`): the row says so. */
+  metaOf: (change: PendingChange) => PendingChange | undefined;
 }
 
 export function ChangesList({
@@ -63,6 +65,7 @@ export function ChangesList({
   changelistMenu,
   review,
   locks,
+  metaOf,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   // The keyboard moves through every row (`rowKeys`), folders and changelists too, so ← and → can close and open them.
@@ -252,6 +255,7 @@ export function ChangesList({
                     reviewStatus={reviewStatusOf(row)}
                     reviewPartial={reviewPartialOf(row)}
                     lock={row.type === 'file' ? locks.get(row.item.path) : undefined}
+                    hasMeta={row.item !== undefined && metaOf(row.item) !== undefined}
                     actions={rowActions}
                   />
                 )}

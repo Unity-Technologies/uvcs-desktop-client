@@ -13,6 +13,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
+import { withMetas } from '../../lib/unityMetaPairs';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
@@ -46,6 +47,7 @@ import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
+import { pairPendingMetas } from './pendingMetaPairs';
 import { addFilterRules, openChange, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
@@ -104,7 +106,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     clearChangeFilter();
     review.showAll();
   };
-  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
+  // Each Unity `.meta` rides on its asset's row; what the check-in picks from stays every change, metas included.
+  const pairs = useMemo(() => pairPendingMetas(changes), [changes]);
+  const pairedCount = useMemo(() => pairPendingMetas(sorted).pairedCount, [sorted]);
+  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes: pairs.shown, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
   // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
   const index = useMemo(() => indexPending(sorted), [sorted]);
@@ -157,7 +162,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     if (include && changes.length === allChanges.length) includeEverything(workspacePath, shown.map((change) => change.path));
     else setIncludedChanges(shown, include);
   };
-  const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
+  const toggleIncluded = (toggled: ChangeRow[], include: boolean): void =>
+    setIncludedChanges(withMetas(toggled.flatMap(changesUnderRow), pairs.metaOf), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
@@ -192,7 +198,13 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
           }
           contextMenu={(selected) =>
-            pendingChangeMenu(workspacePath, selected, changelists, { inclusion: { isIncluded, setIncluded: setIncludedChanges }, review, locks, listed: allChanges })
+            pendingChangeMenu(workspacePath, selected, changelists, {
+              inclusion: { isIncluded, setIncluded: setIncludedChanges },
+              review,
+              locks,
+              listed: allChanges,
+              metaOf: pairs.metaOf,
+            })
           }
           changelistMenu={(changelist) =>
             changelistMenu(workspacePath, changelist, {
@@ -202,6 +214,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           }
           review={review}
           locks={locks}
+          metaOf={pairs.metaOf}
         />
       </HighlightQuery>
     );
@@ -226,11 +239,11 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               {review.bar}
             </ListToolbar>
             <ChangesSummaryBar
-              changes={changes}
-              totalCount={listedCount}
+              changes={pairs.shown}
+              totalCount={listedCount === undefined ? undefined : listedCount - pairedCount}
               checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
-              onUndo={(selected) => void undoChanges(workspacePath, selected)}
+              onUndo={(selected) => void undoChanges(workspacePath, withMetas(selected, pairs.metaOf))}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
               checkboxInset={checkboxInset}
             />

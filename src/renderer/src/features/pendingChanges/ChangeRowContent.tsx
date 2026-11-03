@@ -64,11 +64,13 @@ interface ItemRowContentProps {
   /** A folder's review while under way ("2/5", `partialReviewCount`). */
   reviewPartial?: string | null;
   lock?: PendingLock;
+  /** Its Unity `.meta` changed too, and rides on its row. */
+  hasMeta?: boolean;
   actions: RowActions;
 }
 
 /** A file or folder as every list shows one (`ItemRow`), after its check (and a folder's chevron). */
-export const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, reviewPartial, lock, actions }: ItemRowContentProps) {
+export const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, reviewPartial, lock, hasMeta, actions }: ItemRowContentProps) {
   if (row.type === 'folder') {
     return (
       <TreeFolderLabel
@@ -76,7 +78,12 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         collapsed={row.collapsed}
         count={row.items.length - (row.item ? 1 : 0)}
         before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
-        extras={reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
+        extras={
+          <>
+            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
+          </>
+        }
         status={row.item && changeStatus(row.item)}
         presence={row.item ? changePresence(row.item) : 'controlled'}
         deleted={row.item && changeTone(row.item) === 'deleted'}
@@ -102,6 +109,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         faded={reviewStatus === 'reviewed'}
         extras={
           <>
+            {hasMeta && <ItemTag>+ meta</ItemTag>}
             {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
             {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
             {lock && <LockMark lock={lock} />}
