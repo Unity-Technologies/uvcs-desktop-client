@@ -37,7 +37,7 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
    Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
-   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.1, so check what
+   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.2, so check what
    they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
    (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
 
