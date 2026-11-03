@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
-import { hiddenAfterMigration, migrateBranchExplorerPreferences } from './branchExplorerMigration';
+import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf } from './canvas/graphViewOptions';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 
 describe('migrateBranchExplorerPreferences', () => {
   it('keeps the people picked from version 1 on, and drops whether the details were open', () => {
@@ -30,5 +31,19 @@ describe('hiddenAfterMigration', () => {
     expect(hiddenAfterMigration({ detailsOpen: true }, { labels: true }, 'branchExplorer')).toEqual({ labels: true });
     expect(hiddenAfterMigration({}, {}, 'branchExplorer')).toEqual({});
     expect(hiddenAfterMigration(undefined, {}, 'branchExplorer')).toEqual({});
+  });
+});
+
+describe('rememberedPreferences', () => {
+  const current = { dateRange: 'lastMonth', people: EVERYONE, ...DEFAULT_GRAPH_VIEW_OPTIONS };
+
+  it('starts the display options remembered before there were more at their defaults, keeping the ones remembered', () => {
+    const started = rememberedPreferences({ dateRange: 'lastWeek', showComments: false, showAvatars: true }, current);
+    expect(graphViewOptionsOf(started)).toEqual({ ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false });
+    expect(started.dateRange).toBe('lastWeek');
+  });
+
+  it('starts with the defaults when nothing was remembered', () => {
+    expect(rememberedPreferences(undefined, current)).toEqual(current);
   });
 });

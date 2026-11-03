@@ -6,7 +6,7 @@ import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf, type GraphViewOptions } from './canvas/graphViewOptions';
-import { hiddenAfterMigration, migrateBranchExplorerPreferences } from './branchExplorerMigration';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
 import type { RevealTarget } from './model/revealTarget';
 
@@ -54,6 +54,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
         return migrateBranchExplorerPreferences(persisted, version) as BranchExplorerPreferences;
       },
+      merge: rememberedPreferences,
     },
   ),
 );
