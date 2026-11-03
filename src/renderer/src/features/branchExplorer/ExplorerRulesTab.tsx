@@ -116,13 +116,14 @@ interface RuleRowProps {
 
 function RuleRow({ rule, error, canMoveUp, canMoveDown, onChange, onEdit, onMove, onRemove }: RuleRowProps) {
   const title = ruleRowTitle(rule);
+  const detail = ruleRowDetail(rule);
   return (
     <li className={styles.row} data-disabled={!rule.enabled || undefined}>
       <Checkbox ariaLabel={`Use ${title}`} checked={rule.enabled} onChange={(enabled) => onChange({ ...rule, enabled })} />
       {isFormatRule(rule) && <HueDot hue={rule.hue} size={10} />}
       <div className={styles.text}>
         <span className={styles.title}>{title}</span>
-        <span className={styles.detail}>{ruleRowDetail(rule)}</span>
+        {detail && <span className={styles.detail}>{detail}</span>}
         {error && <span className={styles.error}>{error}</span>}
       </div>
       <div className={styles.actions}>

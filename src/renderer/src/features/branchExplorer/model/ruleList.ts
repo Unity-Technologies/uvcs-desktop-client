@@ -54,8 +54,12 @@ export function ruleSections(rules: readonly ExplorerRule[]): RuleSections {
   return { filters: rules.filter((rule) => !isFormatRule(rule)), formats: rules.filter(isFormatRule) };
 }
 
-/** A row's second line: what the rule matches, and what an inclusion or exclusion takes with it. */
-export function ruleRowDetail(rule: ExplorerRule): string {
+/**
+ * A row's second line: what the rule matches, and what an inclusion or exclusion takes with it. A built-in format
+ * titled by its kind has none: its title already names what it colors.
+ */
+export function ruleRowDetail(rule: ExplorerRule): string | null {
+  if (!hasCondition(rule.kind) && ruleRowTitle(rule) === RULE_KIND_LABELS[rule.kind]) return null;
   const matches = hasCondition(rule.kind) ? rule.condition.trim() || 'No condition yet' : RULE_KIND_LABELS[rule.kind];
   const taken = EXPANSION_OPTIONS.filter(({ option }) => !isFormatRule(rule) && rule.expansion[option]).map(({ label }) => label.toLowerCase());
   return taken.length > 0 ? `${matches} · with ${joinWords(taken)}` : matches;
