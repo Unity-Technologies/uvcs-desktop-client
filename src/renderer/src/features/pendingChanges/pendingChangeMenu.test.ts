@@ -61,12 +61,20 @@ describe('Unity .meta files', () => {
     useNavigation.setState({ pages: [] });
   });
 
-  it("undoes the asset's .meta with it, and counts it", async () => {
+  it("undoes the asset's .meta with it, counting the rows selected", async () => {
     const menu = pendingChangeMenu('/ws', [asset], [], { metaOf });
-    expect(entry(menu, 'undo').label).toBe('Undo 2 changes…');
+    expect(entry(menu, 'undo').label).toBe('Undo changes…');
+    expect(entry(pendingChangeMenu('/ws', [asset, other], [], { metaOf }), 'undo').label).toBe('Undo 2 changes…');
     entry(menu, 'undo').run();
     await vi.waitUntil(() => dialogs.askedToUndo.length > 0);
     expect(dialogs.askedToUndo).toEqual([[asset, meta]]);
+  });
+
+  it("adds the asset's private .meta with it, counting the rows selected", () => {
+    const privateAsset = change('Assets/New.png', ['private']);
+    const privateMeta = change('Assets/New.png.meta', ['private']);
+    const menu = pendingChangeMenu('/ws', [privateAsset], [], { metaOf: (item) => (item === privateAsset ? privateMeta : undefined) });
+    expect(entry(menu, 'add').label).toBe('Add to version control');
   });
 
   it("checks out the asset's .meta with it", async () => {
