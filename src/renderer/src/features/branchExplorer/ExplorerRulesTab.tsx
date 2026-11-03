@@ -123,7 +123,11 @@ function RuleRow({ rule, error, canMoveUp, canMoveDown, onChange, onEdit, onMove
       {isFormatRule(rule) && <HueDot hue={rule.hue} size={10} />}
       <div className={styles.text}>
         <span className={styles.title}>{title}</span>
-        {detail && <span className={styles.detail}>{detail}</span>}
+        {detail && (
+          <span className={styles.detail} title={detail}>
+            {detail}
+          </span>
+        )}
         {error && <span className={styles.error}>{error}</span>}
       </div>
       <div className={styles.actions}>
