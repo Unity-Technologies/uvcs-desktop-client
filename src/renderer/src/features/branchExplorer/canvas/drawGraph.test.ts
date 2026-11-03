@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AVATAR_COLORS } from '../../../lib/avatarColors';
-import { largeHistory } from '../model/graphFixtures';
+import { largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
 import { searchGraph, searchHighlight } from '../model/searchGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { columnX, rowY } from './geometry';
+import { BAND_HEIGHT, columnX, rowY } from './geometry';
 import type { GraphPalette } from './graphPalette';
-import { DEFAULT_GRAPH_VIEW_OPTIONS } from './graphViewOptions';
+import { DEFAULT_GRAPH_VIEW_OPTIONS, type GraphViewOptions } from './graphViewOptions';
 import { centerOn } from './viewport';
 
 // Some authors have a picture, the others their initials.
@@ -181,5 +181,83 @@ describe('drawGraph far into a huge history', () => {
       const expected = { x: PIXEL_RATIO * (columnX(node.column) * ZOOM + panX), y: PIXEL_RATIO * (rowY(node.row) * ZOOM + panY) };
       expect(centers.some(({ x, y }) => Math.abs(x - expected.x) < 1e-6 && Math.abs(y - expected.y) < 1e-6)).toBe(true);
     }
+  });
+});
+
+/**
+ * The small sample history at full size, centered, nothing selected: every display option has something to draw.
+ * Comments are off (their captions measure fonts on a real canvas), as `drawFar` has them.
+ */
+function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
+  const layout = layoutGraph(sampleHistory());
+  const recording = recordingContext();
+  const middle = layout.nodesByColumn[Math.floor(layout.nodesByColumn.length / 2)]!;
+  const scene: GraphScene = {
+    layout,
+    viewport: centerOn({ zoom: 1, panX: 0, panY: 0 }, columnX(middle.column), rowY(middle.row), size),
+    size,
+    palette,
+    options: { ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false, ...options },
+    selectedChangeset: null,
+    selectedBranch: null,
+    selectedPending: false,
+    hoveredChangeset: null,
+    hoveredBranch: null,
+    hoveredReview: null,
+    hoveredPending: false,
+    homeChangeset: null,
+    pendingChangeCount: 0,
+    currentBranch: null,
+    highlightedAuthors: null,
+    search: null,
+    searchQuery: '',
+    searchPing: 0,
+    reviews: new Map(),
+  };
+  const drawn: DrawnTargets = {
+    reviewChips: new DrawnBoxes(),
+    branchHeaders: new DrawnBoxes(),
+    cutBranchNames: new DrawnBoxes(),
+    cutBranchComments: new DrawnBoxes(),
+    captions: new DrawnBoxes(),
+  };
+  drawGraph(recording.ctx, scene, PIXEL_RATIO, drawn);
+  return { ...recording, drawn };
+}
+
+const callsTo = (placed: Placed[], name: string) => placed.filter((call) => call.name === name);
+const textsOf = (placed: Placed[]) => callsTo(placed, 'fillText').map(({ args }) => args[0]);
+
+describe('drawGraph draws only what its display options ask for', () => {
+  it('draws branches as bands, or as lines without them', () => {
+    const bands = (placed: Placed[]) => callsTo(placed, 'roundRect').filter(({ args }) => args[3] === BAND_HEIGHT);
+    const withBands = drawSample().placed;
+    const withoutBands = drawSample({ showBranches: false }).placed;
+    expect(bands(withBands).length).toBeGreaterThan(0);
+    expect(bands(withoutBands)).toEqual([]);
+    expect(callsTo(withoutBands, 'lineTo').length).toBeGreaterThan(callsTo(withBands, 'lineTo').length);
+  });
+
+  it('draws where a branch starts only when asked', () => {
+    expect(callsTo(drawSample().placed, 'arcTo').length).toBeGreaterThan(0);
+    expect(callsTo(drawSample({ showBranchStartLinks: false }).placed, 'arcTo')).toEqual([]);
+  });
+
+  it('draws merge links only when asked', () => {
+    expect(callsTo(drawSample().placed, 'bezierCurveTo').length).toBeGreaterThan(0);
+    expect(callsTo(drawSample({ showMergeLinks: false }).placed, 'bezierCurveTo')).toEqual([]);
+  });
+
+  it('draws labels only when asked', () => {
+    expect(textsOf(drawSample().placed)).toContain('v1');
+    expect(textsOf(drawSample({ showLabels: false }).placed)).not.toContain('v1');
+  });
+
+  it('names a branch by its last part without full names, and keeps the full name for its tooltip', () => {
+    expect(textsOf(drawSample().placed)).toContain('/main/a');
+    const { placed, drawn } = drawSample({ fullBranchNames: false });
+    expect(textsOf(placed)).toContain('a');
+    expect(textsOf(placed)).not.toContain('/main/a');
+    expect(drawn.cutBranchNames.find((lane) => lane.branch.name === '/main/a')).not.toBeNull();
   });
 });
