@@ -2,14 +2,17 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
 import { folderListScope } from '../../components/collapsedFoldersStore';
+import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
+import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
+import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
@@ -27,6 +30,7 @@ import { MergeItemList } from './MergeItemList';
 import { MergePanes } from './MergePanes';
 import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
+import { pairMergeMetas } from './mergeMetaPairs';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
@@ -71,20 +75,22 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   // Thousands of items, from the plan and the directory decisions alone: sorted and laid out once, not again for every
   // version loaded or file decided, which change only the progress the rows read.
   const items = useMemo(() => buildMergeItems(plan, directory.decisions, conflictedFiles), [plan, directory.decisions, conflictedFiles]);
+  // The list shows each Unity `.meta` change with its asset's; the progress and the merge itself count every item.
+  const pairs = useMemo(() => pairMergeMetas(items), [items]);
   const progress = useMemo(() => mergeProgress(fileStates, directory.resolutions, directory.applying), [fileStates, directory.resolutions, directory.applying]);
   const latest = useRef({ items, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const { mergerFor, othersFor } = useFileMergers();
-  const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
+  const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
-  const hidesAll = hidesEveryRow(items.length, filter.visible.length);
+  const hidesAll = hidesEveryRow(pairs.shown.length, filter.visible.length);
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
   const resolutions = collectResolutions({ plan, fileStates, directoryDecisionsId: directory.decisionsId, comment });
-  const selected = mergeItemAt(items, rows, selectedKey);
+  const selected = mergeItemAt(pairs.shown, rows, selectedKey);
   const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
@@ -93,6 +99,17 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   // A binary's versions are read only while it shows.
   const shownFileKey = shown?.kind === 'fileConflict' ? shown.file.key : undefined;
   useEffect(() => openFile(shownFileKey), [openFile, shownFileKey]);
+  // A change listed with its `.meta` shows the asset's diff, or the meta's from its toggle or menu.
+  const [metaShownFor, setMetaShownFor] = useDiffMetaShownFor(shown?.path);
+  const shownMeta = shown && pairs.metaOf(shown);
+  const diffed = shown && diffedItem(shown, shownMeta, metaShownFor);
+  const metaToggle = shown && shownMeta && <MetaDiffButton pressed={diffed !== shown} onChange={(pressed) => setMetaShownFor(pressed ? shown.path : null)} />;
+  const showMetaOf = (meta: MergeItem) => {
+    const asset = pairs.shown.find((item) => item.path === assetOfMeta(meta.path));
+    if (!asset) return;
+    setSelection(singleSelection(rowKeyOf(asset.key)));
+    setMetaShownFor(asset.path);
+  };
 
   // The selection follows the run while the user stays on the file it opened; looking elsewhere doesn't stop it.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
@@ -113,8 +130,8 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
 
   // Start on the first thing that needs the user, as the list shows them, else on its first row.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items, progress) ?? inListOrder(items)[0]!).key)));
-  }, [selectedKey, items, progress, rowKeyOf]);
+    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items, progress) ?? inListOrder(pairs.shown)[0]!).key)));
+  }, [selectedKey, items, pairs.shown, progress, rowKeyOf]);
 
   // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
   const conflictKeys = useMemo(() => conflictStepKeys(rows, selectedKey, (item) => item.kind === 'fileConflict' && needsDecision(item, progress)), [rows, selectedKey, progress]);
@@ -123,7 +140,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
     current: selectedKey,
     select: (key) => setSelection(singleSelection(key)),
     pathOf: (key) => {
-      const item = mergeItemAt(items, rows, key);
+      const item = mergeItemAt(pairs.shown, rows, key);
       return item?.kind === 'fileConflict' ? item.file.path : key;
     },
   });
@@ -178,6 +195,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           filterBar={filter.bar}
           noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}
           selection={selection}
+          metaOf={pairs.metaOf}
           onSelectionChange={setSelection}
           contextMenu={(selectedItems) =>
             mergeItemMenu(mergeItemsActedOn(rows, selection.selected, selectedItems), {
@@ -194,16 +212,20 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               reset,
               resolveIn: (key, merger) => void resolveInTool(key, merger),
               resolveDirectory: (conflict, resolution) => void directory.decide(conflict, resolution),
+              metaOf: pairs.metaOf,
+              onMetaDiff: showMetaOf,
             })
           }
         />
       }
       detail={
-        hidesAll ? null : shown ? (
+        hidesAll ? null : shown && diffed ? (
           <FileStepsContext.Provider value={shown.kind === 'fileConflict' ? conflictSteps : null}>
             <MergeDetail
               workspacePath={workspacePath}
-              item={shown}
+              key={diffed.path}
+              item={diffed}
+              compareControls={metaToggle}
               progress={progress}
               plan={plan}
               labels={labels}

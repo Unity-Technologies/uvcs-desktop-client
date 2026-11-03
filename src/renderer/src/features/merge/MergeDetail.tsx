@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
 import { MergeChangePreview } from './MergeChangePreview';
@@ -18,6 +19,8 @@ interface MergeDetailProps {
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
   onResolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution) => void;
+  /** Buttons beside a change's diff, e.g. the `.meta` toggle of an asset listed with its meta. */
+  compareControls?: ReactNode;
 }
 
 /** The right-hand side of the merge: whatever the selected item needs. */
@@ -32,6 +35,7 @@ export function MergeDetail({
   onDecideFile,
   onStartOverFile,
   onResolveDirectory,
+  compareControls,
 }: MergeDetailProps) {
   switch (item.kind) {
     case 'directoryConflict':
@@ -63,6 +67,8 @@ export function MergeDetail({
         />
       );
     case 'change':
-      return <MergeChangePreview workspacePath={workspacePath} request={request} change={item.change} contributors={plan.contributors} labels={labels} />;
+      return (
+        <MergeChangePreview workspacePath={workspacePath} request={request} change={item.change} contributors={plan.contributors} labels={labels} compareControls={compareControls} />
+      );
   }
 }
