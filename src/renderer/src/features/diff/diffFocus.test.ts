@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { entryToFocus } from './diffFocus';
+import { entryToFocus, pairedFocus } from './diffFocus';
+import { pairDiffMetas } from './diffMetaPairs';
 
 const entry = (path: string, status: DiffEntry['status'] = 'changed', oldPath?: string): DiffEntry => ({
   status,
@@ -36,5 +37,29 @@ describe('entryToFocus', () => {
 
   it('has nothing to focus in an empty diff', () => {
     expect(entryToFocus([], 'a.ts')).toBeUndefined();
+  });
+});
+
+describe('pairedFocus', () => {
+  const asset = entry('Art/Hero.png');
+  const meta = entry('Art/Hero.png.meta');
+  const lonely = entry('Art/Lonely.png.meta', 'added');
+  const pairs = pairDiffMetas([asset, meta, entry('b.ts'), lonely]);
+
+  it('opens a paired .meta on its asset, showing the meta', () => {
+    expect(pairedFocus(pairs, 'Art/Hero.png.meta')).toEqual({ entry: asset, metaShownFor: 'Art/Hero.png' });
+  });
+
+  it('opens an asset on itself, its meta hidden', () => {
+    expect(pairedFocus(pairs, 'Art/Hero.png')).toEqual({ entry: asset, metaShownFor: null });
+  });
+
+  it('opens a .meta listed on its own row on that row', () => {
+    expect(pairedFocus(pairs, 'Art/Lonely.png.meta')).toEqual({ entry: lonely, metaShownFor: null });
+  });
+
+  it('falls back to the first row, as entryToFocus does', () => {
+    expect(pairedFocus(pairs, 'missing.ts')).toEqual({ entry: asset, metaShownFor: null });
+    expect(pairedFocus(pairs)).toEqual({ entry: asset, metaShownFor: null });
   });
 });
