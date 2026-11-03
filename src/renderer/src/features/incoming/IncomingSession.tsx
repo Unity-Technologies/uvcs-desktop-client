@@ -3,10 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
+import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
+import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
@@ -14,6 +16,7 @@ import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
+import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
@@ -64,7 +67,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
   const collides = useCallback((file: DiffEntry) => collidesWithLocal(file, conflictPaths, blockedPaths), [conflictPaths, blockedPaths]);
-  const { files, filter, rows, tree, toggleCollapsed: toggleFolder } = useIncomingFiles(scope, incoming.files, collides, selection.anchor);
+  const { files, metaOf, filter, rows, tree, toggleCollapsed: toggleFolder } = useIncomingFiles(scope, incoming.files, collides, selection.anchor);
 
   // Resolving the files one by one: the selection follows while the user stays on the file it opened.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
@@ -95,6 +98,10 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const focusedFile = files?.find((file) => diffEntryKey(file) === selection.anchor);
   // Nothing to select while the filters hide every file: the detail pane shows no file.
   const hidesAll = hidesEveryRow(files?.length ?? 0, filter.visible.length);
+  // A Unity asset's row shows the asset's diff, or its `.meta`'s while the toggle (or "Open .meta diff") asks.
+  const [metaShownFor, setMetaShownFor] = useDiffMetaShownFor(focusedFile?.path);
+  const focusedMeta = focusedFile && metaOf(focusedFile);
+  const diffedFile = focusedFile && diffedItem(focusedFile, focusedMeta, metaShownFor);
   const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
 
@@ -131,9 +138,16 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   useShowInFollowingWindow(showsChangeset && scopedChangeset ? changesetDiffPage(scopedChangeset) : null);
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
+  // "Open .meta diff": the asset's row selected, showing its `.meta`.
+  const showMetaOf = (meta: DiffEntry): void => {
+    const asset = files?.find((file) => file.path === assetOfMeta(meta.path));
+    if (!asset) return;
+    selectFiles(singleSelection(diffEntryKey(asset)));
+    setMetaShownFor(asset.path);
+  };
   const conflictOf = (path: string) => (conflictPaths.has(path) ? states.find((state) => state.file.key === path) : undefined);
   const fileMenu = (selected: DiffEntry[]) =>
-    incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, mergerFor, othersFor, running: Boolean(run.progress), decide, reset, resolveIn: (key, merger) => void resolveInTool(key, merger) });
+    incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, mergerFor, othersFor, running: Boolean(run.progress), decide, reset, resolveIn: (key, merger) => void resolveInTool(key, merger), metaOf, onMetaDiff: showMetaOf });
   const selectedConflict = scope.kind === 'all' && focusedFile ? states.find((state) => state.file.key === focusedFile.path) : undefined;
   // A binary's versions are read only while it shows.
   const shownConflictKey = selectedConflict?.file.key;
@@ -160,7 +174,10 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
         </FileStepsContext.Provider>
       );
     }
-    if (focusedFile) return <IncomingFileDiff key={`${scope.kind}:${focusedFile.path}`} workspacePath={workspacePath} file={focusedFile} />;
+    if (focusedFile && diffedFile) {
+      const metaToggle = focusedMeta && <MetaDiffButton pressed={diffedFile !== focusedFile} onChange={(pressed) => setMetaShownFor(pressed ? focusedFile.path : null)} />;
+      return <IncomingFileDiff key={`${scope.kind}:${diffedFile.path}`} workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />;
+    }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
       return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(focusedGroup.items.length, 'change')}. Select a file to see its diff.`} />;
@@ -207,6 +224,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               selection={selection}
               onSelectionChange={selectFiles}
               contextMenu={fileMenu}
+              metaOf={metaOf}
               markOf={(file) => <IncomingConflictMark file={file} conflictPaths={conflictPaths} conflictStates={conflictStates} blockedPaths={blockedPaths} />}
             />
           </>

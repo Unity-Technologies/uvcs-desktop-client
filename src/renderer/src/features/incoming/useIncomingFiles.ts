@@ -8,15 +8,17 @@ import { useSettledValue } from '../../lib/useSettled';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { listedEntries } from '../diff/listedEntries';
 import { useDiffEntries } from '../diff/useDiffEntries';
+import { pairIncomingMetas } from './incomingMetaPairs';
 import { INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeKey, type IncomingFileGroup, type IncomingScope } from './incomingScope';
 
 const NO_FILES: DiffEntry[] = [];
+const noMeta = (): DiffEntry | undefined => undefined;
 
 /**
  * The files Incoming lists for a scope, filtered and laid out as every list of changed files is. The whole update's
  * come with the incoming changes; a changeset's are its diff, read once its row stays selected (`useSettledValue`)
- * and kept for good, the very query its details panel elsewhere reads (`useDiffEntries`). `files` is undefined until
- * the scope's files are in.
+ * and kept for good, the very query its details panel elsewhere reads (`useDiffEntries`). A Unity asset's `.meta` rides
+ * on its row (`pairIncomingMetas`, `metaOf`): `files` are the rows, undefined until the scope's files are in.
  */
 export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[], collides: (file: DiffEntry) => boolean, selectedKey: string | null) {
   const workspacePath = useWorkspacePath();
@@ -26,7 +28,10 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
   const { data: changesetFiles } = useDiffEntries(changesetTarget);
   const allListed = useMemo(() => listedEntries(updateFiles), [updateFiles]);
   const changesetListed = useMemo(() => changesetFiles && listedEntries(changesetFiles), [changesetFiles]);
-  const files = scope.kind === 'all' ? allListed : isSettled ? changesetListed : undefined;
+  const listed = scope.kind === 'all' ? allListed : isSettled ? changesetListed : undefined;
+  const pairs = useMemo(() => listed && pairIncomingMetas(listed, collides), [listed, collides]);
+  const files = pairs?.shown;
+  const metaOf = pairs?.metaOf ?? noMeta;
 
   const tonesOf = useCallback((file: DiffEntry) => incomingFileTones(file, collides(file)), [collides]);
   const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, reading: !files, toneLabels: INCOMING_TONE_LABELS });
@@ -36,5 +41,5 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
     [scope.kind, filter.visible, collides],
   );
   const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), selectedKey);
-  return { files, filter, ...tree };
+  return { files, metaOf, filter, ...tree };
 }
