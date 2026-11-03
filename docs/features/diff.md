@@ -622,7 +622,10 @@ and groups, whose files come next; a closed one holding a file to review is a st
 
 Each place the viewer reaches into Pierre (1.6.2) or `diff` past their public API is one module named for it. Those
 that patch or read internals have a test that fails when an update moves them, and a method they wrap hands Pierre's
-own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
+own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some. package.json pins
+@pierre/diffs to exactly 1.6.2, not `^1.6.2`: 1.6.3 was published with unresolved `workspace:*` and `catalog:`
+dependencies and doesn't install, so a range would break `npm update`; it goes back to a `^` range with the first
+release that installs.
 
 - `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
   `data-column-number`), the gutter button slot moved to the hovered line, hovering anew under a still pointer, and
