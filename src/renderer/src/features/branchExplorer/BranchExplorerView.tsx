@@ -35,6 +35,7 @@ import { GraphSearch } from './GraphSearch';
 import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
+import { NO_RULE_COLORS, ruleColors as ruleColorsOf } from './model/ruleColors';
 import { describeSelection } from './model/describeSelection';
 import { homeTarget } from './model/homeTarget';
 import { pendingBranchOf } from './model/pendingChangeset';
@@ -96,6 +97,10 @@ export function BranchExplorerView() {
     matches: ruleMatches,
   });
 
+  const ruleColors = useMemo(
+    () => (data ? rememberedPerHistory(data, 'ruleColors', [rules, ruleMatches, currentBranch], () => ruleColorsOf(data, rules, ruleMatches, currentBranch)) : NO_RULE_COLORS),
+    [data, rules, ruleMatches, currentBranch],
+  );
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
@@ -316,6 +321,7 @@ export function BranchExplorerView() {
               ref={canvasRef}
               layout={layout}
               highlights={highlights}
+              ruleColors={ruleColors}
               onSelect={select}
               onActivate={activate}
               contextMenu={menuFor}

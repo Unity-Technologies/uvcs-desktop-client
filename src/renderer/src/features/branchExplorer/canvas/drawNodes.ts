@@ -8,7 +8,7 @@ import { drawSelectionHalo, drawSelectionRing } from './drawNodeSelection';
 import { drawPendingChangeset } from './drawPendingChangeset';
 import { drawNodeCorona, drawNodeGlow } from './drawSearchHit';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, columnX, NODE_RADIUS, nodePoint, pendingPoint, rowY } from './geometry';
-import { branchColor } from './graphPalette';
+import { branchColor, changesetColor } from './graphPalette';
 import { boundsOf, crossesView } from './linkVisibility';
 import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 
@@ -148,7 +148,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   if (selected) drawSelectionHalo(draw, x, y, radius);
 
   ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1;
-  const color = branchColor(palette, node.changeset.branch);
+  const color = changesetColor(palette, id, node.changeset.branch);
   if (detail.avatars) {
     drawAvatar(draw, {
       x,

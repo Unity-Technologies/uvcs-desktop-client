@@ -9,7 +9,8 @@ import { captionMetrics, captionOnScreen } from './captionCard';
 import { detailLevel, type DrawnTargets, type GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { withBranchColors } from './graphPalette';
+import type { RuleColors } from '../model/ruleColors';
+import { withBranchColors, withRuleColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
 import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
@@ -49,6 +50,8 @@ export type GraphHighlights = Pick<
 interface GraphCanvasProps {
   layout: GraphLayout;
   highlights: GraphHighlights;
+  /** The colors the format rules give (`ruleColors`). */
+  ruleColors: RuleColors;
   onSelect: (target: GraphTarget | null) => void;
   onActivate: (target: GraphTarget) => void;
   /** Builds the context menu for what was right-clicked. */
@@ -69,7 +72,7 @@ interface ShownHoverCard {
 const DOUBLE_CLICK_ZOOM = 1.4;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
-  { layout, highlights, onSelect, onActivate, contextMenu, children },
+  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, children },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,8 +83,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** A viewport change requested before the canvas knew its size; applied on the first resize. */
   const pendingViewRef = useRef<(() => void) | null>(null);
   const themePalette = useGraphPalette(containerRef);
-  /** The theme's palette, with each branch's hue only while the Branch colors option is on. */
-  const palette = themePalette && withBranchColors(themePalette, highlights.options.branchColors);
+  /** The theme's palette, with each branch's hue only while the Branch colors option is on, and the format rules' colors. */
+  const palette = themePalette && withRuleColors(withBranchColors(themePalette, highlights.options.branchColors), ruleColors);
   /** What the pointer is on, highlighted; the hover card has its own life (`useHoverCard`). */
   const [hovered, setHovered] = useState<GraphTarget | null>(null);
   const hoverCard = useHoverCard<ShownHoverCard>();

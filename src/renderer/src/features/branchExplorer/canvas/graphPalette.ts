@@ -3,6 +3,7 @@ import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import { AVATAR_COLORS, avatarColorOf, type AvatarColor } from '../../../lib/avatarColors';
 import { composite, hslAtContrast, hslColor, hueOf, parseColor, type Rgb } from '../../../styles/contrast';
 import { branchHue, hueToColor, hueToInk, LINE_TONE } from '../model/branchHue';
+import { NO_RULE_COLORS, type RuleColors } from '../model/ruleColors';
 
 /** The fonts the graph draws with, built once per theme so frames never assemble font strings. */
 interface GraphFonts {
@@ -66,6 +67,8 @@ export interface GraphPalette {
   captionFontSize: number;
   /** Whether each branch takes its own hue (`branchHue`); without, every branch takes the accent's (`withBranchColors`). */
   branchHues: boolean;
+  /** The hues the format rules give branches, changesets and labels (`withRuleColors`), over any other color. */
+  ruleColors: RuleColors;
 }
 
 /** Changeset comments: a fixed on-screen size at every zoom, like map labels. */
@@ -126,6 +129,7 @@ export function readGraphPalette(element: Element): GraphPalette {
     },
     captionFontSize: CAPTION_FONT_SIZE,
     branchHues: true,
+    ruleColors: NO_RULE_COLORS,
   };
 }
 
@@ -164,9 +168,67 @@ export function withBranchColors(palette: GraphPalette, on: boolean): GraphPalet
   return other;
 }
 
-/** A branch's hue in this palette, null for the accent's. */
+const withRules = new WeakMap<GraphPalette, WeakMap<RuleColors, GraphPalette>>();
+
+/**
+ * The palette with the colors the format rules give, shown whether or not branch colors are on: the user asked for
+ * them. The same object for the same palette and colors, so the colors it remembers (`colorsOf`) are kept.
+ */
+export function withRuleColors(palette: GraphPalette, ruleColors: RuleColors): GraphPalette {
+  if (ruleColors === palette.ruleColors) return palette;
+  let byColors = withRules.get(palette);
+  if (!byColors) withRules.set(palette, (byColors = new WeakMap()));
+  let other = byColors.get(ruleColors);
+  if (!other) byColors.set(ruleColors, (other = { ...palette, ruleColors }));
+  return other;
+}
+
+/** A branch's hue in this palette, null for the accent's: a format rule's first, then its own if branch colors are on. */
 function hueIn(palette: GraphPalette, branchName: string): number | null {
-  return palette.branchHues ? branchHue(branchName) : null;
+  return palette.ruleColors.branches.get(branchName) ?? (palette.branchHues ? branchHue(branchName) : null);
+}
+
+/** The hue of a branch's header: the accent's on the workspace branch, unless a format rule colors it. */
+function headerHue(palette: GraphPalette, branchName: string, current: boolean): number | null {
+  return palette.ruleColors.branches.get(branchName) ?? (current ? null : hueIn(palette, branchName));
+}
+
+/** A branch header's fill color: see `headerHue`. */
+export function headerColor(palette: GraphPalette, branchName: string, current: boolean): string {
+  const hue = headerHue(palette, branchName, current);
+  return hue === null ? palette.accent : hueToColor(hue, palette.isDark);
+}
+
+/** A branch's name zoomed out, in its header's hue: see `headerHue`. */
+export function headerNameInk(palette: GraphPalette, branchName: string, current: boolean): string {
+  const hue = headerHue(palette, branchName, current);
+  return hue === null ? palette.accentText : hueToInk(hue, palette.isDark);
+}
+
+/** A changeset's ring or dot: a format rule's hue for it, else its branch's color. */
+export function changesetColor(palette: GraphPalette, changesetId: number, branchName: string): string {
+  const hue = palette.ruleColors.changesets.get(changesetId);
+  return hue === undefined ? branchColor(palette, branchName) : hueToColor(hue, palette.isDark);
+}
+
+/** A label chip's tint and text. */
+export interface LabelInks {
+  background: string;
+  text: string;
+}
+
+/** A label chip's colors: the first of its labels a format rule colors takes that rule's hue; else the theme's. */
+export function labelInks(palette: GraphPalette, labelNames: readonly string[]): LabelInks {
+  for (const name of labelNames) {
+    const hue = palette.ruleColors.labels.get(name);
+    if (hue !== undefined) return { background: hueToTint(hue, palette.isDark), text: hueToInk(hue, palette.isDark) };
+  }
+  return { background: palette.labelBackground, text: palette.labelText };
+}
+
+/** A soft fill in a hue, as `--label-bg` is to the label color. */
+export function hueToTint(hue: number, isDark: boolean): string {
+  return isDark ? `hsl(${hue} 70% 55% / 0.18)` : `hsl(${hue} 70% 45% / 0.14)`;
 }
 
 /** Branch colors are asked for on every frame: each palette remembers the ones it computed. */
@@ -206,7 +268,7 @@ export function branchInk(palette: GraphPalette, branchName: string): string {
  */
 export function headerInks(palette: GraphPalette, branchName: string, current: boolean): HeaderInks {
   const { headers } = colorsOf(palette);
-  const hue = current ? null : hueIn(palette, branchName);
+  const hue = headerHue(palette, branchName, current);
   let inks = headers.get(hue);
   if (inks === undefined) {
     const theme = palette.isDark ? 'dark' : 'light';
