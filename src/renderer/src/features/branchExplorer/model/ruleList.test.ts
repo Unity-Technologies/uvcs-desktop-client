@@ -54,6 +54,15 @@ describe('a rule row', () => {
     expect(ruleRowDetail({ ...rule('exclude', 'a'), condition: ' ' })).toBe('No condition yet');
   });
 
+  it('names the kind of a rule titled by its description, so an inclusion reads apart from an exclusion', () => {
+    expect(ruleRowDetail({ ...rule('exclude', 'a'), description: 'Not old fixes', condition: "name like '%fix%'" })).toBe(
+      "Exclusion · name like '%fix%'",
+    );
+    expect(ruleRowDetail({ ...rule('labelFormat', 'a'), description: 'Releases', condition: "name like 'v%'" })).toBe(
+      "Label format · name like 'v%'",
+    );
+  });
+
   it('has no second line for a built-in format already titled by its kind', () => {
     expect(ruleRowDetail(rule('currentBranch', 'a'))).toBeNull();
   });
