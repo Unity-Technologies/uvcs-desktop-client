@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import type { PendingChange } from '@shared/domain/pendingChanges';
 
 /** The asset whose `.meta` diff Changes shows instead of its own, asked for from its menu ("Open .meta diff"). */
 interface MetaDiffRequest {
@@ -21,10 +20,6 @@ export function metaDiffRequestedFor(request: MetaDiffRequest | null, workspaceP
   return request !== null && request.workspacePath === workspacePath && request.path === path;
 }
 
-/** What the diff shows: the asset's `.meta` while it is shown for that asset (`metaShownFor`), else the asset. */
-export function diffedChange(change: PendingChange, meta: PendingChange | undefined, metaShownFor: string | null): PendingChange {
-  return meta && metaShownFor === change.path ? meta : change;
-}
 
 /**
  * The asset whose `.meta` the diff shows: the one a request asks for (`requestMetaDiff`), taken once it shows it, or

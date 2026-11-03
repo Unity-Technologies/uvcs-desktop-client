@@ -16,8 +16,9 @@ import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
 import { useRequestedLineFocus } from './changesLineFocus';
-import { diffedChange, useMetaShownFor } from './changesMetaDiff';
-import { MetaDiffButton } from './MetaDiffButton';
+import { diffedItem } from '../../lib/unityMetaPairs';
+import { useMetaShownFor } from './changesMetaDiff';
+import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { changeStatus } from './changeTone';
 
 interface ChangeDiffPanelProps {
@@ -34,7 +35,7 @@ interface ChangeDiffPanelProps {
 export function ChangeDiffPanel({ workspacePath, change: asset, meta, reviewMark, title: ownTitle }: ChangeDiffPanelProps) {
   // Per asset, like "Since review": its menu's "Open .meta diff" or the toggle shows the meta, until another asset shows.
   const [metaShownFor, setMetaShownFor] = useMetaShownFor(workspacePath, asset.path);
-  const change = diffedChange(asset, meta, metaShownFor);
+  const change = diffedItem(asset, meta, metaShownFor);
   const showsMeta = change !== asset;
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);

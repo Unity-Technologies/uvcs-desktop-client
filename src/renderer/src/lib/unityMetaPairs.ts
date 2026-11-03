@@ -60,3 +60,11 @@ export function withMetas<T>(items: readonly T[], metaOf: (item: T) => T | undef
     return meta === undefined ? [item] : [item, meta];
   });
 }
+
+/**
+ * What a diff shows for a listed asset: its `.meta` while the meta is shown for that asset (`metaShownFor`, the asset's
+ * path), else the asset itself.
+ */
+export function diffedItem<T extends { path: string }>(asset: T, meta: T | undefined, metaShownFor: string | null): T {
+  return meta && metaShownFor === asset.path ? meta : asset;
+}

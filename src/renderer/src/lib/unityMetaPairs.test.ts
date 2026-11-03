@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetOfMeta, pairUnityMetas, withMetas } from './unityMetaPairs';
+import { assetOfMeta, diffedItem, pairUnityMetas, withMetas } from './unityMetaPairs';
 
 interface Item {
   path: string;
@@ -117,5 +117,20 @@ describe('assetOfMeta', () => {
     expect(assetOfMeta('Assets/Player.png')).toBeNull();
     expect(assetOfMeta('Assets/.meta')).toBeNull();
     expect(assetOfMeta('.meta')).toBeNull();
+  });
+});
+
+describe('diffedItem', () => {
+  const asset = { path: 'Assets/Player.png' };
+  const meta = { path: 'Assets/Player.png.meta' };
+
+  it("shows the meta's diff only while it is shown for the asset shown", () => {
+    expect(diffedItem(asset, meta, 'Assets/Player.png')).toBe(meta);
+    expect(diffedItem(asset, meta, 'Assets/Enemy.png')).toBe(asset);
+    expect(diffedItem(asset, meta, null)).toBe(asset);
+  });
+
+  it('shows the asset when it has no meta listed', () => {
+    expect(diffedItem(asset, undefined, 'Assets/Player.png')).toBe(asset);
   });
 });

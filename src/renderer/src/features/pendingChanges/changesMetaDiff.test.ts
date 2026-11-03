@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PendingChange } from '@shared/domain/pendingChanges';
-import { diffedChange, metaDiffRequestedFor } from './changesMetaDiff';
+import { metaDiffRequestedFor } from './changesMetaDiff';
 
 const request = { workspacePath: '/wk/game', path: 'Assets/Player.png' };
 
@@ -13,17 +12,3 @@ describe('metaDiffRequestedFor', () => {
   });
 });
 
-describe('diffedChange', () => {
-  const asset = { path: 'Assets/Player.png' } as PendingChange;
-  const meta = { path: 'Assets/Player.png.meta' } as PendingChange;
-
-  it("shows the meta's diff only while it is asked for the asset shown", () => {
-    expect(diffedChange(asset, meta, 'Assets/Player.png')).toBe(meta);
-    expect(diffedChange(asset, meta, 'Assets/Enemy.png')).toBe(asset);
-    expect(diffedChange(asset, meta, null)).toBe(asset);
-  });
-
-  it('shows the asset when it has no meta listed', () => {
-    expect(diffedChange(asset, undefined, 'Assets/Player.png')).toBe(asset);
-  });
-});
