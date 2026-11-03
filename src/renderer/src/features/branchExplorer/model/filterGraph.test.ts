@@ -3,7 +3,7 @@ import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { filterGraph, relatedBranches } from './filterGraph';
 import { branch, changeset, merge, sampleHistory } from './graphFixtures';
 
-const noFilter = { focus: null, visibleBranches: null, hideMergedBranches: false, currentBranch: null };
+const noFilter = { focus: null, visibleBranches: null, keptByRules: null, hideMergedBranches: false, currentBranch: null };
 
 describe('filterGraph', () => {
   it('keeps everything without filters', () => {
@@ -36,6 +36,18 @@ describe('filterGraph', () => {
     const filtered = filterGraph(sampleHistory(), { ...noFilter, visibleBranches: new Set(['/main', '/main/a']) });
     expect(filtered.branches.map((branch) => branch.name)).toEqual(['/main', '/main/a']);
     expect(filtered.changesets.some((changeset) => changeset.branch === '/main/b')).toBe(false);
+  });
+
+  it('shows only the branches the advanced filters keep, with the other filters too', () => {
+    const kept = new Set(['/main', '/main/a']);
+    expect(filterGraph(sampleHistory(), { ...noFilter, keptByRules: kept }).branches.map((branch) => branch.name)).toEqual(['/main', '/main/a']);
+    const both = filterGraph(sampleHistory(), { ...noFilter, keptByRules: kept, visibleBranches: new Set(['/main/a', '/main/b']) });
+    expect(both.branches.map((branch) => branch.name)).toEqual(['/main/a']);
+  });
+
+  it('lets the advanced filters hide the workspace branch, as the user wrote them', () => {
+    const filtered = filterGraph(sampleHistory(), { ...noFilter, keptByRules: new Set(['/main']), currentBranch: '/main/a' });
+    expect(filtered.branches.map((branch) => branch.name)).toEqual(['/main']);
   });
 });
 

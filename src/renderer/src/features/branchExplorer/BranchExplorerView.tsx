@@ -17,7 +17,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -47,6 +47,7 @@ import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
+import { useRuleMatches } from './useRuleMatches';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
@@ -59,6 +60,8 @@ export function BranchExplorerView() {
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
   const viewOptions = useGraphViewOptions();
+  const rules = useExplorerRules(placeRepository);
+  const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
@@ -89,6 +92,8 @@ export function BranchExplorerView() {
     expanded,
     search: search.shown,
     selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
+    rules,
+    matches: ruleMatches,
   });
 
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
