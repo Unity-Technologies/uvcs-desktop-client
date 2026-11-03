@@ -39,13 +39,20 @@ export async function saveVersionAs(place: Place, version: RepositoryVersion, fi
   }
 }
 
+/** What a revert says about itself beyond the file and the changeset. */
+export interface RevertOptions {
+  /**
+   * The changeset whose change to the file this takes back, named in the confirmation too (a changeset's diff), as its
+   * parent's number alone leaves the user to work out which change goes.
+   */
+  undoing?: number;
+}
+
 /**
- * Loads an old revision's content into the workspace; the result shows up as a pending change. `undoing`: the changeset
- * whose change to the file this takes back, named in the confirmation too (a changeset's diff), as its parent's number
- * alone leaves the user to work out which change goes. `cm revert` checks the
+ * Loads an old revision's content into the workspace; the result shows up as a pending change. `cm revert` checks the
  * file out, which may take its lock, so it refreshes what a checkout does.
  */
-export async function revertItemTo(workspacePath: string, path: string, changesetId: number, undoing?: number): Promise<void> {
+export async function revertItemTo(workspacePath: string, path: string, changesetId: number, { undoing }: RevertOptions = {}): Promise<void> {
   const confirmed = await confirm({
     title: `Revert ${path} to changeset ${changesetId}${undoing === undefined ? '' : `, before changeset ${undoing}`}?`,
     message: 'The file will be checked out with the content it had in that changeset. Review and check it in from Changes.',

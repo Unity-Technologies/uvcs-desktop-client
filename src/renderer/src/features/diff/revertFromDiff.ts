@@ -61,7 +61,7 @@ export function revertFromDiffEntry(workspacePath: string, target: DiffTarget, e
 export async function revertToOlderSide(workspacePath: string, path: string, olderSide: OlderSide): Promise<void> {
   const changesetId = await changesetOf(workspacePath, olderSide);
   const undoing = olderSide.kind === 'parentOf' ? olderSide.changesetId : undefined;
-  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId, undoing);
+  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId, { undoing });
 }
 
 async function changesetOf(workspacePath: string, olderSide: OlderSide): Promise<number | undefined> {
