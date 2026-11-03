@@ -69,9 +69,7 @@ export async function revertItemTo(workspacePath: string, path: string, changese
   const reverted = await runVoidAction(
     workspacePlace(workspacePath),
     "Couldn't revert the file",
-    async () => {
-      for (const reverting of metaPath === undefined ? [path] : [path, metaPath]) await api.history.revertTo(workspacePath, reverting, changesetId);
-    },
+    () => api.history.revertTo(workspacePath, metaPath === undefined ? [path] : [path, metaPath], changesetId),
     isAffectedByPendingChangeEdit,
   );
   if (reverted) toast.success(`Reverted ${named}`, `Content from changeset ${changesetId} is now a pending change.`);

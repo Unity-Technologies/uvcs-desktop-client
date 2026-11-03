@@ -9,8 +9,11 @@ export interface HistoryApi {
    * revision is of (browsing a changeset, a diff), wherever it is: a repository with no workspace starts from one.
    */
   forItem(place: Place, path: string, revision?: RevisionRef): Promise<ItemHistory>;
-  /** Loads the content of a past revision into the workspace as a pending change. */
-  revertTo(workspacePath: string, path: string, changesetId: number): Promise<void>;
+  /**
+   * Loads the content workspace-relative files had in a changeset into the workspace as pending changes, in one
+   * command (an asset and its Unity `.meta` revert together).
+   */
+  revertTo(workspacePath: string, paths: readonly string[], changesetId: number): Promise<void>;
   /**
    * Asks where to save a version kept in the repository (a revision, or a merge's side) and writes it there. Resolves to
    * the saved path, or null if cancelled.

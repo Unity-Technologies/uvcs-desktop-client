@@ -44,13 +44,10 @@ describe("a diff's menu for a Unity asset listed with its .meta", () => {
     const revert = actions(menu).get('revert')!;
     expect(revert.label).toBe('Revert file and its .meta to before this change…');
     revert.run();
-    await vi.waitFor(() => expect(reverted).toHaveLength(2));
+    await vi.waitFor(() => expect(reverted).toHaveLength(1));
 
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert Assets/a.png and its .meta to changeset 12?' }]);
-    expect(reverted).toEqual([
-      [ws, 'Assets/a.png', 12],
-      [ws, 'Assets/a.png.meta', 12],
-    ]);
+    expect(reverted).toEqual([[ws, ['Assets/a.png', 'Assets/a.png.meta'], 12]]);
   });
 
   it(".meta diff opens the .meta's diff, and .meta history its history", () => {
