@@ -57,8 +57,9 @@ const selection = (changes = allChanges, matchingFilter = changes) =>
 
 const filterCleared = vi.fn();
 
-function prepare(changelist: Changelist, changelistsNow = changelists): void {
-  const changes = changesByChangelist(allChanges).get(changelist.name) ?? [];
+/** Readies `changelist`, null for the default one, as its menu's "Check in this changelist" does. */
+function prepare(changelist: Changelist | null, changelistsNow = changelists): void {
+  const changes = changesByChangelist(allChanges).get(changelist?.name ?? null) ?? [];
   prepareChangelistCheckin({ workspacePath: ws, changelist, changes, index: indexPending(allChanges), changelists: changelistsNow, clearFilter: filterCleared });
 }
 
@@ -80,12 +81,13 @@ beforeEach(() => {
 });
 
 describe('changesByChangelist', () => {
-  it("lists each user changelist's changes by its name, and none of the default changelist's", () => {
+  it("lists each user changelist's changes by its name, and the default changelist's under null", () => {
     const byName = changesByChangelist(allChanges);
 
     expect(byName.get('ui')).toEqual(uiChanges);
     expect(byName.get('art')).toEqual([artChange]);
-    expect([...byName.keys()].sort()).toEqual(['art', 'plain', 'ui']);
+    expect(byName.get(null)).toEqual(defaultChanges);
+    expect(byName.size).toBe(4);
   });
 });
 
@@ -288,5 +290,49 @@ describe('checking in or shelving a changelist from the panel', () => {
       { workspacePath: ws, changes: uiChanges.slice(0, 4), paths: uiChanges.slice(0, 4).map((candidate) => candidate.path), comment: 'Polish the menus\n\nSpacing and icons.', keep: true },
     ]);
     expect(selection().included).toEqual(allChanges.filter((candidate) => candidate.path !== 'build/out.log'));
+  });
+});
+
+describe('checking in or shelving the default changelist', () => {
+  it('checks exactly its changes, those of every user changelist left out', () => {
+    prepare(null);
+
+    expect(checkinDraftOf(ws).prepared?.name).toBeNull();
+    expect(selection().included).toEqual(defaultChanges.slice(0, 2));
+  });
+
+  it('has no description: it clears one a user changelist left, and keeps the comment the user wrote', () => {
+    prepare(ui);
+    prepare(null);
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: '', description: '' });
+
+    useCheckinDraftStore.getState().setMessage(ws, { summary: 'My own words', description: '' });
+    prepare(null);
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: 'My own words' });
+  });
+
+  it('checks in its changes alone, then checks the others again', async () => {
+    useCheckinDraftStore.getState().setMessage(ws, { summary: 'Readme', description: '' });
+    prepare(null);
+
+    await checkinFromPanel(panelCheckin(selection()));
+
+    expect(steps.checkins).toEqual([expect.objectContaining({ changes: defaultChanges.slice(0, 2), comment: 'Readme' })]);
+    expect(checkinDraftOf(ws).prepared).toBeNull();
+  });
+
+  it('shelves what a shelve can take of its changes: not the private file', async () => {
+    prepare(null);
+
+    await shelveFromPanel(panelShelve(selection()), true);
+
+    expect(steps.shelves).toEqual([expect.objectContaining({ changes: [defaultChanges[0]] })]);
+  });
+
+  it('holds while a change outside every user changelist is pending, and ends once none is', () => {
+    prepare(null);
+
+    expect(selection([defaultChanges[0]!, ...uiChanges]).included).toEqual([defaultChanges[0]]);
+    expect(selection([...uiChanges, artChange]).included).toEqual([...uiChanges, artChange]);
   });
 });
