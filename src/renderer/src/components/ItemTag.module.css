@@ -8,3 +8,10 @@
   line-height: 16px;
   white-space: nowrap;
 }
+
+/* As small as the status badges (`StatusBadge`): a word or two beside the name, not competing with it. */
+.tag[data-compact] {
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 14px;
+}
