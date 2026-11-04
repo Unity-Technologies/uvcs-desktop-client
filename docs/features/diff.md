@@ -367,11 +367,16 @@ in one queue for the frame (`StepQueue`), tagged with the path of the file they'
 too (`pressTarget`): until it opened at the step it was stepped to, and while a step it made is in flight
 (`FileSteps.steppingTo`: the list already on the next file, the diff pane still showing this one while the selection
 settles and the next file is read), for that next file, never stepping from this one's place. Once open, the selected
-file's diff takes its own one at a time through its own navigation (a diff still on screen for a previous file takes
-none); presses tagged with another file are dropped, so a file picked in the list while another loads opens at its
-top. A diff that will never have changes to step through (`stepsCanCome`: anything but a text diff, or a file
-typed into as a diff) opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends on B's 2nd change,
-and ↓↓↓ on its 3rd: no click lost to a button swapped under the pointer, none landing on the wrong file.
+file's diff takes its own one at a time through its own navigation, one per render (`drainsKept`); the previous file's
+diff, still on screen during Changes' settle, takes none, and drawing it again drops nothing. A step from a file takes
+the presses still left for it along to the next file, in order (`StepQueue.retag`), so a burst across a one-change file
+or an image loses none. Presses are dropped only when the selection leaves their file: as the diff pane asks for
+another file, those neither for it nor for a file a step is on its way to go (`StepQueue.keepOnly`), so a file picked
+in the list while another loads opens at its top; and all of them when the selected file couldn't be read
+(`HeaderArrows.dropsKept`). A diff that will never have changes to step through (`stepsCanCome`: anything but a text
+diff, or a file typed into as a diff) opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends
+on B's 2nd change, and ↓↓↓ on its 3rd: no click lost to a button swapped under the pointer, none landing on the wrong
+file.
 
 Hosts keep `FileDiffViewer` mounted from file to file (Incoming's isn't keyed by the file). An xlink's header passes
 `FileOnlyNavigator`. Narrow, the label gives way (`data-toolbar-extra`) and the arrows keep the edge. The merge page's
