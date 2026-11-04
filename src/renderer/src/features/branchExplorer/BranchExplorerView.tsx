@@ -17,7 +17,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -36,6 +36,7 @@ import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { NO_RULE_COLORS, ruleColors as ruleColorsOf } from './model/ruleColors';
+import { changesetUserHues, withUserColors } from './model/userColors';
 import { describeSelection } from './model/describeSelection';
 import { homeTarget } from './model/homeTarget';
 import { pendingBranchOf } from './model/pendingChangeset';
@@ -59,9 +60,9 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, userColors } = preferences;
   const viewOptions = useGraphViewOptions();
-  const rules = useExplorerRules(placeRepository);
+  const rules = useAppliedExplorerRules(placeRepository);
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
@@ -97,9 +98,14 @@ export function BranchExplorerView() {
     matches: ruleMatches,
   });
 
-  const ruleColors = useMemo(
+  const formatColors = useMemo(
     () => (data ? rememberedPerHistory(data, 'ruleColors', [rules, ruleMatches, currentBranch], () => ruleColorsOf(data, rules, ruleMatches, currentBranch)) : NO_RULE_COLORS),
     [data, rules, ruleMatches, currentBranch],
+  );
+  // A format rule's color wins over the color given to the changeset's author (`withUserColors`).
+  const ruleColors = useMemo(
+    () => (data ? withUserColors(formatColors, rememberedPerHistory(data, 'userHues', [userColors], () => changesetUserHues(data, userColors))) : formatColors),
+    [data, formatColors, userColors],
   );
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
