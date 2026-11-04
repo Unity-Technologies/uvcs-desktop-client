@@ -85,6 +85,13 @@ describe('timelineDrawing', () => {
     expect(timelineDrawing(inputs({ dragging: { kind: 'scrub' } })).frameActive).toBe(false);
   });
 
+  it('shows the edges’ grips while the frame is active and wide enough to have them', () => {
+    const hovered = { hover: { target: { kind: 'frame' as const }, x: 120 } };
+    expect(timelineDrawing(inputs(hovered)).grips).toBe(true);
+    expect(timelineDrawing(inputs({ ...hovered, frame: { left: 100, right: 106 } })).grips).toBe(false);
+    expect(timelineDrawing(inputs()).grips).toBe(false);
+  });
+
   it('dashes the house’s ring when it stands for pending changes', () => {
     expect(timelineDrawing(inputs({ homePlaces: { home: { x: 10, y: 20 }, pending: true } }))).toMatchObject({ home: { x: 10, y: 20 }, homePending: true });
   });

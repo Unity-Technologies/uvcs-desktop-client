@@ -4,7 +4,7 @@ import type { TimelineDrawing } from './drawTimeline';
 import { stripXOfColumn, type TimelineAxis } from './timelineAxis';
 import type { PlacedAxisLabel } from './timelineCalendar';
 import type { TimelineCurves } from './timelineCurvePath';
-import type { TimelineFrame } from './timelineFrame';
+import { frameShape, type TimelineFrame } from './timelineFrame';
 import type { TimelineHistory } from './timelineHistory';
 import { branchLifetime, type HitTick, type HomeMark, type LabelTick, type TimelineGap } from './timelineMarks';
 import { ghostFrame, type HomeSpot, type TimelinePress, type TimelineTarget } from './timelineTargets';
@@ -31,8 +31,8 @@ export interface TimelineDrawingInputs {
 }
 
 /**
- * Everything one frame draws, placed on the strip: the frame active (its full halo and grips) while it is hovered or
- * dragged, the hover's ghost frame over an empty spot, /main's newest
+ * Everything one frame draws, placed on the strip: the frame active (its full halo) while it is hovered or dragged,
+ * with its edges' grips once it is wide enough to have them, the hover's ghost frame over an empty spot, /main's newest
  * changeset, the selected changeset's column (a "+N" node's for one folded in it; none where the house stands) and the selected branch's lifetime in
  * its hue; none for what isn't in the graph.
  */
@@ -40,6 +40,7 @@ export function timelineDrawing(inputs: TimelineDrawingInputs): TimelineDrawing 
   const { layout, history, axis, palette, frame, hover, dragging, home, homePlaces, selectedChangeset, selectedBranch } = inputs;
   const selectedColumn = selectedChangeset === null ? undefined : layout.nodes.get(selectedChangeset)?.column;
   // The house already marks the workspace's changeset: no pin through it.
+  const frameActive = dragging ? dragging.kind !== 'scrub' : hover?.target.kind === 'frame' || hover?.target.kind === 'frameEdge';
   const pinned = selectedColumn !== undefined && !(home?.kind === 'inRange' && home.pendingColumn === null && home.column === selectedColumn);
   const lifetime = branchLifetime(layout, axis, selectedBranch);
   return {
@@ -47,7 +48,8 @@ export function timelineDrawing(inputs: TimelineDrawingInputs): TimelineDrawing 
     palette,
     curves: inputs.curves,
     frame,
-    frameActive: dragging ? dragging.kind !== 'scrub' : hover?.target.kind === 'frame' || hover?.target.kind === 'frameEdge',
+    frameActive,
+    grips: frameActive && frameShape(frame) === 'boxWithEdges',
     ghost: hover && !dragging ? ghostFrame(hover.target, frame, hover.x) : null,
     axisLabels: inputs.axisLabels,
     labels: inputs.labels,

@@ -108,7 +108,7 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   hovered or dragged, and nothing dimmed outside it. Dragging it pans (`viewportPannedBy`), dragging an edge zooms the canvas
   with the other edge fixed (`viewportWithEdgeAt`, within `MIN_ZOOM` and `MAX_ZOOM`). Under `FRAME_LINE_BELOW` px it
   is a line with a handle on top; from `FRAME_EDGES_FROM` px its edges have grips, shown while it is active
-  (`frameShape`, `timelineDrawing`'s `frameActive`).
+  (`frameShape`, `timelineDrawing`'s `frameActive` and `grips`; the sizes in `timelineGeometry`).
 - **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`, at 3:1 on the
   strip), 2 px wide and 6 px tall (8 px merged), since 1.5 × 5 px read too thin (`LABEL_TICK_WIDTH`), those within `LABEL_MERGE_DISTANCE` of a
   tick's first label one slightly taller tick (`labelTicks`); the house, the graph's own home badge (`drawHomeBadge`,

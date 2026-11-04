@@ -187,7 +187,7 @@ export function spacedAxisLabels(candidates: readonly AxisLabel[], { xOf, widthO
     const shown = shownYear === null || year === shownYear ? text : textWithYear;
     const width = widthOf(shown);
     if (start - lastStart < AXIS_LABEL_SPACING || x < freeFrom || x + width > stripWidth - AXIS_TEXT_INSET) continue;
-    kept.push({ x, lineX: kept.length === 0 ? null : Math.round(start), text: shown });
+    kept.push({ x, lineX: kept.length === 0 ? null : start, text: shown });
     shownYear = year;
     lastStart = start;
     freeFrom = x + width + AXIS_LABEL_GAP;

@@ -10,13 +10,18 @@ import {
   BASELINE,
   FRAME_HEIGHT,
   FRAME_TOP,
+  GRIP_SIZE,
+  GRIP_TOP,
   HIT_TICK_HEIGHT,
   HIT_TICK_TOP,
   LABEL_TICK_HEIGHT,
   LABEL_TICK_TOP,
   LABEL_TICK_WIDTH,
   MERGED_LABEL_TICK_HEIGHT,
+  LINE_HANDLE,
   MERGED_LABEL_TICK_TOP,
+  PIN_DISC_RADIUS,
+  PIN_TOP,
   PLOT_TOP,
   TIMELINE_HEIGHT,
 } from './timelineGeometry';
@@ -29,8 +34,10 @@ export interface TimelineDrawing {
   palette: GraphPalette;
   curves: TimelineCurves;
   frame: TimelineFrame;
-  /** Whether the frame is hovered or dragged: its full halo and its edges' grips. */
+  /** Whether the frame is hovered or dragged: its full halo. */
   frameActive: boolean;
+  /** Whether its edges show their grips. */
+  grips: boolean;
   /** Where a click would take the frame, while the pointer is on an empty spot. */
   ghost: TimelineFrame | null;
   axisLabels: readonly PlacedAxisLabel[];
@@ -248,9 +255,9 @@ function drawSelectedChangeset(ctx: CanvasRenderingContext2D, { selectedChangese
   if (x === null) return;
   ctx.save();
   ctx.fillStyle = palette.accent;
-  ctx.fillRect(x - 0.75, 5, 1.5, BASELINE - 5);
+  ctx.fillRect(x - 0.75, PIN_TOP, 1.5, BASELINE - PIN_TOP);
   ctx.beginPath();
-  ctx.arc(x, 7.75, 3.75, 0, Math.PI * 2);
+  ctx.arc(x, PIN_TOP + PIN_DISC_RADIUS - 1, PIN_DISC_RADIUS, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -290,8 +297,8 @@ function drawFrameBack(ctx: CanvasRenderingContext2D, { frame, frameActive, pale
   ctx.restore();
 }
 
-/** The frame's outline and, while hovered or dragged, its edges' grips; thinner than a line, a line with a handle on top. */
-function drawFrame(ctx: CanvasRenderingContext2D, { frame, frameActive, palette }: TimelineDrawing): void {
+/** The frame's outline and its edges' grips (`grips`); thinner than a line, a line with a handle on top. */
+function drawFrame(ctx: CanvasRenderingContext2D, { frame, grips, palette }: TimelineDrawing): void {
   const shape = frameShape(frame);
   ctx.save();
   ctx.fillStyle = palette.accent;
@@ -299,12 +306,14 @@ function drawFrame(ctx: CanvasRenderingContext2D, { frame, frameActive, palette 
     const x = (frame.left + frame.right) / 2;
     roundedRect(ctx, x - 1, FRAME_TOP, 2, FRAME_HEIGHT + 2, 1);
     ctx.fill();
-    // A handle to take hold of it, ringed in the strip's background so it stands off the curve.
+    // A handle to take hold of it at the frame's top, ringed in the strip's background so it stands off the curve; the
+    // ring starts at the strip's top edge, never above it.
+    const { size, ring, radius } = LINE_HANDLE;
     ctx.fillStyle = palette.panel;
-    roundedRect(ctx, x - 7, FRAME_TOP - 4, 14, 14, 5);
+    roundedRect(ctx, x - size / 2 - ring, FRAME_TOP - ring, size + ring * 2, size + ring * 2, radius + ring);
     ctx.fill();
     ctx.fillStyle = palette.accent;
-    roundedRect(ctx, x - 5, FRAME_TOP - 2, 10, 10, 3);
+    roundedRect(ctx, x - size / 2, FRAME_TOP, size, size, radius);
     ctx.fill();
     ctx.restore();
     return;
@@ -313,9 +322,10 @@ function drawFrame(ctx: CanvasRenderingContext2D, { frame, frameActive, palette 
   ctx.lineWidth = 1.5;
   frameBox(ctx, frame, 0.75);
   ctx.stroke();
-  if (shape === 'boxWithEdges' && frameActive) {
-    for (const x of [frame.left - 3, frame.right - 1]) {
-      roundedRect(ctx, x, FRAME_TOP + 12, 4, 14, 2);
+  if (grips) {
+    const { width, height, outside } = GRIP_SIZE;
+    for (const x of [frame.left - outside, frame.right + outside - width]) {
+      roundedRect(ctx, x, GRIP_TOP, width, height, width / 2);
       ctx.fill();
     }
   }
