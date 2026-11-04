@@ -39,8 +39,15 @@ export function FileDiffViewer({ place, original, modified, fileName, title, ide
   const contents = useDiffContents(place, original, modified);
   const spin = useSpinDelay(contents.isPending || contents.isPlaceholderData);
 
+  // The diff drawn is the selected file's: not the previous file's, kept on screen while this one is read.
+  const bodyCurrent = !contents.error && contents.data !== undefined && !contents.isPlaceholderData;
+
   // One header for every file and state (`SteppedDiffFrame`): loading, failed or loaded, its arrows stay the same buttons.
-  return <SteppedDiffFrame title={title}>{body()}</SteppedDiffFrame>;
+  return (
+    <SteppedDiffFrame title={title} bodyCurrent={bodyCurrent} loading={!contents.error && !bodyCurrent}>
+      {body()}
+    </SteppedDiffFrame>
+  );
 
   function body(): ReactNode {
     if (contents.error) return <EmptyState title="Couldn't load this file" description={contents.error.message} />;
@@ -56,6 +63,7 @@ export function FileDiffViewer({ place, original, modified, fileName, title, ide
           identicalDescription={identicalDescription}
           compareControls={compareControls}
           onMatchesBase={onMatchesBase}
+          keysStep={bodyCurrent}
         />
       </Suspense>
     );

@@ -23,12 +23,52 @@ export interface DiffFrameHost {
 
 export const DiffFrameHostContext = createContext<DiffFrameHost | null>(null);
 
-/** What the header's arrows show: the body's navigation once it published one, else the header's own, file to file. */
-export function hostedNavigation(published: PublishedNavigation | null, headerNavigation: StepNavigation): PublishedNavigation {
-  return published ?? { navigation: headerNavigation, stepsOwn: false };
+/** Where the header stands with the file selected. */
+export interface HeaderState {
+  /** The body's navigation, as it last rendered; none while no body is drawn (the first read, an error). */
+  published: PublishedNavigation | null;
+  /** The body drawn is the selected file's, not the previous file's kept on screen while the next one loads. */
+  bodyCurrent: boolean;
+  /** The selected file's versions are being read. */
+  loading: boolean;
 }
 
-/** Whether the header's own (file-only) navigation takes the keys: only while no body published one, never both. */
-export function headerTakesKeys(published: PublishedNavigation | null): boolean {
-  return published === null;
+/** What the header's arrows show and do. */
+export interface HeaderArrows {
+  /** The body's navigation the arrows step with; none while they're the header's own (file to file, no label). */
+  body: PublishedNavigation | null;
+  /** The header's own navigation takes the keys (never both it and the body's). */
+  headerKeys: boolean;
+  /** Presses wait for the file loading (`queuedStep`), rather than stepping from a file no longer selected. */
+  queues: boolean;
+}
+
+/**
+ * The header's arrows: the body's navigation, label and keys while the body is the selected file's; otherwise the
+ * header's own (no label, so never another file's "3 of 3" beside this one's title), which, while the selected file
+ * loads, keeps the presses for when it arrives, and where it couldn't be read goes from file to file at once.
+ */
+export function headerArrows({ published, bodyCurrent, loading }: HeaderState): HeaderArrows {
+  if (published && bodyCurrent) return { body: published, headerKeys: false, queues: false };
+  // Read but not drawn yet (the viewer's code loading on first use): its diff is coming too.
+  return { body: null, headerKeys: true, queues: loading || bodyCurrent };
+}
+
+/** What to do with the presses kept while the file loaded. */
+export type QueuedStep = { kind: 'none' } | { kind: 'wait' } | { kind: 'apply'; direction: 1 | -1 } | { kind: 'drop' };
+
+/**
+ * The presses kept while a file loaded, one at a time: once its diff is the body and arrived (at its first change after
+ * ↓, `StepNavigation.opened`), the next one applies, so ↓ ↓ in a burst ends on the second file's 2nd change, no click
+ * lost nor landing on the wrong file. A diff with no changes of its own steps on at once; a file that couldn't be read
+ * drops them, as they were meant for a diff that never came.
+ */
+export function queuedStep(queue: readonly (1 | -1)[], arrows: HeaderArrows): QueuedStep {
+  const next = queue[0];
+  if (next === undefined) return { kind: 'none' };
+  if (arrows.queues) return { kind: 'wait' };
+  if (!arrows.body) return { kind: 'drop' };
+  const { navigation, stepsOwn } = arrows.body;
+  const arrived = !stepsOwn || navigation.count === 0 || navigation.opened;
+  return arrived ? { kind: 'apply', direction: next } : { kind: 'wait' };
 }

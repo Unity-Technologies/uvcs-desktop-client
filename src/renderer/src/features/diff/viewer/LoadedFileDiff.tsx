@@ -62,13 +62,15 @@ interface LoadedFileDiffProps {
   onMatchesBase?: () => void;
   /** Steps through its changes with the header's arrows and keys (`useChangeNavigation`); off where a view around it steps. */
   stepsThroughChanges?: boolean;
+  /** Its step keys work: not while another file is selected and loading, this diff kept on screen meanwhile. */
+  keysStep?: boolean;
 }
 
 /**
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true, keysStep = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editedFile = editedFileIn(place, contents.original, contents.modified);
   const editableInPlace = editedFile !== null;
@@ -115,7 +117,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const host = useDiffFrameHost();
   const changeView = useRef<ChangeView>(null);
   const steppedDiff = stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null;
-  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName);
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, keysStep);
   const stepsOwn = steppedDiff !== null;
   useLayoutEffect(() => host.publish({ navigation, stepsOwn }));
   useLayoutEffect(() => () => host.publish(null), [host.publish]);

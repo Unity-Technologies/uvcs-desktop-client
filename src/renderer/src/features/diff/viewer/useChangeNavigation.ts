@@ -18,6 +18,8 @@ export function useChangeNavigation(
   frame: RefObject<HTMLElement | null>,
   /** The file shown, as the list beside it names it. */
   path: string,
+  /** Its keys work: not while the file selected is another, still loading (`headerArrows`). */
+  active = true,
 ): StepNavigation {
   const blocks = useMemo(() => (diff ? listChangeBlocks(diff) : []), [diff]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
@@ -41,5 +43,6 @@ export function useChangeNavigation(
     path,
     noun: 'change',
     shortcuts: CHANGE_SHORTCUTS,
+    active,
   });
 }
