@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { changeNavigatorView, type NavigatorFacts } from './changeNavigatorView';
 
 /** A text diff with 12 changes beside a list of files, none current yet: the first move goes to its first. */
-const textBeforeStepping: NavigatorFacts = { stepsOwn: true, count: 12, current: null, noun: 'change', previous: 'file', next: 'step', besideFiles: true };
+const textBeforeStepping: NavigatorFacts = { stepsOwn: true, count: 12, current: null, noun: 'change', previous: 'file', next: 'step', besideFiles: true, hostSteps: true };
 /** A diff with no changes of its own to step through, beside a list: one loading, failed, identical, binary, an image, a model. */
-const noStepsOfItsOwn: NavigatorFacts = { stepsOwn: false, count: 0, current: null, noun: 'change', previous: 'file', next: 'file', besideFiles: true };
+const noStepsOfItsOwn: NavigatorFacts = { stepsOwn: false, count: 0, current: null, noun: 'change', previous: 'file', next: 'file', besideFiles: true, hostSteps: true };
 
 describe('changeNavigatorView', () => {
   it('says nothing of a text diff before a change is current; the arrows carry the count', () => {
@@ -53,8 +53,17 @@ describe('changeNavigatorView', () => {
     });
   });
 
-  it('draws no arrows for a diff on its own with nothing to step through: none, for that whole host', () => {
-    expect(changeNavigatorView({ ...noStepsOfItsOwn, besideFiles: false, previous: null, next: null })).toBeNull();
+  it("keeps the arrows, disabled, on an image or binary in a view with no list of files that steps through changes (History, Files): they never come and go there either", () => {
+    expect(changeNavigatorView({ ...noStepsOfItsOwn, besideFiles: false, previous: null, next: null })).toEqual({
+      label: '',
+      previous: { tip: 'Previous change', enabled: false },
+      next: { tip: 'Next change', enabled: false },
+    });
+  });
+
+  it("draws no arrows at all where the view doesn't step through its diff's changes and lists no files (a merge page's diff with its own conflict arrows)", () => {
+    expect(changeNavigatorView({ ...noStepsOfItsOwn, hostSteps: false, besideFiles: false, previous: null, next: null })).toBeNull();
+    expect(changeNavigatorView({ ...textBeforeStepping, hostSteps: false, besideFiles: false, previous: null, next: null })).toBeNull();
   });
 
   it('steps through the changes of a diff with no list beside it', () => {
