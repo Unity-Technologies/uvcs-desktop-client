@@ -1,6 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { joinComment, splitComment } from '../../lib/comment';
-import { changelistNameOf } from './changeCategories';
+import { changelistNameOf, isCheckinCandidate } from './changeCategories';
 import { neededWith, type PendingIndex } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
@@ -42,9 +42,21 @@ interface ChangelistCheckin {
 export function prepareChangelistCheckin({ workspacePath, changelist, changes, index, changelists, clearFilter }: ChangelistCheckin): void {
   clearFilter();
   const store = useCheckinDraftStore.getState();
-  const readied = new Set(neededWith(changes, index).map((change) => change.path));
+  const readied = new Set(readiedChanges(workspacePath, changelist, changes, index).map((change) => change.path));
   store.prepareChangelist(workspacePath, { name: changelist?.name ?? null, paths: readied, readied });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist?.description ?? ''));
+}
+
+/**
+ * What readying a changelist checks: what can go in of its changes, with what they need outside it. The default
+ * changelist leaves out the files the user had unchecked (a `Builds/` folder): readying it isn't asking for them, as
+ * readying a user changelist, which the user filled by hand, is. Ignored, cloaked or hidden changes never go in, and
+ * would keep the default changelist readied while they stay pending (`preparedStillPending`).
+ */
+function readiedChanges(workspacePath: string, changelist: Changelist | null, changes: PendingChange[], index: PendingIndex): PendingChange[] {
+  const { excludedPaths } = checkinDraftOf(workspacePath);
+  const asked = changelist ? changes : changes.filter((change) => !excludedPaths.has(change.path));
+  return neededWith(asked, index).filter(isCheckinCandidate);
 }
 
 /** What the check-in panel says under its button while a changelist is prepared: "Changelist ui", "Default changelist". */
