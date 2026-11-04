@@ -4,8 +4,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
-import { HueDot } from './HueDot';
-import { BRANCH_HUES } from './model/branchHue';
+import { HuePicker } from './HuePicker';
 import { hasCondition, isFormatRule, type ExplorerRule } from './model/explorerRules';
 import { conditionHint, EXPANSION_OPTIONS, ruleDraftProblem, ruleEditorTitle } from './model/ruleList';
 import styles from './ExplorerRuleEditor.module.css';
@@ -73,31 +72,13 @@ function ExplorerRuleEditor({ rule, isNew, onFinish }: ExplorerRuleEditorProps) 
             ))}
           </fieldset>
         )}
-        {isFormatRule(draft) && <HuePicker hue={draft.hue} onChange={(hue) => change({ hue })} />}
+        {isFormatRule(draft) && (
+          <div className={styles.group}>
+            <span className={styles.legend}>Color</span>
+            <HuePicker hue={draft.hue} onChange={(hue) => change({ hue })} />
+          </div>
+        )}
       </div>
     </Dialog>
-  );
-}
-
-function HuePicker({ hue, onChange }: { hue: number | null; onChange: (hue: number) => void }) {
-  return (
-    <div className={styles.group} role="radiogroup" aria-label="Color">
-      <span className={styles.legend}>Color</span>
-      <div className={styles.swatches}>
-        {BRANCH_HUES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="radio"
-            aria-checked={hue === option}
-            aria-label={`Color ${BRANCH_HUES.indexOf(option) + 1}`}
-            className={styles.swatch}
-            onClick={() => onChange(option)}
-          >
-            <HueDot hue={option} size={16} />
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }

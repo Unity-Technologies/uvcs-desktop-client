@@ -24,35 +24,3 @@
   font-weight: 500;
   color: var(--text-primary);
 }
-
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.swatch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  background: none;
-  cursor: pointer;
-}
-
-.swatch:hover {
-  background: var(--bg-hover);
-}
-
-.swatch[aria-checked='true'] {
-  border-color: var(--border-strong);
-}
-
-.swatch:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring-visible);
-}
