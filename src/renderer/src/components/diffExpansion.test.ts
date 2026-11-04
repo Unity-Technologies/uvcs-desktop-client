@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  askedBy,
   collapsesWithHost,
   escapeBackToList,
   escapeCollapsesDiff,
@@ -7,6 +8,7 @@ import {
   expandDiffWords,
   expandedAfterToggle,
   focusGoesToDiff,
+  focusGoesToDiffOnCollapse,
   leavesExpandedDiff,
   listedDiffs,
   selectedFileDiffs,
@@ -37,19 +39,51 @@ describe('leavesExpandedDiff', () => {
 });
 
 describe('focusGoesToDiff', () => {
-  const held = { onBody: false, visible: true, onExpandButton: false };
+  const held = { onBody: false, visible: true, onButton: false };
 
   it('gives the keyboard to the diff from nowhere, or from a list that went out of sight with the files', () => {
     expect(focusGoesToDiff({ ...held, onBody: true, visible: false })).toBe(true);
     expect(focusGoesToDiff({ ...held, visible: false })).toBe(true);
   });
 
-  it('takes it from the Expand button pressed with the mouse, so Esc drops a picked change before collapsing', () => {
-    expect(focusGoesToDiff({ ...held, onExpandButton: true })).toBe(true);
+  it('takes it from a button: the Expand button pressed with the mouse, so Esc drops a picked change before collapsing, or a change arrow clicked before, whose focus ring would show at the next key', () => {
+    expect(focusGoesToDiff({ ...held, onButton: true })).toBe(true);
   });
 
   it('leaves it where it still shows (the code itself, a field)', () => {
     expect(focusGoesToDiff(held)).toBe(false);
+  });
+});
+
+describe('focusGoesToDiffOnCollapse', () => {
+  const onCode = { onBody: false, visible: true, onButton: false };
+
+  it('keeps the keyboard where it still shows, normally the code, so the arrows and ⌥↓ go on working at once', () => {
+    expect(focusGoesToDiffOnCollapse(onCode, 'keyboard')).toBe(false);
+  });
+
+  it('gives it to the code when nothing holds it (a step to another file left it on the page), never back to the list', () => {
+    expect(focusGoesToDiffOnCollapse({ ...onCode, onBody: true, visible: false }, 'keyboard')).toBe(true);
+    expect(focusGoesToDiffOnCollapse({ ...onCode, visible: false }, 'keyboard')).toBe(true);
+  });
+
+  it('gives it to the code from a header button (a change arrow, the Expand button pressed with Enter), never leaving a focus ring there', () => {
+    expect(focusGoesToDiffOnCollapse({ ...onCode, onButton: true }, 'keyboard')).toBe(true);
+  });
+
+  it('leaves it on the Expand button clicked with the mouse, which shows no ring', () => {
+    expect(focusGoesToDiffOnCollapse({ ...onCode, onButton: true }, 'pointer')).toBe(false);
+  });
+});
+
+describe('askedBy', () => {
+  it('reads a click with no pointer presses as the keyboard: Enter or Space on the button', () => {
+    expect(askedBy(0)).toBe('keyboard');
+  });
+
+  it('reads a click as the pointer', () => {
+    expect(askedBy(1)).toBe('pointer');
+    expect(askedBy(2)).toBe('pointer');
   });
 });
 
