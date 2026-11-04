@@ -47,6 +47,13 @@ describe('timelineGaps', () => {
     ]);
   });
 
+  it('keeps only the longest of the gaps closer than a few px, so a sparse history isn’t a row of marks', () => {
+    const history = timelineHistory(layoutGraph(datedHistory(['2026-01-01T10:00:00Z', '2026-01-10T10:00:00Z', '2026-02-10T10:00:00Z', '2026-02-20T10:00:00Z'])));
+    const crowded: TimelineAxis = { worldWidth: 64_000, width: 1_000, columnCount: 4 };
+    expect(timelineGaps(history, crowded).map(({ days }) => days)).toEqual([31]);
+    expect(timelineGaps(history, wide(4)).map(({ days }) => days)).toEqual([9, 31, 10]);
+  });
+
   it('marks none where a "+N" node holds changesets made in between', () => {
     const data = datedHistory([
       '2026-09-01T10:00:00Z',

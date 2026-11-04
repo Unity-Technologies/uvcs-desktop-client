@@ -51,7 +51,13 @@ export interface TimelineGap {
   days: number;
 }
 
-/** Where more than `GAP_MIN_DAYS` pass between two columns with no changeset in between (a "+N" node's may be). */
+/** Break marks closer than this (px) would read as a smudge: of those, only the longest gap keeps its mark. */
+export const GAP_MARK_SPACING = 12;
+
+/**
+ * Where more than `GAP_MIN_DAYS` pass between two columns with no changeset in between (a "+N" node's may be), the
+ * longest of those closer than `GAP_MARK_SPACING` alone: a sparse history would otherwise be a row of marks.
+ */
 export function timelineGaps(history: TimelineHistory, axis: TimelineAxis): TimelineGap[] {
   const gaps: TimelineGap[] = [];
   const { columnTimes, times } = history;
@@ -59,7 +65,13 @@ export function timelineGaps(history: TimelineHistory, axis: TimelineAxis): Time
     const from = columnTimes[column - 1]!;
     const to = columnTimes[column]!;
     if (to - from <= GAP_MIN_DAYS * DAY || countBetween(times, from + 1, to - 1) > 0) continue;
-    gaps.push({ x: (stripXOfColumn(axis, column - 1) + stripXOfColumn(axis, column)) / 2, column, from, to, days: Math.floor((to - from) / DAY) });
+    const gap = { x: (stripXOfColumn(axis, column - 1) + stripXOfColumn(axis, column)) / 2, column, from, to, days: Math.floor((to - from) / DAY) };
+    const last = gaps.at(-1);
+    if (last && gap.x - last.x < GAP_MARK_SPACING) {
+      if (gap.days > last.days) gaps[gaps.length - 1] = gap;
+      continue;
+    }
+    gaps.push(gap);
   }
   return gaps;
 }
