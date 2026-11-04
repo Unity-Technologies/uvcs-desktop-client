@@ -143,7 +143,8 @@ describe('rankedOrder', () => {
     const next = rankedOrder(items, fileListOrder(sort, facts)!, first);
     // Each item is looked up among the ranks, unread: only those the new one is compared with are read.
     expect(reads() - readBefore).toBeLessThan(10 * Math.log2(many.length));
-    expect(next.ordered.map((file) => file.path)).toEqual(fileListOrder(sort, facts)!.arrange!([...many, added]).map((file) => file.path));
+    const inPathOrder = [...many, added].sort((a, b) => comparePaths(a.path, b.path));
+    expect(next.ordered.map((file) => file.path)).toEqual(fileListOrder(sort, facts)!.arrange!(inPathOrder).map((file) => file.path));
   });
 
   it('ranks afresh when fewer than half the items are still there', () => {
