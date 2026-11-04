@@ -27,7 +27,10 @@ function seededRandom(seed: number): () => number {
 // ("v01" and "v1", "café" composed and decomposed), and a name that is another's start ("src" and "src-old").
 const NAMES = ['a', 'b', 'A', 'Lap_2', 'Lap_10', 'lap_3', 'v01', 'v1', 'café', 'café', 'src', 'src-old', 'x.txt', 'x'];
 
-/** Paths at random depths, some of them folders that are items themselves, and runs of folders holding only the next. */
+/**
+ * Paths at random depths, some of them folders that are items themselves, runs of folders holding only the next, and
+ * some listed twice (a merge can list two conflicts on one path).
+ */
 function randomPaths(random: () => number, count: number): string[] {
   const pick = (names: string[]): string => names[Math.floor(random() * names.length)]!;
   const paths = new Set<string>();
@@ -39,7 +42,7 @@ function randomPaths(random: () => number, count: number): string[] {
     // A folder that is an item itself: an added or moved folder.
     if (depth > 0 && random() < 0.25) paths.add(names.slice(0, 1 + Math.floor(random() * depth)).join('/'));
   }
-  return [...paths];
+  return [...paths].flatMap((path) => (random() < 0.1 ? [path, path] : [path]));
 }
 
 describe('layoutPathTree', () => {
@@ -125,18 +128,33 @@ describe('layoutPathTree', () => {
     ]);
   });
 
-  it('gives every folder of generated trees exactly the items in it, and shows every item once', () => {
+  it('gives every folder of generated trees exactly the items in it, and shows every item listed once', () => {
     const random = seededRandom(11);
     for (let trial = 0; trial < 200; trial++) {
       const sorted = sortedItems(randomPaths(random, 1 + Math.floor(random() * 40)));
       const rows = layoutPathTree({ sorted, keyOf, folderScope: 'all' });
       for (const row of rows) {
-        if (row.type === 'folder') expect(itemsIn(row.held)).toEqual(sorted.filter((item) => item.path === row.path || item.path.startsWith(`${row.path}/`)));
+        if (row.type !== 'folder') continue;
+        const inside = sorted.filter((item) => item.path.startsWith(`${row.path}/`));
+        expect(itemsIn(row.held)).toEqual(row.item ? [row.item, ...inside] : inside);
       }
+      // Each item listed, a path listed twice too, shows once: as a file's row or as its folder's.
       const shown = rows.flatMap((row) => (row.type === 'file' ? [row.item] : row.item ? [row.item] : []));
       expect(new Set(shown).size).toBe(sorted.length);
       expect(shown).toHaveLength(sorted.length);
     }
+  });
+
+  it('shows a file listed twice as two rows, not as a folder holding itself', () => {
+    expect(shape(tree(['b.txt', 'b.txt']))).toEqual([
+      ['b.txt', 0],
+      ['b.txt', 0],
+    ]);
+    expect(shape(tree(['src/a.ts', 'src/a.ts']))).toEqual([
+      ['src/', 0],
+      ['src/a.ts', 1],
+      ['src/a.ts', 1],
+    ]);
   });
 
   it('lays out no rows for no items', () => {
