@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { clickedWith, focusAs, showsFocusRing } from './focusRing';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { clickedWith, focusAs, settleClickFocus, showsFocusRing } from './focusRing';
 
 /** An element that records how it was focused and blurred. */
 function element() {
@@ -50,5 +50,25 @@ describe('focusAs', () => {
     const list = element();
     focusAs(list, 'keyboard', null);
     expect(list.calls).toEqual([['focus', { preventScroll: true }]]);
+  });
+});
+
+describe('settleClickFocus', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('leaves a clicked change arrow focused ringless, so the keys pressed next show none', () => {
+    const arrow = element();
+    vi.stubGlobal('document', { activeElement: arrow });
+    settleClickFocus({ detail: 1, currentTarget: arrow as unknown as HTMLElement });
+    expect(arrow.calls).toEqual([['blur'], ['focus', { preventScroll: true, focusVisible: false }]]);
+  });
+
+  it('leaves alone an arrow pressed with Enter or Space, and one a click no longer focuses (the step moved it)', () => {
+    const arrow = element();
+    vi.stubGlobal('document', { activeElement: arrow });
+    settleClickFocus({ detail: 0, currentTarget: arrow as unknown as HTMLElement });
+    vi.stubGlobal('document', { activeElement: null });
+    settleClickFocus({ detail: 1, currentTarget: arrow as unknown as HTMLElement });
+    expect(arrow.calls).toEqual([]);
   });
 });
