@@ -1317,7 +1317,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
     its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
     (marks, the R key, the review bar), not how the files are laid out.
-  - One tree**: `layoutPathTree` (`lib/pathTreeLayout`) lays out any items with a path: a folder's row, folders holding
+  - **One tree**: `layoutPathTree` (`lib/pathTreeLayout`) lays out any items with a path: a folder's row, folders holding
     only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder) as its
     own row, with its status; a path listed twice (two conflicts on one path) is two rows, never a folder holding
     itself. Its work grows with the items and the folders, never with how deep they sit: in path order a folder's items
