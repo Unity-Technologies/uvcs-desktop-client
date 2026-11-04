@@ -50,10 +50,16 @@ export interface GraphPalette {
   accentContrast: string;
   /** The soft halo behind a selection. */
   accentSoft: string;
+  /** The faintest accent fill (the Timeline's frame). */
+  accentWash: string;
   /** Search hits glow in this color, whatever the branch color. */
   searchHit: string;
   labelBackground: string;
   labelText: string;
+  /** A label drawn as a mark (the Timeline's ticks). */
+  labelMark: string;
+  /** Under a small badge drawn over the canvas. */
+  badgeShadow: string;
   /** Link colors for everything but plain merges, which take the source branch's color. */
   mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
   /** Code review chips, colored like the status badges elsewhere. */
@@ -78,7 +84,9 @@ const CAPTION_FONT_WEIGHT = 500;
 export function readGraphPalette(element: Element): GraphPalette {
   const style = getComputedStyle(element);
   const variable = (name: string): string => style.getPropertyValue(name).trim();
-  const fontUi = variable('--font-ui');
+  // The token spans several lines. Chromium's canvas reads it the same either way (checked: `ctx.font` comes back
+  // identical), so this changes nothing drawn; it keeps the font strings the palette builds on one line.
+  const fontUi = variable('--font-ui').replace(/\s+/g, ' ');
 
   return {
     isDark: document.documentElement.dataset.theme === 'dark',
@@ -98,9 +106,12 @@ export function readGraphPalette(element: Element): GraphPalette {
     },
     accentContrast: variable('--accent-contrast'),
     accentSoft: variable('--accent-soft'),
+    accentWash: variable('--accent-wash'),
     searchHit: variable('--search-highlight'),
     labelBackground: variable('--label-bg'),
     labelText: variable('--label-text'),
+    labelMark: variable('--label-mark'),
+    badgeShadow: variable('--badge-shadow'),
     mergeLinks: {
       interval: variable('--status-added'),
       cherryPick: variable('--status-changed'),

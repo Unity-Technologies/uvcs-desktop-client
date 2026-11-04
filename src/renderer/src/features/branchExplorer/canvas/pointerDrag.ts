@@ -10,7 +10,7 @@ export interface PointerDragHandlers {
   onClick: (up: PointerEvent) => void;
 }
 
-/** Follows the pointer from a press until it comes up, anywhere in the window, telling a drag from a click. */
+/** Follows the pointer from a press until it comes up (or the system takes it), anywhere in the window, telling a drag from a click. */
 export function followPointerDrag(press: { clientX: number; clientY: number }, { onDrag, onDragEnd, onClick }: PointerDragHandlers): void {
   const start = { x: press.clientX, y: press.clientY };
   let last = start;
@@ -21,12 +21,22 @@ export function followPointerDrag(press: { clientX: number; clientY: number }, {
     onDrag(move.clientX - last.x, move.clientY - last.y, move);
     last = { x: move.clientX, y: move.clientY };
   };
-  const onUp = (up: PointerEvent): void => {
+  const stop = (): void => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+  };
+  const onUp = (up: PointerEvent): void => {
+    stop();
     if (dragging) onDragEnd();
     else onClick(up);
   };
+  // The system took the pointer (a gesture, the window losing it): a drag ends where it was, a press clicks nothing.
+  const onCancel = (): void => {
+    stop();
+    if (dragging) onDragEnd();
+  };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
 }

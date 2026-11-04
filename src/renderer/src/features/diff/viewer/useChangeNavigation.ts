@@ -1,10 +1,15 @@
 import type { FileDiffMetadata } from '@pierre/diffs';
 import { useMemo, useRef, type RefObject } from 'react';
-import { listChangeBlocks, listChangeRegions } from './changeBlocks';
+import { listChangeBlocks, listChangeRegions, type ChangeRegion } from './changeBlocks';
 import { changesAbove } from './changeNavigation';
 import type { ChangeView } from './changeView';
 import type { KeptPresses } from './stepQueue';
 import { useStepNavigation, type StepNavigation, type StepShortcuts } from './useStepNavigation';
+
+/** Moving through a diff's changes, and the changes themselves, for the change map (`ChangeMap`). */
+export interface ChangeNavigation extends StepNavigation {
+  regions: ChangeRegion[];
+}
 
 export const CHANGE_SHORTCUTS: StepShortcuts = { next: 'nextChange', previous: 'previousChange' };
 
@@ -31,12 +36,12 @@ export function useChangeNavigation(
     /** Where presses made before it opened wait: its frame's queue (`StepQueue`), bound to this diff. */
     kept?: KeptPresses;
   } = {},
-): StepNavigation {
+): ChangeNavigation {
   const blocks = useMemo(() => (diff ? listChangeBlocks(diff) : []), [diff]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
   // The last line read at the top of the view, kept for when the diff can't tell (not shown yet).
   const topLine = useRef(1);
-  return useStepNavigation({
+  const navigation = useStepNavigation({
     steps: regions,
     view: {
       isShown: () => view.current !== null,
@@ -58,4 +63,5 @@ export function useChangeNavigation(
     noStepsComing,
     kept,
   });
+  return { ...navigation, regions };
 }

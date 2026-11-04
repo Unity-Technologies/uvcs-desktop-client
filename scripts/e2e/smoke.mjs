@@ -113,6 +113,15 @@ try {
       await settled();
     });
   }
+  await step('Branch Explorer timeline', async () => {
+    // From another view its shortcut opens the Branch Explorer with the timeline shown.
+    await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');
+    await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).click();
+    await main.getByRole('button', { name: 'Hide timeline' }).click();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor({ state: 'detached' });
+  });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().click();

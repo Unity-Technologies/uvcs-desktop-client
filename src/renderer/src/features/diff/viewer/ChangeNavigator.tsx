@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useContext, type Ref } from 'react';
+import { useContext, type MouseEvent, type Ref } from 'react';
+import { settleClickFocus } from '../../../lib/focusRing';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { hotkey, hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { IconButton } from '../../../ui/IconButton';
@@ -33,6 +34,11 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
   const { noun, shortcuts, count, current } = navigation;
   const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles, hostSteps });
   if (!view) return null;
+  // A click leaves the arrow focused with no ring (`settleClickFocus`), Enter or Space as Chromium decides.
+  const step = (event: MouseEvent<HTMLButtonElement>, direction: 1 | -1): void => {
+    navigation.go(direction);
+    settleClickFocus(event);
+  };
   return (
     <PaneToolbarGroup ref={ref} className={className}>
       <span className={styles.position} data-toolbar-extra aria-live="polite">
@@ -45,7 +51,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
         shortcut={hotkey(shortcuts.previous)}
         data-tip-sub={otherKey(shortcuts.previous, keysWhileTyping)}
         disabled={!view.previous.enabled}
-        onClick={() => navigation.go(-1)}
+        onClick={(event) => step(event, -1)}
       />
       <IconButton
         size="small"
@@ -54,7 +60,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
         shortcut={hotkey(shortcuts.next)}
         data-tip-sub={otherKey(shortcuts.next, keysWhileTyping)}
         disabled={!view.next.enabled}
-        onClick={() => navigation.go(1)}
+        onClick={(event) => step(event, 1)}
       />
     </PaneToolbarGroup>
   );

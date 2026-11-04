@@ -4,6 +4,7 @@
  * (View ▸ Enter Full Screen), which stacks with it independently. What decides when it starts, lasts and ends is here;
  * `diffExpansionStore` holds it for the window.
  */
+import type { FocusMover } from '../lib/focusRing';
 import type { ShortcutId } from '../lib/shortcutRegistry';
 
 /** Where the window's navigation stands: the view, and how many pages are open over it. */
@@ -31,23 +32,63 @@ export function expandableDiffInFront<Element>(diffs: Iterable<ExpandableDiff<El
   return [...diffs].some((diff) => inFront(diff.element));
 }
 
-/** What held the keyboard as the diff expanded. */
+/** What held the keyboard as the diff expanded or collapsed. */
 export interface FocusHolder {
   /** Nothing: the page itself. */
   onBody: boolean;
   /** It still shows: it wasn't in a part the diff stowed. */
   visible: boolean;
-  /** The diff header's Expand button, pressed with the mouse. */
-  onExpandButton: boolean;
+  /** A button (the Expand button, a change arrow, any other). */
+  onButton: boolean;
+  /** It shows the keyboard ring (`:focus-visible`): the keyboard put focus there (Tab), not a click. */
+  ringed: boolean;
+}
+
+/** What of an element tells how it holds focus. */
+export interface FocusCandidate {
+  matches: (selector: string) => boolean;
+  checkVisibility: () => boolean;
+}
+
+/** What holds the keyboard: `active`, the document's active element, or nothing when it's the page itself (`body`). */
+export function focusHolderOf(active: FocusCandidate | null, body: unknown): FocusHolder {
+  if (active === null || active === body) return { onBody: true, visible: false, onButton: false, ringed: false };
+  return { onBody: false, visible: active.checkVisibility(), onButton: active.matches('button, [role="button"]'), ringed: active.matches(':focus-visible') };
 }
 
 /**
- * Whether the keyboard goes to the expanded diff: from nowhere, from a list that went out of sight, or from the Expand
- * button, so the arrows scroll the code and Esc reaches the diff first (a picked change drops before the diff
- * collapses). What still shows and holds it otherwise (a field) keeps it.
+ * Whether the keyboard goes to the expanded diff: from nowhere, from a list that went out of sight, or from a button a
+ * click focused (the Expand button, a change arrow clicked before), so the arrows scroll the code and Esc reaches the
+ * diff first (a picked change drops before the diff collapses). Always ringless (`focusAs`'s `'app'`): the app moves
+ * it. A button the keyboard reached keeps it, its ring showing where focus is, as a toggle keeps it; so does what still
+ * shows and takes keys (a field).
  */
 export function focusGoesToDiff(holder: FocusHolder): boolean {
-  return holder.onBody || !holder.visible || holder.onExpandButton;
+  return holder.onBody || !holder.visible || (holder.onButton && !holder.ringed);
+}
+
+/** How the user asked to expand or collapse: a key (Esc, the shortcut, the palette, the menu, Enter on the button) or a click. */
+export type AskedBy = Exclude<FocusMover, 'app'>;
+
+/**
+ * Whether the keyboard goes to the diff's code as the user collapses it from the keyboard: from nowhere (a step to
+ * another file left it on the page) or a button a click focused, whose ring the key just pressed would show; never back
+ * to the list it had before expanding. What still shows and takes keys (the code, a field) keeps it, so ⌥↓ and the
+ * arrows work at once, and so does a button the keyboard reached, ringed. A click on the Expand button leaves it there
+ * (`settleClickFocus`).
+ */
+export function focusGoesToDiffOnCollapse(holder: FocusHolder, by: AskedBy): boolean {
+  return by === 'keyboard' && focusGoesToDiff(holder);
+}
+
+/**
+ * What gives back focus that fell to the page (a menu or dialog closed): while expanded, the app, giving the code the
+ * keyboard on its own, so no ring shows until a Tab (`focusAs`). Ringless even after a dialog closed with the keyboard:
+ * the user didn't move focus to the code, the dialog's going left it nowhere, and a ring around the whole diff would
+ * mark nothing they chose. Otherwise as ever, the ring as Chromium decides.
+ */
+export function restoredFocusMover(expanded: boolean): FocusMover {
+  return expanded ? 'app' : 'keyboard';
 }
 
 /** Whether Expand Diff's command is offered (the palette's entry): to collapse, or with a diff in front to expand. */

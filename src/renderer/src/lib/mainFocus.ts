@@ -1,3 +1,4 @@
+import { focusAs, type FocusMover } from './focusRing';
 import { isTextEntry } from './textEntry';
 
 /**
@@ -16,11 +17,14 @@ function findMainFocus(root: ParentNode): HTMLElement | null {
   return null;
 }
 
-/** Focuses the main element under `root`; false when there is none yet (still loading) or nothing to focus. */
-export function focusMain(root: ParentNode): boolean {
+/**
+ * Focuses the main element under `root`; false when there is none yet (still loading) or nothing to focus. `mover` is
+ * what moved it, for its ring (`focusAs`): the app on its own shows none.
+ */
+export function focusMain(root: ParentNode, mover: FocusMover = 'keyboard'): boolean {
   const target = findMainFocus(root);
   if (!target) return false;
-  if (!target.contains(document.activeElement)) target.focus({ preventScroll: true });
+  if (!target.contains(document.activeElement)) focusAs(target, mover);
   return true;
 }
 

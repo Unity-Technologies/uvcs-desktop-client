@@ -1,5 +1,6 @@
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { clickedWith, settleClickFocus } from '../lib/focusRing';
 import { formatShortcut } from '../lib/shortcuts';
 import { hotkey } from '../lib/shortcutRegistry';
 import { Button } from '../ui/Button';
@@ -26,7 +27,11 @@ export function ExpandDiffButton() {
       data-tip={words.label}
       data-tip-sub={words.hint}
       data-tip-shortcut={hotkey(expanded ? 'collapseDiff' : 'expandDiff')}
-      onClick={toggleDiffExpanded}
+      onClick={(event) => {
+        toggleDiffExpanded(clickedWith(event.detail));
+        // A click that leaves the button focused (collapsing, or expanding a diff with no code to take it) shows no ring.
+        settleClickFocus(event);
+      }}
     />
   );
 }

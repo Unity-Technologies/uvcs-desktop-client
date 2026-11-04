@@ -1,14 +1,24 @@
 /* As the list skeletons (`ui/Skeleton`): after a short beat, fading toward the bottom and the right, in their grey. */
 .skeleton {
   position: relative;
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   animation: var(--keyframes-fade-in) var(--duration-normal) var(--duration-fast) var(--ease-out) both;
 }
 
-/* The canvas's date ruler (`drawDateRuler`): its strip, without dates; as tall as `DATE_RULER_HEIGHT`. */
+/* Under the Timeline's strip while it shows: the canvas's place. */
+.area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The Timeline's strip and the canvas's date ruler (`drawDateRuler`): their strips, without dates; as tall as `TIMELINE_HEIGHT` and `DATE_RULER_HEIGHT`. */
 .ruler {
   border-bottom: 1px solid var(--border-default);
   background: var(--bg-subtle);

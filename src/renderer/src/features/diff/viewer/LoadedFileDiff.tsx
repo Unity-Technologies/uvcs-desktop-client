@@ -182,6 +182,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
         onDiscard={discards?.onDiscard}
         onUndoDiscard={discards?.onUndoDiscard}
         changeViewRef={changeView}
+        changes={navigation}
         onViewScroll={navigation.onViewScroll}
         wrapsLongLines={wrapsLongLines}
       />
