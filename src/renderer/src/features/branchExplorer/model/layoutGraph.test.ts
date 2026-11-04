@@ -116,7 +116,7 @@ describe('layoutGraph with moved branches', () => {
     expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 3, row: 1 }]))).toEqual({ '/main': 0, '/main/b': 1, '/main/a': 2, '/main/a/fix': 3 });
   });
 
-  it('takes a moved branch's children along, below it', () => {
+  it("takes a moved branch's children along, below it", () => {
     expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 2, row: 0 }]))).toEqual({ '/main/a': 0, '/main': 1, '/main/a/fix': 2, '/main/b': 3 });
   });
 
