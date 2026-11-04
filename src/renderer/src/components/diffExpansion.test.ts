@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { escapeCollapsesDiff, expandableDiffInFront, expandDiffWords, expandedAfterToggle, leavesExpandedDiff, type EscapePress } from './diffExpansion';
+import {
+  collapsesWithHost,
+  escapeBackToList,
+  escapeCollapsesDiff,
+  expandDiffWords,
+  expandedAfterToggle,
+  leavesExpandedDiff,
+  shortcutWhileExpanded,
+  type EscapePress,
+} from './diffExpansion';
 
 describe('leavesExpandedDiff', () => {
   const changes = { view: 'changes', depth: 0 };
@@ -22,21 +31,6 @@ describe('leavesExpandedDiff', () => {
   });
 });
 
-describe('expandableDiffInFront', () => {
-  const shown = { element: 'diff of the page in front' };
-  const underPage = { element: 'diff of the view under the page' };
-  const inFront = (element: string): boolean => element === shown.element;
-
-  it('finds a diff only where it is in front, not in a view hidden under a page', () => {
-    expect(expandableDiffInFront([underPage, shown], inFront)).toBe(true);
-    expect(expandableDiffInFront([underPage], inFront)).toBe(false);
-  });
-
-  it('finds none with no diff on screen', () => {
-    expect(expandableDiffInFront([], inFront)).toBe(false);
-  });
-});
-
 describe('expandedAfterToggle', () => {
   it('expands the diff in front', () => {
     expect(expandedAfterToggle(false, true)).toBe(true);
@@ -53,7 +47,7 @@ describe('expandedAfterToggle', () => {
 });
 
 describe('escapeCollapsesDiff', () => {
-  const esc: EscapePress = { isEscape: true, defaultPrevented: false, keyboardTaken: false, mayRun: true };
+  const esc: EscapePress = { isEscape: true, defaultPrevented: false, keyboardTaken: false, mayRun: true, commandClaims: false };
 
   it('collapses the expanded diff on Esc nothing else took', () => {
     expect(escapeCollapsesDiff(true, esc)).toBe(true);
@@ -74,6 +68,58 @@ describe('escapeCollapsesDiff', () => {
 
   it('waits behind a modal dialog and runs once per press', () => {
     expect(escapeCollapsesDiff(true, { ...esc, mayRun: false })).toBe(false);
+  });
+
+  it("leaves Esc to a command bound to it, whichever listens first: a pending cut in Files is cancelled before the diff collapses", () => {
+    expect(escapeCollapsesDiff(true, { ...esc, commandClaims: true })).toBe(false);
+  });
+});
+
+describe('escapeBackToList', () => {
+  const esc = { isEscape: true, defaultPrevented: false, keyboardTaken: false };
+
+  it("takes the keyboard from a diff back to its list (History's revisions, Files' tree)", () => {
+    expect(escapeBackToList(false, esc)).toBe(true);
+  });
+
+  it('gives way while the diff is expanded: the list is out of sight, and Esc collapses the diff instead', () => {
+    expect(escapeBackToList(true, esc)).toBe(false);
+  });
+
+  it('leaves Esc to what took it first, or to what holds the keyboard', () => {
+    expect(escapeBackToList(false, { ...esc, defaultPrevented: true })).toBe(false);
+    expect(escapeBackToList(false, { ...esc, keyboardTaken: true })).toBe(false);
+    expect(escapeBackToList(false, { ...esc, isEscape: false })).toBe(false);
+  });
+});
+
+describe('shortcutWhileExpanded', () => {
+  it('collapses before checking in: the summary and what is checked in show, and an empty summary takes the caret', () => {
+    expect(shortcutWhileExpanded('checkin')).toBe('collapseFirst');
+  });
+
+  it('only collapses for Toggle Sidebar: the sidebar the user asked for comes back as it was', () => {
+    expect(shortcutWhileExpanded('toggleSidebar')).toBe('collapseOnly');
+  });
+
+  it("lets Go to file act expanded: the file picked shows in the diff, as choosing another file does", () => {
+    expect(shortcutWhileExpanded('filesGoToFile')).toBe('acts');
+    expect(shortcutWhileExpanded('goToFile')).toBe('acts');
+  });
+});
+
+describe('collapsesWithHost', () => {
+  it('ends the mode once its view settles with nothing to diff: nothing pending after a check-in, Incoming up to date', () => {
+    expect(collapsesWithHost(true, 'none')).toBe(true);
+  });
+
+  it('keeps it while the view reads (the next changeset, a followed selection) or has diffs', () => {
+    expect(collapsesWithHost(true, 'reading')).toBe(false);
+    expect(collapsesWithHost(true, 'some')).toBe(false);
+  });
+
+  it('has nothing to end while no diff is expanded', () => {
+    expect(collapsesWithHost(false, 'none')).toBe(false);
   });
 });
 
