@@ -55,6 +55,24 @@ describe('timelineHistory', () => {
     expect(mainChangesetsAfter(history, 5)).toBe(0);
   });
 
+  it('counts a changeset on /main that merges landed on once, merges only', () => {
+    const merges = datedHistory([
+      '2026-09-01T10:00:00Z',
+      { date: '2026-09-02T10:00:00Z', branch: '/main/a' },
+      { date: '2026-09-03T10:00:00Z', branch: '/main/b' },
+      '2026-09-04T10:00:00Z',
+      '2026-09-05T10:00:00Z',
+      '2026-09-06T10:00:00Z',
+    ]);
+    merges.mergeLinks = [
+      { type: 'merge', sourceChangeset: 1, destinationChangeset: 3 },
+      { type: 'merge', sourceChangeset: 2, destinationChangeset: 3 },
+      { type: 'cherryPick', sourceChangeset: 1, destinationChangeset: 4 },
+      { type: 'subtractive', sourceChangeset: 2, destinationChangeset: 5 },
+    ];
+    expect([...timelineHistory(layoutGraph(merges)).mainMergeTimes]).toEqual([at('2026-09-04T10:00:00Z')]);
+  });
+
   it('orders the labels by their changeset’s time, with its column', () => {
     const history = timelineHistory(layoutGraph(data));
     expect(history.labels.map(({ label, column }) => [label.name, column])).toEqual([

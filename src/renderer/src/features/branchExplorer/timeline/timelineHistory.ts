@@ -24,7 +24,7 @@ export interface TimelineHistory {
   changesetsBefore: Int32Array;
   /** Every changeset's time, ascending. */
   times: Float64Array;
-  /** The times of /main's changesets a merge landed on, ascending. */
+  /** The times of /main's changesets a merge (not a cherry pick or a subtractive merge) landed on, each once, ascending. */
   mainMergeTimes: Float64Array;
   /** The labels, by their changeset's time. */
   labels: readonly TimedLabel[];
@@ -78,9 +78,13 @@ function measureHistory(layout: GraphLayout): TimelineHistory {
     changesetsBefore[column + 1] = changesetsBefore[column]! + members.length;
   });
 
-  const mainMergeTimes = layout.mergeLinks
-    .filter((link) => layout.nodes.get(link.destinationChangeset) && branchOf(layout, link.destinationChangeset) === MAIN_BRANCH)
-    .map((link) => timeById.get(link.destinationChangeset)!);
+  // Merges only (no cherry pick or subtractive), each changeset on /main once however many branches it merged.
+  const mergedIntoMain = new Set(
+    layout.mergeLinks
+      .filter((link) => link.type === 'merge' && branchOf(layout, link.destinationChangeset) === MAIN_BRANCH)
+      .map((link) => link.destinationChangeset),
+  );
+  const mainMergeTimes = [...mergedIntoMain].map((id) => timeById.get(id)!);
   const labels = [...layout.labelsByChangeset.values()]
     .flat()
     .map((label) => ({ label, column: layout.nodes.get(label.changeset)!.column, time: timeById.get(label.changeset)! }))

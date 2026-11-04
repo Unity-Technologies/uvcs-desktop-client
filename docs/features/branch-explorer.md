@@ -117,7 +117,8 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   and drag scrubs (`viewportForDrag`); after a drag the landed row comes into view (`viewportAfterDrag`). The wheel pans the canvas, with
   ⌘ or Ctrl it zooms (`timelineWheel`). Hovering an empty spot shows a dashed frame where a click would land
   (`ghostFrame`), and every target has a card (`timelineCard`): the hour, day or week under the pointer
-  (`bucketSize`) with "N changesets · M yours · K merged to /main" and its labels; the frame's dates, zoom and
+  (`bucketSize`) with "N changesets · M yours · K merged to /main" (K: changesets on /main a merge landed on, each once; cherry
+  picks and subtractive merges aren't merges into it) and its labels; the frame's dates, zoom and
   changesets on screen; home, gaps, labels and hits their own.
 
 What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it. Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary searches,
