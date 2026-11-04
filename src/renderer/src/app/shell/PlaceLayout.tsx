@@ -67,7 +67,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
             onSizeChange={setCommandLogHeight}
             hidden={commandLogOpen ? undefined : 'second'}
             first={
-              <div ref={contentRef} className={styles.content}>
+              <div ref={contentRef} className={styles.content} data-diff-expanded={diffExpanded || undefined}>
                 {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
                     each one arrives with the view transition. */}
                 <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
