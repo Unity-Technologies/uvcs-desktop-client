@@ -117,6 +117,12 @@ describe('fileSteps', () => {
     expect(at('b').takeArrival('src/b.ts')).toBeNull();
   });
 
+  it("says which file the list is on while the view beside it still shows another, as the host says (Changes' settle)", () => {
+    const list = { select: SELECTS, pathOf: (key: string) => `src/${key}.ts` };
+    expect(fileSteps(['a', 'b'], 'b', { ...list, settlingOn: 'src/b.ts' }, pendingArrival()).settlingOn).toBe('src/b.ts');
+    expect(fileSteps(['a', 'b'], 'b', list, pendingArrival()).settlingOn).toBeNull();
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyPress, pressGoal, routePress, takesKept, type PressSpot } from './pressRouting';
 import { StepQueue } from './stepQueue';
 
-const opened: PressSpot = { holder: 'view', path: 'a.cs', opened: true, steppingTo: null };
+const opened: PressSpot = { holder: 'view', path: 'a.cs', opened: true, steppingTo: null, settlingOn: null };
 
 describe('routePress', () => {
   it('steps through a view once it opened, with no step to another file in flight', () => {
@@ -11,6 +11,12 @@ describe('routePress', () => {
 
   it("keeps a press for the file a step went to while the view shown is still the previous one's (its selection settling)", () => {
     expect(routePress({ ...opened, steppingTo: 'b.cs' })).toEqual({ kind: 'keep', path: 'b.cs' });
+  });
+
+  it("keeps a press for the file the list is on while the view beside it still shows the previous one (Changes' settle)", () => {
+    expect(routePress({ ...opened, settlingOn: 'c.cs' })).toEqual({ kind: 'keep', path: 'c.cs' });
+    expect(routePress({ ...opened, holder: 'waiting', settlingOn: 'c.cs' })).toEqual({ kind: 'keep', path: 'c.cs' });
+    expect(routePress({ ...opened, settlingOn: 'a.cs' })).toEqual({ kind: 'step' });
   });
 
   it('keeps a press for the view itself until it opened at its arrival, else the arrival would move it back', () => {

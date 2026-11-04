@@ -180,7 +180,7 @@ class CachedDiffs {
     const body = this.body;
     if (!body) return null;
     return {
-      spot: { holder: 'view', path: body.path, opened: body.opened, steppingTo: this.steps().steppingTo() },
+      spot: { holder: 'view', path: body.path, opened: body.opened, steppingTo: this.steps().steppingTo(), settlingOn: this.steps().settlingOn },
       position: { count: this.files[body.path]!, current: body.current, above: 0 },
       moveTo: (index) => {
         body.current = index;
@@ -191,7 +191,8 @@ class CachedDiffs {
 
   /** The header's own navigation (`SteppedDiffFrame`): waiting for the selected file's diff, or stepless where it failed. */
   private headerNavigator(): Navigator {
-    return { spot: { holder: this.arrows().own, path: this.requested, opened: false, steppingTo: this.steps().steppingTo() }, position: NO_STEPS, moveTo: () => undefined };
+    const spot: PressSpot = { holder: this.arrows().own, path: this.requested, opened: false, steppingTo: this.steps().steppingTo(), settlingOn: this.steps().settlingOn };
+    return { spot, position: NO_STEPS, moveTo: () => undefined };
   }
 
   private steps() {
@@ -202,6 +203,8 @@ class CachedDiffs {
           this.pick(key);
         },
         pathOf: (key) => key,
+        // Changes: the list on another file than its diff shows, until the selection settles (`diffChange`).
+        settlingOn: this.settles && this.rendered !== this.requested ? this.rendered : null,
       }, this.pending);
   }
 }
@@ -251,6 +254,10 @@ describe('a burst of ↓ across diffs read from the cache', () => {
 
   it('keeps the presses for the next file while the previous one\'s diff, still shown, is drawn again', () => {
     expect(atLastChangeOfA({ 'b.cs': 3 }, true).press(1).press(1).rerender().settle().frame().header).toBe('b.cs: 2 of 3');
+  });
+
+  it('keeps for the file picked in Changes a press made before its selection settled, never stepping the previous file', () => {
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).pick('c.cs').rerender().press(1).settle().frame().header).toBe('c.cs: 1 of 2');
   });
 
   it('drops the presses meant for a file once another is picked while it loads: that one opens at its top', () => {
