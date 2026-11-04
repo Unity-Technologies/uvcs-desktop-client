@@ -2,7 +2,7 @@ name: Release note
 
 # Every pull request tells the app's users what it delivers, in its body's "## Release note" section, or says why it
 # has nothing to tell them (`readReleaseNote`, scripts/build/releaseNote.ts; how to write one: the release-notes skill),
-# and that a visible change's picture sits in that note (`misplacedPicture`).
+# and that no picture sits after the body's closing line, where `gh --attach` appends one nobody placed (`misplacedPicture`).
 # It runs apart from CI so that editing the description checks the note again without building on every OS.
 on:
   pull_request:
