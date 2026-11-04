@@ -1,7 +1,7 @@
 import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
 import { frameCenteredAt, frameShape, type TimelineFrame } from './timelineFrame';
-import { BASELINE, HIT_TICK_HEIGHT, MERGED_LABEL_TICK_HEIGHT, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
+import { BASELINE, HIT_TICK_HEIGHT, HIT_TICK_TOP, MERGED_LABEL_TICK_HEIGHT, MERGED_LABEL_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { HitTick, HomeMark, LabelTick, TimelineGap } from './timelineMarks';
 
 export interface Point {
@@ -13,8 +13,8 @@ export interface Point {
 export type TimelineTarget =
   | { kind: 'frameEdge'; edge: 'left' | 'right' }
   | { kind: 'frame' }
+  /** The house: the workspace, or its pending changes when it has some. */
   | { kind: 'home' }
-  | { kind: 'pending' }
   | { kind: 'labels'; tick: LabelTick }
   | { kind: 'gap'; gap: TimelineGap }
   | { kind: 'hits'; tick: HitTick }
@@ -29,13 +29,12 @@ export interface TimelineSpots {
   hits: readonly HitTick[];
   /** The house's middle. */
   home: Point | null;
-  /** The pending changes' ring's middle. */
-  pending: Point | null;
 }
 
-/** The house stands this far above the curve, and sits this far in from the left edge when the workspace is older than everything loaded. */
-const HOUSE_LIFT = 8;
-export const PINNED_HOUSE_X = 16;
+/** The house's badge stands this far above the curve (its middle), as the graph pins it to its changeset's shoulder. */
+const HOUSE_LIFT = 12;
+/** Where the house sits when the workspace is older than everything loaded: in from the left edge, a "‹" before it. */
+export const PINNED_HOUSE_X = 22;
 
 /** The top of the curve at a point of the strip. */
 export function curveTopAt(curve: ActivityCurve, x: number): number {
@@ -43,27 +42,29 @@ export function curveTopAt(curve: ActivityCurve, x: number): number {
   return BASELINE - (curve.total[pixel] ?? 0) * PLOT_HEIGHT;
 }
 
-/** The pending changes' ring's radius, and the house's disc's: room the house keeps from the ring and the top edge. */
-export const PENDING_RING_RADIUS = 5;
-export const HOUSE_RADIUS = 7.5;
+/** The house's badge: an 18 px disc, as the graph's home badge at full size (`drawHomeBadge`). */
+export const HOUSE_RADIUS = 9;
 /** The house's highest middle: its disc stays under the search hits' ticks along the top edge. */
-const HOUSE_TOP = HIT_TICK_HEIGHT + 2 + HOUSE_RADIUS;
+const HOUSE_TOP = HIT_TICK_TOP + HIT_TICK_HEIGHT + 1 + HOUSE_RADIUS;
+
+/** Where the house goes, and whether it stands for pending changes (its ring dashed, as the graph draws them). */
+export interface HomeSpot {
+  home: Point | null;
+  pending: boolean;
+}
 
 /**
- * Where the house and the pending changes' ring go: the house on the curve at the workspace's column (or pinned at the
- * left edge), the ring on the baseline at the right end; a house close above the ring stands clear of it. Where the
- * curve stands taller than room above it, the house sits into the curve rather than over the top edge.
+ * Where the house goes: on the curve at the workspace's column, or at its pending changes' column past every changeset
+ * when it has some (where the graph moves its home badge too); pinned at the left edge when the workspace is older
+ * than everything loaded. Where the curve stands taller than the room above it, the house sits into the curve rather
+ * than over the top edge.
  */
-export function homeSpots(mark: HomeMark, axis: TimelineAxis, curve: ActivityCurve): { home: Point | null; pending: Point | null } {
-  if (mark === null) return { home: null, pending: null };
-  if (mark.kind === 'olderThanRange') return { home: { x: PINNED_HOUSE_X, y: BASELINE - HOUSE_LIFT }, pending: null };
-  const x = stripXOfColumn(axis, mark.column);
-  const onCurve = Math.max(HOUSE_TOP, curveTopAt(curve, x) - HOUSE_LIFT);
-  if (mark.pendingColumn === null) return { home: { x, y: onCurve }, pending: null };
-  const pending = { x: stripXOfColumn(axis, mark.pendingColumn), y: BASELINE - PENDING_RING_RADIUS };
-  const clearOfRing = pending.y - PENDING_RING_RADIUS - HOUSE_RADIUS - 1;
-  const close = Math.abs(pending.x - x) < (PENDING_RING_RADIUS + HOUSE_RADIUS) * 2;
-  return { home: { x, y: close ? Math.max(HOUSE_TOP, Math.min(onCurve, clearOfRing)) : onCurve }, pending };
+export function homeSpots(mark: HomeMark, axis: TimelineAxis, curve: ActivityCurve): HomeSpot {
+  if (mark === null) return { home: null, pending: false };
+  if (mark.kind === 'olderThanRange') return { home: { x: PINNED_HOUSE_X, y: Math.max(HOUSE_TOP, BASELINE - HOUSE_LIFT) }, pending: false };
+  const pending = mark.pendingColumn !== null;
+  const x = stripXOfColumn(axis, pending ? mark.pendingColumn! : mark.column);
+  return { home: { x, y: Math.max(HOUSE_TOP, curveTopAt(curve, x) - HOUSE_LIFT) }, pending };
 }
 
 /** The gaps whose break mark the house leaves room for: none drawn under it. */
@@ -72,11 +73,11 @@ export function gapsClearOfHome(gaps: readonly TimelineGap[], home: Point | null
 }
 
 /** How near (px) the pointer must be to grab or hover each thing. */
-const REACH = { edge: 4, line: 5, label: 3, hit: 2, home: 8, gap: 4 };
+const REACH = { edge: 4, line: 5, label: 3, hit: 2, home: HOUSE_RADIUS, gap: 4 };
 
 /**
  * What the pointer is on, the most precise first: the frame's edges (only where they have handles), a label tick under
- * the baseline, a search hit along the top, the house, the pending changes, a gap's break mark, the frame, else the
+ * the baseline, a search hit along the top, the house, a gap's break mark, the frame, else the
  * moment under it.
  */
 export function timelineTargetAt(spots: TimelineSpots, x: number, y: number): TimelineTarget {
@@ -86,16 +87,15 @@ export function timelineTargetAt(spots: TimelineSpots, x: number, y: number): Ti
     if (Math.abs(x - frame.left) <= REACH.edge) return { kind: 'frameEdge', edge: 'left' };
     if (Math.abs(x - frame.right) <= REACH.edge) return { kind: 'frameEdge', edge: 'right' };
   }
-  if (y >= BASELINE - 2 && y <= BASELINE + MERGED_LABEL_TICK_HEIGHT + 4) {
+  if (y >= BASELINE && y <= MERGED_LABEL_TICK_TOP + MERGED_LABEL_TICK_HEIGHT + 3) {
     const tick = nearest(spots.labels, x, REACH.label);
     if (tick) return { kind: 'labels', tick };
   }
-  if (y <= HIT_TICK_HEIGHT + 3) {
+  if (y <= HIT_TICK_TOP + HIT_TICK_HEIGHT + 2) {
     const tick = nearest(spots.hits, x, REACH.hit);
     if (tick) return { kind: 'hits', tick };
   }
   if (spots.home && Math.hypot(x - spots.home.x, y - spots.home.y) <= REACH.home) return { kind: 'home' };
-  if (spots.pending && Math.hypot(x - spots.pending.x, y - spots.pending.y) <= REACH.home) return { kind: 'pending' };
   if (y >= PLOT_TOP && y <= BASELINE) {
     const gap = nearest(spots.gaps, x, REACH.gap);
     if (gap) return { kind: 'gap', gap };
@@ -126,8 +126,8 @@ export function timelineCursor(target: TimelineTarget | null): 'ew-resize' | 'gr
 }
 
 /**
- * Where a click takes the view: a label tick to its newest label, a gap to where history resumes, the house and
- * the pending changes to theirs, anything else to the column under the pointer.
+ * Where a click takes the view: a label tick to its newest label, a gap to where history resumes, the house to the
+ * workspace (its pending changes when it has some), anything else to the column under the pointer.
  */
 export function clickedColumn(target: TimelineTarget, x: number, axis: TimelineAxis, mark: HomeMark): number {
   switch (target.kind) {
@@ -136,9 +136,7 @@ export function clickedColumn(target: TimelineTarget, x: number, axis: TimelineA
     case 'gap':
       return target.gap.column;
     case 'home':
-      return mark?.kind === 'inRange' ? mark.column : 0;
-    case 'pending':
-      return mark?.kind === 'inRange' && mark.pendingColumn !== null ? mark.pendingColumn : columnAtStrip(axis, x);
+      return mark?.kind === 'inRange' ? (mark.pendingColumn ?? mark.column) : 0;
     default:
       return columnAtStrip(axis, x);
   }

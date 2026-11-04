@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   AXIS_LABEL_SPACING,
-  AXIS_TEXT_INSET,
   axisLabelCandidates,
   bucketAround,
   bucketSize,
@@ -97,10 +96,10 @@ describe('spacedAxisLabels', () => {
   it('keeps the first label, and each other one far enough from the last one kept', () => {
     const candidates = [0, 1, 2, 3].map((column) => ({ column, text: String(column), year: 2026, textWithYear: `${column} 2026` }));
     const xs = [0, 20, AXIS_LABEL_SPACING, AXIS_LABEL_SPACING + 10];
-    // Each text starts 2 px into its day, and 4 px in from the strip's edge.
+    // Each text starts 5 px into its day, after a hairline where the day begins; the first, the range's start, has none.
     expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 1_000 })).toEqual([
-      { x: AXIS_TEXT_INSET, text: '0' },
-      { x: AXIS_LABEL_SPACING + 2, text: '2' },
+      { x: 5, lineX: null, text: '0' },
+      { x: AXIS_LABEL_SPACING + 5, lineX: AXIS_LABEL_SPACING, text: '2' },
     ]);
   });
 
@@ -108,14 +107,14 @@ describe('spacedAxisLabels', () => {
     const candidates = [0, 1, 2].map((column) => ({ column, text: 'Long label text', year: 2026, textWithYear: 'Long label text' }));
     const xs = [0, 60, 90];
     // 75 px of text and 8 px after it: the second starts too soon, the third clears it.
-    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 1_000 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET, 92]);
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 1_000 }).map(({ x }) => x)).toEqual([5, 95]);
   });
 
   it('leaves out a date the strip’s right edge would cut', () => {
     const candidates = [0, 1].map((column) => ({ column, text: 'Sep', year: 2026, textWithYear: 'Sep 2026' }));
-    // 'Sep' is 15 px: at 100 it ends at 117, past 120 − 4.
+    // 'Sep' is 15 px: from 109 it ends at 124, past 125 − 4.
     const xs = [0, 104];
-    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 120 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET]);
-    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 130 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET, 106]);
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 125 }).map(({ x }) => x)).toEqual([5]);
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 130 }).map(({ x }) => x)).toEqual([5, 109]);
   });
 });

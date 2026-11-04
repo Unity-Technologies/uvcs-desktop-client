@@ -1,46 +1,64 @@
+import { drawHomeBadge } from '../canvas/drawHomeMarker';
 import type { GraphPalette } from '../canvas/graphPalette';
-import { strokeHouse } from '../canvas/houseGlyph';
-import { shareHeight, type ActivityCurve } from './activityCurve';
+import type { PlacedAxisLabel } from './timelineCalendar';
+import type { CurvePath, TimelineCurves } from './timelineCurvePath';
 import { frameShape, type TimelineFrame } from './timelineFrame';
 import {
+  AXIS_LINE_HEIGHT,
   AXIS_TEXT_MIDDLE,
+  AXIS_TOP,
   BASELINE,
+  FRAME_HEIGHT,
+  FRAME_TOP,
   HIT_TICK_HEIGHT,
+  HIT_TICK_TOP,
   LABEL_TICK_HEIGHT,
+  LABEL_TICK_TOP,
+  LABEL_TICK_WIDTH,
   MERGED_LABEL_TICK_HEIGHT,
-  PLOT_HEIGHT,
+  MERGED_LABEL_TICK_TOP,
   PLOT_TOP,
   TIMELINE_HEIGHT,
 } from './timelineGeometry';
 import type { HitTick, LabelTick, TimelineGap } from './timelineMarks';
-import { HOUSE_RADIUS, PENDING_RING_RADIUS, type Point } from './timelineTargets';
+import { HOUSE_RADIUS, type Point } from './timelineTargets';
 
-/** Everything one frame of the Timeline draws, already placed in strip px (`GraphTimeline` measures it). */
+/** Everything one frame of the Timeline draws, already placed in strip px (`timelineDrawing`). */
 export interface TimelineDrawing {
   width: number;
   palette: GraphPalette;
-  curve: ActivityCurve;
+  curves: TimelineCurves;
   frame: TimelineFrame;
+  /** Whether the frame is hovered or dragged: its full halo and its edges' grips. */
+  frameActive: boolean;
   /** Where a click would take the frame, while the pointer is on an empty spot. */
   ghost: TimelineFrame | null;
-  axisLabels: readonly { x: number; text: string }[];
+  axisLabels: readonly PlacedAxisLabel[];
   labels: readonly LabelTick[];
   gaps: readonly TimelineGap[];
   hits: readonly HitTick[];
   home: Point | null;
+  /** The house stands for pending changes: its ring is dashed. */
+  homePending: boolean;
   /** The house pinned at the left edge: the workspace is older than everything loaded. */
   homeOlderThanRange: boolean;
-  pending: Point | null;
   newestMainX: number | null;
   selectedChangesetX: number | null;
   selectedBranch: { left: number; right: number; color: string } | null;
 }
 
+/** The curve's fill, its line and the user's share, as the approved design weighs them. */
 const CURVE_FILL_ALPHA = 0.16;
-const CURVE_LINE_ALPHA = 0.55;
-const SHARE_ALPHA = 0.6;
-const BRANCH_BAND_ALPHA = 0.14;
+const CURVE_LINE_ALPHA = 0.6;
+const CURVE_LINE_WIDTH = 1.25;
+const SHARE_ALPHA = 0.5;
+const BRANCH_BAND_ALPHA = 0.18;
+const SINGLE_LABEL_ALPHA = 0.8;
 const AXIS_FONT_SIZE = 10;
+const FRAME_RADIUS = 5;
+/** The halo around the frame: 3 px, half as strong until the frame is hovered or dragged. */
+const HALO_WIDTH = 3;
+const RESTING_HALO_ALPHA = 0.5;
 
 export function drawTimeline(ctx: CanvasRenderingContext2D, drawing: TimelineDrawing, pixelRatio: number): void {
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -53,91 +71,119 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, drawing: TimelineDra
   drawSelectedBranch(ctx, drawing);
   drawCurve(ctx, drawing);
   drawGaps(ctx, drawing);
-  drawLabelTicks(ctx, drawing);
-  drawAxisLabels(ctx, drawing);
+  drawLabelTicks(ctx, drawing, pixelRatio);
+  drawAxisLabels(ctx, drawing, pixelRatio);
   drawHitTicks(ctx, drawing);
   drawNewestMain(ctx, drawing);
   drawSelectedChangeset(ctx, drawing);
-  if (drawing.ghost) drawFrameOutline(ctx, drawing.ghost, palette, true);
-  drawFrameTint(ctx, drawing);
+  if (drawing.ghost) drawGhostFrame(ctx, drawing.ghost, palette);
+  drawFrameBack(ctx, drawing);
   // Over the frame's tint, under its outline: at the newest end, where the frame often is, the house stays whole and
   // the frame's line runs unbroken.
   drawHome(ctx, drawing);
   drawFrame(ctx, drawing);
 }
 
+/** Snaps a length to the device's pixels, so a hairline is drawn crisp rather than smeared over two. */
+function snap(value: number, pixelRatio: number): number {
+  return Math.round(value * pixelRatio) / pixelRatio;
+}
+
 function drawSelectedBranch(ctx: CanvasRenderingContext2D, { selectedBranch }: TimelineDrawing): void {
   if (!selectedBranch) return;
-  const width = Math.max(2, selectedBranch.right - selectedBranch.left);
+  const width = Math.max(3, selectedBranch.right - selectedBranch.left);
   ctx.save();
   ctx.fillStyle = selectedBranch.color;
   ctx.globalAlpha = BRANCH_BAND_ALPHA;
-  ctx.fillRect(selectedBranch.left, PLOT_TOP, width, PLOT_HEIGHT);
+  roundedRect(ctx, selectedBranch.left - 1, PLOT_TOP - 4, width + 2, BASELINE - PLOT_TOP + 2, 4);
+  ctx.fill();
   ctx.globalAlpha = 1;
-  ctx.fillRect(selectedBranch.left, BASELINE - 1, width, 2);
+  ctx.strokeStyle = selectedBranch.color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
   ctx.restore();
 }
 
-function drawCurve(ctx: CanvasRenderingContext2D, { curve, palette }: TimelineDrawing): void {
-  const { total } = curve;
-  ctx.save();
+function tracePath(ctx: CanvasRenderingContext2D, { start, segments }: CurvePath): void {
+  ctx.moveTo(start.x, start.y);
+  for (const { c1, c2, end } of segments) ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
+}
+
+/** The path closed down to the baseline, to fill. */
+function traceArea(ctx: CanvasRenderingContext2D, path: CurvePath): void {
   ctx.beginPath();
-  ctx.moveTo(0, BASELINE);
-  for (let pixel = 0; pixel < total.length; pixel++) ctx.lineTo(pixel + 0.5, BASELINE - total[pixel]! * PLOT_HEIGHT);
-  ctx.lineTo(total.length, BASELINE);
+  tracePath(ctx, path);
+  const end = path.segments.at(-1)?.end ?? path.start;
+  ctx.lineTo(end.x, BASELINE);
+  ctx.lineTo(path.start.x, BASELINE);
   ctx.closePath();
+}
+
+function drawCurve(ctx: CanvasRenderingContext2D, { curves, palette, width }: TimelineDrawing): void {
+  ctx.save();
+  traceArea(ctx, curves.total);
   ctx.fillStyle = palette.textTertiary;
   ctx.globalAlpha = CURVE_FILL_ALPHA;
   ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(0, BASELINE);
-  for (let pixel = 0; pixel < total.length; pixel++) ctx.lineTo(pixel + 0.5, BASELINE - total[pixel]! * PLOT_HEIGHT);
-  ctx.strokeStyle = palette.textTertiary;
-  ctx.globalAlpha = CURVE_LINE_ALPHA;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(0, BASELINE);
-  for (let pixel = 0; pixel < total.length; pixel++) ctx.lineTo(pixel + 0.5, BASELINE - shareHeight(curve, pixel, PLOT_HEIGHT));
-  ctx.lineTo(total.length, BASELINE);
-  ctx.closePath();
+  traceArea(ctx, curves.share);
   ctx.fillStyle = palette.accent;
   ctx.globalAlpha = SHARE_ALPHA;
   ctx.fill();
 
+  ctx.beginPath();
+  tracePath(ctx, curves.total);
+  ctx.strokeStyle = palette.textTertiary;
+  ctx.globalAlpha = CURVE_LINE_ALPHA;
+  ctx.lineWidth = CURVE_LINE_WIDTH;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
   ctx.globalAlpha = 1;
   ctx.fillStyle = palette.border;
-  ctx.fillRect(0, BASELINE, total.length, 1);
+  ctx.fillRect(0, BASELINE, width, 1);
   ctx.restore();
 }
 
-/** A break mark (two short slanted strokes across the baseline) where days passed without a changeset. */
+/** A break mark where days passed without a changeset: a small slanted box across the baseline, its sides drawn. */
 function drawGaps(ctx: CanvasRenderingContext2D, { gaps, palette }: TimelineDrawing): void {
+  const half = { width: 2.5, height: 6 };
+  // skewX(-18deg): the top leans right, the bottom left.
+  const lean = Math.tan((18 * Math.PI) / 180) * half.height;
   ctx.save();
+  ctx.lineWidth = 1.5;
   ctx.strokeStyle = palette.textTertiary;
-  ctx.lineWidth = 1.2;
-  ctx.lineCap = 'round';
+  ctx.fillStyle = palette.panel;
   for (const { x } of gaps) {
-    ctx.fillStyle = palette.panel;
-    ctx.fillRect(x - 3, BASELINE - 5, 6, 10);
+    const top = BASELINE - half.height;
+    const bottom = BASELINE + half.height;
     ctx.beginPath();
-    for (const offset of [-2, 2]) {
-      ctx.moveTo(x + offset - 2, BASELINE + 4);
-      ctx.lineTo(x + offset + 2, BASELINE - 4);
-    }
+    ctx.moveTo(x - half.width + lean, top);
+    ctx.lineTo(x + half.width + lean, top);
+    ctx.lineTo(x + half.width - lean, bottom);
+    ctx.lineTo(x - half.width - lean, bottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x - half.width + lean + 0.75, top);
+    ctx.lineTo(x - half.width - lean + 0.75, bottom);
+    ctx.moveTo(x + half.width + lean - 0.75, top);
+    ctx.lineTo(x + half.width - lean - 0.75, bottom);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawLabelTicks(ctx: CanvasRenderingContext2D, { labels, palette }: TimelineDrawing): void {
+/** One tick per label (or group) under the baseline, in the label color, snapped to the device's pixels so it reads crisp. */
+function drawLabelTicks(ctx: CanvasRenderingContext2D, { labels, palette }: TimelineDrawing, pixelRatio: number): void {
   ctx.save();
-  ctx.fillStyle = palette.labelText;
+  ctx.fillStyle = palette.labelMark;
+  const width = Math.max(1, snap(LABEL_TICK_WIDTH, pixelRatio));
   for (const tick of labels) {
-    const height = tick.labels.length > 1 ? MERGED_LABEL_TICK_HEIGHT : LABEL_TICK_HEIGHT;
-    ctx.fillRect(Math.round(tick.x - 0.5), BASELINE + 1, 1, height);
+    const merged = tick.labels.length > 1;
+    ctx.globalAlpha = merged ? 1 : SINGLE_LABEL_ALPHA;
+    const left = snap(tick.x - width / 2, pixelRatio);
+    ctx.fillRect(left, merged ? MERGED_LABEL_TICK_TOP : LABEL_TICK_TOP, width, merged ? MERGED_LABEL_TICK_HEIGHT : LABEL_TICK_HEIGHT);
   }
   ctx.restore();
 }
@@ -156,13 +202,15 @@ export function measureAxisText(text: string, palette: GraphPalette): number {
   return measuringContext.measureText(text).width;
 }
 
-/** The dates `spacedAxisLabels` kept, where it placed them. */
-function drawAxisLabels(ctx: CanvasRenderingContext2D, { axisLabels, palette }: TimelineDrawing): void {
+/** The dates `spacedAxisLabels` kept, where it placed them: a hairline where each begins, the date 4 px after it. */
+function drawAxisLabels(ctx: CanvasRenderingContext2D, { axisLabels, palette }: TimelineDrawing, pixelRatio: number): void {
   ctx.save();
+  ctx.fillStyle = palette.border;
+  for (const { lineX } of axisLabels) if (lineX !== null) ctx.fillRect(snap(lineX, pixelRatio), AXIS_TOP, 1, AXIS_LINE_HEIGHT);
   ctx.font = axisFont(palette);
   ctx.textBaseline = 'middle';
   ctx.fillStyle = palette.textTertiary;
-  for (const { x, text } of axisLabels) ctx.fillText(text, x, AXIS_TEXT_MIDDLE);
+  for (const { x, text } of axisLabels) ctx.fillText(text, snap(x, pixelRatio), snap(AXIS_TEXT_MIDDLE, pixelRatio));
   ctx.restore();
 }
 
@@ -171,8 +219,9 @@ function drawHitTicks(ctx: CanvasRenderingContext2D, { hits, palette }: Timeline
   ctx.fillStyle = palette.searchHit;
   for (const { x, count } of hits) {
     // Many hits in one pixel stand out more: hundreds read as a density.
-    ctx.globalAlpha = Math.min(1, 0.55 + 0.15 * count);
-    ctx.fillRect(Math.floor(x), 0, 1, HIT_TICK_HEIGHT);
+    ctx.globalAlpha = Math.min(1, 0.6 + 0.15 * count);
+    roundedRect(ctx, x - 1, HIT_TICK_TOP, 2, HIT_TICK_HEIGHT, 1);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -198,87 +247,96 @@ function drawSelectedChangeset(ctx: CanvasRenderingContext2D, { selectedChangese
   if (x === null) return;
   ctx.save();
   ctx.fillStyle = palette.accent;
-  ctx.fillRect(Math.round(x - 0.5), PLOT_TOP + 3, 1, BASELINE - PLOT_TOP - 3);
+  ctx.fillRect(x - 0.75, 5, 1.5, BASELINE - 5);
   ctx.beginPath();
-  ctx.arc(x, PLOT_TOP + 3, 3, 0, Math.PI * 2);
+  ctx.arc(x, 7.75, 3.75, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
-function drawHome(ctx: CanvasRenderingContext2D, { home, homeOlderThanRange, pending, palette }: TimelineDrawing): void {
+/** The house, as the graph's own home badge (`drawHomeBadge`), lifted by a shadow over the curve. */
+function drawHome(ctx: CanvasRenderingContext2D, { home, homePending, homeOlderThanRange, palette }: TimelineDrawing): void {
+  if (!home) return;
+  drawHomeBadge(ctx, home.x, home.y, HOUSE_RADIUS, palette, { dashed: homePending, shadow: true });
+  if (!homeOlderThanRange) return;
   ctx.save();
-  if (pending) {
-    ctx.fillStyle = palette.panel;
-    ctx.strokeStyle = palette.accent;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([2, 2]);
-    ctx.beginPath();
-    ctx.arc(pending.x, pending.y, PENDING_RING_RADIUS, 0, Math.PI * 2);
+  ctx.font = `700 11px ${palette.fontUi}`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = palette.accentText;
+  ctx.fillText('‹', home.x - HOUSE_RADIUS - 2, home.y);
+  ctx.restore();
+}
+
+/** The frame's box: from `FRAME_TOP`, `FRAME_HEIGHT` tall, its corners rounded. */
+function frameBox(ctx: CanvasRenderingContext2D, frame: TimelineFrame, inset: number): void {
+  roundedRect(ctx, frame.left + inset, FRAME_TOP + inset, Math.max(0, frame.right - frame.left - inset * 2), FRAME_HEIGHT - inset * 2, Math.max(0, FRAME_RADIUS - inset));
+}
+
+/** Under what the frame covers: its halo, then its wash. A frame thinner than a line has neither. */
+function drawFrameBack(ctx: CanvasRenderingContext2D, { frame, frameActive, palette }: TimelineDrawing): void {
+  if (frameShape(frame) === 'line') return;
+  ctx.save();
+  ctx.strokeStyle = palette.accentSoft;
+  ctx.lineWidth = HALO_WIDTH;
+  ctx.globalAlpha = frameActive ? 1 : RESTING_HALO_ALPHA;
+  frameBox(ctx, frame, -HALO_WIDTH / 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = palette.accentWash;
+  frameBox(ctx, frame, 0);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** The frame's outline and, while hovered or dragged, its edges' grips; thinner than a line, a line with a handle on top. */
+function drawFrame(ctx: CanvasRenderingContext2D, { frame, frameActive, palette }: TimelineDrawing): void {
+  const shape = frameShape(frame);
+  ctx.save();
+  ctx.fillStyle = palette.accent;
+  if (shape === 'line') {
+    const x = (frame.left + frame.right) / 2;
+    roundedRect(ctx, x - 1, FRAME_TOP, 2, FRAME_HEIGHT + 2, 1);
     ctx.fill();
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // A handle to take hold of it, ringed in the strip's background so it stands off the curve.
+    ctx.fillStyle = palette.panel;
+    roundedRect(ctx, x - 7, FRAME_TOP - 4, 14, 14, 5);
+    ctx.fill();
+    ctx.fillStyle = palette.accent;
+    roundedRect(ctx, x - 5, FRAME_TOP - 2, 10, 10, 3);
+    ctx.fill();
+    ctx.restore();
+    return;
   }
-  if (home) {
-    ctx.fillStyle = palette.panel;
-    ctx.beginPath();
-    ctx.arc(home.x, home.y, HOUSE_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-    strokeHouse(ctx, home.x, home.y, 0.8, palette.accent, 1.5);
-    if (homeOlderThanRange) {
-      ctx.font = `600 12px ${palette.fontUi}`;
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'right';
-      ctx.fillStyle = palette.accentText;
-      ctx.fillText('‹', home.x - 8, home.y);
+  ctx.strokeStyle = palette.accent;
+  ctx.lineWidth = 1.5;
+  frameBox(ctx, frame, 0.75);
+  ctx.stroke();
+  if (shape === 'boxWithEdges' && frameActive) {
+    for (const x of [frame.left - 3, frame.right - 1]) {
+      roundedRect(ctx, x, FRAME_TOP + 12, 4, 14, 2);
+      ctx.fill();
     }
   }
   ctx.restore();
 }
 
-/** The frame's light tint, under what it covers; a frame thinner than a line has none. */
-function drawFrameTint(ctx: CanvasRenderingContext2D, { frame, palette }: TimelineDrawing): void {
-  if (frameShape(frame) === 'line') return;
+/** Where a click would take the frame: the same rounded box, dashed; a dashed line where the frame is one. */
+function drawGhostFrame(ctx: CanvasRenderingContext2D, ghost: TimelineFrame, palette: GraphPalette): void {
   ctx.save();
-  ctx.fillStyle = palette.accentSoft;
-  ctx.fillRect(frame.left, 0, frame.right - frame.left, TIMELINE_HEIGHT - 1);
-  ctx.restore();
-}
-
-/** The frame's outline (or line and handle) and its edges' handles. */
-function drawFrame(ctx: CanvasRenderingContext2D, { frame, palette }: TimelineDrawing): void {
-  const shape = frameShape(frame);
-  if (shape === 'line') {
-    const x = (frame.left + frame.right) / 2;
-    ctx.save();
-    ctx.fillStyle = palette.accent;
-    ctx.fillRect(Math.round(x) - 1, 1, 2, TIMELINE_HEIGHT - 2);
-    // A handle to take hold of a frame thinner than a line.
-    roundedRect(ctx, x - 3.5, BASELINE - 6, 7, 12, 2);
-    ctx.fill();
-    ctx.restore();
-    return;
+  ctx.strokeStyle = palette.textTertiary;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  if (frameShape(ghost) === 'line') {
+    const x = Math.round((ghost.left + ghost.right) / 2) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, FRAME_TOP + 1);
+    ctx.lineTo(x, FRAME_TOP + FRAME_HEIGHT - 1);
+    ctx.stroke();
+  } else {
+    roundedRect(ctx, ghost.left + 0.5, FRAME_TOP + 1.5, Math.max(0, ghost.right - ghost.left - 1), FRAME_HEIGHT - 3, FRAME_RADIUS);
+    ctx.stroke();
   }
-  drawFrameOutline(ctx, frame, palette, false);
-  if (shape !== 'boxWithEdges') return;
-  ctx.save();
-  ctx.fillStyle = palette.accent;
-  for (const x of [frame.left, frame.right]) {
-    roundedRect(ctx, x - 2, TIMELINE_HEIGHT / 2 - 7, 4, 14, 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawFrameOutline(ctx: CanvasRenderingContext2D, frame: TimelineFrame, palette: GraphPalette, ghost: boolean): void {
-  ctx.save();
-  ctx.strokeStyle = palette.accent;
-  ctx.lineWidth = ghost ? 1 : 1.5;
-  if (ghost) {
-    ctx.setLineDash([3, 3]);
-    ctx.globalAlpha = 0.7;
-  }
-  const width = Math.max(1, frame.right - frame.left);
-  ctx.strokeRect(frame.left, 0.75, width, TIMELINE_HEIGHT - 2.5);
   ctx.restore();
 }
 

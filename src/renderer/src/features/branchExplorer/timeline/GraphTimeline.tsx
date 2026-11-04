@@ -14,12 +14,13 @@ import { stripXOfColumn, timelineAxis } from './timelineAxis';
 import { axisLabelCandidates, LOCAL_CALENDAR, spacedAxisLabels } from './timelineCalendar';
 import { timelineCard } from './timelineCard';
 import { viewportAfterDrag, viewportForDrag } from './timelineDrag';
+import { timelineCurves } from './timelineCurvePath';
 import { timelineDrawing } from './timelineDrawing';
 import { TIMELINE_HEIGHT } from './timelineGeometry';
 import { viewportAtColumn, viewportFrame } from './timelineFrame';
 import { timelineHistory, timelineShare } from './timelineHistory';
 import { hitTicks, homeMark, labelTicks, searchHitColumns, timelineGaps } from './timelineMarks';
-import { clickedColumn, gapsClearOfHome, homeSpots, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots, type TimelineTarget } from './timelineTargets';
+import { clickedColumn, gapsClearOfHome, homeSpots, timelineCursor, timelinePress, timelineTargetAt, type TimelinePress, type TimelineSpots, type TimelineTarget } from './timelineTargets';
 import { timelineWheel, zoomAnchorX } from './timelineWheel';
 import styles from './GraphTimeline.module.css';
 
@@ -72,12 +73,15 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
   const frameRequest = useRef(0);
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<Hover | null>(null);
+  /** What a press on the strip is doing while the pointer is down: the frame shows active while it is dragged. */
+  const [dragging, setDragging] = useState<TimelinePress | null>(null);
 
   // Measured once per layout, share and width: never per frame or pointer move.
   const history = useMemo(() => timelineHistory(layout), [layout]);
   const share = useMemo(() => timelineShare(history, owners), [history, owners]);
   const axis = useMemo(() => timelineAxis(layout, width), [layout, width]);
   const curve = useMemo(() => activityCurve(history, share, axis), [history, share, axis]);
+  const curves = useMemo(() => timelineCurves(curve), [curve]);
   const labels = useMemo(() => labelTicks(history, axis), [history, axis]);
   const allGaps = useMemo(() => timelineGaps(history, axis), [history, axis]);
   const axisCandidates = useMemo(() => axisLabelCandidates(history.columnTimes, LOCAL_CALENDAR), [history]);
@@ -95,7 +99,7 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     labels,
     gaps,
     hits,
-    ...homePlaces,
+    home: homePlaces.home,
   });
 
   const drawRef = useRef<() => void>(() => {});
@@ -103,7 +107,7 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx || width === 0) return;
     const { frame } = spots();
-    const drawing = timelineDrawing({ layout, history, axis, palette, curve, frame, hover, axisLabels, labels, gaps, hits, home, homePlaces, selectedChangeset, selectedBranch });
+    const drawing = timelineDrawing({ layout, history, axis, palette, curves, frame, hover, dragging, axisLabels, labels, gaps, hits, home, homePlaces, selectedChangeset, selectedBranch });
     drawTimeline(ctx, drawing, window.devicePixelRatio);
   };
   // Every render may change what is drawn (the selection, a search, the hover's ghost frame): drawn before it is painted.
@@ -161,10 +165,12 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     followPointerDrag(event, {
       onDrag: (dx, _dy, move) => {
         containerRef.current?.setAttribute('data-dragging', press.kind);
+        setDragging(press);
         view.jumpTo(viewportForDrag(press, view.viewportRef.current, axis, screenSize(), { dx, x: localX(move.clientX) }));
       },
       onDragEnd: () => {
         containerRef.current?.removeAttribute('data-dragging');
+        setDragging(null);
         const landed = viewportAfterDrag(layout, view.viewportRef.current, axis, screenSize());
         if (landed) view.glideTo(landed);
       },

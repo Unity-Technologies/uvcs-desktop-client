@@ -95,9 +95,14 @@ describe('timelineCard', () => {
     });
   });
 
-  it('counts the pending changes, names a gap’s days and counts the search matches', () => {
+  it('counts the workspace’s pending changes on its house', () => {
     const context = contextFor();
-    expect(timelineCard({ kind: 'pending' }, 0, context)).toEqual({ title: 'Pending changes', lines: ['4 changes not checked in yet'] });
+    const pending = { ...context, home: { kind: 'inRange' as const, column: 1, changeset: 1, pendingColumn: 7 } };
+    expect(timelineCard({ kind: 'home' }, 0, pending).lines).toEqual(['On changeset 1', '4 changes not checked in yet', '/main moved on 3 changesets since']);
+  });
+
+  it('names a gap’s days and counts the search matches', () => {
+    const context = contextFor();
     expect(timelineCard({ kind: 'gap', gap: { x: 0, column: 1, from: Date.parse('2026-12-23T10:00:00Z'), to: Date.parse('2027-01-03T10:00:00Z'), days: 11 } }, 0, context)).toEqual({
       title: 'No changesets for 11 days',
       lines: ['Dec 23 – Jan 3'],

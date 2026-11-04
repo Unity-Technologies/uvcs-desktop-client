@@ -150,8 +150,11 @@ function monthOf(day: number): number {
 /** The axis's labels start at least this far apart (px), and leave at least `AXIS_LABEL_GAP` after the text before. */
 export const AXIS_LABEL_SPACING = 38;
 export const AXIS_LABEL_GAP = 8;
-/** A date starts this far right of where its day or month begins, and never closer than `AXIS_TEXT_INSET` to an edge. */
-const AXIS_TEXT_OFFSET = 2;
+/**
+ * A date starts this far right of where its day or month begins (a 1 px hairline there, then 4 px), and never closer
+ * than `AXIS_TEXT_INSET` to an edge.
+ */
+const AXIS_TEXT_OFFSET = 5;
 export const AXIS_TEXT_INSET = 4;
 
 /** Where the strip's dates go, and how wide a date is drawn. */
@@ -161,9 +164,10 @@ export interface AxisLabelRoom {
   stripWidth: number;
 }
 
-/** A date as drawn: its text from `x` (its left). */
+/** A date as drawn: its text from `x` (its left), after the hairline at `lineX` where its day or month begins; the first, the range's start, has none. */
 export interface PlacedAxisLabel {
   x: number;
+  lineX: number | null;
   text: string;
 }
 
@@ -183,7 +187,7 @@ export function spacedAxisLabels(candidates: readonly AxisLabel[], { xOf, widthO
     const shown = shownYear === null || year === shownYear ? text : textWithYear;
     const width = widthOf(shown);
     if (start - lastStart < AXIS_LABEL_SPACING || x < freeFrom || x + width > stripWidth - AXIS_TEXT_INSET) continue;
-    kept.push({ x, text: shown });
+    kept.push({ x, lineX: kept.length === 0 ? null : Math.round(start), text: shown });
     shownYear = year;
     lastStart = start;
     freeFrom = x + width + AXIS_LABEL_GAP;
