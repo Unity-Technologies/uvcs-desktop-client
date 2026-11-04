@@ -27,26 +27,17 @@ export interface CommandLineToken {
   end: number;
 }
 
-/** Commands whose second word is a subcommand (`lock list`) or, for `find`, the kind of object looked for. */
-const COMMANDS_WITH_SUBCOMMAND = new Set([
-  'attribute',
-  'branch',
-  'changelist',
-  'changeset',
-  'codereview',
-  'find',
-  'label',
-  'lock',
-  'profile',
-  'purge',
-  'repository',
-  'shelveset',
-  'trigger',
-  'workspace',
-]);
+/**
+ * The commands the app runs whose second word is a subcommand (`lock list`) or, for `find`, the kind of object looked
+ * for. `changelist` is apart: its second word is a subcommand or a changelist's name (`CHANGELIST_SUBCOMMANDS`).
+ */
+const COMMANDS_WITH_SUBCOMMAND = new Set(['attribute', 'branch', 'changeset', 'codereview', 'find', 'label', 'lock', 'profile', 'repository', 'shelveset', 'workspace']);
+/** `cm changelist create|edit|delete <name>`; any other second word is a name, its subcommand next (`cm changelist art add …`). */
+const CHANGELIST_SUBCOMMANDS = new Set(['create', 'edit', 'delete']);
+const CHANGELIST_ITEM_SUBCOMMANDS = new Set(['add', 'rm']);
 
-/** The words of `cm find`'s query language. */
-const QUERY_KEYWORDS = new Set(['where', 'and', 'or', 'not', 'order', 'by', 'asc', 'desc', 'limit', 'like', 'is', 'null', 'between', 'in']);
+/** The words of `cm find`'s query language; `on repository '<repository>'` ends a query run with no workspace. */
+const QUERY_KEYWORDS = new Set(['where', 'and', 'or', 'not', 'order', 'by', 'asc', 'desc', 'limit', 'like', 'is', 'null', 'between', 'on', 'repository']);
 const QUERY_OPERATOR = /^(=|!=|<>|<|>|<=|>=)$/;
 const NUMBER = /^\d+$/;
 const SUBCOMMAND = /^[a-z]+$/;
@@ -89,10 +80,19 @@ function pushWord(tokens: CommandLineToken[], word: string, start: number, befor
   const end = start + word.length;
   if (before.length === 0 && word === 'cm') return push(tokens, 'program', start, end);
   if (before.length === 1) return push(tokens, 'command', start, end);
-  if (before.length === 2 && COMMANDS_WITH_SUBCOMMAND.has(before[1]!) && SUBCOMMAND.test(word)) return push(tokens, 'command', start, end);
+  if (isSubcommand(word, before)) return push(tokens, 'command', start, end);
   if (word.length > 1 && word.startsWith('-')) return pushOption(tokens, word, start);
   if (before[1] === 'find') return push(tokens, queryWordKind(word), start, end);
   push(tokens, 'plain', start, end);
+}
+
+function isSubcommand(word: string, before: readonly string[]): boolean {
+  const command = before[1]!;
+  if (command === 'changelist') {
+    if (before.length === 2) return CHANGELIST_SUBCOMMANDS.has(word);
+    return before.length === 3 && !CHANGELIST_SUBCOMMANDS.has(before[2]!) && CHANGELIST_ITEM_SUBCOMMANDS.has(word);
+  }
+  return before.length === 2 && COMMANDS_WITH_SUBCOMMAND.has(command) && SUBCOMMAND.test(word);
 }
 
 /** `--name`, or `--name=value` with the value's format fields and separators told apart. */
@@ -120,9 +120,15 @@ function queryWordKind(word: string): CommandLineTokenKind {
   return 'plain';
 }
 
-/** Adds a token, one a word or a run of spaces, skipping empty ones (a value that starts with a format field). */
+/**
+ * Adds a token, skipping empty ones (a value that starts with a format field). Plain text joins the plain text before
+ * it, so a command over thousands of paths draws them as one run, not a node per word and per space.
+ */
 function push(tokens: CommandLineToken[], kind: CommandLineTokenKind, start: number, end: number): void {
-  if (end > start) tokens.push({ kind, start, end });
+  if (end <= start) return;
+  const last = tokens[tokens.length - 1];
+  if (kind === 'plain' && last?.kind === 'plain' && last.end === start) last.end = end;
+  else tokens.push({ kind, start, end });
 }
 
 function endOfSpace(line: string, start: number): number {
