@@ -225,15 +225,20 @@ describe('menuTargetOf', () => {
   });
   const row = (key: string) => rows.find((candidate) => candidate.key === key)!;
 
-  it("opens a folder's or the default changelist's menu on the changes in it, not on the selected files", () => {
-    expect((menuTargetOf(row('folder:changelist::src')) as PendingChange[]).map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
-    expect((menuTargetOf(row('changelist:')) as PendingChange[]).length).toBe(3);
+  it("opens a folder's menu on the changes in it, not on the selected files", () => {
+    const target = menuTargetOf(row('folder:changelist::src'));
+
+    expect(target.kind === 'changes' && target.changes.map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
   });
 
-  it("opens a changelist's own menu on its header, and the selection's on a file", () => {
-    expect(menuTargetOf(row('changelist:UI'))).toEqual({ name: 'UI', description: '' });
-    expect(menuTargetOf(row('change:src/b.ts'))).toBeNull();
-    expect(menuTargetOf(null)).toBeNull();
+  it("opens a changelist's own menu on its header, the default changelist's too", () => {
+    expect(menuTargetOf(row('changelist:UI'))).toEqual({ kind: 'changelist', changelist: { name: 'UI', description: '' } });
+    expect(menuTargetOf(row('changelist:'))).toEqual({ kind: 'changelist', changelist: null });
+  });
+
+  it("opens the selection's menu on a file", () => {
+    expect(menuTargetOf(row('change:src/b.ts'))).toEqual({ kind: 'selection' });
+    expect(menuTargetOf(null)).toEqual({ kind: 'selection' });
   });
 });
 
@@ -338,10 +343,15 @@ describe('grouping by status', () => {
     expect(rows.at(-1)).toMatchObject({ type: 'group', key: 'changelist:Empty', depth: 0 });
   });
 
-  it("opens the menu of a status group's changes, not a changelist's", () => {
+  it("opens the menu of a status group's changes, not its changelist's, the default changelist's included", () => {
     const rows = buildChangeRows({ ...base, groupByStatus: true, grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
-    const uiChanged = rows.find((row) => row.key === 'status:changelist:UI:changed')!;
-    expect((menuTargetOf(uiChanged) as PendingChange[]).map((item) => item.path)).toEqual(['src/a.ts']);
+    const pathsTargeted = (key: string): string[] | undefined => {
+      const target = menuTargetOf(rows.find((row) => row.key === key)!);
+      return target.kind === 'changes' ? target.changes.map((item) => item.path) : undefined;
+    };
+    expect(pathsTargeted('status:changelist:UI:changed')).toEqual(['src/a.ts']);
+    expect(pathsTargeted('status:changelist::changed')).toEqual(['src/b.ts']);
+    expect(menuTargetOf(rows.find((row) => row.key === 'changelist:')!)).toEqual({ kind: 'changelist', changelist: null });
   });
 
   it('closes a status group alone, leaving the same status of another changelist open', () => {

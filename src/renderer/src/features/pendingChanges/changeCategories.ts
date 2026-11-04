@@ -97,3 +97,8 @@ export function describeKinds(change: PendingChange): string {
 export function describeKindList(kinds: readonly ChangeKind[]): string {
   return kinds.map((kind) => KIND_LABELS[kind]).join(', ');
 }
+
+/** The user changelist a change is in, or null for the default changelist, which `cm` names nowhere. */
+export function changelistNameOf(change: PendingChange): string | null {
+  return change.changelist || null;
+}

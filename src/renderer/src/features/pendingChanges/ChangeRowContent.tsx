@@ -3,6 +3,7 @@ import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
 import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
@@ -13,7 +14,7 @@ import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { ReviewStatus } from '../review/reviewStatus';
 import { ReviewToggle } from '../review/ReviewToggle';
 import { changePresence, changeStatus, changeTone } from './changeTone';
-import { changelistOfGroup, type ChangeRow } from './changeRows';
+import type { ChangeRow } from './changeRows';
 import { LockMark } from './locks/LockMark';
 import type { PendingLock } from './locks/pendingLocks';
 import styles from './ChangesList.module.css';
@@ -33,15 +34,20 @@ interface GroupRowContentProps {
   row: GroupRow;
   checkState: CheckState | null;
   onToggleIncluded: ToggleIncluded;
-  changelistMenu: (changelist: Changelist) => MenuEntry[];
+  changelistMenu: (changelist: Changelist | null) => MenuEntry[];
+  /** Whether it has a menu, and so a "…" (`changelistHasMenu`): cheap, unlike building the menu. */
+  hasChangelistMenu: (changelist: Changelist | null) => boolean;
 }
 
 /**
  * A changelist's or a status group's header: its check, icon, name, actions and count. A changelist's icon, as in the
  * official client, sets it apart from the folders under it; a status group's is its status letter, as its rows have it.
+ * Every changelist has its "…", the default one too, unless nothing in its menu applies; the menu is built only when it
+ * opens. A status group has none: right-clicking it opens its changes' menu.
  */
-export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: GroupRowContentProps) {
-  const changelist = changelistOfGroup(row.group);
+export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu, hasChangelistMenu }: GroupRowContentProps) {
+  // The changelist the header is, null for the default one; undefined for a status group.
+  const changelist = row.group.kind === 'changelist' ? (row.group.changelist ?? null) : undefined;
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
@@ -54,8 +60,8 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
       <span className={styles.groupLabel} data-tip={changelist?.description}>
         {row.label}
       </span>
-      {changelist && (
-        <ActionDropdownMenu entries={changelistMenu(changelist)}>
+      {changelist !== undefined && hasChangelistMenu(changelist) && (
+        <ActionDropdownMenu entries={() => changelistMenu(changelist)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>
@@ -91,7 +97,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {hasMeta && <MetaTag takenAlong />}
             {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(itemsIn(row.held))} />}
           </>
         }
@@ -120,7 +126,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         faded={reviewStatus === 'reviewed'}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {hasMeta && <MetaTag takenAlong />}
             {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
             {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
             {lock && <LockMark lock={lock} />}

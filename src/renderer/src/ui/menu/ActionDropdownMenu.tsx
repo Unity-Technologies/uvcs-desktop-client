@@ -15,7 +15,8 @@ const primitives: MenuPrimitives = {
 };
 
 interface ActionDropdownMenuProps {
-  entries: MenuEntry[];
+  /** A function is asked only as the menu opens: a menu costly to build isn't built on every render of its trigger. */
+  entries: MenuEntry[] | (() => MenuEntry[]);
   align?: 'start' | 'end';
   children: ReactElement;
   /** Opens and closes it from outside too, e.g. from the keyboard; uncontrolled without it. */
@@ -41,9 +42,14 @@ export function ActionDropdownMenu({ entries, align = 'end', children, open, onO
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <MenuEntries entries={entries} primitives={primitives} />
+          <OpenedEntries entries={entries} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
   );
+}
+
+/** Rendered only while the menu is open, so a function's entries are built then. */
+function OpenedEntries({ entries }: { entries: MenuEntry[] | (() => MenuEntry[]) }) {
+  return <MenuEntries entries={typeof entries === 'function' ? entries() : entries} primitives={primitives} />;
 }

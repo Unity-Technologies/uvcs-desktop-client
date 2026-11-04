@@ -139,7 +139,7 @@ describe('checkinSelectionOf, over many changes', () => {
     ['a moved folder unchecked', unchecking(['moved'])],
     ['the move a deleted folder waits for unchecked', unchecking(['kept/b.ts'])],
     ['a merge change unchecked', unchecking(['m/merged.ts'])],
-    ['a changelist prepared', { excludedPaths: new Set<string>(), prepared: { name: 'ui', paths: new Set(['src/f5/edit5.ts', 'gen/sub2/p2.g', 'gen']) } }],
+    ['a changelist prepared', { excludedPaths: new Set<string>(), prepared: { name: 'ui', paths: new Set(['src/f5/edit5.ts', 'gen/sub2/p2.g', 'gen']), readied: new Set<string>() } }],
   ];
 
   it.each(choices.flatMap(([name, choice]) => [[`${name}, nothing filtered`, many, choice] as const, [`${name}, filtered by Changed`, edits, choice] as const]))(
@@ -198,6 +198,6 @@ describe('everyBoxChecked', () => {
     expect(everyBoxChecked(unchecking([]), index)).toBe(true);
     expect(everyBoxChecked(unchecking(['src/a.ts']), index)).toBe(false);
     expect(everyBoxChecked(unchecking(['src/gone.ts', 'build/out.bin']), index)).toBe(true);
-    expect(everyBoxChecked({ excludedPaths: new Set(), prepared: { name: 'ui', paths: new Set() } }, index)).toBe(false);
+    expect(everyBoxChecked({ excludedPaths: new Set(), prepared: { name: 'ui', paths: new Set(), readied: new Set() } }, index)).toBe(false);
   });
 });

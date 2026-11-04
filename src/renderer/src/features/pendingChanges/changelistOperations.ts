@@ -38,9 +38,11 @@ function showChangelists(): void {
   usePendingChangesViewStore.getState().setGrouping('changelist');
 }
 
-export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[]): Promise<void> {
+/** `beforeMove` runs once a name is given, before the changelist is created: cancelling leaves everything as it was. */
+export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[], beforeMove: () => void = () => {}): Promise<void> {
   const name = await prompt({ title: 'New changelist', label: 'Name', confirmLabel: 'Create' });
   if (!name) return;
+  beforeMove();
 
   const created = await runVoidAction(
     workspacePlace(workspacePath),

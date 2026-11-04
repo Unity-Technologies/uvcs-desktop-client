@@ -43,8 +43,8 @@ import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
-import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
-import { changelistMenu } from './changelistMenu';
+import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
+import { changelistHasMenu, changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones, PENDING_CHANGE_FACTS } from './changeTone';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
@@ -155,7 +155,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   );
   useMergeComment(workspacePath, snapshot);
   useEndPreparedWhenGone(workspacePath, snapshot, checkinChoice.prepared);
-  const preparedChangelist = useMemo(() => currentChoice(checkinChoice, allChanges).prepared?.name ?? null, [checkinChoice, allChanges]);
+  const preparedNote = useMemo(() => preparedChangelistNote(currentChoice(checkinChoice, allChanges).prepared), [checkinChoice, allChanges]);
 
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
@@ -188,10 +188,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     setIncludedChanges(withMetas(toggled.flatMap(changesUnderRow), pairs.metaOf), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
-  const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
+  const prepareChangelist = (changelist: Changelist | null, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, index, changelists, clearFilter });
+      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES, index, changelists, clearFilter });
       setCheckinMode(mode);
     });
     summaryRef.current?.focusAtEnd();
@@ -231,10 +231,13 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           }
           changelistMenu={(changelist) =>
             changelistMenu(workspacePath, changelist, {
-              changes: changelistChanges.get(changelist.name) ?? NO_CHANGES,
+              changes: changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES,
               prepare: (mode) => prepareChangelist(changelist, mode),
+              changelists,
+              clearFilter,
             })
           }
+          hasChangelistMenu={(changelist) => changelistHasMenu(changelist, changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES)}
           review={review}
           locks={locks}
           metaOf={pairs.metaOf}
@@ -266,6 +269,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={shownRows}
               totalCount={listedCount === undefined ? undefined : listedCount - pairs.pairedCount}
+              metaCount={pairs.pairedCount}
               checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, withMetas(selected, pairs.metaOf))}
@@ -307,7 +311,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
-              preparedChangelist={preparedChangelist}
+              preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
               recentComments={settings.recentComments}
               mode={checkinMode}

@@ -20,6 +20,33 @@ List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item
 A Unity asset and its `.meta` are one row (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"): checking, undoing, adding, checking out, moving
 to a changelist and the filter rules take the meta along; "Open .meta" and "Open .meta diff" open the meta alone.
 
+## Changelist menus
+
+Grouped by changelists, every changelist's header offers one menu (`changelistMenu`), by right-click, the menu key or
+its "…" button, the default changelist's included (`menuTargetOf` gives it `changelist: null`): "Check in this
+changelist" and "Shelve this changelist" (shelves-and-switching.md, "A changelist at a time"), "Move to changelist ▸"
+and "Undo N changes…", which act on all its changes, those the filters hide too (`changesByChangelist`, the default
+changelist's under `null`). A user changelist adds "Rename…", "Edit description…" and "Delete changelist…"; the default
+one can't be renamed, described or deleted, so they aren't offered rather than shown disabled. An entry nothing applies
+to is left out ("Shelve" for private files alone), and a header whose menu would be empty (the default changelist
+holding only ignored or cloaked files) has no "…" (`changelistHasMenu`, asked on every render; the menu itself is built
+only as it opens).
+
+"Move to changelist ▸" on a header clears Changes' filters first, as readying a check-in does: the changes they hide
+move too, and the list then shows every one that moved ("New changelist…" clears them once a name is given, so
+cancelling leaves them). As every move to a changelist (`moveToChangelist`), it checks out the changed files that
+aren't yet (only checked-out and added items live in a changelist), then moves them all in one
+`cm changelist <name> add`, however many: `CmClient` runs it as a process of its own past a few paths (`runsLong`), and
+through a `cm shell` of its own when too long for a command line. Only the default changelist's header can need that
+checkout, since a user changelist holds no item that isn't checked out or added; moving from it checks out every
+changed file it holds, which may take locks, without asking: it is what selecting all its files and moving them does,
+and that doesn't ask either.
+
+What acts on some of a changelist's files (Include or Exclude, Add to version control, Check out, Copy, the filter
+rules) isn't in it: the header's checkbox includes or excludes them all, and the rest is the files' own menu, on the
+files selected or a folder right-clicked. Opening the files' menu on the default changelist's header was dropped: the
+same kind of row offered two different menus.
+
 ## Search matches: a move recorded by hand
 
 `cm status` pairs an item deleted from disk with a private one as a local move only when their contents are alike
