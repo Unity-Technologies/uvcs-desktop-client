@@ -36,7 +36,7 @@ import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
-import { incomingFileStepKeys } from './incomingFileSteps';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
 import { useIncomingChangesetList } from './useIncomingChangesets';
@@ -99,7 +99,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     pathOf: (key) => key,
   });
   // A file's diff goes on past its last or first change to the files around it, as the list shows them.
-  const fileKeys = useMemo(() => incomingFileStepKeys(rows), [rows]);
+  const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
   const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key) => selectFiles(singleSelection(key)), pathOf: (key) => key });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
