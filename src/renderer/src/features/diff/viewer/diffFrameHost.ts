@@ -83,15 +83,10 @@ export function isSelectedFile(ownKey: string, requestedKey: string): boolean {
   return ownKey === requestedKey;
 }
 
-/** Where a press on the header's arrows goes. */
-export type HeaderPress = { kind: 'body' } | { kind: 'keep'; path: string } | { kind: 'step' };
-
 /**
- * A press on the header's arrows (`headerArrows`): to the selected file's diff once it's the one published; while it's
- * read or drawn, kept for the file a step is on its way to (`FileSteps.steppingTo`), else for the file asked for; where
- * it couldn't be read, a step from file to file.
+ * The file a press on the header's own arrows is kept for while they keep presses (`HeaderArrows.queues`: the selected
+ * file's diff read or drawn): the file a step is on its way to (`FileSteps.steppingTo`), else the file asked for.
  */
-export function headerPress(arrows: HeaderArrows, { steppingTo, requestedPath }: { steppingTo: string | null; requestedPath: string }): HeaderPress {
-  if (arrows.body) return { kind: 'body' };
-  return arrows.queues ? { kind: 'keep', path: steppingTo ?? requestedPath } : { kind: 'step' };
+export function headerKeepsFor({ steppingTo, requestedPath }: { steppingTo: string | null; requestedPath: string }): string {
+  return steppingTo ?? requestedPath;
 }

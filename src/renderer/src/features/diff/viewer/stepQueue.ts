@@ -4,7 +4,7 @@ export type StepDirection = 1 | -1;
 /**
  * The presses kept for a file whose diff hasn't taken them yet (being read, drawn, not opened at its arrival, or still
  * the previous file's while a step settles), each tagged with the path of the file it's for, as the list beside the
- * diff names it. One per diff header (`SteppedDiffFrame`): the header and the diffs put presses in (`headerPress`,
+ * diff names it. One per diff header (`SteppedDiffFrame`): the header and the diffs put presses in (`headerKeepsFor`,
  * `pressTarget`), the selected file's diff takes its own once it opened (`drainsKept`). A step from a file takes the
  * presses left for it along (`retag`); presses are dropped only when the selection leaves their file (`keepOnly`), so a
  * file picked while another loads opens at its top.
