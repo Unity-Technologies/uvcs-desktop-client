@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { create } from 'zustand';
 import { isInFront } from '../lib/inFront';
-import { focusAs } from '../lib/focusRing';
 import { focusMain } from '../lib/mainFocus';
 import type { ShortcutId } from '../lib/shortcutRegistry';
 import {
@@ -11,10 +10,10 @@ import {
   expandedAfterToggle,
   focusGoesToDiff,
   focusGoesToDiffOnCollapse,
+  focusHolderOf,
   shortcutWhileExpanded,
   type AskedBy,
   type ExpandableDiff,
-  type FocusHolder,
   type HostDiffs,
 } from './diffExpansion';
 
@@ -44,14 +43,12 @@ export function collapseDiff(): void {
 
 /**
  * Collapses the expanded diff as the user asked (Esc, the command, the button), leaving the keyboard on its code where
- * it would be left nowhere or on a button (`focusGoesToDiffOnCollapse`): given while the code is still the main focus,
- * ringless, as the app moved it. A click leaves the button it pressed focused, ringless too.
+ * it would be left nowhere or on a button a click focused (`focusGoesToDiffOnCollapse`): given while the code is still
+ * the main focus, ringless, as the app moved it.
  */
 export function collapseDiffAsAsked(by: AskedBy): void {
   if (!isDiffExpanded()) return;
-  const holder = focusHolder();
-  if (focusGoesToDiffOnCollapse(holder, by)) focusMain(document, 'app');
-  else if (by === 'pointer' && holder.onButton) focusAs(document.activeElement as HTMLElement, 'pointer');
+  if (focusGoesToDiffOnCollapse(focusHolder(), by)) focusMain(document, 'app');
   collapseDiff();
 }
 
@@ -132,8 +129,6 @@ function focusExpandedDiff(): void {
 }
 
 /** What holds the keyboard now. */
-function focusHolder(): FocusHolder {
-  const active = document.activeElement;
-  if (!(active instanceof HTMLElement) || active === document.body) return { onBody: true, visible: false, onButton: false };
-  return { onBody: false, visible: active.checkVisibility(), onButton: active.matches('button, [role="button"]') };
+function focusHolder() {
+  return focusHolderOf(document.activeElement, document.body);
 }
