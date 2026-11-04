@@ -2,7 +2,7 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type ChangeRegion } from './changeBlocks';
-import { changeKindOf, changeMapClick, changeMarkLabel, changeMarks, holdsChange, MIN_MARK_HEIGHT, showsChangeMap, type ChangeMapLayout, type LineBox } from './changeMarks';
+import { changeKindOf, changeMapClick, changeMarkLabel, changeMarks, holdsChange, MIN_MARK_HEIGHT, placesAgain, showsChangeMap, type ChangeMapLayout, type LineBox, type MarksPlacedFrom } from './changeMarks';
 
 const ROW = 20;
 const removed = (lineNumber: number): ChangedLine => ({ side: 'deletions', lineNumber });
@@ -180,5 +180,41 @@ describe('holdsChange', () => {
     expect(holdsChange(mark, 3)).toBe(true);
     expect(holdsChange(mark, 5)).toBe(false);
     expect(holdsChange(mark, null)).toBe(false);
+  });
+});
+
+describe('placesAgain', () => {
+  const regions = [region(0, added(10))];
+  const placed: MarksPlacedFrom = { regions, bothSides: true, layoutKey: 'split:true:false', contentHeight: 4000, viewHeight: 500, lastChangeTop: 180 };
+
+  it('places the marks when none were placed yet', () => {
+    expect(placesAgain(null, placed)).toBe(true);
+  });
+
+  it('places nothing again from the same changes, layout and sizes: scrolling', () => {
+    expect(placesAgain(placed, { ...placed })).toBe(false);
+  });
+
+  it('places them again for other changes, typed or read anew', () => {
+    expect(placesAgain(placed, { ...placed, regions: [region(0, added(10))] })).toBe(true);
+  });
+
+  it('places them again when a version shows alone or both show again', () => {
+    expect(placesAgain(placed, { ...placed, bothSides: false })).toBe(true);
+  });
+
+  it('places them again for another layout: Split or Unified, collapsed, wrapped', () => {
+    expect(placesAgain(placed, { ...placed, layoutKey: 'unified:true:false' })).toBe(true);
+  });
+
+  it('places them again when the content or the view changes height', () => {
+    expect(placesAgain(placed, { ...placed, contentHeight: 4200 })).toBe(true);
+    expect(placesAgain(placed, { ...placed, viewHeight: 300 })).toBe(true);
+  });
+
+  it("places them again once Pierre can tell where the last change is, and as it measures the lines above it", () => {
+    const byShare = { ...placed, lastChangeTop: undefined };
+    expect(placesAgain(byShare, placed)).toBe(true);
+    expect(placesAgain(placed, { ...placed, lastChangeTop: 240 })).toBe(true);
   });
 });
