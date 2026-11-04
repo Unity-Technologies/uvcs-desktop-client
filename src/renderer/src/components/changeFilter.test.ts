@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, statusTones } from './changeFilter';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, ownTone, statusTones, toneRank } from './changeFilter';
 
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
@@ -48,6 +48,20 @@ describe('statusTones', () => {
   it('gives the same array every time, so filtering a long list allocates nothing per change', () => {
     expect(statusTones('moved', true)).toBe(statusTones('moved', true));
     expect(statusTones('added', false)).toBe(statusTones('added', false));
+  });
+});
+
+describe('ownTone', () => {
+  it("is a file's last status: a moved file that changed is a moved one, as its row's last letter says", () => {
+    expect(ownTone(statusTones('moved', true))).toBe('moved');
+    expect(ownTone(statusTones('added', false))).toBe('added');
+  });
+});
+
+describe('toneRank', () => {
+  it("orders the statuses as the chips are", () => {
+    const chips = offeredTones(new Set(['private', 'conflict']));
+    expect([...chips].sort((a, b) => toneRank(a) - toneRank(b))).toEqual(chips);
   });
 });
 

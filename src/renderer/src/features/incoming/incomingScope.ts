@@ -1,9 +1,9 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { spec } from '@shared/domain/specs';
 import type { StatusTone } from '../../components/StatusBadge';
-import type { FileListContent } from '../../components/useGroupedFileTree';
 import { formatCount, pluralize } from '../../lib/text';
-import { diffEntryTones } from '../diff/diffEntrySources';
+import { isStatusGroup, statusGroup, type FileListContent, type GroupedFileListFacts, type StatusGroup } from '../../components/statusGroups';
+import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
 
 /** What Incoming's files show: everything the update brings, or what one incoming changeset changed. */
 export type IncomingScope = { kind: 'all' } | { kind: 'changeset'; id: number };
@@ -15,6 +15,20 @@ export const ALL_INCOMING: IncomingScope = { kind: 'all' };
  * is a merge, so they read as the merge page's groups do, naming what the update does to the user's workspace.
  */
 export type IncomingFileGroup = 'conflicts' | 'changes';
+
+/** A group of Incoming's list: one of its own, or the files of one status when the list is grouped by status. */
+export type IncomingListGroup = IncomingFileGroup | StatusGroup;
+
+/**
+ * What Incoming's list knows of each file to sort and group it (`useGroupedFileTree`): what the branch did to it,
+ * its own groups saying whether it conflicts.
+ */
+export const INCOMING_FILE_FACTS: GroupedFileListFacts<DiffEntry, IncomingListGroup> = { toneOf: DIFF_ENTRY_FACTS.toneOf, statusGroup };
+
+/** What a group of Incoming's list is, as its tooltip: its own groups say; a status group's name does. */
+export function incomingGroupTip(group: IncomingListGroup): string | undefined {
+  return isStatusGroup(group) ? undefined : INCOMING_GROUP_TIPS[group];
+}
 
 export const INCOMING_GROUP_TIPS: Record<IncomingFileGroup, string> = {
   conflicts: 'Changed by you and on the branch, or deleted or moved on the branch while you changed them',
@@ -44,7 +58,7 @@ export function collidesWithLocal(file: DiffEntry, conflictPaths: ReadonlySet<st
  * own, first, when there are any (they are what the update needs the user for), then the changes to apply; without
  * groups otherwise.
  */
-export function incomingFileContent(files: DiffEntry[], collides: (file: DiffEntry) => boolean): FileListContent<DiffEntry, IncomingFileGroup> {
+export function incomingFileContent(files: DiffEntry[], collides: (file: DiffEntry) => boolean): FileListContent<DiffEntry, IncomingListGroup> {
   const conflicts = files.filter(collides);
   if (conflicts.length === 0) return { sorted: files };
   const changes = files.filter((file) => !collides(file));

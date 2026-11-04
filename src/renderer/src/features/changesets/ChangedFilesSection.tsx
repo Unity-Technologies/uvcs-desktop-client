@@ -3,7 +3,8 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
+import { FileListViewMenu } from '../../components/FileListViewMenu';
+import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
@@ -18,7 +19,7 @@ import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { listedEntries } from '../diff/listedEntries';
 import { pairDiffMetas } from '../diff/diffMetaPairs';
-import { diffEntryTones } from '../diff/diffEntrySources';
+import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
@@ -36,6 +37,9 @@ interface ChangedFilesSectionProps {
   /** Opens the full diff, focused on the file. */
   onOpen: (focusPath: string) => void;
 }
+
+/** A details panel's short list is never grouped: its view menu offers the layout and the order. */
+const NO_GROUPINGS: FileListViewOffer = { statusGroups: false };
 
 /**
  * The changes pane of a details panel: what a changeset, branch, label, shelve or code review changed.
@@ -55,8 +59,8 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const entries = pairs?.shown;
   const metaOf = (entry: DiffEntry) => pairs?.metaOf(entry);
   // "Open .meta diff" opens the diff on the meta, which shows it on its asset's row (`pairedFocus`).
-  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
-  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`));
+  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones, { viewOffer: NO_GROUPINGS });
+  const { rows, tree, toggleCollapsed } = useFileTree(visible, entries ?? NO_ENTRIES, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS);
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
   const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
@@ -85,7 +89,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
     // No "Open diff" here: the panel's primary action at the top opens it.
     <DetailsChangesPane
       title={view.title}
-      action={view.layoutMenu && <FileListLayoutMenu />}
+      action={view.layoutMenu && <FileListViewMenu offer={NO_GROUPINGS} />}
       expanded={view.expanded}
       disclosure={view.collapsible ? { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) } : undefined}
     >

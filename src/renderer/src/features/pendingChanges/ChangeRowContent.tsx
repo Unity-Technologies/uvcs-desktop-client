@@ -1,8 +1,9 @@
-import { ChevronRight, ListChecks, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
+import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
@@ -36,21 +37,27 @@ interface GroupRowContentProps {
 }
 
 /**
- * A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart
- * from the folders under it. Every changelist has its "…", the default one too, unless nothing in its menu applies; the
- * menu is built only when it opens.
+ * A changelist's or a status group's header: its check, icon, name, actions and count. A changelist's icon, as in the
+ * official client, sets it apart from the folders under it; a status group's is its status letter, as its rows have it.
+ * Every changelist has its "…", the default one too, unless nothing in its menu applies; the menu is built only when it
+ * opens. A status group has none: right-clicking it opens its changes' menu.
  */
 export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu, hasChangelistMenu }: GroupRowContentProps) {
-  const changelist = row.group ?? null;
+  // The changelist the header is, null for the default one; undefined for a status group.
+  const changelist = row.group.kind === 'changelist' ? (row.group.changelist ?? null) : undefined;
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
-      <ListChecks size={14} className={styles.groupIcon} aria-hidden />
-      <span className={styles.groupLabel} data-tip={row.group?.description}>
+      {row.group.kind === 'status' ? (
+        <StatusGroupBadge tone={row.group.tone} />
+      ) : (
+        <ClipboardList size={14} className={styles.groupIcon} aria-hidden />
+      )}
+      <span className={styles.groupLabel} data-tip={changelist?.description}>
         {row.label}
       </span>
-      {hasChangelistMenu(changelist) && (
+      {changelist !== undefined && hasChangelistMenu(changelist) && (
         <ActionDropdownMenu entries={() => changelistMenu(changelist)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />

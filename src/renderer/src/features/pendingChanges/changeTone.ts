@@ -1,5 +1,6 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { statusTones } from '../../components/changeFilter';
+import type { FileListFacts } from '../../components/fileListOrder';
 import type { ItemPresence } from '../../components/ItemRow';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
@@ -19,6 +20,9 @@ const TONES: Record<ChangeCategory, StatusTone> = {
 export function changeTone(change: PendingChange): StatusTone {
   return TONES[categoryOf(change)];
 }
+
+/** What the Changes list knows of each change to sort it beyond its path (`fileListOrder`): its own status. */
+export const PENDING_CHANGE_FACTS: FileListFacts<PendingChange> = { toneOf: changeTone };
 
 /** The statuses the filter chips find a pending change by: a moved file that changed by C and M. */
 export function changeTones(change: PendingChange): readonly StatusTone[] {

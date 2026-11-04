@@ -3,6 +3,20 @@
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
 List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
 
+## Changelists and status groups in the list
+
+- **Grouping by changelist** is the view menu's "Group by ▸ Changelist" in Changes alone (`usePendingChangesViewStore`'s
+  `grouping`, `FileListViewOffer.changelists`), with grouping by status beside it: both on, each changelist holds a
+  group per status (`layoutChangeRows`, `ChangeGroup`). A status group's header has its badge, its checkbox and its
+  count; its menu acts on its changes (`menuTargetOf`), and dropping changes on it moves them into its changelist,
+  which lights whole (`changelistHeadersOf` reads only the changelists' headers).
+- **Moving changes to a changelist turns the grouping on** (`moveToChangelist`, `moveToNewChangelist`): otherwise the
+  move, or a new empty changelist, would look as if nothing happened. Moving back to the default changelist doesn't.
+- **Indentation** (`changeRowLevels`): once the list is a tree or grouped, every row leaves a column for the chevrons
+  (`RowLevels.chevronColumn`), and what a changelist, a status group or a folder holds starts a level in: its rows'
+  chevrons under its checkbox, their checkboxes under its icon. A flat list without groups stays flush. The summary's checkbox
+  lines up with the top-level ones (`topLevelCheckboxInset`).
+
 A Unity asset and its `.meta` are one row (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"): checking, undoing, adding, checking out, moving
 to a changelist and the filter rules take the meta along; "Open .meta" and "Open .meta diff" open the meta alone.
 

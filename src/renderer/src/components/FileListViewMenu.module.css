@@ -1,0 +1,32 @@
+/* As tight as an icon button: the chevron only marks it as a menu. */
+.trigger {
+  gap: 2px;
+  padding-inline: var(--space-1);
+}
+
+.chevron {
+  opacity: 0.7;
+}
+
+.content {
+  min-width: 190px;
+}
+
+/* A rule between sections, as a menu's separator, without one more element to step over with the keyboard. */
+.section + .section {
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.title {
+  padding: 6px var(--space-2) 4px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+/* The room of the check, so every label of a section ends in the same place. */
+.noMark {
+  width: 14px;
+}

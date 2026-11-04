@@ -1254,9 +1254,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   changed shows its C before its M (`StatusMark.changedLabel`, in a diff's header too), and both filter chips find it
   (`statusTones`). A moved item's name and its M show the move on hover, through the one tooltip
   (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once ("in"), then one line each for
-  where it was ("from") and is ("to"), what the move removed and added tinted as a diff tints them
-  (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`), never wrapped
-  (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
+  where it was ("from") and is ("to"), the paths monospaced and what the move removed and added tinted as a diff tints
+  them (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`),
+  never wrapped (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
   and the shared folder, said twice, hid what changed. `ItemPathRow` is an item
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
   stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
@@ -1291,18 +1291,41 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
     sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
-    order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
-    to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
-    one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
-    give.
-  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
-    one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), follows the
-    status chips, so it is in the same place in each list; a details panel too short for a filter bar has it in its
-    title. Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle).
+    order. That path order is the default and the one every list's items come in; a sort is laid over it.
+  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`) or extension
+    (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
+    sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
+    (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
+    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
+    when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
+    million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
+    leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
+    a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
+    the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
+    nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
+    entries have none, so it would mean reading the disk or the server for every file.
+  - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
+    and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
+    alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
+    `fileListViewMenuModel`) takes the room of one button and follows the status chips, so it is in the same place in
+    each list; a details panel too short for a filter bar has it in its title. Its choices apply with the menu open, so
+    the list behind it shows each. Its button is an eye, since it holds the whole view and not only the layout, and
+    names that view in its tooltip ("View options: Tree, grouped by status"). Each list says what it offers
+    (`FileListViewOffer`): Changes adds grouping by changelist; the merge page and a details panel offer no grouping.
+    It ends with "Collapse all" or "Expand all" for a list with groups or folders (`fileTreeFoldingOf`, given by the
+    list around its toolbar: `FileTreeFoldingContext`). The palette has its choices too (`fileListViewCommands`).
+    Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
+    its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
+    (marks, the R key, the review bar), not how the files are laid out.
   - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
     holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
     as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
-    holds while closed); `FileTreeCell` indents rows to their level. A click, Enter, ← and → open and close folders
+    holds while closed); `FileTreeCell` indents rows to their level. Every list with its own pane draws indent guides
+    (`FileTreeList`, Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row.
+    They are always on: a guide costs nothing to read past, and an option for it would be one more knob. Drawing the one
+    holding the selected row stronger, as an editor's explorer does, was tried and dropped: it moved with every
+    selection and read as noise, where the selected row's own highlight already says where it is. A details panel's short list draws none. A click, Enter, ← and → open and close folders
     (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
     (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
     `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
@@ -1316,8 +1339,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     out with `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name,
     count, or what its items' progress says instead, `FileTreeList`'s `groupProgress`, the merge page's
     `mergeGroupProgress`; what it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
-    do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
-    them.
+    do. Grouping by status is a choice (`groupByStatus`, off by default): each status the files have becomes a group
+    (`statusGroupsOf`, in the chips' order, each file in its own status's, a moved file that changed in Moved), headed
+    by its badge, inside the list's own groups when it has some (`withStatusGroups`, `TreeGroup.subgroups`: Changes'
+    changelists, Incoming's), so every file sits as many groups in (`groupLevelsOf`). It was rejected once, when it was
+    the only order: a row jumps to another group when its status changes, and a folder's changes split apart. As a
+    choice made for it, that is what it asks for; a status group's checkbox checks or unchecks every change of that
+    status at once, which the chips can't. A list whose own groups already say what happens to each file (the merge
+    page) offers none (`GroupedFileListFacts.statusGroup` undefined).
   - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
     drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the

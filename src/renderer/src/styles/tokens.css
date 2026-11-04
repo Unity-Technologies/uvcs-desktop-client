@@ -183,6 +183,8 @@
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
+  /* The indent guides of a tree of files: a hairline under each chevron. */
+  --tree-guide: var(--border-subtle);
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;
@@ -292,6 +294,8 @@
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
+  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
+  --tree-guide: var(--border-default);
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;

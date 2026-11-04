@@ -1,14 +1,20 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import type { FileListLayout } from '../../components/fileListLayoutStore';
-import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow } from '../../lib/groupedPathTree';
-import { layoutPathList, layoutPathTree } from '../../lib/pathTree';
+import type { FileListLayout } from '../../components/fileListViewStore';
+import type { StatusTone } from '../../components/StatusBadge';
+import { statusGroupsOf } from '../../components/statusGroups';
+import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from '../../lib/groupedPathTree';
+import { layoutPathItems, type ItemOrder } from '../../lib/pathTree';
 import { changelistNameOf } from './changeCategories';
+import { changeTone } from './changeTone';
 
 /**
- * A changelist, a folder of changes or a change, as every grouped list of files has them (`groupedPathTree`). A
- * changelist's `group` is the user changelist it is, undefined for the default one.
+ * What a header of the Changes list is: a changelist (`changelist` undefined for the default one), or the changes of
+ * one status, inside their changelist when the list is grouped by both.
  */
-export type ChangeRow = GroupedTreeRow<PendingChange, Changelist | undefined>;
+export type ChangeGroup = { kind: 'changelist'; changelist: Changelist | undefined } | { kind: 'status'; tone: StatusTone };
+
+/** A changelist, a status group, a folder of changes or a change, as every grouped list of files has them (`groupedPathTree`). */
+export type ChangeRow = GroupedTreeRow<PendingChange, ChangeGroup>;
 
 export type ChangesGrouping = 'none' | 'changelist';
 
@@ -20,6 +26,10 @@ interface LayoutInput {
   changelists: Changelist[];
   layout: FileListLayout;
   grouping: ChangesGrouping;
+  /** The changes of each status in a group of their own, inside their changelist when grouped by changelist too. */
+  groupByStatus?: boolean;
+  /** The order of the changes when not by path (`fileListOrder`). */
+  order?: ItemOrder<PendingChange>;
 }
 
 interface Group {
@@ -30,16 +40,27 @@ interface Group {
 }
 
 /**
- * Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. Every row, as
- * if nothing was collapsed: opening or closing a folder only leaves rows out (`collapseRows`). What is checked is left
- * to `checkStateOver`: checking files doesn't lay tens of thousands of rows out again either.
+ * Flattens pending changes into the rows of the list: changelist and status headers, optional folders and changes.
+ * Every row, as if nothing was collapsed: opening or closing a folder only leaves rows out (`collapseRows`). What is
+ * checked is left to `checkStateOver`: checking files doesn't lay tens of thousands of rows out again either.
  */
-export function layoutChangeRows({ sorted, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
-  if (grouping === 'none') {
-    return layout === 'tree' ? layoutPathTree({ sorted, keyOf: changeKey, folderScope: 'all' }) : layoutPathList(sorted, changeKey);
-  }
-  const groups = groupByChangelist(sorted, changelists).map(({ key, label, changelist, changes: inGroup }) => ({ key, label, group: changelist, sorted: inGroup }));
-  return layoutGroupedTree(groups, changeKey, layout === 'tree');
+export function layoutChangeRows({ sorted, changelists, layout, grouping, groupByStatus = false, order }: LayoutInput): ChangeRow[] {
+  const tree = layout === 'tree';
+  if (grouping === 'none' && !groupByStatus) return layoutPathItems(sorted, changeKey, { tree, folderScope: 'all', order });
+  return layoutGroupedTree(changeGroupsOf(sorted, changelists, grouping, groupByStatus), changeKey, tree, order);
+}
+
+/** The groups of the list: its changelists, each with its status groups when asked for; or the status groups alone. */
+function changeGroupsOf(sorted: PendingChange[], changelists: Changelist[], grouping: ChangesGrouping, groupByStatus: boolean): TreeGroup<PendingChange, ChangeGroup>[] {
+  const byStatus = (changes: PendingChange[], scope: string) => statusGroupsOf<PendingChange, ChangeGroup>({ sorted: changes, toneOf: changeTone, scope, groupOf: (tone) => ({ kind: 'status', tone }) });
+  if (grouping === 'none') return byStatus(sorted, 'all');
+  return groupByChangelist(sorted, changelists).map(({ key, label, changelist, changes }) => ({
+    key,
+    label,
+    group: { kind: 'changelist', changelist },
+    sorted: changes,
+    subgroups: groupByStatus ? byStatus(changes, key) : undefined,
+  }));
 }
 
 /** The rows laid out by `layoutChangeRows` but for what collapsed changelists and folders hold. */
@@ -75,13 +96,18 @@ export type ChangeMenuTarget =
   | { kind: 'selection' }
   /** A changelist's header, the default changelist's (null) too: the changelist's own menu (`changelistMenu`). */
   | { kind: 'changelist'; changelist: Changelist | null }
-  /** A folder: the menu of the changes in it, not of the files selected elsewhere. */
+  /** A folder or a status group: the menu of the changes in it, not of the files selected elsewhere. */
   | { kind: 'changes'; changes: PendingChange[] };
 
 export function menuTargetOf(row: ChangeRow | null): ChangeMenuTarget {
   if (!row || row.type === 'file') return { kind: 'selection' };
-  if (row.type === 'group') return { kind: 'changelist', changelist: row.group ?? null };
+  if (row.type === 'group' && row.group.kind === 'changelist') return { kind: 'changelist', changelist: row.group.changelist ?? null };
   return { kind: 'changes', changes: row.items };
+}
+
+/** The user changelist a header is, or undefined: the default changelist, a status group. */
+export function changelistOfGroup(group: ChangeGroup): Changelist | undefined {
+  return group.kind === 'changelist' ? group.changelist : undefined;
 }
 
 

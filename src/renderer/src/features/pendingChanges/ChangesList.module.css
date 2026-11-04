@@ -16,6 +16,20 @@
   border-radius: var(--radius-sm);
 }
 
+/* The indent guides: a hairline down from the chevron of each changelist, status group and folder holding the row,
+   one per level (`--guide-levels`), every `LEVEL_INDENT` (`--level-indent`) from where the row's content starts, at the
+   middle of the 15px chevron. Rows touch, so the lines run on from row to row. */
+.row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--space-2) + 7px);
+  pointer-events: none;
+  width: calc(var(--guide-levels, 0) * var(--level-indent));
+  background: repeating-linear-gradient(to right, var(--tree-guide) 0 1px, transparent 1px var(--level-indent));
+}
+
 .row:hover {
   background: var(--bg-hover);
 }
