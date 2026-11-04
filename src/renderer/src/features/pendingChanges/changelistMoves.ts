@@ -1,11 +1,11 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { singleSelection, type SelectionState } from '../../lib/selection';
-import { isControlled } from './changeCategories';
+import { changelistNameOf, isControlled } from './changeCategories';
 import type { ChangeRow } from './changeRows';
 
 /** The changes that would actually move into `changelist` (null: the default one): controlled ones not already in it. */
 export function changesToMove(changes: PendingChange[], changelist: string | null): PendingChange[] {
-  return changes.filter((change) => isControlled(change) && (change.changelist ?? null) !== changelist);
+  return changes.filter((change) => isControlled(change) && changelistNameOf(change) !== changelist);
 }
 
 /**

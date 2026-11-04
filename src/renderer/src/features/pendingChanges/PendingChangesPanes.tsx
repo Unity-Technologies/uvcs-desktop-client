@@ -136,7 +136,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   );
   useMergeComment(workspacePath, snapshot);
   useEndPreparedWhenGone(workspacePath, snapshot, checkinChoice.prepared);
-  const preparedChangelist = useMemo(() => preparedChangelistNote(currentChoice(checkinChoice, allChanges).prepared), [checkinChoice, allChanges]);
+  const preparedNote = useMemo(() => preparedChangelistNote(currentChoice(checkinChoice, allChanges).prepared), [checkinChoice, allChanges]);
 
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
@@ -288,7 +288,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
-              preparedChangelist={preparedChangelist}
+              preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
               recentComments={settings.recentComments}
               mode={checkinMode}

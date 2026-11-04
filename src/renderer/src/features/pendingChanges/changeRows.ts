@@ -2,6 +2,7 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow } from '../../lib/groupedPathTree';
 import { layoutPathList, layoutPathTree } from '../../lib/pathTree';
+import { changelistNameOf } from './changeCategories';
 
 /**
  * A changelist, a folder of changes or a change, as every grouped list of files has them (`groupedPathTree`). A
@@ -88,13 +89,13 @@ function groupByChangelist(changes: PendingChange[], changelists: Changelist[]):
   const defaultGroup: Group = {
     key: 'changelist:',
     label: DEFAULT_CHANGELIST_LABEL,
-    changes: changes.filter((change) => !change.changelist),
+    changes: changes.filter((change) => changelistNameOf(change) === null),
   };
   const userGroups = changelists.map((changelist) => ({
     key: `changelist:${changelist.name}`,
     label: changelist.name,
     changelist,
-    changes: changes.filter((change) => change.changelist === changelist.name),
+    changes: changes.filter((change) => changelistNameOf(change) === changelist.name),
   }));
   // Empty user changelists stay visible so they can be used as drop targets for "Move to changelist".
   return [defaultGroup, ...userGroups].filter((group) => group.changes.length > 0 || group.changelist);
