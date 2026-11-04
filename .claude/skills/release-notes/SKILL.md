@@ -35,7 +35,7 @@ menu of files, changesets, branches, labels and shelves, and open on what you ri
   Choose by what the user gets, not by the branch name: a `feature/` branch that makes an existing view better is
   **Improved**; a `perf/` branch users will feel is **Improved**.
 - The description under it: Markdown. Headings inside it are `####`, never `###` (that starts a note).
-- A picture or a GIF goes in only when it adds to what the note says, cropped to what it shows: see "Pictures and GIFs".
+- A change anyone can see ends with its picture or GIF, cropped to the feature: see "Pictures and GIFs".
 
 A pull request with nothing for users writes `None:` and the reason, in one line:
 
@@ -67,14 +67,15 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
   halfway. Now the app waits for it to finish and closes the window then."
 - **Short sentences, plain words.** Active voice, the user as "you". Usually one paragraph; more only when the
   feature needs it.
-- **A picture, a table or a snippet only when words aren't enough**: a new view or dialog, a before and after, a
-  format the user types (`cs:4821` in a comment). Never a picture of something a sentence says as well.
+- **A table or a snippet only when words aren't enough**: a format the user types (`cs:4821` in a comment). A
+  visible change's picture always goes in: "Pictures and GIFs".
 
 ## Pictures and GIFs
 
-A picture earns its place only when it shows what the note delivers better than words: a new dialog, menu or panel,
-a before and after, a layout the user has to see. Most fixes and many improvements need none. When in doubt, leave it
-out: a note without a picture reads well; a picture that doesn't help makes the note harder to read.
+**A change anyone can see carries its picture in the note**: a new dialog, menu, tab or panel, a layout, a before
+and after. It is the pull request's one picture, so users see it in What's New and reviewers at a glance (CLAUDE.md,
+"Delivering work", step 6). A fix or a change with nothing to show (faster, a crash gone, a word changed) has none:
+never a picture of something a sentence says as well.
 
 What's New shows a picture inside the note, as wide as the text (about 600 pixels) and at most 360 pixels tall, and
 a click shows it larger. So a picture must read at that size:
@@ -92,11 +93,12 @@ a click shows it larger. So a picture must read at that size:
   to the note and shows it larger on a click.
 - **Name it**: the alt text says what the picture shows (`![The Tools page in Settings](./tools.png)`); it is what a
   screen reader says and what shows if the picture can't load.
-- **Reuse the pull request's screenshot** when it already is that crop: reference the same file in the note and
-  `gh pr create --attach ./tools.png` uploads it once for both. The pull request's own picture may show more for
-  reviewers; the note's is cropped for users.
-- **Reference it inside the note.** `gh --attach` places a file where the body references it; an unreferenced one
-  is appended after the closing line, outside `## Release note`, where What's New never shows it.
+- **Attach it where the note references it**: `![The Tools page in Settings](./tools.png)` after the description,
+  and `gh pr create --attach ./tools.png` (or `gh pr edit --attach`), which uploads the file and puts its link there.
+  An unreferenced one is appended after the closing line, outside `## Release note`, where What's New never shows it.
+  The Release note check (`misplacedPicture`) fails a body like that, and one with pictures elsewhere but none in the
+  note. A wider shot for reviewers, when the crop can't show what changed, goes under "Behavior with this pull
+  request" the same way.
 
 ### GIFs
 

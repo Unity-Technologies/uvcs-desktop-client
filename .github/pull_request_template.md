@@ -12,8 +12,10 @@ release-notes skill (.claude/skills/release-notes). One note:
 
 <A sentence or two: what it is, where to find it; for a fix, what users saw and what happens now.>
 
-A picture, when the release-notes skill calls for one, goes after the text as ![What it shows](./note.png), attached
-with --attach like the screenshot below.
+![What it shows](./shot.png)
+
+The picture of a visible change, cropped to the feature, attached with `gh pr create --attach ./shot.png` so it lands
+here; a change nobody can see has none.
 
 Or, when users have nothing to read: "None: <why>". The Release note check fails the pull request otherwise.
 -->
@@ -24,11 +26,8 @@ What the user sees or the app does today (for performance work, the numbers and 
 
 ## Behavior with this pull request
 
-What the user can now do or see, and the numbers after. A visible change shows it here: one representative screenshot
-(a short video or GIF when a still can't show it), referenced on the line below and attached with
-`gh pr create --attach ./shot.png`, so it lands here and not after the closing line. Remove the line when there is none.
-
-![What the user now sees](./shot.png)
+What the user can now do or see, and the numbers after. A wider shot for reviewers goes here only when the release
+note's picture can't show what changed, referenced and attached the same way.
 
 ## How it was implemented
 

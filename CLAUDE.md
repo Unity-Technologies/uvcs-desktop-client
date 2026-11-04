@@ -260,7 +260,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
-| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`) |
+| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`); a visible change's picture sits in it, and none after the closing line (`misplacedPicture`) |
 | `scripts/build/noInvisibleCharacters.test.ts`               | no source, script or doc holds an invisible formatting character (bidirectional controls, zero-width joiners): an emoji that needs one writes it as an escape |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
@@ -366,17 +366,16 @@ them on the server, and reading shell command lines cost more to keep right than
    the releases page, so it is written for them, apart from the title and the rest of the body, which are for
    reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
    without one.
-   **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
-   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
-   One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
-   without it (a before and after, a theme-specific change). When a still can't show it (motion, a flow, something
-   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). It goes under
-   "Behavior with this pull request": reference it there as `![alt](./shot.png)` and attach it with `gh pr create
-   --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`), so `gh`
-   puts it in place; an unreferenced attachment lands after the closing line, outside every section. Never commit it
-   to the repository. When the `release-notes` skill calls for a picture (a new dialog, menu, tab or panel),
-   the note gets its own cropped one, referenced inside `## Release note` the same way; it is the reviewer's file
-   only when that already is the right crop.
+   **A change anyone can see carries its picture, in its release note**: one screenshot of the outcome, cropped to
+   the feature as the `release-notes` skill says, taken from the app with Playwright (a sandbox, the light theme, the
+   pointer out of the way). Users see it in What's New and reviewers see it at a glance, so one picture serves both.
+   When a still can't show it (motion, a flow, something that must *not* move), a short GIF instead. Reference it
+   inside `## Release note` as `![alt](./shot.png)` and attach it with `gh pr create --attach ./shot.png` (`gh` 2.99
+   or later; `.claude/skills/playwright-cli/references/pr-attachments.md`), so `gh` puts it there: an unreferenced
+   attachment lands after the closing line, outside every section. A second, wider shot for reviewers only when the
+   crop can't show what changed (a before and after, a theme-specific change), placed the same way under "Behavior
+   with this pull request". Never commit them to the repository. The Release note check (`misplacedPicture`) fails a
+   body with pictures elsewhere and none in the note, or one after the closing line.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.

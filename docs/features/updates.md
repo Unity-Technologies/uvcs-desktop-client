@@ -83,8 +83,11 @@ What users read there is written with each change: every pull request's body has
 note (`### New:`, `Improved:` or `Fixed:`, a title, then a short Markdown description) or `None:` and why users have
 nothing to read. The `release-notes` skill (`.claude/skills/release-notes`) says how to write one: for users, not
 reviewers, in the app's words. The Release note workflow (`.github/workflows/release-note.yml`) reads the section with
-`readReleaseNote` (`scripts/build/releaseNote.ts`) on every change to the pull request and fails it when it can't;
-Dependabot's pull requests are left out. It runs apart from CI so that editing the description checks the note again
+`readReleaseNote` (`scripts/build/releaseNote.ts`) on every change to the pull request and fails it when it can't,
+or when the body's pictures sit where What's New never shows them: elsewhere with none in the note, or after the
+closing line, where `gh --attach` appends a file the body doesn't reference (`misplacedPicture`, through
+`checkPullRequestBody`). The Release workflow reads merged bodies with `readReleaseNote` alone. Dependabot's pull
+requests are left out. It runs apart from CI so that editing the description checks the note again
 without building on every OS.
 
 The Release workflow joins those notes into the release's description (`releaseNotesMarkdown`,
