@@ -14,7 +14,7 @@ import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
-import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps } from '../diff/viewer/fileSteps';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
@@ -139,7 +139,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const conflictSteps = useFileSteps({
     keys: conflictKeys,
     current: selectedKey,
-    select: (key) => setSelection(singleSelection(key)),
+    select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))),
     pathOf: (key) => {
       const item = mergeItemAt(pairs.shown, rows, key);
       return item?.kind === 'fileConflict' ? item.file.path : key;

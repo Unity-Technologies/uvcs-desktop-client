@@ -22,3 +22,14 @@ export function diffBodyOf(presentation: DiffPresentation, editable: boolean, sa
   if (presentation.identical) return 'noContentChanges';
   return savedDiff !== null && !hasLineChanges(savedDiff) ? 'onlyIgnoredChanges' : 'textDiff';
 }
+
+/**
+ * Whether the diff may have changes to step through (`useChangeNavigation`), which may come a render after it draws: a
+ * read-only text diff, or a file typed into as a diff, where the view steps through changes at all. Anything else
+ * (nothing to compare, only ignored changes, an image, a model, a `.meta` shown as its model, a binary) never will, so
+ * its arrows go on to the files at once rather than waiting for steps (`noStepsComing`).
+ */
+export function stepsCanCome(body: DiffBody | 'metaModel', { wholeFile, stepsThroughChanges }: { wholeFile: boolean; stepsThroughChanges: boolean }): boolean {
+  if (!stepsThroughChanges) return false;
+  return body === 'textDiff' || (body === 'editable' && !wholeFile);
+}

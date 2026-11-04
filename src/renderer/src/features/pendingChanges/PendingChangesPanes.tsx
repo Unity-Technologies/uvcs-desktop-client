@@ -25,7 +25,7 @@ import { Stowable } from '../../ui/Stowable';
 import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { useChangeset } from '../changesets/useChangeset';
-import { useFileSteps } from '../diff/viewer/fileSteps';
+import { settlingOnOf, useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ReviewModeButton } from '../review/ReviewModeButton';
@@ -43,7 +43,7 @@ import { behindBranch, behindDescription } from './checkinBehind';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
-import { changesUnderRow, type ChangeRow } from './changeRows';
+import { changesUnderRow, firstChangeKeyOf, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesDiffs, changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
@@ -166,15 +166,24 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
   const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
+  // Every row in order: a folder whose `.meta` diff shows steps on from its place to the nearest file.
+  const rowOrder = useMemo(() => rows.map((row) => row.key), [rows]);
   const fileSteps = useFileSteps({
     keys: fileKeys,
+    rowOrder,
+    // The list on another change than the diff shows, until it settles: presses meanwhile are that change's.
+    settlingOn: settlingOnOf(focused, diffChange),
     current: selection.anchor,
-    select: (key) => selectAfterLeaving(selection, singleSelection(key), setSelection),
+    select: (key, selected) =>
+      selectAfterLeaving(selection, singleSelection(key), (next) => {
+        selected();
+        setSelection(next);
+      }),
     pathOf: (key) => changesByKey.get(key)?.path ?? key,
   });
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
-  const firstChangeKey = fileKeys[0];
+  const firstChangeKey = firstChangeKeyOf(rows);
   useEffect(() => {
     if (!focused && !focusedFolder && firstChangeKey) setSelection(singleSelection(firstChangeKey));
   }, [focused, focusedFolder, firstChangeKey]);

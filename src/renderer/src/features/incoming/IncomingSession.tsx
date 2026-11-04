@@ -16,12 +16,13 @@ import { NoMatches } from '../../ui/NoMatches';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
-import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
@@ -91,12 +92,19 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     () => conflictStepKeys(rows, selection.anchor, (file: DiffEntry) => pendingConflictPaths.has(file.path)),
     [rows, selection.anchor, pendingConflictPaths],
   );
+  // A diff and a conflicting file step on through different files, but share where a step arrives: ↓ past a diff's last
+  // change into a conflicting file lands on its first conflict, and nothing stale waits for a file opened later.
+  const arrival = usePendingArrival();
   const conflictSteps = useFileSteps({
     keys: conflictKeys,
     current: selection.anchor,
-    select: (key) => selectFiles(singleSelection(key)),
+    select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))),
     pathOf: (key) => key,
+    pending: arrival,
   });
+  // A file's diff goes on past its last or first change to the files around it, as the list shows them.
+  const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
+  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -184,7 +192,12 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (focusedFile && diffedFile) {
       const metaToggle = focusedMeta && <MetaDiffButton pressed={diffedFile !== focusedFile} onChange={(pressed) => setMetaShownFor(pressed ? focusedFile.path : null)} />;
-      return <IncomingFileDiff key={`${scope.kind}:${diffedFile.path}`} workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />;
+      // Not keyed by the file: its header and arrows stay from file to file (`SteppedDiffFrame`), as in a diff page.
+      return (
+        <FileStepsContext.Provider value={fileSteps}>
+          <IncomingFileDiff workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />
+        </FileStepsContext.Provider>
+      );
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;

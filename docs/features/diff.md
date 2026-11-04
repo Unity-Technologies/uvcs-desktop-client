@@ -315,25 +315,96 @@ into whole, nor Split | Unified for a version shown alone.
 
 ## Moving through changes
 
-Every text diff of two versions steps through its changes (`useChangeNavigation`: the
-regions of the one `lineDiff`, so they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines
-while typing) and the header's arrows around "3 of 12" (last in the header, so ▼ stays put from file to file), from the diff or the list beside it; the first move goes from
-the top of the view. The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff
-not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
-as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
-the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
-file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
-(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
-starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
-until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It
-opens so once, as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added
-or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
-keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
-shows them: in a tree, those in a closed folder are skipped. The list itself, its order, layout and groups, are
-every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it
-shows how many changes it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
+Every text diff of two versions steps through its changes (`useChangeNavigation`: the regions of the one `lineDiff`, so
+they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines while typing) and the header's arrows
+(see "The arrows never move" below), from the diff or the list beside it; the first move goes from the top of the view.
+The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered there yet is
+scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one, as changes are always in the
+hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
+beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or
+the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting files step through
+different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting
+file lands on its first conflict, and no arrival is left waiting for a file opened later. A diff opened any other way
+(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it starts
+in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted until the
+first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It opens so once,
+as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added or
+deleted file) is one change; a file with none to step through (an image, a model, a binary, identical versions) keeps
+the arrows, which go from file to file ("Previous file", "Next file", no label), so stepping through the list never
+stops there. It steps through the files as the list shows them, never on to a folder (private, deleted or moved), which
+has no diff (`fileRowKeys`, Changes' too), though a folder's `.meta` diff shown in Changes steps on from the folder's
+place (`FileStepsOptions.rowOrder`); in a tree, those in a closed folder are skipped. With only folders pending, Changes
+selects the first of them (`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed
+files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it shows how many changes it
+holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
+
+### The arrows never move
+
+People click ↓ many times in a row through a changeset, past each file's last change into the next file, so the arrow
+must never move under the pointer. The arrows are the header's last slot, side by side at its right edge, in every
+diff's header alike (`DiffViewerFrame`'s `navigator`): text, image, model, binary, identical, loading, an error, an
+xlink. Right before them, with no room reserved, the label has one form, "3 of 12", and only while a change is current
+(`positionLabel`); otherwise it is empty, as the line counts and the diff itself (identical, binary) already say how
+many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). A count before the first step
+("12 changes") and "No changes" are left out on purpose: three forms of one label read as noise, and the room they
+needed, reserved, left "1 of 1" floating in a gap. It grows leftward, in tabular figures; then the Expand button and
+the view's controls. What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a
+list of files always (disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws
+(History, Files, Browse repository, the merge page's previews of a change and its directory conflicts' comparisons:
+disabled where there is nothing to step through, an image, a binary), and on none of a merge page's merged result,
+whose conflict arrows step instead (`stepsThroughChanges` off).
+
+**Whose arrows.** The arrows are one element for as long as the view shows diffs: the header belongs to
+`SteppedDiffFrame`, which `FileDiffViewer` draws around every state of a file (loading, failed, loaded), and the loaded
+diff (`LoadedFileDiff`, mounted anew per file) draws its controls into it (`createPortal`) and hands it its navigation
+as it renders (`DiffFrameHost.publish`), saying whose it is (its versions' `diffContentsKey`). `headerArrows` decides
+from the selected file's key and how its read stands: with that file's diff published, its navigation, label and keys;
+otherwise (the file being read, the previous file's diff still on screen; read fast, its diff mounted while the previous
+one's navigation is still the one published, as publishing follows the render; its viewer's code loading) the header's
+own, with no label (never the previous file's "3 of 3" beside the new title), both arrows enabled with a neutral tip
+(`ArrowGoal` `'queued'`); where the file couldn't be read, the header's own going from file to file.
+
+**Where a press goes.** One router decides it for every navigation (`routePress`, `pressRouting.ts`): a diff's, a
+conflicts view's, the header's own, an xlink's (`FileOnlyNavigator`), and the burst tests walk it too. It knows what
+holds the press (`PressHolder`: a view that opens at its arrival, a header waiting for the selected file's diff, or one
+with no steps of its own, a file that couldn't be read or an xlink) and the file the list is ahead on. A press is kept,
+tagged with a file's path, for the file a step went to while the view shown is still the previous one's
+(`FileSteps.steppingTo`, also before the list redrew, `PendingArrival.from`), or the list is on while Changes' diff
+settles after a click (`FileSteps.settlingOn`, from the host's own two values, the change selected and the one diffed);
+for a view until it opened at its arrival; for the selected file's diff while the header waits for it. Otherwise it
+steps, and a press that would be kept leaves the arrow enabled (`pressGoal`), so no click is lost to an arrow disabled
+by the list's end.
+
+**Where kept presses wait.** In one queue (`StepQueue`): the list's (`FileSteps.kept`, which the lists of one view share
+with their pending arrival, so a step from an Incoming diff into a conflicting file hands the conflict's view the
+presses left), else the frame's own. A step from a file takes the presses still left for it along to the next file, in
+order (`applyPress`), so a burst across a one-change file, an image, an unreadable file or an xlink loses none. A step
+is recorded only once the list selects (`FileStepsOptions.select`'s `selected`): kept unsaved edits (Cancel) leave
+nothing in flight, and the arrows go on in the file shown.
+
+**When they're taken.** `takesKept`: the selected file's diff once it opened at its arrival, not a previous one still on
+screen; a navigation with no steps (an unreadable file, an xlink) at once, replaying them as steps from file to file;
+never a header waiting for the diff. A press that moves the view is the last until the render it brings; one that does
+nothing (past the last change of the last file) brings no render, so the next is taken at once (`drainKept`). A diff
+that will never have changes to step through (`stepsCanCome`: anything but a text diff, or a file typed into as a diff)
+opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends on B's 2nd change, and ↓↓↓ on its 3rd.
+
+**When they're dropped.** Only when the selection leaves their file, in two cases: the list moves to another file
+(`FileSteps.listMoved`, for every view beside it), which also forgets a step it went past, and the file shown changes
+under the same row (`SteppedDiffFrame`'s `keepOnly`: an asset's `.meta` toggled in its place). Those neither for the
+file now shown nor for one a step is on its way to go, so a file picked in the list while another loads opens at its
+top.
+
+**Gaps left.** A press made while the unsaved-edits question is open goes nowhere: the dialog holds the keys and the
+pointer. A view that shows another path than its row's (a `.meta` in place of its asset) takes no presses kept for the
+row; the `.meta` shows only once asked for in that file, so a step always arrives on the asset.
+
+Hosts keep `FileDiffViewer` mounted from file to file (Incoming's isn't keyed by the file). An xlink's header passes
+`FileOnlyNavigator`. Narrow, the label gives way (`data-toolbar-extra`) and the arrows keep the edge. The merge page's
+conflict arrows share the order and the label (`ConflictNavigator`), and stay, disabled, once there is nowhere to go
+(merge.md "Stepping through conflicts").
 
 A move to a change, or to a conflict on the merge page (they share `scrollToRows`), that is rendered already but more
 than a view away jumps to a quarter of a view short of it and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), as a
@@ -404,7 +475,7 @@ never runs under them; Linux keeps its native title bar. So does the command log
 never the OS's full screen (View ▸ Enter Full Screen, ⌃⌘F, F11), which it stacks with independently, and its name says
 so: "Full screen" names the OS's.
 
-- **Where**: one icon button, last in the diff's header after the change arrows (`ExpandDiffButton`, drawn by
+- **Where**: one icon button, in the diff's header, right before the change arrows (`ExpandDiffButton`, drawn by
   `DiffViewerFrame` where its host says it can expand: `ExpandableDiffContext`), pressed while expanded; ⇧⌘E or
   Ctrl+Shift+E (`expandDiff`: E for Expand, taken by no browser, desktop or the diff's editor); View ▸ Expand Diff and
   the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
@@ -413,8 +484,8 @@ so: "Full screen" names the OS's.
   files. The merge page offers none, nor do Incoming's conflicts.
 - **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
   scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
-  past its last change (`FileStepsContext`: Changes, a diff page, a code review), it still does, so a whole changeset is
-  reviewed expanded. Incoming, History, Files and Browse repository step through the file shown only, as they do
+  past its last change (`FileStepsContext`: Changes, Incoming, a diff page, a code review), it still does, so a whole
+  changeset is reviewed expanded. History, Files and Browse repository step through the file shown only, as they do
   collapsed.
 - **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was a button a click
   focused (the Expand button, a change arrow clicked before), and the code is the window's main focus while expanded

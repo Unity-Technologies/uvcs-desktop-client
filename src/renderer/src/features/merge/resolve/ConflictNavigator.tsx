@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type RefObject } from 'react';
 import { ChangeNavigator } from '../../diff/viewer/ChangeNavigator';
-import { goesSomewhere, useStepNavigation, type StepShortcuts, type StepView } from '../../diff/viewer/useStepNavigation';
+import { useStepNavigation, type StepShortcuts, type StepView } from '../../diff/viewer/useStepNavigation';
 import styles from './ConflictNavigator.module.css';
 
 const CONFLICT_SHORTCUTS: StepShortcuts = { next: 'nextConflict', previous: 'previousConflict' };
@@ -17,9 +17,9 @@ interface ConflictNavigatorProps {
 }
 
 /**
- * A conflicting file's arrows around "2 of 3", with the diff's keys (⌥↓ ⌥↑, F7 ⇧F7): from conflict to conflict, then,
- * beside the merge's list, on to the next file that waits for the user (`conflictStepKeys`). Resolving a conflict takes
- * it out of the count, and the next move goes on from the view.
+ * A conflicting file's "2 of 3" and its arrows, as a diff's header has them, with the diff's keys (⌥↓ ⌥↑, F7 ⇧F7): from
+ * conflict to conflict, then, beside the merge's list, on to the next file that waits for the user
+ * (`conflictStepKeys`). Resolving a conflict takes it out of the count, and the next move goes on from the view.
  */
 export function ConflictNavigator({ count, view, frame, path }: ConflictNavigatorProps) {
   const steps = useMemo(() => Array.from({ length: count }, (_, index) => index), [count]);
@@ -33,10 +33,6 @@ export function ConflictNavigator({ count, view, frame, path }: ConflictNavigato
     return () => panel?.removeEventListener('scroll', onViewScroll, { capture: true });
   }, [frame, onViewScroll]);
 
-  if (!goesSomewhere(navigation)) return null;
-  return (
-    <div className={styles.navigator}>
-      <ChangeNavigator navigation={navigation} />
-    </div>
-  );
+  // Always there while the file shows, disabled once there is nowhere to go: they never come and go.
+  return <ChangeNavigator className={styles.navigator} navigation={navigation} stepsOwn />;
 }

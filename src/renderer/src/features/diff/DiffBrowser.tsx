@@ -6,6 +6,7 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
@@ -31,7 +32,7 @@ import { EntryDiff } from './EntryDiff';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
-import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps } from './viewer/fileSteps';
 import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
 import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
@@ -99,12 +100,12 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // A folder or a status group the keyboard (or a click) is on.
   const focusedFolder = focusedAsset ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
-  const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
+  const rowKeys = useMemo(() => fileRowKeys(rows), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
   const findSibling = useMemo(() => diffSibling(readEntries, target, workspaceRepository), [readEntries, target, workspaceRepository]);
   // A model's materials and textures are the ones where the diff points to, the side before with its changes undone.
   const findAssetsPoint = useMemo(() => diffAssetsPoint(readEntries, target), [readEntries, target]);
-  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
+  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))), pathOf: (key) => key });
 
   // The file asked for once the files are read, else the first, before the list paints: something is always selected
   // for the diff pane. A selected file the diff no longer holds (read again after a check-in) gives way the same.

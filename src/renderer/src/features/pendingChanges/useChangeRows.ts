@@ -3,6 +3,7 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useCollapsedFolders } from '../../components/collapsedFoldersStore';
 import { useFileTreeFolding, type FileTreeFolding } from '../../components/fileTreeFolding';
 import type { FileListLayout } from '../../components/fileListViewStore';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import type { ItemOrder } from '../../lib/pathTree';
 import { rowLevelsOf, topLevelCheckboxInset, type RowLevels } from './changeRowLevels';
 import { changeKey, collapseRows, layoutChangeRows, type ChangeRow, type ChangesGrouping } from './changeRows';
@@ -25,7 +26,10 @@ interface ChangeRows {
   rows: ChangeRow[];
   /** The changes shown by key: arrowing renders the view on every step, so what it asks of the selection is looked up. */
   changesByKey: ReadonlyMap<string, PendingChange>;
-  /** The keys of the change rows in list order: the diff's navigation goes on to the files before and after. */
+  /**
+   * The keys of the changes with a diff to show, in list order (`fileRowKeys`: never a folder): the diff's navigation
+   * goes on to the files before and after.
+   */
   fileKeys: string[];
   /** How the rows sit (`rowLevelsOf`), for their indents and guides. */
   levels: RowLevels;
@@ -46,7 +50,8 @@ export function useChangeRows({ changes, changelists, layout, grouping, groupByS
   const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
   const levels = useMemo(() => rowLevelsOf(rows, layout === 'tree'), [rows, layout]);
   const checkboxInset = topLevelCheckboxInset(levels);
-  const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' ? [row.key] : [])), [rows]);
+  // The rows the diff steps on to: those with a diff to show, never a folder (`fileRowKeys`).
+  const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
   const folding = useFileTreeFolding(allRows, rows, closeOnly);
   return { rows, changesByKey, fileKeys, levels, checkboxInset, folding, toggleCollapsed };
 }

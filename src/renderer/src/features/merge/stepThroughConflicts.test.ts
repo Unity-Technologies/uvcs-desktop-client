@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalChange, plannedMove, positionLabel, type ChangePosition } from '../diff/viewer/changeNavigation';
-import { fileSteps, type PendingArrival } from '../diff/viewer/fileSteps';
+import { fileSteps, pendingArrival } from '../diff/viewer/fileSteps';
 import { positionAfterChange, pressStep } from '../diff/viewer/stepNavigation';
 import { conflictStepKeys } from './conflictSteps';
 import { ConflictPlace } from './resolve/conflictRows';
@@ -30,15 +30,21 @@ class MergePage {
   private shown = '';
   private position: ChangePosition = { count: 0, current: null, above: 0 };
   private place = new ConflictPlace();
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
 
   constructor(private readonly files: Record<string, ListedFile>) {
     this.open(Object.keys(files)[0]!);
   }
 
-  /** The file shown and the arrows' "2 of 3". */
+  /** The file shown and the arrows' "2 of 3", which says nothing before a conflict is current. */
   get header(): string {
-    return `${this.shown}: ${positionLabel(this.position, 'conflict')}`;
+    const label = positionLabel(this.position);
+    return label ? `${this.shown}: ${label}` : this.shown;
+  }
+
+  /** The file shown, how many conflicts wait in it, and the one moved to. */
+  get state(): { shown: string; count: number; current: number | null } {
+    return { shown: this.shown, count: this.position.count, current: this.position.current };
   }
 
   press(direction: 1 | -1): this {
@@ -79,7 +85,10 @@ class MergePage {
   private steps() {
     const rows = Object.keys(this.files).map((path) => ({ type: 'file', key: path, item: path }));
     const keys = conflictStepKeys(rows, this.shown, (path) => !this.files[path]!.decided);
-    return fileSteps(keys, this.shown, { select: (key) => this.open(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(keys, this.shown, { select: (key, selected) => {
+        selected();
+        this.open(key);
+      }, pathOf: (key) => key }, this.pending);
   }
 
   private open(path: string): void {
@@ -106,7 +115,7 @@ describe('stepping through the conflicts of a merge', () => {
     const headers = [page.header];
     for (let press = 0; press < 8; press++) headers.push(page.press(1).header);
     expect(headers).toEqual([
-      'Enemy.cs: 1 conflict',
+      'Enemy.cs',
       'Enemy.cs: 1 of 1',
       'Level.cs: 1 of 3',
       'Level.cs: 2 of 3',
@@ -127,7 +136,7 @@ describe('stepping through the conflicts of a merge', () => {
   it('goes on from the conflict resolved to the one that took its place, not back to the first in view', () => {
     const page = merge().select('Level.cs').press(1).press(1);
     expect(page.header).toBe('Level.cs: 2 of 3');
-    expect(page.resolveCurrent().header).toBe('Level.cs: 2 conflicts');
+    expect(page.resolveCurrent().state).toEqual({ shown: 'Level.cs', count: 2, current: null });
     expect(page.press(1).header).toBe('Level.cs: 2 of 2');
     expect(page.resolveCurrent().press(1).header).toBe('logo.png: 1 of 1');
   });
@@ -145,7 +154,7 @@ describe('stepping through the conflicts of a merge', () => {
   it("goes straight on to the files around it once the file shown is decided, which it doesn't go back to", () => {
     const page = merge().select('Level.cs');
     for (let conflict = 0; conflict < 3; conflict++) page.press(1).resolveCurrent();
-    expect(page.header).toBe('Level.cs: No conflicts');
+    expect(page.state).toEqual({ shown: 'Level.cs', count: 0, current: null });
     expect(page.goesTo(1)).toBe('file');
     expect(page.press(-1).header).toBe('Enemy.cs: 1 of 1');
     expect(page.press(1).header).toBe('logo.png: 1 of 1');
@@ -153,7 +162,7 @@ describe('stepping through the conflicts of a merge', () => {
 
   it('steps from a file decided or merged automatically, opened from the list, to the files around it that wait', () => {
     const page = merge().select('Menu.cs');
-    expect(page.header).toBe('Menu.cs: No conflicts');
+    expect(page.state).toEqual({ shown: 'Menu.cs', count: 0, current: null });
     expect(page.press(1).header).toBe('logo.png: 1 of 1');
     expect(merge().select('Menu.cs').press(-1).header).toBe('Level.cs: 3 of 3');
   });

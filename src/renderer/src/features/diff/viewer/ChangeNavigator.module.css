@@ -1,14 +1,15 @@
-/* ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. At least as
-   wide as the usual labels ("1 change", "No changes", "12 of 34"), centered, so ▲ and what's before it (the `.meta`
-   toggle) stay put too from one file to the next. */
+/* "3 of 12", right before the arrows with no room reserved, so nothing floats between them: it grows leftward, and
+   tabular figures keep "3 of 12" to "4 of 12" still. Empty, it takes no room at all. */
 .position {
   flex: none;
-  min-width: 10ch;
-  text-align: center;
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   cursor: default;
   user-select: none;
+}
+
+.position:not(:empty) {
+  margin-right: var(--space-1);
 }

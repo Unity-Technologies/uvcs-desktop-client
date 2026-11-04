@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
+import { classNames } from '../lib/classNames';
 import styles from './PaneToolbar.module.css';
 
 interface PaneToolbarProps {
@@ -18,7 +19,18 @@ export function PaneToolbar({ title, children }: PaneToolbarProps) {
   );
 }
 
+interface PaneToolbarGroupProps {
+  children: ReactNode;
+  /** Where the group sits, beyond keeping its buttons tight (a bar's end). */
+  className?: string;
+  ref?: Ref<HTMLDivElement>;
+}
+
 /** Keeps related icon buttons of a toolbar tight together. */
-export function PaneToolbarGroup({ children }: { children: ReactNode }) {
-  return <div className={styles.group}>{children}</div>;
+export function PaneToolbarGroup({ children, className, ref }: PaneToolbarGroupProps) {
+  return (
+    <div ref={ref} className={classNames(styles.group, className)}>
+      {children}
+    </div>
+  );
 }
