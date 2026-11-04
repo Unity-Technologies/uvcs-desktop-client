@@ -1,5 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { FileListLayout } from '../../components/fileListViewStore';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import type { StatusTone } from '../../components/StatusBadge';
 import { statusGroupsOf } from '../../components/statusGroups';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from '../../lib/groupedPathTree';
@@ -84,6 +85,14 @@ export function changeKey(change: PendingChange): string {
     changeKeys.set(change, key);
   }
   return key;
+}
+
+/**
+ * The row Changes selects when nothing is (at first, or once the selected change went away): the first change with a
+ * diff to show (`fileRowKeys`), else, with only folders pending, the first of them, whose pane says what it is.
+ */
+export function firstChangeKeyOf(rows: readonly ChangeRow[]): string | undefined {
+  return fileRowKeys(rows)[0] ?? rows.find((row) => row.type === 'file')?.key;
 }
 
 /** The changes a row stands for: all changes in a group or folder, or the change itself. */

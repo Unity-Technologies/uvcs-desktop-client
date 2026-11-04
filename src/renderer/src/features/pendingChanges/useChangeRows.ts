@@ -28,7 +28,7 @@ interface ChangeRows {
   changesByKey: ReadonlyMap<string, PendingChange>;
   /**
    * The keys of the changes with a diff to show, in list order (`fileRowKeys`: never a folder): the diff's navigation
-   * goes on to the files before and after, and the list selects the first.
+   * goes on to the files before and after.
    */
   fileKeys: string[];
   /** How the rows sit (`rowLevelsOf`), for their indents and guides. */

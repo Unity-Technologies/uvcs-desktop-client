@@ -43,7 +43,7 @@ import { behindBranch, behindDescription } from './checkinBehind';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
-import { changesUnderRow, type ChangeRow } from './changeRows';
+import { changesUnderRow, firstChangeKeyOf, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesDiffs, changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
@@ -180,7 +180,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   });
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
-  const firstChangeKey = fileKeys[0];
+  const firstChangeKey = firstChangeKeyOf(rows);
   useEffect(() => {
     if (!focused && !focusedFolder && firstChangeKey) setSelection(singleSelection(firstChangeKey));
   }, [focused, focusedFolder, firstChangeKey]);
