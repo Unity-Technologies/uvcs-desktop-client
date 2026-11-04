@@ -335,6 +335,65 @@ shows how many changes it holds instead of a diff. The stepping itself (the posi
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
+A move to a change, or to a conflict on the merge page (they share `scrollToRows`), that is rendered already but more
+than a view away jumps to a quarter of a view short of it and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), as a
+click on the change map does: a smooth scroll the whole way would pass through rows Pierre renders one screen after
+another.
+
+## The change map
+
+While a text diff of two versions has changes and scrolls, it draws its own vertical scrollbar (`ChangeMap`,
+`--diff-scrollbar-size`), whose track marks where the changes are, as an editor's overview ruler does: the track stands
+for the whole diff, so a change a third of the way down the content is marked a third of the way down the track. Each
+change is a solid block (`changeMarks`, `changeMarks.ts`), at least `MIN_MARK_HEIGHT` (4 px) tall so one line reads as a
+block, filled with the changed rows' own tint, read from Pierre (`pierreChangeColors`: `--diffs-bg-deletion`,
+`--diffs-bg-addition` on its host, which follow the syntax theme), so the map is the diff's colors in any theme. A
+change that removes and adds (`changeKindOf`: `both`) is split down the middle, the removed tint on the left as in a
+Split diff. Changes close together fuse into one band ("Changes 4–24 of 25" in its tooltip): with at most `FUSE_LINES`
+(3) unchanged lines between them, however far apart the diff draws them, or blocks less than `FUSE_GAP` (4 px) apart;
+the clear gaps left are what make the groups readable, and the blocks drawn are bounded by the track, not the file.
+The marks are the regions the arrows step through (`useChangeNavigation`'s `regions`, so they follow what's typed),
+placed where Pierre lays them out (`pierreLineBox`: collapsed unchanged lines and wrapped lines counted) or, until
+Pierre can tell, at the line's share of its side.
+
+It shows only for a diff that scrolls, with changes, of two versions (`showsChangeMap`): not for a version shown alone
+(an added or deleted file), a file typed into whole, nor where the arrows don't step (the merge page); then the
+browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
+(`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top
+as it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls
+the diff, and no code goes under it. The thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks,
+translucent in the app's hovered thumb color (`--diff-scrollbar-thumb`: the resting one was too faint over the marks
+in the dark theme), and dragged with the pointer captured; it moves on the scroll event itself (`useScrollTop`), with
+the content, not a frame behind. `useChangeMap` places the marks again
+(`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines above the last
+change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a resize or as Pierre
+renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are read anew each time,
+so a theme switch recolors the map.
+
+A press anywhere in the track off the thumb, on a block or between blocks, scrolls smoothly so that point is in the
+middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
+that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view
+short of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a
+smooth scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye
+can predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is
+no press in the diff: the caret typing in it stays, and no lines are picked. It's for the pointer only
+(`aria-hidden`). Always on, with no setting.
+
+Designs tried on screen and dropped, not to be proposed again:
+
+- **A lane beside the browser's scrollbar**, or marks under it: a strip floating next to a bar it doesn't belong to,
+  and the browser's bar is the system's, its track paging on a click. The map is the bar instead.
+- **Colors mirrored as tokens** (Pierre's `--diffs-added-light` and the like copied into `tokens.css`): those are only
+  Pierre's fallbacks; the diff's colors come from the syntax theme, so the copies never matched what it shows. They're
+  read from Pierre at run time.
+- **Marks in the gutter bars' strong red and green**, or with an edge in them: loud next to the rows' tint, and not
+  what the rows look like. The blocks are the rows' tint alone.
+- **Two lanes of dots**, removed lines on the left and added on the right, each placed by its own lines: read as a
+  texture, not as changes, with no boundary between groups. One column of blocks, close changes fused, reads at a
+  glance.
+- **A click that went to a change** (through the arrows' navigation, "3 of 12"), and scrolled elsewhere between marks:
+  two rules for one click, a mark a few pixels tall decided which. A click scrolls there, as on any scrollbar.
+
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
@@ -653,7 +712,10 @@ release that installs.
   It relies on `Editor.focus()` (`#focus`) putting the window's selection inside the content element at once
   (`#setWindowSelection`), DOM focus coming later (`queueRender`): `document.execCommand('copy' | 'cut')` fires where
   the selection is. Checked on screen: several carets copy and paste their own pieces.
-- `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
+- `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change
+  (see Moving through changes), and where the change map places its marks (see The change map).
+- `pierreChangeColors`: the tints Pierre gives removed and added rows, read from its host's computed
+  `--diffs-bg-deletion` and `--diffs-bg-addition`, for the change map's blocks (see The change map).
 - `pierreHighlightWorker`: the entry the highlighting worker starts from. Pierre's worker chunks import `worker.js`
   back, and the development server loads it twice when the worker is started by Pierre's own URL: two copies answer
   every request, and the one never set up fails (`pierreHighlightWorker.test.ts`). `electron.vite.config.ts`
