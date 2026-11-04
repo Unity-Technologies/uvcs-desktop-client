@@ -11,6 +11,15 @@ const stop = (id: number) => ({ kind: 'changeset' as const, id });
 describe('searchGraph', () => {
   const changeset = (id: number) => ({ kind: 'changeset', id });
 
+  it('lists branches in the same column top to bottom, one moved down below the others too', () => {
+    // Two branches without changesets based on the same changeset share their header's column.
+    const data = sampleHistory();
+    const withEmpty = { ...data, branches: [...data.branches, branch('/main/x1', '/main', 4), branch('/main/x2', '/main', 4)].map((each, index) => ({ ...each, id: index + 1 })) };
+    const names = (hits: SearchHit[]) => hits.flatMap((hit) => (hit.kind === 'branch' ? [hit.name] : []));
+    expect(names(searchGraph(layoutGraph(withEmpty), 'x'))).toEqual(['/main/x1', '/main/x2']);
+    expect(names(searchGraph(layoutGraph(withEmpty, undefined, null, [{ branch: 4, row: 4 }]), 'x'))).toEqual(['/main/x2', '/main/x1']);
+  });
+
   it('finds a changeset by number', () => {
     expect(searchGraph(layout, 'cs:5')).toEqual([changeset(5)]);
     expect(searchGraph(layout, '5')).toEqual([changeset(5)]);
