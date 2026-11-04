@@ -84,7 +84,7 @@ export interface RankedOrder<T> extends ItemOrder<T> {
 
 /**
  * `order` as each item's place among `all`, put in order once: a list filtered as the user types (Changes, up to a
- * million changes) is arranged again on every key, and picking the items out of the ranks costs one pass, where
+ * million changes) is arranged again on every key, and picking the items out of the ranks costs a look-up each, where
  * sorting them compares names again. Items not in `all` go last. `previous`, the ranking of the list a read before,
  * keeps the order of the items still in it: only the others are sorted, then merged in (as `sortedFromPrevious`
  * does for the path order), unless fewer than half are still there.
@@ -97,7 +97,7 @@ export function rankedOrder<T extends { path: string }>(all: readonly T[], order
   return {
     ordered,
     compare: (a, b) => rankOf(a) - rankOf(b),
-    arrange: (items) => pickInRankOrder(items, ordered.length, rankOf),
+    arrange: (items) => pickInRankOrder(items, ordered, ranks),
   };
 }
 
@@ -118,20 +118,22 @@ export function rankList<T extends { path: string }>(all: readonly T[], sort: Fi
 }
 
 /**
- * `items` by their ranks: placed in a slot per rank and read back, in one pass over the ranks, when that costs less
- * than sorting them (a filter leaving most of the list); sorted by rank when they are few (one status group's).
+ * `items` in the order of their ranks among `ordered`, items without one last: each rank looked up once, and the ranks
+ * sorted as numbers (a typed array's own sort), never through a function. A filter can leave any share of a million
+ * changes, then split in a group per changelist and status: sorting a group by a function looking ranks up took a
+ * second for 900,000 changes, and placing items in a slot per rank went over every rank for each group.
  */
-function pickInRankOrder<T>(items: readonly T[], rankCount: number, rankOf: (item: T) => number): T[] {
-  if (items.length * Math.log2(items.length + 1) < rankCount) return [...items].sort((a, b) => rankOf(a) - rankOf(b));
-  const slots: (T | undefined)[] = new Array(rankCount);
+function pickInRankOrder<T>(items: readonly T[], ordered: readonly T[], ranks: ReadonlyMap<T, number>): T[] {
+  const itemRanks = new Uint32Array(items.length);
   const unranked: T[] = [];
+  let ranked = 0;
   for (const item of items) {
-    const rank = rankOf(item);
-    if (rank < rankCount) slots[rank] = item;
-    else unranked.push(item);
+    const rank = ranks.get(item);
+    if (rank === undefined) unranked.push(item);
+    else itemRanks[ranked++] = rank;
   }
   const picked: T[] = [];
-  for (const item of slots) if (item !== undefined) picked.push(item);
+  for (const rank of itemRanks.subarray(0, ranked).sort()) picked.push(ordered[rank]!);
   for (const item of unranked) picked.push(item);
   return picked;
 }
