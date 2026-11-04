@@ -73,6 +73,8 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   const keep = (direction: 1 | -1): void => queue.push(headerKeepsFor({ steppingTo: files?.steppingTo() ?? null, requestedPath: path }), direction);
   const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? keep : undefined);
   // The selection left a file: the presses kept for it (not for this one, nor for one a step is on its way to) go.
+  // Only as the file asked for changes (`[path]`): that is when the selection leaves one. Other renders leave nothing,
+  // and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
   // A file that couldn't be read: the presses kept for it, meant for a diff that never came, step on from it.
   useEffect(() => {
