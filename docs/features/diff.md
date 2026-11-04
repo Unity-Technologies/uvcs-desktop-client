@@ -322,7 +322,9 @@ the top of the view. The change comes a few rows from the top unless it's all in
 not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
 as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
 the last or first change, a diff beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next
-file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
+file's first change or the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting
+files step through different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last
+change into a conflicting file lands on its first conflict, and no arrival is left waiting for a file opened later. A diff opened any other way
 (picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
 starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
 until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It
@@ -359,9 +361,11 @@ mounted anew per file) draws its controls into it (`createPortal`) and hands it 
 label and keys; while the selected file is read (the previous file's diff kept on screen meanwhile) or its viewer
 loads, the header's own navigation, with no label (never the previous file's "3 of 3" beside the new title), keeping
 each press for the file that loads (`useFileOnlyNavigation`'s `goes`); where it couldn't be read, file to file at once.
-The kept presses apply one at a time once the diff arrived at the step it was stepped to (`queuedStep`,
-`StepNavigation.opened`), so ↓ onto file B and ↓ again while B loads ends on B's 2nd change: no click lost to a
-button swapped under the pointer, none landing on the wrong file. Hosts keep `FileDiffViewer` mounted from file to
+The kept presses go to the diff once it's the selected file's (`queuedStep`), and a diff keeps any press made before
+it opened at the step it was stepped to, applying them one at a time after (`pressWhileOpening`; one that will never
+have changes to step through, an image or a binary, opens at once: `noStepsComing`). So ↓ onto file B and ↓ again
+while B loads, or just after, ends on B's 2nd change: no click lost to a button swapped under the pointer, none
+landing on the wrong file. Hosts keep `FileDiffViewer` mounted from file to
 file (Incoming's isn't keyed by the file). An xlink's header passes `FileOnlyNavigator`. Narrow, the label gives way
 (`data-toolbar-extra`) and the arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and stay,
 disabled, once there is nowhere to go (merge.md "Stepping through conflicts").
