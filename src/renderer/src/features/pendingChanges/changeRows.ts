@@ -3,6 +3,7 @@ import type { FileListLayout } from '../../components/fileListViewStore';
 import type { StatusTone } from '../../components/StatusBadge';
 import { statusGroupsOf } from '../../components/statusGroups';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from '../../lib/groupedPathTree';
+import { itemsIn } from '../../lib/itemRange';
 import { layoutPathItems, type ItemOrder } from '../../lib/pathTree';
 import { changeTone } from './changeTone';
 
@@ -86,7 +87,7 @@ export function changeKey(change: PendingChange): string {
 
 /** The changes a row stands for: all changes in a group or folder, or the change itself. */
 export function changesUnderRow(row: ChangeRow): PendingChange[] {
-  return row.type === 'file' ? [row.item] : row.items;
+  return row.type === 'file' ? [row.item] : itemsIn(row.held);
 }
 
 /**
@@ -95,7 +96,7 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
  */
 export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
   if (!row || row.type === 'file') return null;
-  return row.type === 'group' && row.group.kind === 'changelist' && row.group.changelist ? row.group.changelist : row.items;
+  return row.type === 'group' && row.group.kind === 'changelist' && row.group.changelist ? row.group.changelist : itemsIn(row.held);
 }
 
 /** The user changelist a header is, or undefined: the default changelist, a status group. */

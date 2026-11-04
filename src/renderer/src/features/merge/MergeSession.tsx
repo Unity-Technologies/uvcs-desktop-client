@@ -6,6 +6,7 @@ import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
@@ -241,7 +242,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           <EmptyState
             icon={<Folder size={24} />}
             title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
-            description={`${pluralize(selectedGroup.items.length, 'item')}. Select one to see what the merge does to it.`}
+            description={`${pluralize(rangeLength(selectedGroup.held), 'item')}. Select one to see what the merge does to it.`}
           />
         ) : (
           <EmptyState title="Nothing selected" />

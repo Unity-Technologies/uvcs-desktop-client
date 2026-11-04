@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compareNames, comparePaths } from '@shared/pathOrder';
+import { itemsIn, wholeList } from './itemRange';
 import { layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
 import { layoutPathItems, layoutPathTree, orderTreeRows, type ItemOrder, type PathTreeRow, type TreeFolderRow } from './pathTree';
 
@@ -33,7 +34,7 @@ function layoutPathTreeAsBefore<T extends { path: string }>(sorted: readonly T[]
           name: level === 0 ? path : path.slice(pathAt(level - 1).length + 1),
           depth,
           item: byPath.get(path),
-          items: inside,
+          held: wholeList(inside),
           collapsed: false,
         };
         rows.push(row);
@@ -70,7 +71,7 @@ function layoutGroupedTreeAsBefore<T extends { path: string }, G>(groups: readon
   const rows: GroupedTreeRow<T, G>[] = [];
   const layOut = (inGroups: readonly TreeGroup<T, G>[], depth: number): void => {
     for (const { key, label, group, sorted, subgroups } of inGroups) {
-      rows.push({ type: 'group', key, label, group, items: [...sorted], depth, collapsed: false });
+      rows.push({ type: 'group', key, label, group, held: wholeList([...sorted]), depth, collapsed: false });
       if (subgroups) {
         layOut(subgroups, depth + 1);
         continue;
@@ -125,8 +126,8 @@ const sortedItems = (paths: string[], random: () => number): Item[] =>
 /** A row as the user sees it, with the items a folder or a group holds. */
 function seen(row: GroupedTreeRow<Item, number>): unknown {
   if (row.type === 'file') return row;
-  const { items, ...rest } = row;
-  return { ...rest, held: items.map(keyOf) };
+  const { held, ...rest } = row;
+  return { ...rest, held: itemsIn(held).map(keyOf) };
 }
 
 const lastName = (item: Item): string => item.path.slice(item.path.lastIndexOf('/') + 1);

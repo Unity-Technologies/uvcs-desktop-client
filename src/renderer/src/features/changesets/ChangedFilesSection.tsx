@@ -8,6 +8,7 @@ import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
+import { itemsIn } from '../../lib/itemRange';
 import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
@@ -117,7 +118,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, row.items, menuOptions)}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, itemsIn(row.held), menuOptions)}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>

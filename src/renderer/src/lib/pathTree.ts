@@ -1,3 +1,4 @@
+import { rangeLength, type ItemRange } from './itemRange';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /** A folder of a tree of files: one row, even for folders that only hold the next one ("deep/very/long"). */
@@ -11,8 +12,8 @@ export interface TreeFolderRow<T> {
   depth: number;
   /** The folder's own item, when it is one (a new private folder, an added, deleted or moved one). */
   item?: T;
-  /** Every item in the folder, its own included, in order. */
-  items: T[];
+  /** Every item in the folder, its own included, in order: a range of the list the tree was laid out from. */
+  held: ItemRange<T>;
   collapsed: boolean;
 }
 
@@ -28,7 +29,7 @@ export type PathTreeRow<T> = TreeFolderRow<T> | TreeFileRow<T>;
 
 export interface PathTreeInput<T extends { path: string }> {
   /** The items, sorted by `comparePaths` (`@shared/pathOrder`): a folder's items come right after it. */
-  sorted: T[];
+  sorted: readonly T[];
   keyOf: (item: T) => string;
   /** Tells the folder rows of one tree from another's on the same list (e.g. a changelist's): `folder:<scope>:<path>`. */
   folderScope: string;
@@ -61,9 +62,9 @@ export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, fold
     for (let level = 0; level < folderCount; level++) {
       let row = folderRows.get(pathAt(level));
       if (!row) {
-        const inside = itemsInFolder(sorted, index, pathAt(level));
+        const held: ItemRange<T> = { list: sorted, start: index, end: folderEnd(sorted, index, pathAt(level)) };
         let last = level;
-        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(inside, pathAt(last + 1))) last++;
+        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(held, pathAt(last + 1))) last++;
         const path = pathAt(last);
         row = {
           type: 'folder',
@@ -72,7 +73,7 @@ export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, fold
           name: level === 0 ? path : path.slice(pathAt(level - 1).length + 1),
           depth,
           item: byPath.get(path),
-          items: inside,
+          held,
           collapsed: false,
         };
         rows.push(row);
@@ -89,7 +90,7 @@ export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, fold
 }
 
 /** The rows of a flat list: every item at depth 0. */
-export function layoutPathList<T>(items: T[], keyOf: (item: T) => string): TreeFileRow<T>[] {
+export function layoutPathList<T>(items: readonly T[], keyOf: (item: T) => string): TreeFileRow<T>[] {
   return items.map((item) => ({ type: 'file', key: keyOf(item), item, depth: 0 }));
 }
 
@@ -116,7 +117,7 @@ interface PathItemsLayout<T> {
  * tree keeps its folders in path order, first, and sorts the files of each folder by it after them
  * (`orderTreeRows`). Without an order, the path order of either.
  */
-export function layoutPathItems<T extends { path: string }>(sorted: T[], keyOf: (item: T) => string, { tree, folderScope, order }: PathItemsLayout<T>): PathTreeRow<T>[] {
+export function layoutPathItems<T extends { path: string }>(sorted: readonly T[], keyOf: (item: T) => string, { tree, folderScope, order }: PathItemsLayout<T>): PathTreeRow<T>[] {
   if (!tree) return layoutPathList(order ? arranged(sorted, order) : sorted, keyOf);
   const rows = layoutPathTree({ sorted, keyOf, folderScope });
   return order ? orderTreeRows(rows, order) : rows;
@@ -193,8 +194,13 @@ export function pathTreeKeyMove<T>(rows: readonly PathTreeRow<T>[], index: numbe
   return treeArrowMove(pathTreeArrowRows(rows), index, key);
 }
 
+/** How many items a folder's row counts: what it holds, but for the folder itself when it is an item. */
+export function folderItemCount<T>(row: TreeFolderRow<T>): number {
+  return rangeLength(row.held) - (row.item ? 1 : 0);
+}
+
 /** A row that stands for items: a file for its own, a folder or a group (`groupedPathTree`) for all it holds. */
-type RowOfItems<T> = { type: 'file'; item: T } | { type: 'folder' | 'group'; items: T[] };
+type RowOfItems<T> = { type: 'file'; item: T } | { type: 'folder' | 'group'; held: ItemRange<T> };
 
 /**
  * The items rows stand for, each once, in the rows' order: a file's own, everything in a folder or a group. What a
@@ -204,7 +210,7 @@ export function itemsUnderRows<T>(rows: readonly RowOfItems<T>[]): T[] {
   const items = new Set<T>();
   for (const row of rows) {
     if (row.type === 'file') items.add(row.item);
-    else for (const item of row.items) items.add(item);
+    else for (let index = row.held.start; index < row.held.end; index++) items.add(row.held.list[index]!);
   }
   return [...items];
 }
@@ -223,17 +229,17 @@ export function firstFilesOf<T>(rows: PathTreeRow<T>[], limit: number): { rows: 
 }
 
 /** Whether all a folder holds is `child`, one of its folders, or in it. */
-function holdsOnly<T extends { path: string }>(inside: T[], child: string): boolean {
+function holdsOnly<T extends { path: string }>({ list, start, end }: ItemRange<T>, child: string): boolean {
   // Sorted by `comparePaths`, the first and the last item tell for all of them.
-  return [inside[0]!, inside.at(-1)!].every((item) => item.path === child || item.path.startsWith(`${child}/`));
+  return [list[start]!, list[end - 1]!].every((item) => item.path === child || item.path.startsWith(`${child}/`));
 }
 
-/** The items in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
-function itemsInFolder<T extends { path: string }>(sorted: T[], first: number, folder: string): T[] {
+/** Where the items in a folder end, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
+function folderEnd<T extends { path: string }>(sorted: readonly T[], first: number, folder: string): number {
   const inside = `${folder}/`;
   let end = first;
   while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(inside))) end++;
-  return sorted.slice(first, end);
+  return end;
 }
 
 /** "a/b/c.txt" is in "a" and "a/b": ["a", "a/b", "a/b/c.txt"]. */

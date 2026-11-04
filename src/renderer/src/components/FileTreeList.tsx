@@ -1,6 +1,7 @@
 import { useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../lib/actions';
 import { groupedRowLevel, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, type GroupedTreeRow, type TreeGroupRow } from '../lib/groupedPathTree';
+import { rangeLength, type ItemRange } from '../lib/itemRange';
 import { itemsUnderRows, type PathTreeRow } from '../lib/pathTree';
 import type { SelectionState } from '../lib/selection';
 import { HighlightQuery } from '../ui/Highlight';
@@ -27,7 +28,7 @@ interface FileTreeListProps<T, G> {
   /** What a group is, as its tooltip. */
   groupTip?: (group: G) => string | undefined;
   /** What a group's header says instead of its count, from the items it holds (`TreeGroupLabel`'s `progress`). */
-  groupProgress?: (group: G, items: T[]) => GroupProgress | undefined;
+  groupProgress?: (group: G, held: ItemRange<T>) => GroupProgress | undefined;
   /** The filter's text, marked in the rows. */
   query: string;
   /** Under the filter bar, e.g. the review bar: what its `actions` open, right beneath them. */
@@ -87,7 +88,7 @@ export function FileTreeList<T, G>({
       render: (row) => (
         <RowGuidesContext.Provider value={rowGuides}>
           {row.type === 'group' ? (
-            <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.items)} />
+            <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.held)} />
           ) : (
             renderItem(row, levelOf(row))
           )}
@@ -148,7 +149,7 @@ function GroupRow<T, G>({ row, level, tip, progress }: { row: TreeGroupRow<T, G>
         label={row.label}
         icon={isStatusGroup(row.group) ? <StatusGroupBadge tone={row.group.status} /> : undefined}
         collapsed={row.collapsed}
-        count={row.items.length}
+        count={rangeLength(row.held)}
         progress={progress}
         tip={tip}
       />

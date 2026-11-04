@@ -6,6 +6,8 @@ import { ItemTag } from '../../components/ItemTag';
 import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
+import { itemsIn, rangeLength } from '../../lib/itemRange';
+import { folderItemCount } from '../../lib/pathTree';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { ReviewStatus } from '../review/reviewStatus';
@@ -59,7 +61,7 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
           </button>
         </ActionDropdownMenu>
       )}
-      <span className={styles.count}>{row.items.length}</span>
+      <span className={styles.count}>{rangeLength(row.held)}</span>
     </>
   );
 }
@@ -85,12 +87,12 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
       <TreeFolderLabel
         name={row.name}
         collapsed={row.collapsed}
-        count={row.items.length - (row.item ? 1 : 0)}
+        count={folderItemCount(row)}
         before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
         extras={
           <>
             {hasMeta && <ItemTag>+ meta</ItemTag>}
-            {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
+            {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(itemsIn(row.held))} />}
           </>
         }
         status={row.item && changeStatus(row.item)}

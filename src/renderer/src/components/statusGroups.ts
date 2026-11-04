@@ -18,7 +18,7 @@ export function isStatusGroup(group: unknown): group is StatusGroup {
 
 interface StatusGroupsInput<T, G> {
   /** The items, in `comparePaths` order: each group keeps it. */
-  sorted: T[];
+  sorted: readonly T[];
   toneOf: (item: T) => StatusTone;
   /** Unique in the list, for the groups' keys: a changelist's, so each changelist's Added group closes alone. */
   scope: string;
@@ -66,7 +66,7 @@ export interface GroupedFileListFacts<T, G> extends FileListFacts<T> {
 /** The list's files in a group per status: inside each of its own groups, or as its only groups. */
 export function withStatusGroups<T, G>(content: FileListContent<T, G>, { toneOf, toneLabels, statusGroup }: GroupedFileListFacts<T, G>): TreeGroup<T, G>[] {
   const groupOf = statusGroup!;
-  const byStatus = (sorted: T[], scope: string) => statusGroupsOf<T, G>({ sorted, toneOf, scope, groupOf, toneLabels });
+  const byStatus = (sorted: readonly T[], scope: string) => statusGroupsOf<T, G>({ sorted, toneOf, scope, groupOf, toneLabels });
   if (!('groups' in content)) return byStatus(content.sorted, 'all');
   return content.groups.map((group) => ({ ...group, subgroups: byStatus(group.sorted, group.key) }));
 }

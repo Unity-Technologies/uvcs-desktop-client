@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { wholeList } from '../../lib/itemRange';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
@@ -118,8 +119,8 @@ describe('mergeGroupProgress', () => {
     const change: MergeItem = { kind: 'change', key: 'change:0', path: 'b.txt', change: { kind: 'added', path: '/b.txt' } };
     const progress = mergeProgress([state], new Map());
 
-    expect(mergeGroupProgress('fileConflicts', [conflict], progress)).toEqual({ count: '1 of 1' });
-    expect(mergeGroupProgress('changes', [change], progress)).toBeUndefined();
+    expect(mergeGroupProgress('fileConflicts', wholeList([conflict]), progress)).toEqual({ count: '1 of 1' });
+    expect(mergeGroupProgress('changes', wholeList([change]), progress)).toBeUndefined();
   });
 
   it('counts a directory conflict decided as resolved, and one whose decision is being applied as still to decide', () => {
@@ -129,7 +130,7 @@ describe('mergeGroupProgress', () => {
     const items: MergeItem[] = [decided, applying].map((conflict) => ({ kind: 'directoryConflict', key: `directory:${conflict.itemId}`, path: 'shared', conflict }));
     const progress = mergeProgress([], resolutionsByConflict([{ conflict: decided, resolution: { choice: 'source' } }]), directoryConflictIdentity(applying));
 
-    expect(mergeGroupProgress('directoryConflicts', items, progress)).toEqual({ count: '1 of 2', tip: '1 resolved, 1 to decide' });
+    expect(mergeGroupProgress('directoryConflicts', wholeList(items), progress)).toEqual({ count: '1 of 2', tip: '1 resolved, 1 to decide' });
   });
 });
 

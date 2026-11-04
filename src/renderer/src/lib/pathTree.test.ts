@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { countCalls } from '@shared/testing/countCalls';
 import { countedArray, readGrowthWhenDoubled } from '@shared/testing/countedReads';
+import { itemsIn } from './itemRange';
 import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, layoutPathTree, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
 
 interface Item {
@@ -52,7 +53,8 @@ describe('layoutPathTree', () => {
       ['assets/a.png', 1],
       ['assets/b.png', 1],
     ]);
-    expect(rows[0]).toMatchObject({ item: { path: 'assets' }, items: [{ path: 'assets' }, { path: 'assets/a.png' }, { path: 'assets/b.png' }] });
+    expect(rows[0]).toMatchObject({ item: { path: 'assets' } });
+    expect(rows[0]!.type === 'folder' && itemsIn(rows[0]!.held)).toEqual([{ path: 'assets' }, { path: 'assets/a.png' }, { path: 'assets/b.png' }]);
   });
 
   it('ends a row of folders at a folder that is an item itself, so it keeps its status', () => {
@@ -69,7 +71,7 @@ describe('layoutPathTree', () => {
 
   it('gives each folder every item in it, at every level', () => {
     const rows = tree(['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts', 'src-old.ts']);
-    expect(rows.flatMap((row) => (row.type === 'folder' ? [[row.path, row.items.map(keyOf)]] : []))).toEqual([
+    expect(rows.flatMap((row) => (row.type === 'folder' ? [[row.path, itemsIn(row.held).map(keyOf)]] : []))).toEqual([
       ['src', ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts']],
       ['src/lib', ['src/lib/b.ts', 'src/lib/deep/c.ts']],
       ['src/lib/deep', ['src/lib/deep/c.ts']],
