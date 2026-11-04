@@ -1,4 +1,5 @@
 import { groupBy } from '../../../lib/groupBy';
+import type { BranchPins } from './branchRows';
 import type { Lane } from './layoutGraph';
 
 /** Free columns kept between two lanes sharing a row, so they never look connected. */
@@ -10,8 +11,12 @@ export type UnplacedLane = Omit<Lane, 'row'>;
 /**
  * Assigns rows: parents before children, each lane in the first free row below its parent, packed into shared rows
  * when they don't overlap. `/main` (or whichever top-level branch comes first) takes the top row.
+ *
+ * A branch the user moved (`pins`) takes the first free row from the one it asks for, before any other, the one moved
+ * last first; its children follow below it. Pins of branches not drawn are ignored, and the rows nothing ends up on
+ * close, so a branch moved below every row lands just below the last.
  */
-export function placeLanes(unplaced: UnplacedLane[]): Lane[] {
+export function placeLanes(unplaced: UnplacedLane[], pins: BranchPins = []): Lane[] {
   const byName = new Map(unplaced.map((lane) => [lane.branch.name, lane]));
   const childrenOf = groupBy(
     unplaced.filter((lane) => byName.has(lane.branch.parent)),
@@ -22,17 +27,35 @@ export function placeLanes(unplaced: UnplacedLane[]): Lane[] {
   const occupiedByRow: RowOccupancy[] = [];
   const placed: Lane[] = [];
 
-  const place = (lane: UnplacedLane, minimumRow: number): void => {
+  const take = (lane: UnplacedLane, minimumRow: number): number => {
     let row = minimumRow;
     while (!occupy((occupiedByRow[row] ??= { starts: [], ends: [] }), lane.startColumn, lane.endColumn)) row++;
     placed.push({ ...lane, row });
+    return row;
+  };
 
+  const pinnedRows = new Map<UnplacedLane, number>();
+  const byId = new Map(unplaced.map((lane) => [lane.branch.id, lane]));
+  for (const pin of [...pins].reverse()) {
+    const lane = byId.get(pin.branch);
+    if (lane && !pinnedRows.has(lane)) pinnedRows.set(lane, take(lane, pin.row));
+  }
+
+  const place = (lane: UnplacedLane, minimumRow: number): void => {
+    const row = pinnedRows.get(lane) ?? take(lane, minimumRow);
     const children = [...(childrenOf.get(lane.branch.name) ?? [])].sort((a, b) => a.startColumn - b.startColumn);
     children.forEach((childLane) => place(childLane, row + 1));
   };
 
   roots.forEach((root, index) => place(root, index === 0 ? 0 : 1));
-  return placed;
+  return pinnedRows.size === 0 ? placed : withoutEmptyRows(placed);
+}
+
+/** Moves every lane up past the rows above it that hold none: only moved branches leave such rows. */
+function withoutEmptyRows(lanes: Lane[]): Lane[] {
+  const usedRows = [...new Set(lanes.map((lane) => lane.row))].sort((a, b) => a - b);
+  const closedRow = new Map(usedRows.map((row, index) => [row, index]));
+  return lanes.map((lane) => ({ ...lane, row: closedRow.get(lane.row)! }));
 }
 
 function rootOrder(a: UnplacedLane, b: UnplacedLane): number {
