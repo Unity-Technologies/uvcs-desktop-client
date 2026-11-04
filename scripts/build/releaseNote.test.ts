@@ -155,17 +155,28 @@ describe('a release note CI refuses', () => {
   });
 });
 
+interface BodyParts {
+  note?: string;
+  behavior?: string;
+  checklist?: string;
+  /** The last section's text, or null for a body without it. */
+  fixedIssues?: string | null;
+  /** False for a body a person wrote, without the agent's closing line. */
+  closingLine?: boolean;
+  after?: string;
+}
+
 /** A body shaped like an agent's: every section of the template, then the closing line. */
-const pullRequest = ({ note = '', behavior = '', fixedIssues = 'None.', after = '' } = {}) =>
+const pullRequest = ({ note = '', behavior = '', checklist = '', fixedIssues = 'None.', closingLine = true, after = '' }: BodyParts = {}) =>
   [
     '## What does this pull request do?\n\nMove branches up and down.',
     `## Release note\n\n### New: Move branches up and down in the Branch Explorer\n\nRight-click a branch and choose **Position**.${note}`,
     '## Current behavior\n\nThe Branch Explorer chooses every row.',
     `## Behavior with this pull request\n\nA branch's menu has a **Position** submenu.${behavior}`,
-    '## Checklist\n\n- [x] `npm test` passes.',
-    `## Fixed issues\n\n${fixedIssues}`,
-    `🤖 Generated with [Claude Code](https://claude.com/claude-code)${after}`,
-  ].join('\n\n') + '\n';
+    `## Checklist\n\n- [x] \`npm test\` passes.${checklist}`,
+    ...(fixedIssues === null ? [] : [`## Fixed issues\n\n${fixedIssues}`]),
+    ...(closingLine ? ['🤖 Generated with [Claude Code](https://claude.com/claude-code)'] : []),
+  ].join('\n\n') + after + '\n';
 
 const cropped = '\n\n![The Position submenu](https://github.com/user-attachments/assets/1)';
 const wide = '\n\n![The Branch Explorer with a branch moved](https://github.com/user-attachments/assets/2)';
@@ -190,7 +201,30 @@ describe("a pull request's pictures", () => {
   });
 
   it('are refused in the last section, where a body without a closing line ends', () => {
+    expect(misplacedPicture(pullRequest({ closingLine: false, after: `\n${wide}` }))).toMatch(/end of the body/);
     expect(misplacedPicture(pullRequest({ note: cropped, fixedIssues: `None.${wide}` }))).toMatch(/end of the body/);
+  });
+
+  it('may follow a body with neither a closing line nor "Fixed issues", in its last section', () => {
+    expect(misplacedPicture(pullRequest({ behavior: wide, fixedIssues: null, closingLine: false }))).toBeNull();
+  });
+
+  it('take "Generated with" before the last section as words, not the closing line', () => {
+    const checklist = `\n\nThe models:\n\n- Generated with the models.sh sandbox, then seen in the app.${wide}`;
+
+    expect(misplacedPicture(pullRequest({ note: cropped, checklist }))).toBeNull();
+  });
+
+  it('count a video, which gh appends as its bare link', () => {
+    const video = '\n\nhttps://github.com/user-attachments/assets/3f0c2a9e-7b1d-4c55-9e0a-1d2b3c4d5e6f';
+
+    expect(misplacedPicture(pullRequest({ behavior: video }))).toBeNull();
+    expect(misplacedPicture(pullRequest({ after: `\n${video}` }))).toMatch(/end of the body/);
+  });
+
+  it('are refused when a local file was referenced but never attached', () => {
+    expect(misplacedPicture(pullRequest({ note: '\n\n![The Position submenu](./position.png)' }))).toMatch(/gh --attach/);
+    expect(misplacedPicture(pullRequest({ behavior: '\n\n![The menu](C:\\shots\\menu.png)' }))).toMatch(/gh --attach/);
   });
 
   it("count an HTML picture, as GitHub's editor writes one", () => {
