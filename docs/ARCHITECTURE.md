@@ -1254,9 +1254,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   changed shows its C before its M (`StatusMark.changedLabel`, in a diff's header too), and both filter chips find it
   (`statusTones`). A moved item's name and its M show the move on hover, through the one tooltip
   (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once ("in"), then one line each for
-  where it was ("from") and is ("to"), what the move removed and added tinted as a diff tints them
-  (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`), never wrapped
-  (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
+  where it was ("from") and is ("to"), the paths monospaced and what the move removed and added tinted as a diff tints
+  them (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`),
+  never wrapped (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
   and the shared folder, said twice, hid what changed. `ItemPathRow` is an item
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
   stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
