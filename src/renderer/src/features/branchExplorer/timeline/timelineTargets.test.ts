@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
-import { BASELINE, HIT_TICK_HEIGHT, HIT_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
+import { AXIS_TEXT_MIDDLE, BASELINE, FRAME_HEIGHT, FRAME_TOP, HIT_TICK_HEIGHT, HIT_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { LabelTick, TimelineGap } from './timelineMarks';
 import { clickedColumn, curveTopAt, gapsClearOfHome, ghostFrame, homeSpots, HOUSE_RADIUS, PINNED_HOUSE_X, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots } from './timelineTargets';
 
@@ -26,6 +26,13 @@ describe('timelineTargetAt', () => {
     expect(timelineTargetAt(spots, 150, BASELINE + 3)).toEqual({ kind: 'labels', tick: spots.labels[0] });
     expect(timelineTargetAt(spots, 121, 2)).toEqual({ kind: 'hits', tick: spots.hits[0] });
     expect(timelineTargetAt(spots, 150, middle)).toEqual({ kind: 'frame' });
+  });
+
+  it('takes the frame only where it is drawn: the axis dates under it are the moment', () => {
+    expect(timelineTargetAt(spots, 150, AXIS_TEXT_MIDDLE)).toEqual({ kind: 'moment' });
+    expect(timelineTargetAt(spots, 102, AXIS_TEXT_MIDDLE)).toEqual({ kind: 'moment' });
+    expect(timelineTargetAt(spots, 170, FRAME_TOP + FRAME_HEIGHT)).toEqual({ kind: 'frame' });
+    expect(timelineTargetAt({ ...spots, frame: { left: 100, right: 101 } }, 101, AXIS_TEXT_MIDDLE)).toEqual({ kind: 'moment' });
   });
 
   it('gives a narrow frame no edges to grab', () => {

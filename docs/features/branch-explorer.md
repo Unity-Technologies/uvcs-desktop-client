@@ -123,7 +123,8 @@ It shows only what the graph loaded and draws (the same range and filters), and 
 - **The axis's dates** name days (short ranges) or months where they begin, each 4 px after a hairline there (the
   first, the range's start, has none), those that would run into the one before or be cut by the right edge left out,
   a month in another year than the date before it with its year (`axisLabelCandidates`, `spacedAxisLabels`).
-- **Pointer** (`timelineTargetAt`, `timelinePress`): a click glides the canvas there and brings the row it lands on into
+- **Pointer** (`timelineTargetAt`, `timelinePress`; the frame answers only where it is drawn, not over the axis's
+  dates): a click glides the canvas there and brings the row it lands on into
   view (`viewportAtColumn`, `clickedColumn`: a label tick to its newest label, a gap to where history resumes); press
   and drag scrubs (`viewportForDrag`); after a drag the landed row comes into view (`viewportAfterDrag`). The wheel
   pans the canvas, with ⌘ or Ctrl it zooms (`timelineWheel`). Hovering an empty spot shows a dashed frame where a

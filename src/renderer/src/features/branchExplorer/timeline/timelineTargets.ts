@@ -1,7 +1,7 @@
 import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
 import { frameCenteredAt, frameShape, type TimelineFrame } from './timelineFrame';
-import { BASELINE, HIT_TICK_HEIGHT, HIT_TICK_TOP, HOUSE_RADIUS, MERGED_LABEL_TICK_HEIGHT, MERGED_LABEL_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
+import { BASELINE, FRAME_HEIGHT, FRAME_TOP, HIT_TICK_HEIGHT, HIT_TICK_TOP, HOUSE_RADIUS, MERGED_LABEL_TICK_HEIGHT, MERGED_LABEL_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { HitTick, HomeMark, LabelTick, TimelineGap } from './timelineMarks';
 
 export interface Point {
@@ -72,17 +72,19 @@ export function gapsClearOfHome(gaps: readonly TimelineGap[], home: Point | null
 }
 
 /** How near (px) the pointer must be to grab or hover each thing. */
-const REACH = { edge: 4, line: 5, label: 3, hit: 2, home: HOUSE_RADIUS, gap: 4 };
+const REACH = { edge: 4, line: 5, label: 3, hit: 2, home: HOUSE_RADIUS, gap: 4, frameBand: 3 };
 
 /**
  * What the pointer is on, the most precise first: the frame's edges (only where they have handles), a label tick under
- * the baseline, a search hit along the top, the house, a gap's break mark, the frame, else the
- * moment under it.
+ * the baseline, a search hit along the top, the house, a gap's break mark, the frame (only where it is drawn, not over
+ * the axis's dates), else the moment under it.
  */
 export function timelineTargetAt(spots: TimelineSpots, x: number, y: number): TimelineTarget {
   const { frame } = spots;
   const shape = frameShape(frame);
-  if (shape === 'boxWithEdges') {
+  // Only where the frame is drawn: the axis's dates under it are the moment's, not the frame's.
+  const inFrameBand = y >= FRAME_TOP - REACH.frameBand && y <= FRAME_TOP + FRAME_HEIGHT + REACH.frameBand;
+  if (shape === 'boxWithEdges' && inFrameBand) {
     if (Math.abs(x - frame.left) <= REACH.edge) return { kind: 'frameEdge', edge: 'left' };
     if (Math.abs(x - frame.right) <= REACH.edge) return { kind: 'frameEdge', edge: 'right' };
   }
@@ -100,7 +102,7 @@ export function timelineTargetAt(spots: TimelineSpots, x: number, y: number): Ti
     if (gap) return { kind: 'gap', gap };
   }
   const middle = (frame.left + frame.right) / 2;
-  const onFrame = shape === 'line' ? Math.abs(x - middle) <= REACH.line : x >= frame.left && x <= frame.right;
+  const onFrame = inFrameBand && (shape === 'line' ? Math.abs(x - middle) <= REACH.line : x >= frame.left && x <= frame.right);
   return onFrame ? { kind: 'frame' } : { kind: 'moment' };
 }
 
