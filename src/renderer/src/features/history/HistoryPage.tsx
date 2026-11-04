@@ -12,6 +12,9 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
@@ -46,6 +49,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const listWidth = useDetailsPaneStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
   const setListWidth = useDetailsPaneStore((state) => state.setWidth);
   const [view, setView] = usePageRevisionView(page.view);
+  const diffExpanded = useDiffExpanded();
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
   const filters = useHistoryFilters(rows, otherRepository);
@@ -110,10 +114,11 @@ export function HistoryPage({ page }: PageProps<'history'>) {
 
   return (
     <>
-      {header}
+      <Stowable stowed={diffExpanded}>{header}</Stowable>
       <SplitPane
         initialSize={LIST_WIDTH.initial}
         minSize={LIST_WIDTH.min}
+        stowed={diffExpanded ? 'first' : undefined}
         maxSize={LIST_WIDTH.max}
         size={listWidth}
         onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
@@ -144,18 +149,20 @@ export function HistoryPage({ page }: PageProps<'history'>) {
             <EmptyState icon={<History size={22} />} title="No history yet" />
           ) : (
             <LineLinksContext.Provider value={lineLinks}>
-              <RevisionPane
-                path={page.path}
-                history={history}
-                focusedRow={focusedRow}
-                selectedRows={selectedRows}
-                menu={menu}
-                onBack={selection.back}
-                annotationHistory={annotationHistory}
-                otherRepository={otherRepository}
-                view={view}
-                onPickView={setView}
-              />
+              <ExpandableDiffContext.Provider value>
+                <RevisionPane
+                  path={page.path}
+                  history={history}
+                  focusedRow={focusedRow}
+                  selectedRows={selectedRows}
+                  menu={menu}
+                  onBack={selection.back}
+                  annotationHistory={annotationHistory}
+                  otherRepository={otherRepository}
+                  view={view}
+                  onPickView={setView}
+                />
+              </ExpandableDiffContext.Provider>
             </LineLinksContext.Provider>
           )
         }
