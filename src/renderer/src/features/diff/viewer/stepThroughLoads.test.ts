@@ -267,6 +267,14 @@ describe('a burst of ↓ across diffs read from the cache', () => {
     expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }).press(1).press(1).press(1).fail().frame().header).toBe('c.cs: 2 of 2');
   });
 
+  it("keeps for the file a step went to the presses made on an unreadable file before the list rendered on it", () => {
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }).press(1).fail().burst(1, 1).frame().header).toBe('c.cs: 2 of 2');
+  });
+
+  it('the same in Changes, whose diff follows the selection once it settled', () => {
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).press(1).settle().fail().burst(1, 1).settle().frame().header).toBe('c.cs: 2 of 2');
+  });
+
   it("goes from file to file at once where the selected file couldn't be read", () => {
     expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }).press(1).fail().press(1).frame().header).toBe('c.cs: 1 of 2');
   });

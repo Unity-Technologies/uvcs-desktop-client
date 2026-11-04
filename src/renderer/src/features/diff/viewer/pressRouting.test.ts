@@ -25,6 +25,11 @@ describe('routePress', () => {
 
   it('steps from file to file where there is no view to step through (a file that could not be read, an xlink)', () => {
     expect(routePress({ ...opened, holder: 'stepless', opened: false })).toEqual({ kind: 'step' });
+    expect(routePress({ ...opened, holder: 'stepless', opened: false, steppingTo: 'a.cs' })).toEqual({ kind: 'step' });
+  });
+
+  it('keeps the press there too while a step from it is in flight, never stepping from it twice', () => {
+    expect(routePress({ ...opened, holder: 'stepless', opened: false, steppingTo: 'b.cs' })).toEqual({ kind: 'keep', path: 'b.cs' });
   });
 });
 
