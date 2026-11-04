@@ -64,6 +64,13 @@ export function ruleTabBody(rules: readonly ExplorerRule[]): RuleTabBody {
 }
 
 /**
+ * Whether adding a rule turns the rules on: the first one does, since the empty tab shows no switch to say they're off.
+ */
+export function addingTurnsRulesOn(rules: readonly ExplorerRule[], on: boolean): boolean {
+  return !on && rules.length === 0;
+}
+
+/**
  * A row's second line: its kind when a description titles it, what it matches, and what an inclusion or exclusion
  * takes with it. A built-in format titled by its kind has none: its title already names what it colors.
  */

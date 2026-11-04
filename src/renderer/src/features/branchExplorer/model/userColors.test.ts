@@ -46,7 +46,11 @@ describe('withUsersAdded', () => {
   });
 
   it('keeps the colors off when they were', () => {
-    expect(withUsersAdded({ on: false, users: [] }, ['ana']).on).toBe(false);
+    expect(withUsersAdded({ on: false, users: [{ user: 'ana', hue: first! }] }, ['bo']).on).toBe(false);
+  });
+
+  it('turns the colors on with the first person, since no switch showed they were off', () => {
+    expect(withUsersAdded({ on: false, users: [] }, ['ana']).on).toBe(true);
   });
 });
 

@@ -59,7 +59,8 @@ a question, no earlier answer colors or hides anything (`shownRuleMatches`). A r
 
 "Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, `rulesOnIn` and `withRulesOn` in
 `model/rulesByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
-colored and no rule asks the server anything, and the tab dims them until they're turned back on.
+colored and no rule asks the server anything, and the tab dims them until they're turned back on. With no rule, the tab shows
+no switch, so adding the first one turns the rules on (`addingTurnsRulesOn`).
 
 ### Changeset colors
 
@@ -68,7 +69,8 @@ The display options' third tab (`ChangesetColorsTab`) gives each person picked a
 repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
 yet, by name (`usersToAdd`); each one added takes the first of `BRANCH_HUES` no one has (`withUsersAdded`). A
 changeset's color is its format rule's, else its author's, else its branch's: the authors' colors go under the rules'
-(`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off and keeps the list. The tab
+(`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off and keeps the list. The first person added
+turns them back on, as the empty tab shows no switch (`withUsersAdded`). The tab
 reads the view's own history query, so opening it asks the server nothing.
 
 ## Loading

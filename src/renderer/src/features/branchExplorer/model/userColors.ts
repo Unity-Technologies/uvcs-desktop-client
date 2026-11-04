@@ -22,13 +22,16 @@ export interface UserColors {
 
 export const DEFAULT_USER_COLORS: UserColors = { on: true, users: [] };
 
-/** `users` added at the end, each with the first hue no one has yet (once every hue is taken, they repeat in order). */
+/**
+ * `users` added at the end, each with the first hue no one has yet (once every hue is taken, they repeat in order). The
+ * first ones turn the colors on: with no one colored the tab shows no switch, so nothing says they'd be off.
+ */
 export function withUsersAdded(colors: UserColors, users: readonly string[]): UserColors {
   const added = [...colors.users];
   for (const user of users) {
     if (!added.some((color) => color.user === user)) added.push({ user, hue: nextHue(added) });
   }
-  return { ...colors, users: added };
+  return { on: colors.on || colors.users.length === 0, users: added };
 }
 
 function nextHue(taken: readonly UserColor[]): number {

@@ -11,6 +11,7 @@ import { isFormatRule, newRule, type ExplorerRule } from './model/explorerRules'
 import { ruleError } from './model/ruleMatches';
 import {
   ADD_RULE_GROUPS,
+  addingTurnsRulesOn,
   addRule,
   canMoveRule,
   moveRule,
@@ -40,7 +41,9 @@ export function ExplorerRulesTab({ rules, on, applied, onChange, onTurn }: Explo
   const body = ruleTabBody(rules);
   const add = async (rule: ExplorerRule): Promise<void> => {
     const saved = await editExplorerRule(rule, true);
-    if (saved) onChange(addRule(rules, saved));
+    if (!saved) return;
+    onChange(addRule(rules, saved));
+    if (addingTurnsRulesOn(rules, on)) onTurn(true);
   };
   const row = (rule: ExplorerRule) => (
     <RuleRow

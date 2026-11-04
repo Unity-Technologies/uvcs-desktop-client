@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newRule, NO_EXPANSION, type ExplorerRule, type ExplorerRuleKind } from './explorerRules';
 import {
   ADD_RULE_GROUPS,
+  addingTurnsRulesOn,
   addRule,
   canMoveRule,
   conditionHint,
@@ -45,6 +46,20 @@ describe('ruleTabBody', () => {
   it('leaves out a section with no rules', () => {
     const body = ruleTabBody([rule('exclude', 'e')]);
     expect(body.state === 'list' && body.sections.map((section) => section.title)).toEqual(['Filters']);
+  });
+});
+
+describe('adding a rule while the rules are off', () => {
+  it('turns them on when it is the first, since the empty tab shows no switch', () => {
+    expect(addingTurnsRulesOn([], false)).toBe(true);
+  });
+
+  it('leaves them off when there are rules already, whose switch says so', () => {
+    expect(addingTurnsRulesOn([rule('exclude', 'e')], false)).toBe(false);
+  });
+
+  it('changes nothing when they are on', () => {
+    expect(addingTurnsRulesOn([], true)).toBe(false);
   });
 });
 
