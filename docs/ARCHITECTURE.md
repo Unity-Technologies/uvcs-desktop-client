@@ -1105,7 +1105,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
   once a key was pressed, and a clicked button at the next key, so focus the app moves on its own (Expand Diff giving
   the code the keyboard: `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
-  `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab.
+  `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab (Go to line… too). New code uses
+  `focusAs` and `settleClickFocus`. Two older marks remain for what they alone can see: a click inside the code, whose
+  focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
+  skip), and focus a closing menu hands back to its trigger (`trackPointerReturnFocus`, `data-pointer-return-focus`).
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
