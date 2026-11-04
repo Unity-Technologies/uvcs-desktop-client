@@ -43,24 +43,27 @@ export function curveTopAt(curve: ActivityCurve, x: number): number {
   return BASELINE - (curve.total[pixel] ?? 0) * PLOT_HEIGHT;
 }
 
-/** The pending changes' ring's radius, and how much room the house keeps above it when the two are close. */
+/** The pending changes' ring's radius, and the house's disc's: room the house keeps from the ring and the top edge. */
 export const PENDING_RING_RADIUS = 5;
-const HOUSE_RADIUS = 7.5;
+export const HOUSE_RADIUS = 7.5;
+/** The house's highest middle: its disc stays under the search hits' ticks along the top edge. */
+const HOUSE_TOP = HIT_TICK_HEIGHT + 2 + HOUSE_RADIUS;
 
 /**
  * Where the house and the pending changes' ring go: the house on the curve at the workspace's column (or pinned at the
- * left edge), the ring on the baseline at the right end; a house close above the ring stands clear of it.
+ * left edge), the ring on the baseline at the right end; a house close above the ring stands clear of it. Where the
+ * curve stands taller than room above it, the house sits into the curve rather than over the top edge.
  */
 export function homeSpots(mark: HomeMark, axis: TimelineAxis, curve: ActivityCurve): { home: Point | null; pending: Point | null } {
   if (mark === null) return { home: null, pending: null };
   if (mark.kind === 'olderThanRange') return { home: { x: PINNED_HOUSE_X, y: BASELINE - HOUSE_LIFT }, pending: null };
   const x = stripXOfColumn(axis, mark.column);
-  const onCurve = Math.max(PLOT_TOP, curveTopAt(curve, x) - HOUSE_LIFT);
+  const onCurve = Math.max(HOUSE_TOP, curveTopAt(curve, x) - HOUSE_LIFT);
   if (mark.pendingColumn === null) return { home: { x, y: onCurve }, pending: null };
   const pending = { x: stripXOfColumn(axis, mark.pendingColumn), y: BASELINE - PENDING_RING_RADIUS };
   const clearOfRing = pending.y - PENDING_RING_RADIUS - HOUSE_RADIUS - 1;
   const close = Math.abs(pending.x - x) < (PENDING_RING_RADIUS + HOUSE_RADIUS) * 2;
-  return { home: { x, y: close ? Math.max(PLOT_TOP, Math.min(onCurve, clearOfRing)) : onCurve }, pending };
+  return { home: { x, y: close ? Math.max(HOUSE_TOP, Math.min(onCurve, clearOfRing)) : onCurve }, pending };
 }
 
 /** The gaps whose break mark the house leaves room for: none drawn under it. */

@@ -13,7 +13,7 @@ import {
   TIMELINE_HEIGHT,
 } from './timelineGeometry';
 import type { HitTick, LabelTick, TimelineGap } from './timelineMarks';
-import { PENDING_RING_RADIUS, type Point } from './timelineTargets';
+import { HOUSE_RADIUS, PENDING_RING_RADIUS, type Point } from './timelineTargets';
 
 /** Everything one frame of the Timeline draws, already placed in strip px (`GraphTimeline` measures it). */
 export interface TimelineDrawing {
@@ -59,9 +59,11 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, drawing: TimelineDra
   drawNewestMain(ctx, drawing);
   drawSelectedChangeset(ctx, drawing);
   if (drawing.ghost) drawFrameOutline(ctx, drawing.ghost, palette, true);
-  drawFrame(ctx, drawing);
-  // Over the frame: at the newest end, where the frame often is, the house stays whole.
+  drawFrameTint(ctx, drawing);
+  // Over the frame's tint, under its outline: at the newest end, where the frame often is, the house stays whole and
+  // the frame's line runs unbroken.
   drawHome(ctx, drawing);
+  drawFrame(ctx, drawing);
 }
 
 function drawSelectedBranch(ctx: CanvasRenderingContext2D, { selectedBranch }: TimelineDrawing): void {
@@ -223,7 +225,7 @@ function drawHome(ctx: CanvasRenderingContext2D, { home, homeOlderThanRange, pen
   if (home) {
     ctx.fillStyle = palette.panel;
     ctx.beginPath();
-    ctx.arc(home.x, home.y, 7.5, 0, Math.PI * 2);
+    ctx.arc(home.x, home.y, HOUSE_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     strokeHouse(ctx, home.x, home.y, 0.8, palette.accent, 1.5);
     if (homeOlderThanRange) {
@@ -237,6 +239,16 @@ function drawHome(ctx: CanvasRenderingContext2D, { home, homeOlderThanRange, pen
   ctx.restore();
 }
 
+/** The frame's light tint, under what it covers; a frame thinner than a line has none. */
+function drawFrameTint(ctx: CanvasRenderingContext2D, { frame, palette }: TimelineDrawing): void {
+  if (frameShape(frame) === 'line') return;
+  ctx.save();
+  ctx.fillStyle = palette.accentSoft;
+  ctx.fillRect(frame.left, 0, frame.right - frame.left, TIMELINE_HEIGHT - 1);
+  ctx.restore();
+}
+
+/** The frame's outline (or line and handle) and its edges' handles. */
 function drawFrame(ctx: CanvasRenderingContext2D, { frame, palette }: TimelineDrawing): void {
   const shape = frameShape(frame);
   if (shape === 'line') {
@@ -250,10 +262,6 @@ function drawFrame(ctx: CanvasRenderingContext2D, { frame, palette }: TimelineDr
     ctx.restore();
     return;
   }
-  ctx.save();
-  ctx.fillStyle = palette.accentSoft;
-  ctx.fillRect(frame.left, 0, frame.right - frame.left, TIMELINE_HEIGHT - 1);
-  ctx.restore();
   drawFrameOutline(ctx, frame, palette, false);
   if (shape !== 'boxWithEdges') return;
   ctx.save();

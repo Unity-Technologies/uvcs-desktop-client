@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
-import { BASELINE, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
+import { BASELINE, HIT_TICK_HEIGHT, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { LabelTick, TimelineGap } from './timelineMarks';
-import { clickedColumn, curveTopAt, gapsClearOfHome, ghostFrame, homeSpots, PENDING_RING_RADIUS, PINNED_HOUSE_X, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots } from './timelineTargets';
+import { clickedColumn, curveTopAt, gapsClearOfHome, ghostFrame, homeSpots, HOUSE_RADIUS, PENDING_RING_RADIUS, PINNED_HOUSE_X, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots } from './timelineTargets';
 
 const tick = (x: number, columns: number[]): LabelTick => ({
   x,
@@ -98,6 +98,14 @@ describe('homeSpots', () => {
     expect(home!.y).toBeLessThan(curveTopAt(curve, home!.x));
     expect(curveTopAt(curve, home!.x)).toBe(BASELINE - 0.5 * PLOT_HEIGHT);
     expect(pending).toEqual({ x: stripXOfColumn(axis, 150), y: BASELINE - PENDING_RING_RADIUS });
+  });
+
+  it('keeps the house under the top edge’s search ticks where the curve is at its tallest, sitting into it', () => {
+    const tall: ActivityCurve = { ...curve, total: new Float64Array(1_000).fill(1) };
+    for (const pendingColumn of [null, 51]) {
+      const { home } = homeSpots({ kind: 'inRange', column: 50, changeset: 7, pendingColumn }, axis, tall);
+      expect(home!.y - HOUSE_RADIUS).toBeGreaterThanOrEqual(HIT_TICK_HEIGHT + 2);
+    }
   });
 
   it('lifts a house close to the ring clear of it, even where the curve is low', () => {

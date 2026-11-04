@@ -102,7 +102,8 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   `FRAME_EDGES_FROM` px (`frameShape`).
 - **Marks** (`timelineMarks`): labels as hairline ticks under the baseline in the label color, those within
   `LABEL_MERGE_DISTANCE` of a tick's first label one slightly taller tick (`labelTicks`); the house on the curve at
-  the workspace's changeset, with the pending changes' dashed ring at the right end, or pinned at the left with "‹"
+  the workspace's changeset (into the curve where it is tallest, its disc under the search ticks and the frame's
+  outline over it), with the pending changes' dashed ring at the right end, or pinned at the left with "‹"
   when the workspace is older than the range (`homeMark`, `homeSpots`); /main's newest changeset as a diamond; the
   selected changeset as a pin and the selected branch's lifetime in its hue (`branchLifetime`); search hits as ticks
   along the top, one per pixel (`hitTicks`); more than `GAP_MIN_DAYS` without changesets as a break mark, the longest
