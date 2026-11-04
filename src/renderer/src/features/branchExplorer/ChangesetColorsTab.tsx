@@ -1,5 +1,5 @@
 import { Palette, Plus, Trash2 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { displayName, userFilterTexts } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
@@ -24,7 +24,12 @@ interface ChangesetColorsTabProps {
 
 /** The display options' "Changeset colors" tab: a color for each person's changesets, under the format rules' colors. */
 export function ChangesetColorsTab({ colors, authors, onChange }: ChangesetColorsTabProps) {
-  const addButton = <AddPeople colors={colors} authors={authors} onChange={onChange} />;
+  // The colors as the list of people opened, kept here: adding the first person swaps the empty state for the list, and
+  // the list of people stays open across it.
+  const [addingFrom, setAddingFrom] = useState<UserColors | null>(null);
+  const addButton = (
+    <AddPeople colors={colors} authors={authors} onChange={onChange} addingFrom={addingFrom} onAddingFrom={setAddingFrom} />
+  );
   if (colors.users.length === 0) {
     return (
       <EmptyState
@@ -78,12 +83,17 @@ function PersonRow({ color, onHue, onRemove }: { color: UserColor; onHue: (hue: 
   );
 }
 
-function AddPeople({ colors, authors, onChange }: ChangesetColorsTabProps) {
-  const [open, setOpen] = useState(false);
+interface AddPeopleProps extends ChangesetColorsTabProps {
+  /** The colors as the list opened; null while it's closed. */
+  addingFrom: UserColors | null;
+  onAddingFrom: (colors: UserColors | null) => void;
+}
+
+function AddPeople({ colors, authors, onChange, addingFrom, onAddingFrom }: AddPeopleProps) {
   return (
     <Popover
-      open={open}
-      onOpenChange={setOpen}
+      open={addingFrom !== null}
+      onOpenChange={(open) => onAddingFrom(open ? colors : null)}
       align="end"
       trigger={
         <Button size="small" icon={<Plus size={14} />}>
@@ -91,15 +101,14 @@ function AddPeople({ colors, authors, onChange }: ChangesetColorsTabProps) {
         </Button>
       }
     >
-      <AddPeopleList colors={colors} authors={authors} onChange={onChange} />
+      <AddPeopleList colors={colors} authors={authors} onChange={onChange} colorsOnOpen={addingFrom ?? colors} />
     </Popover>
   );
 }
 
 /** The people in the history without a color as the list opened (rows don't leave while picking); checked ones have one. */
-function AddPeopleList({ colors, authors, onChange }: ChangesetColorsTabProps) {
+function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetColorsTabProps & { colorsOnOpen: UserColors }) {
   const [search, setSearch] = useState('');
-  const colorsOnOpen = useRef(colors).current;
   const offered = useMemo(() => usersToAdd(authors, colorsOnOpen), [authors, colorsOnOpen]);
   const rows = useMemo(() => offered.filter((user) => matchesWordFilter(userFilterTexts(user), search)), [offered, search]);
   const isColored = (user: string): boolean => colors.users.some((color) => color.user === user);
