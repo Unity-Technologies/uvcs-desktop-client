@@ -28,7 +28,7 @@ import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
 import { MergePanes } from './MergePanes';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { pairMergeMetas } from './mergeMetaPairs';
 import { mergeItemTypes } from './mergeItemTypes';
@@ -81,11 +81,11 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const latest = useRef({ items: pairs.shown, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const { mergerFor, othersFor } = useFileMergers();
-  const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true });
+  const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true, viewOffer: MERGE_VIEW_OFFER });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
   const hidesAll = hidesEveryRow(pairs.shown.length, filter.visible.length);
-  const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
+  const { rows, tree, toggleCollapsed, rowKeyOf, folding } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), MERGE_ITEM_FACTS, selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
@@ -189,6 +189,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           progress={progress}
           tree={tree}
           toggleCollapsed={toggleCollapsed}
+          folding={folding}
           typeOf={typeOf}
           labels={labels}
           query={filter.query}

@@ -1,7 +1,9 @@
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
 import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeChange, MergePlan } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
-import { statusTones } from '../../components/changeFilter';
+import { ownTone, statusTones } from '../../components/changeFilter';
+import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
+import type { GroupedFileListFacts } from '../../components/statusGroups';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
 import type { GroupedTreeRow, TreeGroup } from '../../lib/groupedPathTree';
@@ -147,6 +149,15 @@ export function mergeItemGroups(items: MergeItem[]): TreeGroup<MergeItem, MergeG
 }
 
 /** An item's statuses for the filter's chips: what the merge does to it, and "Conflicts" for a conflict. */
+/**
+ * What the merge page's list knows of each item to sort it (`useGroupedFileTree`): its own status. No status groups:
+ * its own groups already say what the merge does to each item.
+ */
+export const MERGE_ITEM_FACTS: GroupedFileListFacts<MergeItem, MergeGroup> = { toneOf: (item) => ownTone(mergeItemTones(item)) };
+
+/** The merge page's view menu offers no grouping: its own groups already say what the merge does to each item. */
+export const MERGE_VIEW_OFFER: FileListViewOffer = { statusGroups: false };
+
 export function mergeItemTones(item: MergeItem): readonly StatusTone[] {
   switch (item.kind) {
     case 'directoryConflict':

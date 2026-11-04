@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { FileTreeCell } from '../../components/FileTreeCell';
 import { FileTreeList } from '../../components/FileTreeList';
+import type { FileTreeFolding } from '../../components/fileTreeFolding';
 import { ItemTag } from '../../components/ItemTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
@@ -21,6 +22,8 @@ interface MergeItemListProps {
   progress: MergeProgress;
   tree: boolean;
   toggleCollapsed: (key: string) => void;
+  /** Closing or opening every group and folder, from the view menu. */
+  folding: FileTreeFolding | null;
   /** What each repository path of the merge is, for its icon (`mergeItemTypes`). */
   typeOf: (path: string) => ItemType;
   labels: MergeLabels;
@@ -36,7 +39,7 @@ interface MergeItemListProps {
 }
 
 /** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
-export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, noMatches }: MergeItemListProps) {
+export function MergeItemList({ rows, progress, tree, toggleCollapsed, folding, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, noMatches }: MergeItemListProps) {
 
   const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
     if (row.type === 'folder') {
@@ -58,6 +61,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       rows={rows}
       tree={tree}
       toggleCollapsed={toggleCollapsed}
+      folding={folding}
       renderItem={renderItem}
       groupTip={(group) => MERGE_GROUP_TIPS[group]}
       groupProgress={(group, items) => mergeGroupProgress(group, items, progress)}
