@@ -91,8 +91,8 @@ export function scrollToRows(container: HTMLElement, first: Element, last: Eleme
   const bottom = Math.max(...[first, ...last].map((row) => row.getBoundingClientRect().bottom));
   if (top >= view.top && bottom <= view.bottom) return;
   const target = container.scrollTop + top - view.top - CONTEXT_ROWS * rowHeight(first);
-  // Far away, a smooth scroll would pass through rows a big diff renders one screen after another: it jumps to a view
-  // short of the change and glides the rest (`smoothScrollPlan`).
+  // Far away, a smooth scroll would pass through rows a big diff renders one screen after another: it jumps to a quarter
+  // of a view short of the change and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`).
   if (smooth) scrollSmoothlyTo(container, target, prefersReducedMotion());
   else container.scrollTo({ top: target, behavior: 'auto' });
 }

@@ -46,9 +46,11 @@
   /* How thick the app's scrollbars are (global.css), on every OS: styled, they take room instead of overlaying. */
   --scrollbar-size: 10px;
   /* How wide a text diff's own vertical scrollbar is while it marks the changes in its track (`ChangeMap`): a little
-     wider than the app's, for its two lanes of marks. */
+     wider than the app's, so a change reads as a block. */
   --diff-scrollbar-size: 14px;
-  /* Its thumb, drawn over the marks: the app's thumb colors (global.css), translucent so the marks show through. */
+  /* Its thumb, drawn over the marks: the app's hovered thumb color (global.css's --border-strong), translucent so the
+     marks show through, and stronger hovered or dragged. The app's resting --border-default was too faint over them in
+     the dark theme. */
   --diff-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 60%, transparent);
   --diff-scrollbar-thumb-hover: color-mix(in srgb, var(--border-strong) 85%, transparent);
 

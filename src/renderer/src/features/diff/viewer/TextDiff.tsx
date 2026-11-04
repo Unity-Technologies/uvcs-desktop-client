@@ -104,7 +104,7 @@ interface TextDiffProps {
   onUndoDiscard?: () => void;
   /** Receives the diff's side of moving from change to change (`useChangeNavigation`). */
   changeViewRef?: RefObject<ChangeView | null>;
-  /** The changes stepped through (`useChangeNavigation`), which the change map beside the scrollbar marks. */
+  /** The changes stepped through (`useChangeNavigation`), which the change map marks in the diff's scrollbar. */
   changes?: ChangeSteps;
   /** The diff scrolled. */
   onViewScroll?: () => void;
@@ -254,7 +254,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
   useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
-  // Where the changes are, on a lane beside the scrollbar.
+  // Where the changes are, marked in the diff's own scrollbar.
   const changeMap = useChangeMap({
     containerRef: container,
     virtualizer,
