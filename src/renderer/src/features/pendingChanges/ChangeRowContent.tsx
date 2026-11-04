@@ -3,6 +3,7 @@ import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
+import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
@@ -10,7 +11,7 @@ import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { ReviewStatus } from '../review/reviewStatus';
 import { ReviewToggle } from '../review/ReviewToggle';
 import { changePresence, changeStatus, changeTone } from './changeTone';
-import type { ChangeRow } from './changeRows';
+import { changelistOfGroup, type ChangeRow } from './changeRows';
 import { LockMark } from './locks/LockMark';
 import type { PendingLock } from './locks/pendingLocks';
 import styles from './ChangesList.module.css';
@@ -33,18 +34,26 @@ interface GroupRowContentProps {
   changelistMenu: (changelist: Changelist) => MenuEntry[];
 }
 
-/** A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart from the folders under it. */
+/**
+ * A changelist's or a status group's header: its check, icon, name, actions and count. A changelist's icon, as in the
+ * official client, sets it apart from the folders under it; a status group's is its status letter, as its rows have it.
+ */
 export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: GroupRowContentProps) {
+  const changelist = changelistOfGroup(row.group);
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
-      <ListChecks size={14} className={styles.groupIcon} aria-hidden />
-      <span className={styles.groupLabel} data-tip={row.group?.description}>
+      {row.group.kind === 'status' ? (
+        <StatusGroupBadge tone={row.group.tone} />
+      ) : (
+        <ListChecks size={14} className={styles.groupIcon} aria-hidden />
+      )}
+      <span className={styles.groupLabel} data-tip={changelist?.description}>
         {row.label}
       </span>
-      {row.group && (
-        <ActionDropdownMenu entries={changelistMenu(row.group)}>
+      {changelist && (
+        <ActionDropdownMenu entries={changelistMenu(changelist)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>

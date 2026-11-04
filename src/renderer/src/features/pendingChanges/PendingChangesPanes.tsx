@@ -8,6 +8,8 @@ import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
+import { fileListOrder, rankedOrder } from '../../components/fileListOrder';
+import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
@@ -44,7 +46,7 @@ import { changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
-import { changeTones } from './changeTone';
+import { changeTones, PENDING_CHANGE_FACTS } from './changeTone';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { pairPendingMetas } from './pendingMetaPairs';
@@ -85,7 +87,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListViewStore((state) => state.layout);
+  const sort = useFileListViewStore((state) => state.sort);
+  const groupByStatus = useFileListViewStore((state) => state.groupByStatus);
   const grouping = usePendingChangesViewStore((state) => state.grouping);
+  const setGrouping = usePendingChangesViewStore((state) => state.setGrouping);
   const checkinChoice = useCheckinChoice(workspacePath);
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
   const includeEverything = useCheckinDraftStore((state) => state.includeEverything);
@@ -100,7 +105,19 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
-  const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton place={workspacePlace(workspacePath)} /> });
+  const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, {
+    isViewFilter: true,
+    reading: !snapshot,
+    actions: <ReviewModeButton place={workspacePlace(workspacePath)} />,
+    viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
+    onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
+  });
+  // Another order than by path ranks every change once per read (`rankedOrder`): typing in the filter then sorts what
+  // it leaves by those ranks, not by names again.
+  const order = useMemo(() => {
+    const byChoice = fileListOrder(sort, PENDING_CHANGE_FACTS);
+    return byChoice && rankedOrder(sorted, byChoice);
+  }, [sorted, sort]);
   // Each Unity `.meta` rides on its asset's row, paired before filtering so a filter never splits a pair: a row shows
   // while its asset or its meta matches, and review mode narrows rows, as it counts them (`pairedReviewStatusOf`).
   const pairs = useMemo(() => pairPendingMetas(sorted), [sorted]);
@@ -111,7 +128,15 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     clearChangeFilter();
     review.showAll();
   };
-  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes: shownRows, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
+  const { rows, changesByKey, fileKeys, levels, checkboxInset, folding, toggleCollapsed } = useChangeRows({
+    changes: shownRows,
+    changelists,
+    layout,
+    grouping,
+    groupByStatus,
+    order,
+    scope: folderListScope(workspacePath, 'changes'),
+  });
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
   // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
   const index = useMemo(() => indexPending(sorted), [sorted]);
@@ -191,6 +216,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
       <HighlightQuery query={query}>
         <ChangesList
           rows={rows}
+          levels={levels}
           selection={selection}
           onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
           shownChecks={shownChecks}
@@ -237,10 +263,12 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
         first={
           <div className={styles.listPane}>
             {/* Narrow the list first, then act on what's left: the summary's checkbox and undo sit right above the rows they act on. */}
-            <ListToolbar>
-              {filterBar}
-              {review.bar}
-            </ListToolbar>
+            <FileTreeFoldingContext.Provider value={folding}>
+              <ListToolbar>
+                {filterBar}
+                {review.bar}
+              </ListToolbar>
+            </FileTreeFoldingContext.Provider>
             <ChangesSummaryBar
               changes={shownRows}
               totalCount={listedCount === undefined ? undefined : listedCount - pairs.pairedCount}

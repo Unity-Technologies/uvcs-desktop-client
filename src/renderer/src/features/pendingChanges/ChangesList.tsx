@@ -13,7 +13,8 @@ import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded }
 import { indexChangeRows, perRow } from './changeRowIndex';
 import { candidatesUnderRow, checkStateOver, spaceToggle } from './changeRowChecks';
 import type { ShownChecks } from './checkinSelection';
-import { changeTreeArrowRows, rowIndent, treeLevel } from './changeRowLevels';
+import { activeGuideLevelAt, activeIndentGuide } from '../../lib/indentGuides';
+import { changeTreeArrowRows, rowIndent, rowLevel, treeLevel, type RowLevels } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -32,6 +33,8 @@ const LETTER_STEPS: Record<string, number> = { j: 1, k: -1 };
 
 interface ChangesListProps {
   rows: ChangeRow[];
+  /** How the rows sit (`rowLevelsOf`): their indents and indent guides. */
+  levels: RowLevels;
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   /** The checks of the changes shown (`shownChecksOf`): how a row asks whether a change is checked, and how many are. */
@@ -54,6 +57,7 @@ interface ChangesListProps {
 
 export function ChangesList({
   rows,
+  levels,
   selection,
   onSelectionChange,
   shownChecks,
@@ -75,7 +79,6 @@ export function ChangesList({
   // list (the diff going on to the next file) moves it too.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKeyOf(focusedKey, selection, (key) => rowIndexes.has(key));
-  const grouped = useMemo(() => rows.some((row) => row.type === 'group'), [rows]);
   // Files that just appeared among the changes (saved, created) fade in once.
   const [arrivals] = useState(() => new Arrivals(ARRIVAL_WINDOW_MS));
   const arrived = arrivals.update(orderedKeys, performance.now());
@@ -84,6 +87,11 @@ export function ChangesList({
   const rowIdPrefix = useId();
   const focusedIndex = focused === null ? -1 : (rowIndexes.get(focused) ?? -1);
   const focusedRow = rows[focusedIndex];
+  // The guide of what holds the selected row, drawn stronger down every row it holds.
+  const activeGuide = useMemo(
+    () => activeIndentGuide({ rows, levelOf: (row) => rowLevel(row, levels), isOpenHeader: (row) => row.type !== 'file' && !row.collapsed }, rowIndexes.get(selection.anchor ?? '') ?? -1),
+    [rows, levels, rowIndexes, selection.anchor],
+  );
   // A folder's check and mark go over everything in it: worked out once per row, not on every arrow key.
   const candidatesOf = useMemo(() => perRow(candidatesUnderRow), [rows]);
   const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), shownChecks.isChosen, { candidates: shownChecks.candidates.length, checked: shownChecks.checked })), [candidatesOf, shownChecks]);
@@ -227,7 +235,7 @@ export function ChangesList({
                 key={row.key}
                 id={`${rowIdPrefix}-${item.index}`}
                 role={isTree ? 'treeitem' : 'option'}
-                aria-level={isTree ? treeLevel(row, grouped) : undefined}
+                aria-level={isTree ? treeLevel(row, levels) : undefined}
                 aria-expanded={row.type === 'file' ? undefined : !row.collapsed}
                 aria-selected={selection.selected.has(row.key)}
                 className={styles.row}
@@ -238,7 +246,8 @@ export function ChangesList({
                 data-focused={row.key === focused}
                 data-arrived={arrived.has(row.key) || undefined}
                 data-drop-target={isInDropTarget(row)}
-                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
+                data-active-guide={activeGuideLevelAt(activeGuide, item.index) !== undefined || undefined}
+                style={guideStyle(row, levels, item.start, activeGuideLevelAt(activeGuide, item.index))}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'file' && onOpen(row.item)}
@@ -266,6 +275,11 @@ export function ChangesList({
       </div>
     </ActionContextMenu>
   );
+}
+
+/** Where a row sits, how far in it starts, and the indent guides it draws (`ChangesList.module.css`). */
+function guideStyle(row: ChangeRow, levels: RowLevels, top: number, activeGuide: number | undefined): CSSProperties {
+  return { top, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, levels)}px`, '--guide-levels': rowLevel(row, levels), '--active-guide': activeGuide } as CSSProperties;
 }
 
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */

@@ -3,7 +3,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SelectionState } from '../../lib/selection';
 import { isControlled } from './changeCategories';
 import { changelistHeadersOf, changesToMove, dragFromRow } from './changelistMoves';
-import type { ChangeRow } from './changeRows';
+import { changelistOfGroup, type ChangeRow } from './changeRows';
 
 /** Data type of a drag carrying selected changes; the changes themselves stay in a ref, since only this list reads them. */
 const CHANGES_DRAG_TYPE = 'application/x-uvcs-pending-changes';
@@ -51,7 +51,7 @@ export function useChangelistDrop({ rows, selection, onSelectionChange, selected
   const dropProps = (row: ChangeRow): HTMLAttributes<HTMLElement> => {
     const header = headers.get(row.key);
     if (!onMoveToChangelist || !header) return {};
-    const target = header.group?.name ?? null;
+    const target = changelistOfGroup(header.group)?.name ?? null;
     return {
       onDragOver: (event: DragEvent) => {
         if (!dragged.current) return;
