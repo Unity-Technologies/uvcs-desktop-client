@@ -353,6 +353,32 @@ describe('checking in or shelving the default changelist', () => {
     expect(selection([edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
   });
 
+  // An ignored, cloaked or hidden change can't go in, and stays pending: readied, it would keep the changelist going.
+  it('ends though a change it can never check in is still pending in it', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    const ignored = defaultChanges[2]!;
+    expect(selection([ignored, edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
+  });
+
+  // The user means to check in a private file left checked: it keeps the changelist going until it is added or deleted.
+  it('holds while a private file it readied is pending', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([defaultChanges[1]!, edited, ...uiChanges]).included).toEqual([defaultChanges[1]]);
+  });
+
+  // A `Builds/` folder unchecked on purpose stays out: readying the default changelist isn't asking for it.
+  it('leaves out the files the user had unchecked', () => {
+    useCheckinDraftStore.getState().setIncluded(ws, ['notes.txt'], false);
+
+    prepare(null);
+
+    expect(selection().included).toEqual([defaultChanges[0]]);
+  });
+
   it('holds while the user unchecks every file: its readied changes are still pending', () => {
     prepare(null);
 
