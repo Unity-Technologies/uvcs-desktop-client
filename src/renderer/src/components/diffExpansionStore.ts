@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { create } from 'zustand';
 import { isInFront } from '../lib/inFront';
+import { focusMain } from '../lib/mainFocus';
 import type { ShortcutId } from '../lib/shortcutRegistry';
 import {
   collapsesWithHost,
@@ -37,8 +38,9 @@ export function collapseDiff(): void {
 /** Expands the diff in front, or collapses an expanded one; nothing where no diff can expand. */
 export function toggleDiffExpanded(): void {
   const expanded = expandedAfterToggle(isDiffExpanded(), expandableDiffInFront(mounted, isInFront));
-  useDiffExpansionStore.setState({ expanded });
-  if (expanded) requestAnimationFrame(focusExpandedDiff);
+  // Drawn at once (`flushSync`): the code is the main focus and the list out of sight before the keyboard moves.
+  flushSync(() => useDiffExpansionStore.setState({ expanded }));
+  if (expanded) focusExpandedDiff();
 }
 
 /**
@@ -78,6 +80,6 @@ function focusExpandedDiff(): void {
   if (!diff) return;
   const onBody = !(active instanceof HTMLElement) || active === document.body;
   const holder = { onBody, visible: !onBody && (active as HTMLElement).checkVisibility(), onExpandButton: active === diff.element };
-  if (!focusGoesToDiff(holder)) return;
-  diff.element.closest('[data-diff-frame]')?.querySelector<HTMLElement>('[tabindex="0"]')?.focus({ preventScroll: true });
+  // The code is the window's main focus while expanded (`useExpandedDiffFocus`); an image or a model has none to take.
+  if (focusGoesToDiff(holder)) focusMain(document);
 }

@@ -20,7 +20,7 @@ interface DiffViewerFrameProps {
 export function DiffViewerFrame({ title, controls, children, ref }: DiffViewerFrameProps) {
   const expandable = useContext(ExpandableDiffContext);
   return (
-    <div ref={ref} className={styles.viewer} data-diff-frame="">
+    <div ref={ref} className={styles.viewer}>
       <PaneToolbar title={title}>
         {controls}
         {expandable && <ExpandDiffButton />}
