@@ -116,10 +116,14 @@ function nameEnd(path: string, from: number, holdsOthers: boolean): number {
   return holdsOthers && from <= path.length ? path.length : -1;
 }
 
-/** Whether `path` is `folder` or in it, telling without making a string. */
+/**
+ * Whether `path` is `folder` or in it, telling without making a string. The character after the folder's name goes
+ * first: it tells a file apart from the next one at once, without comparing their folders.
+ */
 function isInFolder(path: string | undefined, folder: string): boolean {
-  if (path === undefined || !path.startsWith(folder)) return false;
-  return path.length === folder.length || path.charCodeAt(folder.length) === SLASH;
+  if (path === undefined) return false;
+  if (path.length !== folder.length && path.charCodeAt(folder.length) !== SLASH) return false;
+  return path.startsWith(folder);
 }
 
 const SLASH = '/'.charCodeAt(0);
