@@ -19,6 +19,7 @@ export interface FileSteps {
   /**
    * The file a step went to whose diff hasn't taken its arrival yet, while the list is still on it: the diff shown is
    * still the previous file's (the selection settling, the file read), and a press meanwhile is meant for that file.
+   * Also while the list hasn't rendered on it yet: a press faster than that sees the list on the file the step left.
    */
   steppingTo: () => string | null;
   /**
@@ -26,8 +27,11 @@ export interface FileSteps {
    * their pending arrival: a step from an Incoming diff into a conflicting file hands that file's view the presses left.
    */
   kept: StepQueue;
-  /** Drops the presses kept for files the list left: all but those of the file it is on, or a step is on its way to. */
-  dropLeftPresses: () => void;
+  /**
+   * The list rendered on another file: drops the presses kept for the files it left (all but those of the file it is
+   * on, or a step is on its way to), and forgets where a step to this file came from, so a click back there is a pick.
+   */
+  listMoved: () => void;
 }
 
 export const FileStepsContext = createContext<FileSteps | null>(null);
@@ -74,6 +78,8 @@ export function usePendingArrival(): PendingArrivalRef {
 export interface PendingArrival {
   path: string;
   at: Arrival;
+  /** The file the step left, until the list rendered on the one it went to (`FileSteps.listMoved`). */
+  from: string | null;
 }
 
 /**
@@ -92,7 +98,7 @@ export function fileSteps(
       const key = adjacentKey(keys, current, direction);
       if (key === null) return null;
       const path = list.pathOf(key);
-      pending.current = { path, at: direction === 1 ? 'first' : 'last' };
+      pending.current = { path, at: direction === 1 ? 'first' : 'last', from: list.pathOf(current!) };
       list.select(key);
       return path;
     },
@@ -103,12 +109,18 @@ export function fileSteps(
     },
     steppingTo,
     kept: pending.kept,
-    dropLeftPresses: () => pending.kept.keepOnly([current === null ? null : list.pathOf(current), steppingTo()]),
+    listMoved: () => {
+      const shown = current === null ? null : list.pathOf(current);
+      pending.kept.keepOnly([shown, steppingTo()]);
+      if (pending.current && pending.current.path === shown) pending.current = { ...pending.current, from: null };
+    },
   };
 
   function steppingTo(): string | null {
-    const path = pending.current?.path ?? null;
-    return path !== null && current !== null && list.pathOf(current) === path ? path : null;
+    const step = pending.current;
+    if (step === null || current === null) return null;
+    const shown = list.pathOf(current);
+    return shown === step.path || shown === step.from ? step.path : null;
   }
 }
 
@@ -123,6 +135,6 @@ export function useFileSteps({ keys, current, select, pathOf, pending }: FileSte
     [keys, current, arrival],
   );
   // The selection moved: what was kept for the files it left goes (a file picked while another loads opens at its top).
-  useEffect(() => steps.dropLeftPresses(), [current]);
+  useEffect(() => steps.listMoved(), [current]);
   return steps;
 }
