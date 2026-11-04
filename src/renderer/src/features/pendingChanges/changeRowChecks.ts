@@ -29,7 +29,7 @@ export function candidatesUnderRow(row: ChangeRow): RowCandidates {
 export function checkStateOver(candidates: RowCandidates, isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownCount): CheckState | null {
   if (candidates.count === 0) return null;
   if (isChosen === null) return true;
-  const checked = shown && candidates.count === shown.candidates ? shown.checked : countIn(candidates.held, (change) => isCheckinCandidate(change) && isChosen(change));
+  const checked = shown && candidates.count === shown.candidates ? shown.checked : countIn(candidates.held, (change) => isChosen(change) && isCheckinCandidate(change));
   if (checked === 0) return false;
   return checked === candidates.count ? true : 'mixed';
 }
