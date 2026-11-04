@@ -54,6 +54,15 @@ interface ChangelistMenuContext {
 }
 
 /**
+ * Whether a changelist header has a menu (`changelistMenu`), and so its "…": a user changelist always, as it can be
+ * renamed or deleted; the default one while it holds a change its menu acts on, not only ignored or cloaked files.
+ * Asked on every render of the header, so it stops at the first such change rather than building the menu.
+ */
+export function changelistHasMenu(changelist: Changelist | null, changes: PendingChange[]): boolean {
+  return changelist !== null || changes.some((change) => isCheckinCandidate(change) || isControlled(change));
+}
+
+/**
  * Actions for a changelist header, null for the default changelist: every changelist offers the same menu, but for
  * what the default one can't do (be renamed, described or deleted), which isn't offered. Checking it in or shelving it
  * readies the check-in panel rather than running at once, so the user still reads its comment and presses the button;

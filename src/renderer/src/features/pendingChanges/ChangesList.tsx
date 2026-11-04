@@ -46,6 +46,8 @@ interface ChangesListProps {
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   /** A changelist header's menu, and its "…": null for the default changelist. */
   changelistMenu: (changelist: Changelist | null) => MenuEntry[];
+  /** Whether a changelist's header shows its "…" (`changelistHasMenu`). */
+  hasChangelistMenu: (changelist: Changelist | null) => boolean;
   /** The row's check and R on the selection; outside review mode, no checks or "changed since review" dots, and R turns it on. */
   review: ListReview<PendingChange>;
   locks: PendingLocks;
@@ -64,6 +66,7 @@ export function ChangesList({
   onMoveToChangelist,
   contextMenu,
   changelistMenu,
+  hasChangelistMenu,
   review,
   locks,
   metaOf,
@@ -254,7 +257,7 @@ export function ChangesList({
                 {...dropProps(row)}
               >
                 {row.type === 'group' ? (
-                  <GroupRowContent row={row} checkState={checkStateOf(row)} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} />
+                  <GroupRowContent row={row} checkState={checkStateOf(row)} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} hasChangelistMenu={hasChangelistMenu} />
                 ) : (
                   <ItemRowContent
                     row={row}

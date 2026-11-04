@@ -42,7 +42,7 @@ import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
-import { changelistMenu } from './changelistMenu';
+import { changelistHasMenu, changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
@@ -216,6 +216,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               changelists,
             })
           }
+          hasChangelistMenu={(changelist) => changelistHasMenu(changelist, changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES)}
           review={review}
           locks={locks}
           metaOf={pairs.metaOf}
