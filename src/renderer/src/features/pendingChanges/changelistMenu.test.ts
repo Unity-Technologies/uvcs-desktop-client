@@ -12,7 +12,7 @@ vi.mock('./UndoChangesDialog', () => ({
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { isSubmenu, SEPARATOR, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import type { CheckinMode } from './checkinButton';
-import { changelistMenu } from './changelistMenu';
+import { changelistHasMenu, changelistMenu } from './changelistMenu';
 
 const ws = '/ws';
 const ui: Changelist = { name: 'ui', description: 'Polish the menus' };
@@ -149,5 +149,24 @@ describe('changelistMenu of the default changelist', () => {
     const menu = changelistMenu(ws, null, { changes: [defaultChanges[1]!], prepare: () => {}, changelists });
 
     expect(labels(menu)).toEqual(['Check in this changelist']);
+  });
+});
+
+describe('changelistHasMenu', () => {
+  it('gives every user changelist a menu, an empty one too: it can be renamed or deleted', () => {
+    expect(changelistHasMenu(ui, [])).toBe(true);
+  });
+
+  it('gives the default changelist a menu while it holds a change it can act on', () => {
+    expect(changelistHasMenu(null, defaultChanges)).toBe(true);
+    expect(changelistHasMenu(null, [defaultChanges[1]!])).toBe(true);
+  });
+
+  // Agrees with `changelistMenu`, which would be empty: the header shows no "…".
+  it('gives none to a default changelist of ignored or cloaked files alone', () => {
+    const ignoredOnly = [change('build/out.log', ['ignored'], 'file', null), change('Library/cache.bin', ['cloaked'], 'file', null)];
+
+    expect(changelistHasMenu(null, ignoredOnly)).toBe(false);
+    expect(changelistMenu(ws, null, { changes: ignoredOnly, prepare: () => {}, changelists })).toEqual([]);
   });
 });
