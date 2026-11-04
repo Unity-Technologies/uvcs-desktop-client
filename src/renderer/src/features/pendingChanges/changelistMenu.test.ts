@@ -10,19 +10,21 @@ vi.mock('./UndoChangesDialog', () => ({
 }));
 
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
+import { isSubmenu, SEPARATOR, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import type { CheckinMode } from './checkinButton';
 import { changelistMenu } from './changelistMenu';
 
 const ws = '/ws';
 const ui: Changelist = { name: 'ui', description: 'Polish the menus' };
-const change = (path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file'): PendingChange => ({
+const art: Changelist = { name: 'art', description: '' };
+const changelists = [ui, art];
+const change = (path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file', changelist: string | undefined = 'ui'): PendingChange => ({
   path,
   kinds,
   itemType,
   size: 1,
   lastModified: '',
-  changelist: 'ui',
+  ...(changelist && { changelist }),
 });
 const uiChanges = [
   change('src/menu.ts', ['checkedOut', 'changed']),
@@ -31,8 +33,13 @@ const uiChanges = [
   change('src/old.ts', ['deleted']),
 ];
 
+const defaultChanges = [change('README.md', ['checkedOut', 'changed'], 'file', undefined), change('notes.txt', ['private'], 'file', undefined)];
+
 const labels = (menu: MenuEntry[]): string[] => menu.map((entry) => (entry === SEPARATOR ? '—' : entry.label));
 const entry = (menu: MenuEntry[], id: string): Action => menu.find((candidate): candidate is Action => candidate !== SEPARATOR && 'run' in candidate && candidate.id === id)!;
+const submenu = (menu: MenuEntry[], id: string): Submenu => menu.find((candidate): candidate is Submenu => candidate !== SEPARATOR && isSubmenu(candidate) && candidate.id === id)!;
+const enabledIn = (entries: MenuEntry[]): string[] =>
+  entries.filter((candidate): candidate is Action => candidate !== SEPARATOR && 'run' in candidate && !candidate.disabled).map((candidate) => candidate.label);
 
 beforeEach(() => {
   dialogs.askedToUndo = [];
@@ -40,7 +47,7 @@ beforeEach(() => {
 
 describe('changelistMenu', () => {
   it('checks in, shelves or undoes the changelist, then edits it, then deletes it', () => {
-    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {} });
+    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {}, changelists });
 
     expect(labels(menu)).toEqual([
       'Check in this changelist',
@@ -48,6 +55,7 @@ describe('changelistMenu', () => {
       '—',
       'Rename…',
       'Edit description…',
+      'Move to changelist',
       '—',
       'Undo 4 changes…',
       'Delete changelist…',
@@ -56,7 +64,7 @@ describe('changelistMenu', () => {
 
   it('readies the check-in panel to check in or shelve the changelist', () => {
     const prepared: CheckinMode[] = [];
-    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: (mode) => prepared.push(mode) });
+    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: (mode) => prepared.push(mode), changelists });
 
     entry(menu, 'checkin').run();
     entry(menu, 'shelve').run();
@@ -66,7 +74,7 @@ describe('changelistMenu', () => {
 
   it("undoes the changelist's changes, after the Undo dialog, in one command", async () => {
     const undone = new Promise<unknown[]>((resolve) => fakeApi.answer('pendingChanges.undo', (...args: unknown[]) => resolve(args)));
-    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {} });
+    const menu = changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {}, changelists });
 
     entry(menu, 'undo').run();
 
@@ -76,20 +84,70 @@ describe('changelistMenu', () => {
   });
 
   it('names one change alone', () => {
-    const menu = changelistMenu(ws, ui, { changes: uiChanges.slice(0, 1), prepare: () => {} });
+    const menu = changelistMenu(ws, ui, { changes: uiChanges.slice(0, 1), prepare: () => {}, changelists });
 
     expect(entry(menu, 'undo').label).toBe('Undo changes…');
   });
 
   it('offers no shelve for a changelist of links alone: a shelve takes none', () => {
-    const menu = changelistMenu(ws, ui, { changes: [change('src/link', ['checkedOut'], 'symlink')], prepare: () => {} });
+    const menu = changelistMenu(ws, ui, { changes: [change('src/link', ['checkedOut'], 'symlink')], prepare: () => {}, changelists });
 
-    expect(labels(menu)).toEqual(['Check in this changelist', '—', 'Rename…', 'Edit description…', '—', 'Undo changes…', 'Delete changelist…']);
+    expect(labels(menu)).toEqual(['Check in this changelist', '—', 'Rename…', 'Edit description…', 'Move to changelist', '—', 'Undo changes…', 'Delete changelist…']);
   });
 
   it('offers only editing and deleting an empty changelist', () => {
-    const menu = changelistMenu(ws, ui, { changes: [], prepare: () => {} });
+    const menu = changelistMenu(ws, ui, { changes: [], prepare: () => {}, changelists });
 
     expect(labels(menu)).toEqual(['Rename…', 'Edit description…', '—', 'Delete changelist…']);
+  });
+
+  it("moves all its changes to another changelist, its own offered but disabled", async () => {
+    const moved = new Promise<unknown[]>((resolve) => fakeApi.answer('pendingChanges.moveToChangelist', (...args: unknown[]) => resolve(args)));
+    const move = submenu(changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {}, changelists }), 'changelist');
+
+    expect(enabledIn(move.entries)).toEqual(['New changelist…', 'Default changelist', 'art']);
+    (move.entries.find((candidate) => candidate !== SEPARATOR && 'run' in candidate && candidate.id === 'changelist.art') as Action).run();
+
+    expect(await moved).toEqual([ws, 'art', ['src/menu.ts', 'src/icons.ts', 'src/new/place.ts', 'src/old.ts']]);
+  });
+});
+
+describe('changelistMenu of the default changelist', () => {
+  // The same menu as every changelist's: it can't be renamed, described or deleted, so those aren't offered.
+  it('checks in, shelves, moves or undoes its changes, as any changelist does', () => {
+    const menu = changelistMenu(ws, null, { changes: defaultChanges, prepare: () => {}, changelists });
+
+    expect(labels(menu)).toEqual(['Check in this changelist', 'Shelve this changelist', '—', 'Move to changelist', '—', 'Undo changes…']);
+  });
+
+  it('readies the check-in panel to check in or shelve it', () => {
+    const prepared: CheckinMode[] = [];
+    const menu = changelistMenu(ws, null, { changes: defaultChanges, prepare: (mode) => prepared.push(mode), changelists });
+
+    entry(menu, 'checkin').run();
+    entry(menu, 'shelve').run();
+
+    expect(prepared).toEqual(['checkin', 'shelve']);
+  });
+
+  it('undoes the changes under version control, after the Undo dialog: a private file has none to undo', async () => {
+    const undone = new Promise<unknown[]>((resolve) => fakeApi.answer('pendingChanges.undo', (...args: unknown[]) => resolve(args)));
+    const menu = changelistMenu(ws, null, { changes: defaultChanges, prepare: () => {}, changelists });
+
+    entry(menu, 'undo').run();
+
+    expect(await undone).toEqual([ws, ['README.md']]);
+  });
+
+  it('moves its changes to a user changelist, the default one offered but disabled', () => {
+    const move = submenu(changelistMenu(ws, null, { changes: defaultChanges, prepare: () => {}, changelists }), 'changelist');
+
+    expect(enabledIn(move.entries)).toEqual(['New changelist…', 'ui', 'art']);
+  });
+
+  it('offers only checking in a default changelist of private files: none can be shelved, undone or moved', () => {
+    const menu = changelistMenu(ws, null, { changes: [defaultChanges[1]!], prepare: () => {}, changelists });
+
+    expect(labels(menu)).toEqual(['Check in this changelist']);
   });
 });

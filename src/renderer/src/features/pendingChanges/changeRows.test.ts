@@ -209,15 +209,20 @@ describe('menuTargetOf', () => {
   });
   const row = (key: string) => rows.find((candidate) => candidate.key === key)!;
 
-  it("opens a folder's or the default changelist's menu on the changes in it, not on the selected files", () => {
-    expect((menuTargetOf(row('folder:changelist::src')) as PendingChange[]).map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
-    expect((menuTargetOf(row('changelist:')) as PendingChange[]).length).toBe(3);
+  it("opens a folder's menu on the changes in it, not on the selected files", () => {
+    const target = menuTargetOf(row('folder:changelist::src'));
+
+    expect(target.kind === 'changes' && target.changes.map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
   });
 
-  it("opens a changelist's own menu on its header, and the selection's on a file", () => {
-    expect(menuTargetOf(row('changelist:UI'))).toEqual({ name: 'UI', description: '' });
-    expect(menuTargetOf(row('change:src/b.ts'))).toBeNull();
-    expect(menuTargetOf(null)).toBeNull();
+  it("opens a changelist's own menu on its header, the default changelist's too", () => {
+    expect(menuTargetOf(row('changelist:UI'))).toEqual({ kind: 'changelist', changelist: { name: 'UI', description: '' } });
+    expect(menuTargetOf(row('changelist:'))).toEqual({ kind: 'changelist', changelist: null });
+  });
+
+  it("opens the selection's menu on a file", () => {
+    expect(menuTargetOf(row('change:src/b.ts'))).toEqual({ kind: 'selection' });
+    expect(menuTargetOf(null)).toEqual({ kind: 'selection' });
   });
 });
 
