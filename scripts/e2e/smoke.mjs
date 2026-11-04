@@ -126,7 +126,10 @@ try {
     // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
     // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
     await window.keyboard.press('ControlOrMeta+P');
-    await window.keyboard.type('camera');
+    // Enter picks only a result shown: the workspace's paths are read when the dialog first opens, slowly on CI.
+    const goToFile = window.getByRole('dialog', { name: 'Go to file' });
+    await goToFile.locator('input').fill('camera');
+    await goToFile.getByText('camera.cs', { exact: false }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByText('float distance = 8f;').first().waitFor();
     await main.getByText('float distance = 10f;').first().waitFor();
