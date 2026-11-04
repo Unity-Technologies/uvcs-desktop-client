@@ -26,6 +26,7 @@ class CachedDiffs {
   private published: string | null = null;
   private error = false;
   private rendersDue = false;
+  private requestDue = false;
   private readonly queue = new StepQueue();
   private readonly pending: { current: PendingArrival | null } = { current: null };
 
@@ -52,11 +53,11 @@ class CachedDiffs {
     return this.renders();
   }
 
-  /** A file picked in the list. */
+  /** A file picked in the list: a diff page and Incoming ask for it as they render next. */
   pick(path: string): this {
     this.listCurrent = path;
     this.rendersDue = true;
-    if (!this.settles) this.request(path);
+    this.requestDue = !this.settles;
     return this;
   }
 
@@ -116,6 +117,10 @@ class CachedDiffs {
   private renders(): this {
     while (this.rendersDue) {
       this.rendersDue = false;
+      if (this.requestDue) {
+        this.requestDue = false;
+        this.request(this.listCurrent);
+      }
       if (this.arrows().dropsKept) this.queue.clear();
       const body = this.body;
       if (!body || !drainsKept({ opened: body.opened, selected: isSelectedFile(body.path, this.requested) })) continue;
