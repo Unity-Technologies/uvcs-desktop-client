@@ -8,8 +8,8 @@ import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
-import { useFileTree } from '../../components/useFileTree';
-import type { TreeFolderRow } from '../../lib/pathTree';
+import { useGroupedFileTree } from '../../components/useGroupedFileTree';
+import { isHeaderRow } from '../../lib/groupedPathTree';
 import { pluralize } from '../../lib/text';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -17,7 +17,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import type { DiffBrowserSlots } from './DiffBrowserLayout';
-import { diffEntryTones } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { pairedFocus } from './diffFocus';
@@ -91,10 +91,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     filter.clear();
     review.showAll();
   };
-  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), selection.anchor);
+  const content = useMemo(() => ({ sorted: shown }), [shown]);
+  const { rows, tree, toggleCollapsed, folding } = useGroupedFileTree(content, entries, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS, selection.anchor);
   const workspaceRepository = usePlaceRepository();
-  // A folder the keyboard (or a click) is on, in a tree.
-  const focusedFolder = focusedAsset ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
+  // A folder or a status group the keyboard (or a click) is on.
+  const focusedFolder = focusedAsset ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
@@ -141,6 +142,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
           rows={rows}
           tree={tree}
           toggleCollapsed={toggleCollapsed}
+          folding={folding}
           query={filter.query}
           filterBar={filter.bar}
           selection={selection}
@@ -178,7 +180,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
         ) : pane === 'folder' && focusedFolder ? (
-          <EmptyState icon={<Folder size={24} />} title={focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
+          <EmptyState icon={<Folder size={24} />} title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
         ) : null,
         slots.diff,
       )}

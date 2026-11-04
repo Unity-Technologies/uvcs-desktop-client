@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useCollapsedFolders } from '../../components/collapsedFoldersStore';
-import type { FileListLayout } from '../../components/fileListLayoutStore';
-import { topLevelCheckboxInset } from './changeRowLevels';
+import { useFileTreeFolding, type FileTreeFolding } from '../../components/fileTreeFolding';
+import type { FileListLayout } from '../../components/fileListViewStore';
+import type { ItemOrder } from '../../lib/pathTree';
+import { rowLevelsOf, topLevelCheckboxInset, type RowLevels } from './changeRowLevels';
 import { changeKey, collapseRows, layoutChangeRows, type ChangeRow, type ChangesGrouping } from './changeRows';
 
 interface ChangeRowsInput {
@@ -11,6 +13,9 @@ interface ChangeRowsInput {
   changelists: Changelist[];
   layout: FileListLayout;
   grouping: ChangesGrouping;
+  groupByStatus: boolean;
+  /** The order of the changes when not by path (`fileListOrder`). */
+  order: ItemOrder<PendingChange> | undefined;
   /** Which list this is, for the folders and changelists closed in it (`useCollapsedFolders`). */
   scope: string;
 }
@@ -22,7 +27,11 @@ interface ChangeRows {
   changesByKey: ReadonlyMap<string, PendingChange>;
   /** The keys of the change rows in list order: the diff's navigation goes on to the files before and after. */
   fileKeys: string[];
+  /** How the rows sit (`rowLevelsOf`), for their indents and guides. */
+  levels: RowLevels;
   checkboxInset: number;
+  /** Closing or opening every changelist, status group and folder; null for a flat list. */
+  folding: FileTreeFolding | null;
   toggleCollapsed: (key: string) => void;
 }
 
@@ -30,12 +39,14 @@ interface ChangeRows {
  * The rows of the Changes list and what the view looks up in them. Selecting a row or checking one renders the view
  * again: thousands of changes are laid out again only when they or their layout change.
  */
-export function useChangeRows({ changes, changelists, layout, grouping, scope }: ChangeRowsInput): ChangeRows {
-  const { collapsed, toggleCollapsed } = useCollapsedFolders(scope);
+export function useChangeRows({ changes, changelists, layout, grouping, groupByStatus, order, scope }: ChangeRowsInput): ChangeRows {
+  const { collapsed, toggleCollapsed, closeOnly } = useCollapsedFolders(scope);
   const changesByKey = useMemo(() => new Map(changes.map((change) => [changeKey(change), change])), [changes]);
-  const allRows = useMemo(() => layoutChangeRows({ sorted: changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
+  const allRows = useMemo(() => layoutChangeRows({ sorted: changes, changelists, layout, grouping, groupByStatus, order }), [changes, changelists, layout, grouping, groupByStatus, order]);
   const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
-  const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
+  const levels = useMemo(() => rowLevelsOf(rows, layout === 'tree'), [rows, layout]);
+  const checkboxInset = topLevelCheckboxInset(levels);
   const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' ? [row.key] : [])), [rows]);
-  return { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed };
+  const folding = useFileTreeFolding(allRows, rows, closeOnly);
+  return { rows, changesByKey, fileKeys, levels, checkboxInset, folding, toggleCollapsed };
 }

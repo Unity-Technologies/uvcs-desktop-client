@@ -8,8 +8,37 @@ export interface ChangeFilter {
   tones: ReadonlySet<StatusTone>;
 }
 
-// The order of the status chips: the one the Plastic desktop GUI lists change categories in.
+// The order of the status chips, and of the groups and the sort by status: the one the Plastic desktop GUI lists
+// change categories in.
 const TONE_ORDER: StatusTone[] = ['changed', 'moved', 'deleted', 'permissions', 'added', 'private', 'conflict', 'muted'];
+
+/** What each status chip, and each group of files by status, is called. */
+export const TONE_LABELS: Record<StatusTone, string> = {
+  added: 'Added',
+  changed: 'Changed',
+  deleted: 'Deleted',
+  moved: 'Moved',
+  permissions: 'Only filesystem permissions',
+  private: 'Private',
+  conflict: 'Conflicts',
+  muted: 'Ignored, cloaked and hidden',
+};
+
+const TONE_RANKS = new Map(TONE_ORDER.map((tone, rank) => [tone, rank]));
+
+/** Where a status comes among the others: the chips', the status groups' and the sort by status's order. */
+export function toneRank(tone: StatusTone): number {
+  return TONE_RANKS.get(tone)!;
+}
+
+/**
+ * A file's own status, the one its row shows, from the statuses the chips find it by (`statusTones`): a moved file
+ * that changed is found by C and M, and is a moved one.
+ */
+export function ownTone(tones: readonly StatusTone[]): StatusTone {
+  return tones[tones.length - 1]!;
+}
+
 const ALWAYS_OFFERED: ReadonlySet<StatusTone> = new Set(['added', 'changed', 'deleted', 'moved']);
 
 /** The status chips to offer: the common ones always, the rest only while some change has them. */

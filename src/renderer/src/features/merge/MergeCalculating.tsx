@@ -4,7 +4,7 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
-import { mergeItemTones, type MergeItem } from './mergeItems';
+import { mergeItemTones, MERGE_VIEW_OFFER, type MergeItem } from './mergeItems';
 import { MergePanes } from './MergePanes';
 
 const NO_ITEMS: MergeItem[] = [];
@@ -16,7 +16,7 @@ const nothing = (): void => {};
  * be, the button disabled and placeholder rows where the items go.
  */
 export function MergeCalculating({ request }: { request: MergeRequest }) {
-  const filter = useChangeFilter(NO_ITEMS, itemPath, mergeItemTones, { isViewFilter: true, reading: true });
+  const filter = useChangeFilter(NO_ITEMS, itemPath, mergeItemTones, { isViewFilter: true, reading: true, viewOffer: MERGE_VIEW_OFFER });
   return (
     <MergePanes
       header={

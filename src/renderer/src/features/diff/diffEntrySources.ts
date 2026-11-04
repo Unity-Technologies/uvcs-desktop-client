@@ -2,6 +2,8 @@ import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
 import { revisionIn, type RevisionRef } from '@shared/domain/revision';
 import { statusTones } from '../../components/changeFilter';
+import { statusGroup, type StatusGroup } from '../../components/statusGroups';
+import type { GroupedFileListFacts } from '../../components/useGroupedFileTree';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
 
@@ -41,6 +43,12 @@ const LABELS: Record<DiffEntry['status'], string> = {
 export function diffEntryTone(entry: DiffEntry): StatusTone {
   return TONES[entry.status];
 }
+
+/**
+ * What a diff's list knows of each entry beyond its path, to sort and group it (`useGroupedFileTree`): its own status,
+ * the one its row shows last, and a group per status.
+ */
+export const DIFF_ENTRY_FACTS: GroupedFileListFacts<DiffEntry, StatusGroup> = { toneOf: diffEntryTone, statusGroup };
 
 /** The statuses the filter chips find an entry by: a moved file that changed by C and M. */
 export function diffEntryTones(entry: DiffEntry): readonly StatusTone[] {

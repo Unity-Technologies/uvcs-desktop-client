@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ChangesGrouping } from './changeRows';
 
-/** How the Changes view shows its list; its layout, list or tree, is every list of files' (`useFileListLayoutStore`). */
+/** How the Changes view shows its list beyond what every list of files shares (`useFileListViewStore`: layout, sort, status groups). */
 interface PendingChangesViewStore {
   grouping: ChangesGrouping;
   setGrouping: (grouping: ChangesGrouping) => void;

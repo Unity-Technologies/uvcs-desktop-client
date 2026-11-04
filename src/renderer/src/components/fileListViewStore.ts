@@ -4,25 +4,45 @@ import { persist } from 'zustand/middleware';
 /** How every list of changed files shows them: one row each, or in their folders. */
 export type FileListLayout = 'list' | 'tree';
 
-interface FileListLayoutStore {
+/**
+ * The order of the files of every list of changed files (`fileListOrder`): by path, folder by folder (the default);
+ * by file name; by status, as the filter's chips are ordered; or by extension. Ties keep the path order.
+ */
+export type FileListSort = 'path' | 'name' | 'status' | 'extension';
+
+/** How every list of changed files shows them, chosen in any of them (`FileListViewMenu`). */
+export interface FileListView {
   layout: FileListLayout;
+  sort: FileListSort;
+  /** Files in a group per status (Changed, Added…), inside the list's own groups when it has some (changelists). */
+  groupByStatus: boolean;
+}
+
+interface FileListViewStore extends FileListView {
   setLayout: (layout: FileListLayout) => void;
+  setSort: (sort: FileListSort) => void;
+  setGroupByStatus: (groupByStatus: boolean) => void;
 }
 
 /** Where the Changes view kept its own layout before every list shared one (`usePendingChangesViewStore`). */
 const PENDING_CHANGES_VIEW_KEY = 'pending-changes-view';
 
 /**
- * The one layout of every list of changed files (Changes, the diffs, the details panels, Incoming, the merge page):
- * switched in any of them, it changes in all, and stays across sessions.
+ * The one view of every list of changed files (Changes, the diffs, the details panels, Incoming, the merge page):
+ * changed in any of them, it changes in all, and stays across sessions. Kept under the name it had when it held the
+ * layout alone, so nobody loses their choice.
  */
-export const useFileListLayoutStore = create<FileListLayoutStore>()(
+export const useFileListViewStore = create<FileListViewStore>()(
   persist(
     (set) => ({
       layout: layoutFromPendingChangesView(storedPendingChangesView()),
+      sort: 'path',
+      groupByStatus: false,
       setLayout: (layout) => set({ layout }),
+      setSort: (sort) => set({ sort }),
+      setGroupByStatus: (groupByStatus) => set({ groupByStatus }),
     }),
-    { name: 'file-list-layout', partialize: ({ layout }) => ({ layout }) },
+    { name: 'file-list-layout', partialize: ({ layout, sort, groupByStatus }) => ({ layout, sort, groupByStatus }) },
   ),
 );
 

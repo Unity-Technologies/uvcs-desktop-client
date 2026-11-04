@@ -7,6 +7,7 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
+import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { deleteChangelist, editChangelistDescription, moveToChangelist, moveToNewChangelist, renameChangelist } from './changelistOperations';
 
 const ws = '/ws';
@@ -35,6 +36,32 @@ describe('changelist operations', () => {
 
     expect(fakeApi.methods()).toEqual(['pendingChanges.moveToChangelist']);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved 1 change to Default changelist' }]);
+  });
+
+  it('groups the list by changelist once changes moved into one, so the move shows', async () => {
+    usePendingChangesViewStore.setState({ grouping: 'none' });
+    fakeApi.answer('pendingChanges.moveToChangelist', () => undefined);
+
+    await moveToChangelist(ws, null, [change('c.ts', ['added'])]);
+    expect(usePendingChangesViewStore.getState().grouping).toBe('none');
+
+    await moveToChangelist(ws, 'UI', [change('c.ts', ['added'])]);
+    expect(usePendingChangesViewStore.getState().grouping).toBe('changelist');
+  });
+
+  it('groups the list by changelist once an empty one is created, and not when creating it failed', async () => {
+    usePendingChangesViewStore.setState({ grouping: 'none' });
+    answerPrompts('Refactor', 'Taken');
+    fakeApi.answer('pendingChanges.createChangelist', (_, changelist) => {
+      if ((changelist as Changelist).name === 'Taken') throw new Error('exists');
+    });
+
+    await moveToNewChangelist(ws, []);
+    expect(usePendingChangesViewStore.getState().grouping).toBe('changelist');
+
+    usePendingChangesViewStore.setState({ grouping: 'none' });
+    await moveToNewChangelist(ws, []);
+    expect(usePendingChangesViewStore.getState().grouping).toBe('none');
   });
 
   it('moves nothing when the checkout fails', async () => {
