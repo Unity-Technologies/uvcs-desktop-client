@@ -36,7 +36,8 @@ interface PlacedFrom {
   layoutKey: string;
   contentHeight: number;
   viewHeight: number;
-  laidOut: boolean;
+  /** Where Pierre lays out the last change (none until it can tell): it moves as Pierre measures the lines above it. */
+  lastChangeTop: number | undefined;
 }
 
 /**
@@ -69,8 +70,9 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
         layoutKey,
         contentHeight: container.scrollHeight,
         viewHeight: container.clientHeight,
-        // Placed by line share until Pierre can tell where lines are: placed again once it can.
-        laidOut: regions[0] !== undefined && boxOf(regions[0].lines[0]!) !== undefined,
+        // Placed by line share until Pierre can tell where lines are, and by its estimates of the lines it hasn't
+        // rendered (one row each, a wrapped line too): placed again once it can tell, and as it measures them.
+        lastChangeTop: regions.length > 0 ? boxOf(regions.at(-1)!.lines[0]!)?.top : undefined,
       };
       if (samePlacing(placedFrom.current, from)) return;
       placedFrom.current = from;
@@ -107,7 +109,7 @@ function samePlacing(a: PlacedFrom | null, b: PlacedFrom): boolean {
     a.layoutKey === b.layoutKey &&
     a.contentHeight === b.contentHeight &&
     a.viewHeight === b.viewHeight &&
-    a.laidOut === b.laidOut
+    a.lastChangeTop === b.lastChangeTop
   );
 }
 
