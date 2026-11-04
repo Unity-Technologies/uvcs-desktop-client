@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { arrivalChange, plannedMove, positionLabel, type ChangePosition } from '../diff/viewer/changeNavigation';
 import { fileSteps, type PendingArrival } from '../diff/viewer/fileSteps';
 import { positionAfterChange, pressStep } from '../diff/viewer/stepNavigation';
+import { pluralize } from '../../lib/text';
 import { conflictStepKeys } from './conflictSteps';
 import { ConflictPlace } from './resolve/conflictRows';
 
@@ -36,9 +37,10 @@ class MergePage {
     this.open(Object.keys(files)[0]!);
   }
 
-  /** The file shown and the arrows' "2 of 3". */
+  /** The file shown and the arrows' "2 of 3"; before a conflict is current, how many are left, as the arrows' tips say. */
   get header(): string {
-    return `${this.shown}: ${positionLabel(this.position, 'conflict')}`;
+    const left = this.position.count === 0 ? 'No conflicts' : pluralize(this.position.count, 'conflict');
+    return `${this.shown}: ${positionLabel(this.position) || left}`;
   }
 
   press(direction: 1 | -1): this {
