@@ -343,22 +343,27 @@ must never move under the pointer. The arrows are the header's last slot, side b
 diff's header alike (`DiffViewerFrame`'s `navigator`): text, image, model, binary, identical, loading, an error, an
 xlink. Right before them, with no room reserved, the label has one form, "3 of 12", and only while a change is current
 (`positionLabel`); otherwise it is empty, as the line counts and the diff itself (identical, binary) already say how
-many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). "12 changes" and "No changes"
-were dropped: three forms of one label read as noise, and a reserved width left "1 of 1" floating in a gap. It grows
-leftward, in tabular figures; then the Expand button and the view's controls. What they show is `changeNavigatorView`,
-decided by the view, never by the file shown: beside a list of files always (disabled at its ends rather than gone);
-with no list, on every diff of a view whose diffs step through changes (History, Files, Browse repository: disabled on
-an image) and on none of one that doesn't (a merge page's diff, whose conflict arrows step instead).
+many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). A count before the first step
+("12 changes") and "No changes" are left out on purpose: three forms of one label read as noise, and the room they
+needed, reserved, left "1 of 1" floating in a gap. It grows leftward, in tabular figures; then the Expand button and
+the view's controls. What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a
+list of files always (disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws
+(History, Files, Browse repository, the merge page's previews of a change and its directory conflicts' comparisons:
+disabled where there is nothing to step through, an image, a binary), and on none of a merge page's merged result,
+whose conflict arrows step instead (`stepsThroughChanges` off).
 
 The arrows are one element for as long as the view shows diffs: the header belongs to `SteppedDiffFrame`, which
 `FileDiffViewer` draws around every state of a file (loading, failed, loaded), and the loaded diff (`LoadedFileDiff`,
 mounted anew per file) draws its controls into it (`createPortal`) and hands it its navigation as it renders
-(`DiffFrameHost.publish`). Until a diff hands one, the header's own navigation steps files (`useFileOnlyNavigation`:
-it takes the keys only then, opens nothing and names no file, so the arrival meant for the diff that loads stays its
-own: `hostedNavigation`, `headerTakesKeys`). So a burst of ↓ clicks during a 50–200 ms load never loses one to a
-button swapped under the pointer. Hosts keep `FileDiffViewer` mounted from file to file (Incoming's isn't keyed by
-the file). An xlink's header draws `FileOnlyNavigator`. Narrow, the label gives way (`data-toolbar-extra`) and the
-arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and stay,
+(`DiffFrameHost.publish`). What the arrows do is `headerArrows`: with the selected file's diff drawn, its navigation,
+label and keys; while the selected file is read (the previous file's diff kept on screen meanwhile) or its viewer
+loads, the header's own navigation, with no label (never the previous file's "3 of 3" beside the new title), keeping
+each press for the file that loads (`useFileOnlyNavigation`'s `goes`); where it couldn't be read, file to file at once.
+The kept presses apply one at a time once the diff arrived at the step it was stepped to (`queuedStep`,
+`StepNavigation.opened`), so ↓ onto file B and ↓ again while B loads ends on B's 2nd change: no click lost to a
+button swapped under the pointer, none landing on the wrong file. Hosts keep `FileDiffViewer` mounted from file to
+file (Incoming's isn't keyed by the file). An xlink's header passes `FileOnlyNavigator`. Narrow, the label gives way
+(`data-toolbar-extra`) and the arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and stay,
 disabled, once there is nowhere to go (merge.md "Stepping through conflicts").
 
 ## Expanding the diff
