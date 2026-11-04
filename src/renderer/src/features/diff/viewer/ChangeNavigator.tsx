@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { settleClickFocus } from '../../../lib/focusRing';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { hotkey, hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
@@ -21,6 +22,11 @@ export function ChangeNavigator({ navigation, keysWhileTyping = false }: ChangeN
   const { noun, shortcuts } = navigation;
   const previous = navigation.goesTo(-1);
   const next = navigation.goesTo(1);
+  // A click leaves the arrow focused with no ring (`settleClickFocus`), Enter or Space as Chromium decides.
+  const step = (event: MouseEvent<HTMLButtonElement>, direction: 1 | -1): void => {
+    navigation.go(direction);
+    settleClickFocus(event);
+  };
   return (
     <PaneToolbarGroup>
       <IconButton
@@ -30,10 +36,7 @@ export function ChangeNavigator({ navigation, keysWhileTyping = false }: ChangeN
         shortcut={hotkey(shortcuts.previous)}
         data-tip-sub={otherKey(shortcuts.previous, keysWhileTyping)}
         disabled={previous === null}
-        onClick={(event) => {
-          navigation.go(-1);
-          settleClickFocus(event);
-        }}
+        onClick={(event) => step(event, -1)}
       />
       <span className={styles.position} data-toolbar-extra aria-live="polite">
         {navigation.label}
@@ -45,10 +48,7 @@ export function ChangeNavigator({ navigation, keysWhileTyping = false }: ChangeN
         shortcut={hotkey(shortcuts.next)}
         data-tip-sub={otherKey(shortcuts.next, keysWhileTyping)}
         disabled={next === null}
-        onClick={(event) => {
-          navigation.go(1);
-          settleClickFocus(event);
-        }}
+        onClick={(event) => step(event, 1)}
       />
     </PaneToolbarGroup>
   );
