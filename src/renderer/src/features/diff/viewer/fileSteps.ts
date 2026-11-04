@@ -155,6 +155,15 @@ export function fileSteps(
   }
 }
 
+/**
+ * The file the list is on while the view beside it diffs another (`FileStepsOptions.settlingOn`): the item selected,
+ * unless it's the one diffed. Compared as the host's own two items, the change selected and the one diffed, never by
+ * the paths a view shows (a `.meta` shown in place of its asset).
+ */
+export function settlingOnOf(selected: { path: string } | undefined, diffed: { path: string } | undefined): string | null {
+  return selected !== undefined && selected !== diffed ? selected.path : null;
+}
+
 /** A list's selection made at once, nothing to ask first: the step it's for is told (`FileStepsOptions.select`). */
 export function selectNow(selected: () => void, select: () => void): void {
   selected();

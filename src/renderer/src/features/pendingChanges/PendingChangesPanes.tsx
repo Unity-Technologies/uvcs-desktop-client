@@ -25,7 +25,7 @@ import { Stowable } from '../../ui/Stowable';
 import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { useChangeset } from '../changesets/useChangeset';
-import { useFileSteps } from '../diff/viewer/fileSteps';
+import { settlingOnOf, useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ReviewModeButton } from '../review/ReviewModeButton';
@@ -169,7 +169,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const fileSteps = useFileSteps({
     keys: fileKeys,
     // The list on another change than the diff shows, until it settles: presses meanwhile are that change's.
-    settlingOn: focused && diffChange !== focused ? focused.path : null,
+    settlingOn: settlingOnOf(focused, diffChange),
     current: selection.anchor,
     select: (key, selected) =>
       selectAfterLeaving(selection, singleSelection(key), (next) => {
