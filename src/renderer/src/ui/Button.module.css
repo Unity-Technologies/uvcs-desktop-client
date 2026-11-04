@@ -108,9 +108,12 @@
   background: var(--bg-active);
 }
 
-/* A toggle that is on (`aria-pressed`), such as a view's Timeline button: tinted in the accent. */
-.ghost[aria-pressed='true'],
-.ghost[aria-pressed='true']:hover:not([aria-disabled='true']) {
+/*
+ * A toggle that is on (`aria-pressed`), such as review mode or a view's Timeline: tinted in the accent. As light as a
+ * class (`:where`), so hovering still shows and a button's own look for the state (the image diff's stage controls)
+ * wins.
+ */
+.ghost:where([aria-pressed='true']) {
   background: var(--accent-soft);
   color: var(--accent-text);
 }
