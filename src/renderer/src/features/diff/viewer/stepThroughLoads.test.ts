@@ -26,7 +26,7 @@ interface Navigator {
  * it (`takesKept`, `drainKept`: a render coming only where the app's would, a move, a change of the list's selection,
  * the diff opening). A diff page and Incoming ask for the file selected at once; Changes once its selection settled
  * (`settles`). A file with no changes (0) is an image: it opens as it's drawn; a text diff opens at its arrival a frame
- * later (`frame`).
+ * later (`frame`); an xlink shows where it points instead of a diff, with arrows of its own (`FileOnlyNavigator`).
  */
 class CachedDiffs {
   private listCurrent = '';
@@ -44,7 +44,7 @@ class CachedDiffs {
   private readonly queue = this.pending.kept;
 
   constructor(
-    private readonly files: Record<string, number>,
+    private readonly files: Record<string, number | 'xlink'>,
     private readonly settles = false,
   ) {
     this.pick(Object.keys(files)[0]!).settle().frame();
@@ -53,7 +53,7 @@ class CachedDiffs {
   /** The file selected in the list, and "3 of 12" while its own diff stands on a change. */
   get header(): string {
     const own = this.body?.path === this.listCurrent ? this.body : null;
-    const label = own ? positionLabel({ count: this.files[own.path]!, current: own.current }) : '';
+    const label = own ? positionLabel({ count: this.changes(own.path), current: own.current }) : '';
     return label ? `${this.listCurrent}: ${label}` : this.listCurrent;
   }
 
@@ -70,7 +70,7 @@ class CachedDiffs {
   }
 
   private pressUnrendered(direction: 1 | -1): void {
-    const navigator = this.arrows().body ? this.bodyNavigator()! : this.headerNavigator();
+    const navigator = this.xlinkNavigator() ?? (this.arrows().body ? this.bodyNavigator()! : this.headerNavigator());
     // A click on an arrow disabled (nowhere to go) does nothing.
     if (pressGoal(navigator.spot, navigator.position, direction, this.steps()) === null) return;
     this.go(navigator, direction);
@@ -133,15 +133,16 @@ class CachedDiffs {
     this.requested = path;
     this.error = false;
     this.queue.keepOnly([path, this.steps().steppingTo()]);
-    this.body = { path, current: null, opened: false };
-    this.published = path;
+    // An xlink has no diff: its own arrows take the presses (`xlinkNavigator`).
+    this.body = this.files[path] === 'xlink' ? null : { path, current: null, opened: false };
+    this.published = this.body ? path : null;
     // An image opens as it's drawn (nothing to arrive at, `noStepsComing`).
-    if (this.files[path] === 0) this.open(this.body);
+    if (this.body && this.files[path] === 0) this.open(this.body);
     this.rendersDue = true;
   }
 
   private open(body: { path: string; current: number | null; opened: boolean }): void {
-    const opening = openingStep(this.steps().takeArrival(body.path), this.files[body.path]!, false);
+    const opening = openingStep(this.steps().takeArrival(body.path), this.changes(body.path), false);
     body.current = opening?.movesTo ? opening.index : null;
     body.opened = true;
     this.rendersDue = true;
@@ -159,7 +160,9 @@ class CachedDiffs {
         this.requestDue = false;
         this.request(this.listCurrent);
       }
-      this.drain(this.headerNavigator(), true);
+      const xlink = this.xlinkNavigator();
+      if (xlink) this.drain(xlink, true);
+      else this.drain(this.headerNavigator(), true);
       const body = this.bodyNavigator();
       if (body) this.drain(body, body.spot.path === this.requested);
     }
@@ -181,12 +184,24 @@ class CachedDiffs {
     if (!body) return null;
     return {
       spot: { holder: 'view', path: body.path, opened: body.opened, steppingTo: this.steps().steppingTo(), settlingOn: this.steps().settlingOn },
-      position: { count: this.files[body.path]!, current: body.current, above: 0 },
+      position: { count: this.changes(body.path), current: body.current, above: 0 },
       moveTo: (index) => {
         body.current = index;
         this.rendersDue = true;
       },
     };
+  }
+
+  /** An xlink's arrows (`FileOnlyNavigator`), while the file asked for is one: no steps, from file to file. */
+  private xlinkNavigator(): Navigator | null {
+    if (this.files[this.requested] !== 'xlink') return null;
+    const spot: PressSpot = { holder: 'stepless', path: this.requested, opened: false, steppingTo: this.steps().steppingTo(), settlingOn: this.steps().settlingOn };
+    return { spot, position: NO_STEPS, moveTo: () => undefined };
+  }
+
+  private changes(path: string): number {
+    const changes = this.files[path];
+    return typeof changes === 'number' ? changes : 0;
   }
 
   /** The header's own navigation (`SteppedDiffFrame`): waiting for the selected file's diff, or stepless where it failed. */
@@ -209,13 +224,17 @@ class CachedDiffs {
   }
 }
 
-const atLastChangeOfA = (files: Record<string, number>, settles = false) => new CachedDiffs({ 'a.cs': 3, ...files }, settles).press(1).press(1).press(1);
+const atLastChangeOfA = (files: Record<string, number | 'xlink'>, settles = false) => new CachedDiffs({ 'a.cs': 3, ...files }, settles).press(1).press(1).press(1);
 
 describe('a burst of ↓ across diffs read from the cache', () => {
   it('lands ↓↓↓ from A\'s last change across a one-change file on the next file\'s 2nd change, no press lost on the way', () => {
     const list = atLastChangeOfA({ 'b.cs': 1, 'c.cs': 2 });
     expect(list.header).toBe('a.cs: 3 of 3');
     expect(list.press(1).press(1).press(1).frame().frame().header).toBe('c.cs: 2 of 2');
+  });
+
+  it("crosses an xlink the same way, its own arrows replaying the presses kept for it as steps from it", () => {
+    expect(atLastChangeOfA({ 'b.cs': 'xlink', 'c.cs': 2 }).burst(1, 1, 1).frame().header).toBe('c.cs: 2 of 2');
   });
 
   it('crosses an image the same way', () => {
