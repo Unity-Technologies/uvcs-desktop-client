@@ -353,25 +353,32 @@ so: "Full screen" names the OS's.
   History, Incoming, a file's content in Files and Browse repository, and a page window, where it hides that page's
   files. The merge page offers none, nor do Incoming's conflicts.
 - **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
-  scroll, selection and filters come back as left, nothing is read again, and stepping past the last change still goes
-  on to the next file (`FileStepsContext`), so a whole changeset is reviewed expanded.
+  scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
+  past its last change (`FileStepsContext`: Changes, a diff page, a code review), it still does, so a whole changeset is
+  reviewed expanded. Incoming, History, Files and Browse repository step through the file shown only, as they do
+  collapsed.
 - **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was the Expand button,
   and the code is the window's main focus while expanded (`useExpandedDiffFocus`): focus that falls to the page (a menu
   or dialog closed, the editor left with Esc) comes back to it.
 - **Keys of what is out of sight** never act on it unseen (`shortcutWhileExpanded`, `runWhileDiffExpanded`): ⌘↩ gives
   the window back, then checks in (an empty summary takes the caret); Toggle Sidebar only gives the window back, the
-  sidebar showing as it was; Go to file acts, the file picked showing in the diff, as choosing another file does.
+  sidebar showing as it was; Go to file acts, the file picked showing in the diff, as choosing another file does;
+  Incoming's Esc that stops a resolve run is off (`useShortcutOnWhileExpanded`), so Esc collapses the diff instead.
 - **What ends it** (`diffExpansion.ts`): the button pressed again, the shortcut, Esc, the navigation leaving the diff
   (another view, a page opened over it or gone back from: `leavesExpandedDiff`), the window leaving the place, or the
-  view settling with nothing to diff (nothing pending after a check-in, a diff whose filters hide every file, Incoming up
-  to date: `collapsesWithHost`, from `changesDiffs`, `diffPaneDiffs`, `incomingDiffs`). Choosing another file keeps it,
+  view in front settling with nothing to diff (nothing pending after a check-in or an undo, a diff whose filters hide
+  every file, Incoming up to date, no file selected in Files or Browse repository, no revision left in History:
+  `collapsesWithHost`, from `changesDiffs`, `diffPaneDiffs`, `incomingDiffs`, `selectedFileDiffs`, `listedDiffs`). A
+  view hidden under a page that empties never ends the page's expanded diff, which is still in front. Choosing another file keeps it,
   and so does a read under way (the next changeset of a branch) or a page window following the selection to another
   object (a page replaced at the same depth). It belongs to the window and is never remembered.
 - **Esc** collapses only once nothing else took it (`escapeCollapsesDiff`): a menu, the palette or a dialog closing, the
   picked change dropped, the editor leaving the text, a field typed into, a command bound to Esc (a pending cut in Files
   cancelled). History's and Files' "Esc back to the list" give way to it while expanded (`escapeBackToList`): the list
   is out of sight.
-- With no diff in front, the shortcut does nothing (`expandedAfterToggle`).
+- With no diff in front, the shortcut does nothing (`expandedAfterToggle`) and the palette greys the command out
+  (`expandDiffOffered`). View ▸ Expand Diff stays enabled in every place (the native menu knows only the place shown,
+  `isMenuCommandEnabled`) and does nothing there.
 
 ## Lines for links
 
