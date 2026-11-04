@@ -1,6 +1,17 @@
+import { useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { create } from 'zustand';
 import { isInFront } from '../lib/inFront';
-import { expandableDiffInFront, expandedAfterToggle, type ExpandableDiff } from './diffExpansion';
+import type { ShortcutId } from '../lib/shortcutRegistry';
+import {
+  collapsesWithHost,
+  expandableDiffInFront,
+  expandedAfterToggle,
+  focusGoesToDiff,
+  shortcutWhileExpanded,
+  type ExpandableDiff,
+  type HostDiffs,
+} from './diffExpansion';
 
 /** Whether the window's diff is expanded (`diffExpansion.ts`): one per window, never remembered past it. */
 const useDiffExpansionStore = create<{ expanded: boolean }>(() => ({ expanded: false }));
@@ -31,6 +42,23 @@ export function toggleDiffExpanded(): void {
 }
 
 /**
+ * Runs a window shortcut of a part an expanded diff stows (`shortcutWhileExpanded`): as ever, or once the window is
+ * given back and drawn again (`flushSync`), so what it acts on is in sight and can take the caret, or not at all.
+ */
+export function runWhileDiffExpanded(id: ShortcutId, run: () => void): void {
+  const effect = isDiffExpanded() ? shortcutWhileExpanded(id) : 'acts';
+  if (effect !== 'acts') flushSync(collapseDiff);
+  if (effect !== 'collapseOnly') run();
+}
+
+/** Ends the mode once the view showing the diff settles with nothing to diff (`collapsesWithHost`). */
+export function useCollapseWithHost(diffs: HostDiffs): void {
+  useEffect(() => {
+    if (collapsesWithHost(isDiffExpanded(), diffs)) collapseDiff();
+  }, [diffs]);
+}
+
+/**
  * Lets the command reach this diff while it is in front; returns its removal. The mode outlives a diff gone for a
  * moment (the next file's or changeset's read, a page window following the selection), so a diff leaving doesn't end it.
  */
@@ -40,12 +68,16 @@ export function registerExpandableDiff(diff: ExpandableDiff): () => void {
 }
 
 /**
- * Gives the keyboard to the expanded diff when what held it went out of sight with the files (expanded from the list
- * with the shortcut): the arrows scroll the code, ⌥↓ steps through its changes.
+ * Gives the keyboard to the expanded diff (`focusGoesToDiff`) when what held it went out of sight with the files, or
+ * was the Expand button itself: the arrows scroll the code, ⌥↓ steps through its changes and Esc drops a picked
+ * change before it collapses the diff.
  */
 function focusExpandedDiff(): void {
   const active = document.activeElement;
-  if (active instanceof HTMLElement && active !== document.body && active.checkVisibility()) return;
   const diff = [...mounted].find((candidate) => isInFront(candidate.element));
-  diff?.element.closest('[data-diff-frame]')?.querySelector<HTMLElement>('[tabindex="0"]')?.focus({ preventScroll: true });
+  if (!diff) return;
+  const onBody = !(active instanceof HTMLElement) || active === document.body;
+  const holder = { onBody, visible: !onBody && (active as HTMLElement).checkVisibility(), onExpandButton: active === diff.element };
+  if (!focusGoesToDiff(holder)) return;
+  diff.element.closest('[data-diff-frame]')?.querySelector<HTMLElement>('[tabindex="0"]')?.focus({ preventScroll: true });
 }

@@ -31,6 +31,25 @@ export function expandableDiffInFront<Element>(diffs: Iterable<ExpandableDiff<El
   return [...diffs].some((diff) => inFront(diff.element));
 }
 
+/** What held the keyboard as the diff expanded. */
+export interface FocusHolder {
+  /** Nothing: the page itself. */
+  onBody: boolean;
+  /** It still shows: it wasn't in a part the diff stowed. */
+  visible: boolean;
+  /** The diff header's Expand button, pressed with the mouse. */
+  onExpandButton: boolean;
+}
+
+/**
+ * Whether the keyboard goes to the expanded diff: from nowhere, from a list that went out of sight, or from the Expand
+ * button, so the arrows scroll the code and Esc reaches the diff first (a picked change drops before the diff
+ * collapses). What still shows and holds it otherwise (a field) keeps it.
+ */
+export function focusGoesToDiff(holder: FocusHolder): boolean {
+  return holder.onBody || !holder.visible || holder.onExpandButton;
+}
+
 /** What Expand Diff's command does: collapses an expanded diff, else expands the one in front, if any. */
 export function expandedAfterToggle(expanded: boolean, diffInFront: boolean): boolean {
   return expanded ? false : diffInFront;
@@ -102,5 +121,8 @@ export interface ExpandDiffWords {
 
 /** `escapeKeys` is how Esc reads on this OS (`formatShortcut`): the hint says how to leave before the mode starts. */
 export function expandDiffWords(expanded: boolean, escapeKeys: string): ExpandDiffWords {
-  return expanded ? { label: 'Collapse diff' } : { label: 'Expand diff', hint: `${escapeKeys} to collapse` };
+  return expanded ? { label: 'Collapse diff' } : { label: EXPAND_DIFF_NAME, hint: `${escapeKeys} to collapse` };
 }
+
+/** The button's accessible name, the same pressed or not: a toggle tells its state with `aria-pressed`. */
+export const EXPAND_DIFF_NAME = 'Expand diff';

@@ -5,6 +5,7 @@ import {
   escapeCollapsesDiff,
   expandDiffWords,
   expandedAfterToggle,
+  focusGoesToDiff,
   leavesExpandedDiff,
   shortcutWhileExpanded,
   type EscapePress,
@@ -28,6 +29,23 @@ describe('leavesExpandedDiff', () => {
 
   it('keeps it when a page is replaced at the same depth, as a page window following the selection does', () => {
     expect(leavesExpandedDiff({ view: 'changes', depth: 1 }, { view: 'changes', depth: 1 })).toBe(false);
+  });
+});
+
+describe('focusGoesToDiff', () => {
+  const held = { onBody: false, visible: true, onExpandButton: false };
+
+  it('gives the keyboard to the diff from nowhere, or from a list that went out of sight with the files', () => {
+    expect(focusGoesToDiff({ ...held, onBody: true, visible: false })).toBe(true);
+    expect(focusGoesToDiff({ ...held, visible: false })).toBe(true);
+  });
+
+  it('takes it from the Expand button pressed with the mouse, so Esc drops a picked change before collapsing', () => {
+    expect(focusGoesToDiff({ ...held, onExpandButton: true })).toBe(true);
+  });
+
+  it('leaves it where it still shows (the code itself, a field)', () => {
+    expect(focusGoesToDiff(held)).toBe(false);
   });
 });
 
