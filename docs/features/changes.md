@@ -19,10 +19,14 @@ holding only ignored or cloaked files) has no "…" (`changelistHasMenu`, asked 
 only as it opens).
 
 "Move to changelist ▸" on a header clears Changes' filters first, as readying a check-in does: the changes they hide
-move too, and the list then shows every one that moved. As every move to a changelist (`moveToChangelist`), it checks
-out the changed files that aren't yet (only checked-out and added items live in a changelist; a checkout may take a
-lock), then moves them all in one `cm changelist <name> add`, however many: `CmClient` runs it as a process of its own
-past a few paths (`runsLong`), and through a `cm shell` of its own when too long for a command line.
+move too, and the list then shows every one that moved ("New changelist…" clears them once a name is given, so
+cancelling leaves them). As every move to a changelist (`moveToChangelist`), it checks out the changed files that
+aren't yet (only checked-out and added items live in a changelist), then moves them all in one
+`cm changelist <name> add`, however many: `CmClient` runs it as a process of its own past a few paths (`runsLong`), and
+through a `cm shell` of its own when too long for a command line. Only the default changelist's header can need that
+checkout, since a user changelist holds no item that isn't checked out or added; moving from it checks out every
+changed file it holds, which may take locks, without asking: it is what selecting all its files and moving them does,
+and that doesn't ask either.
 
 What acts on some of a changelist's files (Include or Exclude, Add to version control, Check out, Copy, the filter
 rules) isn't in it: the header's checkbox includes or excludes them all, and the rest is the files' own menu, on the
