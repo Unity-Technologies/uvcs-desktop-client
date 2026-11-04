@@ -85,6 +85,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('Toggle &Details', 'view.details', 'CmdOrCtrl+I'),
         // The diff given the whole window, in the app: never the OS's full screen below, which it stacks with.
         commandItem('&Expand Diff', 'view.expandDiff', 'CmdOrCtrl+Shift+E'),
+        // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there (`shortcutRegistry`'s `graphTimeline`).
+        commandItem('Branch Explorer &Timeline', 'branchExplorer.timeline', isMac ? 'CmdOrCtrl+Alt+T' : 'Alt+Shift+T'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
         zoomItem('&Actual Size', 'reset', 'CmdOrCtrl+0'),
