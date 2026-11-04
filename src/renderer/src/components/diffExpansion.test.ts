@@ -3,6 +3,7 @@ import {
   collapsesWithHost,
   escapeBackToList,
   escapeCollapsesDiff,
+  expandDiffOffered,
   expandDiffWords,
   expandedAfterToggle,
   focusGoesToDiff,
@@ -49,6 +50,17 @@ describe('focusGoesToDiff', () => {
 
   it('leaves it where it still shows (the code itself, a field)', () => {
     expect(focusGoesToDiff(held)).toBe(false);
+  });
+});
+
+describe('expandDiffOffered', () => {
+  it('offers the command with a diff in front to expand, or an expanded one to collapse', () => {
+    expect(expandDiffOffered(false, true)).toBe(true);
+    expect(expandDiffOffered(true, false)).toBe(true);
+  });
+
+  it('greys it out with no diff in front (the Branch Explorer, a view with nothing selected)', () => {
+    expect(expandDiffOffered(false, false)).toBe(false);
   });
 });
 
@@ -149,15 +161,17 @@ describe('collapsesWithHost', () => {
 
 describe('selectedFileDiffs', () => {
   it("has a diff while a file is selected (Files, Browse repository: the details show the file's)", () => {
-    expect(selectedFileDiffs(true, true)).toBe('some');
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: 'text' })).toBe('some');
   });
 
-  it('has none once no file is: deleted, or the selection cleared by a refresh', () => {
-    expect(selectedFileDiffs(true, false)).toBe('none');
+  it('has none once no file is: deleted, the selection cleared by a refresh, or a folder', () => {
+    expect(selectedFileDiffs({ read: true, selected: false, itemType: undefined })).toBe('none');
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: 'directory' })).toBe('none');
   });
 
-  it('reads while the tree does', () => {
-    expect(selectedFileDiffs(false, false)).toBe('reading');
+  it('reads while the tree does, or while the file selected is not among its rows yet (Go to file opening its folder)', () => {
+    expect(selectedFileDiffs({ read: false, selected: false, itemType: undefined })).toBe('reading');
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: undefined })).toBe('reading');
   });
 });
 
