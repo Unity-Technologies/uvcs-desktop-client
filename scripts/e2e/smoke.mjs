@@ -138,6 +138,12 @@ try {
     await main.getByLabel('3D view of the model').waitFor();
     await main.getByRole('region', { name: 'What changed' }).waitFor();
   });
+  await step('The .meta of a binary file', async () => {
+    await main.getByText('Assets/hurt.wav', { exact: true }).first().click();
+    await main.getByText('Binary file', { exact: true }).waitFor();
+    await main.getByRole('button', { name: '.meta', exact: true }).click();
+    await main.getByText('loadInBackground: 1').first().waitFor();
+  });
   await step('A diff in a new window', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();
