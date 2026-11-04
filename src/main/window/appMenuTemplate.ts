@@ -83,6 +83,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('Command &Log', 'app.commandLog', 'CmdOrCtrl+Shift+L'),
         commandItem('Toggle &Sidebar', 'app.sidebar', 'CmdOrCtrl+\\'),
         commandItem('Toggle &Details', 'view.details', 'CmdOrCtrl+I'),
+        // The diff given the whole window, in the app: never the OS's full screen below, which it stacks with.
+        commandItem('&Expand Diff', 'view.expandDiff', 'CmdOrCtrl+Shift+E'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
         zoomItem('&Actual Size', 'reset', 'CmdOrCtrl+0'),
