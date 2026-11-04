@@ -8,6 +8,8 @@ interface CollapsedFoldersStore {
   byScope: ReadonlyMap<string, ReadonlySet<string>>;
   toggle: (scope: string, key: string) => void;
   open: (scope: string, keys: readonly string[]) => void;
+  /** Closes exactly `keys` in the list, opening every other: closing everything, or opening everything (none). */
+  closeOnly: (scope: string, keys: readonly string[]) => void;
 }
 
 const useCollapsedFoldersStore = create<CollapsedFoldersStore>()((set) => ({
@@ -19,6 +21,7 @@ const useCollapsedFoldersStore = create<CollapsedFoldersStore>()((set) => ({
       const opened = withoutKeys(closed, keys);
       return opened === closed ? {} : { byScope: new Map(byScope).set(scope, opened) };
     }),
+  closeOnly: (scope, keys) => set(({ byScope }) => ({ byScope: new Map(byScope).set(scope, keys.length === 0 ? NONE : new Set(keys)) })),
 }));
 
 /**
@@ -26,13 +29,21 @@ const useCollapsedFoldersStore = create<CollapsedFoldersStore>()((set) => ({
  * Changes of a workspace, the diff of a changeset, its details pane): going back to it finds its folders as they were
  * left, for the session, and closing one in a changeset's diff leaves every other diff alone.
  */
-export function useCollapsedFolders(scope: string): { collapsed: ReadonlySet<string>; toggleCollapsed: (key: string) => void; openFolders: (keys: readonly string[]) => void } {
+export function useCollapsedFolders(scope: string): {
+  collapsed: ReadonlySet<string>;
+  toggleCollapsed: (key: string) => void;
+  openFolders: (keys: readonly string[]) => void;
+  /** Closes exactly these groups and folders: every one of the list's to close all, none to open all. */
+  closeOnly: (keys: readonly string[]) => void;
+} {
   const collapsed = useCollapsedFoldersStore((state) => state.byScope.get(scope) ?? NONE);
   const toggle = useCollapsedFoldersStore((state) => state.toggle);
   const open = useCollapsedFoldersStore((state) => state.open);
+  const close = useCollapsedFoldersStore((state) => state.closeOnly);
   const toggleCollapsed = useCallback((key: string) => toggle(scope, key), [toggle, scope]);
   const openFolders = useCallback((keys: readonly string[]) => open(scope, keys), [open, scope]);
-  return { collapsed, toggleCollapsed, openFolders };
+  const closeOnly = useCallback((keys: readonly string[]) => close(scope, keys), [close, scope]);
+  return { collapsed, toggleCollapsed, openFolders, closeOnly };
 }
 
 /** `keys` with `key` added, or taken out when it was there. */
