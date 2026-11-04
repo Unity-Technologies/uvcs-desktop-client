@@ -19,6 +19,9 @@ interface ChangeMapProps {
  * The change map: a lane beside the diff's vertical scrollbar marking where its changes are, colored by what each does.
  * A click on a mark goes to its change, through the arrows' navigation ("3 of 12", the change lit); a click between
  * marks scrolls there. The keys and the arrows already reach every change, so it's for the pointer only.
+ *
+ * It's inside the diff's scrolling element, first, standing still at its top (`ChangeMap.module.css`), so the wheel
+ * over it scrolls the diff as anywhere else.
  */
 export function ChangeMap({ view, count, current, onGoTo, containerRef }: ChangeMapProps) {
   const onClick = (event: MouseEvent<HTMLDivElement>): void => {
@@ -28,7 +31,12 @@ export function ChangeMap({ view, count, current, onGoTo, containerRef }: Change
     else containerRef.current?.scrollTo({ top: click.scrollTop });
   };
   return (
-    <div className={styles.map} style={{ right: view.scrollbarWidth, height: view.viewHeight }} aria-hidden onClick={onClick}>
+    <div
+      className={styles.map}
+      style={{ height: view.viewHeight, marginBottom: -view.viewHeight }}
+      aria-hidden
+      onClick={onClick}
+    >
       {view.marks.map((mark) => (
         <div
           key={mark.first}

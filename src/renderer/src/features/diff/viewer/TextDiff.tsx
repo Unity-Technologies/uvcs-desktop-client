@@ -314,6 +314,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onFocus={pointerFocus.onFocus}
           onBlur={pointerFocus.onBlur}
         >
+          {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} current={changes.current} onGoTo={changes.goTo} containerRef={container} />}
           <EditProvider createEditor={createEditor}>
             {wholeFile ? (
               <VirtualizerContext.Provider value={virtualizer}>
@@ -346,7 +347,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {movedCode}
         </div>
       </ActionContextMenu>
-      {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} current={changes.current} onGoTo={changes.goTo} containerRef={container} />}
     </div>
   );
 }

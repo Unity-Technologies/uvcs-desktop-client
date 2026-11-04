@@ -1,10 +1,16 @@
-/* The lane just left of the diff's vertical scrollbar, the height of its track: the diff leaves room for it
-   (`TextDiff.module.css`), so no code goes under it. Not under the scrollbar itself, whose track pages on a click. */
+/* The lane just left of the diff's vertical scrollbar, the height of its track (and of the view). It's the first thing
+   in the diff's scrolling element and stays at its top while it scrolls, as `PaneScrollbars`' bars stay at its bottom,
+   taking no room of its own (its height is taken back below it: `marginBottom`); it stands in the room the diff leaves
+   for it at its right (`TextDiff.module.css`), so no code goes under it. Not under the scrollbar itself, whose track
+   pages on a click. Under the keyboard's focus ring (`TextDiff.module.css`, `.frame::after`, after it at the same
+   level). */
 .map {
-  position: absolute;
+  position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 1;
   width: var(--change-map-size);
+  margin-right: calc(-1 * var(--change-map-size));
+  margin-left: auto;
   background: var(--bg-surface);
   cursor: pointer;
 }

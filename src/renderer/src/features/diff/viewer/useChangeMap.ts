@@ -12,8 +12,6 @@ export interface ChangeMapView {
   contentHeight: number;
   /** The view's height, and the strip's: it runs beside the scrollbar's whole track. */
   viewHeight: number;
-  /** How wide the view's vertical scrollbar is: the strip stands just left of it. */
-  scrollbarWidth: number;
 }
 
 interface ChangeMapOptions {
@@ -66,8 +64,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       const { contentHeight, viewHeight } = from;
       if (!showsChangeMap({ changes: regions.length, bothSides, contentHeight, viewHeight })) return setView(null);
       const marks = changeMarks(regions, { boxOf, lineCounts, contentHeight, stripHeight: viewHeight });
-      const scrollbarWidth = container.offsetWidth - container.clientWidth - 2 * container.clientLeft;
-      const next = { marks, contentHeight, viewHeight, scrollbarWidth };
+      const next = { marks, contentHeight, viewHeight };
       setView((current) => (current && sameView(current, next) ? current : next));
     };
     const schedule = (): void => {
@@ -89,7 +86,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
 }
 
 function sameView(a: ChangeMapView, b: ChangeMapView): boolean {
-  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && a.scrollbarWidth === b.scrollbarWidth && sameMarks(a.marks, b.marks);
+  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && sameMarks(a.marks, b.marks);
 }
 
 function sameMarks(a: readonly ChangeMark[], b: readonly ChangeMark[]): boolean {
