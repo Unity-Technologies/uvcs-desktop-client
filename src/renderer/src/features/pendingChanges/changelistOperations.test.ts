@@ -88,6 +88,21 @@ describe('changelist operations', () => {
     ]);
   });
 
+  // A changelist header's "New changelist…" clears the filters (`beforeMove`), but only once there is a changelist to move to.
+  it('runs what goes before the move once a name is given, before creating the changelist, and not when cancelled', async () => {
+    const steps: string[] = [];
+    fakeApi.answer('pendingChanges.createChangelist', () => void steps.push('create'));
+    fakeApi.answer('pendingChanges.moveToChangelist', () => undefined);
+
+    answerPrompts(undefined);
+    await moveToNewChangelist(ws, [change('c.ts', ['added'])], () => steps.push('beforeMove'));
+    expect(steps).toEqual([]);
+
+    answerPrompts('Refactor');
+    await moveToNewChangelist(ws, [change('c.ts', ['added'])], () => steps.push('beforeMove'));
+    expect(steps).toEqual(['beforeMove', 'create']);
+  });
+
   it('moves nothing into a changelist that could not be created', async () => {
     answerPrompts('Refactor');
     fakeApi.answer('pendingChanges.createChangelist', () => {

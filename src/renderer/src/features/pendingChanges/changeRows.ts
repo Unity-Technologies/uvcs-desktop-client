@@ -4,6 +4,7 @@ import type { StatusTone } from '../../components/StatusBadge';
 import { statusGroupsOf } from '../../components/statusGroups';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from '../../lib/groupedPathTree';
 import { layoutPathItems, type ItemOrder } from '../../lib/pathTree';
+import { changelistNameOf } from './changeCategories';
 import { changeTone } from './changeTone';
 
 /**
@@ -89,13 +90,19 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'file' ? [row.item] : row.items;
 }
 
-/**
- * What the menu of a right-clicked row is for: a user changelist, the changes in a folder, a status group or the
- * default changelist, or the selected files (null).
- */
-export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
-  if (!row || row.type === 'file') return null;
-  return row.type === 'group' && row.group.kind === 'changelist' && row.group.changelist ? row.group.changelist : row.items;
+/** What the menu of a right-clicked row is for. */
+export type ChangeMenuTarget =
+  /** The files selected: a file was right-clicked, or the menu key pressed on one. */
+  | { kind: 'selection' }
+  /** A changelist's header, the default changelist's (null) too: the changelist's own menu (`changelistMenu`). */
+  | { kind: 'changelist'; changelist: Changelist | null }
+  /** A folder or a status group: the menu of the changes in it, not of the files selected elsewhere. */
+  | { kind: 'changes'; changes: PendingChange[] };
+
+export function menuTargetOf(row: ChangeRow | null): ChangeMenuTarget {
+  if (!row || row.type === 'file') return { kind: 'selection' };
+  if (row.type === 'group' && row.group.kind === 'changelist') return { kind: 'changelist', changelist: row.group.changelist ?? null };
+  return { kind: 'changes', changes: row.items };
 }
 
 /** The user changelist a header is, or undefined: the default changelist, a status group. */
@@ -108,13 +115,13 @@ function groupByChangelist(changes: PendingChange[], changelists: Changelist[]):
   const defaultGroup: Group = {
     key: 'changelist:',
     label: DEFAULT_CHANGELIST_LABEL,
-    changes: changes.filter((change) => !change.changelist),
+    changes: changes.filter((change) => changelistNameOf(change) === null),
   };
   const userGroups = changelists.map((changelist) => ({
     key: `changelist:${changelist.name}`,
     label: changelist.name,
     changelist,
-    changes: changes.filter((change) => change.changelist === changelist.name),
+    changes: changes.filter((change) => changelistNameOf(change) === changelist.name),
   }));
   // Empty user changelists stay visible so they can be used as drop targets for "Move to changelist".
   return [defaultGroup, ...userGroups].filter((group) => group.changes.length > 0 || group.changelist);

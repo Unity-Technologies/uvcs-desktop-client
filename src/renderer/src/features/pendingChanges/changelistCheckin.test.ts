@@ -17,7 +17,7 @@ vi.mock('./checkinOperations', () => ({
 
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { askedDialogs } from '../../testing/fakeDialogs';
-import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
+import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
 import { indexPending } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { checkinFactsOf, type CheckinSelection, checkinSelectionOf, currentChoice } from './checkinSelection';
@@ -57,8 +57,9 @@ const selection = (changes = allChanges, matchingFilter = changes) =>
 
 const filterCleared = vi.fn();
 
-function prepare(changelist: Changelist, changelistsNow = changelists): void {
-  const changes = changesByChangelist(allChanges).get(changelist.name) ?? [];
+/** Readies `changelist`, null for the default one, as its menu's "Check in this changelist" does. */
+function prepare(changelist: Changelist | null, changelistsNow = changelists): void {
+  const changes = changesByChangelist(allChanges).get(changelist?.name ?? null) ?? [];
   prepareChangelistCheckin({ workspacePath: ws, changelist, changes, index: indexPending(allChanges), changelists: changelistsNow, clearFilter: filterCleared });
 }
 
@@ -80,12 +81,13 @@ beforeEach(() => {
 });
 
 describe('changesByChangelist', () => {
-  it("lists each user changelist's changes by its name, and none of the default changelist's", () => {
+  it("lists each user changelist's changes by its name, and the default changelist's under null", () => {
     const byName = changesByChangelist(allChanges);
 
     expect(byName.get('ui')).toEqual(uiChanges);
     expect(byName.get('art')).toEqual([artChange]);
-    expect([...byName.keys()].sort()).toEqual(['art', 'plain', 'ui']);
+    expect(byName.get(null)).toEqual(defaultChanges);
+    expect(byName.size).toBe(4);
   });
 });
 
@@ -288,5 +290,107 @@ describe('checking in or shelving a changelist from the panel', () => {
       { workspacePath: ws, changes: uiChanges.slice(0, 4), paths: uiChanges.slice(0, 4).map((candidate) => candidate.path), comment: 'Polish the menus\n\nSpacing and icons.', keep: true },
     ]);
     expect(selection().included).toEqual(allChanges.filter((candidate) => candidate.path !== 'build/out.log'));
+  });
+});
+
+describe('checking in or shelving the default changelist', () => {
+  it('checks exactly its changes, those of every user changelist left out', () => {
+    prepare(null);
+
+    expect(checkinDraftOf(ws).prepared?.name).toBeNull();
+    expect(selection().included).toEqual(defaultChanges.slice(0, 2));
+  });
+
+  it('is named under the panel\'s button as the list names it', () => {
+    prepare(null);
+    expect(preparedChangelistNote(checkinDraftOf(ws).prepared)).toBe('Default changelist');
+
+    prepare(ui);
+    expect(preparedChangelistNote(checkinDraftOf(ws).prepared)).toBe('Changelist ui');
+    expect(preparedChangelistNote(null)).toBeNull();
+  });
+
+  it('has no description: it clears one a user changelist left, and keeps the comment the user wrote', () => {
+    prepare(ui);
+    prepare(null);
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: '', description: '' });
+
+    useCheckinDraftStore.getState().setMessage(ws, { summary: 'My own words', description: '' });
+    prepare(null);
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: 'My own words' });
+  });
+
+  it('checks in its changes alone, then checks the others again', async () => {
+    useCheckinDraftStore.getState().setMessage(ws, { summary: 'Readme', description: '' });
+    prepare(null);
+
+    await checkinFromPanel(panelCheckin(selection()));
+
+    expect(steps.checkins).toEqual([expect.objectContaining({ changes: defaultChanges.slice(0, 2), comment: 'Readme' })]);
+    expect(checkinDraftOf(ws).prepared).toBeNull();
+  });
+
+  it('shelves what a shelve can take of its changes: not the private file', async () => {
+    prepare(null);
+
+    await shelveFromPanel(panelShelve(selection()), true);
+
+    expect(steps.shelves).toEqual([expect.objectContaining({ changes: [defaultChanges[0]] })]);
+  });
+
+  // Every new edit lands in the default changelist: were it read by membership, as a user changelist is, it would never end.
+  it('holds while one of its readied changes is pending, a change made meanwhile left unchecked', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([defaultChanges[0]!, edited, ...uiChanges]).included).toEqual([defaultChanges[0]]);
+  });
+
+  it('ends once none of its readied changes is pending, though new ones are in it: they are checked again', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
+  });
+
+  // An ignored, cloaked or hidden change can't go in, and stays pending: readied, it would keep the changelist going.
+  it('ends though a change it can never check in is still pending in it', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    const ignored = defaultChanges[2]!;
+    expect(selection([ignored, edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
+  });
+
+  // The user means to check in a private file left checked: it keeps the changelist going until it is added or deleted.
+  it('holds while a private file it readied is pending', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([defaultChanges[1]!, edited, ...uiChanges]).included).toEqual([defaultChanges[1]]);
+  });
+
+  // A `Builds/` folder unchecked on purpose stays out: readying the default changelist isn't asking for it.
+  it('leaves out the files the user had unchecked', () => {
+    useCheckinDraftStore.getState().setIncluded(ws, ['notes.txt'], false);
+
+    prepare(null);
+
+    expect(selection().included).toEqual([defaultChanges[0]]);
+  });
+
+  it('holds while the user unchecks every file: its readied changes are still pending', () => {
+    prepare(null);
+
+    useCheckinDraftStore.getState().setIncluded(ws, allChanges.map((candidate) => candidate.path), false);
+
+    expect(selection().included).toEqual([]);
+  });
+
+  it('ends once its readied changes moved to a user changelist', () => {
+    prepare(null);
+
+    const moved = { ...defaultChanges[0]!, kinds: ['checkedOut' as const, 'changed' as const], changelist: 'ui' };
+    expect(selection([moved, ...uiChanges]).included).toEqual([moved, ...uiChanges]);
   });
 });

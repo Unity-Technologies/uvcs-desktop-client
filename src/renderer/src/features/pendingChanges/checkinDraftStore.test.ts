@@ -15,7 +15,7 @@ describe('checkinDraftStore', () => {
   it('goes back to the files the user left out once a prepared changelist is done with', () => {
     const store = useCheckinDraftStore.getState();
     store.setIncluded('/prepared', ['a.txt'], false);
-    store.prepareChangelist('/prepared', { name: 'ui', paths: new Set(['b.txt']) });
+    store.prepareChangelist('/prepared', { name: 'ui', paths: new Set(['b.txt']), readied: new Set(['b.txt']) });
     store.setIncluded('/prepared', ['c.txt'], true);
     expect([...useCheckinDraftStore.getState().drafts['/prepared']!.prepared!.paths].sort()).toEqual(['b.txt', 'c.txt']);
 
