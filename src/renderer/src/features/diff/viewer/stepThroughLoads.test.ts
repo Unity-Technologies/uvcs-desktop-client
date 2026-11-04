@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel, type ChangePosition } from './changeNavigation';
 import { headerArrows } from './diffFrameHost';
-import { fileSteps, pendingArrival } from './fileSteps';
+import { fileSteps, pendingArrival, settlingOnOf } from './fileSteps';
 import { applyPress, pressGoal, takesKept, type PressEffect, type PressSpot } from './pressRouting';
 import { drainKept } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
@@ -41,6 +41,7 @@ class CachedDiffs {
   /** Unsaved edits are kept: the list asks before leaving the file, and the user cancels. */
   private refusing = false;
   private readonly pending = pendingArrival();
+  private readonly items = new Map<string, { path: string }>();
   private readonly queue = this.pending.kept;
 
   constructor(
@@ -202,6 +203,14 @@ class CachedDiffs {
     return { spot, position: NO_STEPS, moveTo: () => undefined };
   }
 
+  /** The list's item for a path, the same object each time: what Changes compares, the change selected and the one diffed. */
+  private item(path: string): { path: string } | undefined {
+    if (path === '') return undefined;
+    let item = this.items.get(path);
+    if (!item) this.items.set(path, (item = { path }));
+    return item;
+  }
+
   private changes(path: string): number {
     const changes = this.files[path];
     return typeof changes === 'number' ? changes : 0;
@@ -225,7 +234,7 @@ class CachedDiffs {
         },
         pathOf: (key) => key,
         // Changes: the list on another file than its diff shows, until the selection settles (`diffChange`).
-        settlingOn: this.settles && this.rendered !== this.requested ? this.rendered : null,
+        settlingOn: settlingOnOf(this.item(this.rendered), this.item(this.settles ? this.requested : this.rendered)),
       }, this.pending);
   }
 }

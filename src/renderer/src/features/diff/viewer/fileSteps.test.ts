@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { adjacentKey, fileSteps, pendingArrival } from './fileSteps';
+import { adjacentKey, fileSteps, pendingArrival, settlingOnOf } from './fileSteps';
+
+describe('settlingOnOf', () => {
+  const a = { path: 'src/a.ts' };
+  const b = { path: 'src/b.ts' };
+
+  it("names the file selected while the view beside the list still diffs another (Changes' settle)", () => {
+    expect(settlingOnOf(b, a)).toBe('src/b.ts');
+    expect(settlingOnOf(b, undefined)).toBe('src/b.ts');
+  });
+
+  it('names none once the view diffs the file selected, the same item', () => {
+    expect(settlingOnOf(b, b)).toBeNull();
+  });
+
+  it('names none with no file selected: a group, a folder the list draws for a path', () => {
+    expect(settlingOnOf(undefined, a)).toBeNull();
+  });
+});
 
 describe('adjacentKey', () => {
   const keys = ['a', 'b', 'c'];
