@@ -1,5 +1,5 @@
 import { ChevronDown, GitBranch, GitMerge } from 'lucide-react';
-import { navigation } from '../../app/navigation/navigationStore';
+import { navigation, shownMergeId } from '../../app/navigation/navigationStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { branchWorkedOn } from '../../components/workingObject';
 import { Button } from '../../ui/Button';
@@ -26,7 +26,8 @@ export function ResolveInWorkspaceMenu({ workspacePath, sourceSpec, destination,
   const taskBranch = task.branch.name;
 
   const resolve = (path: ConflictPath): void => {
-    navigation.goBack();
+    const mergeId = shownMergeId();
+    if (mergeId !== undefined) navigation.closeMerge(mergeId);
     if (path === 'intoTask') void mergeDestinationIntoTask(workspacePath, currentBranch, taskBranch, destination);
     else void resolveOnDestination(workspacePath, currentBranch, sourceSpec, destination);
   };

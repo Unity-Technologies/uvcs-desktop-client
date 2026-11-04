@@ -1,15 +1,18 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { MergeRequest } from '@shared/domain/merge';
-import { navigation } from '../../app/navigation/navigationStore';
+import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import { queryClient } from '../../app/queryClient';
 import { showQuery } from '../../testing/queryProbes';
 import { MERGE_PLAN_QUERY, mergePlanKey } from './useMergePlan';
 import { useFinishedTasksStore } from '../mergeTask/finishedTask';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { completeMerge } from './mergeOperations';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
+import { closeMergeAsked, completeMerge } from './mergeOperations';
 
 const ws = '/ws';
 const resolutions = { directoryConflicts: [], files: {} };
@@ -86,6 +89,7 @@ describe('completing a merge', () => {
 
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs()).toEqual({ view: 'changes', pages: [] });
+    expect(useNavigation.getState().merge).toBeNull();
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task into main (cs:42)', action: 'Show in Branch Explorer' }]);
 
     pressToastAction('Merged task into main (cs:42)');
@@ -101,6 +105,33 @@ describe('completing a merge', () => {
     await completeMerge(ws, { kind: 'merge', sourceSpec: 'cs:12', destinationBranch: long }, resolutions);
 
     expect(shownToasts().map(({ title }) => title)).toEqual(['Merged subtask into child_1 (cs:15)', 'Merged a/fix into b/fix (cs:15)', 'Merged changeset 12 into child_1 (cs:15)']);
+  });
+
+  it("closes the merge it ran, never one the user started meanwhile", async () => {
+    let finish = (_result: object): void => {};
+    fakeApi.answer('merge.run', () => new Promise((resolve) => (finish = resolve)));
+    navigation.openPage({ kind: 'merge', request: intoServerBranch });
+    const running = completeMerge(ws, intoServerBranch, resolutions);
+    const other = { kind: 'merge' as const, request: { kind: 'merge' as const, sourceSpec: 'br:/main/other' } };
+    await useNavigation.getState().openPage(other);
+    finish({ changesetId: 42 });
+    await running;
+
+    expect(whereTheWindowIs().pages).toEqual([other]);
+    expect(useNavigation.getState().merge?.page).toBe(other);
+  });
+
+  it('closes the merge even when the user went to another view while it ran', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    navigation.openPage({ kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } });
+    navigation.openPage({ kind: 'merge', request: intoServerBranch });
+    const running = completeMerge(ws, intoServerBranch, resolutions);
+    navigation.goToView('branches');
+    navigation.openPage({ kind: 'history', path: 'src/a.cs' });
+    await running;
+
+    expect(whereTheWindowIs()).toEqual({ view: 'branches', pages: [{ kind: 'history', path: 'src/a.cs' }] });
+    expect(useNavigation.getState().merge).toBeNull();
   });
 
   it('opens the merge that finishes it when the destination moved meanwhile, instead of the success', async () => {
@@ -227,5 +258,26 @@ describe('completing a merge', () => {
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs().pages).toHaveLength(1);
     expect(shownToasts().map(({ kind, title }) => ({ kind, title }))).toEqual([{ kind: 'error', title: 'Merging failed' }]);
+  });
+});
+
+describe('closeMergeAsked', () => {
+  const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+
+  it('closes the merge on screen once the user confirms', async () => {
+    navigation.openPage({ kind: 'merge', request });
+    await closeMergeAsked();
+
+    expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Close this merge?' }]);
+    expect(whereTheWindowIs().pages).toEqual([]);
+    expect(useNavigation.getState().merge).toBeNull();
+  });
+
+  it('keeps it when the user cancels', async () => {
+    navigation.openPage({ kind: 'merge', request });
+    answerConfirms(false);
+    await closeMergeAsked();
+
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request }]);
   });
 });

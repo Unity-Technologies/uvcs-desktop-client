@@ -1,7 +1,7 @@
 import { CheckCircle2, FileDiff, GitMerge } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MergePlan } from '@shared/domain/merge';
-import { navigation } from '../../app/navigation/navigationStore';
+import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
@@ -9,6 +9,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
 import { MergeSession } from './MergeSession';
+import { mergeSettled } from './mergeSettled';
 import { useMergePlan } from './useMergePlan';
 
 /** Previews a merge, walks the user through its conflicts and runs it. */
@@ -17,6 +18,12 @@ export function MergePage({ page }: PageProps<'merge'>) {
   const { data: plan, isLoading, error, refetch, isFetching } = useMergePlan(workspacePath, page.request);
   // Once merged into the workspace, the plan no longer holds (the workspace has pending changes): the page says what happened instead.
   const [completion, setCompletion] = useState<MergeCompletion>();
+  // While the merge is in progress, leaving the page only sets it aside; once settled, leaving it closes it.
+  const mergeId = useNavigation((state) => (state.merge?.page === page ? state.merge.id : undefined));
+  const settled = mergeSettled(plan?.status, completion !== undefined);
+  useEffect(() => {
+    if (settled && mergeId !== undefined) navigation.settleMerge(mergeId);
+  }, [settled, mergeId]);
 
   if (completion) return <MergeCompleted request={page.request} completion={completion} />;
   if (isLoading) return <MergeCalculating request={page.request} />;
