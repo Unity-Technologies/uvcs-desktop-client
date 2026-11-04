@@ -147,17 +147,22 @@ describe('layoutPathTree', () => {
 
   it('nests the rows of generated trees as their paths say, sharing a row only among folders holding just the next', () => {
     const random = seededRandom(17);
+    // What breaks the rules, gathered and compared once: thousands of rows asked one by one take too long.
+    const broken: string[] = [];
     for (let trial = 0; trial < 200; trial++) {
       const sorted = sortedItems(randomPaths(random, 1 + Math.floor(random() * 40)));
       const rows = layoutPathTree({ sorted, keyOf, folderScope: 'all' });
+      // The folder rows holding the row at hand, outermost first: each holds the rows until its run ends.
+      const open: TreeFolderRow<Item>[] = [];
       rows.forEach((row, at) => {
         const first = row.type === 'folder' ? row.held.start : sorted.indexOf(row.item);
-        // The folder holding a row: the nearest folder row above it whose run holds the row's first item.
-        const parent = rows.slice(0, at).findLast((above): above is TreeFolderRow<Item> => above.type === 'folder' && above.held.start <= first && first < above.held.end);
-        expect(row.depth).toBe(parent ? parent.depth + 1 : 0);
+        while (open.length > 0 && open.at(-1)!.held.end <= first) open.pop();
+        const parent = open.at(-1);
+        if (row.depth !== (parent ? parent.depth + 1 : 0)) broken.push(`depth of row ${at}: ${row.key}`);
         if (row.type !== 'folder') return;
-        expect(row.name).toBe(parent ? row.path.slice(parent.path.length + 1) : row.path);
-        if (parent) expect(row.path.startsWith(`${parent.path}/`)).toBe(true);
+        open.push(row);
+        if (row.name !== (parent ? row.path.slice(parent.path.length + 1) : row.path)) broken.push(`name of ${row.key}`);
+        if (parent && !row.path.startsWith(`${parent.path}/`)) broken.push(`${row.key} outside ${parent.key}`);
         if (row.item) return;
         // A folder that isn't an item shares its row with the next folder when that folder is all it holds, unless
         // that folder is listed twice: the first shows as a file's row, the second as the folder's.
@@ -166,9 +171,10 @@ describe('layoutPathTree', () => {
         const [only] = children;
         const child = `${row.path}/${only}`;
         const holdsJustAFolder = children.size === 1 && held.some((item) => item.path.startsWith(`${child}/`)) && held.filter((item) => item.path === child).length < 2;
-        expect(holdsJustAFolder ? held.map(keyOf) : false).toBe(false);
+        if (holdsJustAFolder) broken.push(`${row.key} holds only ${child}`);
       });
     }
+    expect(broken).toEqual([]);
   });
 
   it('shows a file listed twice as two rows, not as a folder holding itself', () => {
