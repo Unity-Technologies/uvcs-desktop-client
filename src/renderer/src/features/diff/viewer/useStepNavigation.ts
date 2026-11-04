@@ -173,11 +173,6 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   };
 }
 
-/** Whether the navigation has somewhere to go: steps, or a file beside this one (a file with none still steps on). */
-export function goesSomewhere(navigation: StepNavigation): boolean {
-  return navigation.count > 0 || navigation.goesTo(1) !== null || navigation.goesTo(-1) !== null;
-}
-
 /**
  * Marks what holds a view and the controls that pick it (a conflicting file's panel, with its views' segments): keys
  * pressed anywhere in it move through the view, as from the view itself.

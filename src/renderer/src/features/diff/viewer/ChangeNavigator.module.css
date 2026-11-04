@@ -1,10 +1,19 @@
-/* ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. At least as
-   wide as the usual labels ("1 change", "No changes", "12 of 34"), centered, so ▲ and what's before it (the `.meta`
-   toggle) stay put too from one file to the next. */
+/* Last in the header, the arrows side by side at its right edge: nothing after them, so they never move. */
+.navigator {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Where it stands, before the arrows: right-aligned, so a longer label ("12 changes", then "3 of 12") grows leftward,
+   and at least as wide as the usual ones, so what's before it (the Expand button) stays put too; tabular figures keep
+   "3 of 12" to "4 of 12" still. Empty where the arrows only go from file to file. */
 .position {
   flex: none;
   min-width: 10ch;
-  text-align: center;
+  margin-right: var(--space-1);
+  text-align: right;
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
