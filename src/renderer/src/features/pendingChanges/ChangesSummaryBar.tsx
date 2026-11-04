@@ -17,6 +17,8 @@ interface ChangesSummaryBarProps {
   changes: PendingChange[];
   /** How many changes were read; undefined until they are, when the count is a placeholder. */
   totalCount: number | undefined;
+  /** How many Unity `.meta` files share their asset's row, left out of `totalCount` (`pairPendingMetas`). */
+  metaCount: number;
   /** The checks of `changes` (`shownChecksOf`). */
   checks: ShownChecks;
   onSetIncluded: (changes: PendingChange[], included: boolean) => void;
@@ -27,11 +29,11 @@ interface ChangesSummaryBarProps {
 }
 
 /** Above the list: include or exclude every shown change, how many there are, and the ways to undo them. */
-export function ChangesSummaryBar({ changes, totalCount, checks, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
+export function ChangesSummaryBar({ changes, totalCount, metaCount, checks, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
   const { candidates } = checks;
   const undoable = useMemo(() => changes.filter(isControlled), [changes]);
   const checkState = shownCheckState(checks);
-  const countLabel = changesCountLabel(totalCount, changes.length);
+  const countLabel = changesCountLabel(totalCount, changes.length, metaCount);
   const filtered = countLabel !== null && changes.length !== totalCount;
   // Nothing listed, or not read yet: no way to undo has anything to undo.
   const nothingListed = !totalCount;

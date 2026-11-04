@@ -266,6 +266,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={shownRows}
               totalCount={listedCount === undefined ? undefined : listedCount - pairs.pairedCount}
+              metaCount={pairs.pairedCount}
               checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, withMetas(selected, pairs.metaOf))}
