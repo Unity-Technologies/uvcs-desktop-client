@@ -104,13 +104,13 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   picked"), sampled as the curve is and never above it, nor thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at their own
   times and in its column (`timelineHistory`, `changesetsInColumns`).
 - **The frame** is a rounded box (`FRAME_TOP`, `FRAME_HEIGHT`) around the curve: an accent outline over the faintest
-  accent wash (`--accent-wash`), a soft halo (`--accent-soft`) that grows to its full 3 px while the frame is hovered
-  or dragged, and nothing dimmed outside it. Dragging it pans (`viewportPannedBy`), dragging an edge zooms the canvas
+  accent wash (`--accent-wash`), a 3 px halo (`--accent-soft`) at half strength that turns full while the frame is
+  hovered or dragged, and nothing dimmed outside it. Dragging it pans (`viewportPannedBy`), dragging an edge zooms the canvas
   with the other edge fixed (`viewportWithEdgeAt`, within `MIN_ZOOM` and `MAX_ZOOM`). Under `FRAME_LINE_BELOW` px it
   is a line with a handle on top; from `FRAME_EDGES_FROM` px its edges have grips, shown while it is active
   (`frameShape`, `timelineDrawing`'s `frameActive`).
-- **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`, at 3:1 on the strip), a notch bigger
-  than the mockup's so they read in the app's window (`LABEL_TICK_WIDTH`), those within `LABEL_MERGE_DISTANCE` of a
+- **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`, at 3:1 on the
+  strip), 2 px wide and 6 px tall (8 px merged), since 1.5 × 5 px read too thin (`LABEL_TICK_WIDTH`), those within `LABEL_MERGE_DISTANCE` of a
   tick's first label one slightly taller tick (`labelTicks`); the house, the graph's own home badge (`drawHomeBadge`,
   with a shadow, `--badge-shadow`), on the curve at the workspace's changeset, or at its pending changes past every
   changeset with its ring dashed, as the graph moves its badge there (into the curve where it is tallest, under the
