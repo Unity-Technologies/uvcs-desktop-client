@@ -24,11 +24,6 @@ export function pressStep(position: ChangePosition, direction: 1 | -1, files: Fi
   return move?.index ?? null;
 }
 
-/** The step to move to when one is picked by its number (`StepNavigation.goTo`): only one the view has. */
-export function stepAt(index: number, count: number): number | null {
-  return Number.isInteger(index) && index >= 0 && index < count ? index : null;
-}
-
 /**
  * The position once the steps changed (typed into a diff, a conflict resolved): the step moved to stays while there
  * are as many; `above` is how many start above where the view stands now (`StepView.aboveAfterChange`).
