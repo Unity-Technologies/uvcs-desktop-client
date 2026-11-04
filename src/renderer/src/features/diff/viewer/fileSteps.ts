@@ -45,10 +45,20 @@ export interface FileSteps {
 
 export const FileStepsContext = createContext<FileSteps | null>(null);
 
-/** The key after (1) or before (-1) `current` among `keys`; none past the ends or when `current` isn't there. */
-export function adjacentKey(keys: readonly string[], current: string | null, direction: 1 | -1): string | null {
-  const index = current === null ? -1 : keys.indexOf(current);
-  return index === -1 ? null : (keys[index + direction] ?? null);
+/**
+ * The key after (1) or before (-1) `current` among `keys`; none past the ends. A `current` that isn't among them (a
+ * folder row whose `.meta` diff shows) goes on to the nearest of them that way in `rowOrder`, every row's key in list
+ * order, when given; none otherwise.
+ */
+export function adjacentKey(keys: readonly string[], current: string | null, direction: 1 | -1, rowOrder?: readonly string[]): string | null {
+  if (current === null) return null;
+  const index = keys.indexOf(current);
+  if (index !== -1) return keys[index + direction] ?? null;
+  const row = rowOrder ? rowOrder.indexOf(current) : -1;
+  if (!rowOrder || row === -1) return null;
+  const steps = new Set(keys);
+  const ahead = direction === 1 ? rowOrder.slice(row + 1) : rowOrder.slice(0, row).reverse();
+  return ahead.find((key) => steps.has(key)) ?? null;
 }
 
 interface FileStepsOptions {
@@ -62,6 +72,11 @@ interface FileStepsOptions {
    */
   select: (key: string, selected: () => void) => void;
   pathOf: (key: string) => string;
+  /**
+   * Every row's key in list order, steps or not (folders, headers): a step from a row that isn't one (a folder whose
+   * `.meta` diff shows) goes on to the nearest file that way (`adjacentKey`).
+   */
+  rowOrder?: readonly string[];
   /**
    * The file the list is on (its path) while the view beside it still shows another: Changes' diff follows the
    * selection once it settles (`useSettledValue`), so a click on a file leaves the previous one's diff on screen a
@@ -111,13 +126,13 @@ export interface PendingArrival {
 export function fileSteps(
   keys: readonly string[],
   current: string | null,
-  list: Pick<FileStepsOptions, 'select' | 'pathOf' | 'settlingOn'>,
+  list: Pick<FileStepsOptions, 'select' | 'pathOf' | 'settlingOn' | 'rowOrder'>,
   pending: PendingArrivalRef,
 ): FileSteps {
   return {
-    canStep: (direction) => adjacentKey(keys, current, direction) !== null,
+    canStep: (direction) => adjacentKey(keys, current, direction, list.rowOrder) !== null,
     step: (direction) => {
-      const key = adjacentKey(keys, current, direction);
+      const key = adjacentKey(keys, current, direction, list.rowOrder);
       if (key === null) return null;
       const path = list.pathOf(key);
       const from = list.pathOf(current!);
@@ -171,14 +186,14 @@ export function selectNow(selected: () => void, select: () => void): void {
 }
 
 /** Steps through a list's files for the diff beside it. */
-export function useFileSteps({ keys, current, select, pathOf, settlingOn = null, pending }: FileStepsOptions): FileSteps {
+export function useFileSteps({ keys, current, select, pathOf, rowOrder, settlingOn = null, pending }: FileStepsOptions): FileSteps {
   const ownArrival = usePendingArrival();
   const arrival = pending ?? ownArrival;
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
   const steps = useMemo(
-    () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key), settlingOn }, arrival),
-    [keys, current, settlingOn, arrival],
+    () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key), rowOrder, settlingOn }, arrival),
+    [keys, current, rowOrder, settlingOn, arrival],
   );
   // The list moved: what was kept for the files it left goes (a file picked while another loads opens at its top), for
   // every view beside it, those with no diff header too (Incoming's conflicts, an xlink). Only when it moves

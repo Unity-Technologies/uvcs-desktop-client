@@ -166,8 +166,11 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
   const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
+  // Every row in order: a folder whose `.meta` diff shows steps on from its place to the nearest file.
+  const rowOrder = useMemo(() => rows.map((row) => row.key), [rows]);
   const fileSteps = useFileSteps({
     keys: fileKeys,
+    rowOrder,
     // The list on another change than the diff shows, until it settles: presses meanwhile are that change's.
     settlingOn: settlingOnOf(focused, diffChange),
     current: selection.anchor,
