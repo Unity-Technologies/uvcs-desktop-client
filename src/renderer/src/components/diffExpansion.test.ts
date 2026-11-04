@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  askedBy,
   collapsesWithHost,
   escapeBackToList,
   escapeCollapsesDiff,
@@ -11,6 +10,7 @@ import {
   focusGoesToDiffOnCollapse,
   leavesExpandedDiff,
   listedDiffs,
+  restoredFocusMover,
   selectedFileDiffs,
   shortcutWhileExpanded,
   showsDiffOnly,
@@ -76,14 +76,13 @@ describe('focusGoesToDiffOnCollapse', () => {
   });
 });
 
-describe('askedBy', () => {
-  it('reads a click with no pointer presses as the keyboard: Enter or Space on the button', () => {
-    expect(askedBy(0)).toBe('keyboard');
+describe('restoredFocusMover', () => {
+  it('gives the focus that fell to the page back to the expanded diff ringless: the app moved it, not the user', () => {
+    expect(restoredFocusMover(true)).toBe('app');
   });
 
-  it('reads a click as the pointer', () => {
-    expect(askedBy(1)).toBe('pointer');
-    expect(askedBy(2)).toBe('pointer');
+  it('leaves it as ever otherwise, the ring as Chromium decides', () => {
+    expect(restoredFocusMover(false)).toBe('keyboard');
   });
 });
 
