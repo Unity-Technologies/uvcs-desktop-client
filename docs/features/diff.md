@@ -331,8 +331,9 @@ from the top unless it starts in view already (a collapsed diff's first hunk, wh
 a link's lines stays on them. It opens so once, as the diff first shows: changes typed or read later leave the view
 where it is. A version shown alone (an added or deleted file) is one change; a file with none to step through (an
 image, a model, a binary, identical versions) keeps the arrows, which go from file to file ("Previous file", "Next
-file", no label), so stepping through the list never stops there. It steps through the files as the list shows them:
-in a tree, those in a closed folder are skipped. The list itself, its order, layout and groups, are every list of
+file", no label), so stepping through the list never stops there. It steps through the files as the list shows them,
+never on to a folder (private, deleted or moved), which has no diff (`fileRowKeys`, Changes' too); in a tree, those in
+a closed folder are skipped. The list itself, its order, layout and groups, are every list of
 changed files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it shows how many
 changes it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and
