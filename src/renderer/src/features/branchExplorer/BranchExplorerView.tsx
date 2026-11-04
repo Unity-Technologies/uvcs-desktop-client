@@ -26,6 +26,7 @@ import { GraphDetails } from './details/GraphDetails';
 import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
+import type { BranchPositions } from './branchPosition';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
@@ -63,6 +64,12 @@ export function BranchExplorerView() {
   const viewOptions = useGraphViewOptions();
   const rules = useExplorerRules(placeRepository);
   const pins = useBranchPins(placeRepository);
+  const positions: BranchPositions = {
+    pins,
+    setPins: (next) => {
+      if (placeRepository !== undefined) useBranchExplorerPreferences.getState().setPins(placeRepository, next);
+    },
+  };
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
@@ -204,6 +211,7 @@ export function BranchExplorerView() {
       goToChangeset,
       showRelatedTo: (name) => focusOn(name, focusHops),
       revealCreatedBranch,
+      positions,
     });
 
   const select = (target: GraphTarget | null): void => {
@@ -231,6 +239,7 @@ export function BranchExplorerView() {
       zoomBy,
       toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY),
       exitFocus: () => setFocus(null),
+      positions,
     });
 
   const header = (
