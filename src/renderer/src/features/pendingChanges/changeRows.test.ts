@@ -408,7 +408,7 @@ describe('buildChangeRows at scale', () => {
     expect(growth).toBeLessThan(2.5);
   });
 
-  // The view ranks the changes once a read (`useChangeOrder`); each key typed in the filter only picks what is left out
+  // The view ranks the changes once a read (`useRankedOrder`); each key typed in the filter only picks what is left out
   // of the ranks.
   it('lays out a filtered list in a ranked order without comparing two changes', () => {
     const sorted = sortChanges(many(2_000));

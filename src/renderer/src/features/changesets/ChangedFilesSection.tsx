@@ -60,7 +60,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const metaOf = (entry: DiffEntry) => pairs?.metaOf(entry);
   // "Open .meta diff" opens the diff on the meta, which shows it on its asset's row (`pairedFocus`).
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones, { viewOffer: NO_GROUPINGS });
-  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS);
+  const { rows, tree, toggleCollapsed } = useFileTree(visible, entries ?? NO_ENTRIES, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS);
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
   const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.

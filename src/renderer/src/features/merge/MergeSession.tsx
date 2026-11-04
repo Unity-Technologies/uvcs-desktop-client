@@ -85,7 +85,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
   const hidesAll = hidesEveryRow(pairs.shown.length, filter.visible.length);
-  const { rows, tree, toggleCollapsed, rowKeyOf, folding } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), MERGE_ITEM_FACTS, selectedKey);
+  const { rows, tree, toggleCollapsed, rowKeyOf, folding } = useGroupedFileTree(content, pairs.shown, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), MERGE_ITEM_FACTS, selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);

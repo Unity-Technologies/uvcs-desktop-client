@@ -40,6 +40,6 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),
     [scope.kind, filter.visible, collides],
   );
-  const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), INCOMING_FILE_FACTS, selectedKey);
+  const tree = useGroupedFileTree(content, files ?? NO_FILES, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), INCOMING_FILE_FACTS, selectedKey);
   return { files, metaOf, filter, ...tree };
 }

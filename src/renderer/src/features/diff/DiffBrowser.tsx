@@ -92,7 +92,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     review.showAll();
   };
   const content = useMemo(() => ({ sorted: shown }), [shown]);
-  const { rows, tree, toggleCollapsed, folding } = useGroupedFileTree(content, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS, selection.anchor);
+  const { rows, tree, toggleCollapsed, folding } = useGroupedFileTree(content, entries, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS, selection.anchor);
   const workspaceRepository = usePlaceRepository();
   // A folder or a status group the keyboard (or a click) is on.
   const focusedFolder = focusedAsset ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);

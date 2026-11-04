@@ -8,6 +8,7 @@ import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
+import { useRankedOrder } from '../../components/useRankedOrder';
 import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -45,8 +46,7 @@ import { changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
-import { changeTones } from './changeTone';
-import { useChangeOrder } from './useChangeOrder';
+import { changeTones, PENDING_CHANGE_FACTS } from './changeTone';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { pairPendingMetas } from './pendingMetaPairs';
@@ -87,7 +87,6 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListViewStore((state) => state.layout);
-  const sort = useFileListViewStore((state) => state.sort);
   const groupByStatus = useFileListViewStore((state) => state.groupByStatus);
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const setGrouping = usePendingChangesViewStore((state) => state.setGrouping);
@@ -112,7 +111,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
     onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
   });
-  const order = useChangeOrder(sorted, sort);
+  const order = useRankedOrder(sorted, PENDING_CHANGE_FACTS);
   // Each Unity `.meta` rides on its asset's row, paired before filtering so a filter never splits a pair: a row shows
   // while its asset or its meta matches, and review mode narrows rows, as it counts them (`pairedReviewStatusOf`).
   const pairs = useMemo(() => pairPendingMetas(sorted), [sorted]);
