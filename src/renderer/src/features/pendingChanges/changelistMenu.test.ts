@@ -103,15 +103,21 @@ describe('changelistMenu', () => {
 
   // Its changes the filters hide move too: cleared, the list shows every change that moved.
   it("moves all its changes to another changelist, its own offered but disabled, after clearing the filters", async () => {
-    const moved = new Promise<unknown[]>((resolve) => fakeApi.answer('pendingChanges.moveToChangelist', (...args: unknown[]) => resolve(args)));
-    const clearFilter = vi.fn();
+    const steps: string[] = [];
+    const moved = new Promise<unknown[]>((resolve) =>
+      fakeApi.answer('pendingChanges.moveToChangelist', (...args: unknown[]) => {
+        steps.push('move');
+        resolve(args);
+      }),
+    );
+    const clearFilter = () => void steps.push('clearFilter');
     const move = submenu(changelistMenu(ws, ui, { changes: uiChanges, prepare: () => {}, changelists, clearFilter }), 'changelist');
 
     expect(enabledIn(move.entries)).toEqual(['New changelist…', 'Default changelist', 'art']);
     (move.entries.find((candidate) => candidate !== SEPARATOR && 'run' in candidate && candidate.id === 'changelist.art') as Action).run();
 
     expect(await moved).toEqual([ws, 'art', ['src/menu.ts', 'src/icons.ts', 'src/new/place.ts', 'src/old.ts']]);
-    expect(clearFilter).toHaveBeenCalledOnce();
+    expect(steps).toEqual(['clearFilter', 'move']);
   });
 });
 
@@ -171,5 +177,22 @@ describe('changelistHasMenu', () => {
 
     expect(changelistHasMenu(null, ignoredOnly)).toBe(false);
     expect(changelistMenu(ws, null, { changes: ignoredOnly, prepare: () => {}, changelists, clearFilter: () => {} })).toEqual([]);
+  });
+});
+
+// The "…" shows exactly when its menu has an entry, whatever the default changelist holds.
+describe('changelistHasMenu agrees with changelistMenu', () => {
+  const only = (kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file') => [change('item', kinds, itemType, null)];
+  it.each([
+    ['private', only(['private'])],
+    ['a link', only(['checkedOut'], 'symlink')],
+    ['hidden-changed', only(['hiddenChanged'])],
+    ['ignored', only(['ignored'])],
+    ['cloaked', only(['cloaked'])],
+    ['nothing', []],
+  ])('on a default changelist of %s files', (_, changes) => {
+    const menu = changelistMenu(ws, null, { changes, prepare: () => {}, changelists, clearFilter: () => {} });
+
+    expect(changelistHasMenu(null, changes)).toBe(menu.length > 0);
   });
 });
