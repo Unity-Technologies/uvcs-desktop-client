@@ -10,10 +10,8 @@ interface FileTreeCellProps {
   children: ReactNode;
 }
 
-/** How a row of `FileTreeList` sits among the others: its guides, and whether the list has a column for chevrons. */
+/** How a row of `FileTreeList` sits among the others: it draws indent guides, and maybe leaves a chevron's room. */
 export interface RowGuides {
-  /** The level of the guide drawn stronger (`activeIndentGuide`), if any. */
-  active: number | undefined;
   /**
    * The list is a tree or has groups: a file leaves the room of a chevron, so what a group or folder holds starts
    * under its name, not under its chevron and badge.
@@ -22,8 +20,8 @@ export interface RowGuides {
 }
 
 /**
- * The guides of the row: given by `FileTreeList` around each row, which alone knows the selection and lays its rows
- * out where the guides can run from one to the next. Null elsewhere (a details panel's short list), which draws none.
+ * The guides of the row: given by `FileTreeList` around its rows, which lays them out where the guides can run from one
+ * to the next. Null elsewhere (a details panel's short list), which draws none.
  */
 export const RowGuidesContext = createContext<RowGuides | null>(null);
 
@@ -33,15 +31,13 @@ export const RowGuidesContext = createContext<RowGuides | null>(null);
  */
 export function FileTreeCell({ depth, tree, folder, children }: FileTreeCellProps) {
   const guides = useContext(RowGuidesContext);
-  const active = guides?.active;
-  const style = { '--tree-depth': depth, '--active-guide': active } as CSSProperties;
+  const style = { '--tree-depth': depth } as CSSProperties;
   return (
     <span
       className={styles.cell}
       style={style}
       data-chevron-room={((tree || guides?.chevronColumn) && !folder) || undefined}
       data-guides={guides !== null || undefined}
-      data-active-guide={active !== undefined || undefined}
     >
       {children}
     </span>

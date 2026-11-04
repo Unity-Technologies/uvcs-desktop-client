@@ -19,26 +19,15 @@
 /* The indent guides: a hairline down from the chevron of each changelist, status group and folder holding the row,
    one per level (`--guide-levels`), every `LEVEL_INDENT` (21px) from where the row's content starts, at the middle of
    the 15px chevron. Rows touch, so the lines run on from row to row. */
-.row::before,
-.row[data-active-guide]::after {
+.row::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: calc(var(--space-2) + 7px);
   pointer-events: none;
-}
-
-.row::before {
   width: calc(var(--guide-levels, 0) * 21px);
   background: repeating-linear-gradient(to right, var(--tree-guide) 0 1px, transparent 1px 21px);
-}
-
-/* The guide of what holds the selected row, stronger down every row it holds (`activeIndentGuide`). */
-.row[data-active-guide]::after {
-  width: 1px;
-  margin-left: calc(var(--active-guide) * 21px);
-  background: var(--tree-guide-active);
 }
 
 .row:hover {

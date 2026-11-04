@@ -1,7 +1,6 @@
 import { useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../lib/actions';
 import { groupedRowLevel, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, type GroupedTreeRow, type TreeGroupRow } from '../lib/groupedPathTree';
-import { activeGuideLevelAt, activeIndentGuide } from '../lib/indentGuides';
 import { itemsUnderRows, type PathTreeRow } from '../lib/pathTree';
 import type { SelectionState } from '../lib/selection';
 import { HighlightQuery } from '../ui/Highlight';
@@ -80,18 +79,13 @@ export function FileTreeList<T, G>({
 }: FileTreeListProps<T, G>) {
   const groupLevels = groupLevelsOf(rows);
   const levelOf = (row: GroupedTreeRow<T, G>): number => groupedRowLevel(row, groupLevels);
-  const rowIndexes = useMemo(() => new Map(rows.map((row, index) => [row.key, index])), [rows]);
-  // The guide of what holds the selected row, drawn stronger down every row it holds.
-  const activeGuide = useMemo(
-    () => activeIndentGuide({ rows, levelOf, isOpenHeader: (row) => row.type !== 'file' && !row.collapsed }, rowIndexes.get(selection.anchor ?? '') ?? -1),
-    [rows, groupLevels, rowIndexes, selection.anchor],
-  );
+  const rowGuides = useMemo(() => ({ chevronColumn: hasChevronColumn(groupLevels, tree) }), [groupLevels, tree]);
   const columns: Column<GroupedTreeRow<T, G>>[] = [
     {
       id: 'path',
       header: 'File',
       render: (row) => (
-        <RowGuidesContext.Provider value={{ active: activeGuideLevelAt(activeGuide, rowIndexes.get(row.key) ?? -1), chevronColumn: hasChevronColumn(groupLevels, tree) }}>
+        <RowGuidesContext.Provider value={rowGuides}>
           {row.type === 'group' ? (
             <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.items)} />
           ) : (

@@ -1316,10 +1316,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
     as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
     holds while closed); `FileTreeCell` indents rows to their level. Every list with its own pane draws indent guides
-    (`FileTreeList`, Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row,
-    and, stronger, the one holding the selected row (`activeIndentGuide`: an open group's or folder's own when it is
-    the one selected), as an editor's explorer does. They are always on: a guide costs nothing to read past, and an
-    option for it would be one more knob. A details panel's short list draws none. A click, Enter, ← and → open and close folders
+    (`FileTreeList`, Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row.
+    They are always on: a guide costs nothing to read past, and an option for it would be one more knob. Drawing the one
+    holding the selected row stronger, as an editor's explorer does, was tried and dropped: it moved with every
+    selection and read as noise, where the selected row's own highlight already says where it is. A details panel's short list draws none. A click, Enter, ← and → open and close folders
     (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
     (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
     `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
