@@ -1274,8 +1274,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
-  whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in once a
-  layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
+  whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can
+  go in once a layout, counted where they are (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
   rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
   checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
   takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked paths no longer pending don't count
@@ -1318,9 +1318,18 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
     its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
     (marks, the R key, the review bar), not how the files are laid out.
-  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
-    holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
-    as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
+  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path: a folder's row, folders holding only
+    the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder) as its own
+    row, with its status. Its work grows with the items and the folders, never with how deep they sit: in path order a
+    folder's items are one run of the list, so a folder's or a group's row points into the list it was laid out from
+    (`held`, an `ItemRange` of `lib/itemRange`: the list, which never changes in place, and where the run starts and
+    ends) instead of copying it. What is drawn with every row walks its run without copying it (a count:
+    `folderItemCount`, `rangeLength`; a folder's check, `checkStateOver`; its review mark, `groupReviewStatus`);
+    only what acts on the files once copies them (`itemsIn`: a menu, a check, a review toggle). Each layout walks
+    each path's folders in place: the folders around an item are those it shares with the one before (a row stays
+    open until its run ends), a run's end is found by halves, and only the folders shown become strings. Each folder
+    used to copy every file under it and each path was cut into a string per folder above it, on every key typed in
+    the filter: 100,000 changes eight folders deep took 170 ms a key, a million 1.2 s; now 35 ms and 0.2 s. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
     holds while closed); `FileTreeCell` indents rows to their level. Every list with its own pane draws indent guides
     (`FileTreeList`, Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row.
     They are always on: a guide costs nothing to read past, and an option for it would be one more knob. Drawing the one
