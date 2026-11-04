@@ -2,9 +2,9 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { isModalDialogOpen } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { openingStep, plannedMove } from './changeNavigation';
+import { openingStep } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
-import { positionAfterChange, pressStep } from './stepNavigation';
+import { positionAfterChange, pressStep, stepGoal } from './stepNavigation';
 import { drainKept, drainsKept, followStep, keptPressesOf, pressTarget, StepQueue, type KeptPresses, type PressEffect } from './stepQueue';
 import type { ArrowGoal } from './changeNavigatorView';
 
@@ -215,8 +215,8 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     shortcuts,
     count: steps.length,
     current,
-    // Kept for the file that loads: enabled both ways, as the keys are, wherever that file sits in the list.
-    goesTo: (direction) => (goes ? 'queued' : (plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null)),
+    // Kept for a file (the one that loads, or a step is on its way to): enabled both ways, wherever it sits in the list.
+    goesTo: (direction) => stepGoal(position, direction, files, goes !== undefined || pressTarget({ opens, opened, steppingTo: files?.steppingTo() ?? null, path }).kind === 'keep'),
     go,
     onViewScroll,
   };
