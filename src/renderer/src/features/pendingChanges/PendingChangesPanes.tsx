@@ -22,7 +22,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
-import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { useChangeset } from '../changesets/useChangeset';
 import { useFileSteps } from '../diff/viewer/fileSteps';
@@ -45,7 +45,7 @@ import { undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
-import { changesPanesState } from './changesPanesState';
+import { changesDiffs, changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
 import { changelistHasMenu, changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
@@ -203,6 +203,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   const listedCount = snapshot && allChanges.length;
   const panesState = changesPanesState(listedCount, changes.length);
+  useCollapseWithHost(changesDiffs(panesState));
   const listBody =
     panesState === 'reading' ? (
       <ListSkeleton rowHeight={28} />
