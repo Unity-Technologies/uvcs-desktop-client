@@ -335,6 +335,28 @@ shows how many changes it holds instead of a diff. The stepping itself (the posi
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
+## The change map
+
+A text diff of two versions marks where its changes are on a lane just left of its vertical scrollbar (`ChangeMap`,
+`--change-map-size`), the height of the scrollbar's track: the lane stands for the whole diff as the track does, so
+a change a third of the way down the content is marked a third of the way down the lane. Not under the scrollbar
+itself: its track pages on a click, and it's styled by the system (`styles/global.css`). The diff leaves room for the
+lane (`.diff[data-change-map]`), so no code goes under it. The marks are the regions the arrows step through
+(`useChangeNavigation`'s `regions`, so they follow what's typed), colored by what each does (`changeKindOf`: added,
+deleted, or changed when it has both, in the file badges' `--change-*` colors), placed where Pierre lays them out
+(`pierreLineBox`: collapsed unchanged lines and wrapped lines counted) or, until Pierre can tell, at the line's share
+of its side. `changeMarks` (`changeMarks.ts`) decides it all: a mark is at least `MIN_MARK_HEIGHT` (3 px) tall, and
+changes whose marks would overlap share one ("Changes 3–5 of 12"), so a file with thousands of changes draws at most
+one mark every few pixels. It shows only for a diff that scrolls, with changes, of two versions (`showsChangeMap`):
+not for a version shown alone (an added or deleted file), a file typed into whole, nor where the arrows don't step
+(the merge page). `useChangeMap` places the marks again when the changes, the layout or the sizes change, or as Pierre
+measures the lines above the last change (its estimate of a line not rendered is one row, a wrapped one too):
+batched to a frame on a resize or as Pierre renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing
+again. A click on a mark (or a pixel or two off a thin one) moves to its change through the arrows' navigation
+(`StepNavigation.goTo`): "3 of 12", the change lit and picked as with ⌥↓, its mark outlined; a click between marks
+scrolls the view to center that point (`changeMapClick`). It's for the pointer only (`aria-hidden`): the keys and the
+arrows reach every change. Always on, with no setting.
+
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
