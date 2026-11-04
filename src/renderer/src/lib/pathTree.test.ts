@@ -104,7 +104,7 @@ describe('layoutPathList', () => {
 
 describe('layoutPathItems', () => {
   // By the file's name, last letter first: an order the path order never gives.
-  const byLastLetter = (a: { path: string }, b: { path: string }): number => a.path.at(-1)!.localeCompare(b.path.at(-1)!);
+  const byLastLetter = { compare: (a: { path: string }, b: { path: string }): number => a.path.at(-1)!.localeCompare(b.path.at(-1)!) };
   const keys = (rows: PathTreeRow<{ path: string }>[]) => rows.map((row) => (row.type === 'folder' ? `${row.path}/` : row.key));
 
   it('keeps the path order without an order to follow', () => {
@@ -127,7 +127,7 @@ describe('layoutPathItems', () => {
 describe('orderTreeRows', () => {
   it('keeps a folder that is an item itself with what it holds', () => {
     const rows = layoutPathTree({ sorted: sortedItems(['new', 'new/b.ts', 'new/a.ts', 'top.ts']), keyOf, folderScope: 'all' });
-    const ordered = orderTreeRows(rows, (a, b) => b.path.localeCompare(a.path));
+    const ordered = orderTreeRows(rows, { compare: (a, b) => b.path.localeCompare(a.path) });
     expect(ordered.map((row) => [row.type, row.type === 'folder' ? row.path : row.key, row.depth])).toEqual([
       ['folder', 'new', 0],
       ['file', 'new/b.ts', 1],

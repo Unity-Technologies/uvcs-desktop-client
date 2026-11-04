@@ -94,10 +94,15 @@ export function layoutPathList<T>(items: T[], keyOf: (item: T) => string): TreeF
 }
 
 /**
- * How a list orders its items when not by path: two items compared, ties left as they come (sorting is stable, and
- * the items come in `comparePaths` order, so ties stay in path order). Undefined keeps the path order.
+ * How a list orders its items when not by path (`fileListOrder`); undefined keeps the path order. `compare` ranks two
+ * items, ties left as they come: sorting is stable, and the items come in `comparePaths` order, so ties stay in path
+ * order. `arrange`, when the order has a faster way than comparing items one pair at a time (buckets, ranks worked out
+ * once: `rankedOrder`), puts a whole list in that order, ties kept as they come too.
  */
-export type ItemOrder<T> = (a: T, b: T) => number;
+export interface ItemOrder<T> {
+  compare: (a: T, b: T) => number;
+  arrange?: (items: readonly T[]) => T[];
+}
 
 interface PathItemsLayout<T> {
   tree: boolean;
@@ -112,15 +117,20 @@ interface PathItemsLayout<T> {
  * (`orderTreeRows`). Without an order, the path order of either.
  */
 export function layoutPathItems<T extends { path: string }>(sorted: T[], keyOf: (item: T) => string, { tree, folderScope, order }: PathItemsLayout<T>): PathTreeRow<T>[] {
-  if (!tree) return layoutPathList(order ? [...sorted].sort(order) : sorted, keyOf);
+  if (!tree) return layoutPathList(order ? arranged(sorted, order) : sorted, keyOf);
   const rows = layoutPathTree({ sorted, keyOf, folderScope });
   return order ? orderTreeRows(rows, order) : rows;
 }
 
+/** `items` in `order`: arranged at once when the order knows how, else sorted. */
+export function arranged<T>(items: readonly T[], order: ItemOrder<T>): T[] {
+  return order.arrange ? order.arrange(items) : [...items].sort(order.compare);
+}
+
 /**
  * A tree's rows (`layoutPathTree`) with each folder's rows in `order`: its folders first, in the order they came
- * (by path), each with what it holds, then its files sorted. A sort by status or by date is about the files: folders
- * keep their place, as a file browser's do.
+ * (by path), each with what it holds, then its files sorted. A sort by name, status or extension is about the files:
+ * folders keep their place, as a file browser's do.
  */
 export function orderTreeRows<T>(rows: readonly PathTreeRow<T>[], order: ItemOrder<T>): PathTreeRow<T>[] {
   const ordered: PathTreeRow<T>[] = [];
@@ -137,7 +147,7 @@ export function orderTreeRows<T>(rows: readonly PathTreeRow<T>[], order: ItemOrd
         orderLevel(depth + 1);
       }
     }
-    files.sort((a, b) => order(a.item, b.item));
+    files.sort((a, b) => order.compare(a.item, b.item));
     for (const file of files) ordered.push(file);
   };
   orderLevel(0);

@@ -5,7 +5,7 @@ import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import type { FileListLayout } from '../../components/fileListViewStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { candidatesUnderRow, checkStateOver } from './changeRowChecks';
-import { fileListOrder } from '../../components/fileListOrder';
+import { fileListOrder, rankedOrder } from '../../components/fileListOrder';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, rowLevel, rowLevelsOf, topLevelCheckboxInset, treeLevel } from './changeRowLevels';
 import { changeTone } from './changeTone';
 import { sortChanges } from './changeOrder';
@@ -382,6 +382,29 @@ describe('buildChangeRows at scale', () => {
   it.each(layouts)('lays out a %s grouped by %s in n·log n work: twice the changes, about twice the reads', (layout, grouping) => {
     const growth = readGrowthWhenDoubled(5_000, many, (changes) => buildChangeRows({ ...base, changes, layout, grouping }));
     expect(growth).toBeLessThan(2.5);
+  });
+
+  const views: [string, Partial<BuildInput>][] = [
+    ['sorted by name', { order: fileListOrder<PendingChange>('name', { toneOf: changeTone }) }],
+    ['sorted by status', { order: fileListOrder<PendingChange>('status', { toneOf: changeTone }) }],
+    ['grouped by changelist and status', { grouping: 'changelist', groupByStatus: true }],
+  ];
+
+  it.each(views)('lays out a list %s in n·log n work: twice the changes, about twice the reads', (_, view) => {
+    const growth = readGrowthWhenDoubled(5_000, many, (changes) => buildChangeRows({ ...base, ...view, changes }));
+    expect(growth).toBeLessThan(2.5);
+  });
+
+  // The view ranks the changes once a read (`useChangeOrder`); each key typed in the filter only picks what is left out
+  // of the ranks.
+  it('lays out a filtered list in a ranked order without comparing two changes', () => {
+    const sorted = sortChanges(many(2_000));
+    let compared = 0;
+    const byName = fileListOrder<PendingChange>('name', { toneOf: changeTone })!;
+    const ranked = rankedOrder(sorted, { compare: (a, b) => (compared++, byName.compare(a, b)) });
+    compared = 0;
+    for (const layout of ['list', 'tree'] as const) layoutChangeRows({ sorted: sorted.slice(0, 1_500), changelists: [], layout, grouping: 'none', order: ranked });
+    expect(compared).toBe(0);
   });
 
   // Typing in the filter lays the changes out again on every key: 50,000 of them took 20 ms a key just to be found in

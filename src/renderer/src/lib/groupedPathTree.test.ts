@@ -21,7 +21,7 @@ const shape = (rows: GroupedTreeRow<Item, string>[]) => {
   const groupLevels = groupLevelsOf(rows);
   return rows.map((row) => [row.type === 'group' ? `[${row.label}]` : row.type === 'folder' ? `${row.name}/` : row.key, groupedRowLevel(row, groupLevels)]);
 };
-const byName = (a: Item, b: Item): number => (a.path.split('/').at(-1)! < b.path.split('/').at(-1)! ? -1 : 1);
+const byName = { compare: (a: Item, b: Item): number => (a.path.split('/').at(-1)! < b.path.split('/').at(-1)! ? -1 : 1) };
 
 describe('layoutGroupedTree', () => {
   it("puts each group's header before its items, a level above them, as a tree", () => {

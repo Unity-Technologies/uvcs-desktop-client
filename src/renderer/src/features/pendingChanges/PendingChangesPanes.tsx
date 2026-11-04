@@ -8,7 +8,6 @@ import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
-import { fileListOrder, rankedOrder } from '../../components/fileListOrder';
 import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -46,7 +45,8 @@ import { changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
-import { changeTones, PENDING_CHANGE_FACTS } from './changeTone';
+import { changeTones } from './changeTone';
+import { useChangeOrder } from './useChangeOrder';
 import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { pairPendingMetas } from './pendingMetaPairs';
@@ -112,12 +112,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
     onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
   });
-  // Another order than by path ranks every change once per read (`rankedOrder`): typing in the filter then sorts what
-  // it leaves by those ranks, not by names again.
-  const order = useMemo(() => {
-    const byChoice = fileListOrder(sort, PENDING_CHANGE_FACTS);
-    return byChoice && rankedOrder(sorted, byChoice);
-  }, [sorted, sort]);
+  const order = useChangeOrder(sorted, sort);
   // Each Unity `.meta` rides on its asset's row, paired before filtering so a filter never splits a pair: a row shows
   // while its asset or its meta matches, and review mode narrows rows, as it counts them (`pairedReviewStatusOf`).
   const pairs = useMemo(() => pairPendingMetas(sorted), [sorted]);
