@@ -260,7 +260,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
-| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`); no picture sits after the closing line or in "Fixed issues", where an unreferenced `--attach` lands, while one in backticks or a fence is text (`misplacedPicture`) |
+| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`); no picture or video sits after the closing line or in "Fixed issues", where an unreferenced `--attach` lands, and none shows a file never uploaded; one in backticks or a fence is text (`misplacedPicture`) |
 | `scripts/build/noInvisibleCharacters.test.ts`               | no source, script or doc holds an invisible formatting character (bidirectional controls, zero-width joiners): an emoji that needs one writes it as an escape |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
@@ -367,14 +367,16 @@ them on the server, and reading shell command lines cost more to keep right than
    reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
    without one.
    **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
-   the task did, taken from the app with Playwright (a sandbox, the light theme, the pointer out of the way); a short
-   GIF when a still can't show it (motion, a flow, something that must *not* move). Whether the release note gets a
-   picture, a still or a GIF, and which part of the screen, is the `release-notes` skill's call. When it does, that
-   picture sits inside `## Release note` and serves reviewers too; otherwise the reviewers' shot goes under "Behavior
-   with this pull request". Either way, reference it where it goes as `![alt](./shot.png)` and attach it with
-   `gh pr create --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`):
-   an unreferenced attachment lands after the closing line, outside every section, and the Release note check
-   (`misplacedPicture`) fails it. Never commit them to the repository.
+   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the light theme, the pointer
+   out of the way). One is the rule: not every state, theme or window size, only a second shot when the feature can't
+   be understood without it (a before and after, a theme-specific change). When a still can't show it (motion, a
+   flow, something that must *not* move), a short GIF or video instead. Whether the release note gets a picture, a
+   still or a GIF, and which part of the screen, is the `release-notes` skill's call. When it does, that picture sits
+   inside `## Release note` and serves reviewers too; otherwise the reviewers' shot goes under "Behavior with this pull
+   request". Either way, reference it where it goes as `![alt](./shot.png)` and attach it with `gh pr create --attach
+   ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`): an unreferenced
+   attachment lands after the closing line, outside every section, and a reference to a file not attached stays
+   broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
