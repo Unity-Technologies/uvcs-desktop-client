@@ -98,7 +98,42 @@
   color: var(--text-tertiary);
 }
 
-.entry[data-failed='true'] .command {
+/* A command line's parts (`commandLineTokens`): `cm` quiet, as every line starts with it; what ran (the command and
+   its subcommand) and the options stand out; a find query reads like SQL. Plain words and option values keep the text's color. */
+.token[data-token='program'],
+.token[data-token='separator'] {
+  color: var(--text-tertiary);
+}
+
+.token[data-token='command'] {
+  color: var(--syntax-command);
+}
+
+.token[data-token='option'],
+.token[data-token='number'] {
+  color: var(--syntax-option);
+}
+
+/* An option's name is short and wraps whole: never "--" at a line's end and its name on the next. */
+.token[data-token='option'] {
+  white-space: nowrap;
+}
+
+.token[data-token='field'] {
+  color: var(--syntax-variable);
+}
+
+.token[data-token='keyword'],
+.token[data-token='operator'] {
+  color: var(--syntax-keyword);
+}
+
+.token[data-token='string'] {
+  color: var(--syntax-string);
+}
+
+/* A failed command names what failed in red, its arguments still colored. */
+.entry[data-failed='true'] .token[data-token='command'] {
   color: var(--status-deleted);
 }
 

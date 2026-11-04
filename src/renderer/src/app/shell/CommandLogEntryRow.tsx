@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { withControlPictures } from '../../lib/controlPictures';
 import { Highlight } from '../../ui/Highlight';
 import { commandEnding } from './commandEnding';
+import { CommandLineText } from './CommandLineText';
 import styles from './CommandLogPanel.module.css';
 
 interface CommandLogEntryRowProps {
@@ -16,7 +17,7 @@ interface CommandLogEntryRowProps {
 }
 
 /**
- * One command, its number, its duration and, when it failed, how it ended (`commandEnding`) and its output, the filter's
+ * One command, colored by its parts (`CommandLineText`), its number, its duration and, when it failed, how it ended (`commandEnding`) and its output, the filter's
  * words marked in each (the texts of `commandLogFilterTexts`). Memoized: a new command renders only its own row.
  */
 export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, number, revealed, cwd }: CommandLogEntryRowProps) {
@@ -28,7 +29,7 @@ export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, numb
       </span>
       <span className={styles.duration}>{entry.durationMs} ms</span>
       <span className={styles.command}>
-        <Highlight text={withControlPictures(entry.commandLine)} />
+        <CommandLineText line={withControlPictures(entry.commandLine)} />
         {cwd && (
           <span className={styles.cwd}>
             in <Highlight text={cwd} />
