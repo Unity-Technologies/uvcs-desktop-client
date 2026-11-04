@@ -118,10 +118,10 @@ export function HistoryPage({ page }: PageProps<'history'>) {
       <SplitPane
         initialSize={LIST_WIDTH.initial}
         minSize={LIST_WIDTH.min}
-        stowed={diffExpanded ? 'first' : undefined}
         maxSize={LIST_WIDTH.max}
         size={listWidth}
         onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
+        stowed={diffExpanded ? 'first' : undefined}
         // One layout from the first frame on: placeholder rows while the history is read, and "No history yet"
         // beside an empty list.
         first={
