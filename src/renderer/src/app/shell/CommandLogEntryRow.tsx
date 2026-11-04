@@ -17,8 +17,9 @@ interface CommandLogEntryRowProps {
 }
 
 /**
- * One command, colored by its parts (`CommandLineText`), its number, its duration and, when it failed, how it ended (`commandEnding`) and its output, the filter's
- * words marked in each (the texts of `commandLogFilterTexts`). Memoized: a new command renders only its own row.
+ * One command, colored by its parts (`CommandLineText`), its number, its duration and, when it failed, how it ended
+ * (`commandEnding`) and its output, the filter's words marked in each (the texts of `commandLogFilterTexts`).
+ * Memoized: a new command renders only its own row.
  */
 export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, number, revealed, cwd }: CommandLogEntryRowProps) {
   const failed = entry.exitCode !== 0;
