@@ -26,13 +26,13 @@ describe('fileListViewMenuModel', () => {
   });
 
   it('names the view on its button, saying only what is not the default', () => {
-    expect(fileListViewMenu(view, { statusGroups: true }).summary).toBe('Show files as: List');
+    expect(fileListViewMenu(view, { statusGroups: true }).summary).toBe('View options: List');
     expect(fileListViewMenu({ layout: 'tree', sort: 'extension', groupByStatus: true }, { statusGroups: true, changelists: true }).summary).toBe(
-      'Show files as: Tree, grouped by changelist and status, sorted by extension',
+      'View options: Tree, grouped by changelist and status, sorted by extension',
     );
   });
 
   it("doesn't name a grouping the list doesn't offer", () => {
-    expect(fileListViewMenu({ ...view, groupByStatus: true }, { statusGroups: false }).summary).toBe('Show files as: List');
+    expect(fileListViewMenu({ ...view, groupByStatus: true }, { statusGroups: false }).summary).toBe('View options: List');
   });
 });

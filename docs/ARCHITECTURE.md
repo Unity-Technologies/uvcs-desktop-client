@@ -1310,13 +1310,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
     `fileListViewMenuModel`) takes the room of one button and follows the status chips, so it is in the same place in
     each list; a details panel too short for a filter bar has it in its title. Its choices apply with the menu open, so
-    the list behind it shows each, and its button names the whole view ("Show files as: Tree, grouped by status").
-    Each list says what it offers (`FileListViewOffer`): Changes adds grouping by changelist; the merge page and a
-    details panel offer no grouping. It ends with "Collapse all" or "Expand all" for a list with groups or folders
-    (`fileTreeFoldingOf`, given by the list around its toolbar: `FileTreeFoldingContext`). The palette has its choices
-    too (`fileListViewCommands`). Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review
-    mode toggle). Review mode stays its own button rather than a choice in the menu: it is a way of working that is
-    turned on and off within a task (marks, the R key, the review bar), not how the files are laid out.
+    the list behind it shows each. Its button is an eye, since it holds the whole view and not only the layout, and
+    names that view in its tooltip ("View options: Tree, grouped by status"). Each list says what it offers
+    (`FileListViewOffer`): Changes adds grouping by changelist; the merge page and a details panel offer no grouping.
+    It ends with "Collapse all" or "Expand all" for a list with groups or folders (`fileTreeFoldingOf`, given by the
+    list around its toolbar: `FileTreeFoldingContext`). The palette has its choices too (`fileListViewCommands`).
+    Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
+    its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
+    (marks, the R key, the review bar), not how the files are laid out.
   - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
     holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
     as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it

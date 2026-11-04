@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, List, ListChecks, ListTree } from 'lucide-react';
+import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, Eye, List, ListChecks, ListTree } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 import type { Icon } from '../lib/actions';
 import { Button } from '../ui/Button';
@@ -24,13 +24,13 @@ interface FileListViewMenuProps {
  * How the files of every list of changed files show, chosen in any of them: List or Tree, grouped by status (and by
  * changelist in Changes), sorted, and every group and folder closed or opened at once. One button: chosen once and
  * kept, it takes the room of one in every filter bar. Choices apply at once with the menu still open, so the list
- * behind it shows each; Esc or a click away closes it. The button shows the layout's icon, and names the whole view.
+ * behind it shows each; Esc or a click away closes it. The button is an eye, as it holds the whole view (layout,
+ * groups, sort, folding), not only the layout, and its tooltip names that view.
  */
 export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMenuProps) {
   const view = useFileListViewStore();
   const folding = useContext(FileTreeFoldingContext);
   const menu = fileListViewMenu(view, offer);
-  const CurrentIcon = LAYOUT_ICONS[menu.layout];
   const setGrouping = (grouping: FileListGrouping, on: boolean): void => {
     if (grouping === 'status') view.setGroupByStatus(on);
     else onChangelistsChange?.(on);
@@ -38,7 +38,7 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
-        <Button variant="ghost" size="small" className={styles.trigger} icon={<CurrentIcon size={14} />} aria-label={menu.summary} data-tip={menu.summary}>
+        <Button variant="ghost" size="small" className={styles.trigger} icon={<Eye size={14} />} aria-label={menu.summary} data-tip={menu.summary}>
           <ChevronDown size={11} className={styles.chevron} />
         </Button>
       </DropdownMenu.Trigger>

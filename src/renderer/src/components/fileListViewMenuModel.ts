@@ -23,7 +23,7 @@ export interface FileListViewMenuModel {
   groupings: (ViewMenuChoice<FileListGrouping> & { on: boolean })[];
   sorts: ViewMenuChoice<FileListSort>[];
   sort: FileListSort;
-  /** The button's tooltip and name: the view as it is ("Show files as: Tree, grouped by changelist and status, sorted by name"). */
+  /** The button's tooltip and name: the view as it is ("View options: Tree, grouped by changelist and status, sorted by name"). */
   summary: string;
 }
 
@@ -55,5 +55,5 @@ function viewSummary(layout: FileListLayout, groupings: FileListViewMenuModel['g
   const grouped = groupings.filter((grouping) => grouping.on).map((grouping) => grouping.label.toLowerCase());
   if (grouped.length > 0) parts.push(`grouped by ${grouped.join(' and ')}`);
   if (sort !== 'path') parts.push(`sorted ${SORT_WORDS[sort]}`);
-  return `Show files as: ${parts.join(', ')}`;
+  return `View options: ${parts.join(', ')}`;
 }
