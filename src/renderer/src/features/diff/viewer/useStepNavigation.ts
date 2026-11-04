@@ -17,11 +17,15 @@ export interface StepNavigation {
   noun: string;
   shortcuts: StepShortcuts;
   count: number;
+  /** The step moved to last, by index; none before the first move. */
+  current: number | null;
   /** "3 of 12" once a step was moved to, "12 changes" (or conflicts: `noun`) before, "No changes" with none. */
   label: string;
   /** Where a move goes: to a step, on to the file beside it in the list (past the ends), or nowhere. */
   goesTo: (direction: 1 | -1) => 'step' | 'file' | null;
   go: (direction: 1 | -1) => void;
+  /** Moves to the step at `index` as the arrows would (lit, counted): a change picked on the diff's change map. */
+  goTo: (index: number) => void;
   /** For the view's scrolling element: where the first move goes from follows the view. */
   onViewScroll: () => void;
 }
@@ -166,9 +170,13 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     noun,
     shortcuts,
     count: steps.length,
+    current,
     label: positionLabel(position, noun),
     goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
     go,
+    goTo: (index) => {
+      if (index >= 0 && index < steps.length) moveTo(index);
+    },
     onViewScroll,
   };
 }
