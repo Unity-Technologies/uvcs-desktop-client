@@ -21,7 +21,7 @@ const keysOf = (changes: PendingChange[], layout: FileListLayout = 'list') =>
 const keyOf = (path: string) => changeKey(deletedThenPrivateFolder.find((change) => change.path === path)!);
 
 describe("the rows Changes' diff steps on to", () => {
-  it('are the changes with a diff to show, skipping folders, private, deleted or moved, in a list or a tree', () => {
+  it('are the changes with a diff to show, skipping every folder, whether private, deleted or moved, in a list or a tree', () => {
     const changes = [...deletedThenPrivateFolder, item('Old', 'directory', ['deleted']), item('Moved', 'directory', ['moved'])];
     const expected = [keyOf('foo - Copy.cs'), keyOf('privdir copy/privile.txt')];
     expect(keysOf(changes)).toEqual(expected);
