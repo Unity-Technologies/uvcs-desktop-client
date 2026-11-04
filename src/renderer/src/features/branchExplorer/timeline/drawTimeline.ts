@@ -53,7 +53,6 @@ const CURVE_LINE_ALPHA = 0.6;
 const CURVE_LINE_WIDTH = 1.25;
 const SHARE_ALPHA = 0.5;
 const BRANCH_BAND_ALPHA = 0.18;
-const SINGLE_LABEL_ALPHA = 0.8;
 const AXIS_FONT_SIZE = 10;
 const FRAME_RADIUS = 5;
 /** The halo around the frame: 3 px, half as strong until the frame is hovered or dragged. */
@@ -174,14 +173,16 @@ function drawGaps(ctx: CanvasRenderingContext2D, { gaps, palette }: TimelineDraw
   ctx.restore();
 }
 
-/** One tick per label (or group) under the baseline, in the label color, snapped to the device's pixels so it reads crisp. */
+/**
+ * One tick per label (or group) under the baseline, in the label color at full strength (3:1 on the strip), snapped to
+ * the device's pixels so it reads crisp.
+ */
 function drawLabelTicks(ctx: CanvasRenderingContext2D, { labels, palette }: TimelineDrawing, pixelRatio: number): void {
   ctx.save();
   ctx.fillStyle = palette.labelMark;
   const width = Math.max(1, snap(LABEL_TICK_WIDTH, pixelRatio));
   for (const tick of labels) {
     const merged = tick.labels.length > 1;
-    ctx.globalAlpha = merged ? 1 : SINGLE_LABEL_ALPHA;
     const left = snap(tick.x - width / 2, pixelRatio);
     ctx.fillRect(left, merged ? MERGED_LABEL_TICK_TOP : LABEL_TICK_TOP, width, merged ? MERGED_LABEL_TICK_HEIGHT : LABEL_TICK_HEIGHT);
   }

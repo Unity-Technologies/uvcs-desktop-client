@@ -207,8 +207,8 @@
   --overlay: rgba(31, 35, 40, 0.3);
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
-  /* A label drawn as a mark rather than text (the Timeline's ticks): the label color itself, brighter than its text. */
-  --label-mark: #bf8700;
+  /* A label drawn as a mark rather than text (the Timeline's ticks): the label color, at 3:1 on --bg-subtle. */
+  --label-mark: #b07d00;
   /* Under a small badge drawn over a canvas (the Timeline's home): 0 1px 3px. */
   --badge-shadow: rgba(0, 0, 0, 0.18);
   --search-highlight: #d4a72c;

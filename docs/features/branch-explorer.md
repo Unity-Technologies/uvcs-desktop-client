@@ -109,7 +109,7 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   with the other edge fixed (`viewportWithEdgeAt`, within `MIN_ZOOM` and `MAX_ZOOM`). Under `FRAME_LINE_BELOW` px it
   is a line with a handle on top; from `FRAME_EDGES_FROM` px its edges have grips, shown while it is active
   (`frameShape`, `timelineDrawing`'s `frameActive`).
-- **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`), a notch bigger
+- **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`, at 3:1 on the strip), a notch bigger
   than the mockup's so they read in the app's window (`LABEL_TICK_WIDTH`), those within `LABEL_MERGE_DISTANCE` of a
   tick's first label one slightly taller tick (`labelTicks`); the house, the graph's own home badge (`drawHomeBadge`,
   with a shadow, `--badge-shadow`), on the curve at the workspace's changeset, or at its pending changes past every
