@@ -3,7 +3,7 @@ import { comparePaths } from '@shared/pathOrder';
 import { countCalls } from '@shared/testing/countCalls';
 import { countedArray, readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { itemsIn } from './itemRange';
-import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, layoutPathTree, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, layoutPathTree, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow, type TreeFolderRow } from './pathTree';
 
 interface Item {
   path: string;
@@ -145,6 +145,32 @@ describe('layoutPathTree', () => {
     }
   });
 
+  it('nests the rows of generated trees as their paths say, sharing a row only among folders holding just the next', () => {
+    const random = seededRandom(17);
+    for (let trial = 0; trial < 200; trial++) {
+      const sorted = sortedItems(randomPaths(random, 1 + Math.floor(random() * 40)));
+      const rows = layoutPathTree({ sorted, keyOf, folderScope: 'all' });
+      rows.forEach((row, at) => {
+        const first = row.type === 'folder' ? row.held.start : sorted.indexOf(row.item);
+        // The folder holding a row: the nearest folder row above it whose run holds the row's first item.
+        const parent = rows.slice(0, at).findLast((above): above is TreeFolderRow<Item> => above.type === 'folder' && above.held.start <= first && first < above.held.end);
+        expect(row.depth).toBe(parent ? parent.depth + 1 : 0);
+        if (row.type !== 'folder') return;
+        expect(row.name).toBe(parent ? row.path.slice(parent.path.length + 1) : row.path);
+        if (parent) expect(row.path.startsWith(`${parent.path}/`)).toBe(true);
+        if (row.item) return;
+        // A folder that isn't an item shares its row with the next folder when that folder is all it holds, unless
+        // that folder is listed twice: the first shows as a file's row, the second as the folder's.
+        const held = itemsIn(row.held);
+        const children = new Set(held.map((item) => item.path.slice(row.path.length + 1).split('/')[0]));
+        const [only] = children;
+        const child = `${row.path}/${only}`;
+        const holdsJustAFolder = children.size === 1 && held.some((item) => item.path.startsWith(`${child}/`)) && held.filter((item) => item.path === child).length < 2;
+        expect(holdsJustAFolder ? held.map(keyOf) : false).toBe(false);
+      });
+    }
+  });
+
   it('shows a file listed twice as two rows, not as a folder holding itself', () => {
     expect(shape(tree(['b.txt', 'b.txt']))).toEqual([
       ['b.txt', 0],
@@ -154,6 +180,13 @@ describe('layoutPathTree', () => {
       ['src/', 0],
       ['src/a.ts', 1],
       ['src/a.ts', 1],
+    ]);
+    // A folder listed twice, holding others: the first is a file's row beside the folder's.
+    expect(shape(tree(['a/b', 'a/b', 'a/b/c.ts']))).toEqual([
+      ['a/', 0],
+      ['a/b', 1],
+      ['b/', 1],
+      ['a/b/c.ts', 2],
     ]);
   });
 
