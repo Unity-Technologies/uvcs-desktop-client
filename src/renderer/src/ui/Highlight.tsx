@@ -33,13 +33,14 @@ function renderRanges(text: string, ranges: TextRange[]): ReactNode[] {
   let cursor = 0;
   for (const [start, end] of ranges) {
     if (start > cursor) parts.push(text.slice(cursor, start));
-    parts.push(
-      <mark key={start} className={styles.match}>
-        {text.slice(start, end)}
-      </mark>,
-    );
+    parts.push(<HighlightMark key={start}>{text.slice(start, end)}</HighlightMark>);
     cursor = end;
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
   return parts;
+}
+
+/** Text the filter matched, marked as `Highlight` marks it: for text drawn in parts of its own (a colored command line). */
+export function HighlightMark({ children }: { children: ReactNode }) {
+  return <mark className={styles.match}>{children}</mark>;
 }
