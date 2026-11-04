@@ -171,20 +171,17 @@ const cropped = '\n\n![The Position submenu](https://github.com/user-attachments
 const wide = '\n\n![The Branch Explorer with a branch moved](https://github.com/user-attachments/assets/2)';
 
 describe("a pull request's pictures", () => {
-  it('may be none, for a change nobody sees', () => {
+  it('may be none', () => {
     expect(misplacedPicture(pullRequest())).toBeNull();
   });
 
-  it('sit in the release note, cropped to the feature', () => {
+  it('may sit in the release note', () => {
     expect(misplacedPicture(pullRequest({ note: cropped }))).toBeNull();
-  });
-
-  it("may add a wider one for reviewers beside the note's", () => {
     expect(misplacedPicture(pullRequest({ note: cropped, behavior: wide }))).toBeNull();
   });
 
-  it('are refused when only the reviewers get one', () => {
-    expect(misplacedPicture(pullRequest({ behavior: wide }))).toMatch(/release note has none/);
+  it('may be the reviewers\' alone, under "Behavior with this pull request", since the note decides its own', () => {
+    expect(misplacedPicture(pullRequest({ behavior: wide }))).toBeNull();
   });
 
   it("are refused after the closing line, where gh appends an attachment the body doesn't reference", () => {
@@ -199,13 +196,23 @@ describe("a pull request's pictures", () => {
   it("count an HTML picture, as GitHub's editor writes one", () => {
     const html = '\n\n<img width="800" alt="The Branch Explorer" src="https://github.com/user-attachments/assets/2" />';
 
-    expect(misplacedPicture(pullRequest({ behavior: html }))).toMatch(/release note has none/);
+    expect(misplacedPicture(pullRequest({ after: `\n${html}` }))).toMatch(/end of the body/);
   });
 
-  it('ignore pictures in comments and code, as the template shows them', () => {
-    const shown = '\n\n<!-- ![What it shows](./shot.png) -->\n\n```md\n![What it shows](./shot.png)\n```';
+  it('ignore pictures written as code or in comments, as docs show them', () => {
+    const shown = [
+      '\n\nReference it as `![What it shows](./shot.png)` or ``![What it shows](./shot.png)``.',
+      '```md\n![What it shows](./shot.png)\n```',
+      '<!-- ![What it shows](./shot.png) -->',
+    ].join('\n\n');
 
-    expect(misplacedPicture(pullRequest({ behavior: shown, after: shown }))).toBeNull();
+    expect(misplacedPicture(pullRequest({ fixedIssues: `None.${shown}`, after: `\n${shown}` }))).toBeNull();
+  });
+
+  it('count a picture beside code on the same line', () => {
+    expect(misplacedPicture(pullRequest({ after: '\n\n`./shot.png` ![The Position submenu](https://github.com/user-attachments/assets/1)' }))).toMatch(
+      /end of the body/,
+    );
   });
 
   it('read a body written on Windows', () => {
@@ -213,8 +220,8 @@ describe("a pull request's pictures", () => {
   });
 
   it("are checked once the note reads, so the note's own problem comes first", () => {
-    expect(checkPullRequestBody(pullRequest({ behavior: wide }))).toEqual({ problem: expect.stringMatching(/release note has none/) });
-    expect(checkPullRequestBody(`## Release note\n\n### Feature: Positions\n\nMove branches.\n\n## Behavior${wide}`)).toEqual({
+    expect(checkPullRequestBody(pullRequest({ after: `\n${wide}` }))).toEqual({ problem: expect.stringMatching(/end of the body/) });
+    expect(checkPullRequestBody(`## Release note\n\n### Feature: Positions\n\nMove branches.\n\n## Fixed issues${wide}`)).toEqual({
       problem: expect.stringMatching(/New:, Improved: or Fixed:/),
     });
     expect(checkPullRequestBody(pullRequest({ note: cropped }))).toEqual({
