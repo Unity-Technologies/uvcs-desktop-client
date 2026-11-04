@@ -45,6 +45,24 @@ describe('fileSteps', () => {
     expect(steps.takeArrival('src/c.ts')).toBe('first');
   });
 
+  it("says which file a step went to while its diff hasn't arrived, so a press meanwhile waits for that file", () => {
+    const pending: { current: PendingArrival | null } = { current: null };
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    expect(at('a').steppingTo()).toBeNull();
+    at('a').step(1);
+    // The list moved on to b; its diff is still a's, which only shows once read and settled.
+    expect(at('b').steppingTo()).toBe('src/b.ts');
+    at('b').takeArrival('src/b.ts');
+    expect(at('b').steppingTo()).toBeNull();
+  });
+
+  it('forgets a step once the list is on another file (picked with a click): presses then go to that one', () => {
+    const pending: { current: PendingArrival | null } = { current: null };
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    at('a').step(1);
+    expect(at('c').steppingTo()).toBeNull();
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);
