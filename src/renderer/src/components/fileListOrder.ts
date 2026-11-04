@@ -101,6 +101,22 @@ export function rankedOrder<T extends { path: string }>(all: readonly T[], order
   };
 }
 
+/** A list's ranking for one sort (`rankedOrder`), and the sort it is for. */
+export interface ListRanking<T> {
+  sort: FileListSort;
+  /** Undefined for the path order the items already come in. */
+  order: RankedOrder<T> | undefined;
+}
+
+/**
+ * The ranking of `all` for `sort`, starting from `last`, the ranking of a read before, only when it was for the same
+ * sort: a name order that kept the items as a status order had them would be a status order.
+ */
+export function rankList<T extends { path: string }>(all: readonly T[], sort: FileListSort, facts: FileListFacts<T>, last: ListRanking<T> | undefined): ListRanking<T> {
+  const order = fileListOrder(sort, facts);
+  return { sort, order: order && rankedOrder(all, order, last?.sort === sort ? last.order : undefined) };
+}
+
 /**
  * `items` by their ranks: placed in a slot per rank and read back, in one pass over the ranks, when that costs less
  * than sorting them (a filter leaving most of the list); sorted by rank when they are few (one status group's).
