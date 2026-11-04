@@ -1,0 +1,4 @@
+/* Where the body draws its controls: no box of its own, so they lay out in the header's row as its own children. */
+.controls {
+  display: contents;
+}

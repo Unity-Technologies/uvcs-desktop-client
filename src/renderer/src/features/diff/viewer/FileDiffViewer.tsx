@@ -5,7 +5,7 @@ import { lazyComponent } from '../../../lib/lazyComponent';
 import { useSpinDelay } from '../../../lib/useSpinDelay';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
-import { DiffViewerFrame } from './DiffViewerFrame';
+import { SteppedDiffFrame } from './SteppedDiffFrame';
 import { useDiffContents, type DiffContents } from './useDiffContents';
 
 // The viewers (Pierre, the image and 3D model viewers) load on first use: every view and page that shows a diff is in
@@ -39,31 +39,27 @@ export function FileDiffViewer({ place, original, modified, fileName, title, ide
   const contents = useDiffContents(place, original, modified);
   const spin = useSpinDelay(contents.isPending || contents.isPlaceholderData);
 
-  if (contents.error) {
+  // One header for every file and state (`SteppedDiffFrame`): loading, failed or loaded, its arrows stay the same buttons.
+  return <SteppedDiffFrame title={title}>{body()}</SteppedDiffFrame>;
+
+  function body(): ReactNode {
+    if (contents.error) return <EmptyState title="Couldn't load this file" description={contents.error.message} />;
+    if (spin || !contents.data) return spin && <CenteredSpinner />;
     return (
-      <DiffViewerFrame title={title}>
-        <EmptyState title="Couldn't load this file" description={contents.error.message} />
-      </DiffViewerFrame>
+      <Suspense fallback={null}>
+        <LoadedFileDiff
+          // A new pair starts fresh: edits, blend and zoom belong to the file they were made on.
+          key={pairKey(contents.data)}
+          place={place}
+          contents={contents.data}
+          fileName={fileName}
+          identicalDescription={identicalDescription}
+          compareControls={compareControls}
+          onMatchesBase={onMatchesBase}
+        />
+      </Suspense>
     );
   }
-  if (spin || !contents.data) {
-    return <DiffViewerFrame title={title}>{spin && <CenteredSpinner />}</DiffViewerFrame>;
-  }
-  return (
-    <Suspense fallback={<DiffViewerFrame title={title} />}>
-      <LoadedFileDiff
-      // A new pair starts fresh: edits, blend and zoom belong to the file they were made on.
-      key={pairKey(contents.data)}
-      place={place}
-      contents={contents.data}
-      fileName={fileName}
-      title={title}
-      identicalDescription={identicalDescription}
-      compareControls={compareControls}
-      onMatchesBase={onMatchesBase}
-      />
-    </Suspense>
-  );
 }
 
 function pairKey({ original, modified }: DiffContents): string {

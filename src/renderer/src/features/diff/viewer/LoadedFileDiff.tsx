@@ -1,5 +1,6 @@
 import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
-import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -11,14 +12,13 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
 import { editedFileIn, typesIntoDiff } from './canEditInPlace';
-import { ChangeNavigator } from './ChangeNavigator';
+import { DiffFrameHostContext, type DiffFrameHost } from './diffFrameHost';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
 import { diffDiscards } from './diffDiscards';
 import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
-import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { hasLineTooLongToDraw } from './longLines';
@@ -55,7 +55,6 @@ interface LoadedFileDiffProps {
   place: Place;
   contents: DiffContents;
   fileName: string;
-  title?: ReactNode;
   identicalDescription?: string;
   /** Controls about what to compare, in the toolbar of every diff (a binary file, an image or a model has its `.meta` too), right before the change arrows. */
   compareControls?: ReactNode;
@@ -69,7 +68,7 @@ interface LoadedFileDiffProps {
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ place, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editedFile = editedFileIn(place, contents.original, contents.modified);
   const editableInPlace = editedFile !== null;
@@ -111,11 +110,15 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const viewControls = !metaAsModel && showsLines(presentation, editable);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
-  const frame = useRef<HTMLDivElement>(null);
+  // The header and its arrows are the frame's around it (`SteppedDiffFrame`), which outlives this diff: it hands them
+  // its navigation each time it renders, and draws its controls into the header.
+  const host = useDiffFrameHost();
   const changeView = useRef<ChangeView>(null);
   const steppedDiff = stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null;
-  const navigation = useChangeNavigation(steppedDiff, changeView, frame, fileName);
-  const navigator = <ChangeNavigator navigation={navigation} stepsOwn={steppedDiff !== null} keysWhileTyping />;
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName);
+  const stepsOwn = steppedDiff !== null;
+  useLayoutEffect(() => host.publish({ navigation, stepsOwn }));
+  useLayoutEffect(() => () => host.publish(null), [host.publish]);
   const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
   const discards = diffDiscards(place, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
@@ -280,13 +283,21 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
 
   const purgedLine = purgedNotice(purged);
   return (
-    <DiffViewerFrame ref={frame} title={title} controls={controls} navigator={navigator}>
+    <>
+      {host.controls && createPortal(controls, host.controls)}
       {purgedLine && (
         <DiffNotice tone="info" icon={<ArchiveX size={13} />}>
           {purgedLine}
         </DiffNotice>
       )}
       {body}
-    </DiffViewerFrame>
+    </>
   );
+}
+
+/** The header this diff draws into; a diff is always drawn in one (`SteppedDiffFrame`). */
+function useDiffFrameHost(): DiffFrameHost {
+  const host = useContext(DiffFrameHostContext);
+  if (!host) throw new Error('LoadedFileDiff is drawn inside a SteppedDiffFrame');
+  return host;
 }
