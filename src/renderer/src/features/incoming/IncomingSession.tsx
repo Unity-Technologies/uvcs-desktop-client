@@ -36,6 +36,7 @@ import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
+import { incomingFileStepKeys } from './incomingFileSteps';
 import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
 import { useIncomingChangesetList } from './useIncomingChangesets';
@@ -97,6 +98,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     select: (key) => selectFiles(singleSelection(key)),
     pathOf: (key) => key,
   });
+  // A file's diff goes on past its last or first change to the files around it, as the list shows them.
+  const fileKeys = useMemo(() => incomingFileStepKeys(rows), [rows]);
+  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key) => selectFiles(singleSelection(key)), pathOf: (key) => key });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -184,7 +188,12 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (focusedFile && diffedFile) {
       const metaToggle = focusedMeta && <MetaDiffButton pressed={diffedFile !== focusedFile} onChange={(pressed) => setMetaShownFor(pressed ? focusedFile.path : null)} />;
-      return <IncomingFileDiff key={`${scope.kind}:${diffedFile.path}`} workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />;
+      // Not keyed by the file: its header and arrows stay from file to file (`SteppedDiffFrame`), as in a diff page.
+      return (
+        <FileStepsContext.Provider value={fileSteps}>
+          <IncomingFileDiff workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />
+        </FileStepsContext.Provider>
+      );
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
