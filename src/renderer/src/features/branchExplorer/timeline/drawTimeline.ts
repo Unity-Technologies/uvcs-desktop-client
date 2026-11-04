@@ -47,7 +47,7 @@ export interface TimelineDrawing {
   selectedBranch: { left: number; right: number; color: string } | null;
 }
 
-/** The curve's fill, its line and the user's share, as the approved design weighs them. */
+/** The curve's fill quiet and its line clear, the user's share stronger than both: it is what they look for. */
 const CURVE_FILL_ALPHA = 0.16;
 const CURVE_LINE_ALPHA = 0.6;
 const CURVE_LINE_WIDTH = 1.25;
