@@ -18,8 +18,8 @@ export interface TimelineCard {
 export interface TimelineCardContext {
   history: TimelineHistory;
   share: TimelineShare;
-  /** Whether the share is the user's own (else the people the people filter picks). */
-  shareIsMine: boolean;
+  /** How the share is named after its count: "yours", "by ana", "by the people picked" (`shareOwners`). */
+  shareWord: string;
   axis: TimelineAxis;
   calendar: TimelineCalendar;
   frame: TimelineFrame;
@@ -52,7 +52,7 @@ export function timelineCard(target: TimelineTarget, x: number, context: Timelin
 }
 
 /** The moment under the pointer: its hour, day or week (by the range), what was made then, and its labels. */
-function momentCard(x: number, { history, share, shareIsMine, axis, calendar }: TimelineCardContext): TimelineCard {
+function momentCard(x: number, { history, share, shareWord, axis, calendar }: TimelineCardContext): TimelineCard {
   const time = history.columnTimes[columnAtStrip(axis, x)]!;
   const bucket = bucketAround(time, bucketSize(history.end - history.start), calendar);
   const made = changesetsBetween(history.times, bucket.start, bucket.end);
@@ -60,7 +60,7 @@ function momentCard(x: number, { history, share, shareIsMine, axis, calendar }: 
   const merged = changesetsBetween(history.mainMergeTimes, bucket.start, bucket.end);
   const counts = [
     pluralize(made, 'changeset'),
-    ...(theirs > 0 ? [`${formatCount(theirs)} ${shareIsMine ? 'yours' : 'by the people picked'}`] : []),
+    ...(theirs > 0 ? [`${formatCount(theirs)} ${shareWord}`] : []),
     ...(merged > 0 ? [`${formatCount(merged)} merged to /main`] : []),
   ];
   const first = sortedSearch.lowerBound(history.labelTimes, bucket.start);

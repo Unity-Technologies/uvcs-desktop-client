@@ -40,7 +40,7 @@ function contextFor(data = busyHistory(), homeChangeset: number | null = 1, owne
   return {
     history,
     share: timelineShare(history, owners),
-    shareIsMine: true,
+    shareWord: 'yours',
     axis,
     calendar: utc,
     frame: { left: stripXOfColumn(axis, 1) - 1, right: stripXOfColumn(axis, 3) + 1 },
@@ -60,7 +60,7 @@ describe('timelineCard', () => {
   });
 
   it('leaves out what is none, and names the people picked when the share isn’t the user’s', () => {
-    const context = { ...contextFor(), shareIsMine: false };
+    const context = { ...contextFor(), shareWord: 'by the people picked' };
     expect(timelineCard({ kind: 'moment' }, stripXOfColumn(context.axis, 0), context)).toEqual({ title: 'Saturday, August 1, 2026', lines: ['1 changeset'] });
     expect(timelineCard({ kind: 'moment' }, stripXOfColumn(context.axis, 1), context).lines[0]).toBe('5 changesets · 2 by the people picked · 2 merged to /main');
   });

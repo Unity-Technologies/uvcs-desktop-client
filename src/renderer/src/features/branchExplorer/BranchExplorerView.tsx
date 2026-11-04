@@ -135,7 +135,7 @@ export function BranchExplorerView() {
   const timeline = useMemo<TimelineInputs | null>(
     () =>
       showTimeline
-        ? { owners: timelineShare.owners, shareIsMine: timelineShare.isMine, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn, onSlidIn: timelineSlidIn }
+        ? { owners: timelineShare.owners, shareWord: timelineShare.word, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn, onSlidIn: timelineSlidIn }
         : null,
     [showTimeline, timelineShare, search.shown, searchHits, timelineSlidesIn, timelineSlidIn],
   );

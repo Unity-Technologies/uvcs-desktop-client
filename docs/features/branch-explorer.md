@@ -95,7 +95,8 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   over the part of the window inside the loaded history (the ends would sink otherwise), a mean per pixel, a Gaussian
   blur (σ 3 px) over the history's own pixels (`historyPixels`), scaled to the 98th percentile. A count per day over the day's columns was
   dropped: flat mesas with cliffs. Under it, in the accent, the share of the user's changesets or the people filter's
-  picks (`shareOwners`), never thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at
+  picks (`shareOwners`, which also names them in the hover card: "yours", one person picked by name, "by the people
+  picked"), never thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at
   their own times and in its column (`timelineHistory`, `changesetsInColumns`).
 - **The frame** is an accent outline with a light tint and nothing dimmed outside it. Dragging it pans
   (`viewportPannedBy`), dragging an edge zooms the canvas with the other edge fixed (`viewportWithEdgeAt`, within

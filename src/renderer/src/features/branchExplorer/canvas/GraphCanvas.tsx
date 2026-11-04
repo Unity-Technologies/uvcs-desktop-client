@@ -68,7 +68,8 @@ interface GraphCanvasProps {
 export interface TimelineInputs {
   /** Whose changesets are its share: the user's, or the people filter's picks. */
   owners: ReadonlySet<string>;
-  shareIsMine: boolean;
+  /** How the hover card names them after their count (`shareOwners`). */
+  shareWord: string;
   searchHits: readonly SearchHit[];
   /** Whether it slides in as it shows: the user just showed it (`useTimelineSlideIn`). */
   slideIn: boolean;
@@ -339,7 +340,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           view={view}
           screenSize={() => sizeRef.current}
           owners={timeline.owners}
-          shareIsMine={timeline.shareIsMine}
+          shareWord={timeline.shareWord}
           searchHits={timeline.searchHits}
           slideIn={timeline.slideIn}
           onSlidIn={timeline.onSlidIn}

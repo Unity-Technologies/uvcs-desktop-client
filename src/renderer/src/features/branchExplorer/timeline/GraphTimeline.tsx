@@ -31,7 +31,8 @@ interface GraphTimelineProps {
   screenSize: () => Size;
   /** Whose changesets are the share under the curve: the user's, or the people filter's picks. */
   owners: ReadonlySet<string>;
-  shareIsMine: boolean;
+  /** How the hover card names them after their count. */
+  shareWord: string;
   searchHits: readonly SearchHit[];
   selectedChangeset: number | null;
   selectedBranch: string | null;
@@ -63,7 +64,7 @@ interface Hover {
  * turns the pointer into viewport moves.
  */
 export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>(function GraphTimeline(props, ref) {
-  const { layout, palette, view, screenSize, owners, shareIsMine, searchHits, selectedChangeset, selectedBranch, homeChangeset, pendingChangeCount, slideIn, onSlidIn, focusGraph } = props;
+  const { layout, palette, view, screenSize, owners, shareWord, searchHits, selectedChangeset, selectedBranch, homeChangeset, pendingChangeCount, slideIn, onSlidIn, focusGraph } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sizeRef = useRef<Size>({ width: 0, height: 0 });
@@ -180,7 +181,7 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     timelineCard(hover.target, hover.x, {
       history,
       share,
-      shareIsMine,
+      shareWord,
       axis,
       calendar: LOCAL_CALENDAR,
       frame: spots().frame,
