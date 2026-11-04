@@ -63,6 +63,13 @@ interface StepNavigationOptions {
   path: string;
   noun: string;
   shortcuts: StepShortcuts;
+  /** Whether its keys work; off while another navigation of the same header takes them (a loaded diff's). */
+  active?: boolean;
+  /**
+   * Whether it opens the view at a step (`openingStep`), taking the arrival from the file beside it. A navigation with
+   * no view of its own (the arrows of a diff not loaded yet) opens nothing and leaves the arrival to the diff that loads.
+   */
+  opens?: boolean;
 }
 
 /**
@@ -72,7 +79,7 @@ interface StepNavigationOptions {
  * past the last step goes on to the next file's first, and past the first to the previous file's last, as in the
  * official client.
  */
-export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }: StepNavigationOptions): StepNavigation {
+export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, active = true, opens = true }: StepNavigationOptions): StepNavigation {
   const files = useContext(FileStepsContext);
   const [current, setCurrent] = useState<number | null>(null);
   const [above, setAbove] = useState(0);
@@ -123,7 +130,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   const arrival = useRef<Arrival | null | undefined>(undefined);
   const opened = useRef(false);
   useEffect(() => {
-    if (opened.current) return;
+    if (opened.current || !opens) return;
     if (arrival.current === undefined) arrival.current = files?.takeArrival(path) ?? null;
     const from = arrival.current;
     let frames = 0;
@@ -144,11 +151,11 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     // which would stop the scroll started here, then this effect again, which would find the view opened already.
     frame = requestAnimationFrame(arrive);
     return () => cancelAnimationFrame(frame);
-  }, [files, path, steps.length]);
+  }, [files, path, steps.length, opens]);
 
   const hasFiles = files !== null;
   useEffect(() => {
-    if (steps.length === 0 && !hasFiles) return;
+    if (!active || (steps.length === 0 && !hasFiles)) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       // Keys the editor took (⌥↓ ⌥↑ move lines while typing) are its own.
       if (event.defaultPrevented || isModalDialogOpen() || !takesKeysFrom(frame.current, event.target)) return;
@@ -160,7 +167,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [steps.length, hasFiles, frame, shortcuts.next, shortcuts.previous]);
+  }, [active, steps.length, hasFiles, frame, shortcuts.next, shortcuts.previous]);
 
   return {
     noun,
