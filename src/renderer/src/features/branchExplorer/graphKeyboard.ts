@@ -32,8 +32,8 @@ export interface GraphKeyboard {
   toggleDetails: () => void;
   /** Esc with nothing selected: out of the focus on a branch. */
   exitFocus: () => void;
-  /** The branches moved in the repository shown: ⌘↑ and ⌘↓ move the selected one (`graphMoveBranch*`). */
-  positions: BranchPositions;
+  /** The branches moved in the repository shown: ⌘↑ and ⌘↓ move the selected one (`graphMoveBranch*`); null while it isn't known. */
+  positions: BranchPositions | null;
 }
 
 /**
@@ -72,6 +72,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
   const selectedId = selection?.kind === 'changeset' ? selection.id : null;
   const branchName = selectedBranchOf(layout, selection);
   const lane = keyboardMoveLane(layout, selection);
+  const { positions } = keyboard;
 
   // Keyboard moves glide the view along, just enough to keep the selection in sight.
   const move = (graphMove: GraphMove): void => {
@@ -119,7 +120,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
         if (source !== null) graphActions.merge('merge', source);
       },
     ],
-    ...(lane ? BRANCH_MOVES.map(({ move, shortcutId }): [ShortcutId, () => void] => [shortcutId, () => moveBranch(layout, lane, move, keyboard.positions)]) : []),
+    ...(lane && positions ? BRANCH_MOVES.map(({ move, shortcutId }): [ShortcutId, () => void] => [shortcutId, () => moveBranch(layout, lane, move, positions)]) : []),
     ['graphDetails', keyboard.toggleDetails],
     ['graphContextMenu', openContextMenu],
     // ⌘F is the palette command's; the view adds the plain key.

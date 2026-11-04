@@ -25,7 +25,7 @@ interface GraphMenuContext {
   showRelatedTo: (branch: string) => void;
   revealCreatedBranch: (name: string) => void;
   /** The branches moved in the repository shown: a branch's Position submenu moves it. */
-  positions: BranchPositions;
+  positions: BranchPositions | null;
 }
 
 /**

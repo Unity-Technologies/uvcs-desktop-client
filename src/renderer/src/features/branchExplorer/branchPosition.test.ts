@@ -3,7 +3,7 @@ import '../../testing/fakeWindow';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { branchPositionEntries, moveBranch, resetAllPositions, type BranchPositions } from './branchPosition';
+import { branchPositionEntries, branchPositionsOf, moveBranch, resetAllPositions, type BranchPositions } from './branchPosition';
 import type { BranchPins } from './model/branchRows';
 import { branch, changeset } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
@@ -76,6 +76,30 @@ describe('branchPositionEntries', () => {
     const { run } = explorer([{ branch: 3, row: 1 }]);
     run('/main/a', 'position.resetAll');
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Reset all positions?' }]);
+  });
+});
+
+describe('branchPositionsOf', () => {
+  it('has no positions while the repository is not known, so nothing can be moved and lost', () => {
+    expect(branchPositionsOf(undefined, [], () => {})).toBeNull();
+  });
+
+  it("saves the moves in the repository's own pins", () => {
+    const saved: [string, BranchPins][] = [];
+    const pins: BranchPins = [{ branch: 3, row: 1 }];
+    const positions = branchPositionsOf('game@local', [], (repository, next) => saved.push([repository, next]))!;
+    positions.setPins(pins);
+    expect(saved).toEqual([['game@local', pins]]);
+  });
+});
+
+describe('branchPositionEntries without a repository', () => {
+  it('lists every entry, all disabled', () => {
+    const layout = layoutGraph(history(), undefined, null, []);
+    const entries = branchPositionEntries(layout, layout.lanesByBranch.get('/main/a')!, null);
+    expect(entries.map(({ id, disabled }) => ({ id, disabled }))).toEqual(
+      ['up', 'down', 'top', 'bottom', 'reset', 'resetAll'].map((move) => ({ id: `position.${move}`, disabled: true })),
+    );
   });
 });
 

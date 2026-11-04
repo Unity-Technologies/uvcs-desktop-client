@@ -10,6 +10,15 @@ export interface BranchPositions {
   setPins: (pins: BranchPins) => void;
 }
 
+/**
+ * The branches moved in `repository` and how to change them; null while the repository isn't known yet, since pins
+ * are kept per repository: the Position entries are then disabled and the keys move nothing.
+ */
+export function branchPositionsOf(repository: string | undefined, pins: BranchPins, setPinsOf: (repository: string, pins: BranchPins) => void): BranchPositions | null {
+  if (repository === undefined) return null;
+  return { pins, setPins: (next) => setPinsOf(repository, next) };
+}
+
 /** Each move, its words in the Position submenu and its key in the graph. */
 export const BRANCH_MOVES: readonly { move: BranchMove; label: string; shortcutId: ShortcutId }[] = [
   { move: 'up', label: 'Move up', shortcutId: 'graphMoveBranchUp' },
@@ -27,7 +36,8 @@ export function moveBranch(layout: GraphLayout, lane: Lane, move: BranchMove, { 
  * The entries of a branch's Position submenu: the moves, then putting it back where the layout puts it, and every
  * branch of the repository back, after asking (the arrangement can't be brought back).
  */
-export function branchPositionEntries(layout: GraphLayout, lane: Lane, positions: BranchPositions): Action[] {
+export function branchPositionEntries(layout: GraphLayout, lane: Lane, positions: BranchPositions | null): Action[] {
+  if (positions === null) return positionEntriesWithNoRepository();
   const { pins, setPins } = positions;
   const offered = branchMoves(layout, lane, pins);
   return [
@@ -40,6 +50,14 @@ export function branchPositionEntries(layout: GraphLayout, lane: Lane, positions
     })),
     { id: 'position.reset', label: 'Reset position', disabled: !offered.reset, run: () => setPins(withoutPin(pins, lane.branch.id)) },
     { id: 'position.resetAll', label: 'Reset all positions…', disabled: !offered.resetAll, run: () => void resetAllPositions(setPins) },
+  ];
+}
+
+function positionEntriesWithNoRepository(): Action[] {
+  return [
+    ...BRANCH_MOVES.map(({ move, label, shortcutId }) => ({ id: `position.${move}`, label, shortcut: hotkey(shortcutId), disabled: true, run: () => {} })),
+    { id: 'position.reset', label: 'Reset position', disabled: true, run: () => {} },
+    { id: 'position.resetAll', label: 'Reset all positions…', disabled: true, run: () => {} },
   ];
 }
 
