@@ -32,13 +32,13 @@ export interface PressSpot {
 export type PressRoute = { kind: 'step' } | { kind: 'keep'; path: string };
 
 /**
- * The route of a press: kept for the file a step is on its way to, never stepping from the previous file's place; kept
- * for the view itself until it opened at its arrival, or for the selected file's diff while a header waits for it;
- * a step otherwise.
+ * The route of a press: kept for the file a step is on its way to, never stepping from the previous file's place (an
+ * unreadable file's or an xlink's too, which would step on from it twice); kept for the view itself until it opened at
+ * its arrival, or for the selected file's diff while a header waits for it; a step otherwise.
  */
 export function routePress({ holder, path, opened, steppingTo }: PressSpot): PressRoute {
-  if (holder === 'stepless') return { kind: 'step' };
   if (steppingTo !== null && steppingTo !== path) return { kind: 'keep', path: steppingTo };
+  if (holder === 'stepless') return { kind: 'step' };
   return holder === 'waiting' || !opened ? { kind: 'keep', path } : { kind: 'step' };
 }
 
