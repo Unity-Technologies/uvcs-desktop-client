@@ -49,21 +49,27 @@ interface ChangelistMenuContext {
   changes: PendingChange[];
   /** Readies the check-in panel to check in or shelve them (`prepareChangelistCheckin`). */
   prepare: (mode: CheckinMode) => void;
+  /** Every user changelist, where "Move to changelist" can take its changes. */
+  changelists: Changelist[];
 }
 
 /**
- * Actions for a changelist header. Checking it in or shelving it readies the check-in panel rather than running at
- * once, so the user still reads its comment and presses the button; undoing its changes asks as every undo does.
+ * Actions for a changelist header, null for the default changelist: every changelist offers the same menu, but for
+ * what the default one can't do (be renamed, described or deleted), which isn't offered. Checking it in or shelving it
+ * readies the check-in panel rather than running at once, so the user still reads its comment and presses the button;
+ * moving or undoing its changes acts on all of them, as checking it in does. What acts on some of its files (checking
+ * out, adding, ignoring, copying their paths) is in their own menu: select them, or right-click a folder.
  */
-export function changelistMenu(workspacePath: string, changelist: Changelist, { changes, prepare }: ChangelistMenuContext): MenuEntry[] {
+export function changelistMenu(workspacePath: string, changelist: Changelist | null, { changes, prepare, changelists }: ChangelistMenuContext): MenuEntry[] {
   const controlled = changes.filter(isControlled);
   return groupedMenu([
     changes.some(isCheckinCandidate) && menuAction('checkin', () => prepare('checkin'), { label: 'Check in this changelist' }),
     changes.some(isShelvable) && menuAction('shelve', () => prepare('shelve'), { label: 'Shelve this changelist' }),
-    menuAction('rename', () => void renameChangelist(workspacePath, changelist)),
-    menuAction('describe', () => void editChangelistDescription(workspacePath, changelist)),
+    changelist && menuAction('rename', () => void renameChangelist(workspacePath, changelist)),
+    changelist && menuAction('describe', () => void editChangelistDescription(workspacePath, changelist)),
+    moveToChangelistSubmenu(workspacePath, changes, changelists),
     controlled.length > 0 &&
       menuAction('undo', () => void undoChanges(workspacePath, controlled), { label: undoChangesLabel(controlled.length) }),
-    menuAction('delete', () => void deleteChangelist(workspacePath, changelist), { label: 'Delete changelist…' }),
+    changelist && menuAction('delete', () => void deleteChangelist(workspacePath, changelist), { label: 'Delete changelist…' }),
   ]);
 }

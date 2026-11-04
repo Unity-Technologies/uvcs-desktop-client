@@ -30,11 +30,15 @@ interface GroupRowContentProps {
   row: GroupRow;
   checkState: CheckState | null;
   onToggleIncluded: ToggleIncluded;
-  changelistMenu: (changelist: Changelist) => MenuEntry[];
+  changelistMenu: (changelist: Changelist | null) => MenuEntry[];
 }
 
-/** A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart from the folders under it. */
+/**
+ * A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart
+ * from the folders under it. Every changelist has its "…", the default one too, unless nothing in its menu applies.
+ */
 export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: GroupRowContentProps) {
+  const menu = changelistMenu(row.group ?? null);
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
@@ -43,8 +47,8 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
       <span className={styles.groupLabel} data-tip={row.group?.description}>
         {row.label}
       </span>
-      {row.group && (
-        <ActionDropdownMenu entries={changelistMenu(row.group)}>
+      {menu.length > 0 && (
+        <ActionDropdownMenu entries={menu}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>

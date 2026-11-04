@@ -44,7 +44,8 @@ interface ChangesListProps {
   /** Dropping changes on a changelist, its header or any row in it; rows only take drops when this is set. */
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
-  changelistMenu: (changelist: Changelist) => MenuEntry[];
+  /** A changelist header's menu, and its "…": null for the default changelist. */
+  changelistMenu: (changelist: Changelist | null) => MenuEntry[];
   /** The row's check and R on the selection; outside review mode, no checks or "changed since review" dots, and R turns it on. */
   review: ListReview<PendingChange>;
   locks: PendingLocks;
@@ -124,8 +125,14 @@ export function ChangesList({
   const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.item);
   const menuEntries = (): MenuEntry[] => {
     const target = menuTargetOf(menuRow.current);
-    if (target === null) return contextMenu(selectedChanges());
-    return Array.isArray(target) ? contextMenu(target) : changelistMenu(target);
+    switch (target.kind) {
+      case 'selection':
+        return contextMenu(selectedChanges());
+      case 'changes':
+        return contextMenu(target.changes);
+      case 'changelist':
+        return changelistMenu(target.changelist);
+    }
   };
   const { dragProps, dropProps, listDropProps, isInDropTarget } = useChangelistDrop({ rows, selection, onSelectionChange, selectedChanges, onMoveToChangelist });
 

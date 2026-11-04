@@ -68,10 +68,19 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'file' ? [row.item] : row.items;
 }
 
-/** What the menu of a right-clicked row is for: a changelist, the changes in a folder or the default changelist, or the selected files (null). */
-export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
-  if (!row || row.type === 'file') return null;
-  return row.type === 'group' && row.group ? row.group : row.items;
+/** What the menu of a right-clicked row is for. */
+export type ChangeMenuTarget =
+  /** The files selected: a file was right-clicked, or the menu key pressed on one. */
+  | { kind: 'selection' }
+  /** A changelist's header, the default changelist's (null) too: the changelist's own menu (`changelistMenu`). */
+  | { kind: 'changelist'; changelist: Changelist | null }
+  /** A folder: the menu of the changes in it, not of the files selected elsewhere. */
+  | { kind: 'changes'; changes: PendingChange[] };
+
+export function menuTargetOf(row: ChangeRow | null): ChangeMenuTarget {
+  if (!row || row.type === 'file') return { kind: 'selection' };
+  if (row.type === 'group') return { kind: 'changelist', changelist: row.group ?? null };
+  return { kind: 'changes', changes: row.items };
 }
 
 

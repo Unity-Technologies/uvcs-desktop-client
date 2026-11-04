@@ -211,8 +211,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           }
           changelistMenu={(changelist) =>
             changelistMenu(workspacePath, changelist, {
-              changes: changelistChanges.get(changelist.name) ?? NO_CHANGES,
+              changes: changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES,
               prepare: (mode) => prepareChangelist(changelist, mode),
+              changelists,
             })
           }
           review={review}
