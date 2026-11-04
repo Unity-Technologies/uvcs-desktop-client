@@ -10,8 +10,9 @@
  *   If you close a window during an update or a checkin, the app now waits for it to finish.
  *
  * The Release note workflow (`.github/workflows/release-note.yml`) fails a pull request whose section this can't
- * read, so every change either tells users what it delivers or says why it doesn't. It reads Markdown lines rather
- * than parsing Markdown, so it needs no package: only what Node runs as it is.
+ * read, so every change either tells users what it delivers or says why it doesn't, and one whose pictures sit where
+ * What's New never shows them (`misplacedPicture`). It reads Markdown lines rather than parsing Markdown, so it needs
+ * no package: only what Node runs as it is.
  *
  *   PULL_REQUEST_BODY="$(gh pr view --json body -q .body)" node scripts/build/releaseNote.ts
  */
@@ -36,6 +37,12 @@ const SETEXT_UNDERLINE = /^\s{0,3}(=+|-+)\s*$/;
 const BARE_NONE = /^None:?$/;
 const NONE = /^None:\s*([\s\S]*)$/;
 const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+/** A Markdown picture, `![alt](url)`, or an HTML one, `<img …>`, which `gh --attach` and GitHub's editor both write. */
+const PICTURE = /!\[[^\]]*\]\([^)]*\)|<img\b/i;
+/** The line an agent closes a body with ("🤖 Generated with [Claude Code](…)"): `gh` appends unreferenced attachments after it. */
+const CLOSING_LINE = /^\W*Generated with\b/;
+/** The template's last section, which holds links to issues, never a picture. */
+const LAST_SECTION = /^##\s+Fixed issues\s*$/i;
 /** What the pull request template asks to be replaced (`.github/pull_request_template.md`). */
 const TEMPLATE_PLACEHOLDER = /<what users can now do>|<A sentence or two\b|<why>/;
 
@@ -52,6 +59,47 @@ export function readReleaseNote(body: string): ReleaseNoteReading {
 
   const none = text.match(NONE);
   return none ? noneOf(none[1]!) : noteOf(text);
+}
+
+/**
+ * What the Release note workflow checks: the note (`readReleaseNote`), then where the body's pictures are
+ * (`misplacedPicture`). The release's notes read merged pull requests with `readReleaseNote` alone, so a body
+ * written before the picture rule still gives its note.
+ */
+export function checkPullRequestBody(body: string): ReleaseNoteReading {
+  const reading = readReleaseNote(body);
+  if ('problem' in reading) return reading;
+  const misplaced = misplacedPicture(body);
+  return misplaced === null ? reading : { problem: misplaced };
+}
+
+/**
+ * Why a body's pictures are where nobody reads them, or null. What's New shows only what "## Release note" holds,
+ * so a visible change carries its picture there (the release-notes skill, "Pictures and GIFs"); a wider one for
+ * reviewers may sit in another section, never alone. `gh --attach` appends a file the body doesn't reference after
+ * everything else: past the closing line or in the last section, a picture is one nobody placed.
+ */
+export function misplacedPicture(body: string): string | null {
+  const lines = body.replace(/\r\n?/g, '\n').replace(COMMENT, '').split('\n');
+  let section = '';
+  let closed = false;
+  let inNote = 0;
+  let elsewhere = 0;
+  for (const index of outsideCodeIndexes(lines)) {
+    const line = lines[index]!;
+    if (NEXT_SECTION.test(line)) section = line;
+    if (CLOSING_LINE.test(line)) closed = true;
+    if (!PICTURE.test(line)) continue;
+    if (closed || LAST_SECTION.test(section)) {
+      return 'A picture sits at the end of the body, where `gh --attach` puts a file the body doesn\'t reference: reference it inside "## Release note" as ![what it shows](./shot.png).';
+    }
+    if (SECTION_HEADING.test(section)) inNote++;
+    else elsewhere++;
+  }
+  if (elsewhere > 0 && inNote === 0) {
+    return 'The pull request shows a picture but its release note has none: a visible change carries its picture, cropped to the feature, inside "## Release note".';
+  }
+  return null;
 }
 
 /** "None:" and its reason: one line, so a note written under it isn't dropped without a word. */
@@ -137,7 +185,7 @@ function describeReading(reading: ReleaseNoteReading): string {
 }
 
 if (import.meta.filename === resolve(process.argv[1] ?? '')) {
-  const reading = readReleaseNote(process.env.PULL_REQUEST_BODY ?? '');
+  const reading = checkPullRequestBody(process.env.PULL_REQUEST_BODY ?? '');
   console.log(describeReading(reading));
   if ('problem' in reading) process.exitCode = 1;
 }
