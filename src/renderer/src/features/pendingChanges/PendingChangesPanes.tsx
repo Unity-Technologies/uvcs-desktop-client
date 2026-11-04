@@ -41,7 +41,7 @@ import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
-import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
+import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
@@ -136,7 +136,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   );
   useMergeComment(workspacePath, snapshot);
   useEndPreparedWhenGone(workspacePath, snapshot, checkinChoice.prepared);
-  const preparedChangelist = useMemo(() => currentChoice(checkinChoice, allChanges).prepared?.name ?? null, [checkinChoice, allChanges]);
+  const preparedChangelist = useMemo(() => preparedChangelistNote(currentChoice(checkinChoice, allChanges).prepared), [checkinChoice, allChanges]);
 
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
@@ -169,10 +169,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     setIncludedChanges(withMetas(toggled.flatMap(changesUnderRow), pairs.metaOf), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
-  const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
+  const prepareChangelist = (changelist: Changelist | null, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, index, changelists, clearFilter });
+      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist?.name ?? null) ?? NO_CHANGES, index, changelists, clearFilter });
       setCheckinMode(mode);
     });
     summaryRef.current?.focusAtEnd();

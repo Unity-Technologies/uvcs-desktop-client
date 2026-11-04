@@ -47,7 +47,7 @@ interface CheckinPanelProps {
   behindCount: number;
   /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
   behindDescription: string | null;
-  /** The changelist whose files alone are checked ("Check in this changelist"), or null. */
+  /** Says which changelist's files alone are checked ("Check in this changelist"): "Changelist ui"; or null. */
   preparedChangelist: string | null;
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
@@ -206,7 +206,7 @@ export function CheckinPanel({
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
       {preparedChangelist !== null && (
         <div className={styles.prepared} data-tip="Only its files are checked, until they are checked in or shelved">
-          Changelist {preparedChangelist}
+          {preparedChangelist}
         </div>
       )}
     </div>

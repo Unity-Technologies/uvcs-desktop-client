@@ -1,7 +1,7 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
 import { BulkPrivateTally, bulkPrivateFiles, isPrivateFolderAt, privateFoldersOf, type BulkPrivate, type PrivateFolders } from './bulkPrivate';
-import { isCheckinCandidate, isShelvable } from './changeCategories';
+import { changelistNameOf, isCheckinCandidate, isShelvable } from './changeCategories';
 import { UploadTally, uploadKindOf, type UploadKind, type UploadSummary } from './uploadSummary';
 import { consistentlyIncluded, neededWith, type PendingIndex } from './checkinDependencies';
 
@@ -33,7 +33,8 @@ export interface CheckinSelection {
  * that appears meanwhile (an editor saving, a new `.meta`) stays out. Checking files by hand adds or takes them here.
  */
 export interface PreparedChangelist {
-  name: string;
+  /** Null for the default changelist (`changelistNameOf`). */
+  name: string | null;
   paths: ReadonlySet<string>;
 }
 
@@ -61,7 +62,7 @@ export function withEverythingIncluded(choice: CheckinChoice, paths: string[]): 
  * added file undone stays on disk, private, at its path, and files the user checked besides don't keep it going.
  */
 export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
-  return allChanges.some((change) => change.changelist === prepared.name);
+  return allChanges.some((change) => changelistNameOf(change) === prepared.name);
 }
 
 /**

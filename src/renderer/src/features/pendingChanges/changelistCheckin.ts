@@ -1,23 +1,27 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { joinComment, splitComment } from '../../lib/comment';
+import { changelistNameOf } from './changeCategories';
 import { neededWith, type PendingIndex } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
+import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
+import type { PreparedChangelist } from './checkinSelection';
 
-/** The changes of each user changelist, by its name; the default changelist's are in none. */
-export function changesByChangelist(changes: PendingChange[]): ReadonlyMap<string, PendingChange[]> {
-  const byName = new Map<string, PendingChange[]>();
+/** The changes of each changelist, by its name: the default changelist's under null (`changelistNameOf`). */
+export function changesByChangelist(changes: PendingChange[]): ReadonlyMap<string | null, PendingChange[]> {
+  const byName = new Map<string | null, PendingChange[]>();
   for (const change of changes) {
-    if (!change.changelist) continue;
-    const inChangelist = byName.get(change.changelist);
+    const name = changelistNameOf(change);
+    const inChangelist = byName.get(name);
     if (inChangelist) inChangelist.push(change);
-    else byName.set(change.changelist, [change]);
+    else byName.set(name, [change]);
   }
   return byName;
 }
 
 interface ChangelistCheckin {
   workspacePath: string;
-  changelist: Changelist;
+  /** Null for the default changelist, which has no description. */
+  changelist: Changelist | null;
   /** Its pending changes, those the filters hide too (`changesByChangelist`). */
   changes: PendingChange[];
   /** Every pending change: what the changelist's changes need goes in with them (`neededWith`). */
@@ -38,8 +42,14 @@ interface ChangelistCheckin {
 export function prepareChangelistCheckin({ workspacePath, changelist, changes, index, changelists, clearFilter }: ChangelistCheckin): void {
   clearFilter();
   const store = useCheckinDraftStore.getState();
-  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(neededWith(changes, index).map((change) => change.path)) });
-  if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist.description));
+  store.prepareChangelist(workspacePath, { name: changelist?.name ?? null, paths: new Set(neededWith(changes, index).map((change) => change.path)) });
+  if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist?.description ?? ''));
+}
+
+/** What the check-in panel says under its button while a changelist is prepared: "Changelist ui", "Default changelist". */
+export function preparedChangelistNote(prepared: PreparedChangelist | null): string | null {
+  if (!prepared) return null;
+  return prepared.name === null ? DEFAULT_CHANGELIST_LABEL : `Changelist ${prepared.name}`;
 }
 
 /** Whether the draft holds a comment of the user's own: anything but nothing or a changelist's description as it was put there. */

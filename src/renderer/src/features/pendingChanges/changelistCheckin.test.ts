@@ -17,7 +17,7 @@ vi.mock('./checkinOperations', () => ({
 
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { askedDialogs } from '../../testing/fakeDialogs';
-import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
+import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
 import { indexPending } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { checkinFactsOf, type CheckinSelection, checkinSelectionOf, currentChoice } from './checkinSelection';
@@ -299,6 +299,15 @@ describe('checking in or shelving the default changelist', () => {
 
     expect(checkinDraftOf(ws).prepared?.name).toBeNull();
     expect(selection().included).toEqual(defaultChanges.slice(0, 2));
+  });
+
+  it('is named under the panel\'s button as the list names it', () => {
+    prepare(null);
+    expect(preparedChangelistNote(checkinDraftOf(ws).prepared)).toBe('Default changelist');
+
+    prepare(ui);
+    expect(preparedChangelistNote(checkinDraftOf(ws).prepared)).toBe('Changelist ui');
+    expect(preparedChangelistNote(null)).toBeNull();
   });
 
   it('has no description: it clears one a user changelist left, and keeps the comment the user wrote', () => {
