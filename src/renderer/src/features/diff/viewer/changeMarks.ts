@@ -2,20 +2,21 @@ import { formatCount } from '../../../lib/text';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
 
 /**
- * The change map: a narrow strip beside a text diff's vertical scrollbar marking where its changes are (`ChangeMap`),
- * so the shape of the whole diff reads at a glance and a click on a mark goes to its change. The strip stands for the
- * whole scrolling content, as the scrollbar's track does: a change at a share of the content's height is marked at
- * that share of the strip's.
+ * The change map: the diff's own vertical scrollbar marks where its changes are in its track (`ChangeMap`), so the
+ * shape of the whole diff reads at a glance and a click there scrolls to it. The track stands for the whole
+ * scrolling content: a change at a share of the content's height is marked at that share of the track's. Each change
+ * is a solid block, and changes close together fuse into one band, so the clear gaps between bands show where the
+ * groups of changes are.
  */
 
-/** What a change does: adds lines only, removes lines only, or both (a line changed). */
-export type ChangeKind = 'added' | 'deleted' | 'changed';
+/** What a mark's changes do: only add lines, only remove lines, or both (drawn half removed, half added). */
+export type ChangeMarkKind = 'added' | 'deleted' | 'both';
 
-/** A mark of the strip, in its pixels: one change, or several too close to tell apart (`first` to `last`). */
+/** A block of the track, in its pixels: one change, or several close together fused into a band (`first` to `last`). */
 export interface ChangeMark {
+  kind: ChangeMarkKind;
   top: number;
   height: number;
-  kind: ChangeKind;
   /** The first change it stands for, by index; where a click on it goes. */
   first: number;
   last: number;
@@ -37,15 +38,21 @@ export interface ChangeMapLayout {
   lineCounts: Record<DiffSide, number>;
   /** The scrolling content's height (`scrollHeight`). */
   contentHeight: number;
-  /** The strip's height, which stands for the whole content. */
+  /** The track's height, which stands for the whole content. */
   stripHeight: number;
 }
 
-/** A mark is never thinner than this, so a change of one line among thousands still shows and can be clicked. */
-export const MIN_MARK_HEIGHT = 3;
+/** A block is never shorter than this, so a change of one line reads as a block, not a speck, and can be clicked. */
+export const MIN_MARK_HEIGHT = 4;
 
-/** A click this close to a mark goes to its change: a mark of a few pixels is hard to hit exactly. */
-const HIT_SLOP = 2;
+/** Changes whose blocks are closer than this fuse into one band: the gaps left are the ones the eye can read. */
+export const FUSE_GAP = 4;
+
+/**
+ * Changes this few unchanged lines apart, or fewer, fuse into one band however far apart the diff lays them out: they
+ * read as one group of edits (a run of one-line edits a couple of lines apart), as the hunk around them shows them.
+ */
+export const FUSE_LINES = 3;
 
 /** Whether the map shows: a diff of two versions that has changes and doesn't fit without scrolling. */
 export function showsChangeMap({ changes, bothSides, contentHeight, viewHeight }: { changes: number; bothSides: boolean; contentHeight: number; viewHeight: number }): boolean {
@@ -53,37 +60,46 @@ export function showsChangeMap({ changes, bothSides, contentHeight, viewHeight }
   return changes > 0 && bothSides && viewHeight > 0 && contentHeight > viewHeight + 1;
 }
 
-export function changeKindOf(region: ChangeRegion): ChangeKind {
+export function changeKindOf(region: ChangeRegion): ChangeMarkKind {
   const removes = region.lines.some((line) => line.side === 'deletions');
   const adds = region.lines.some((line) => line.side === 'additions');
-  return removes && adds ? 'changed' : removes ? 'deleted' : 'added';
+  return removes && adds ? 'both' : removes ? 'deleted' : 'added';
 }
 
 /**
- * The marks of the changes, top to bottom. Changes whose marks would overlap share one, so however many changes a file
- * has, the marks are at most one for every `MIN_MARK_HEIGHT` pixels of the strip: what's drawn is bounded by the strip,
- * not the file. Each change asks where at most four lines are (the first and last of each side).
+ * The blocks of the changes, top to bottom. Changes whose blocks touch or are less than `FUSE_GAP` apart, or with at
+ * most `FUSE_LINES` unchanged lines between them, fuse into one band, of one kind if they all are, else `both`; so however many changes a file has, the marks are at most one for
+ * every `MIN_MARK_HEIGHT` pixels of the track: what's drawn is bounded by the track, not the file. Each change asks
+ * where at most four lines are (the first and last of each side).
  */
 export function changeMarks(regions: readonly ChangeRegion[], layout: ChangeMapLayout): ChangeMark[] {
   const { contentHeight, stripHeight } = layout;
   if (contentHeight <= 0 || stripHeight <= 0) return [];
   const scale = stripHeight / contentHeight;
   const marks: ChangeMark[] = [];
+  let previousEnd = -Infinity;
   for (const region of regions) {
     const span = regionSpan(region, layout);
     const height = Math.min(stripHeight, Math.max(MIN_MARK_HEIGHT, Math.ceil(span.bottom * scale) - Math.floor(span.top * scale)));
     const top = Math.min(Math.max(0, Math.floor(span.top * scale)), stripHeight - height);
     const kind = changeKindOf(region);
     const previous = marks.at(-1);
-    if (previous && top < previous.top + previous.height) {
+    const linesBetween = region.newStart - previousEnd;
+    previousEnd = modifiedEnd(region);
+    if (previous && (top < previous.top + previous.height + FUSE_GAP || linesBetween <= FUSE_LINES)) {
       previous.height = Math.max(previous.top + previous.height, top + height) - previous.top;
-      previous.kind = previous.kind === kind ? kind : 'changed';
+      previous.kind = previous.kind === kind ? kind : 'both';
       previous.last = region.index;
     } else {
-      marks.push({ top, height, kind, first: region.index, last: region.index });
+      marks.push({ kind, top, height, first: region.index, last: region.index });
     }
   }
   return marks;
+}
+
+/** The modified line just past a change: where the unchanged lines after it start. */
+function modifiedEnd(region: ChangeRegion): number {
+  return region.newStart + region.lines.filter((line) => line.side === 'additions').length;
 }
 
 /** Where a change's rows start and end in the content: from its first lines' tops to its last lines' bottoms. */
@@ -109,38 +125,20 @@ function shareOfSide({ side, lineNumber }: ChangedLine, { lineCounts, contentHei
   return { top: ((lineNumber - 1) / lines) * contentHeight, height: contentHeight / lines };
 }
 
-/** What a click on the strip at `y` does: go to the change of the mark there, or scroll the view to center that point. */
-export type ChangeMapClick = { to: 'change'; index: number } | { to: 'point'; scrollTop: number };
-
-export function changeMapClick(marks: readonly ChangeMark[], y: number, { contentHeight, stripHeight, viewHeight }: { contentHeight: number; stripHeight: number; viewHeight: number }): ChangeMapClick {
-  const hit = nearestMark(marks, y);
-  if (hit) return { to: 'change', index: hit.first };
-  const point = (y / stripHeight) * contentHeight;
-  return { to: 'point', scrollTop: Math.round(Math.min(Math.max(0, point - viewHeight / 2), Math.max(0, contentHeight - viewHeight))) };
-}
-
-function nearestMark(marks: readonly ChangeMark[], y: number): ChangeMark | undefined {
-  let nearest: ChangeMark | undefined;
-  let nearestDistance = Infinity;
-  for (const mark of marks) {
-    const distance = y < mark.top ? mark.top - y : y >= mark.top + mark.height ? y - (mark.top + mark.height) + 1 : 0;
-    if (distance <= HIT_SLOP && distance < nearestDistance) {
-      nearest = mark;
-      nearestDistance = distance;
-    }
-  }
-  return nearest;
+/**
+ * Where a click on the track at `y` scrolls the view: so the point of the content it stands for is in the middle of the
+ * view, within the content's ends. A click on a block or between blocks alike: one rule the eye can predict, while the
+ * arrows (⌥↓ ⌥↑) step from change to change.
+ */
+export function scrollTopForTrackPoint(y: number, { contentHeight, stripHeight, viewHeight }: { contentHeight: number; stripHeight: number; viewHeight: number }): number {
+  const point = stripHeight > 0 ? (y / stripHeight) * contentHeight : 0;
+  return Math.round(Math.min(Math.max(0, point - viewHeight / 2), Math.max(0, contentHeight - viewHeight)));
 }
 
 /** A mark's tooltip: "Change 3 of 12", or "Changes 3–5 of 12" for changes too close to tell apart. */
 export function changeMarkLabel(mark: ChangeMark, count: number): string {
   const total = formatCount(count);
   return mark.first === mark.last ? `Change ${formatCount(mark.first + 1)} of ${total}` : `Changes ${formatCount(mark.first + 1)}–${formatCount(mark.last + 1)} of ${total}`;
-}
-
-/** Whether a mark stands for the change moved to last (`StepNavigation.current`). */
-export function holdsChange(mark: ChangeMark, current: number | null): boolean {
-  return current !== null && current >= mark.first && current <= mark.last;
 }
 
 /** What the marks were placed from (`useChangeMap`): they're placed again only when one of these changes. */

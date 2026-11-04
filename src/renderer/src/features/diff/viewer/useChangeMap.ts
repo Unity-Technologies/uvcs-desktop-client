@@ -2,6 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
 import { changeMarks, placesAgain, showsChangeMap, type ChangeMark, type MarksPlacedFrom } from './changeMarks';
+import { pierreChangeColors, sameChangeColors, type ChangeColors } from './pierreChangeColors';
 import { pierreShadowRoot } from './pierreDom';
 import { pierreLineBox } from './pierreLinePosition';
 
@@ -12,6 +13,8 @@ export interface ChangeMapView {
   contentHeight: number;
   /** The view's height, and the strip's: it runs beside the scrollbar's whole track. */
   viewHeight: number;
+  /** The colors the diff draws its removed and added lines in (`pierreChangeColors`), the marks' too. */
+  colors: ChangeColors;
 }
 
 interface ChangeMapOptions {
@@ -32,7 +35,8 @@ interface ChangeMapOptions {
  * marks are placed where Pierre lays the changes out (`pierreLineBox`), and placed again (`placesAgain`) when the changes, the layout
  * or the sizes change: on a resize, and as Pierre renders rows (expanding unchanged lines, wrapped lines measured),
  * batched to a frame as `PaneScrollbars` measures. Scrolling renders rows too, but leaves the sizes as they were, so
- * it places nothing again.
+ * it places nothing again. The marks' colors are read anew each time, apart from that: a theme switch recolors the
+ * diff without moving anything.
  */
 export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, bothSides, layoutKey }: ChangeMapOptions): ChangeMapView | null {
   const [view, setView] = useState<ChangeMapView | null>(null);
@@ -50,7 +54,9 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       frame = 0;
       const { regions, lineCounts, bothSides, layoutKey } = latest.current;
       const fileContainer = container.querySelector('diffs-container');
-      const boxOf = (line: ChangedLine) => (fileContainer ? pierreLineBox(virtualizer, fileContainer, line) : undefined);
+      if (!fileContainer) return;
+      const colors = pierreChangeColors(fileContainer);
+      const boxOf = (line: ChangedLine) => pierreLineBox(virtualizer, fileContainer, line);
       const from: MarksPlacedFrom = {
         regions,
         bothSides,
@@ -59,12 +65,15 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
         viewHeight: container.clientHeight,
         lastChangeTop: regions.length > 0 ? boxOf(regions.at(-1)!.lines[0]!)?.top : undefined,
       };
-      if (!placesAgain(placedFrom.current, from)) return;
+      if (!placesAgain(placedFrom.current, from)) {
+        setView((current) => (current && !sameChangeColors(current.colors, colors) ? { ...current, colors } : current));
+        return;
+      }
       placedFrom.current = from;
       const { contentHeight, viewHeight } = from;
       if (!showsChangeMap({ changes: regions.length, bothSides, contentHeight, viewHeight })) return setView(null);
       const marks = changeMarks(regions, { boxOf, lineCounts, contentHeight, stripHeight: viewHeight });
-      const next = { marks, contentHeight, viewHeight };
+      const next = { marks, contentHeight, viewHeight, colors };
       setView((current) => (current && sameView(current, next) ? current : next));
     };
     const schedule = (): void => {
@@ -86,7 +95,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
 }
 
 function sameView(a: ChangeMapView, b: ChangeMapView): boolean {
-  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && sameMarks(a.marks, b.marks);
+  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && sameChangeColors(a.colors, b.colors) && sameMarks(a.marks, b.marks);
 }
 
 function sameMarks(a: readonly ChangeMark[], b: readonly ChangeMark[]): boolean {

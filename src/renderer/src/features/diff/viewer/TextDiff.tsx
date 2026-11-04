@@ -56,7 +56,7 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 const NO_CHANGES: ChangeNavigation['regions'] = [];
 
 /** What the change map takes of the navigation through the diff's changes. */
-export type ChangeSteps = Pick<ChangeNavigation, 'regions' | 'count' | 'current' | 'goTo'>;
+export type ChangeSteps = Pick<ChangeNavigation, 'regions' | 'count'>;
 
 // Typing re-diffs the text in Pierre: under the comparison method, like the diff it starts from.
 installPierreLineComparison();
@@ -314,7 +314,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onFocus={pointerFocus.onFocus}
           onBlur={pointerFocus.onBlur}
         >
-          {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} current={changes.current} onGoTo={changes.goTo} containerRef={container} />}
+          {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} containerRef={container} />}
           <EditProvider createEditor={createEditor}>
             {wholeFile ? (
               <VirtualizerContext.Provider value={virtualizer}>

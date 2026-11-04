@@ -7,9 +7,14 @@
   user-select: text;
 }
 
-/* Room for the change map (`ChangeMap`) just left of the vertical scrollbar, so no code goes under it. */
+/* While the change map shows, the diff draws its own vertical scrollbar (`ChangeMap`), whose track holds the marks: the
+   browser's is hidden, and the code leaves room for the diff's at its right, so no code goes under it. */
 .diff[data-change-map] {
-  padding-right: var(--change-map-size);
+  padding-right: var(--diff-scrollbar-size);
+}
+
+.diff[data-change-map]::-webkit-scrollbar:vertical {
+  width: 0;
 }
 
 .diff:focus {
