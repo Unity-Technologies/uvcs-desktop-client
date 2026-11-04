@@ -33,14 +33,14 @@ interface Drag {
  */
 export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
   const scrollTop = useScrollTop(containerRef);
-  const geometry = { contentHeight: view.contentHeight, viewHeight: view.viewHeight, trackHeight: view.viewHeight };
+  const geometry = { contentHeight: view.contentHeight, viewHeight: view.viewHeight, trackHeight: view.trackHeight };
   const thumb = thumbOf({ ...geometry, scrollTop });
   const drag = useRef<Drag | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const onTrackClick = (event: MouseEvent<HTMLDivElement>): void => {
     const y = event.clientY - event.currentTarget.getBoundingClientRect().top;
-    const top = scrollTopForTrackPoint(y, { contentHeight: view.contentHeight, stripHeight: view.viewHeight, viewHeight: view.viewHeight });
+    const top = scrollTopForTrackPoint(y, geometry);
     const container = containerRef.current;
     if (container) scrollSmoothlyTo(container, top, prefersReducedMotion());
   };
@@ -63,7 +63,7 @@ export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
   return (
     <div
       className={styles.track}
-      style={{ height: view.viewHeight, marginBottom: -view.viewHeight, ...colorProperties(view) }}
+      style={{ height: view.trackHeight, marginBottom: -view.trackHeight, ...colorProperties(view) }}
       aria-hidden
       onMouseDown={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}

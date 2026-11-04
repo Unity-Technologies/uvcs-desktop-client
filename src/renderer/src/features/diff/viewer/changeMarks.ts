@@ -17,7 +17,7 @@ export interface ChangeMark {
   kind: ChangeMarkKind;
   top: number;
   height: number;
-  /** The first change it stands for, by index; where a click on it goes. */
+  /** The first change it stands for, by index; its tooltip counts from it ("Changes 4–24 of 25"). */
   first: number;
   last: number;
 }
@@ -39,7 +39,7 @@ export interface ChangeMapLayout {
   /** The scrolling content's height (`scrollHeight`). */
   contentHeight: number;
   /** The track's height, which stands for the whole content. */
-  stripHeight: number;
+  trackHeight: number;
 }
 
 /** A block is never shorter than this, so a change of one line reads as a block, not a speck, and can be clicked. */
@@ -73,15 +73,15 @@ export function changeKindOf(region: ChangeRegion): ChangeMarkKind {
  * where at most four lines are (the first and last of each side).
  */
 export function changeMarks(regions: readonly ChangeRegion[], layout: ChangeMapLayout): ChangeMark[] {
-  const { contentHeight, stripHeight } = layout;
-  if (contentHeight <= 0 || stripHeight <= 0) return [];
-  const scale = stripHeight / contentHeight;
+  const { contentHeight, trackHeight } = layout;
+  if (contentHeight <= 0 || trackHeight <= 0) return [];
+  const scale = trackHeight / contentHeight;
   const marks: ChangeMark[] = [];
   let previousEnd = -Infinity;
   for (const region of regions) {
     const span = regionSpan(region, layout);
-    const height = Math.min(stripHeight, Math.max(MIN_MARK_HEIGHT, Math.ceil(span.bottom * scale) - Math.floor(span.top * scale)));
-    const top = Math.min(Math.max(0, Math.floor(span.top * scale)), stripHeight - height);
+    const height = Math.min(trackHeight, Math.max(MIN_MARK_HEIGHT, Math.ceil(span.bottom * scale) - Math.floor(span.top * scale)));
+    const top = Math.min(Math.max(0, Math.floor(span.top * scale)), trackHeight - height);
     const kind = changeKindOf(region);
     const previous = marks.at(-1);
     const linesBetween = region.newStart - previousEnd;
@@ -130,8 +130,8 @@ function shareOfSide({ side, lineNumber }: ChangedLine, { lineCounts, contentHei
  * view, within the content's ends. A click on a block or between blocks alike: one rule the eye can predict, while the
  * arrows (⌥↓ ⌥↑) step from change to change.
  */
-export function scrollTopForTrackPoint(y: number, { contentHeight, stripHeight, viewHeight }: { contentHeight: number; stripHeight: number; viewHeight: number }): number {
-  const point = stripHeight > 0 ? (y / stripHeight) * contentHeight : 0;
+export function scrollTopForTrackPoint(y: number, { contentHeight, trackHeight, viewHeight }: { contentHeight: number; trackHeight: number; viewHeight: number }): number {
+  const point = trackHeight > 0 ? (y / trackHeight) * contentHeight : 0;
   return Math.round(Math.min(Math.max(0, point - viewHeight / 2), Math.max(0, contentHeight - viewHeight)));
 }
 

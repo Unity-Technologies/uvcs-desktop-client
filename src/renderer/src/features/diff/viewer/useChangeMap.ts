@@ -9,10 +9,12 @@ import { pierreLineBox } from './pierreLinePosition';
 /** The change map as measured: its marks, and the sizes of the view it stands beside. */
 export interface ChangeMapView {
   marks: ChangeMark[];
-  /** The diff's scrolling content (`scrollHeight`), which the strip stands for whole. */
+  /** The diff's scrolling content (`scrollHeight`), which the track stands for whole. */
   contentHeight: number;
-  /** The view's height, and the strip's: it runs beside the scrollbar's whole track. */
+  /** The view's height (`clientHeight`). */
   viewHeight: number;
+  /** The track's height: the bar runs the view's whole height. */
+  trackHeight: number;
   /** The colors the diff draws its removed and added lines in (`pierreChangeColors`), the marks' too. */
   colors: ChangeColors;
 }
@@ -72,8 +74,9 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       placedFrom.current = from;
       const { contentHeight, viewHeight } = from;
       if (!showsChangeMap({ changes: regions.length, bothSides, contentHeight, viewHeight })) return setView(null);
-      const marks = changeMarks(regions, { boxOf, lineCounts, contentHeight, stripHeight: viewHeight });
-      const next = { marks, contentHeight, viewHeight, colors };
+      const trackHeight = viewHeight;
+      const marks = changeMarks(regions, { boxOf, lineCounts, contentHeight, trackHeight });
+      const next = { marks, contentHeight, viewHeight, trackHeight, colors };
       setView((current) => (current && sameView(current, next) ? current : next));
     };
     const schedule = (): void => {
