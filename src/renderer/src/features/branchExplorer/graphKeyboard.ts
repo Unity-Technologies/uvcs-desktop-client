@@ -3,6 +3,7 @@ import { spec } from '@shared/domain/specs';
 import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { isTextEntry } from '../../lib/textEntry';
+import { BRANCH_MOVES, moveBranch, type BranchPositions } from './branchPosition';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import { ZOOM_STEP } from './canvas/zoom';
 import { graphActions, openSelection } from './graphActions';
@@ -31,6 +32,8 @@ export interface GraphKeyboard {
   toggleDetails: () => void;
   /** Esc with nothing selected: out of the focus on a branch. */
   exitFocus: () => void;
+  /** The branches moved in the repository shown: ⌘↑ and ⌘↓ move the selected one (`graphMoveBranch*`). */
+  positions: BranchPositions;
 }
 
 /**
@@ -107,6 +110,13 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
         if (source !== null) graphActions.merge('merge', source);
       },
     ],
+    // The selected changeset's branch moves too: it's the lane the selection is on.
+    ...BRANCH_MOVES.map(({ move, shortcutId }): [ShortcutId, () => void] => [
+      shortcutId,
+      () => {
+        if (lane) moveBranch(layout, lane, move, keyboard.positions);
+      },
+    ]),
     ['graphDetails', keyboard.toggleDetails],
     ['graphContextMenu', openContextMenu],
     // ⌘F is the palette command's; the view adds the plain key.
