@@ -2,7 +2,7 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type ChangeRegion } from './changeBlocks';
-import { changeKindOf, changeMapClick, changeMarkLabel, changeMarks, holdsChange, MIN_MARK_HEIGHT, showsChangeMap, type ChangeMapLayout, type LineBox } from './changeMap';
+import { changeKindOf, changeMapClick, changeMarkLabel, changeMarks, holdsChange, MIN_MARK_HEIGHT, showsChangeMap, type ChangeMapLayout, type LineBox } from './changeMarks';
 
 const ROW = 20;
 const removed = (lineNumber: number): ChangedLine => ({ side: 'deletions', lineNumber });
