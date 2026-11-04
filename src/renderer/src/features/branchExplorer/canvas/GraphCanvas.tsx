@@ -70,8 +70,10 @@ export interface TimelineInputs {
   owners: ReadonlySet<string>;
   shareIsMine: boolean;
   searchHits: readonly SearchHit[];
-  /** Whether it slides in as it shows: the user just showed it. */
+  /** Whether it slides in as it shows: the user just showed it (`useTimelineSlideIn`). */
   slideIn: boolean;
+  /** Its slide is over. */
+  onSlidIn: () => void;
 }
 
 /** The hover card on screen: what it is about, where the pointer was, and the caption it lies on, if any. */
@@ -340,6 +342,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           shareIsMine={timeline.shareIsMine}
           searchHits={timeline.searchHits}
           slideIn={timeline.slideIn}
+          onSlidIn={timeline.onSlidIn}
           selectedChangeset={highlights.selectedChangeset}
           selectedBranch={highlights.selectedBranch}
           homeChangeset={highlights.homeChangeset}

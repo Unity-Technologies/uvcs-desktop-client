@@ -39,6 +39,8 @@ interface GraphTimelineProps {
   pendingChangeCount: number;
   /** Whether it slides in as it shows: the user just showed it. */
   slideIn: boolean;
+  /** Its slide is over: it doesn't slide again when mounted again. */
+  onSlidIn: () => void;
   /** Gives the keyboard to the graph, as pressing the canvas does. */
   focusGraph: () => void;
 }
@@ -61,7 +63,7 @@ interface Hover {
  * turns the pointer into viewport moves.
  */
 export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>(function GraphTimeline(props, ref) {
-  const { layout, palette, view, screenSize, owners, shareIsMine, searchHits, selectedChangeset, selectedBranch, homeChangeset, pendingChangeCount, slideIn, focusGraph } = props;
+  const { layout, palette, view, screenSize, owners, shareIsMine, searchHits, selectedChangeset, selectedBranch, homeChangeset, pendingChangeCount, slideIn, onSlidIn, focusGraph } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sizeRef = useRef<Size>({ width: 0, height: 0 });
@@ -192,6 +194,8 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
       ref={containerRef}
       className={styles.timeline}
       data-slide-in={slideIn}
+      // Its own slide only: the hover card's animation bubbles here through React's tree.
+      onAnimationEnd={(event) => event.target === event.currentTarget && onSlidIn()}
       data-cursor={timelineCursor(hover?.target ?? null)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

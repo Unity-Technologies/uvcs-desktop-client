@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { slidesIn } from './timelineSlideIn';
 
 /**
- * Whether the Timeline slides in: only once the user shows it while the view is open, never as the view opens with it
- * already shown (the view keeps one layout from its first frame).
+ * Whether the Timeline slides in (`slidesIn`): from the toggle that shows it until its slide is over, which the strip
+ * tells (`slidIn`, on its `animationend`).
  */
-export function useTimelineSlideIn(shown: boolean): boolean {
-  const shownAtOpen = useRef(shown);
-  const [slideIn, setSlideIn] = useState(false);
+export function useTimelineSlideIn(shown: boolean): { slideIn: boolean; slidIn: () => void } {
+  const shownBefore = useRef(shown);
+  const [sliding, setSliding] = useState(false);
   useEffect(() => {
-    if (shown !== shownAtOpen.current) setSlideIn(shown);
+    const before = shownBefore.current;
+    shownBefore.current = shown;
+    setSliding((current) => slidesIn(before, shown, current));
   }, [shown]);
-  return slideIn;
+  const slidIn = useCallback(() => setSliding(false), []);
+  return { slideIn: sliding, slidIn };
 }

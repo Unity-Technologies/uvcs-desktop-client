@@ -131,13 +131,13 @@ export function BranchExplorerView() {
     [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
   );
   const timelineShare = useMemo(() => shareOwners(people, me), [people, me]);
-  const timelineSlidesIn = useTimelineSlideIn(showTimeline);
+  const { slideIn: timelineSlidesIn, slidIn: timelineSlidIn } = useTimelineSlideIn(showTimeline);
   const timeline = useMemo<TimelineInputs | null>(
     () =>
       showTimeline
-        ? { owners: timelineShare.owners, shareIsMine: timelineShare.isMine, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn }
+        ? { owners: timelineShare.owners, shareIsMine: timelineShare.isMine, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn, onSlidIn: timelineSlidIn }
         : null,
-    [showTimeline, timelineShare, search.shown, searchHits, timelineSlidesIn],
+    [showTimeline, timelineShare, search.shown, searchHits, timelineSlidesIn, timelineSlidIn],
   );
   useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
