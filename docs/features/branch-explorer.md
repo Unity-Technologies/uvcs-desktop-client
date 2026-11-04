@@ -100,7 +100,7 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   `smoothPath`), so it reads as a line rather than a staircase of pixels. A count per day over the day's columns was
   dropped: flat mesas with cliffs. Under it, in the accent, the share of the user's changesets or the people filter's
   picks (`shareOwners`, which also names them in the hover card: "yours", one person picked by name, "by the people
-  picked"), never thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at their own
+  picked"), sampled as the curve is and never above it, nor thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at their own
   times and in its column (`timelineHistory`, `changesetsInColumns`).
 - **The frame** is a rounded box (`FRAME_TOP`, `FRAME_HEIGHT`) around the curve: an accent outline over the faintest
   accent wash (`--accent-wash`), a soft halo (`--accent-soft`) that grows to its full 3 px while the frame is hovered

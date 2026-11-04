@@ -72,4 +72,12 @@ describe('timelineCurves', () => {
     const tallest = Math.max(BASELINE - curves.share.start.y, ...curves.share.segments.map(({ end }) => BASELINE - end.y));
     expect(tallest).toBe(SHARE_MIN_HEIGHT);
   });
+
+  it('never stands the share above the curve where it is all of the activity, on a rising slope too', () => {
+    const ramp = Array.from({ length: 30 }, (_, pixel) => pixel / 29);
+    const curves = timelineCurves(curveOf(ramp, ramp, ramp.map(() => 1)));
+    const points = (path: typeof curves.total) => [path.start, ...path.segments.map(({ end }) => end)];
+    const share = points(curves.share);
+    points(curves.total).forEach((point, index) => expect(share[index]!.y).toBeGreaterThanOrEqual(Math.min(point.y, BASELINE - SHARE_MIN_HEIGHT)));
+  });
 });

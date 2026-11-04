@@ -1,4 +1,4 @@
-import { shareHeight, type ActivityCurve } from './activityCurve';
+import { SHARE_MIN_HEIGHT, type ActivityCurve } from './activityCurve';
 import { BASELINE, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 
 export interface CurvePoint {
@@ -63,16 +63,17 @@ export interface TimelineCurves {
 }
 
 /**
- * The activity and the share as smooth paths. The share takes the tallest of the pixels each point stands for, so its
- * floor (`SHARE_MIN_HEIGHT`, where the user has a changeset) is never stepped over.
+ * The activity and the share as smooth paths, both sampled at each point's pixel. The share never stands above the
+ * curve, except for its floor (`SHARE_MIN_HEIGHT`) where the user has a changeset among the pixels the point stands for,
+ * so one that falls between two points still shows.
  */
 export function timelineCurves(curve: ActivityCurve, step = CURVE_STEP): TimelineCurves {
   const width = curve.total.length;
   const total = sampledCurve(width, step, (from) => curve.total[from]! * PLOT_HEIGHT);
   const share = sampledCurve(width, step, (from, to) => {
-    let tallest = 0;
-    for (let pixel = from; pixel < to; pixel++) tallest = Math.max(tallest, shareHeight(curve, pixel, PLOT_HEIGHT));
-    return tallest;
+    const height = Math.min(curve.share[from]!, curve.total[from]!) * PLOT_HEIGHT;
+    for (let pixel = from; pixel < to; pixel++) if (curve.sharePresent[pixel]) return Math.max(height, SHARE_MIN_HEIGHT);
+    return height;
   });
   return { total: smoothPath(total), share: smoothPath(share) };
 }
