@@ -321,7 +321,7 @@ while typing) and the header's arrows (see "The arrows never move" below), from 
 the top of the view. The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff
 not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
 as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
-the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
+the last or first change, a diff beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next
 file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
 (picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
 starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
@@ -345,13 +345,21 @@ xlink. Right before them, with no room reserved, the label has one form, "3 of 1
 (`positionLabel`); otherwise it is empty, as the line counts and the diff itself (identical, binary) already say how
 many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). "12 changes" and "No changes"
 were dropped: three forms of one label read as noise, and a reserved width left "1 of 1" floating in a gap. It grows
-leftward, in tabular figures; then the Expand button and the view's controls. What they show is `changeNavigatorView`:
-beside a list of files always (disabled at its ends rather than gone), with no list only for steps of its own, so per
-host they either always show or never do. A diff not loaded yet (or failed, or an xlink) draws `FileOnlyNavigator`,
-which steps files at once and names no file, so the arrival meant for the diff that loads stays its own; the loaded
-diff's arrows take its place in the same commit, at the same pixel. Narrow, the label gives way
-(`data-toolbar-extra`) and the arrows keep the edge. The merge page's conflict arrows share the order and the label
-(`ConflictNavigator`).
+leftward, in tabular figures; then the Expand button and the view's controls. What they show is `changeNavigatorView`,
+decided by the view, never by the file shown: beside a list of files always (disabled at its ends rather than gone);
+with no list, on every diff of a view whose diffs step through changes (History, Files, Browse repository: disabled on
+an image) and on none of one that doesn't (a merge page's diff, whose conflict arrows step instead).
+
+The arrows are one element for as long as the view shows diffs: the header belongs to `SteppedDiffFrame`, which
+`FileDiffViewer` draws around every state of a file (loading, failed, loaded), and the loaded diff (`LoadedFileDiff`,
+mounted anew per file) draws its controls into it (`createPortal`) and hands it its navigation as it renders
+(`DiffFrameHost.publish`). Until a diff hands one, the header's own navigation steps files (`useFileOnlyNavigation`:
+it takes the keys only then, opens nothing and names no file, so the arrival meant for the diff that loads stays its
+own: `hostedNavigation`, `headerTakesKeys`). So a burst of ↓ clicks during a 50–200 ms load never loses one to a
+button swapped under the pointer. Hosts keep `FileDiffViewer` mounted from file to file (Incoming's isn't keyed by
+the file). An xlink's header draws `FileOnlyNavigator`. Narrow, the label gives way (`data-toolbar-extra`) and the
+arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and leave
+no place while there is nowhere to go.
 
 ## Expanding the diff
 
@@ -363,7 +371,7 @@ never runs under them; Linux keeps its native title bar. So does the command log
 never the OS's full screen (View ▸ Enter Full Screen, ⌃⌘F, F11), which it stacks with independently, and its name says
 so: "Full screen" names the OS's.
 
-- **Where**: one icon button, last in the diff's header after the change arrows (`ExpandDiffButton`, drawn by
+- **Where**: one icon button, in the diff's header, right before the change arrows (`ExpandDiffButton`, drawn by
   `DiffViewerFrame` where its host says it can expand: `ExpandableDiffContext`), pressed while expanded; ⇧⌘E or
   Ctrl+Shift+E (`expandDiff`: E for Expand, taken by no browser, desktop or the diff's editor); View ▸ Expand Diff and
   the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
@@ -372,8 +380,8 @@ so: "Full screen" names the OS's.
   files. The merge page offers none, nor do Incoming's conflicts.
 - **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
   scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
-  past its last change (`FileStepsContext`: Changes, a diff page, a code review), it still does, so a whole changeset is
-  reviewed expanded. Incoming, History, Files and Browse repository step through the file shown only, as they do
+  past its last change (`FileStepsContext`: Changes, Incoming, a diff page, a code review), it still does, so a whole changeset is
+  reviewed expanded. History, Files and Browse repository step through the file shown only, as they do
   collapsed.
 - **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was the Expand button,
   and the code is the window's main focus while expanded (`useExpandedDiffFocus`): focus that falls to the page (a menu
