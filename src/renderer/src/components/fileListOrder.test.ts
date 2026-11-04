@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
+import { countCalls } from '@shared/testing/countCalls';
 import { layoutPathItems } from '../lib/pathTree';
 import { extensionOf, fileListOrder, rankedOrder, rankList } from './fileListOrder';
 import type { FileListSort } from './fileListViewStore';
@@ -106,6 +107,17 @@ describe('rankedOrder', () => {
     expect(ranked.arrange!(many.slice(0, 150))).toEqual(expected(many.slice(0, 150)));
     expect(ranked.arrange!(many.slice(0, 3))).toEqual(expected(many.slice(0, 3)));
     expect(counted.calls).toBe(ranking);
+  });
+
+  // A filter over a million changes grouped by changelist and status picks each group out of the ranks: sorting a group
+  // by a function looking ranks up took a second for 900,000 changes, and a slot per rank went over every rank per group.
+  it.each([3, 150, 200])('picks %i items out of the ranks with one look-up each', (count) => {
+    const many = files(Array.from({ length: 200 }, (_, index): [string, StatusTone] => [`f${(index * 37) % 200}.ts`, 'changed']));
+    const ranked = rankedOrder(many, fileListOrder('name', facts)!);
+    const shuffled = many.slice(0, count).reverse();
+    const { result, calls } = countCalls(Map.prototype, 'get', () => ranked.arrange!(shuffled));
+    expect(result).toEqual([...shuffled].sort(ranked.compare));
+    expect(calls).toBe(count);
   });
 
   it('keeps the order of the items a read before ranked, comparing only the new one against them', () => {
