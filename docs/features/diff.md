@@ -335,6 +335,37 @@ shows how many changes it holds instead of a diff. The stepping itself (the posi
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
+## Expanding the diff
+
+Expand Diff gives a diff the whole window to read in: the sidebar, the files beside the diff, the view's or page's
+header (a breadcrumb, filters, a changeset's summary, a review's header, a history's revision, a file's details) and the
+status bar go out of sight, and the diff keeps its own header. The top bar stays: it holds the window's own buttons
+(the traffic lights on macOS, the caption buttons drawn over it on Windows, `titleBarOverlay`), so the diff's header
+never runs under them; Linux keeps its native title bar. So does the command log, when open. It is a layout of the app,
+never the OS's full screen (View ▸ Enter Full Screen, ⌃⌘F, F11), which it stacks with independently, and its name says
+so: "Full screen" names the OS's.
+
+- **Where**: one icon button, last in the diff's header after the change arrows (`ExpandDiffButton`, drawn by
+  `DiffViewerFrame` where its host says it can expand: `ExpandableDiffContext`), pressed while expanded; ⇧⌘E or
+  Ctrl+Shift+E (`expandDiff`: E for Expand, taken by no browser, desktop or the diff's editor); View ▸ Expand Diff and
+  the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
+- **Every diff beside its files**: Changes, a diff page (changeset, branch, shelve, label, range), a code review,
+  History, Incoming, a file's content in Files and Browse repository, and a page window, where it hides that page's
+  files. The merge page offers none.
+- **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
+  scroll, selection and filters come back as left, nothing is read again, and stepping past the last change still goes
+  on to the next file (`FileStepsContext`), so a whole changeset is reviewed expanded. The keyboard goes to the diff when
+  what held it went out of sight.
+- **What ends it** (`diffExpansion.ts`): the button pressed again, the shortcut, Esc, or the navigation leaving the diff:
+  another view, a page opened over it or gone back from (`leavesExpandedDiff`), the window leaving the place. Choosing
+  another file keeps it, and so does a page window following the selection to another object (a page replaced at the
+  same depth). It belongs to the window and is never remembered.
+- **Esc** collapses only once nothing else took it (`escapeCollapsesDiff`): a menu, the palette or a dialog closing, the
+  picked lines dropped, the editor leaving the text, a field typed into. History's and Files' "Esc back to the list"
+  give way to it while expanded: the list is out of sight.
+- A diff gone for a moment (the next file's or changeset's read) doesn't end it; with no diff in front, the shortcut
+  does nothing (`expandedAfterToggle`).
+
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
