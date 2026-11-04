@@ -28,13 +28,15 @@ interface ExplorerRulesTabProps {
   rules: readonly ExplorerRule[];
   /** Off keeps the rules and applies none of them. */
   on: boolean;
+  /** The rules the graph applies (none while they're off): only these ask the server, for their errors. */
+  applied: readonly ExplorerRule[];
   onChange: (rules: ExplorerRule[]) => void;
   onTurn: (on: boolean) => void;
 }
 
 /** The display options' "Advanced filters & format" tab: the repository's inclusions, exclusions and formats. */
-export function ExplorerRulesTab({ rules, on, onChange, onTurn }: ExplorerRulesTabProps) {
-  const matches = useRuleMatches(rules);
+export function ExplorerRulesTab({ rules, on, applied, onChange, onTurn }: ExplorerRulesTabProps) {
+  const matches = useRuleMatches(applied);
   const body = ruleTabBody(rules);
   const add = async (rule: ExplorerRule): Promise<void> => {
     const saved = await editExplorerRule(rule, true);

@@ -6,7 +6,7 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SettingsGroup } from '../../app/settings/SettingsGroup';
 import { usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { useBranchExplorerPreferences, useExplorerRules, useExplorerRulesOn, useGraphViewOptions } from './branchExplorerStore';
+import { useAppliedExplorerRules, useBranchExplorerPreferences, useExplorerRules, useExplorerRulesOn, useGraphViewOptions } from './branchExplorerStore';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, GRAPH_VIEW_OPTION_GROUPS, hidesAnything } from './canvas/graphViewOptions';
 import { ChangesetColorsTab } from './ChangesetColorsTab';
 import { ExplorerRulesTab } from './ExplorerRulesTab';
@@ -83,6 +83,7 @@ function RepositoryRules() {
   const repository = usePlaceRepository();
   const rules = useExplorerRules(repository);
   const on = useExplorerRulesOn(repository);
+  const applied = useAppliedExplorerRules(repository);
   const setRules = useBranchExplorerPreferences((preferences) => preferences.setRules);
   const setRulesOn = useBranchExplorerPreferences((preferences) => preferences.setRulesOn);
   if (!repository) return null;
@@ -90,6 +91,7 @@ function RepositoryRules() {
     <ExplorerRulesTab
       rules={rules}
       on={on}
+      applied={applied}
       onChange={(changed) => setRules(repository, changed)}
       onTurn={(turnedOn) => setRulesOn(repository, turnedOn)}
     />
