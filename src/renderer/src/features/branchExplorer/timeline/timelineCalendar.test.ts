@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AXIS_LABEL_SPACING,
+  AXIS_TEXT_INSET,
   axisLabelCandidates,
   bucketAround,
   bucketSize,
@@ -56,7 +57,7 @@ describe('dates', () => {
 });
 
 /** The candidates' labels as the strip shows them with room for all of them. */
-const shown = (times: Float64Array) => spacedAxisLabels(axisLabelCandidates(times, utc), (column) => column * 100, measure).map(({ text }) => text);
+const shown = (times: Float64Array) => spacedAxisLabels(axisLabelCandidates(times, utc), { xOf: (column) => column * 100, widthOf: measure, stripWidth: 10_000 }).map(({ text }) => text);
 
 describe('axis labels', () => {
   it('name the range’s start, then each day where it begins in a short range', () => {
@@ -81,8 +82,8 @@ describe('axis labels', () => {
 
   it('say the year when the label of the new year was left out for room', () => {
     const times = Float64Array.from([at('2025-11-20T09:00:00Z'), at('2025-12-02T09:00:00Z'), at('2026-01-05T09:00:00Z'), at('2026-02-01T09:00:00Z')]);
-    const xs = [0, AXIS_LABEL_SPACING, AXIS_LABEL_SPACING + 10, 2 * AXIS_LABEL_SPACING + 10];
-    expect(spacedAxisLabels(axisLabelCandidates(times, utc), (column) => xs[column]!, measure).map(({ text }) => text)).toEqual(['Nov 20', 'Dec', 'Feb 2026']);
+    const xs = [0, 50, 60, 110];
+    expect(spacedAxisLabels(axisLabelCandidates(times, utc), { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 10_000 }).map(({ text }) => text)).toEqual(['Nov 20', 'Dec', 'Feb 2026']);
   });
 
   it('name nothing for a changeset dated before the one to its left', () => {
@@ -96,9 +97,10 @@ describe('spacedAxisLabels', () => {
   it('keeps the first label, and each other one far enough from the last one kept', () => {
     const candidates = [0, 1, 2, 3].map((column) => ({ column, text: String(column), year: 2026, textWithYear: `${column} 2026` }));
     const xs = [0, 20, AXIS_LABEL_SPACING, AXIS_LABEL_SPACING + 10];
-    expect(spacedAxisLabels(candidates, (column) => xs[column]!, measure)).toEqual([
-      { x: 0, text: '0' },
-      { x: AXIS_LABEL_SPACING, text: '2' },
+    // Each text starts 2 px into its day, and 4 px in from the strip's edge.
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 1_000 })).toEqual([
+      { x: AXIS_TEXT_INSET, text: '0' },
+      { x: AXIS_LABEL_SPACING + 2, text: '2' },
     ]);
   });
 
@@ -106,6 +108,14 @@ describe('spacedAxisLabels', () => {
     const candidates = [0, 1, 2].map((column) => ({ column, text: 'Long label text', year: 2026, textWithYear: 'Long label text' }));
     const xs = [0, 60, 90];
     // 75 px of text and 8 px after it: the second starts too soon, the third clears it.
-    expect(spacedAxisLabels(candidates, (column) => xs[column]!, measure).map(({ x }) => x)).toEqual([0, 90]);
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 1_000 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET, 92]);
+  });
+
+  it('leaves out a date the strip’s right edge would cut', () => {
+    const candidates = [0, 1].map((column) => ({ column, text: 'Sep', year: 2026, textWithYear: 'Sep 2026' }));
+    // 'Sep' is 15 px: at 100 it ends at 117, past 120 − 4.
+    const xs = [0, 104];
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 120 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET]);
+    expect(spacedAxisLabels(candidates, { xOf: (column) => xs[column]!, widthOf: measure, stripWidth: 130 }).map(({ x }) => x)).toEqual([AXIS_TEXT_INSET, 106]);
   });
 });

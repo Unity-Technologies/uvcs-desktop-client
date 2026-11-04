@@ -150,23 +150,43 @@ function monthOf(day: number): number {
 /** The axis's labels start at least this far apart (px), and leave at least `AXIS_LABEL_GAP` after the text before. */
 export const AXIS_LABEL_SPACING = 38;
 export const AXIS_LABEL_GAP = 8;
+/** A date starts this far right of where its day or month begins, and never closer than `AXIS_TEXT_INSET` to an edge. */
+const AXIS_TEXT_OFFSET = 2;
+export const AXIS_TEXT_INSET = 4;
+
+/** Where the strip's dates go, and how wide a date is drawn. */
+export interface AxisLabelRoom {
+  xOf: (column: number) => number;
+  widthOf: (text: string) => number;
+  stripWidth: number;
+}
+
+/** A date as drawn: its text from `x` (its left). */
+export interface PlacedAxisLabel {
+  x: number;
+  text: string;
+}
 
 /**
- * The labels that fit, at their x on the strip, measured as drawn (`widthOf`): the first always, each other one far
- * enough from the last kept; one in another year than the label shown before it says its year (January, or a month
- * after a gap or a label left out).
+ * The dates that fit, each where its text starts: the first always, each other one far enough from the last kept and
+ * clear of its text, none cut by the right edge; one in another year than the date shown before it says its year
+ * (January, or a month after a gap or a date left out).
  */
-export function spacedAxisLabels(candidates: readonly AxisLabel[], xOf: (column: number) => number, widthOf: (text: string) => number): { x: number; text: string }[] {
-  const kept: { x: number; text: string }[] = [];
+export function spacedAxisLabels(candidates: readonly AxisLabel[], { xOf, widthOf, stripWidth }: AxisLabelRoom): PlacedAxisLabel[] {
+  const kept: PlacedAxisLabel[] = [];
   let shownYear: number | null = null;
   let freeFrom = Number.NEGATIVE_INFINITY;
+  let lastStart = Number.NEGATIVE_INFINITY;
   for (const { column, text, year, textWithYear } of candidates) {
-    const x = xOf(column);
+    const start = xOf(column);
+    const x = Math.max(AXIS_TEXT_INSET, start + AXIS_TEXT_OFFSET);
     const shown = shownYear === null || year === shownYear ? text : textWithYear;
-    if (kept.length > 0 && (x - kept.at(-1)!.x < AXIS_LABEL_SPACING || x < freeFrom)) continue;
+    const width = widthOf(shown);
+    if (start - lastStart < AXIS_LABEL_SPACING || x < freeFrom || x + width > stripWidth - AXIS_TEXT_INSET) continue;
     kept.push({ x, text: shown });
     shownYear = year;
-    freeFrom = x + widthOf(shown) + AXIS_LABEL_GAP;
+    lastStart = start;
+    freeFrom = x + width + AXIS_LABEL_GAP;
   }
   return kept;
 }

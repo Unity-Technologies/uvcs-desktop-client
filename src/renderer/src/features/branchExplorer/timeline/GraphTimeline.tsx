@@ -76,8 +76,8 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
   const allGaps = useMemo(() => timelineGaps(history, axis), [history, axis]);
   const axisCandidates = useMemo(() => axisLabelCandidates(history.columnTimes, LOCAL_CALENDAR), [history]);
   const axisLabels = useMemo(
-    () => spacedAxisLabels(axisCandidates, (column) => stripXOfColumn(axis, column), (text) => measureAxisText(text, palette)),
-    [axisCandidates, axis, palette],
+    () => spacedAxisLabels(axisCandidates, { xOf: (column) => stripXOfColumn(axis, column), widthOf: (text) => measureAxisText(text, palette), stripWidth: width }),
+    [axisCandidates, axis, palette, width],
   );
   const hits = useMemo(() => hitTicks(searchHitColumns(layout, searchHits), axis), [layout, searchHits, axis]);
   const home = useMemo(() => homeMark(layout, history, homeChangeset), [layout, history, homeChangeset]);

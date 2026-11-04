@@ -156,17 +156,13 @@ export function measureAxisText(text: string, palette: GraphPalette): number {
   return measuringContext.measureText(text).width;
 }
 
-function drawAxisLabels(ctx: CanvasRenderingContext2D, { axisLabels, palette, width }: TimelineDrawing): void {
+/** The dates `spacedAxisLabels` kept, where it placed them. */
+function drawAxisLabels(ctx: CanvasRenderingContext2D, { axisLabels, palette }: TimelineDrawing): void {
   ctx.save();
   ctx.font = axisFont(palette);
   ctx.textBaseline = 'middle';
   ctx.fillStyle = palette.textTertiary;
-  for (const { x, text } of axisLabels) {
-    const left = Math.max(4, x + 2);
-    // A date the right edge would cut is left out.
-    if (left + ctx.measureText(text).width > width - 4) continue;
-    ctx.fillText(text, left, AXIS_TEXT_MIDDLE);
-  }
+  for (const { x, text } of axisLabels) ctx.fillText(text, x, AXIS_TEXT_MIDDLE);
   ctx.restore();
 }
 

@@ -109,7 +109,7 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   along the top, one per pixel (`hitTicks`); more than `GAP_MIN_DAYS` without changesets as a break mark, the longest
   of those closer than `GAP_MARK_SPACING` (`timelineGaps`). Merges into /main have no mark: they repeated the curve.
 - **The axis's dates** name days (short ranges) or months where they begin, the first the range's start, those that
-  would run into the one before left out, a month in another year than the date before it with its year
+  would run into the one before or be cut by the right edge left out, a month in another year than the date before it with its year
   (`axisLabelCandidates`, `spacedAxisLabels`).
 - **Pointer** (`timelineTargetAt`, `timelinePress`): a click glides the canvas there and brings the row it lands on into
   view (`viewportAtColumn`, `clickedColumn`: a label tick to its newest label, a gap to where history resumes); press
