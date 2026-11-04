@@ -48,7 +48,6 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
 /** The store's actions, which aren't remembered. */
 export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn';
 
-
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
     (set) => ({
