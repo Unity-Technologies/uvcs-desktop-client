@@ -28,7 +28,7 @@ export function XlinkDiff({ place, target, xlink, entries, onOpen }: XlinkDiffPr
   const view = xlinkDiffView(target, xlink, sides.data, entries);
 
   return (
-    <DiffViewerFrame title={<DiffFileTitle status={diffEntryStatus(xlink)} path={xlink.path} oldPath={xlink.oldPath} />} navigator={<FileOnlyNavigator />}>
+    <DiffViewerFrame title={<DiffFileTitle status={diffEntryStatus(xlink)} path={xlink.path} oldPath={xlink.oldPath} />} navigator={<FileOnlyNavigator path={xlink.path} />}>
       <div className={styles.body}>
         <DetailsSection title={view.kind}>
           {sides.error ? (
