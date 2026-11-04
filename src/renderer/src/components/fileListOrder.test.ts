@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { countCalls } from '@shared/testing/countCalls';
+import { countedReads } from '@shared/testing/countedReads';
 import { layoutPathItems } from '../lib/pathTree';
 import { extensionOf, fileListOrder, rankedOrder, rankList } from './fileListOrder';
 import type { FileListSort } from './fileListViewStore';
@@ -120,15 +121,29 @@ describe('rankedOrder', () => {
     expect(calls).toBe(count);
   });
 
-  it('keeps the order of the items a read before ranked, comparing only the new one against them', () => {
+  // A read of a million changes where one file was edited keeps every other change: it is found its place among them,
+  // where going over them all compared half a million names (0.5 s).
+  it('keeps the order of the items a read before ranked, finding the new one its place in about log n comparisons', () => {
     const many = files(Array.from({ length: 1000 }, (_, index): [string, StatusTone] => [`d${index % 7}/f${index}.ts`, 'changed']));
     const first = rankedOrder(many, fileListOrder('name', facts)!);
     const added: File = { path: 'd3/f500b.ts', tone: 'changed' };
     const counted = countedNameOrder();
-    const next = rankedOrder([...many, added], counted.order, first);
-    // Merged in: about one comparison per item kept, where ranking afresh takes about log n each.
-    expect(counted.calls).toBeLessThan(many.length * 1.1);
-    expect(next.ordered).toEqual([...many, added].sort(fileListOrder('name', facts)!.compare));
+    const next = rankedOrder([...many.slice(1), added], counted.order, first);
+    expect(counted.calls).toBeLessThanOrEqual(Math.ceil(Math.log2(many.length)) + 1);
+    expect(next.ordered).toEqual([...many.slice(1), added].sort(fileListOrder('name', facts)!.compare));
+  });
+
+  it.each(['status', 'extension'] as const)('keeps the order of the items a read before ranked by %s, reading only the new one and a few others', (sort) => {
+    const tones: StatusTone[] = ['changed', 'added', 'private'];
+    const many = files(Array.from({ length: 1000 }, (_, index): [string, StatusTone] => [`d${index % 7}/f${index}.${['ts', 'png'][index % 2]}`, tones[index % 3]!]));
+    const added: File = { path: 'd3/f500b.cs', tone: 'added' };
+    const { items, reads } = countedReads([...many, added]);
+    const first = rankedOrder(items.slice(0, -1), fileListOrder(sort, facts)!);
+    const readBefore = reads();
+    const next = rankedOrder(items, fileListOrder(sort, facts)!, first);
+    // Each item is looked up among the ranks, unread: only those the new one is compared with are read.
+    expect(reads() - readBefore).toBeLessThan(10 * Math.log2(many.length));
+    expect(next.ordered.map((file) => file.path)).toEqual(fileListOrder(sort, facts)!.arrange!([...many, added]).map((file) => file.path));
   });
 
   it('ranks afresh when fewer than half the items are still there', () => {
