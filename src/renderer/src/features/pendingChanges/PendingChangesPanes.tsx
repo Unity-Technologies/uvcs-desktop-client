@@ -169,7 +169,11 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const fileSteps = useFileSteps({
     keys: fileKeys,
     current: selection.anchor,
-    select: (key) => selectAfterLeaving(selection, singleSelection(key), setSelection),
+    select: (key, selected) =>
+      selectAfterLeaving(selection, singleSelection(key), (next) => {
+        selected();
+        setSelection(next);
+      }),
     pathOf: (key) => changesByKey.get(key)?.path ?? key,
   });
 

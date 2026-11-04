@@ -12,7 +12,10 @@ export type Arrival = 'first' | 'last';
 export interface FileSteps {
   /** Whether the list has a file after (1) or before (-1) the one shown. */
   canStep: (direction: 1 | -1) => boolean;
-  /** Selects that file, its diff to open at its first or last change; its path, or none past the ends. */
+  /**
+   * Selects that file, its diff to open at its first or last change; its path, or none past the ends or where the list
+   * didn't select it at once (unsaved edits asked about, or kept).
+   */
   step: (direction: 1 | -1) => string | null;
   /** Where the diff of `path` opens, once: after a step to it, else nowhere in particular. */
   takeArrival: (path: string) => Arrival | null;
@@ -47,8 +50,11 @@ interface FileStepsOptions {
   keys: readonly string[];
   /** The file shown. */
   current: string | null;
-  /** Selects a file, as the list does (asking first about unsaved edits: `selectAfterLeaving`). */
-  select: (key: string) => void;
+  /**
+   * Selects a file, as the list does, asking first about unsaved edits (`selectAfterLeaving`); calls `selected` as it
+   * does, now or once the user lets the file go, and never when they keep it (Cancel).
+   */
+  select: (key: string, selected: () => void) => void;
   pathOf: (key: string) => string;
   /**
    * Where a step leaves the arrival of the file it goes to (`usePendingArrival`), shared by the lists of one view whose
@@ -98,9 +104,14 @@ export function fileSteps(
       const key = adjacentKey(keys, current, direction);
       if (key === null) return null;
       const path = list.pathOf(key);
-      pending.current = { path, at: direction === 1 ? 'first' : 'last', from: list.pathOf(current!) };
-      list.select(key);
-      return path;
+      const from = list.pathOf(current!);
+      // Recorded only as the list selects: a step kept back by unsaved edits leaves nothing in flight.
+      let selected = false;
+      list.select(key, () => {
+        selected = true;
+        pending.current = { path, at: direction === 1 ? 'first' : 'last', from };
+      });
+      return selected ? path : null;
     },
     takeArrival: (path) => {
       const at = pending.current?.path === path ? pending.current.at : null;
@@ -111,6 +122,9 @@ export function fileSteps(
     kept: pending.kept,
     listMoved: () => {
       const shown = current === null ? null : list.pathOf(current);
+      const step = pending.current;
+      // On a file the step neither went to nor came from (picked with a click): it's over, its arrival unwanted.
+      if (step && shown !== step.path && shown !== step.from) pending.current = null;
       pending.kept.keepOnly([shown, steppingTo()]);
       if (pending.current && pending.current.path === shown) pending.current = { ...pending.current, from: null };
     },
@@ -124,6 +138,12 @@ export function fileSteps(
   }
 }
 
+/** A list's selection made at once, nothing to ask first: the step it's for is told (`FileStepsOptions.select`). */
+export function selectNow(selected: () => void, select: () => void): void {
+  selected();
+  select();
+}
+
 /** Steps through a list's files for the diff beside it. */
 export function useFileSteps({ keys, current, select, pathOf, pending }: FileStepsOptions): FileSteps {
   const ownArrival = usePendingArrival();
@@ -131,7 +151,7 @@ export function useFileSteps({ keys, current, select, pathOf, pending }: FileSte
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
   const steps = useMemo(
-    () => fileSteps(keys, current, { select: (key) => latest.current.select(key), pathOf: (key) => latest.current.pathOf(key) }, arrival),
+    () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key) }, arrival),
     [keys, current, arrival],
   );
   // The selection moved: what was kept for the files it left goes (a file picked while another loads opens at its top).

@@ -21,7 +21,7 @@ import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
-import { FileStepsContext, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
@@ -98,13 +98,13 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const conflictSteps = useFileSteps({
     keys: conflictKeys,
     current: selection.anchor,
-    select: (key) => selectFiles(singleSelection(key)),
+    select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))),
     pathOf: (key) => key,
     pending: arrival,
   });
   // A file's diff goes on past its last or first change to the files around it, as the list shows them.
   const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
-  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key) => selectFiles(singleSelection(key)), pathOf: (key) => key, pending: arrival });
+  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 

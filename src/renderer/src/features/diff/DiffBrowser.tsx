@@ -32,7 +32,7 @@ import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { fileRowKeys } from '../../components/fileRowKeys';
 import { useDiffReview } from './review/useDiffReview';
-import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps } from './viewer/fileSteps';
 import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
 import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
@@ -105,7 +105,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const findSibling = useMemo(() => diffSibling(readEntries, target, workspaceRepository), [readEntries, target, workspaceRepository]);
   // A model's materials and textures are the ones where the diff points to, the side before with its changes undone.
   const findAssetsPoint = useMemo(() => diffAssetsPoint(readEntries, target), [readEntries, target]);
-  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
+  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))), pathOf: (key) => key });
 
   // The file asked for once the files are read, else the first, before the list paints: something is always selected
   // for the diff pane. A selected file the diff no longer holds (read again after a check-in) gives way the same.
