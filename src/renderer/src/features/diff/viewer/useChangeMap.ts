@@ -1,7 +1,7 @@
 import type { Virtualizer } from '@pierre/diffs';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
-import { changeMarks, sameMarks, showsChangeMap, type ChangeMark } from './changeMarks';
+import { changeMarks, placesAgain, showsChangeMap, type ChangeMark, type MarksPlacedFrom } from './changeMarks';
 import { pierreShadowRoot } from './pierreDom';
 import { pierreLineBox } from './pierreLinePosition';
 
@@ -29,20 +29,9 @@ interface ChangeMapOptions {
   layoutKey: string;
 }
 
-/** What the marks were placed from last: placed again only when one of these changes. */
-interface PlacedFrom {
-  regions: readonly ChangeRegion[];
-  bothSides: boolean;
-  layoutKey: string;
-  contentHeight: number;
-  viewHeight: number;
-  /** Where Pierre lays out the last change (none until it can tell): it moves as Pierre measures the lines above it. */
-  lastChangeTop: number | undefined;
-}
-
 /**
  * The change map of the diff in `containerRef` (`changeMarks`), or null while it doesn't show (`showsChangeMap`). The
- * marks are placed where Pierre lays the changes out (`pierreLineBox`), and placed again when the changes, the layout
+ * marks are placed where Pierre lays the changes out (`pierreLineBox`), and placed again (`placesAgain`) when the changes, the layout
  * or the sizes change: on a resize, and as Pierre renders rows (expanding unchanged lines, wrapped lines measured),
  * batched to a frame as `PaneScrollbars` measures. Scrolling renders rows too, but leaves the sizes as they were, so
  * it places nothing again.
@@ -51,7 +40,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
   const [view, setView] = useState<ChangeMapView | null>(null);
   const latest = useRef({ regions, lineCounts, bothSides, layoutKey });
   latest.current = { regions, lineCounts, bothSides, layoutKey };
-  const placedFrom = useRef<PlacedFrom | null>(null);
+  const placedFrom = useRef<MarksPlacedFrom | null>(null);
 
   // After every render, as `PaneScrollbars`: the diff (and its shadow root) may have only just appeared.
   useEffect(() => {
@@ -64,17 +53,15 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       const { regions, lineCounts, bothSides, layoutKey } = latest.current;
       const fileContainer = container.querySelector('diffs-container');
       const boxOf = (line: ChangedLine) => (fileContainer ? pierreLineBox(virtualizer, fileContainer, line) : undefined);
-      const from: PlacedFrom = {
+      const from: MarksPlacedFrom = {
         regions,
         bothSides,
         layoutKey,
         contentHeight: container.scrollHeight,
         viewHeight: container.clientHeight,
-        // Placed by line share until Pierre can tell where lines are, and by its estimates of the lines it hasn't
-        // rendered (one row each, a wrapped line too): placed again once it can tell, and as it measures them.
         lastChangeTop: regions.length > 0 ? boxOf(regions.at(-1)!.lines[0]!)?.top : undefined,
       };
-      if (samePlacing(placedFrom.current, from)) return;
+      if (!placesAgain(placedFrom.current, from)) return;
       placedFrom.current = from;
       const { contentHeight, viewHeight } = from;
       if (!showsChangeMap({ changes: regions.length, bothSides, contentHeight, viewHeight })) return setView(null);
@@ -101,18 +88,13 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
   return view;
 }
 
-function samePlacing(a: PlacedFrom | null, b: PlacedFrom): boolean {
-  return (
-    a !== null &&
-    a.regions === b.regions &&
-    a.bothSides === b.bothSides &&
-    a.layoutKey === b.layoutKey &&
-    a.contentHeight === b.contentHeight &&
-    a.viewHeight === b.viewHeight &&
-    a.lastChangeTop === b.lastChangeTop
-  );
-}
-
 function sameView(a: ChangeMapView, b: ChangeMapView): boolean {
   return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && a.scrollbarWidth === b.scrollbarWidth && sameMarks(a.marks, b.marks);
+}
+
+function sameMarks(a: readonly ChangeMark[], b: readonly ChangeMark[]): boolean {
+  return a.length === b.length && a.every((mark, index) => {
+    const other = b[index]!;
+    return mark.top === other.top && mark.height === other.height && mark.kind === other.kind && mark.first === other.first && mark.last === other.last;
+  });
 }

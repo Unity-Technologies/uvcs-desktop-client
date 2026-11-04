@@ -143,9 +143,33 @@ export function holdsChange(mark: ChangeMark, current: number | null): boolean {
   return current !== null && current >= mark.first && current <= mark.last;
 }
 
-export function sameMarks(a: readonly ChangeMark[], b: readonly ChangeMark[]): boolean {
-  return a.length === b.length && a.every((mark, index) => {
-    const other = b[index]!;
-    return mark.top === other.top && mark.height === other.height && mark.kind === other.kind && mark.first === other.first && mark.last === other.last;
-  });
+/** What the marks were placed from (`useChangeMap`): they're placed again only when one of these changes. */
+export interface MarksPlacedFrom {
+  regions: readonly ChangeRegion[];
+  bothSides: boolean;
+  /** How the lines are laid out: Split or Unified, collapsed, wrapped. */
+  layoutKey: string;
+  contentHeight: number;
+  viewHeight: number;
+  /**
+   * Where Pierre lays out the last change, none until it can tell (the marks are then placed by line share). It moves
+   * as Pierre measures the lines above it: its estimate of a line it hasn't rendered is one row, a wrapped one too.
+   */
+  lastChangeTop: number | undefined;
+}
+
+/**
+ * Whether the marks are placed again: none were yet, or the changes, the layout, the sizes or Pierre's place for the
+ * last change changed. Scrolling changes none of them, so it places nothing again.
+ */
+export function placesAgain(previous: MarksPlacedFrom | null, next: MarksPlacedFrom): boolean {
+  return (
+    previous === null ||
+    previous.regions !== next.regions ||
+    previous.bothSides !== next.bothSides ||
+    previous.layoutKey !== next.layoutKey ||
+    previous.contentHeight !== next.contentHeight ||
+    previous.viewHeight !== next.viewHeight ||
+    previous.lastChangeTop !== next.lastChangeTop
+  );
 }
