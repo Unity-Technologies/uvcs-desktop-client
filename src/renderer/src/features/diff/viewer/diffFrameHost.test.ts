@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headerArrows, headerPress, isSelectedFile, type HeaderArrows, type HeaderState } from './diffFrameHost';
+import { headerArrows, headerKeepsFor, isSelectedFile, type HeaderState } from './diffFrameHost';
 import type { StepNavigation } from './useStepNavigation';
 
 const navigation = { noun: 'change' } as StepNavigation;
@@ -30,22 +30,13 @@ describe('headerArrows', () => {
   });
 });
 
-describe('headerPress', () => {
-  const onBody: HeaderArrows = { body: published('b.cs'), headerKeys: false, queues: false, replaysKept: false };
-  const waiting: HeaderArrows = { body: null, headerKeys: true, queues: true, replaysKept: false };
-  const failed: HeaderArrows = { body: null, headerKeys: true, queues: false, replaysKept: true };
-
-  it("hands a press to the selected file's diff once it's the one published", () => {
-    expect(headerPress(onBody, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'body' });
+describe('headerKeepsFor', () => {
+  it('keeps a press made while the diff is read or drawn for the file a step is on its way to', () => {
+    expect(headerKeepsFor({ steppingTo: 'c.cs', requestedPath: 'b.cs' })).toBe('c.cs');
   });
 
-  it('keeps it for the file a step is on its way to, else for the file asked for, while its diff is read or drawn', () => {
-    expect(headerPress(waiting, { steppingTo: 'c.cs', requestedPath: 'b.cs' })).toEqual({ kind: 'keep', path: 'c.cs' });
-    expect(headerPress(waiting, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'keep', path: 'b.cs' });
-  });
-
-  it("goes from file to file at once where the file couldn't be read, replaying the presses kept for it as such steps", () => {
-    expect(headerPress(failed, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'step' });
+  it('else for the file asked for', () => {
+    expect(headerKeepsFor({ steppingTo: null, requestedPath: 'b.cs' })).toBe('b.cs');
   });
 });
 

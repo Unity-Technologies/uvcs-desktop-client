@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel } from './changeNavigation';
-import { headerArrows, headerPress, isSelectedFile } from './diffFrameHost';
+import { headerArrows, headerKeepsFor, isSelectedFile } from './diffFrameHost';
 import { fileSteps, type PendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
 import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
@@ -11,11 +11,11 @@ const NAVIGATION = { noun: 'change' } as StepNavigation;
 
 /**
  * Clicking ↓ through a list of files whose diffs are read from the cache (the fast path), as `SteppedDiffFrame` and
- * `LoadedFileDiff` do, through the same decisions: whose the arrows are (`headerArrows`), where the header's press
- * goes (`headerPress`), where a diff's own goes (`pressTarget`), when a diff takes the presses kept for it
- * (`drainsKept`, one per render, a render coming only where the app's would: a move, a change of the list's
- * selection, the diff opening), and how kept presses follow a step (`StepQueue.retag`) or are dropped when the
- * selection leaves their file (`StepQueue.keepOnly`). A diff page and Incoming ask for the file selected at once;
+ * `LoadedFileDiff` do, through the same decisions: whose the arrows are (`headerArrows`), which file the header keeps
+ * a press for (`headerKeepsFor`), where a diff's own goes (`pressTarget`), when a diff takes the presses kept for it
+ * (`drainsKept`, `drainKept`: a render coming only where the app's would, a move, a change of the list's selection,
+ * the diff opening), and how kept presses follow a step (`followStep`), are replayed from a file that couldn't be read
+ * (`replaysKept`) or are dropped when the selection leaves their file (`StepQueue.keepOnly`). A diff page and Incoming ask for the file selected at once;
  * Changes once its selection settled (`settles`). A file with no changes (0) is an image: it opens as it's drawn; a
  * text diff opens at its arrival a frame later (`frame`).
  */
@@ -44,11 +44,15 @@ class CachedDiffs {
     return label ? `${this.listCurrent}: ${label}` : this.listCurrent;
   }
 
-  /** ↓ (1) or ↑ (-1) on the header's arrows. */
+  /**
+   * ↓ (1) or ↑ (-1) on the header's arrows, as `SteppedDiffFrame` wires them: the body's navigation once it's the
+   * selected file's, else the header's own, which keeps the press (`headerKeepsFor`) or, where the file couldn't be
+   * read, steps to the file beside it.
+   */
   press(direction: 1 | -1): this {
-    const route = headerPress(this.arrows(), { steppingTo: this.steps().steppingTo(), requestedPath: this.requested });
-    if (route.kind === 'body') this.bodyGo(direction);
-    else if (route.kind === 'keep') this.queue.push(route.path, direction);
+    const arrows = this.arrows();
+    if (arrows.body) this.bodyGo(direction);
+    else if (arrows.queues) this.queue.push(headerKeepsFor({ steppingTo: this.steps().steppingTo(), requestedPath: this.requested }), direction);
     else this.steps().step(direction);
     return this.renders();
   }
