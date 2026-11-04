@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { comparePaths } from '@shared/pathOrder';
+import { describe, expect, it, vi } from 'vitest';
+import { compareNames, comparePaths } from '@shared/pathOrder';
 import { countCalls } from '@shared/testing/countCalls';
 import { countedReads } from '@shared/testing/countedReads';
-import { layoutPathItems } from '../lib/pathTree';
+import { arranged, layoutPathItems } from '../lib/pathTree';
 import { extensionOf, fileListOrder, rankedOrder, rankList } from './fileListOrder';
 import type { FileListSort } from './fileListViewStore';
 import type { StatusTone } from './StatusBadge';
@@ -12,8 +12,14 @@ interface File {
   tone: StatusTone;
 }
 
+vi.mock('@shared/pathOrder', async (original) => {
+  const actual = await original<typeof import('@shared/pathOrder')>();
+  return { ...actual, compareNames: vi.fn(actual.compareNames) };
+});
+
 const facts = { toneOf: (file: File) => file.tone };
 const files = (entries: [string, StatusTone][]): File[] => entries.map(([path, tone]) => ({ path, tone })).sort((a, b) => comparePaths(a.path, b.path));
+const nameOf = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 /** The paths of a flat list of `items` sorted by `sort`. */
 const listed = (items: File[], sort: FileListSort): string[] =>
   layoutPathItems(items, (file) => file.path, { tree: false, folderScope: 'all', order: fileListOrder(sort, facts) }).map((row) => row.key);
@@ -43,6 +49,16 @@ describe('fileListOrder', () => {
 
   it('sorts by extension, files without one first, keeping the path order within one', () => {
     expect(listed(sample, 'extension')).toEqual(['Makefile', 'docs/beta.md', 'src/Alpha.png', 'src/file_2.ts', 'src/file_10.ts', 'src/zeta.ts']);
+  });
+
+  // A million changes ranked by name compared about 20 million pairs of names (4 s); a project's files share names
+  // (`index.ts`, `README.md`, `Player.prefab` in each scene), which are compared once.
+  it('sorts by name comparing each name only once whatever the files that share it', () => {
+    const many = files(Array.from({ length: 1000 }, (_, index): [string, StatusTone] => [`d${index}/name${index % 10}.ts`, 'changed']));
+    vi.mocked(compareNames).mockClear();
+    const sorted = arranged(many, fileListOrder('name', facts)!);
+    expect(vi.mocked(compareNames).mock.calls.length).toBeLessThan(10 * 10);
+    expect(sorted.map((file) => file.path)).toEqual([...many].sort((a, b) => compareNames(nameOf(a.path), nameOf(b.path))).map((file) => file.path));
   });
 });
 
