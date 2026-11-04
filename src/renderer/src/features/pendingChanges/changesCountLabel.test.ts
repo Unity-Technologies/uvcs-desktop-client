@@ -12,6 +12,16 @@ describe('changesCountLabel', () => {
     expect(changesCountLabel(1204, 2)).toBe('2 of 1,204');
   });
 
+  it("counts the .meta files riding on their asset's row apart, so the list adds up to what's pending", () => {
+    expect(changesCountLabel(6, 6, 2)).toBe('6 files + 2 meta');
+    expect(changesCountLabel(1, 1, 1)).toBe('1 file + 1 meta');
+    expect(changesCountLabel(6, 6, 0)).toBe('6 files');
+  });
+
+  it('counts only rows while the filter hides some', () => {
+    expect(changesCountLabel(6, 2, 2)).toBe('2 of 6');
+  });
+
   it('has no count until the changes are read', () => {
     expect(changesCountLabel(undefined, 0)).toBeNull();
   });
