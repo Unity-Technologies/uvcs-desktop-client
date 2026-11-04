@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { isModalDialogOpen } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { openingStep, plannedMove, positionLabel } from './changeNavigation';
+import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
 
@@ -17,8 +17,8 @@ export interface StepNavigation {
   noun: string;
   shortcuts: StepShortcuts;
   count: number;
-  /** "3 of 12" once a step was moved to, "12 changes" (or conflicts: `noun`) before, "No changes" with none. */
-  label: string;
+  /** The step moved to, by index; none before the first move or once the steps are others. */
+  current: number | null;
   /** Where a move goes: to a step, on to the file beside it in the list (past the ends), or nowhere. */
   goesTo: (direction: 1 | -1) => 'step' | 'file' | null;
   go: (direction: 1 | -1) => void;
@@ -166,7 +166,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     noun,
     shortcuts,
     count: steps.length,
-    label: positionLabel(position, noun),
+    current,
     goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
     go,
     onViewScroll,

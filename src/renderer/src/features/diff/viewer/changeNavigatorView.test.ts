@@ -10,7 +10,7 @@ describe('changeNavigatorView', () => {
   it('says nothing of a text diff before a change is current; the arrows carry the count', () => {
     expect(changeNavigatorView(textBeforeStepping)).toEqual({
       label: '',
-      previous: { tip: 'Previous file', enabled: true },
+      previous: { tip: "Previous file's last change", enabled: true },
       next: { tip: 'Next change · 12 in this file', enabled: true },
     });
   });

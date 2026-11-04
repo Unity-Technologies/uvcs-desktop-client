@@ -25,8 +25,8 @@ interface ChangeNavigatorProps {
  */
 export function ChangeNavigator({ navigation, stepsOwn, keysWhileTyping = false, ref }: ChangeNavigatorProps) {
   const besideFiles = useContext(FileStepsContext) !== null;
-  const { noun, shortcuts, count, label } = navigation;
-  const view = changeNavigatorView({ stepsOwn, count, label, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles });
+  const { noun, shortcuts, count, current } = navigation;
+  const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles });
   if (!view) return null;
   return (
     <div ref={ref} className={styles.navigator}>
