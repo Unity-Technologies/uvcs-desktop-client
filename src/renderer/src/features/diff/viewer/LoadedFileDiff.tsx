@@ -58,7 +58,7 @@ interface LoadedFileDiffProps {
   fileName: string;
   title?: ReactNode;
   identicalDescription?: string;
-  /** Controls about what to compare, first in the toolbar of a text diff. */
+  /** Controls about what to compare, first in the toolbar of every diff: a binary file, an image or a model has its `.meta` too. */
   compareControls?: ReactNode;
   /** Discarding changes brought the workspace file back to its loaded revision. */
   onMatchesBase?: () => void;
@@ -133,7 +133,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const controls = (
     <>
       {dirty && <UnsavedEditsControls buffer={buffer} />}
-      {isText && compareControls}
+      {compareControls}
       {viewControls && (
         <TextViewControls
           diff={diffs.current}

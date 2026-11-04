@@ -1352,7 +1352,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     rules; a diff's revert and restore, whose "Restore to…" goes away when the meta comes back too, as an asset moved
     without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's
     own: "Open .meta diff" (`metaDiff`), "View .meta history" (`metaHistory`), and in Changes "Open .meta". Selecting
-    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar (`MetaDiffButton`, `diffedItem`) or "Open
+    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar, there whatever the asset's diff is (text,
+    image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`) or "Open
     .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
