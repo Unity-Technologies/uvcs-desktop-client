@@ -1,4 +1,4 @@
-import { wholeList, type ItemRange } from '../../lib/itemRange';
+import { forEachIn, wholeList, type ItemRange } from '../../lib/itemRange';
 import type { MetaPairs } from '../../lib/unityMetaPairs';
 
 export type ReviewStatus = 'unreviewed' | 'reviewed' | 'changedSinceReview';
@@ -44,12 +44,12 @@ export function reviewProgress<T>(items: readonly T[], statusOf: ReviewStatusOf<
 function reviewProgressIn<T>(held: ItemRange<T>, statusOf: ReviewStatusOf<T>): ReviewProgress {
   let total = 0;
   let reviewed = 0;
-  for (let index = held.start; index < held.end; index++) {
-    const status = statusOf(held.list[index]!);
-    if (status === null) continue;
+  forEachIn(held, (item) => {
+    const status = statusOf(item);
+    if (status === null) return;
     total++;
     if (status === 'reviewed') reviewed++;
-  }
+  });
   return { total, reviewed };
 }
 

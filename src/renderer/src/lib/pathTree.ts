@@ -1,4 +1,4 @@
-import { rangeLength, type ItemRange } from './itemRange';
+import { forEachIn, rangeLength, type ItemRange } from './itemRange';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /** A folder of a tree of files: one row, even for folders that only hold the next one ("deep/very/long"). */
@@ -273,7 +273,7 @@ export function itemsUnderRows<T>(rows: readonly RowOfItems<T>[]): T[] {
   const items = new Set<T>();
   for (const row of rows) {
     if (row.type === 'file') items.add(row.item);
-    else for (let index = row.held.start; index < row.held.end; index++) items.add(row.held.list[index]!);
+    else forEachIn(row.held, (item) => items.add(item));
   }
   return [...items];
 }

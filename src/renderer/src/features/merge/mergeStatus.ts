@@ -2,7 +2,7 @@ import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/me
 import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import type { GroupProgress } from '../../components/TreeGroupLabel';
-import type { ItemRange } from '../../lib/itemRange';
+import { forEachIn, type ItemRange } from '../../lib/itemRange';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
 import { directoryResolutionOf, fileStateOf, isApplying, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
@@ -204,10 +204,10 @@ export function groupProgress(statuses: ConflictStatus[]): GroupProgress {
 export function mergeGroupProgress(group: MergeGroup, held: ItemRange<MergeItem>, progress: MergeProgress): GroupProgress | undefined {
   if (group === 'changes') return undefined;
   const statuses: ConflictStatus[] = [];
-  for (let index = held.start; index < held.end; index++) {
-    const status = conflictStatusOf(held.list[index]!, progress);
+  forEachIn(held, (item) => {
+    const status = conflictStatusOf(item, progress);
     if (status !== null) statuses.push(status);
-  }
+  });
   return groupProgress(statuses);
 }
 

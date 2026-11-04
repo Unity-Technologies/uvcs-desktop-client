@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countIn, itemsIn, rangeLength, someIn, wholeList, type ItemRange } from './itemRange';
+import { countIn, forEachIn, itemsIn, rangeLength, someIn, wholeList, type ItemRange } from './itemRange';
 
 // A folder's run in the middle of its list: the items before and after it are another folder's.
 const folder: ItemRange<string> = { list: ['a.txt', 'src/a.ts', 'src/b.png', 'src/c.ts', 'z.ts'], start: 1, end: 4 };
@@ -11,6 +11,9 @@ describe('ItemRange', () => {
     expect(countIn(folder, (path) => path.endsWith('.ts'))).toBe(2);
     expect(someIn(folder, (path) => path === 'z.ts')).toBe(false);
     expect(someIn(folder, (path) => path.endsWith('.png'))).toBe(true);
+    const visited: string[] = [];
+    forEachIn(folder, (path) => visited.push(path));
+    expect(visited).toEqual(['src/a.ts', 'src/b.png', 'src/c.ts']);
   });
 
   it('holds every item of a whole list, and none of an empty one', () => {

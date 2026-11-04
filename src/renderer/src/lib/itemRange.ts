@@ -28,6 +28,11 @@ export function itemsIn<T>(range: ItemRange<T>): T[] {
   return range.list.slice(range.start, range.end);
 }
 
+/** Calls `visit` with each item of the range, in order, without copying them. */
+export function forEachIn<T>(range: ItemRange<T>, visit: (item: T) => void): void {
+  for (let index = range.start; index < range.end; index++) visit(range.list[index]!);
+}
+
 /** How many items of the range pass `test`, without copying them. */
 export function countIn<T>(range: ItemRange<T>, test: (item: T) => boolean): number {
   let count = 0;
