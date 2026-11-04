@@ -95,6 +95,8 @@ a click shows it larger. So a picture must read at that size:
 - **Reuse the pull request's screenshot** when it already is that crop: reference the same file in the note and
   `gh pr create --attach ./tools.png` uploads it once for both. The pull request's own picture may show more for
   reviewers; the note's is cropped for users.
+- **Reference it inside the note.** `gh --attach` places a file where the body references it; an unreferenced one
+  is appended after the closing line, outside `## Release note`, where What's New never shows it.
 
 ### GIFs
 

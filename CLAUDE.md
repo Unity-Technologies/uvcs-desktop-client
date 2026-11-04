@@ -370,9 +370,13 @@ them on the server, and reading shell command lines cost more to keep right than
    the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
    One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
    without it (a before and after, a theme-specific change). When a still can't show it (motion, a flow, something
-   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). Attach it with
-   `gh pr create --attach <file>` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`);
-   never commit it to the repository.
+   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). It goes under
+   "Behavior with this pull request": reference it there as `![alt](./shot.png)` and attach it with `gh pr create
+   --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`), so `gh`
+   puts it in place; an unreferenced attachment lands after the closing line, outside every section. Never commit it
+   to the repository. When the `release-notes` skill calls for a picture (a new dialog, menu, tab or panel),
+   the note gets its own cropped one, referenced inside `## Release note` the same way; it is the reviewer's file
+   only when that already is the right crop.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
