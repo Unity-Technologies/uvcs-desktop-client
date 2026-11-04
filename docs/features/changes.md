@@ -14,7 +14,15 @@ changelist" and "Shelve this changelist" (shelves-and-switching.md, "A changelis
 and "Undo N changes…", which act on all its changes, those the filters hide too (`changesByChangelist`, the default
 changelist's under `null`). A user changelist adds "Rename…", "Edit description…" and "Delete changelist…"; the default
 one can't be renamed, described or deleted, so they aren't offered rather than shown disabled. An entry nothing applies
-to is left out ("Shelve" for private files alone), and a header whose menu is empty has no "…".
+to is left out ("Shelve" for private files alone), and a header whose menu would be empty (the default changelist
+holding only ignored or cloaked files) has no "…" (`changelistHasMenu`, asked on every render; the menu itself is built
+only as it opens).
+
+"Move to changelist ▸" on a header clears Changes' filters first, as readying a check-in does: the changes they hide
+move too, and the list then shows every one that moved. As every move to a changelist (`moveToChangelist`), it checks
+out the changed files that aren't yet (only checked-out and added items live in a changelist; a checkout may take a
+lock), then moves them all in one `cm changelist <name> add`, however many: `CmClient` runs it as a process of its own
+past a few paths (`runsLong`), and through a `cm shell` of its own when too long for a command line.
 
 What acts on some of a changelist's files (Include or Exclude, Add to version control, Check out, Copy, the filter
 rules) isn't in it: the header's checkbox includes or excludes them all, and the rest is the files' own menu, on the
