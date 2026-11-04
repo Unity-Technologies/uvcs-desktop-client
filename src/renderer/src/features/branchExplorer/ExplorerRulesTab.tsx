@@ -26,11 +26,14 @@ import styles from './ExplorerRulesTab.module.css';
 
 interface ExplorerRulesTabProps {
   rules: readonly ExplorerRule[];
+  /** Off keeps the rules and applies none of them. */
+  on: boolean;
   onChange: (rules: ExplorerRule[]) => void;
+  onTurn: (on: boolean) => void;
 }
 
 /** The display options' "Advanced filters & format" tab: the repository's inclusions, exclusions and formats. */
-export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
+export function ExplorerRulesTab({ rules, on, onChange, onTurn }: ExplorerRulesTabProps) {
   const matches = useRuleMatches(rules);
   const body = ruleTabBody(rules);
   const add = async (rule: ExplorerRule): Promise<void> => {
@@ -73,9 +76,12 @@ export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
   }
   return (
     <div className={styles.tab}>
-      <div className={styles.toolbar}>{addButton}</div>
+      <div className={styles.toolbar}>
+        <Checkbox label="Apply these rules" checked={on} onChange={onTurn} />
+        {addButton}
+      </div>
       {body.sections.map((section) => (
-        <section key={section.title} className={styles.section}>
+        <section key={section.title} className={styles.section} data-off={!on || undefined}>
           <h3 className={styles.heading}>{section.title}</h3>
           {section.note && <p className={styles.note}>{section.note}</p>}
           <ul className={styles.list}>{section.rules.map(row)}</ul>

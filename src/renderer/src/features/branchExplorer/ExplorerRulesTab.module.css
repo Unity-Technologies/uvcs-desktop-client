@@ -6,7 +6,9 @@
 
 .toolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .section {
@@ -49,7 +51,10 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.row[data-disabled] .text {
+.row[data-disabled] .text,
+.section[data-off] .text,
+.section[data-off] .heading,
+.section[data-off] .note {
   opacity: 0.6;
 }
 
