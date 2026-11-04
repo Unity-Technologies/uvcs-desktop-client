@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
+import { countCalls } from '@shared/testing/countCalls';
+import { countedArray, readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, layoutPathTree, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
 
 interface Item {
@@ -90,6 +91,29 @@ describe('layoutPathTree', () => {
     const many = (count: number) =>
       sortedItems(Array.from({ length: count }, (_, index) => (index % 2 ? `src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs` : `flat/asset${index}.txt`)));
     expect(readGrowthWhenDoubled(5_000, many, (sorted) => layoutPathTree({ sorted, keyOf, folderScope: 'all' }))).toBeLessThan(2.5);
+  });
+
+  // Ten folders, each holding a file and the next folder at every level, `depth` of them: each file sits as many
+  // folders deep as its index says, so twice the depth puts each file, on average, in twice the folders.
+  const filesInFolders = (files: number, depth: number): Item[] =>
+    sortedItems(Array.from({ length: files }, (_, index) => [`top${index % 10}`, ...Array.from({ length: index % depth }, (_, level) => `level${level}`), `f${index}.cs`].join('/')));
+
+  // A folder that copied every item under it read each item once per folder it is in: a 50,000-file diff took 50 ms a key.
+  it('reads each item about as often however many folders deep it sits', () => {
+    const readsAt = (depth: number): number => {
+      const { array: sorted, reads } = countedArray(filesInFolders(2_000, depth));
+      layoutPathTree({ sorted, keyOf, folderScope: 'all' });
+      return reads();
+    };
+    expect(readsAt(16) / readsAt(8)).toBeLessThan(1.25);
+  });
+
+  it('makes the strings of the folders it shows, none for each file in them', () => {
+    const slicesFor = (files: number): number => {
+      const sorted = filesInFolders(files, 16);
+      return countCalls(String.prototype, 'slice', () => layoutPathTree({ sorted, keyOf, folderScope: 'all' })).calls;
+    };
+    expect(slicesFor(4_000)).toBe(slicesFor(2_000));
   });
 });
 
