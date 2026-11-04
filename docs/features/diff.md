@@ -369,14 +369,15 @@ pending arrival, so a step from an Incoming diff into a conflicting file hands t
 else the frame's own. A diff keeps its own there too (`pressTarget`): until it opened at the step it was stepped to,
 and while a step it made is in flight (`FileSteps.steppingTo`: the list already on the next file, the diff pane still
 showing this one while the selection settles and the next file is read), for that next file, never stepping from
-this one's place. Once open, the selected file's diff takes its own through its own navigation (`drainsKept`,
+this one's place; a press faster than the list redraws, which still sees it on this file, too (`PendingArrival.from`,
+forgotten once the list rendered on the next file). Once open, the selected file's diff takes its own through its own navigation (`drainsKept`,
 `drainKept`): one that moves the view is the last until the render it brings, one that does nothing (past the last
 change of the last file) brings no render, so the next is taken at once. The previous file's diff, still on screen
 during Changes' settle, takes none, and drawing it again drops nothing. A step from a file takes the presses still left
 for it along to the next file, in order (`followStep`), so a burst across a one-change file or an image loses none;
 where the selected file couldn't be read, its presses step on from it the same way (`HeaderArrows.replaysKept`).
 Presses are dropped in two cases, both when the selection leaves their file: as the list moves to another file
-(`FileSteps.dropLeftPresses`) and as the diff pane asks for one (`StepQueue.keepOnly`), those neither for it nor for a
+(`FileSteps.listMoved`) and as the diff pane asks for one (`StepQueue.keepOnly`), those neither for it nor for a
 file a step is on its way to go, so a file picked in the list while another loads opens at its top. A diff that will
 never have changes to step through (`stepsCanCome`: anything but a text
 diff, or a file typed into as a diff) opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends
