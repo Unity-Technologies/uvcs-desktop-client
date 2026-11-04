@@ -1370,15 +1370,16 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
   - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
-    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`, whose tip says so, and in
-    Changes that what the row does its meta gets too), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
+    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
+    Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
     `pairPendingMetas` for Changes, `pairDiffMetas` for a diff and a details panel's changed files, `pairIncomingMetas`,
     `pairMergeMetas`); Changes adds the metas apart ("6 files + 2 meta", `changesCountLabel`) so its list adds up to the
-    changes pending its header counts. A meta joins its asset only when both are listed and changed the same way (the
-    same kinds and changelist in Changes, the same status in a diff), with the name matched exactly as Unity writes it;
-    otherwise it keeps its own row, so nothing that changed alone is hidden. A conflict never joins: each is a decision
-    with its own panel (Incoming keeps a colliding meta apart; the merge page every conflict). Pairing is always on, not
-    tied to a Unity project: a `.meta` beside its asset means Unity.
+    changes pending its header counts (ignored, cloaked or hidden items the list's options show aren't pending). A meta
+    joins its asset only when both are listed and changed the same way (the same kinds and changelist in Changes, the
+    same status in a diff), with the name matched exactly as Unity writes it; otherwise it keeps its own row, so nothing
+    that changed alone is hidden. A conflict never joins: each is a decision with its own panel (Incoming keeps a
+    colliding meta apart; the merge page every conflict). Pairing is always on, not tied to a Unity project: a `.meta`
+    beside its asset means Unity.
     What changes data takes the meta along (`withMetas`): Changes' checkbox, undo, add, checkout, changelists and filter
     rules; a diff's revert and restore, whose "Restore to…" goes away when the meta comes back too, as an asset moved
     without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's

@@ -16,6 +16,7 @@ describe('changesCountLabel', () => {
     expect(changesCountLabel(6, 6, 2)).toBe('6 files + 2 meta');
     expect(changesCountLabel(1, 1, 1)).toBe('1 file + 1 meta');
     expect(changesCountLabel(6, 6, 0)).toBe('6 files');
+    expect(changesCountLabel(1204, 1204, 1204)).toBe('1,204 files + 1,204 meta');
   });
 
   it('counts only rows while the filter hides some', () => {
