@@ -58,7 +58,7 @@ interface LoadedFileDiffProps {
   fileName: string;
   title?: ReactNode;
   identicalDescription?: string;
-  /** Controls about what to compare, first in the toolbar of a text diff. */
+  /** Controls about what to compare, in the toolbar of every diff (a binary file, an image or a model has its `.meta` too), right before the change arrows. */
   compareControls?: ReactNode;
   /** Discarding changes brought the workspace file back to its loaded revision. */
   onMatchesBase?: () => void;
@@ -129,11 +129,12 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
   // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
-  // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them.
+  // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them. The compare
+  // controls (`.meta`, Since review) come right before them, so they stay put too whatever controls a file has (a text
+  // file's, an image's or a binary file's none): toggling a binary file's `.meta` leaves the button under the pointer.
   const controls = (
     <>
       {dirty && <UnsavedEditsControls buffer={buffer} />}
-      {isText && compareControls}
       {viewControls && (
         <TextViewControls
           diff={diffs.current}
@@ -149,6 +150,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
       {metaAsModel && <ModelModeSwitch />}
       {representationSwitch}
       {metaModel !== null && <RepresentationSwitch value={metaAsModel ? 'model' : 'text'} rendered="model" onChange={(value) => setRepresentation('meta', value)} />}
+      {compareControls}
       {navigator}
     </>
   );

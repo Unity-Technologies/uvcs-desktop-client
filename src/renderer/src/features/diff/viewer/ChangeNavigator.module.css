@@ -1,6 +1,10 @@
-/* As wide as its text: ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. */
+/* ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. At least as
+   wide as the usual labels ("1 change", "No changes", "12 of 34"), centered, so ▲ and what's before it (the `.meta`
+   toggle) stay put too from one file to the next. */
 .position {
   flex: none;
+  min-width: 10ch;
+  text-align: center;
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
