@@ -2,7 +2,7 @@ import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { followPointerDrag } from './pointerDrag';
 
-function pointer(type: 'pointermove' | 'pointerup', clientX: number, clientY: number): void {
+function pointer(type: 'pointermove' | 'pointerup' | 'pointercancel', clientX: number, clientY: number): void {
   window.dispatchEvent(Object.assign(new Event(type), { clientX, clientY }));
 }
 
@@ -42,5 +42,18 @@ describe('followPointerDrag', () => {
     pointer('pointerup', 150, 150);
 
     expect(told).toEqual(['click at 100']);
+  });
+
+  it('ends a drag when the system takes the pointer, and clicks nothing for a press', () => {
+    const dragged = press();
+    pointer('pointermove', 110, 100);
+    pointer('pointercancel', 110, 100);
+    pointer('pointermove', 150, 100);
+    expect(dragged).toEqual(['drag 10,0', 'end']);
+
+    const pressed = press();
+    pointer('pointercancel', 100, 100);
+    pointer('pointerup', 100, 100);
+    expect(pressed).toEqual([]);
   });
 });

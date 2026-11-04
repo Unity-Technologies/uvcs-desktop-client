@@ -83,6 +83,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('Command &Log', 'app.commandLog', 'CmdOrCtrl+Shift+L'),
         commandItem('Toggle &Sidebar', 'app.sidebar', 'CmdOrCtrl+\\'),
         commandItem('Toggle &Details', 'view.details', 'CmdOrCtrl+I'),
+        // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there (`shortcutRegistry`'s `graphTimeline`).
+        commandItem('Branch Explorer &Timeline', 'branchExplorer.timeline', isMac ? 'CmdOrCtrl+Alt+T' : 'Alt+Shift+T'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
         zoomItem('&Actual Size', 'reset', 'CmdOrCtrl+0'),

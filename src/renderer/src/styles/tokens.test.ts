@@ -79,6 +79,10 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     },
   );
 
+  it("draws the Branch Explorer Timeline's label ticks (--label-mark) at 3:1 on its strip (--bg-subtle)", () => {
+    expect(ratio(tokens, '--label-mark', '--bg-subtle')).toBeGreaterThanOrEqual(3);
+  });
+
   it('draws focus rings at 3:1 on surfaces and on selected rows', () => {
     for (const surface of SURFACES) expect(ratio(tokens, '--focus-color', surface), surface).toBeGreaterThanOrEqual(3);
     const surface = parseColor(tokens['--bg-surface']!).rgb;
