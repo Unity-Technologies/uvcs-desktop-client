@@ -4,7 +4,7 @@ import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove, positionLabel } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
-import { positionAfterChange, pressStep } from './stepNavigation';
+import { positionAfterChange, pressStep, stepAt } from './stepNavigation';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
 const ARRIVAL_MAX_FRAMES = 60;
@@ -175,7 +175,8 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
     go,
     goTo: (index) => {
-      if (index >= 0 && index < steps.length) moveTo(index);
+      const target = stepAt(index, steps.length);
+      if (target !== null) moveTo(target);
     },
     onViewScroll,
   };
