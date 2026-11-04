@@ -48,7 +48,8 @@ export function FileDiffViewer({ place, original, modified, fileName, title, ide
     isPlaceholderData: contents.isPlaceholderData,
   };
 
-  // One header for every file and state (`SteppedDiffFrame`): loading, failed or loaded, its arrows stay the same buttons.
+  // One header for every file and state (`SteppedDiffFrame`): loading, failed or loaded, its arrows stay the same
+  // buttons.
   return (
     <SteppedDiffFrame title={title} requested={requested}>
       {body()}

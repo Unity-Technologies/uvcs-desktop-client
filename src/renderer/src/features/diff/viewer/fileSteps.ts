@@ -26,13 +26,14 @@ export interface FileSteps {
    */
   steppingTo: () => string | null;
   /**
-   * The file the list is on while the view beside it still shows another, as its host says (`FileStepsOptions.settlingOn`):
-   * a press meanwhile is meant for it.
+   * The file the list is on while the view beside it still shows another, as its host says
+   * (`FileStepsOptions.settlingOn`): a press meanwhile is meant for it.
    */
   settlingOn: string | null;
   /**
    * The presses kept for files whose view hasn't taken them yet (`StepQueue`), shared by the lists of one view with
-   * their pending arrival: a step from an Incoming diff into a conflicting file hands that file's view the presses left.
+   * their pending arrival: a step from an Incoming diff into a conflicting file hands that file's view the presses
+   * left.
    */
   kept: StepQueue;
   /**
@@ -63,9 +64,9 @@ interface FileStepsOptions {
   pathOf: (key: string) => string;
   /**
    * The file the list is on (its path) while the view beside it still shows another: Changes' diff follows the
-   * selection once it settles (`useSettledValue`), so a click on a file leaves the previous one's diff on screen a while.
-   * Compared by the host from its own two values, the change selected and the one diffed, never from paths a view shows
-   * (a `.meta` shown in place of its asset).
+   * selection once it settles (`useSettledValue`), so a click on a file leaves the previous one's diff on screen a
+   * while. Compared by the host from its own two values, the change selected and the one diffed, never from paths a
+   * view shows (a `.meta` shown in place of its asset).
    */
   settlingOn?: string | null;
   /**
@@ -75,7 +76,10 @@ interface FileStepsOptions {
   pending?: PendingArrivalRef;
 }
 
-/** Where a step leaves the arrival of the file it selects, and the presses kept for it, until that file's view takes them. */
+/**
+ * Where a step leaves the arrival of the file it selects, and the presses kept for it, until that file's view takes
+ * them.
+ */
 export interface PendingArrivalRef {
   current: PendingArrival | null;
   readonly kept: StepQueue;

@@ -7,8 +7,8 @@ import type { FileSteps } from './fileSteps';
  */
 
 /**
- * What a press of next (1) or previous (-1) did: moved to a step (its index), went on to a file beside it (its path), or
- * nothing.
+ * What a press of next (1) or previous (-1) did: moved to a step (its index), went on to a file beside it (its path),
+ * or nothing.
  */
 export type PressOutcome = number | { file: string } | null;
 

@@ -3,7 +3,10 @@ import { changeNavigatorView, type NavigatorFacts } from './changeNavigatorView'
 
 /** A text diff with 12 changes beside a list of files, none current yet: the first move goes to its first. */
 const textBeforeStepping: NavigatorFacts = { stepsOwn: true, count: 12, current: null, noun: 'change', previous: 'file', next: 'step', besideFiles: true, hostSteps: true };
-/** A diff with no changes of its own to step through, beside a list: one loading, failed, identical, binary, an image, a model. */
+/**
+ * A diff with no changes of its own to step through, beside a list: one loading, failed, identical, binary, an image, a
+ * model.
+ */
 const noStepsOfItsOwn: NavigatorFacts = { stepsOwn: false, count: 0, current: null, noun: 'change', previous: 'file', next: 'file', besideFiles: true, hostSteps: true };
 
 describe('changeNavigatorView', () => {

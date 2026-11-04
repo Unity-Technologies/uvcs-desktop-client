@@ -12,9 +12,13 @@ import { positionLabel } from './changeNavigation';
  */
 export type ArrowGoal = 'step' | 'file' | 'queued' | null;
 
-/** What decides the arrows: the view's own steps, where each arrow goes (`StepNavigation.goesTo`), the list beside it. */
+/**
+ * What decides the arrows: the view's own steps, where each arrow goes (`StepNavigation.goesTo`), the list beside it.
+ */
 export interface NavigatorFacts {
-  /** The view steps through steps of its own: a text diff of two versions (its changes), a merged file (its conflicts). */
+  /**
+   * The view steps through steps of its own: a text diff of two versions (its changes), a merged file (its conflicts).
+   */
   stepsOwn: boolean;
   count: number;
   /** The step moved to; none before the first move. */

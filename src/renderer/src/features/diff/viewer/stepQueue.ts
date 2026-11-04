@@ -25,7 +25,9 @@ export class StepQueue {
     return this.presses.splice(index, 1)[0]!.direction;
   }
 
-  /** The presses left for `from` go to `to`, in order: a step from `from` went to `to`, and they're meant to follow it. */
+  /**
+   * The presses left for `from` go to `to`, in order: a step from `from` went to `to`, and they're meant to follow it.
+   */
   retag(from: string, to: string): void {
     this.presses = this.presses.map((press) => (press.path === from ? { ...press, path: to } : press));
   }

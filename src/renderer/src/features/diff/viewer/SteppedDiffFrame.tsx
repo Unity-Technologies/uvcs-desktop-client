@@ -22,7 +22,10 @@ export type RequestedDiff = Omit<HeaderState, 'published' | 'requestedKey'> & {
 
 interface SteppedDiffFrameProps {
   title?: ReactNode;
-  /** Its diffs step through their changes (as `LoadedFileDiff`'s `stepsThroughChanges`): off where the view steps instead. */
+  /**
+   * Its diffs step through their changes (as `LoadedFileDiff`'s `stepsThroughChanges`): off where the view steps
+   * instead.
+   */
   stepsThroughChanges?: boolean;
   requested: RequestedDiff;
   /** The diff, loading, loaded (`LoadedFileDiff`, which draws into this header: `DiffFrameHostContext`) or failed. */
@@ -40,7 +43,8 @@ export function SteppedDiffFrame({ title, stepsThroughChanges = true, requested,
   const frame = useRef<HTMLDivElement>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
   const [store] = useState<PublishedStore>(() => createStore(() => ({ published: null })));
-  // The list's (shared by the lists of one view, so a step into a file shown otherwise hands it its presses), else its own.
+  // The list's (shared by the lists of one view, so a step into a file shown otherwise hands it its presses), else its
+  // own.
   const [ownQueue] = useState(() => new StepQueue());
   const queue = useContext(FileStepsContext)?.kept ?? ownQueue;
   // Stable while the frame lives: the body's unmount hands the arrows back to the header (`publish(null)`) once only.
@@ -74,8 +78,8 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   const header = useFileOnlyNavigation(frame, { active: arrows.body === null, holder: arrows.own, path, kept });
   // The file shown changed under the same row (an asset's `.meta` toggled in its place): the presses kept for the one
   // left (not for this one, nor for one a step is on its way to) go; they'd never be taken, and would come back with
-  // it. The list moving is `FileSteps.listMoved`'s. Only when the file asked for changes (`[path]`): other renders leave
-  // nothing, and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
+  // it. The list moving is `FileSteps.listMoved`'s. Only when the file asked for changes (`[path]`): other renders
+  // leave nothing, and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;

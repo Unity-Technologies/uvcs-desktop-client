@@ -6,8 +6,8 @@ import type { StepQueue } from './stepQueue';
 
 /**
  * Where a press of the change arrows or their keys goes, decided in one place for every navigation that takes them
- * (`useStepNavigation`: a diff's, a conflicts view's, a diff header's own, an xlink's) and for the tests that walk a list
- * of files through them (`stepThroughLoads.test.ts`), so the two can't wire it differently.
+ * (`useStepNavigation`: a diff's, a conflicts view's, a diff header's own, an xlink's) and for the tests that walk a
+ * list of files through them (`stepThroughLoads.test.ts`), so the two can't wire it differently.
  */
 
 /**

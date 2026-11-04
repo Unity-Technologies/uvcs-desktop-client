@@ -57,7 +57,10 @@ class CachedDiffs {
     return label ? `${this.listCurrent}: ${label}` : this.listCurrent;
   }
 
-  /** ↓ (1) or ↑ (-1) on the header's arrows, as `SteppedDiffFrame` shows them: the body's once it's the selected file's, else its own. */
+  /**
+   * ↓ (1) or ↑ (-1) on the header's arrows, as `SteppedDiffFrame` shows them: the body's once it's the selected file's,
+   * else its own.
+   */
   press(direction: 1 | -1): this {
     this.pressUnrendered(direction);
     return this.renders();
@@ -204,7 +207,10 @@ class CachedDiffs {
     return typeof changes === 'number' ? changes : 0;
   }
 
-  /** The header's own navigation (`SteppedDiffFrame`): waiting for the selected file's diff, or stepless where it failed. */
+  /**
+   * The header's own navigation (`SteppedDiffFrame`): waiting for the selected file's diff, or stepless where it
+   * failed.
+   */
   private headerNavigator(): Navigator {
     const spot: PressSpot = { holder: this.arrows().own, path: this.requested, opened: false, steppingTo: this.steps().steppingTo(), settlingOn: this.steps().settlingOn };
     return { spot, position: NO_STEPS, moveTo: () => undefined };

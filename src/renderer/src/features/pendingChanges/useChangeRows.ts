@@ -27,8 +27,8 @@ interface ChangeRows {
   /** The changes shown by key: arrowing renders the view on every step, so what it asks of the selection is looked up. */
   changesByKey: ReadonlyMap<string, PendingChange>;
   /**
-   * The keys of the changes with a diff to show, in list order (`fileRowKeys`: never a folder): the diff's navigation goes
-   * on to the files before and after, and the list selects the first.
+   * The keys of the changes with a diff to show, in list order (`fileRowKeys`: never a folder): the diff's navigation
+   * goes on to the files before and after, and the list selects the first.
    */
   fileKeys: string[];
   /** How the rows sit (`rowLevelsOf`), for their indents and guides. */

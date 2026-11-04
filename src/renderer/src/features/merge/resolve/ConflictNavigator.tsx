@@ -17,9 +17,9 @@ interface ConflictNavigatorProps {
 }
 
 /**
- * A conflicting file's "2 of 3" and its arrows, as a diff's header has them, with the diff's keys (⌥↓ ⌥↑, F7 ⇧F7): from conflict to conflict, then,
- * beside the merge's list, on to the next file that waits for the user (`conflictStepKeys`). Resolving a conflict takes
- * it out of the count, and the next move goes on from the view.
+ * A conflicting file's "2 of 3" and its arrows, as a diff's header has them, with the diff's keys (⌥↓ ⌥↑, F7 ⇧F7): from
+ * conflict to conflict, then, beside the merge's list, on to the next file that waits for the user
+ * (`conflictStepKeys`). Resolving a conflict takes it out of the count, and the next move goes on from the view.
  */
 export function ConflictNavigator({ count, view, frame, path }: ConflictNavigatorProps) {
   const steps = useMemo(() => Array.from({ length: count }, (_, index) => index), [count]);

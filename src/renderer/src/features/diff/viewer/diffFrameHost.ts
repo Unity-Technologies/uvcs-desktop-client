@@ -13,8 +13,8 @@ export interface PublishedNavigation {
 }
 
 /**
- * The header a diff body draws into (`SteppedDiffFrame`), which outlives it: the body (`LoadedFileDiff`) is mounted anew
- * for each file, the header and its arrows stay, so ↓ clicked through a changeset always lands on the same button.
+ * The header a diff body draws into (`SteppedDiffFrame`), which outlives it: the body (`LoadedFileDiff`) is mounted
+ * anew for each file, the header and its arrows stay, so ↓ clicked through a changeset always lands on the same button.
  */
 export interface DiffFrameHost {
   /** The frame, the view and its header: where the body's keys work from (`useStepNavigation`'s `frame`). */
@@ -25,7 +25,10 @@ export interface DiffFrameHost {
   publish: (published: PublishedNavigation | null) => void;
   /** The presses made before the selected file's diff opened, which that diff drains once it did. */
   queue: StepQueue;
-  /** The selected file's versions (`diffContentsKey`): a diff of others (the previous file's, still on screen) takes no keys. */
+  /**
+   * The selected file's versions (`diffContentsKey`): a diff of others (the previous file's, still on screen) takes no
+   * keys.
+   */
   requestedKey: string;
 }
 
