@@ -25,6 +25,11 @@ describe('fileSteps', () => {
     return { steps, selected };
   };
 
+  it('says where a step went, for the presses left for this file to follow it', () => {
+    expect(list('b').steps.step(1)).toBe('src/c.ts');
+    expect(list('c').steps.step(1)).toBeNull();
+  });
+
   it("selects the next file to open at its first change, the previous at its last, told once to that file's diff", () => {
     const down = list('b');
     down.steps.step(1);

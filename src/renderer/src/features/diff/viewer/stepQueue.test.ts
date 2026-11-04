@@ -9,12 +9,29 @@ describe('StepQueue', () => {
     expect([queue.take('b.cs'), queue.take('b.cs'), queue.take('b.cs')]).toEqual([1, -1, undefined]);
   });
 
-  it("drops the presses meant for another file: they were for a diff that's no longer selected", () => {
+  it("takes only a file's own presses, dropping none of another's: a diff still on screen while the next file is read takes nothing of the next file's", () => {
+    const queue = new StepQueue();
+    queue.push('b.cs', 1);
+    expect(queue.take('a.cs')).toBeUndefined();
+    expect(queue.take('b.cs')).toBe(1);
+  });
+
+  it('moves the presses left for a file on to the file a step from it went to, in order', () => {
     const queue = new StepQueue();
     queue.push('b.cs', 1);
     queue.push('c.cs', -1);
-    expect(queue.take('c.cs')).toBe(-1);
-    expect(queue.take('b.cs')).toBeUndefined();
+    queue.push('b.cs', -1);
+    queue.retag('b.cs', 'c.cs');
+    expect([queue.take('c.cs'), queue.take('c.cs'), queue.take('c.cs'), queue.take('b.cs')]).toEqual([1, -1, -1, undefined]);
+  });
+
+  it('drops the presses for files the selection left: those neither for the file asked for nor for one a step is on its way to', () => {
+    const queue = new StepQueue();
+    queue.push('a.cs', 1);
+    queue.push('b.cs', 1);
+    queue.push('c.cs', -1);
+    queue.keepOnly(['c.cs', null]);
+    expect([queue.take('a.cs'), queue.take('b.cs'), queue.take('c.cs')]).toEqual([undefined, undefined, -1]);
   });
 
   it('forgets them all', () => {

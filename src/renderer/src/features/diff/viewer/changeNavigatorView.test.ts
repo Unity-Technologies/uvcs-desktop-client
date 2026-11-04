@@ -84,6 +84,15 @@ describe('changeNavigatorView', () => {
     });
   });
 
+  it('keeps both arrows enabled with a neutral tip while presses wait for the file being read, wherever it sits in the list', () => {
+    const queued = { ...noStepsOfItsOwn, previous: 'queued', next: 'queued' } as const;
+    expect(changeNavigatorView(queued)).toEqual({
+      label: '',
+      previous: { tip: 'Previous change', enabled: true },
+      next: { tip: 'Next change', enabled: true },
+    });
+  });
+
   it("names the merge page's steps by its noun", () => {
     const conflicts = { ...textBeforeStepping, count: 3, current: 0, noun: 'conflict', previous: 'file', next: 'step' } as const;
     expect(changeNavigatorView(conflicts)).toEqual({
