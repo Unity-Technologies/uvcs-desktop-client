@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { layoutGraph } from '../model/layoutGraph';
+import { MIN_ZOOM } from '../canvas/viewport';
 import { sortedSearch } from './sortedSearch';
 import { stripXOfColumn, timelineAxis } from './timelineAxis';
 import type { TimelineCalendar } from './timelineCalendar';
@@ -72,6 +73,8 @@ describe('timelineCard', () => {
     });
     const narrow = { ...context, frame: { left: 10, right: 12 } };
     expect(timelineCard({ kind: 'frameEdge', edge: 'left' }, 0, narrow).lines.at(-1)).toBe('Drag to move · zoom out to widen it');
+    // Zoomed out as far as it goes, nothing widens it.
+    expect(timelineCard({ kind: 'frame' }, 0, { ...narrow, zoom: MIN_ZOOM }).lines.at(-1)).toBe('Drag to move');
   });
 
   it('says where the workspace is and how far /main moved on since', () => {
@@ -104,9 +107,9 @@ describe('timelineCard', () => {
 
   it('names a tick’s label, or how many it holds, the newest first', () => {
     const context = contextFor();
-    const ticks = labelTicks(context.history, { ...context.axis, width: 100_000 });
+    const ticks = labelTicks(context.history, { ...context.axis, width: 100_000, inset: 0 });
     expect(timelineCard({ kind: 'labels', tick: ticks[0]! }, 0, context)).toEqual({ title: 'a', lines: ['Sep 3'] });
-    const merged = labelTicks(context.history, { ...context.axis, width: 1 })[0]!;
+    const merged = labelTicks(context.history, { ...context.axis, width: 1, inset: 0 })[0]!;
     expect(timelineCard({ kind: 'labels', tick: merged }, 0, context)).toEqual({ title: '5 labels', lines: ['e, d, c and 2 more', 'Sep 3'] });
   });
 

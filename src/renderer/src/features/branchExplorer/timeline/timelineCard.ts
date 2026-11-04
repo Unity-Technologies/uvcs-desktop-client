@@ -1,4 +1,5 @@
 import { formatCount, pluralize, pluralizeAtLeast } from '../../../lib/text';
+import { MIN_ZOOM } from '../canvas/viewport';
 import { sortedSearch } from './sortedSearch';
 import { columnAtStrip, columnsBetween, type TimelineAxis } from './timelineAxis';
 import { bucketAround, bucketSize, bucketTitle, dateRange, type TimelineCalendar } from './timelineCalendar';
@@ -72,12 +73,18 @@ function momentCard(x: number, { history, share, shareIsMine, axis, calendar }: 
 function frameCard({ history, axis, frame, zoom, calendar }: TimelineCardContext): TimelineCard {
   const { first, last } = columnsBetween(axis, frame.left, frame.right);
   const onScreen = changesetsInColumns(history, first, last);
-  const hint = frameShape(frame) === 'boxWithEdges' ? 'Drag to move · drag an edge to zoom' : 'Drag to move · zoom out to widen it';
   return {
     title: last < first ? 'No changesets on screen' : dateRange(history.columnTimes[first]!, history.columnTimes[last]!, calendar),
-    lines: [`Zoom ${Math.round(zoom * 100)}%`, `On screen: ${pluralize(onScreen, 'changeset')}`, hint],
+    lines: [`Zoom ${Math.round(zoom * 100)}%`, `On screen: ${pluralize(onScreen, 'changeset')}`, frameHint(frame, zoom)],
   };
 }
+
+/** How to move the frame: its edges zoom once it is wide enough to hold them; narrower, zooming out widens it, if it can. */
+function frameHint(frame: TimelineFrame, zoom: number): string {
+  if (frameShape(frame) === 'boxWithEdges') return 'Drag to move · drag an edge to zoom';
+  return zoom > MIN_ZOOM ? 'Drag to move · zoom out to widen it' : 'Drag to move';
+}
+
 
 /** The workspace: which changeset it loaded and how far /main moved on since; or that it is older than the range. */
 function homeCard({ history, home }: TimelineCardContext): TimelineCard {
