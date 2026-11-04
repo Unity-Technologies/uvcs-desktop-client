@@ -203,7 +203,10 @@ class CachedDiffs {
     return { spot, position: NO_STEPS, moveTo: () => undefined };
   }
 
-  /** The list's item for a path, the same object each time: what Changes compares, the change selected and the one diffed. */
+  /**
+   * The list's item for a path, the same object each time: what Changes compares, the change selected and the one
+   * diffed.
+   */
   private item(path: string): { path: string } | undefined {
     if (path === '') return undefined;
     let item = this.items.get(path);
