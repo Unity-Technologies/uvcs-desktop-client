@@ -5,6 +5,7 @@ import { modifiedLineAt } from './changeNavigation';
 import { lineOfRow, topProbePoints, type LineAtTop } from './rowPosition';
 import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
+import { scrollSmoothlyTo } from './smoothScrollPlan';
 
 /** What the diff's navigation asks of the diff on screen (`TextDiff`). */
 export interface ChangeView {
@@ -90,9 +91,10 @@ export function scrollToRows(container: HTMLElement, first: Element, last: Eleme
   const bottom = Math.max(...[first, ...last].map((row) => row.getBoundingClientRect().bottom));
   if (top >= view.top && bottom <= view.bottom) return;
   const target = container.scrollTop + top - view.top - CONTEXT_ROWS * rowHeight(first);
-  // Smoothly only a short way: far away it would scroll through rows a big diff renders one screen after another.
-  const near = Math.abs(target - container.scrollTop) < view.height * 2;
-  container.scrollTo({ top: target, behavior: smooth && near && !prefersReducedMotion() ? 'smooth' : 'auto' });
+  // Far away, a smooth scroll would pass through rows a big diff renders one screen after another: it jumps to a view
+  // short of the change and glides the rest (`smoothScrollPlan`).
+  if (smooth) scrollSmoothlyTo(container, target, prefersReducedMotion());
+  else container.scrollTo({ top: target, behavior: 'auto' });
 }
 
 function startsInView(container: HTMLElement, row: Element): boolean {
