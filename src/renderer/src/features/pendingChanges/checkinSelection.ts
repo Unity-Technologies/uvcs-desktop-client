@@ -35,7 +35,10 @@ export interface CheckinSelection {
 export interface PreparedChangelist {
   /** Null for the default changelist (`changelistNameOf`). */
   name: string | null;
+  /** What is checked: the paths readied, then as the user checks or unchecks files by hand. */
   paths: ReadonlySet<string>;
+  /** The paths readied, as they were: what the default changelist's end is read by (`preparedStillPending`). */
+  readied: ReadonlySet<string>;
 }
 
 /** What the user checked for the next check-in. */
@@ -60,11 +63,11 @@ export function withEverythingIncluded(choice: CheckinChoice, paths: string[]): 
 /**
  * Whether the prepared changelist still holds a pending change, checked or not. A user changelist is read by the
  * changelist, not the paths: an added file undone stays on disk, private, at its path, and files the user checked
- * besides don't keep it going. The default changelist is read by its prepared paths still in it: every new edit lands
- * there, so it would never end otherwise.
+ * besides don't keep it going. The default changelist is read by the paths readied still in it, whether the user
+ * unchecked them or not: every new edit lands there, so it would never end otherwise.
  */
 export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
-  if (prepared.name === null) return allChanges.some((change) => changelistNameOf(change) === null && prepared.paths.has(change.path));
+  if (prepared.name === null) return allChanges.some((change) => changelistNameOf(change) === null && prepared.readied.has(change.path));
   return allChanges.some((change) => changelistNameOf(change) === prepared.name);
 }
 

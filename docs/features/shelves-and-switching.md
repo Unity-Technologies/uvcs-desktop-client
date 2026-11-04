@@ -98,8 +98,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   on its changes. The default changelist offers the same (`PreparedChangelist`'s `name` is null, `changelistNameOf`),
   with no description to suggest and "Default changelist" under the button (`preparedChangelistNote`). Its "no pending
   change left" is read by the paths readied, not by the changelist: every new edit lands in it, so it would never end;
-  it ends once none of those paths is pending in it (an added file undone, left private at its path, keeps it going
-  until it is checked in, deleted or unchecked). changes.md "Changelist menus" holds the whole menu.
+  it ends once none of the paths it readied (`PreparedChangelist`'s `readied`, which checking files by hand leaves
+  alone) is pending in it; an added file undone, left private at its path, keeps it going until it is checked in or
+  deleted. changes.md "Changelist menus" holds the whole menu.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's

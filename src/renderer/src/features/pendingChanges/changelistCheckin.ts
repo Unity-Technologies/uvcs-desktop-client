@@ -42,7 +42,8 @@ interface ChangelistCheckin {
 export function prepareChangelistCheckin({ workspacePath, changelist, changes, index, changelists, clearFilter }: ChangelistCheckin): void {
   clearFilter();
   const store = useCheckinDraftStore.getState();
-  store.prepareChangelist(workspacePath, { name: changelist?.name ?? null, paths: new Set(neededWith(changes, index).map((change) => change.path)) });
+  const readied = new Set(neededWith(changes, index).map((change) => change.path));
+  store.prepareChangelist(workspacePath, { name: changelist?.name ?? null, paths: readied, readied });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist?.description ?? ''));
 }
 
