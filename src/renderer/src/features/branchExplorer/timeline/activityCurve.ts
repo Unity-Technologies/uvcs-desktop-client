@@ -37,12 +37,24 @@ export function activityHalfWindow(range: number): number {
   return (previous[1] * range) / previous[0];
 }
 
-/** For each column, how many of the ascending `times` lie within `halfWindow` of its time. */
-export function columnActivity(columnTimes: Float64Array, times: Float64Array, halfWindow: number): Float64Array {
+/** The loaded history's first and last times: what a window can see. */
+export interface LoadedSpan {
+  start: number;
+  end: number;
+}
+
+/**
+ * For each column, how many of the ascending `times` lie within `halfWindow` of its time, as a rate over the part of
+ * the window inside the loaded history: near its ends half the window sees nothing loaded, which would halve the count
+ * and sink the curve's ends.
+ */
+export function columnActivity(columnTimes: Float64Array, times: Float64Array, halfWindow: number, loaded: LoadedSpan): Float64Array {
   const activity = new Float64Array(columnTimes.length);
   for (let column = 0; column < columnTimes.length; column++) {
     const time = columnTimes[column]!;
-    activity[column] = countBetween(times, time - halfWindow, time + halfWindow);
+    const seen = Math.min(time + halfWindow, loaded.end) - Math.max(time - halfWindow, loaded.start);
+    const count = countBetween(times, time - halfWindow, time + halfWindow);
+    activity[column] = seen > 0 ? (count * 2 * halfWindow) / seen : count;
   }
   return activity;
 }
@@ -99,6 +111,24 @@ export function percentile(values: Float64Array, p: number): number {
   return positive[Math.min(positive.length - 1, Math.floor(p * (positive.length - 1)))]!;
 }
 
+/** The pixels from the first column's to the last's: the curve's own, outside which the strip is empty. */
+export function historyPixels(axis: TimelineAxis, columnCount: number): { first: number; last: number } {
+  const last = Math.ceil(axis.width) - 1;
+  const at = (column: number): number => Math.min(last, Math.max(0, Math.floor(stripXOfColumn(axis, column))));
+  return { first: at(0), last: at(columnCount - 1) };
+}
+
+/**
+ * The values blurred over `span` alone: the empty strip past the history's ends never averages in, so the curve keeps
+ * its height to its first and last changesets instead of fading toward them.
+ */
+function blurWithin(values: Float64Array, { first, last }: { first: number; last: number }): Float64Array {
+  if (last < first) return values;
+  const blurred = new Float64Array(values.length);
+  blurred.set(gaussianBlur(values.subarray(first, last + 1), BLUR_SIGMA), first);
+  return blurred;
+}
+
 /** The Timeline's curve, one height (0 to 1 of the plot) per pixel of the strip. */
 export interface ActivityCurve {
   total: Float64Array;
@@ -111,13 +141,15 @@ export interface ActivityCurve {
 /**
  * The smooth activity across the strip: each column's count of changesets within a window of its time
  * (`activityHalfWindow`), a mean per pixel, a Gaussian blur, scaled to the 98th percentile. A count per day drawn over
- * the day's columns was tried and dropped: flat mesas with cliffs between them. Computed once per layout, share and
+ * the day's columns was tried and dropped: flat mesas with cliffs between them. The blur keeps to the history's pixels
+ * (`historyPixels`). Computed once per layout, share and
  * width, never per frame.
  */
 export function activityCurve(history: TimelineHistory, share: TimelineShare, axis: TimelineAxis): ActivityCurve {
   const halfWindow = activityHalfWindow(history.end - history.start);
-  const total = gaussianBlur(perPixelMean(columnActivity(history.columnTimes, history.times, halfWindow), axis), BLUR_SIGMA);
-  const theirs = gaussianBlur(perPixelMean(columnActivity(history.columnTimes, share.times, halfWindow), axis), BLUR_SIGMA);
+  const span = historyPixels(axis, history.columnTimes.length);
+  const total = blurWithin(perPixelMean(columnActivity(history.columnTimes, history.times, halfWindow, history), axis), span);
+  const theirs = blurWithin(perPixelMean(columnActivity(history.columnTimes, share.times, halfWindow, history), axis), span);
   const top = percentile(total, SCALE_PERCENTILE) || 1;
   const sharePresent = new Uint8Array(total.length);
   for (let column = 0; column < share.columns.length; column++) {

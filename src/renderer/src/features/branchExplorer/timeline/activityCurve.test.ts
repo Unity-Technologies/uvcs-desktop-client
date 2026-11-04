@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { layoutGraph } from '../model/layoutGraph';
-import { activityCurve, activityHalfWindow, BLUR_SIGMA, columnActivity, gaussianBlur, percentile, perPixelMean, SHARE_MIN_HEIGHT, shareHeight } from './activityCurve';
+import { activityCurve, activityHalfWindow, BLUR_SIGMA, historyPixels, columnActivity, gaussianBlur, percentile, perPixelMean, SHARE_MIN_HEIGHT, shareHeight } from './activityCurve';
 import { sortedSearch } from './sortedSearch';
 import { stripXOfColumn, timelineAxis, type TimelineAxis } from './timelineAxis';
 import { datedHistory, datesEvery } from './timelineFixtures';
@@ -30,7 +30,9 @@ describe('activityHalfWindow', () => {
 describe('columnActivity', () => {
   it('counts, for each column, the changesets within the window of its time', () => {
     const times = Float64Array.from([0, 10, 20, 100]);
-    expect([...columnActivity(times, times, 10)]).toEqual([2, 3, 2, 1]);
+    // Within the history, a plain count; at its ends, a rate over the half of the window inside it.
+    expect([...columnActivity(times, times, 10, { start: -100, end: 200 })]).toEqual([2, 3, 2, 1]);
+    expect([...columnActivity(times, times, 10, { start: 0, end: 100 })]).toEqual([4, 3, 2, 2]);
   });
 });
 
@@ -110,6 +112,18 @@ describe('activityCurve', () => {
     expect(shareHeight(curve, 10, 38)).toBeLessThan(SHARE_MIN_HEIGHT);
   });
 
+  it('keeps a steady history’s height to its last changeset, the empty ends of the strip never blurred in', () => {
+    const steady = layoutGraph(datedHistory(datesEvery('2026-06-01T08:00:00Z', 2_000, 60)));
+    const steadyAxis = timelineAxis(steady, 600);
+    expect(steadyAxis.inset).toBe(10);
+    const curve = activityCurve(timelineHistory(steady), timelineShare(timelineHistory(steady), new Set()), steadyAxis);
+    const { first, last } = historyPixels(steadyAxis, steady.columnCount);
+    const middle = curve.total[Math.floor((first + last) / 2)]!;
+    expect(curve.total[last]).toBeGreaterThan(middle * 0.9);
+    expect(curve.total[first]).toBeGreaterThan(middle * 0.9);
+    expect(curve.total[last + 2]).toBe(0);
+  });
+
   it('counts the changesets a "+N" node holds where they were made', () => {
     // /main/task's middle changesets fold into one node: the busy hour still counts all of them.
     const busy = datedHistory([
@@ -123,7 +137,7 @@ describe('activityCurve', () => {
     const whole = timelineHistory(layoutGraph(busy));
     expect(folded.columnTimes.length).toBeLessThan(whole.columnTimes.length);
     const window = activityHalfWindow(folded.end - folded.start);
-    expect(columnActivity(folded.columnTimes, folded.times, window)[2]).toBe(columnActivity(whole.columnTimes, whole.times, window)[2]);
+    expect(columnActivity(folded.columnTimes, folded.times, window, folded)[2]).toBe(columnActivity(whole.columnTimes, whole.times, window, whole)[2]);
   });
 
   it('measures each column with one search of each end of its window, for the curve and the share, at scale', () => {

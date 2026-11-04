@@ -91,8 +91,9 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   `TIMELINE_INSET` px in from each end. So the viewport is a frame of its own width wherever it goes (`viewportFrame`).
   A calendar axis was tried and dropped: the frame grew and shrank as it moved.
 - **The curve is smooth activity** (`activityCurve`): for each column, the changesets within a window of its time
-  (`activityHalfWindow`: ±1 h for a week, ±12 h for three months, ±3.5 days for a year, growing with the range), a mean
-  per pixel, a Gaussian blur (σ 3 px), scaled to the 98th percentile. A count per day over the day's columns was
+  (`activityHalfWindow`: ±1 h for a week, ±12 h for three months, ±3.5 days for a year, growing with the range), as a rate
+  over the part of the window inside the loaded history (the ends would sink otherwise), a mean per pixel, a Gaussian
+  blur (σ 3 px) over the history's own pixels (`historyPixels`), scaled to the 98th percentile. A count per day over the day's columns was
   dropped: flat mesas with cliffs. Under it, in the accent, the share of the user's changesets or the people filter's
   picks (`shareOwners`), never thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at
   their own times and in its column (`timelineHistory`, `changesetsInColumns`).
