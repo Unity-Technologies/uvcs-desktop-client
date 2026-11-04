@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { layoutPathItems } from '../lib/pathTree';
-import { extensionOf, fileListOrder, rankedOrder } from './fileListOrder';
+import { extensionOf, fileListOrder, rankedOrder, rankList } from './fileListOrder';
 import type { FileListSort } from './fileListViewStore';
 import type { StatusTone } from './StatusBadge';
 
@@ -127,5 +127,29 @@ describe('rankedOrder', () => {
       ['a.ts', 'changed'],
     ]);
     expect(rankedOrder(others, fileListOrder('name', facts)!, first).ordered.map((file) => file.path)).toEqual(['a.ts', 'p.ts', 'q.ts']);
+  });
+});
+
+describe('rankList', () => {
+  const sample = files([
+    ['b/a.ts', 'added'],
+    ['a/c.ts', 'changed'],
+    ['c/b.ts', 'changed'],
+  ]);
+
+  it('ranks the list afresh when the sort changes, rather than keeping the last sort\'s order', () => {
+    const byStatus = rankList(sample, 'status', facts, undefined);
+    expect(rankList(sample, 'name', facts, byStatus).order!.ordered.map((file) => file.path)).toEqual(['b/a.ts', 'c/b.ts', 'a/c.ts']);
+  });
+
+  it('starts from the last ranking of the same sort', () => {
+    const first = rankList(sample, 'name', facts, undefined);
+    const added: File = { path: 'a/b.ts', tone: 'added' };
+    const next = rankList([added, ...sample], 'name', facts, first);
+    expect(next.order!.ordered.map((file) => file.path)).toEqual(['b/a.ts', 'a/b.ts', 'c/b.ts', 'a/c.ts']);
+  });
+
+  it('has no ranking for the path order the items come in', () => {
+    expect(rankList(sample, 'path', facts, undefined).order).toBeUndefined();
   });
 });
