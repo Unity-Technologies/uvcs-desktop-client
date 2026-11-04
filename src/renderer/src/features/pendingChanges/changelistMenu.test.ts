@@ -18,13 +18,13 @@ const ws = '/ws';
 const ui: Changelist = { name: 'ui', description: 'Polish the menus' };
 const art: Changelist = { name: 'art', description: '' };
 const changelists = [ui, art];
-const change = (path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file', changelist: string | undefined = 'ui'): PendingChange => ({
+const change = (path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file', changelist: string | null = 'ui'): PendingChange => ({
   path,
   kinds,
   itemType,
   size: 1,
   lastModified: '',
-  ...(changelist && { changelist }),
+  ...(changelist !== null && { changelist }),
 });
 const uiChanges = [
   change('src/menu.ts', ['checkedOut', 'changed']),
@@ -33,7 +33,7 @@ const uiChanges = [
   change('src/old.ts', ['deleted']),
 ];
 
-const defaultChanges = [change('README.md', ['checkedOut', 'changed'], 'file', undefined), change('notes.txt', ['private'], 'file', undefined)];
+const defaultChanges = [change('README.md', ['checkedOut', 'changed'], 'file', null), change('notes.txt', ['private'], 'file', null)];
 
 const labels = (menu: MenuEntry[]): string[] => menu.map((entry) => (entry === SEPARATOR ? '—' : entry.label));
 const entry = (menu: MenuEntry[], id: string): Action => menu.find((candidate): candidate is Action => candidate !== SEPARATOR && 'run' in candidate && candidate.id === id)!;
