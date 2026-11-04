@@ -21,6 +21,8 @@ const NAVIGATION = { noun: 'change' } as StepNavigation;
  */
 class CachedDiffs {
   private listCurrent = '';
+  /** The file the list was on as it last rendered: what its `FileSteps` know, until it renders again. */
+  private rendered = '';
   private requested = '';
   private body: { path: string; current: number | null; opened: boolean } | null = null;
   private published: string | null = null;
@@ -50,11 +52,21 @@ class CachedDiffs {
    * read, steps to the file beside it.
    */
   press(direction: 1 | -1): this {
+    this.pressUnrendered(direction);
+    return this.renders();
+  }
+
+  /** Presses faster than the view renders: each one sees the list as it last rendered. */
+  burst(...directions: (1 | -1)[]): this {
+    for (const direction of directions) this.pressUnrendered(direction);
+    return this.renders();
+  }
+
+  private pressUnrendered(direction: 1 | -1): void {
     const arrows = this.arrows();
     if (arrows.body) this.bodyGo(direction);
     else if (arrows.queues) this.queue.push(headerKeepsFor({ steppingTo: this.steps().steppingTo(), requestedPath: this.requested }), direction);
     else this.steps().step(direction);
-    return this.renders();
   }
 
   /** A file picked in the list: a diff page and Incoming ask for it as they render next. */
@@ -124,6 +136,10 @@ class CachedDiffs {
   private renders(): this {
     while (this.rendersDue) {
       this.rendersDue = false;
+      if (this.rendered !== this.listCurrent) {
+        this.rendered = this.listCurrent;
+        this.steps().listMoved();
+      }
       if (this.requestDue) {
         this.requestDue = false;
         this.request(this.listCurrent);
@@ -153,7 +169,7 @@ class CachedDiffs {
   }
 
   private steps() {
-    return fileSteps(Object.keys(this.files), this.listCurrent, { select: (key) => this.pick(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(Object.keys(this.files), this.rendered, { select: (key) => this.pick(key), pathOf: (key) => key }, this.pending);
   }
 }
 
@@ -182,6 +198,14 @@ describe('a burst of ↓ across diffs read from the cache', () => {
   it('goes on past ↑ at the first change of the first file, to the presses behind it', () => {
     const list = new CachedDiffs({ 'a.cs': 1, 'b.cs': 2 }).press(1).press(1);
     expect(list.press(-1).press(-1).press(1).frame().frame().frame().header).toBe('b.cs: 1 of 2');
+  });
+
+  it('keeps for the next file the presses made before the list rendered on it, never stepping from the previous file again', () => {
+    expect(atLastChangeOfA({ 'b.cs': 2 }).burst(1, 1, 1).press(-1).frame().header).toBe('b.cs: 1 of 2');
+  });
+
+  it('the same in Changes, whose diff follows the selection once it settled', () => {
+    expect(atLastChangeOfA({ 'b.cs': 2 }, true).burst(1, 1, 1).press(-1).settle().frame().header).toBe('b.cs: 1 of 2');
   });
 
   it('applies ↓↓↑ in order', () => {

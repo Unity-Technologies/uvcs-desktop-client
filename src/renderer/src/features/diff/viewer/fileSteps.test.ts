@@ -62,6 +62,21 @@ describe('fileSteps', () => {
     expect(at('b').steppingTo()).toBeNull();
   });
 
+  it('says so too before the list rendered on the file stepped to: a press then still sees the list on the previous one', () => {
+    const pending = pendingArrival();
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    at('a').step(1);
+    expect(at('a').steppingTo()).toBe('src/b.ts');
+  });
+
+  it('forgets where the step came from once the list rendered on the file it went to: a click back there is a pick', () => {
+    const pending = pendingArrival();
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    at('a').step(1);
+    at('b').listMoved();
+    expect(at('a').steppingTo()).toBeNull();
+  });
+
   it('forgets a step once the list is on another file (picked with a click): presses then go to that one', () => {
     const pending = pendingArrival();
     const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
@@ -89,11 +104,11 @@ describe('fileSteps', () => {
     expect([conflicts.kept.take('src/b.ts'), conflicts.kept.take('src/b.ts')]).toEqual([-1, undefined]);
   });
 
-  it('drops the presses kept for files the list left, keeping those of the file it is on', () => {
+  it('drops the presses kept for files the list left as it moves, keeping those of the file it is on', () => {
     const pending = pendingArrival();
     pending.kept.push('src/a.ts', 1);
     pending.kept.push('src/b.ts', -1);
-    fileSteps(['a', 'b', 'c'], 'b', { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending).dropLeftPresses();
+    fileSteps(['a', 'b', 'c'], 'b', { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending).listMoved();
     expect([pending.kept.take('src/a.ts'), pending.kept.take('src/b.ts')]).toEqual([undefined, -1]);
   });
 });
