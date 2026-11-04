@@ -4,7 +4,7 @@ import type { FileListLayout } from '../../components/fileListViewStore';
 import { fileRowKeys } from '../../components/fileRowKeys';
 import { fileSteps, pendingArrival, selectNow } from '../diff/viewer/fileSteps';
 import { sortChanges } from './changeOrder';
-import { changeKey, layoutChangeRows } from './changeRows';
+import { changeKey, firstChangeKeyOf, layoutChangeRows } from './changeRows';
 
 const item = (path: string, itemType: ItemType, kinds: ChangeKind[] = ['changed']): PendingChange => ({ path, kinds, itemType, size: 0, lastModified: '' });
 
@@ -40,5 +40,22 @@ describe("the rows Changes' diff steps on to", () => {
     fileSteps(keys, keyOf('foo - Copy.cs'), list, pendingArrival()).step(1);
     fileSteps(keys, keyOf('privdir copy/privile.txt'), list, pendingArrival()).step(-1);
     expect(selected).toEqual([keyOf('privdir copy/privile.txt'), keyOf('foo - Copy.cs')]);
+  });
+});
+
+describe('firstChangeKeyOf', () => {
+  const rowsOf = (changes: PendingChange[]) => layoutChangeRows({ sorted: sortChanges(changes), changelists: [], layout: 'list', grouping: 'none' });
+
+  it('selects the first change with a diff to show, past the folders before it', () => {
+    expect(firstChangeKeyOf(rowsOf(deletedThenPrivateFolder.slice(1)))).toBe(keyOf('privdir copy/privile.txt'));
+  });
+
+  it("selects the first folder where the changes are only folders, so the pane says what it is ('Directory · Added')", () => {
+    const folders = [item('Art', 'directory', ['added']), item('Art/Sprites', 'directory', ['added'])];
+    expect(firstChangeKeyOf(rowsOf(folders))).toBe(changeKey(folders[0]!));
+  });
+
+  it('selects nothing with no changes', () => {
+    expect(firstChangeKeyOf([])).toBeUndefined();
   });
 });
