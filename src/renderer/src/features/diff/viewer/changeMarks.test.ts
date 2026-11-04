@@ -2,7 +2,7 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type ChangeRegion } from './changeBlocks';
-import { changeKindOf, changeMapClick, changeMarkLabel, changeMarks, holdsChange, MIN_MARK_HEIGHT, placesAgain, showsChangeMap, type ChangeMapLayout, type LineBox, type MarksPlacedFrom } from './changeMarks';
+import { changeKindOf, changeMarkLabel, changeMarks, FUSE_GAP, FUSE_LINES, MIN_MARK_HEIGHT, placesAgain, scrollTopForTrackPoint, showsChangeMap, type ChangeMapLayout, type LineBox, type MarksPlacedFrom } from './changeMarks';
 
 const ROW = 20;
 const removed = (lineNumber: number): ChangedLine => ({ side: 'deletions', lineNumber });
@@ -48,58 +48,112 @@ describe('changeKindOf', () => {
   it('names a change by the lines it has', () => {
     expect(changeKindOf(region(0, added(4), added(5)))).toBe('added');
     expect(changeKindOf(region(0, removed(4)))).toBe('deleted');
-    expect(changeKindOf(region(0, removed(4), added(4)))).toBe('changed');
+    expect(changeKindOf(region(0, removed(4), added(4)))).toBe('both');
   });
 });
 
+/**
+ * Pierre's split layout of a diff with its unchanged lines collapsed: each hunk's rows (as many as its longer side),
+ * a bar for the lines folded between hunks. A line's row is its offset in its side of the hunk.
+ */
+function collapsedLayout(original: string, modified: string, stripHeight: number): ChangeMapLayout {
+  const BAR = 30;
+  const { hunks } = parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified });
+  const tops: number[] = [];
+  let top = 0;
+  for (const hunk of hunks) {
+    top += BAR;
+    tops.push(top);
+    top += Math.max(hunk.additionCount, hunk.deletionCount) * ROW;
+  }
+  const boxOf = ({ side, lineNumber }: ChangedLine): LineBox | undefined => {
+    const index = hunks.findIndex((hunk) => {
+      const [start, count] = side === 'additions' ? [hunk.additionStart, hunk.additionCount] : [hunk.deletionStart, hunk.deletionCount];
+      return lineNumber >= start && lineNumber < start + count;
+    });
+    if (index === -1) return undefined;
+    const hunk = hunks[index]!;
+    const start = side === 'additions' ? hunk.additionStart : hunk.deletionStart;
+    return { top: tops[index]! + (lineNumber - start) * ROW, height: ROW };
+  };
+  return { boxOf, lineCounts: { deletions: 1500, additions: 1500 }, contentHeight: top + BAR, stripHeight };
+}
+
+/** A long file with its changes spread through it, as `scripts/sandboxes` would build one: groups far apart, and a run of close one-line edits. */
+function spreadChanges(): { original: string; modified: string } {
+  const original = numbered(1500);
+  const modified: string[] = [];
+  original.forEach((line, index) => {
+    const number = index + 1;
+    if (number >= 40 && number <= 42) return void modified.push(`${line} changed`);
+    if (number === 300) return void modified.push(line, 'added', 'added too');
+    if (number >= 610 && number <= 619) return;
+    if (number >= 1200 && number <= 1260 && number % 3 === 0) return void modified.push(`${line} edited`);
+    if (number === 1450) return;
+    modified.push(line);
+  });
+  return { original: text(original), modified: text(modified) };
+}
+
 describe('changeMarks', () => {
-  it('marks each change at its share of the content, colored by what it does', () => {
+  it('marks each change as a block at its share of the content, by what it does', () => {
     const original = numbered(100);
     const modified = [...original];
     modified[9] = 'changed 10';
     modified.splice(60, 0, 'inserted', 'inserted too');
     const regions = regionsOf(text(original), text(modified));
     expect(changeMarks(regions, rowsLayout(102, 510))).toEqual([
-      { top: 45, height: 5, kind: 'changed', first: 0, last: 0 },
+      { top: 45, height: 5, kind: 'both', first: 0, last: 0 },
       { top: 300, height: 10, kind: 'added', first: 1, last: 1 },
     ]);
   });
 
-  it('marks a removed line as a thin tick, never thinner than the minimum', () => {
+  it('marks a removed line as a block, never shorter than the minimum', () => {
     const original = numbered(1000);
     const modified = original.filter((_, index) => index !== 499);
     const [change] = regionsOf(text(original), text(modified));
     expect(changeMarks([change!], rowsLayout(1000, 500))).toEqual([{ top: 249, height: MIN_MARK_HEIGHT, kind: 'deleted', first: 0, last: 0 }]);
   });
 
-  it('places changes where the diff lays them out, unchanged lines collapsed between them', () => {
-    // Lines 1 to 10 are a hunk at the top, a bar stands for lines 11 to 989, and lines 990 to 1000 follow it.
-    const collapsed = (line: ChangedLine): LineBox => ({ top: line.lineNumber <= 10 ? (line.lineNumber - 1) * ROW : 10 * ROW + 30 + (line.lineNumber - 990) * ROW, height: ROW });
-    const layout = { ...rowsLayout(1000, 460, collapsed), contentHeight: 21 * ROW + 30 + 10 };
-    const marks = changeMarks([region(0, added(5)), region(1, added(995))], layout);
-    // By line share, line 995 would sit at the very bottom and line 5 at the top; laid out, each is where its row is.
-    expect(marks.map(({ top }) => top)).toEqual([80, 330]);
+  it('keeps changes far apart in the file as blocks of their own, unchanged lines collapsed between them', () => {
+    const { original, modified } = spreadChanges();
+    const marks = changeMarks(regionsOf(original, modified), collapsedLayout(original, modified, 725));
+    expect(marks.map(({ kind, first, last }) => ({ kind, first, last }))).toEqual([
+      { kind: 'both', first: 0, last: 0 },
+      { kind: 'added', first: 1, last: 1 },
+      { kind: 'deleted', first: 2, last: 2 },
+      { kind: 'both', first: 3, last: 23 },
+      { kind: 'deleted', first: 24, last: 24 },
+    ]);
+    expect(marks.every((mark, index) => index === 0 || mark.top >= marks[index - 1]!.top + marks[index - 1]!.height + FUSE_GAP)).toBe(true);
   });
 
-  it('takes a wrapped line at its whole height', () => {
+  it('fuses changes a few unchanged lines apart into one band, however far apart the diff lays them out', () => {
+    const regions = [region(0, removed(10), added(10)), region(1, added(14)), region(2, added(18 + FUSE_LINES))];
+    const tall = (line: ChangedLine): LineBox => ({ top: (line.lineNumber - 1) * 100, height: 100 });
+    expect(changeMarks(regions, { ...rowsLayout(100, 1000, tall), contentHeight: 10_000 })).toEqual([
+      { top: 90, height: 50, kind: 'both', first: 0, last: 1 },
+      { top: 200, height: 10, kind: 'added', first: 2, last: 2 },
+    ]);
+  });
+
+  it('fuses blocks closer than the gap the eye can read, of one kind when all are', () => {
+    const marks = changeMarks([region(0, added(10)), region(1, added(20)), region(2, removed(30)), region(3, added(900))], rowsLayout(1000, 200));
+    expect(marks.map(({ kind, first, last }) => ({ kind, first, last }))).toEqual([
+      { kind: 'both', first: 0, last: 2 },
+      { kind: 'added', first: 3, last: 3 },
+    ]);
+  });
+
+  it('places changes where the diff lays them out, wrapped lines at their whole height', () => {
     const wrapped = (line: ChangedLine): LineBox => (line.lineNumber === 50 ? { top: 49 * ROW, height: 10 * ROW } : { top: (line.lineNumber - 1) * ROW + (line.lineNumber > 50 ? 9 * ROW : 0), height: ROW });
     const layout = { ...rowsLayout(100, 109, wrapped), contentHeight: 109 * ROW };
-    expect(changeMarks([region(0, removed(50), added(50))], layout)).toEqual([{ top: 49, height: 10, kind: 'changed', first: 0, last: 0 }]);
-  });
-
-  it('spans both sides of a change side by side, where the added lines go lower', () => {
-    const split = (line: ChangedLine): LineBox => ({ top: (line.lineNumber - 1) * ROW, height: ROW });
-    expect(changeMarks([region(0, removed(10), added(10), added(11), added(12), added(13))], rowsLayout(100, 100, split))).toEqual([
-      { top: 9, height: 4, kind: 'changed', first: 0, last: 0 },
-    ]);
+    expect(changeMarks([region(0, removed(50), added(50))], layout)).toEqual([{ top: 49, height: 10, kind: 'both', first: 0, last: 0 }]);
   });
 
   it('spans the removed lines then the added ones of a change shown unified', () => {
-    // Unified: removed lines 10 and 11 are rows 10 and 11, the added line 10 comes under them, as row 12.
     const unified = (line: ChangedLine): LineBox => ({ top: (line.side === 'deletions' ? line.lineNumber - 1 : line.lineNumber + 1) * ROW, height: ROW });
-    expect(changeMarks([region(0, removed(10), removed(11), added(10))], rowsLayout(100, 100, unified))).toEqual([
-      { top: 9, height: 3, kind: 'changed', first: 0, last: 0 },
-    ]);
+    expect(changeMarks([region(0, removed(10), removed(11), added(10))], rowsLayout(100, 100, unified))).toEqual([{ top: 9, height: MIN_MARK_HEIGHT, kind: 'both', first: 0, last: 0 }]);
   });
 
   it("places a change at its line's share of its side while the diff can't tell", () => {
@@ -107,28 +161,18 @@ describe('changeMarks', () => {
     expect(changeMarks([region(0, added(101))], layout)).toEqual([{ top: 100, height: MIN_MARK_HEIGHT, kind: 'added', first: 0, last: 0 }]);
   });
 
-  it('keeps a change at the end of the content inside the strip', () => {
-    expect(changeMarks([region(0, added(100))], rowsLayout(100, 100))).toEqual([{ top: 97, height: MIN_MARK_HEIGHT, kind: 'added', first: 0, last: 0 }]);
-  });
-
-  it('joins changes too close to tell apart into one mark, changed where they differ', () => {
-    const marks = changeMarks([region(0, added(10)), region(1, removed(12)), region(2, added(80))], rowsLayout(1000, 100));
-    expect(marks).toEqual([
-      { top: 0, height: 4, kind: 'changed', first: 0, last: 1 },
-      { top: 7, height: 3, kind: 'added', first: 2, last: 2 },
-    ]);
+  it('keeps a change at the end of the content inside the track', () => {
+    expect(changeMarks([region(0, added(100))], rowsLayout(100, 100))).toEqual([{ top: 96, height: MIN_MARK_HEIGHT, kind: 'added', first: 0, last: 0 }]);
   });
 
   it('draws a bounded number of marks for thousands of changes, asking for at most four lines each', () => {
-    const regions = Array.from({ length: 5000 }, (_, index) => region(index, removed(index * 4 + 1), removed(index * 4 + 2), added(index * 4 + 1), added(index * 4 + 2)));
-    const layout = rowsLayout(20_000, 600);
+    const regions = Array.from({ length: 5000 }, (_, index) => region(index, removed(index * 8 + 1), removed(index * 8 + 2), added(index * 8 + 1), added(index * 8 + 2)));
+    const layout = rowsLayout(40_000, 600);
     const { result: marks, calls } = countCalls(layout, 'boxOf', () => changeMarks(regions, layout));
     expect(calls).toBe(4 * 5000);
     expect(marks.length).toBeLessThanOrEqual(600 / MIN_MARK_HEIGHT);
     expect(marks[0]!.first).toBe(0);
     expect(marks.at(-1)!.last).toBe(4999);
-    // No two marks overlap.
-    expect(marks.every((mark, index) => index === 0 || mark.top >= marks[index - 1]!.top + marks[index - 1]!.height)).toBe(true);
   });
 
   it('draws nothing before the view or the content has a size', () => {
@@ -137,49 +181,28 @@ describe('changeMarks', () => {
   });
 });
 
-describe('changeMapClick', () => {
-  const marks = [
-    { top: 40, height: 3, kind: 'added' as const, first: 0, last: 0 },
-    { top: 200, height: 10, kind: 'changed' as const, first: 1, last: 3 },
-  ];
+describe('scrollTopForTrackPoint', () => {
   const sizes = { contentHeight: 10_000, stripHeight: 500, viewHeight: 400 };
 
-  it('goes to the change of the mark clicked', () => {
-    expect(changeMapClick(marks, 41, sizes)).toEqual({ to: 'change', index: 0 });
-  });
-
-  it('goes to the first of the changes a mark joins', () => {
-    expect(changeMapClick(marks, 209, sizes)).toEqual({ to: 'change', index: 1 });
-  });
-
-  it('takes a click a pixel or two off a thin mark as on it', () => {
-    expect(changeMapClick(marks, 38, sizes)).toEqual({ to: 'change', index: 0 });
-    expect(changeMapClick(marks, 44, sizes)).toEqual({ to: 'change', index: 0 });
-  });
-
-  it('scrolls the view to center the point clicked between marks', () => {
-    expect(changeMapClick(marks, 100, sizes)).toEqual({ to: 'point', scrollTop: 1800 });
+  it('scrolls the view to center the point clicked, on a block or between blocks alike', () => {
+    expect(scrollTopForTrackPoint(100, sizes)).toBe(1800);
+    expect(scrollTopForTrackPoint(250, sizes)).toBe(4800);
   });
 
   it('scrolls no further than the ends', () => {
-    expect(changeMapClick(marks, 1, sizes)).toEqual({ to: 'point', scrollTop: 0 });
-    expect(changeMapClick(marks, 499, sizes)).toEqual({ to: 'point', scrollTop: 9600 });
+    expect(scrollTopForTrackPoint(1, sizes)).toBe(0);
+    expect(scrollTopForTrackPoint(499, sizes)).toBe(9600);
+  });
+
+  it('stays at the top before the track has a size', () => {
+    expect(scrollTopForTrackPoint(10, { ...sizes, stripHeight: 0 })).toBe(0);
   });
 });
 
 describe('changeMarkLabel', () => {
   it('names the change a mark stands for, or the changes it joins', () => {
-    expect(changeMarkLabel({ top: 0, height: 3, kind: 'added', first: 2, last: 2 }, 12)).toBe('Change 3 of 12');
-    expect(changeMarkLabel({ top: 0, height: 3, kind: 'added', first: 1204, last: 1210 }, 5000)).toBe('Changes 1,205–1,211 of 5,000');
-  });
-});
-
-describe('holdsChange', () => {
-  it('tells the mark of the change moved to', () => {
-    const mark = { top: 0, height: 3, kind: 'added' as const, first: 2, last: 4 };
-    expect(holdsChange(mark, 3)).toBe(true);
-    expect(holdsChange(mark, 5)).toBe(false);
-    expect(holdsChange(mark, null)).toBe(false);
+    expect(changeMarkLabel({ top: 0, height: 4, kind: 'added', first: 2, last: 2 }, 12)).toBe('Change 3 of 12');
+    expect(changeMarkLabel({ top: 0, height: 4, kind: 'added', first: 1204, last: 1210 }, 5000)).toBe('Changes 1,205–1,211 of 5,000');
   });
 });
 
