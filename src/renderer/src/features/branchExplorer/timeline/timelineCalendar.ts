@@ -92,6 +92,9 @@ export function bucketTitle(bucket: Bucket, calendar: TimelineCalendar): string 
 export interface AxisLabel {
   column: number;
   text: string;
+  /** Its local year, and how it reads in another year than the label shown before it ("Mar 2026"). */
+  year: number;
+  textWithYear: string;
 }
 
 /** Up to this long a range, the axis names days; longer, months. */
@@ -105,10 +108,10 @@ export function axisLabelCandidates(columnTimes: Float64Array, calendar: Timelin
   if (columnTimes.length === 0) return [];
   const range = columnTimes[columnTimes.length - 1]! - columnTimes[0]!;
   const byDay = range <= DAY_LABELS_UP_TO;
-  const labels: AxisLabel[] = [{ column: 0, text: shortDate(columnTimes[0]!, calendar) }];
   const firstDay = Math.floor(local(calendar, columnTimes[0]!) / DAY);
+  const start = shortDate(columnTimes[0]!, calendar);
+  const labels: AxisLabel[] = [{ column: 0, text: start, year: yearOf(firstDay), textWithYear: start }];
   let previousMonth = monthOf(firstDay);
-  let previousMonthNamed = previousMonth;
   // Most columns fall on the day of the one before: only one past the day's end reads the calendar again.
   let dayEnd = instant(calendar, (firstDay + 1) * DAY);
   for (let column = 1; column < columnTimes.length; column++) {
@@ -117,18 +120,25 @@ export function axisLabelCandidates(columnTimes: Float64Array, calendar: Timelin
     const day = Math.floor(local(calendar, columnTimes[column]!) / DAY);
     dayEnd = instant(calendar, (day + 1) * DAY);
     if (byDay) {
-      labels.push({ column, text: shortDate(columnTimes[column]!, calendar) });
+      const text = shortDate(columnTimes[column]!, calendar);
+      labels.push({ column, text, year: yearOf(day), textWithYear: text });
       continue;
     }
     const month = monthOf(day);
     if (month === previousMonth) continue;
     previousMonth = month;
-    // A month in another year than the label before it (January, or after a gap) says its year.
-    const newYear = Math.floor(month / 12) !== Math.floor(previousMonthNamed / 12);
-    previousMonthNamed = month;
-    labels.push({ column, text: write(calendar, day * DAY, newYear ? { month: 'short', year: 'numeric' } : { month: 'short' }) });
+    labels.push({
+      column,
+      text: write(calendar, day * DAY, { month: 'short' }),
+      year: yearOf(day),
+      textWithYear: write(calendar, day * DAY, { month: 'short', year: 'numeric' }),
+    });
   }
   return labels;
+}
+
+function yearOf(day: number): number {
+  return new Date(day * DAY).getUTCFullYear();
 }
 
 /** A local day's month, as a number that grows with it. */
@@ -137,16 +147,26 @@ function monthOf(day: number): number {
   return date.getUTCFullYear() * 12 + date.getUTCMonth();
 }
 
-/** The axis's labels never come closer than this (px): one too close to the one before is left out. */
+/** The axis's labels start at least this far apart (px), and leave at least `AXIS_LABEL_GAP` after the text before. */
 export const AXIS_LABEL_SPACING = 38;
+export const AXIS_LABEL_GAP = 8;
 
-/** The labels that fit, at their x on the strip: the first always, each other one far enough from the last kept. */
-export function spacedAxisLabels(candidates: readonly AxisLabel[], xOf: (column: number) => number): { x: number; text: string }[] {
+/**
+ * The labels that fit, at their x on the strip, measured as drawn (`widthOf`): the first always, each other one far
+ * enough from the last kept; one in another year than the label shown before it says its year (January, or a month
+ * after a gap or a label left out).
+ */
+export function spacedAxisLabels(candidates: readonly AxisLabel[], xOf: (column: number) => number, widthOf: (text: string) => number): { x: number; text: string }[] {
   const kept: { x: number; text: string }[] = [];
-  for (const { column, text } of candidates) {
+  let shownYear: number | null = null;
+  let freeFrom = Number.NEGATIVE_INFINITY;
+  for (const { column, text, year, textWithYear } of candidates) {
     const x = xOf(column);
-    if (kept.length > 0 && x - kept.at(-1)!.x < AXIS_LABEL_SPACING) continue;
-    kept.push({ x, text });
+    const shown = shownYear === null || year === shownYear ? text : textWithYear;
+    if (kept.length > 0 && (x - kept.at(-1)!.x < AXIS_LABEL_SPACING || x < freeFrom)) continue;
+    kept.push({ x, text: shown });
+    shownYear = year;
+    freeFrom = x + widthOf(shown) + AXIS_LABEL_GAP;
   }
   return kept;
 }
