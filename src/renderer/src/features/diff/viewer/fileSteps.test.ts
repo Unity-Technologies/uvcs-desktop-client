@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adjacentKey, fileSteps, pendingArrival, settlingOnOf } from './fileSteps';
+import { adjacentKey, fileSteps, pendingArrival, selectNow, settlingOnOf } from './fileSteps';
 
 describe('settlingOnOf', () => {
   const a = { path: 'src/a.ts' };
@@ -32,6 +32,14 @@ describe('adjacentKey', () => {
     expect(adjacentKey(keys, 'a', -1)).toBeNull();
     expect(adjacentKey(keys, 'x', 1)).toBeNull();
     expect(adjacentKey(keys, null, 1)).toBeNull();
+  });
+
+  it("goes on from a row that isn't a step (a folder whose .meta shows) to the nearest file that way, in the list's order", () => {
+    const rows = ['a', 'Art', 'Art/Sprites', 'b', 'c'];
+    expect(adjacentKey(keys, 'Art', 1, rows)).toBe('b');
+    expect(adjacentKey(keys, 'Art', -1, rows)).toBe('a');
+    expect(adjacentKey(['a'], 'Art', 1, ['a', 'Art'])).toBeNull();
+    expect(adjacentKey(keys, 'x', 1, rows)).toBeNull();
   });
 });
 
@@ -139,6 +147,15 @@ describe('fileSteps', () => {
     const list = { select: SELECTS, pathOf: (key: string) => `src/${key}.ts` };
     expect(fileSteps(['a', 'b'], 'b', { ...list, settlingOn: 'src/b.ts' }, pendingArrival()).settlingOn).toBe('src/b.ts');
     expect(fileSteps(['a', 'b'], 'b', list, pendingArrival()).settlingOn).toBeNull();
+  });
+
+  it("steps on from a folder row its diff shows the .meta of, given the list's rows", () => {
+    const selected: string[] = [];
+    const list = { select: (key: string, done: () => void) => selectNow(done, () => void selected.push(key)), pathOf: (key: string) => key, rowOrder: ['a', 'Art', 'b'] };
+    const steps = fileSteps(['a', 'b'], 'Art', list, pendingArrival());
+    expect(steps.canStep(1)).toBe(true);
+    expect(steps.step(1)).toBe('b');
+    expect(selected).toEqual(['b']);
   });
 
   it('selects nothing past the ends', () => {
