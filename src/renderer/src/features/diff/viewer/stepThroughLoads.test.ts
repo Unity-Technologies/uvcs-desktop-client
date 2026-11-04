@@ -3,7 +3,7 @@ import { openingStep, positionLabel } from './changeNavigation';
 import { headerArrows, headerPress, isSelectedFile } from './diffFrameHost';
 import { fileSteps, type PendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
-import { drainsKept, pressTarget, StepQueue } from './stepQueue';
+import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
 
 /** Stands for a published navigation: `headerArrows` only asks whose it is. */
@@ -124,24 +124,24 @@ class CachedDiffs {
       if (this.arrows().dropsKept) this.queue.clear();
       const body = this.body;
       if (!body || !drainsKept({ opened: body.opened, selected: isSelectedFile(body.path, this.requested) })) continue;
-      const kept = this.queue.take(body.path);
-      if (kept !== undefined) this.bodyGo(kept);
+      drainKept(this.queue, body.path, (direction) => this.bodyGo(direction));
     }
     return this;
   }
 
   /** The diff's own go: kept for the file it's for, else a step, the presses left for it following a step to a file. */
-  private bodyGo(direction: 1 | -1): void {
+  private bodyGo(direction: 1 | -1): PressEffect {
     const body = this.body!;
     const target = pressTarget({ opens: true, opened: body.opened, steppingTo: this.steps().steppingTo(), path: body.path });
-    if (target.kind === 'keep') return this.queue.push(target.path, direction);
-    const outcome = pressStep({ count: this.files[body.path]!, current: body.current, above: 0 }, direction, this.steps(), () => 0);
-    if (typeof outcome === 'number') {
-      body.current = outcome;
-      this.rendersDue = true;
-    } else if (outcome !== null) {
-      this.queue.retag(body.path, outcome.file);
+    if (target.kind === 'keep') {
+      this.queue.push(target.path, direction);
+      return 'kept';
     }
+    const outcome = pressStep({ count: this.files[body.path]!, current: body.current, above: 0 }, direction, this.steps(), () => 0);
+    if (typeof outcome !== 'number') return followStep(this.queue, body.path, outcome?.file ?? null);
+    body.current = outcome;
+    this.rendersDue = true;
+    return 'moved';
   }
 
   private steps() {
@@ -165,6 +165,15 @@ describe('a burst of ↓ across diffs read from the cache', () => {
   it('lands ↓↓↓↓ in Changes, whose diff follows the selection once it settled, one change at a time', () => {
     const list = atLastChangeOfA({ 'b.cs': 1, 'c.cs': 2, 'd.cs': 2 }, true).press(1).press(1).press(1).press(1);
     expect(list.settle().frame().settle().frame().settle().frame().header).toBe('d.cs: 1 of 2');
+  });
+
+  it('goes on past a press that moves nothing: ↓↓↓↑ ending past the last change of the last file lands one change back', () => {
+    expect(atLastChangeOfA({ 'b.cs': 2 }).press(1).press(1).press(1).press(-1).frame().header).toBe('b.cs: 1 of 2');
+  });
+
+  it('goes on past ↑ at the first change of the first file, to the presses behind it', () => {
+    const list = new CachedDiffs({ 'a.cs': 1, 'b.cs': 2 }).press(1).press(1);
+    expect(list.press(-1).press(-1).press(1).frame().frame().frame().header).toBe('b.cs: 1 of 2');
   });
 
   it('applies ↓↓↑ in order', () => {

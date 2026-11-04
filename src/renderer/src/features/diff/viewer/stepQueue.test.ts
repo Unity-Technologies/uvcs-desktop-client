@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drainsKept, pressTarget, StepQueue } from './stepQueue';
+import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
 
 describe('StepQueue', () => {
   it('gives the presses kept for a file back to that file, in order, once each', () => {
@@ -71,5 +71,49 @@ describe('drainsKept', () => {
   it('not before it opened, nor while it stays on screen for a previous file as the next one is read', () => {
     expect(drainsKept({ opened: false, selected: true })).toBe(false);
     expect(drainsKept({ opened: true, selected: false })).toBe(false);
+  });
+});
+
+describe('followStep', () => {
+  it('sends the presses left for a file on to the file a press went to', () => {
+    const queue = new StepQueue();
+    queue.push('b.cs', -1);
+    expect(followStep(queue, 'b.cs', 'c.cs')).toBe('file');
+    expect([queue.take('b.cs'), queue.take('c.cs')]).toEqual([undefined, -1]);
+  });
+
+  it('did nothing where there was no file to go on to (past the last change of the last file): the presses stay', () => {
+    const queue = new StepQueue();
+    queue.push('b.cs', -1);
+    expect(followStep(queue, 'b.cs', null)).toBe('none');
+    expect(queue.take('b.cs')).toBe(-1);
+  });
+});
+
+describe('drainKept', () => {
+  /** A queue holding `presses` for b.cs, and a go answering each press with the next of `effects`, recording it. */
+  function drain(presses: (1 | -1)[], effects: PressEffect[]) {
+    const queue = new StepQueue();
+    for (const press of presses) queue.push('b.cs', press);
+    const taken: (1 | -1)[] = [];
+    drainKept(queue, 'b.cs', (direction) => {
+      taken.push(direction);
+      return effects[taken.length - 1]!;
+    });
+    const left = [queue.take('b.cs'), queue.take('b.cs'), queue.take('b.cs')].filter((press) => press !== undefined);
+    return { taken, left };
+  }
+
+  it('takes one press that moves the view: the render it brings takes the next, from where it left the view', () => {
+    expect(drain([1, -1], ['moved'])).toEqual({ taken: [1], left: [-1] });
+  });
+
+  it('goes on past a press that does nothing (at the last change of the last file), which brings no render to take the next', () => {
+    expect(drain([1, 1, -1], ['none', 'none', 'moved'])).toEqual({ taken: [1, 1, -1], left: [] });
+  });
+
+  it('stops at a press that went on to another file or was kept for one: their presses wait for that file', () => {
+    expect(drain([1, -1], ['file'])).toEqual({ taken: [1], left: [-1] });
+    expect(drain([1, -1], ['kept'])).toEqual({ taken: [1], left: [-1] });
   });
 });
