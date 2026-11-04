@@ -129,6 +129,7 @@ const graphContext = {
   goToChangeset: () => {},
   showRelatedTo: () => {},
   revealCreatedBranch: () => {},
+  positions: { pins: [], setPins: () => {} },
 };
 const lane = layout.lanesByBranch.get('/main/a')!;
 const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
