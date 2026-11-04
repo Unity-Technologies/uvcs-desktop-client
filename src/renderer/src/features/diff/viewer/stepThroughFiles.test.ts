@@ -53,7 +53,10 @@ class DiffBesideList {
   }
 
   private steps() {
-    return fileSteps(Object.keys(this.files), this.shown, { select: (key) => this.open(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(Object.keys(this.files), this.shown, { select: (key, selected) => {
+        selected();
+        this.open(key);
+      }, pathOf: (key) => key }, this.pending);
   }
 
   private open(path: string): void {

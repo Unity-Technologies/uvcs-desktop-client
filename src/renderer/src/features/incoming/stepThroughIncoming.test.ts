@@ -48,7 +48,10 @@ class IncomingList {
   private stepsOfShown() {
     const conflicting = this.files[this.shown]!.conflicts;
     const keys = Object.keys(this.files).filter((path) => !conflicting || this.files[path]!.conflicts);
-    return fileSteps(keys, this.shown, { select: (key) => this.open(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(keys, this.shown, { select: (key, selected) => {
+        selected();
+        this.open(key);
+      }, pathOf: (key) => key }, this.pending);
   }
 
   private open(path: string): void {

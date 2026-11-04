@@ -85,7 +85,10 @@ class MergePage {
   private steps() {
     const rows = Object.keys(this.files).map((path) => ({ type: 'file', key: path, item: path }));
     const keys = conflictStepKeys(rows, this.shown, (path) => !this.files[path]!.decided);
-    return fileSteps(keys, this.shown, { select: (key) => this.open(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(keys, this.shown, { select: (key, selected) => {
+        selected();
+        this.open(key);
+      }, pathOf: (key) => key }, this.pending);
   }
 
   private open(path: string): void {

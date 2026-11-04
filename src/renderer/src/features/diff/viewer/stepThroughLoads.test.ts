@@ -38,6 +38,8 @@ class CachedDiffs {
   private error = false;
   private rendersDue = false;
   private requestDue = false;
+  /** Unsaved edits are kept: the list asks before leaving the file, and the user cancels. */
+  private refusing = false;
   private readonly pending = pendingArrival();
   private readonly queue = this.pending.kept;
 
@@ -102,6 +104,17 @@ class CachedDiffs {
     this.published = null;
     this.rendersDue = true;
     return this.renders();
+  }
+
+  /** The file shown has unsaved edits, and the user cancels leaving it (`selectAfterLeaving`), until `allowLeaving`. */
+  refuseLeaving(): this {
+    this.refusing = true;
+    return this;
+  }
+
+  allowLeaving(): this {
+    this.refusing = false;
+    return this;
   }
 
   /** Something else draws the view again (the list refreshed). */
@@ -182,7 +195,14 @@ class CachedDiffs {
   }
 
   private steps() {
-    return fileSteps(Object.keys(this.files), this.rendered, { select: (key) => this.pick(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(Object.keys(this.files), this.rendered, {
+        select: (key, selected) => {
+          if (this.refusing) return;
+          selected();
+          this.pick(key);
+        },
+        pathOf: (key) => key,
+      }, this.pending);
   }
 }
 
@@ -235,6 +255,12 @@ describe('a burst of ↓ across diffs read from the cache', () => {
 
   it('drops the presses meant for a file once another is picked while it loads: that one opens at its top', () => {
     expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).press(1).press(1).pick('c.cs').settle().frame().header).toBe('c.cs');
+  });
+
+  it('keeps stepping through the file shown after its unsaved edits were kept, and picking the next later replays nothing', () => {
+    const list = atLastChangeOfA({ 'b.cs': 3 }).refuseLeaving().press(1).press(-1);
+    expect(list.header).toBe('a.cs: 2 of 3');
+    expect(list.allowLeaving().pick('b.cs').frame().header).toBe('b.cs');
   });
 
   it("replays the presses kept for a file that couldn't be read as steps from it, so a burst across it loses none", () => {

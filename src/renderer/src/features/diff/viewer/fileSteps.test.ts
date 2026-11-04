@@ -17,11 +17,17 @@ describe('adjacentKey', () => {
   });
 });
 
+/** A list that selects at once, telling the step so. */
+const SELECTS = (_key: string, selected: () => void): void => selected();
+
 describe('fileSteps', () => {
   const list = (current: string) => {
     const selected: string[] = [];
     const pending = pendingArrival();
-    const steps = fileSteps(['a', 'b', 'c'], current, { select: (key) => void selected.push(key), pathOf: (key) => `src/${key}.ts` }, pending);
+    const steps = fileSteps(['a', 'b', 'c'], current, { select: (key, done) => {
+      done();
+      selected.push(key);
+    }, pathOf: (key) => `src/${key}.ts` }, pending);
     return { steps, selected };
   };
 
@@ -52,7 +58,7 @@ describe('fileSteps', () => {
 
   it("says which file a step went to while its diff hasn't arrived, so a press meanwhile waits for that file", () => {
     const pending = pendingArrival();
-    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending);
     expect(at('a').steppingTo()).toBeNull();
     at('a').step(1);
     // The list moved on to b; its diff is still a's, which only shows once read and settled.
@@ -63,14 +69,14 @@ describe('fileSteps', () => {
 
   it('says so too before the list rendered on the file stepped to: a press then still sees the list on the previous one', () => {
     const pending = pendingArrival();
-    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending);
     at('a').step(1);
     expect(at('a').steppingTo()).toBe('src/b.ts');
   });
 
   it('forgets where the step came from once the list rendered on the file it went to: a click back there is a pick', () => {
     const pending = pendingArrival();
-    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending);
     at('a').step(1);
     at('b').listMoved();
     expect(at('a').steppingTo()).toBeNull();
@@ -78,9 +84,37 @@ describe('fileSteps', () => {
 
   it('forgets a step once the list is on another file (picked with a click): presses then go to that one', () => {
     const pending = pendingArrival();
-    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending);
     at('a').step(1);
     expect(at('c').steppingTo()).toBeNull();
+  });
+
+  it("leaves no step in flight where the list didn't select (unsaved edits kept: Cancel), so presses go on in this file", () => {
+    const pending = pendingArrival();
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
+    expect(at('a').step(1)).toBeNull();
+    expect(at('a').steppingTo()).toBeNull();
+    expect(at('a').takeArrival('src/b.ts')).toBeNull();
+  });
+
+  it('records the step once the list selects, after asking about unsaved edits', () => {
+    const pending = pendingArrival();
+    let leave = (): void => undefined;
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: (_key, selected) => void (leave = selected), pathOf: (key) => `src/${key}.ts` }, pending);
+    at('a').step(1);
+    expect(at('a').steppingTo()).toBeNull();
+    leave();
+    expect(at('b').steppingTo()).toBe('src/b.ts');
+    expect(at('b').takeArrival('src/b.ts')).toBe('first');
+  });
+
+  it('forgets a step once the list rendered on a file neither it went to nor came from', () => {
+    const pending = pendingArrival();
+    const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending);
+    at('a').step(1);
+    at('c').listMoved();
+    expect(at('b').steppingTo()).toBeNull();
+    expect(at('b').takeArrival('src/b.ts')).toBeNull();
   });
 
   it('selects nothing past the ends', () => {
@@ -95,11 +129,11 @@ describe('fileSteps', () => {
   it("hands the presses left for a diff on to the conflict a step from it went to, the lists of one view sharing them (Incoming's)", () => {
     const pending = pendingArrival();
     const path = (key: string) => `src/${key}.ts`;
-    const diffs = fileSteps(['a', 'b'], 'a', { select: () => undefined, pathOf: path }, pending);
+    const diffs = fileSteps(['a', 'b'], 'a', { select: SELECTS, pathOf: path }, pending);
     diffs.kept.push('src/a.ts', -1);
     diffs.kept.retag('src/a.ts', diffs.step(1)!);
     // The conflict's view, with no diff header of its own, takes them from its list.
-    const conflicts = fileSteps(['b'], 'b', { select: () => undefined, pathOf: path }, pending);
+    const conflicts = fileSteps(['b'], 'b', { select: SELECTS, pathOf: path }, pending);
     expect([conflicts.kept.take('src/b.ts'), conflicts.kept.take('src/b.ts')]).toEqual([-1, undefined]);
   });
 
@@ -107,7 +141,7 @@ describe('fileSteps', () => {
     const pending = pendingArrival();
     pending.kept.push('src/a.ts', 1);
     pending.kept.push('src/b.ts', -1);
-    fileSteps(['a', 'b', 'c'], 'b', { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending).listMoved();
+    fileSteps(['a', 'b', 'c'], 'b', { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending).listMoved();
     expect([pending.kept.take('src/a.ts'), pending.kept.take('src/b.ts')]).toEqual([undefined, -1]);
   });
 });
