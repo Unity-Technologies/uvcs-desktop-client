@@ -57,6 +57,8 @@ export interface HeaderArrows {
   headerKeys: boolean;
   /** The header's presses wait for the selected file's diff (`StepQueue`), rather than stepping from another file. */
   queues: boolean;
+  /** The presses kept are dropped: the selected file couldn't be read, so the diff they were meant for never comes. */
+  dropsKept: boolean;
 }
 
 /**
@@ -67,8 +69,31 @@ export interface HeaderArrows {
  * previous one's navigation is still the one published (publishing follows the render).
  */
 export function headerArrows({ published, requestedKey, error, hasData, isPlaceholderData }: HeaderState): HeaderArrows {
-  if (error) return { body: null, headerKeys: true, queues: false };
-  const current = hasData && !isPlaceholderData && published?.key === requestedKey;
-  if (current) return { body: published, headerKeys: false, queues: false };
-  return { body: null, headerKeys: true, queues: true };
+  if (error) return { body: null, headerKeys: true, queues: false, dropsKept: true };
+  const current = hasData && !isPlaceholderData && published !== null && isSelectedFile(published.key, requestedKey);
+  if (current) return { body: published, headerKeys: false, queues: false, dropsKept: false };
+  return { body: null, headerKeys: true, queues: true, dropsKept: false };
+}
+
+/** Whether a diff is the selected file's, not a previous one kept on screen while the next is read: by its versions. */
+export function isSelectedFile(ownKey: string, requestedKey: string): boolean {
+  return ownKey === requestedKey;
+}
+
+/** Where a press on the header's arrows goes. */
+export type HeaderPress = { kind: 'body' } | { kind: 'keep'; path: string } | { kind: 'step' };
+
+/**
+ * A press on the header's arrows (`headerArrows`): to the selected file's diff once it's the one published; while it's
+ * read or drawn, kept for the file a step is on its way to (`FileSteps.steppingTo`), else for the file asked for; where
+ * it couldn't be read, a step from file to file.
+ */
+export function headerPress(arrows: HeaderArrows, { steppingTo, requestedPath }: { steppingTo: string | null; requestedPath: string }): HeaderPress {
+  if (arrows.body) return { kind: 'body' };
+  return arrows.queues ? { kind: 'keep', path: steppingTo ?? requestedPath } : { kind: 'step' };
+}
+
+/** Whether a diff takes the presses kept for it: once it opened at its arrival, while it's the selected file's. */
+export function drainsKept({ opened, selected }: { opened: boolean; selected: boolean }): boolean {
+  return opened && selected;
 }

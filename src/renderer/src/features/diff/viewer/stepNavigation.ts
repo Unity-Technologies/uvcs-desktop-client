@@ -6,8 +6,11 @@ import type { FileSteps } from './fileSteps';
  * files take the very ones the views take.
  */
 
-/** What a press of next (1) or previous (-1) did: moved to a step (its index), went on to a file beside it, or nothing. */
-export type PressOutcome = number | 'file' | null;
+/**
+ * What a press of next (1) or previous (-1) did: moved to a step (its index), went on to a file beside it (its path), or
+ * nothing.
+ */
+export type PressOutcome = number | { file: string } | null;
 
 /**
  * Presses next or previous from `position`: before the first move, from where the view stands (`readAbove`, read
@@ -18,12 +21,11 @@ export function pressStep(position: ChangePosition, direction: 1 | -1, files: Fi
   const from = position.current === null ? { ...position, above: readAbove() } : position;
   const move = plannedMove(from, direction, files?.canStep(direction) ?? false);
   if (move?.to === 'file') {
-    files!.step(direction);
-    return 'file';
+    const file = files!.step(direction);
+    return file === null ? null : { file };
   }
   return move?.index ?? null;
 }
-
 
 /**
  * The position once the steps changed (typed into a diff, a conflict resolved): the step moved to stays while there

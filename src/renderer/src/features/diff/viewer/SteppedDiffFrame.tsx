@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type 
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ChangeNavigator } from './ChangeNavigator';
-import { DiffFrameHostContext, headerArrows, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
+import { DiffFrameHostContext, headerArrows, headerPress, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { FileStepsContext } from './fileSteps';
 import { StepQueue } from './stepQueue';
@@ -66,10 +66,17 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   const files = useContext(FileStepsContext);
   const { key, path, ...read } = requested;
   const arrows = headerArrows({ published, requestedKey: key, ...read });
-  const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? (direction) => queue.push(files?.steppingTo() ?? path, direction) : undefined);
+  // The header's own arrows while they keep presses (`headerPress`: for the file a step is on its way to, else this one).
+  const keep = (direction: 1 | -1): void => {
+    const route = headerPress(arrows, { steppingTo: files?.steppingTo() ?? null, requestedPath: path });
+    if (route.kind === 'keep') queue.push(route.path, direction);
+  };
+  const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? keep : undefined);
+  // The selection left a file: the presses kept for it (not for this one, nor for one a step is on its way to) go.
+  useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
   // A file that couldn't be read: the presses kept for it were meant for a diff that never came.
   useEffect(() => {
-    if (!arrows.body && !arrows.queues) queue.clear();
+    if (arrows.dropsKept) queue.clear();
   });
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;

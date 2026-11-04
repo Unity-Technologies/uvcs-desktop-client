@@ -82,13 +82,15 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           onDecide={(conflictIndex, choice) => onDecide(decideConflict(decision, conflictIndex, choice))}
         />
       );
-    case 'changes':
+    case 'changes': {
+      // The merged result lives in memory: nothing to read it from, nor to edit in place.
+      const merged = { original: file.destination, modified: EMPTY_SOURCE, left: contents.destination, right: textContent(mergedText(state) ?? '') };
       return (
         <FileStepsContext.Provider value={changeArrows ? fileSteps : null}>
           <SteppedDiffFrame
             stepsThroughChanges={changeArrows}
-            // The merged result is in memory: always read, never another's.
-            requested={{ key: diffContentsKey(file.destination, EMPTY_SOURCE), path: file.path, error: false, hasData: true, isPlaceholderData: false }}
+            // In memory: always read, never another file's.
+            requested={{ key: diffContentsKey(merged.original, merged.modified), path: file.path, error: false, hasData: true, isPlaceholderData: false }}
             title={
               <span className={styles.diffTitle} data-tip={labels.destination}>
                 {labels.roles.destination.name} now → after the merge
@@ -97,8 +99,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           >
             <LoadedFileDiff
               place={workspacePlace(workspacePath)}
-              // The merged result lives in memory: nothing to read it from, nor to edit in place.
-              contents={{ original: file.destination, modified: EMPTY_SOURCE, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
+              contents={merged}
               fileName={file.path}
               identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
               stepsThroughChanges={changeArrows}
@@ -106,6 +107,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           </SteppedDiffFrame>
         </FileStepsContext.Provider>
       );
+    }
     case 'destination':
     case 'source':
       return (

@@ -6,6 +6,12 @@ import { positionLabel } from './changeNavigation';
  * the pointer.
  */
 
+/**
+ * Where an arrow goes (`StepNavigation.goesTo`): to a step, on to the file beside it, nowhere, or `queued`, its press
+ * kept for the file being read (the header's arrows while it is: `useStepNavigation`'s `goes`).
+ */
+export type ArrowGoal = 'step' | 'file' | 'queued' | null;
+
 /** What decides the arrows: the view's own steps, where each arrow goes (`StepNavigation.goesTo`), the list beside it. */
 export interface NavigatorFacts {
   /** The view steps through steps of its own: a text diff of two versions (its changes), a merged file (its conflicts). */
@@ -15,8 +21,8 @@ export interface NavigatorFacts {
   current: number | null;
   /** What a step is: "change", "conflict". */
   noun: string;
-  previous: 'step' | 'file' | null;
-  next: 'step' | 'file' | null;
+  previous: ArrowGoal;
+  next: ArrowGoal;
   /** A list of files is beside the view (`FileStepsContext`): past the ends, the arrows go on to its files. */
   besideFiles: boolean;
   /**
@@ -54,13 +60,23 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   const namesFiles = facts.besideFiles && !hasSteps;
   return {
     label: hasSteps ? positionLabel(facts) : '',
-    previous: arrowOf(facts.previous, namesFiles, `Previous ${facts.noun}${inFile}`, `Previous file's last ${facts.noun}`, 'Previous file'),
-    next: arrowOf(facts.next, namesFiles, `Next ${facts.noun}${inFile}`, `Next file's first ${facts.noun}`, 'Next file'),
+    previous: arrowOf(facts.previous, namesFiles, { step: `Previous ${facts.noun}${inFile}`, fileStep: `Previous file's last ${facts.noun}`, file: 'Previous file', queued: `Previous ${facts.noun}` }),
+    next: arrowOf(facts.next, namesFiles, { step: `Next ${facts.noun}${inFile}`, fileStep: `Next file's first ${facts.noun}`, file: 'Next file', queued: `Next ${facts.noun}` }),
   };
 }
 
-function arrowOf(goesTo: 'step' | 'file' | null, namesFiles: boolean, toStep: string, toFileStep: string, toFile: string): NavigatorArrow {
-  if (goesTo === 'step') return { tip: toStep, enabled: true };
-  if (goesTo === 'file') return { tip: namesFiles ? toFile : toFileStep, enabled: true };
-  return { tip: namesFiles ? toFile : toStep, enabled: false };
+/** An arrow's tip by where it goes: a step, the next file's first step, the next file, or kept for the file read. */
+interface ArrowTips {
+  step: string;
+  fileStep: string;
+  file: string;
+  queued: string;
+}
+
+function arrowOf(goesTo: ArrowGoal, namesFiles: boolean, tips: ArrowTips): NavigatorArrow {
+  // Kept for the file being read: enabled both ways, as the keys are, wherever that file sits in the list.
+  if (goesTo === 'queued') return { tip: tips.queued, enabled: true };
+  if (goesTo === 'step') return { tip: tips.step, enabled: true };
+  if (goesTo === 'file') return { tip: namesFiles ? tips.file : tips.fileStep, enabled: true };
+  return { tip: namesFiles ? tips.file : tips.step, enabled: false };
 }

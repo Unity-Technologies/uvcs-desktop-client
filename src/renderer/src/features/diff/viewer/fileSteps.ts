@@ -11,8 +11,8 @@ export type Arrival = 'first' | 'last';
 export interface FileSteps {
   /** Whether the list has a file after (1) or before (-1) the one shown. */
   canStep: (direction: 1 | -1) => boolean;
-  /** Selects that file, its diff to open at its first or last change. */
-  step: (direction: 1 | -1) => void;
+  /** Selects that file, its diff to open at its first or last change; its path, or none past the ends. */
+  step: (direction: 1 | -1) => string | null;
   /** Where the diff of `path` opens, once: after a step to it, else nowhere in particular. */
   takeArrival: (path: string) => Arrival | null;
   /**
@@ -73,9 +73,11 @@ export function fileSteps(
     canStep: (direction) => adjacentKey(keys, current, direction) !== null,
     step: (direction) => {
       const key = adjacentKey(keys, current, direction);
-      if (key === null) return;
-      pending.current = { path: list.pathOf(key), at: direction === 1 ? 'first' : 'last' };
+      if (key === null) return null;
+      const path = list.pathOf(key);
+      pending.current = { path, at: direction === 1 ? 'first' : 'last' };
       list.select(key);
+      return path;
     },
     takeArrival: (path) => {
       const at = pending.current?.path === path ? pending.current.at : null;

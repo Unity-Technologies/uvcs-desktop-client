@@ -2,23 +2,35 @@
 export type StepDirection = 1 | -1;
 
 /**
- * The presses made before the selected file's diff opened at its arrival (while it's read, drawn, or just drawn), each
- * tagged with the file it was meant for (its versions' key, `diffContentsKey`). One per diff header
- * (`SteppedDiffFrame`): the header puts presses in while no diff of the selected file is drawn, the diff its own until
- * it opened, and the diff takes them once it did, one at a time. Presses meant for another file are dropped: picking
- * a file while another loads opens it at its top.
+ * The presses kept for a file whose diff hasn't taken them yet (being read, drawn, not opened at its arrival, or still
+ * the previous file's while a step settles), each tagged with the path of the file it's for, as the list beside the
+ * diff names it. One per diff header (`SteppedDiffFrame`): the header and the diffs put presses in (`headerPress`,
+ * `pressTarget`), the selected file's diff takes its own once it opened (`drainsKept`). A step from a file takes the
+ * presses left for it along (`retag`); presses are dropped only when the selection leaves their file (`keepOnly`), so a
+ * file picked while another loads opens at its top.
  */
 export class StepQueue {
-  private presses: { key: string; direction: StepDirection }[] = [];
+  private presses: { path: string; direction: StepDirection }[] = [];
 
-  push(key: string, direction: StepDirection): void {
-    this.presses.push({ key, direction });
+  push(path: string, direction: StepDirection): void {
+    this.presses.push({ path, direction });
   }
 
-  /** The next press kept for the file `key` names; those kept for any other are dropped. */
-  take(key: string): StepDirection | undefined {
-    this.presses = this.presses.filter((press) => press.key === key);
-    return this.presses.shift()?.direction;
+  /** The next press kept for `path`; those for other files stay. */
+  take(path: string): StepDirection | undefined {
+    const index = this.presses.findIndex((press) => press.path === path);
+    if (index === -1) return undefined;
+    return this.presses.splice(index, 1)[0]!.direction;
+  }
+
+  /** The presses left for `from` go to `to`, in order: a step from `from` went to `to`, and they're meant to follow it. */
+  retag(from: string, to: string): void {
+    this.presses = this.presses.map((press) => (press.path === from ? { ...press, path: to } : press));
+  }
+
+  /** Drops the presses for any file but these (the file asked for, the one a step is on its way to). */
+  keepOnly(paths: readonly (string | null)[]): void {
+    this.presses = this.presses.filter((press) => paths.includes(press.path));
   }
 
   clear(): void {

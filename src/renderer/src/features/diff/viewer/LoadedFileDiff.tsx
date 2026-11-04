@@ -12,7 +12,7 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
 import { editedFileIn, typesIntoDiff } from './canEditInPlace';
-import { DiffFrameHostContext, type DiffFrameHost } from './diffFrameHost';
+import { DiffFrameHostContext, diffContentsKey, isSelectedFile, type DiffFrameHost } from './diffFrameHost';
 import type { ChangeView } from './changeView';
 import { diffBodyOf, stepsCanCome } from './diffBody';
 import { diffDiscards } from './diffDiscards';
@@ -95,9 +95,10 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const findSibling = useContext(SiblingFinderContext);
   // Where neither side's model was beside it after all (in History, a .meta moved since: `metaModelView`), the .meta is
   // its text, as any other, arrows and notices included; told by ModelMetaDiff once read, for these versions only.
-  const metaVersions = JSON.stringify([contents.original, contents.modified]);
+  // The versions shown, as a key: what a model's absence is told for, and whose this diff's navigation is.
+  const versionsKey = diffContentsKey(contents.original, contents.modified);
   const [modelAbsentFor, setModelAbsentFor] = useState<string | null>(null);
-  const modelFound = modelAbsentFor !== metaVersions;
+  const modelFound = modelAbsentFor !== versionsKey;
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
@@ -114,17 +115,16 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   // The header and its arrows are the frame's around it (`SteppedDiffFrame`), which outlives this diff: it hands them
   // its navigation each time it renders, saying whose it is, and draws its controls into the header.
   const host = useDiffFrameHost();
-  const ownKey = metaVersions;
   const changeView = useRef<ChangeView>(null);
   const stepsCome = stepsCanCome(bodyKind, { wholeFile, stepsThroughChanges });
   const steppedDiff = stepsCome ? (diffs.current?.meta ?? null) : null;
   // Presses kept for this file (the header's, while it was read, then its own until it opened) wait in the frame's
   // queue; it takes them once opened, while it is the selected file's diff, not a previous one kept on screen.
-  const isSelectedFile = ownKey === host.requestedKey;
-  const kept = useMemo(() => ({ queue: host.queue, takes: isSelectedFile }), [host.queue, isSelectedFile]);
-  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: isSelectedFile, noStepsComing: !stepsCome, kept });
+  const selected = isSelectedFile(versionsKey, host.requestedKey);
+  const kept = useMemo(() => ({ queue: host.queue, takes: selected }), [host.queue, selected]);
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: selected, noStepsComing: !stepsCome, kept });
   const stepsOwn = steppedDiff !== null;
-  useLayoutEffect(() => host.publish({ navigation, stepsOwn, key: ownKey }));
+  useLayoutEffect(() => host.publish({ navigation, stepsOwn, key: versionsKey }));
   useLayoutEffect(() => () => host.publish(null), [host.publish]);
   const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
   const discards = diffDiscards(place, buffer, onMatchesBase);
@@ -208,7 +208,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
-            onModelAbsent={() => setModelAbsentFor(metaVersions)}
+            onModelAbsent={() => setModelAbsentFor(versionsKey)}
           />
         </Suspense>
       );
