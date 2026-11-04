@@ -53,6 +53,22 @@ export function pressTarget({ opens, opened, steppingTo, path }: { opens: boolea
   return opened ? { kind: 'step' } : { kind: 'keep', path };
 }
 
+/** A queue of presses tagged with the file they're for, and whether a view takes its own from it. */
+export interface KeptPresses {
+  queue: StepQueue;
+  takes: boolean;
+}
+
+/**
+ * Where a view's presses wait (`useStepNavigation`'s `kept`): those a diff header hands it, while it's the selected
+ * file's (`LoadedFileDiff`); else its list's (`FileSteps.kept`), which the lists of one view share, so a conflict's view
+ * takes the presses a step from a diff left it; else its own, with no list beside it.
+ */
+export function keptPressesOf(kept: KeptPresses | undefined, files: { kept: StepQueue } | null, own: KeptPresses): KeptPresses {
+  if (kept) return kept;
+  return files ? { queue: files.kept, takes: true } : own;
+}
+
 /** Whether a diff takes the presses kept for it: once it opened at its arrival, while it's the selected file's. */
 export function drainsKept({ opened, selected }: { opened: boolean; selected: boolean }): boolean {
   return opened && selected;

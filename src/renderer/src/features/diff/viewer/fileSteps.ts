@@ -1,4 +1,5 @@
-import { createContext, useMemo, useRef } from 'react';
+import { createContext, useEffect, useMemo, useRef, useState } from 'react';
+import { StepQueue } from './stepQueue';
 
 /** Where a view opens after a step from the file beside it: at its first step going down, its last going up. */
 export type Arrival = 'first' | 'last';
@@ -20,6 +21,13 @@ export interface FileSteps {
    * still the previous file's (the selection settling, the file read), and a press meanwhile is meant for that file.
    */
   steppingTo: () => string | null;
+  /**
+   * The presses kept for files whose view hasn't taken them yet (`StepQueue`), shared by the lists of one view with
+   * their pending arrival: a step from an Incoming diff into a conflicting file hands that file's view the presses left.
+   */
+  kept: StepQueue;
+  /** Drops the presses kept for files the list left: all but those of the file it is on, or a step is on its way to. */
+  dropLeftPresses: () => void;
 }
 
 export const FileStepsContext = createContext<FileSteps | null>(null);
@@ -45,12 +53,21 @@ interface FileStepsOptions {
   pending?: PendingArrivalRef;
 }
 
-/** Where a step leaves the arrival of the file it selects, until that file's view takes it. */
-export type PendingArrivalRef = { current: PendingArrival | null };
+/** Where a step leaves the arrival of the file it selects, and the presses kept for it, until that file's view takes them. */
+export interface PendingArrivalRef {
+  current: PendingArrival | null;
+  readonly kept: StepQueue;
+}
+
+/** No step pending, no press kept. */
+export function pendingArrival(): PendingArrivalRef {
+  return { current: null, kept: new StepQueue() };
+}
 
 /** One pending arrival, to share between the file steps of one view (`FileStepsOptions.pending`). */
 export function usePendingArrival(): PendingArrivalRef {
-  return useRef<PendingArrival | null>(null);
+  const [pending] = useState(pendingArrival);
+  return pending;
 }
 
 /** A step to a file whose diff hasn't opened yet: where it opens. */
@@ -84,11 +101,15 @@ export function fileSteps(
       if (at) pending.current = null;
       return at;
     },
-    steppingTo: () => {
-      const path = pending.current?.path ?? null;
-      return path !== null && current !== null && list.pathOf(current) === path ? path : null;
-    },
+    steppingTo,
+    kept: pending.kept,
+    dropLeftPresses: () => pending.kept.keepOnly([current === null ? null : list.pathOf(current), steppingTo()]),
   };
+
+  function steppingTo(): string | null {
+    const path = pending.current?.path ?? null;
+    return path !== null && current !== null && list.pathOf(current) === path ? path : null;
+  }
 }
 
 /** Steps through a list's files for the diff beside it. */
@@ -97,8 +118,11 @@ export function useFileSteps({ keys, current, select, pathOf, pending }: FileSte
   const arrival = pending ?? ownArrival;
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
-  return useMemo(
+  const steps = useMemo(
     () => fileSteps(keys, current, { select: (key) => latest.current.select(key), pathOf: (key) => latest.current.pathOf(key) }, arrival),
     [keys, current, arrival],
   );
+  // The selection moved: what was kept for the files it left goes (a file picked while another loads opens at its top).
+  useEffect(() => steps.dropLeftPresses(), [current]);
+  return steps;
 }

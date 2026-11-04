@@ -3,7 +3,8 @@ import { useMemo, useRef, type RefObject } from 'react';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
 import { changesAbove } from './changeNavigation';
 import type { ChangeView } from './changeView';
-import { useStepNavigation, type KeptPresses, type StepNavigation, type StepShortcuts } from './useStepNavigation';
+import type { KeptPresses } from './stepQueue';
+import { useStepNavigation, type StepNavigation, type StepShortcuts } from './useStepNavigation';
 
 export const CHANGE_SHORTCUTS: StepShortcuts = { next: 'nextChange', previous: 'previousChange' };
 

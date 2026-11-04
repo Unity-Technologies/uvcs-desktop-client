@@ -5,7 +5,7 @@ import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
-import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
+import { drainKept, drainsKept, followStep, keptPressesOf, pressTarget, StepQueue, type KeptPresses, type PressEffect } from './stepQueue';
 import type { ArrowGoal } from './changeNavigatorView';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
@@ -88,12 +88,6 @@ interface StepNavigationOptions {
   kept?: KeptPresses;
 }
 
-/** A queue of presses tagged with the file they're for, and whether this view takes its own from it. */
-export interface KeptPresses {
-  queue: StepQueue;
-  takes: boolean;
-}
-
 /**
  * Moving step by step through a view: the header's arrows and the keys, which work from the view (`frame`, its header
  * included), from the list beside it on screen that has `MAIN_FOCUS` (the files, the revisions) and with nothing
@@ -139,7 +133,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   };
   // Presses meant for a file whose view hasn't opened at its arrival wait for it (`pressTarget`), tagged with that file.
   const ownKept = useOwnKeptPresses();
-  const keptPresses = kept ?? ownKept;
+  const keptPresses = keptPressesOf(kept, files, ownKept);
   const press = (direction: 1 | -1): PressEffect => {
     if (goes) {
       goes(direction);

@@ -40,7 +40,9 @@ export function SteppedDiffFrame({ title, stepsThroughChanges = true, requested,
   const frame = useRef<HTMLDivElement>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
   const [store] = useState<PublishedStore>(() => createStore(() => ({ published: null })));
-  const [queue] = useState(() => new StepQueue());
+  // The list's (shared by the lists of one view, so a step into a file shown otherwise hands it its presses), else its own.
+  const [ownQueue] = useState(() => new StepQueue());
+  const queue = useContext(FileStepsContext)?.kept ?? ownQueue;
   // Stable while the frame lives: the body's unmount hands the arrows back to the header (`publish(null)`) once only.
   const publish = useMemo(() => (published: PublishedNavigation | null) => store.setState({ published }), [store]);
   const host = useMemo<DiffFrameHost>(() => ({ frame, controls, publish, queue, requestedKey: requested.key }), [controls, publish, queue, requested.key]);
