@@ -84,7 +84,8 @@ try {
     await sidebar.getByRole('button', { name: /^studio/ }).click();
     await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
     await main.getByRole('button', { name: 'Project: All projects' }).click();
-    await window.keyboard.type('racing');
+    await window.getByPlaceholder('Find a project').fill('racing');
+    await window.getByText('Racing', { exact: true }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
@@ -185,6 +186,7 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Explore a repository', async () => {
     await window.keyboard.press('Escape');
@@ -223,6 +225,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Settings and dark theme', async () => {
     await window.keyboard.press('Escape');
