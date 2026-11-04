@@ -168,6 +168,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
   const fileSteps = useFileSteps({
     keys: fileKeys,
+    // The list on another change than the diff shows, until it settles: presses meanwhile are that change's.
+    settlingOn: focused && diffChange !== focused ? focused.path : null,
     current: selection.anchor,
     select: (key, selected) =>
       selectAfterLeaving(selection, singleSelection(key), (next) => {

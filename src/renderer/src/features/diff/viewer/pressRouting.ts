@@ -26,18 +26,22 @@ export interface PressSpot {
   opened: boolean;
   /** The file a step went to while the view shown is still the previous one's (`FileSteps.steppingTo`). */
   steppingTo: string | null;
+  /** The file the list is on while the view beside it still shows another (`FileSteps.settlingOn`: Changes' settle). */
+  settlingOn: string | null;
 }
 
 /** A press goes through the view's steps (on to the file beside it past the ends), or is kept for a file. */
 export type PressRoute = { kind: 'step' } | { kind: 'keep'; path: string };
 
 /**
- * The route of a press: kept for the file a step is on its way to, never stepping from the previous file's place (an
- * unreadable file's or an xlink's too, which would step on from it twice); kept for the view itself until it opened at
+ * The route of a press: kept for the file a step is on its way to, or the list is on while the view beside it settles,
+ * never stepping from the previous file's place (an unreadable file's or an xlink's too, which would step on from it
+ * twice); kept for the view itself until it opened at
  * its arrival, or for the selected file's diff while a header waits for it; a step otherwise.
  */
-export function routePress({ holder, path, opened, steppingTo }: PressSpot): PressRoute {
-  if (steppingTo !== null && steppingTo !== path) return { kind: 'keep', path: steppingTo };
+export function routePress({ holder, path, opened, steppingTo, settlingOn }: PressSpot): PressRoute {
+  const ahead = steppingTo ?? settlingOn;
+  if (ahead !== null && ahead !== path) return { kind: 'keep', path: ahead };
   if (holder === 'stepless') return { kind: 'step' };
   return holder === 'waiting' || !opened ? { kind: 'keep', path } : { kind: 'step' };
 }

@@ -26,6 +26,11 @@ export interface FileSteps {
    */
   steppingTo: () => string | null;
   /**
+   * The file the list is on while the view beside it still shows another, as its host says (`FileStepsOptions.settlingOn`):
+   * a press meanwhile is meant for it.
+   */
+  settlingOn: string | null;
+  /**
    * The presses kept for files whose view hasn't taken them yet (`StepQueue`), shared by the lists of one view with
    * their pending arrival: a step from an Incoming diff into a conflicting file hands that file's view the presses left.
    */
@@ -56,6 +61,13 @@ interface FileStepsOptions {
    */
   select: (key: string, selected: () => void) => void;
   pathOf: (key: string) => string;
+  /**
+   * The file the list is on (its path) while the view beside it still shows another: Changes' diff follows the
+   * selection once it settles (`useSettledValue`), so a click on a file leaves the previous one's diff on screen a while.
+   * Compared by the host from its own two values, the change selected and the one diffed, never from paths a view shows
+   * (a `.meta` shown in place of its asset).
+   */
+  settlingOn?: string | null;
   /**
    * Where a step leaves the arrival of the file it goes to (`usePendingArrival`), shared by the lists of one view whose
    * files open under either (Incoming's diffs and conflicts): the file stepped to takes it, whichever list it shows in.
@@ -95,7 +107,7 @@ export interface PendingArrival {
 export function fileSteps(
   keys: readonly string[],
   current: string | null,
-  list: Pick<FileStepsOptions, 'select' | 'pathOf'>,
+  list: Pick<FileStepsOptions, 'select' | 'pathOf' | 'settlingOn'>,
   pending: PendingArrivalRef,
 ): FileSteps {
   return {
@@ -119,6 +131,7 @@ export function fileSteps(
       return at;
     },
     steppingTo,
+    settlingOn: list.settlingOn ?? null,
     kept: pending.kept,
     listMoved: () => {
       const shown = current === null ? null : list.pathOf(current);
@@ -145,14 +158,14 @@ export function selectNow(selected: () => void, select: () => void): void {
 }
 
 /** Steps through a list's files for the diff beside it. */
-export function useFileSteps({ keys, current, select, pathOf, pending }: FileStepsOptions): FileSteps {
+export function useFileSteps({ keys, current, select, pathOf, settlingOn = null, pending }: FileStepsOptions): FileSteps {
   const ownArrival = usePendingArrival();
   const arrival = pending ?? ownArrival;
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
   const steps = useMemo(
-    () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key) }, arrival),
-    [keys, current, arrival],
+    () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key), settlingOn }, arrival),
+    [keys, current, settlingOn, arrival],
   );
   // The selection moved: what was kept for the files it left goes (a file picked while another loads opens at its top).
   useEffect(() => steps.listMoved(), [current]);

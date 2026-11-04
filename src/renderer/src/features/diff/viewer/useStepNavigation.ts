@@ -131,7 +131,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   // Presses meant for a file whose view hasn't taken them wait for it (`routePress`), tagged with that file.
   const ownKept = useOwnKeptPresses();
   const keptPresses = kept ?? (files ? { queue: files.kept, takes: true } : ownKept);
-  const spot = (): PressSpot => ({ holder, path, opened, steppingTo: files?.steppingTo() ?? null });
+  const spot = (): PressSpot => ({ holder, path, opened, steppingTo: files?.steppingTo() ?? null, settlingOn: files?.settlingOn ?? null });
   const press = (direction: 1 | -1): PressEffect =>
     applyPress(direction, spot(), { position, files, queue: keptPresses.queue, readAbove, moveTo });
   const go = (direction: 1 | -1): void => void press(direction);
