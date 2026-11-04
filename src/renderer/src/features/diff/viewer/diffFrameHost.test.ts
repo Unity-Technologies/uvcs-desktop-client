@@ -9,31 +9,31 @@ const read: HeaderState = { published: published('b.cs'), requestedKey: 'b.cs', 
 
 describe('headerArrows', () => {
   it("steps with the diff shown once it is the selected file's: its changes, its label, its keys", () => {
-    expect(headerArrows(read)).toEqual({ body: published('b.cs'), headerKeys: false, queues: false, dropsKept: false });
+    expect(headerArrows(read)).toEqual({ body: published('b.cs'), headerKeys: false, queues: false, replaysKept: false });
   });
 
   it("never trusts the previous file's diff while the next is read, still on screen: no place shown, presses kept", () => {
-    expect(headerArrows({ ...read, published: published('a.cs'), isPlaceholderData: true })).toEqual({ body: null, headerKeys: true, queues: true, dropsKept: false });
+    expect(headerArrows({ ...read, published: published('a.cs'), isPlaceholderData: true })).toEqual({ body: null, headerKeys: true, queues: true, replaysKept: false });
   });
 
   it("keeps them the same once the next file is read and its diff mounted, the previous one's navigation still published", () => {
-    expect(headerArrows({ ...read, published: published('a.cs') })).toEqual({ body: null, headerKeys: true, queues: true, dropsKept: false });
+    expect(headerArrows({ ...read, published: published('a.cs') })).toEqual({ body: null, headerKeys: true, queues: true, replaysKept: false });
   });
 
   it('keeps them while the first diff is read, or read but not drawn yet (its viewer loading on first use)', () => {
-    expect(headerArrows({ ...read, published: null, hasData: false })).toEqual({ body: null, headerKeys: true, queues: true, dropsKept: false });
-    expect(headerArrows({ ...read, published: null })).toEqual({ body: null, headerKeys: true, queues: true, dropsKept: false });
+    expect(headerArrows({ ...read, published: null, hasData: false })).toEqual({ body: null, headerKeys: true, queues: true, replaysKept: false });
+    expect(headerArrows({ ...read, published: null })).toEqual({ body: null, headerKeys: true, queues: true, replaysKept: false });
   });
 
-  it("goes from file to file at once where the file couldn't be read", () => {
-    expect(headerArrows({ ...read, published: null, error: true, hasData: false })).toEqual({ body: null, headerKeys: true, queues: false, dropsKept: true });
+  it("goes from file to file at once where the file couldn't be read, replaying the presses kept for it as such steps", () => {
+    expect(headerArrows({ ...read, published: null, error: true, hasData: false })).toEqual({ body: null, headerKeys: true, queues: false, replaysKept: true });
   });
 });
 
 describe('headerPress', () => {
-  const onBody: HeaderArrows = { body: published('b.cs'), headerKeys: false, queues: false, dropsKept: false };
-  const waiting: HeaderArrows = { body: null, headerKeys: true, queues: true, dropsKept: false };
-  const failed: HeaderArrows = { body: null, headerKeys: true, queues: false, dropsKept: true };
+  const onBody: HeaderArrows = { body: published('b.cs'), headerKeys: false, queues: false, replaysKept: false };
+  const waiting: HeaderArrows = { body: null, headerKeys: true, queues: true, replaysKept: false };
+  const failed: HeaderArrows = { body: null, headerKeys: true, queues: false, replaysKept: true };
 
   it("hands a press to the selected file's diff once it's the one published", () => {
     expect(headerPress(onBody, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'body' });
@@ -44,7 +44,7 @@ describe('headerPress', () => {
     expect(headerPress(waiting, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'keep', path: 'b.cs' });
   });
 
-  it("goes from file to file at once where the file couldn't be read", () => {
+  it("goes from file to file at once where the file couldn't be read, replaying the presses kept for it as such steps", () => {
     expect(headerPress(failed, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'step' });
   });
 });

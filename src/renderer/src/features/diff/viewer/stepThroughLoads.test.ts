@@ -113,7 +113,10 @@ class CachedDiffs {
     this.rendersDue = true;
   }
 
-  /** Each render: the header drops what a failed read left; the diff takes one press kept for it, once it may. */
+  /**
+   * Each render: the header replays as file steps the presses kept for a file that couldn't be read; the diff takes
+   * the presses kept for it, once it may (`drainKept`).
+   */
   private renders(): this {
     while (this.rendersDue) {
       this.rendersDue = false;
@@ -121,7 +124,8 @@ class CachedDiffs {
         this.requestDue = false;
         this.request(this.listCurrent);
       }
-      if (this.arrows().dropsKept) this.queue.clear();
+      const failed = this.requested;
+      if (this.arrows().replaysKept) drainKept(this.queue, failed, (direction) => followStep(this.queue, failed, this.steps().step(direction)));
       const body = this.body;
       if (!body || !drainsKept({ opened: body.opened, selected: isSelectedFile(body.path, this.requested) })) continue;
       drainKept(this.queue, body.path, (direction) => this.bodyGo(direction));
@@ -186,6 +190,10 @@ describe('a burst of ↓ across diffs read from the cache', () => {
 
   it('drops the presses meant for a file once another is picked while it loads: that one opens at its top', () => {
     expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).press(1).press(1).pick('c.cs').settle().frame().header).toBe('c.cs');
+  });
+
+  it("replays the presses kept for a file that couldn't be read as steps from it, so a burst across it loses none", () => {
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }).press(1).press(1).press(1).fail().frame().header).toBe('c.cs: 2 of 2');
   });
 
   it("goes from file to file at once where the selected file couldn't be read", () => {
