@@ -43,6 +43,13 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
       icon: check(preferences.structureOnly),
       run: () => set({ structureOnly: !preferences.structureOnly }),
     },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      icon: check(preferences.showTimeline),
+      shortcut: hotkey('graphTimeline'),
+      run: () => set({ showTimeline: !preferences.showTimeline }),
+    },
     SEPARATOR,
     { id: 'displayOptions', label: 'Display options…', run: openBranchExplorerOptionsDialog },
     SEPARATOR,

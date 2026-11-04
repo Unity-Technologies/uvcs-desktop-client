@@ -27,6 +27,8 @@ import { useGraphViewport } from './useGraphViewport';
 import { useHoverCard } from './useHoverCard';
 import { useSearchPing } from './useSearchPing';
 import { useWheel } from './useWheel';
+import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeline';
+import type { SearchHit } from '../model/searchGraph';
 import { toWorld, type Size } from './viewport';
 import { wheelGesture } from './wheelGesture';
 import styles from './GraphCanvas.module.css';
@@ -56,8 +58,20 @@ interface GraphCanvasProps {
   onActivate: (target: GraphTarget) => void;
   /** Builds the context menu for what was right-clicked. */
   contextMenu: (target: GraphTarget | null) => MenuEntry[];
+  /** The Timeline over the graph, while shown (`GraphTimeline`), with what only it shows. */
+  timeline: TimelineInputs | null;
   /** Floating controls drawn over the canvas. */
   children?: ReactNode;
+}
+
+/** What the Timeline shows beyond the graph's own highlights. */
+export interface TimelineInputs {
+  /** Whose changesets are its share: the user's, or the people filter's picks. */
+  owners: ReadonlySet<string>;
+  shareIsMine: boolean;
+  searchHits: readonly SearchHit[];
+  /** Whether it slides in as it shows: the user just showed it. */
+  slideIn: boolean;
 }
 
 /** The hover card on screen: what it is about, where the pointer was, and the caption it lies on, if any. */
@@ -72,7 +86,7 @@ interface ShownHoverCard {
 const DOUBLE_CLICK_ZOOM = 1.4;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
-  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, children },
+  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, timeline, children },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,6 +96,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const contextTargetRef = useRef<GraphTarget | null>(null);
   /** A viewport change requested before the canvas knew its size; applied on the first resize. */
   const pendingViewRef = useRef<(() => void) | null>(null);
+  const timelineRef = useRef<GraphTimelineHandle>(null);
   const themePalette = useGraphPalette(containerRef);
   /** The theme's palette, with each branch's hue only while the Branch colors option is on, and the format rules' colors. */
   const palette = themePalette && withRuleColors(withBranchColors(themePalette, highlights.options.branchColors), ruleColors);
@@ -150,6 +165,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       clearHover();
       scheduleDraw();
       updateAwayFromEnd();
+      timelineRef.current?.viewportChanged();
     },
   );
   const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
@@ -208,6 +224,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     updateAwayFromEnd();
     // Resizing cleared the canvas: redraw before this frame is painted, or it flashes blank.
     drawNow();
+    timelineRef.current?.viewportChanged();
   }, [view, drawNow]);
 
   useCanvasSize(containerRef, canvasRef, sizeRef, onResize);
@@ -311,46 +328,66 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   };
 
   return (
-    <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>
-      <div
-        ref={containerRef}
-        className={styles.container}
-        tabIndex={0}
-        role="application"
-        aria-roledescription="graph"
-        aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace. Question mark lists every shortcut."
-        {...MAIN_FOCUS}
-        data-hovering={hovered !== null}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerLeave={() => {
-          setHovered(null);
-          hoverCard.requestClose();
-          clippedTip.hide();
-        }}
-        onContextMenu={(event) => {
-          // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
-          if (!onCanvas(event) || !contextTargetRef.current) event.preventDefault();
-        }}
-        onDoubleClick={onDoubleClick}
-      >
-        <canvas ref={canvasRef} className={styles.canvas} />
-        {card && palette && (
-          <GraphTooltip
-            target={card.target}
-            layout={layout}
-            palette={palette}
-            pendingChangeCount={highlights.pendingChangeCount}
-            x={card.x}
-            y={card.y}
-            anchor={card.anchor}
-            containerWidth={sizeRef.current.width}
-          />
-        )}
-        {clippedTip.tip && <TooltipBubble {...clippedTip.tip} wide />}
-        <NewestEndButton shown={awayFromEnd} onClick={() => view.glideTo(newestEnd(layout, view.viewportRef.current, sizeRef.current))} />
-        {children}
-      </div>
-    </ActionContextMenu>
+    <div className={styles.pane}>
+      {timeline && palette && (
+        <GraphTimeline
+          ref={timelineRef}
+          layout={layout}
+          palette={palette}
+          view={view}
+          screenSize={() => sizeRef.current}
+          owners={timeline.owners}
+          shareIsMine={timeline.shareIsMine}
+          searchHits={timeline.searchHits}
+          slideIn={timeline.slideIn}
+          selectedChangeset={highlights.selectedChangeset}
+          selectedBranch={highlights.selectedBranch}
+          homeChangeset={highlights.homeChangeset}
+          pendingChangeCount={highlights.pendingChangeCount}
+          focusGraph={() => containerRef.current?.focus()}
+        />
+      )}
+      <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>
+        <div
+          ref={containerRef}
+          className={styles.container}
+          tabIndex={0}
+          role="application"
+          aria-roledescription="graph"
+          aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace. Question mark lists every shortcut."
+          {...MAIN_FOCUS}
+          data-hovering={hovered !== null}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerLeave={() => {
+            setHovered(null);
+            hoverCard.requestClose();
+            clippedTip.hide();
+          }}
+          onContextMenu={(event) => {
+            // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
+            if (!onCanvas(event) || !contextTargetRef.current) event.preventDefault();
+          }}
+          onDoubleClick={onDoubleClick}
+        >
+          <canvas ref={canvasRef} className={styles.canvas} />
+          {card && palette && (
+            <GraphTooltip
+              target={card.target}
+              layout={layout}
+              palette={palette}
+              pendingChangeCount={highlights.pendingChangeCount}
+              x={card.x}
+              y={card.y}
+              anchor={card.anchor}
+              containerWidth={sizeRef.current.width}
+            />
+          )}
+          {clippedTip.tip && <TooltipBubble {...clippedTip.tip} wide />}
+          <NewestEndButton shown={awayFromEnd} onClick={() => view.glideTo(newestEnd(layout, view.viewportRef.current, sizeRef.current))} />
+          {children}
+        </div>
+      </ActionContextMenu>
+    </div>
   );
 });
