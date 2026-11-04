@@ -1,7 +1,6 @@
 import { Palette, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { displayName, userFilterTexts } from '../../lib/userName';
+import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -12,7 +11,18 @@ import { IconButton } from '../../ui/IconButton';
 import { Popover } from '../../ui/Popover';
 import { HueDot } from './HueDot';
 import { HuePicker } from './HuePicker';
-import { usersToAdd, withUserHue, withUserRemoved, withUsersAdded, type UserColor, type UserColors } from './model/userColors';
+import {
+  addPeopleEmpty,
+  changesetColorsTabBody,
+  isColored,
+  peopleMatching,
+  usersToAdd,
+  withUserHue,
+  withUserRemoved,
+  withUserToggled,
+  type UserColor,
+  type UserColors,
+} from './model/userColors';
 import styles from './ChangesetColorsTab.module.css';
 
 interface ChangesetColorsTabProps {
@@ -30,7 +40,8 @@ export function ChangesetColorsTab({ colors, authors, onChange }: ChangesetColor
   const addButton = (
     <AddPeople colors={colors} authors={authors} onChange={onChange} addingFrom={addingFrom} onAddingFrom={setAddingFrom} />
   );
-  if (colors.users.length === 0) {
+  const body = changesetColorsTabBody(colors);
+  if (body.state === 'empty') {
     return (
       <EmptyState
         icon={<Palette size={20} />}
@@ -46,7 +57,7 @@ export function ChangesetColorsTab({ colors, authors, onChange }: ChangesetColor
         <Checkbox label="Color changesets by who made them" checked={colors.on} onChange={(on) => onChange({ ...colors, on })} />
         {addButton}
       </div>
-      <ul className={styles.list} data-off={!colors.on || undefined}>
+      <ul className={styles.list} data-off={body.dimmed || undefined}>
         {colors.users.map((color) => (
           <PersonRow
             key={color.user}
@@ -110,8 +121,8 @@ function AddPeople({ colors, authors, onChange, addingFrom, onAddingFrom }: AddP
 function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetColorsTabProps & { colorsOnOpen: UserColors }) {
   const [search, setSearch] = useState('');
   const offered = useMemo(() => usersToAdd(authors, colorsOnOpen), [authors, colorsOnOpen]);
-  const rows = useMemo(() => offered.filter((user) => matchesWordFilter(userFilterTexts(user), search)), [offered, search]);
-  const isColored = (user: string): boolean => colors.users.some((color) => color.user === user);
+  const rows = useMemo(() => peopleMatching(offered, search), [offered, search]);
+  const empty = addPeopleEmpty(offered, search);
   return (
     <FilterChecklist
       rows={rows}
@@ -119,8 +130,8 @@ function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetCol
       onSearchChange={setSearch}
       placeholder="Find people"
       label="People"
-      isChecked={isColored}
-      onToggle={(user) => onChange(isColored(user) ? withUserRemoved(colors, user) : withUsersAdded(colors, [user]))}
+      isChecked={(user) => isColored(colors, user)}
+      onToggle={(user) => onChange(withUserToggled(colors, user))}
       renderRow={(user) => (
         <>
           <Avatar user={user} size={18} tip={null} />
@@ -129,7 +140,7 @@ function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetCol
           </span>
         </>
       )}
-      empty={offered.length === 0 ? <>Everyone in the graph has a color</> : <>No one matches “{search.trim()}”</>}
+      empty={empty.kind === 'everyoneColored' ? <>Everyone in the graph has a color</> : <>No one matches “{empty.search}”</>}
     />
   );
 }

@@ -2,7 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { BRANCH_HUES } from './branchHue';
 import { changeset, sampleHistory } from './graphFixtures';
 import { NO_RULE_COLORS, type RuleColors } from './ruleColors';
-import { changesetUserHues, DEFAULT_USER_COLORS, historyAuthors, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, type UserColors } from './userColors';
+import {
+  addPeopleEmpty,
+  changesetColorsTabBody,
+  changesetUserHues,
+  DEFAULT_USER_COLORS,
+  historyAuthors,
+  isColored,
+  peopleMatching,
+  usersToAdd,
+  withUserColors,
+  withUserHue,
+  withUserRemoved,
+  withUsersAdded,
+  withUserToggled,
+  type UserColors,
+} from './userColors';
 
 const [first, second, third] = BRANCH_HUES;
 
@@ -56,6 +71,53 @@ describe('historyAuthors', () => {
 describe('usersToAdd', () => {
   it('offers the authors without a color, by name', () => {
     expect(usersToAdd(['zoe@x.com', 'ana@x.com', 'bo@x.com'], colorsOf(['bo@x.com', 1]))).toEqual(['ana@x.com', 'zoe@x.com']);
+  });
+});
+
+describe('withUserToggled', () => {
+  it('gives a color to someone picked without one', () => {
+    const colors = withUserToggled(colorsOf(['ana', first!]), 'bo');
+    expect(isColored(colors, 'bo')).toBe(true);
+    expect(colors.users.at(-1)).toEqual({ user: 'bo', hue: second });
+  });
+
+  it('takes it back when they are picked again', () => {
+    expect(withUserToggled(colorsOf(['ana', first!], ['bo', second!]), 'bo')).toEqual(colorsOf(['ana', first!]));
+  });
+});
+
+describe('changesetColorsTabBody', () => {
+  it('invites to add people while no one has a color, on or off', () => {
+    expect(changesetColorsTabBody(DEFAULT_USER_COLORS)).toEqual({ state: 'empty' });
+    expect(changesetColorsTabBody({ on: false, users: [] })).toEqual({ state: 'empty' });
+  });
+
+  it('lists the people, dimmed while the colors are off', () => {
+    expect(changesetColorsTabBody(colorsOf(['ana', 1]))).toEqual({ state: 'list', dimmed: false });
+    expect(changesetColorsTabBody({ ...colorsOf(['ana', 1]), on: false })).toEqual({ state: 'list', dimmed: true });
+  });
+});
+
+describe('peopleMatching', () => {
+  const offered = ['jane.doe@example.com', 'bo@example.com'];
+
+  it('lists everyone offered with nothing searched', () => {
+    expect(peopleMatching(offered, '  ')).toEqual(offered);
+  });
+
+  it('matches the name shown or the user as stored', () => {
+    expect(peopleMatching(offered, 'jane doe')).toEqual(['jane.doe@example.com']);
+    expect(peopleMatching(offered, 'bo@')).toEqual(['bo@example.com']);
+  });
+});
+
+describe('addPeopleEmpty', () => {
+  it('says everyone has a color when no one is left to offer', () => {
+    expect(addPeopleEmpty([], 'jane')).toEqual({ kind: 'everyoneColored' });
+  });
+
+  it('names what was searched, trimmed, when no one offered matches it', () => {
+    expect(addPeopleEmpty(['bo@example.com'], ' jane ')).toEqual({ kind: 'noMatch', search: 'jane' });
   });
 });
 

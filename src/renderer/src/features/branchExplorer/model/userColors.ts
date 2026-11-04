@@ -1,5 +1,6 @@
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
-import { displayName } from '../../../lib/userName';
+import { matchesWordFilter } from '../../../lib/matchesAllWords';
+import { displayName, userFilterTexts } from '../../../lib/userName';
 import { BRANCH_HUES } from './branchHue';
 import type { RuleColors } from './ruleColors';
 
@@ -41,6 +42,34 @@ export function withUserRemoved(colors: UserColors, user: string): UserColors {
 
 export function withUserHue(colors: UserColors, user: string, hue: number): UserColors {
   return { ...colors, users: colors.users.map((color) => (color.user === user ? { user, hue } : color)) };
+}
+
+export function isColored(colors: UserColors, user: string): boolean {
+  return colors.users.some((color) => color.user === user);
+}
+
+/** Picking a person in "Add people": gives them a color, or takes back the one just given. */
+export function withUserToggled(colors: UserColors, user: string): UserColors {
+  return isColored(colors, user) ? withUserRemoved(colors, user) : withUsersAdded(colors, [user]);
+}
+
+/** What the "Changeset colors" tab shows: an invitation while no one has a color, else the list, dimmed while off. */
+export type ChangesetColorsTabBody = { state: 'empty' } | { state: 'list'; dimmed: boolean };
+
+export function changesetColorsTabBody(colors: UserColors): ChangesetColorsTabBody {
+  return colors.users.length === 0 ? { state: 'empty' } : { state: 'list', dimmed: !colors.on };
+}
+
+/** The people "Add people" lists: those it offers (`usersToAdd`) whose name or user matches every word searched. */
+export function peopleMatching(offered: readonly string[], search: string): readonly string[] {
+  return offered.filter((user) => matchesWordFilter(userFilterTexts(user), search));
+}
+
+/** Why "Add people" lists no one: everyone already has a color, or no one matches what was searched. */
+export type AddPeopleEmpty = { kind: 'everyoneColored' } | { kind: 'noMatch'; search: string };
+
+export function addPeopleEmpty(offered: readonly string[], search: string): AddPeopleEmpty {
+  return offered.length === 0 ? { kind: 'everyoneColored' } : { kind: 'noMatch', search: search.trim() };
 }
 
 /** Everyone who made a changeset in `data`, each once. */
