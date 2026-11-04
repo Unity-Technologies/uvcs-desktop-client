@@ -5,6 +5,7 @@ import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
+import { escapeBackToList } from '../../components/diffExpansion';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { Stowable } from '../../ui/Stowable';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
@@ -49,8 +50,8 @@ export function RevisionPane({ path, history, focusedRow, selectedRows, menu, on
   const diffExpanded = useDiffExpanded();
   const leavePane = (event: KeyboardEvent): void => {
     const inPane = event.target instanceof Node && event.currentTarget.contains(event.target);
-    // Expanded, the revisions are out of sight: Esc is the window's, which collapses the diff (`escapeCollapsesDiff`).
-    if (diffExpanded || event.defaultPrevented || !inPane || isKeyboardTaken() || !matchesShortcut(event.nativeEvent, hotkey('historyLeavePane'))) return;
+    const press = { isEscape: matchesShortcut(event.nativeEvent, hotkey('historyLeavePane')), defaultPrevented: event.defaultPrevented, keyboardTaken: !inPane || isKeyboardTaken() };
+    if (!escapeBackToList(diffExpanded, press)) return;
     event.preventDefault();
     focusMain(document);
   };
