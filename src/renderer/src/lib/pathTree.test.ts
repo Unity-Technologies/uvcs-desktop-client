@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, folderItemCount, itemsUnderRows, layoutPathItems, layoutPathList, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow, type TreeFolderRow } from './pathTree';
 import { layoutPathTree } from './pathTreeLayout';
 
 interface Item {
@@ -149,5 +149,17 @@ describe('rowsHolding', () => {
   it('names none for a row at the top, or one not laid out', () => {
     expect(rowsHolding(rows, 'z.ts', levelOf)).toEqual([]);
     expect(rowsHolding(rows, 'gone.ts', levelOf)).toEqual([]);
+  });
+});
+
+describe('folderItemCount', () => {
+  const folderCounts = (paths: string[]): number[] =>
+    layoutPathTree({ sorted: paths.map((path) => ({ path })), keyOf: (item) => item.path, folderScope: 'test' })
+      .filter((row): row is TreeFolderRow<{ path: string }> => row.type === 'folder')
+      .map(folderItemCount);
+
+  it('counts what a folder holds, but for the folder itself when it is an item (an added folder)', () => {
+    expect(folderCounts(['assets', 'assets/a.png', 'assets/b.png'])).toEqual([2]);
+    expect(folderCounts(['src/a.ts', 'src/b.ts'])).toEqual([2]);
   });
 });
