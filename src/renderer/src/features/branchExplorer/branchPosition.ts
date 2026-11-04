@@ -19,7 +19,10 @@ export function branchPositionsOf(repository: string | undefined, pins: BranchPi
   return { pins, setPins: (next) => setPinsOf(repository, next) };
 }
 
-/** Each move, its words in the Position submenu and its key in the graph. */
+/**
+ * Each move, its words in the Position submenu and its key in the graph. The words are written here, not taken from
+ * `menuWords`: that holds the verbs shared by every object's menu, and these name moves only the Branch Explorer offers.
+ */
 export const BRANCH_MOVES: readonly { move: BranchMove; label: string; shortcutId: ShortcutId }[] = [
   { move: 'up', label: 'Move up', shortcutId: 'graphMoveBranchUp' },
   { move: 'down', label: 'Move down', shortcutId: 'graphMoveBranchDown' },
