@@ -32,6 +32,7 @@ import { itemComparison } from './itemComparison';
 import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
 import { ItemViewer, type FileViewChoice } from './ItemViewer';
+import { showsDiffOnly } from '../../components/diffExpansion';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { detailsKindOf, type DetailsKind } from './xlinkItem';
@@ -160,7 +161,7 @@ export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelec
       primaryActionId="history"
       properties={properties}
       // The file's diff expanded: the diff alone, under its own header.
-      changesOnly={diffExpanded && isFile}
+      changesOnly={showsDiffOnly(diffExpanded, isFile)}
       changes={
         isFile &&
         shownComparison && (

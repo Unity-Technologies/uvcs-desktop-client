@@ -13,7 +13,7 @@ interface IncomingPanesProps {
 
 /**
  * Incoming's two panes, laid out the same while it reads, once it's up to date, and with changes coming in. A file's
- * diff expands: the list stays mounted out of sight, so stepping past its last change goes on to the next file.
+ * diff expands: the list stays mounted out of sight, its scroll, selection and filter kept for when it shows again.
  */
 export function IncomingPanes({ list, detail }: IncomingPanesProps) {
   const diffExpanded = useDiffExpanded();

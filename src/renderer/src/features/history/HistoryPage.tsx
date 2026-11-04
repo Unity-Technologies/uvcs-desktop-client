@@ -13,7 +13,8 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
-import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { listedDiffs } from '../../components/diffExpansion';
+import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
@@ -53,6 +54,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
   const filters = useHistoryFilters(rows, otherRepository);
+  useCollapseWithHost(listedDiffs(history !== undefined, filters.visible.length));
   const selection = useHistorySelection({
     initialKey: history && initialHistoryRow(rows, history, page),
     visible: filters.visible,

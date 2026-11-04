@@ -14,8 +14,11 @@ import {
   type HostDiffs,
 } from './diffExpansion';
 
-/** Whether the window's diff is expanded (`diffExpansion.ts`): one per window, never remembered past it. */
-const useDiffExpansionStore = create<{ expanded: boolean }>(() => ({ expanded: false }));
+/**
+ * Whether the window's diff is expanded (`diffExpansion.ts`): one per window, never remembered past it. `registrations`
+ * counts Expand buttons coming and going (`useExpandableDiffsChanged`).
+ */
+const useDiffExpansionStore = create<{ expanded: boolean; registrations: number }>(() => ({ expanded: false, registrations: 0 }));
 
 /** The Expand buttons on screen, each in a diff's header; views stay mounted under pages, so being here isn't enough. */
 const mounted = new Set<ExpandableDiff>();
@@ -37,7 +40,7 @@ export function collapseDiff(): void {
 
 /** Expands the diff in front, or collapses an expanded one; nothing where no diff can expand. */
 export function toggleDiffExpanded(): void {
-  const expanded = expandedAfterToggle(isDiffExpanded(), expandableDiffInFront(mounted, isInFront));
+  const expanded = expandedAfterToggle(isDiffExpanded(), isExpandableDiffInFront());
   // Drawn at once (`flushSync`): the code is the main focus and the list out of sight before the keyboard moves.
   flushSync(() => useDiffExpansionStore.setState({ expanded }));
   if (expanded) focusExpandedDiff();
@@ -49,15 +52,38 @@ export function toggleDiffExpanded(): void {
  */
 export function runWhileDiffExpanded(id: ShortcutId, run: () => void): void {
   const effect = isDiffExpanded() ? shortcutWhileExpanded(id) : 'acts';
+  if (effect === 'off') return;
   if (effect !== 'acts') flushSync(collapseDiff);
   if (effect !== 'collapseOnly') run();
 }
 
-/** Ends the mode once the view showing the diff settles with nothing to diff (`collapsesWithHost`). */
+/**
+ * Whether a stowed part's window shortcut takes its key now: not while the diff is expanded where it is `off`
+ * (`shortcutWhileExpanded`), so the key goes on to what is in sight. Pass it as `useShortcut`'s `enabled`.
+ */
+export function useShortcutOnWhileExpanded(id: ShortcutId): boolean {
+  const expanded = useDiffExpanded();
+  return !expanded || shortcutWhileExpanded(id) !== 'off';
+}
+
+/**
+ * Ends the mode once the view showing the diff settles with nothing to diff (`collapsesWithHost`): a view in front only,
+ * whose diff went with its files, never one hidden under a page whose expanded diff is still in front.
+ */
 export function useCollapseWithHost(diffs: HostDiffs): void {
   useEffect(() => {
-    if (collapsesWithHost(isDiffExpanded(), diffs)) collapseDiff();
+    if (collapsesWithHost(isDiffExpanded(), diffs, isExpandableDiffInFront())) collapseDiff();
   }, [diffs]);
+}
+
+/** Whether a diff that can expand is in front now. */
+export function isExpandableDiffInFront(): boolean {
+  return expandableDiffInFront(mounted, isInFront);
+}
+
+/** Changes as Expand buttons come and go, for what shows whether one is in front (the palette's command). */
+export function useExpandableDiffsChanged(): number {
+  return useDiffExpansionStore((state) => state.registrations);
 }
 
 /**
@@ -66,7 +92,15 @@ export function useCollapseWithHost(diffs: HostDiffs): void {
  */
 export function registerExpandableDiff(diff: ExpandableDiff): () => void {
   mounted.add(diff);
-  return () => mounted.delete(diff);
+  countRegistration();
+  return () => {
+    mounted.delete(diff);
+    countRegistration();
+  };
+}
+
+function countRegistration(): void {
+  useDiffExpansionStore.setState((state) => ({ registrations: state.registrations + 1 }));
 }
 
 /**

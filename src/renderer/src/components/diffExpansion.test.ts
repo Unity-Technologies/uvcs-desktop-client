@@ -3,11 +3,15 @@ import {
   collapsesWithHost,
   escapeBackToList,
   escapeCollapsesDiff,
+  expandDiffOffered,
   expandDiffWords,
   expandedAfterToggle,
   focusGoesToDiff,
   leavesExpandedDiff,
+  listedDiffs,
+  selectedFileDiffs,
   shortcutWhileExpanded,
+  showsDiffOnly,
   type EscapePress,
 } from './diffExpansion';
 
@@ -46,6 +50,17 @@ describe('focusGoesToDiff', () => {
 
   it('leaves it where it still shows (the code itself, a field)', () => {
     expect(focusGoesToDiff(held)).toBe(false);
+  });
+});
+
+describe('expandDiffOffered', () => {
+  it('offers the command with a diff in front to expand, or an expanded one to collapse', () => {
+    expect(expandDiffOffered(false, true)).toBe(true);
+    expect(expandDiffOffered(true, false)).toBe(true);
+  });
+
+  it('greys it out with no diff in front (the Branch Explorer, a view with nothing selected)', () => {
+    expect(expandDiffOffered(false, false)).toBe(false);
   });
 });
 
@@ -120,24 +135,59 @@ describe('shortcutWhileExpanded', () => {
     expect(shortcutWhileExpanded('toggleSidebar')).toBe('collapseOnly');
   });
 
-  it("lets Go to file act expanded: the file picked shows in the diff, as choosing another file does", () => {
-    expect(shortcutWhileExpanded('filesGoToFile')).toBe('acts');
-    expect(shortcutWhileExpanded('goToFile')).toBe('acts');
+  it("turns off a stowed control's Esc: a resolve run in Incoming's hidden update bar never stops out of sight", () => {
+    expect(shortcutWhileExpanded('stopResolvingInTool')).toBe('off');
   });
 });
 
 describe('collapsesWithHost', () => {
-  it('ends the mode once its view settles with nothing to diff: nothing pending after a check-in, Incoming up to date', () => {
-    expect(collapsesWithHost(true, 'none')).toBe(true);
+  it('ends the mode once the view in front settles with nothing to diff: nothing pending after an undo, Incoming up to date', () => {
+    expect(collapsesWithHost(true, 'none', false)).toBe(true);
   });
 
   it('keeps it while the view reads (the next changeset, a followed selection) or has diffs', () => {
-    expect(collapsesWithHost(true, 'reading')).toBe(false);
-    expect(collapsesWithHost(true, 'some')).toBe(false);
+    expect(collapsesWithHost(true, 'reading', false)).toBe(false);
+    expect(collapsesWithHost(true, 'some', true)).toBe(false);
+  });
+
+  it("keeps it when a view hidden under a page empties: the page's expanded diff is still in front", () => {
+    expect(collapsesWithHost(true, 'none', true)).toBe(false);
   });
 
   it('has nothing to end while no diff is expanded', () => {
-    expect(collapsesWithHost(false, 'none')).toBe(false);
+    expect(collapsesWithHost(false, 'none', false)).toBe(false);
+  });
+});
+
+describe('selectedFileDiffs', () => {
+  it("has a diff while a file is selected (Files, Browse repository: the details show the file's)", () => {
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: 'text' })).toBe('some');
+  });
+
+  it('has none once no file is: deleted, the selection cleared by a refresh, or a folder', () => {
+    expect(selectedFileDiffs({ read: true, selected: false, itemType: undefined })).toBe('none');
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: 'directory' })).toBe('none');
+  });
+
+  it('reads while the tree does, or while the file selected is not among its rows yet (Go to file opening its folder)', () => {
+    expect(selectedFileDiffs({ read: false, selected: false, itemType: undefined })).toBe('reading');
+    expect(selectedFileDiffs({ read: true, selected: true, itemType: undefined })).toBe('reading');
+  });
+});
+
+describe('listedDiffs', () => {
+  it("has diffs while the list shows rows to diff (History's revisions), none once its filters or a refresh leave none", () => {
+    expect(listedDiffs(true, 4)).toBe('some');
+    expect(listedDiffs(true, 0)).toBe('none');
+    expect(listedDiffs(false, 0)).toBe('reading');
+  });
+});
+
+describe('showsDiffOnly', () => {
+  it("shows a file's diff alone in its details while expanded; a folder's details stay as they are", () => {
+    expect(showsDiffOnly(true, true)).toBe(true);
+    expect(showsDiffOnly(true, false)).toBe(false);
+    expect(showsDiffOnly(false, true)).toBe(false);
   });
 });
 

@@ -50,6 +50,11 @@ export function focusGoesToDiff(holder: FocusHolder): boolean {
   return holder.onBody || !holder.visible || holder.onExpandButton;
 }
 
+/** Whether Expand Diff's command is offered (the palette's entry): to collapse, or with a diff in front to expand. */
+export function expandDiffOffered(expanded: boolean, diffInFront: boolean): boolean {
+  return expanded || diffInFront;
+}
+
 /** What Expand Diff's command does: collapses an expanded diff, else expands the one in front, if any. */
 export function expandedAfterToggle(expanded: boolean, diffInFront: boolean): boolean {
   return expanded ? false : diffInFront;
@@ -82,20 +87,24 @@ export function escapeBackToList(expanded: boolean, press: Pick<EscapePress, 'is
   return !expanded && press.isEscape && !press.defaultPrevented && !press.keyboardTaken;
 }
 
-/**
- * What a window shortcut of a part the expanded diff stowed does while it is: `acts` as ever, `collapseFirst` gives
- * the window back then acts on what is in sight again, `collapseOnly` gives it back and stops there.
- */
-export type ShortcutWhileExpanded = 'acts' | 'collapseFirst' | 'collapseOnly';
+/** What a stowed part's window shortcut does while the diff is expanded (`shortcutWhileExpanded`). */
+export type ShortcutWhileExpanded = 'acts' | 'collapseFirst' | 'collapseOnly' | 'off';
 
 const WHILE_EXPANDED: Partial<Record<ShortcutId, ShortcutWhileExpanded>> = {
   // Never out of sight: the summary and what is checked in show, and an empty summary takes the caret.
   checkin: 'collapseFirst',
   // The sidebar the user asked for comes back as it was (folded or not); folding it too would undo the ask.
   toggleSidebar: 'collapseOnly',
+  // Incoming's update bar is out of sight: Esc collapses the diff, and never stops a resolve run unseen.
+  stopResolvingInTool: 'off',
   // Go to file (`filesGoToFile`, `goToFile`) acts: the file picked shows in the diff, as choosing another file does.
 };
 
+/**
+ * What a window shortcut of a part the expanded diff stows does while it is: `acts` as ever, `collapseFirst` gives the
+ * window back then acts on what is in sight again, `collapseOnly` gives it back and stops there, `off` doesn't take the
+ * key at all (it goes on to what is in sight: Esc collapses the diff).
+ */
 export function shortcutWhileExpanded(id: ShortcutId): ShortcutWhileExpanded {
   return WHILE_EXPANDED[id] ?? 'acts';
 }
@@ -104,12 +113,45 @@ export function shortcutWhileExpanded(id: ShortcutId): ShortcutWhileExpanded {
 export type HostDiffs = 'reading' | 'some' | 'none';
 
 /**
- * Whether the expanded diff ends with its view's settled state: nothing to diff left (nothing pending after a check-in,
+ * Whether the expanded diff ends with a view's settled state: nothing to diff left (nothing pending after an undo,
  * Incoming up to date), the window would show an empty page with nothing to go to. A read (the next changeset of a
- * branch, a page window following the selection) keeps it.
+ * branch, a page window following the selection) keeps it, and so does a view hidden under a page, which empties while
+ * the page's expanded diff is in front (`diffInFront`): only a view in front, whose diff went with its files, ends it.
  */
-export function collapsesWithHost(expanded: boolean, diffs: HostDiffs): boolean {
-  return expanded && diffs === 'none';
+export function collapsesWithHost(expanded: boolean, diffs: HostDiffs, diffInFront: boolean): boolean {
+  return expanded && diffs === 'none' && !diffInFront;
+}
+
+/** What a tree whose details show the selected item has selected. */
+export interface TreeSelection {
+  /** Its root was read. */
+  read: boolean;
+  /** Something is selected. */
+  selected: boolean;
+  /** The selected row's item type; none while it isn't among the rows yet (revealed by Go to file, its folder opening). */
+  itemType: string | undefined;
+}
+
+/**
+ * The diffs of a view whose details show the selected file's (Files, Browse repository): none once no file is selected
+ * (deleted, or the selection cleared by a refresh), or a folder is; a selection not among the rows yet is still read.
+ */
+export function selectedFileDiffs({ read, selected, itemType }: TreeSelection): HostDiffs {
+  if (!read) return 'reading';
+  if (!selected) return 'none';
+  if (itemType === undefined) return 'reading';
+  return itemType === 'directory' ? 'none' : 'some';
+}
+
+/** The diffs of a view listing what it diffs (History's revisions): none once its filters or a refresh leave no row. */
+export function listedDiffs(read: boolean, shownCount: number): HostDiffs {
+  if (!read) return 'reading';
+  return shownCount > 0 ? 'some' : 'none';
+}
+
+/** Whether a details panel shows only its file's diff (`DetailsPanel`'s `changesOnly`): a file's, while expanded. */
+export function showsDiffOnly(expanded: boolean, isFile: boolean): boolean {
+  return expanded && isFile;
 }
 
 /** The words of the diff header's button and the palette's command, by whether the diff is expanded. */
