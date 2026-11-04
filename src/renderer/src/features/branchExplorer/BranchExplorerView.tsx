@@ -17,7 +17,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useBranchPins, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -62,6 +62,7 @@ export function BranchExplorerView() {
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
   const viewOptions = useGraphViewOptions();
   const rules = useExplorerRules(placeRepository);
+  const pins = useBranchPins(placeRepository);
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
@@ -95,6 +96,7 @@ export function BranchExplorerView() {
     selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
     rules,
     matches: ruleMatches,
+    pins,
   });
 
   const ruleColors = useMemo(

@@ -210,7 +210,7 @@ describe('layoutGraph with pending changes', () => {
 
   it('keeps it while "Only relevant changesets" keeps the selection', () => {
     const data = sampleHistory();
-    const base = { keep: new Set([5]), pending: pending('/main/a', 5), layout: layoutGraph(data, { keep: new Set([5]) }, pending('/main/a', 5)) };
+    const base = { keep: new Set([5]), pending: pending('/main/a', 5), pins: [], layout: layoutGraph(data, { keep: new Set([5]) }, pending('/main/a', 5)) };
     expect(layoutKeeping(data, base, 4).pending).toMatchObject({ parent: 5, row: 1 });
   });
 });
