@@ -123,7 +123,8 @@ export function historyPixels(axis: TimelineAxis, columnCount: number): { first:
  * its height to its first and last changesets instead of fading toward them.
  */
 function blurWithin(values: Float64Array, { first, last }: { first: number; last: number }): Float64Array {
-  if (last < first) return values;
+  // A strip not laid out yet (no width) has no pixels to blur.
+  if (first < 0 || last < first) return values;
   const blurred = new Float64Array(values.length);
   blurred.set(gaussianBlur(values.subarray(first, last + 1), BLUR_SIGMA), first);
   return blurred;

@@ -124,6 +124,11 @@ describe('activityCurve', () => {
     expect(curve.total[last + 2]).toBe(0);
   });
 
+  it('is empty for a strip not laid out yet', () => {
+    const curve = activityCurve(history, timelineShare(history, new Set()), timelineAxis(layout, 0));
+    expect(curve.total.length).toBe(0);
+  });
+
   it('counts the changesets a "+N" node holds where they were made', () => {
     // /main/task's middle changesets fold into one node: the busy hour still counts all of them.
     const busy = datedHistory([
