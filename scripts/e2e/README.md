@@ -13,6 +13,11 @@ to the dark theme. It fails on any `pageerror` or `console.error`, a view whose 
 saved. Beyond that answer, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
 
+A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
+result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
+seconds on a CI runner while it takes milliseconds locally: a step that doesn't wait passes on a laptop and fails now
+and then on CI.
+
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
 private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFolder`), and Gravatar is off as on a

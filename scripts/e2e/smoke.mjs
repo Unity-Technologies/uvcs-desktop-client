@@ -84,7 +84,8 @@ try {
     await sidebar.getByRole('button', { name: /^studio/ }).click();
     await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
     await main.getByRole('button', { name: 'Project: All projects' }).click();
-    await window.keyboard.type('racing');
+    await window.getByPlaceholder('Find a project').fill('racing');
+    await window.getByText('Racing', { exact: true }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
@@ -126,7 +127,10 @@ try {
     // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
     // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
     await window.keyboard.press('ControlOrMeta+P');
-    await window.keyboard.type('camera');
+    // Enter picks only a result shown: the workspace's paths are read when the dialog first opens, slowly on CI.
+    const goToFile = window.getByRole('dialog', { name: 'Go to file' });
+    await goToFile.locator('input').fill('camera');
+    await goToFile.getByText('camera.cs', { exact: false }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByText('float distance = 8f;').first().waitFor();
     await main.getByText('float distance = 10f;').first().waitFor();
@@ -182,6 +186,7 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Explore a repository', async () => {
     await window.keyboard.press('Escape');
@@ -220,6 +225,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Settings and dark theme', async () => {
     await window.keyboard.press('Escape');
