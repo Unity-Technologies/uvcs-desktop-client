@@ -167,7 +167,9 @@ export function useFileSteps({ keys, current, select, pathOf, settlingOn = null,
     () => fileSteps(keys, current, { select: (key, selected) => latest.current.select(key, selected), pathOf: (key) => latest.current.pathOf(key), settlingOn }, arrival),
     [keys, current, settlingOn, arrival],
   );
-  // The selection moved: what was kept for the files it left goes (a file picked while another loads opens at its top).
+  // The list moved: what was kept for the files it left goes (a file picked while another loads opens at its top), for
+  // every view beside it, those with no diff header too (Incoming's conflicts, an xlink). Only when it moves
+  // (`[current]`): `steps` changes with the keys and the host's settling too, which leave no file behind.
   useEffect(() => steps.listMoved(), [current]);
   return steps;
 }

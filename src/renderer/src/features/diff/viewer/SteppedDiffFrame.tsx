@@ -72,9 +72,10 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   // which keeps the presses for that file's diff or, where it couldn't be read, replays them from file to file.
   const kept = useMemo(() => ({ queue, takes: true }), [queue]);
   const header = useFileOnlyNavigation(frame, { active: arrows.body === null, holder: arrows.own, path, kept });
-  // The selection left a file: the presses kept for it (not for this one, nor for one a step is on its way to) go.
-  // Only as the file asked for changes (`[path]`): that is when the selection leaves one. Other renders leave nothing,
-  // and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
+  // The file shown changed under the same row (an asset's `.meta` toggled in its place): the presses kept for the one
+  // left (not for this one, nor for one a step is on its way to) go; they'd never be taken, and would come back with
+  // it. The list moving is `FileSteps.listMoved`'s. Only when the file asked for changes (`[path]`): other renders leave
+  // nothing, and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;
