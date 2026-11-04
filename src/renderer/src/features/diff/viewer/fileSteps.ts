@@ -15,6 +15,11 @@ export interface FileSteps {
   step: (direction: 1 | -1) => void;
   /** Where the diff of `path` opens, once: after a step to it, else nowhere in particular. */
   takeArrival: (path: string) => Arrival | null;
+  /**
+   * The file a step went to whose diff hasn't taken its arrival yet, while the list is still on it: the diff shown is
+   * still the previous file's (the selection settling, the file read), and a press meanwhile is meant for that file.
+   */
+  steppingTo: () => string | null;
 }
 
 export const FileStepsContext = createContext<FileSteps | null>(null);
@@ -76,6 +81,10 @@ export function fileSteps(
       const at = pending.current?.path === path ? pending.current.at : null;
       if (at) pending.current = null;
       return at;
+    },
+    steppingTo: () => {
+      const path = pending.current?.path ?? null;
+      return path !== null && current !== null && list.pathOf(current) === path ? path : null;
     },
   };
 }

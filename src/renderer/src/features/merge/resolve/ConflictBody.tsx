@@ -88,7 +88,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           <SteppedDiffFrame
             stepsThroughChanges={changeArrows}
             // The merged result is in memory: always read, never another's.
-            requested={{ key: diffContentsKey(file.destination, EMPTY_SOURCE), error: false, hasData: true, isPlaceholderData: false }}
+            requested={{ key: diffContentsKey(file.destination, EMPTY_SOURCE), path: file.path, error: false, hasData: true, isPlaceholderData: false }}
             title={
               <span className={styles.diffTitle} data-tip={labels.destination}>
                 {labels.roles.destination.name} now → after the merge

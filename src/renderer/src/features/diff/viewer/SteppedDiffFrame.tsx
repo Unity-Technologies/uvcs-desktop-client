@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ChangeNavigator } from './ChangeNavigator';
 import { DiffFrameHostContext, headerArrows, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
 import { DiffViewerFrame } from './DiffViewerFrame';
+import { FileStepsContext } from './fileSteps';
 import { StepQueue } from './stepQueue';
 import { useFileOnlyNavigation } from './useFileOnlyNavigation';
 import styles from './SteppedDiffFrame.module.css';
@@ -13,7 +14,11 @@ import styles from './SteppedDiffFrame.module.css';
 type PublishedStore = StoreApi<{ published: PublishedNavigation | null }>;
 
 /** What the frame knows of the file selected: its versions' key (`diffContentsKey`) and how their read stands. */
-export type RequestedDiff = Omit<HeaderState, 'published' | 'requestedKey'> & { key: string };
+export type RequestedDiff = Omit<HeaderState, 'published' | 'requestedKey'> & {
+  key: string;
+  /** Its path, as the list beside it names it: what the presses kept for it are tagged with. */
+  path: string;
+};
 
 interface SteppedDiffFrameProps {
   title?: ReactNode;
@@ -58,9 +63,10 @@ interface HostedNavigatorProps {
 /** The arrows (`headerArrows`): the selected file's diff's, else the header's own, which keep presses for it. */
 function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNavigatorProps) {
   const published = useStore(store, (state) => state.published);
-  const { key, ...read } = requested;
+  const files = useContext(FileStepsContext);
+  const { key, path, ...read } = requested;
   const arrows = headerArrows({ published, requestedKey: key, ...read });
-  const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? (direction) => queue.push(key, direction) : undefined);
+  const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? (direction) => queue.push(files?.steppingTo() ?? path, direction) : undefined);
   // A file that couldn't be read: the presses kept for it were meant for a diff that never came.
   useEffect(() => {
     if (!arrows.body && !arrows.queues) queue.clear();

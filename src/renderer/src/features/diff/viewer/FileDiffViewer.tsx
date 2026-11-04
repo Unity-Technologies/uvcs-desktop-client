@@ -42,6 +42,7 @@ export function FileDiffViewer({ place, original, modified, fileName, title, ide
 
   const requested = {
     key: diffContentsKey(original, modified),
+    path: fileName,
     error: contents.error !== null,
     hasData: contents.data !== undefined,
     isPlaceholderData: contents.isPlaceholderData,

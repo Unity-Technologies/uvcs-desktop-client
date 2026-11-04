@@ -118,9 +118,11 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const changeView = useRef<ChangeView>(null);
   const stepsCome = stepsCanCome(bodyKind, { wholeFile, stepsThroughChanges });
   const steppedDiff = stepsCome ? (diffs.current?.meta ?? null) : null;
-  // Presses made before it opened (the header's, while it was read, then its own) wait in the frame's queue, for it.
-  const kept = useMemo(() => ({ push: (direction: 1 | -1) => host.queue.push(ownKey, direction), take: () => host.queue.take(ownKey) }), [host.queue, ownKey]);
-  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: ownKey === host.requestedKey, noStepsComing: !stepsCome, kept });
+  // Presses kept for this file (the header's, while it was read, then its own until it opened) wait in the frame's
+  // queue; it takes them once opened, while it is the selected file's diff, not a previous one kept on screen.
+  const isSelectedFile = ownKey === host.requestedKey;
+  const kept = useMemo(() => ({ queue: host.queue, takes: isSelectedFile }), [host.queue, isSelectedFile]);
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: isSelectedFile, noStepsComing: !stepsCome, kept });
   const stepsOwn = steppedDiff !== null;
   useLayoutEffect(() => host.publish({ navigation, stepsOwn, key: ownKey }));
   useLayoutEffect(() => () => host.publish(null), [host.publish]);

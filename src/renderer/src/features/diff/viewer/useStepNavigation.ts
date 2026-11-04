@@ -5,7 +5,7 @@ import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
-import { StepQueue, type StepDirection } from './stepQueue';
+import { pressTarget, StepQueue } from './stepQueue';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
 const ARRIVAL_MAX_FRAMES = 60;
@@ -79,16 +79,18 @@ interface StepNavigationOptions {
    */
   goes?: (direction: 1 | -1) => void;
   /**
-   * Where presses made before the view opened at its arrival wait, taken once it did: the frame's (`StepQueue`, shared
-   * with its header's presses while the file was read); a queue of its own by default.
+   * Where presses kept for a file wait (`pressTarget`: before the view opened at its arrival, or while a step to another
+   * file is in flight): the frame's (`StepQueue`, shared with its header's presses while the file is read), from which
+   * this view takes its own once opened while it `takes` (it's the selected file's diff, not a previous one still on
+   * screen); a queue of its own by default.
    */
   kept?: KeptPresses;
 }
 
-/** A queue of presses, bound to the view whose they are (`StepQueue` with that view's key). */
+/** A queue of presses tagged with the file they're for, and whether this view takes its own from it. */
 export interface KeptPresses {
-  push: (direction: StepDirection) => void;
-  take: () => StepDirection | undefined;
+  queue: StepQueue;
+  takes: boolean;
 }
 
 /**
@@ -134,13 +136,13 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     setCurrent(target);
     latestView.current.reveal(target);
   };
-  // Presses made before the view opened at its arrival wait for it: else ↓ just after stepping to a file would move from
-  // the top, and the arrival move there again, the press lost.
+  // Presses meant for a file whose view hasn't opened at its arrival wait for it (`pressTarget`), tagged with that file.
   const ownKept = useOwnKeptPresses();
   const keptPresses = kept ?? ownKept;
   const go = (direction: 1 | -1): void => {
     if (goes) return goes(direction);
-    if (opens && !opened) return keptPresses.push(direction);
+    const target = pressTarget({ opens, opened, steppingTo: files?.steppingTo() ?? null, path });
+    if (target.kind === 'keep') return keptPresses.queue.push(target.path, direction);
     const outcome = pressStep(position, direction, files, readAbove);
     if (typeof outcome === 'number') moveTo(outcome);
   };
@@ -181,10 +183,11 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     return () => cancelAnimationFrame(frame);
   }, [files, path, steps.length, opens, opened, noStepsComing]);
 
-  // Once opened, the presses kept meanwhile, one per render: each moves from where the last one left it.
+  // Once opened, the presses kept for this file, one per render, each moving from where the last one left it; not by a
+  // view kept on screen while another file is read, which isn't the one they're for.
   useEffect(() => {
-    if (!opened) return;
-    const press = keptPresses.take();
+    if (!opened || !keptPresses.takes) return;
+    const press = keptPresses.queue.take(path);
     if (press !== undefined) latestGo.current(press);
   });
 
@@ -222,19 +225,17 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
  */
 export const STEP_FRAME = { 'data-step-frame': '' } as const;
 
+/** A view's own queue of kept presses, where no frame shares one (the merge page's conflicts). */
+function useOwnKeptPresses(): KeptPresses {
+  const [own] = useState<KeptPresses>(() => ({ queue: new StepQueue(), takes: true }));
+  return own;
+}
+
 /**
  * Whether a key pressed on `target` moves through the view in `frame`: pressed in it or in what holds it
  * (`STEP_FRAME`), in the list beside it, or with nothing focused (a header button disabled at the last step lets go
  * of the focus).
  */
-/** A view's own queue of presses kept until it opened, where no frame shares one (the merge page's conflicts). */
-function useOwnKeptPresses(): KeptPresses {
-  const [own] = useState<KeptPresses>(() => {
-    const queue = new StepQueue();
-    return { push: (direction) => queue.push('own', direction), take: () => queue.take('own') };
-  });
-  return own;
-}
 
 function takesKeysFrom(frame: HTMLElement | null, target: EventTarget | null): boolean {
   if (!frame || !(target instanceof Element) || target.closest('input, textarea, select, [contenteditable="true"]')) return false;
