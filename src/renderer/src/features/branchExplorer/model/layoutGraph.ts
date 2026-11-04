@@ -168,4 +168,3 @@ function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], colum
     ];
   });
 }
-

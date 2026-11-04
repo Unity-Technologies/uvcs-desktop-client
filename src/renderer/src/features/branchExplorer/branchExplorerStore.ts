@@ -46,7 +46,6 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
   setPins: (repository: string, pins: BranchPins) => void;
 }
 
-
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
     (set) => ({
