@@ -14,8 +14,8 @@ release-notes skill (.claude/skills/release-notes). One note:
 
 ![What it shows](./shot.png)
 
-The picture of a visible change, cropped to the feature, attached with `gh pr create --attach ./shot.png` so it lands
-here; a change nobody can see has none.
+The picture is optional: the skill's "Pictures and GIFs" decides whether the note gets one, a still or a GIF, and
+which part of the screen. When it does, it goes here, attached with `gh pr create --attach ./shot.png`.
 
 Or, when users have nothing to read: "None: <why>". The Release note check fails the pull request otherwise.
 -->
@@ -26,8 +26,8 @@ What the user sees or the app does today (for performance work, the numbers and 
 
 ## Behavior with this pull request
 
-What the user can now do or see, and the numbers after. A wider shot for reviewers goes here only when the release
-note's picture can't show what changed, referenced and attached the same way.
+What the user can now do or see, and the numbers after. A visible change whose release note has no picture, or one
+that can't show what changed, shows its screenshot here, referenced in the body and attached with `--attach`.
 
 ## How it was implemented
 

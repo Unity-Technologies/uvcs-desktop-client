@@ -84,9 +84,9 @@ note (`### New:`, `Improved:` or `Fixed:`, a title, then a short Markdown descri
 nothing to read. The `release-notes` skill (`.claude/skills/release-notes`) says how to write one: for users, not
 reviewers, in the app's words. The Release note workflow (`.github/workflows/release-note.yml`) reads the section with
 `readReleaseNote` (`scripts/build/releaseNote.ts`) on every change to the pull request and fails it when it can't,
-or when the body's pictures sit where What's New never shows them: elsewhere with none in the note, or after the
-closing line, where `gh --attach` appends a file the body doesn't reference (`misplacedPicture`, through
-`checkPullRequestBody`). The Release workflow reads merged bodies with `readReleaseNote` alone. Dependabot's pull
+or when a picture sits after the closing line or in "Fixed issues", where `gh --attach` appends a file the body
+doesn't reference (`misplacedPicture`, through `checkPullRequestBody`). It checks where pictures are, never whether
+there is one: the skill decides that. The Release workflow reads merged bodies with `readReleaseNote` alone. Dependabot's pull
 requests are left out. It runs apart from CI so that editing the description checks the note again
 without building on every OS.
 
