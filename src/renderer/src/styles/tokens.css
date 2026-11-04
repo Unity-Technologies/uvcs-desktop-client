@@ -183,6 +183,9 @@
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
+  /* The indent guides of a tree of files: a hairline under each chevron, and the one holding the selection stronger. */
+  --tree-guide: var(--border-subtle);
+  --tree-guide-active: var(--border-strong);
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;
@@ -292,6 +295,8 @@
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
+  --tree-guide: var(--border-subtle);
+  --tree-guide-active: var(--border-strong);
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;
