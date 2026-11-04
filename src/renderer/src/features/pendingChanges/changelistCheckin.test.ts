@@ -353,6 +353,14 @@ describe('checking in or shelving the default changelist', () => {
     expect(selection([edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
   });
 
+  it('holds while the user unchecks every file: its readied changes are still pending', () => {
+    prepare(null);
+
+    useCheckinDraftStore.getState().setIncluded(ws, allChanges.map((candidate) => candidate.path), false);
+
+    expect(selection().included).toEqual([]);
+  });
+
   it('ends once its readied changes moved to a user changelist', () => {
     prepare(null);
 
