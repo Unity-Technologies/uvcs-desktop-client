@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { formatShortcut } from '../lib/shortcuts';
 import { hotkey } from '../lib/shortcutRegistry';
 import { Button } from '../ui/Button';
-import { expandDiffWords } from './diffExpansion';
+import { EXPAND_DIFF_NAME, expandDiffWords } from './diffExpansion';
 import { registerExpandableDiff, toggleDiffExpanded, useDiffExpanded } from './diffExpansionStore';
 
 /**
@@ -21,7 +21,7 @@ export function ExpandDiffButton() {
       size="small"
       variant={expanded ? 'secondary' : 'ghost'}
       icon={expanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-      aria-label={words.label}
+      aria-label={EXPAND_DIFF_NAME}
       aria-pressed={expanded}
       data-tip={words.label}
       data-tip-sub={words.hint}

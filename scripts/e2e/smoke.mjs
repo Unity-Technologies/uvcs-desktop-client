@@ -129,7 +129,7 @@ try {
     await sidebar.waitFor();
     await window.keyboard.press('ControlOrMeta+Shift+E');
     await sidebar.waitFor({ state: 'hidden' });
-    await main.getByRole('button', { name: 'Collapse diff' }).click();
+    await main.getByRole('button', { name: 'Expand diff', pressed: true }).click();
     await sidebar.waitFor();
   });
   await step('A revision read from the disk', async () => {
