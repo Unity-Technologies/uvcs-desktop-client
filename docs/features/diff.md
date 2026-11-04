@@ -357,9 +357,13 @@ so: "Full screen" names the OS's.
   past its last change (`FileStepsContext`: Changes, a diff page, a code review), it still does, so a whole changeset is
   reviewed expanded. Incoming, History, Files and Browse repository step through the file shown only, as they do
   collapsed.
-- **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was the Expand button,
-  and the code is the window's main focus while expanded (`useExpandedDiffFocus`): focus that falls to the page (a menu
-  or dialog closed, the editor left with Esc) comes back to it.
+- **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was a button (the Expand
+  button, a change arrow clicked before), and the code is the window's main focus while expanded
+  (`useExpandedDiffFocus`): focus that falls to the page (a menu or dialog closed, the editor left with Esc) comes back
+  to it. Collapsing from the keyboard (Esc, the shortcut, the palette, the menu, Enter on the button) keeps it where it
+  still shows, normally the code, so ⌥↓ and the arrows work at once; from nowhere (a step to another file left it on
+  the page) or a button, the code takes it (`focusGoesToDiffOnCollapse`), never the list it had before. A click on the
+  button leaves it there. The app moving focus draws no ring (`focusAs`, ARCHITECTURE.md "Focus").
 - **Keys of what is out of sight** never act on it unseen (`shortcutWhileExpanded`, `runWhileDiffExpanded`): ⌘↩ gives
   the window back, then checks in (an empty summary takes the caret); Toggle Sidebar only gives the window back, the
   sidebar showing as it was; Go to file acts, the file picked showing in the diff, as choosing another file does;

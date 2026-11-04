@@ -1101,7 +1101,11 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
   the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
-  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
+  ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
+  once a key was pressed, and a clicked button at the next key, so focus the app moves on its own (Expand Diff giving
+  the code the keyboard: `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
+  `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab.
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
