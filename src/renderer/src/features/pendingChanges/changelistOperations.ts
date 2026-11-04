@@ -27,9 +27,11 @@ export async function moveToChangelist(workspacePath: string, changelist: string
   if (moved) toast.success(`Moved ${pluralize(changes.length, 'change')} to ${changelist ?? DEFAULT_CHANGELIST_LABEL}`);
 }
 
-export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[]): Promise<void> {
+/** `beforeMove` runs once a name is given, before the changelist is created: cancelling leaves everything as it was. */
+export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[], beforeMove: () => void = () => {}): Promise<void> {
   const name = await prompt({ title: 'New changelist', label: 'Name', confirmLabel: 'Create' });
   if (!name) return;
+  beforeMove();
 
   const created = await runVoidAction(
     workspacePlace(workspacePath),

@@ -16,8 +16,8 @@ import {
 import { undoChanges, undoChangesLabel } from './pendingChangeOperations';
 
 /**
- * "Move to changelist" for the selected changes; null when none of them can be moved. `beforeMove` runs as one is
- * picked, before anything moves.
+ * "Move to changelist" for the selected changes; null when none of them can be moved. `beforeMove` runs once the
+ * changelist is known (picked, or a new one named), before anything moves.
  */
 export function moveToChangelistSubmenu(
   workspacePath: string,
@@ -42,10 +42,7 @@ export function moveToChangelistSubmenu(
         id: 'changelist.new',
         label: 'New changelist…',
         icon: ListPlus,
-        run: () => {
-          beforeMove();
-          void moveToNewChangelist(workspacePath, movable);
-        },
+        run: () => void moveToNewChangelist(workspacePath, movable, beforeMove),
       },
       SEPARATOR,
       {
