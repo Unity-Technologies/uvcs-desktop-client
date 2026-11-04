@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isStatusGroup, statusGroup, statusGroupsOf, withStatusGroups } from './statusGroups';
+import { fileListGroupsOf, isStatusGroup, statusGroup, statusGroupsOf, withStatusGroups } from './statusGroups';
 import type { StatusTone } from './StatusBadge';
 
 interface File {
@@ -61,5 +61,25 @@ describe('withStatusGroups', () => {
     const [conflicts] = withStatusGroups(content, facts);
     expect(conflicts!.subgroups!.map((group) => group.key)).toEqual(['status:group:conflicts:changed', 'status:group:conflicts:deleted']);
     expect(conflicts!.sorted).toHaveLength(2);
+  });
+});
+
+describe('fileListGroupsOf', () => {
+  const files = [file('a.ts', 'added'), file('b.ts', 'changed')];
+  const ownGroups = { groups: [{ key: 'group:changes', label: 'Changes to apply', group: statusGroup('changed'), sorted: files }] };
+  const facts = { toneOf, statusGroup };
+
+  it('shows a list without groups of its own in status groups, or without groups', () => {
+    expect(fileListGroupsOf({ sorted: files }, true, facts)!.map((group) => group.label)).toEqual(['Changed', 'Added']);
+    expect(fileListGroupsOf({ sorted: files }, false, facts)).toBeNull();
+  });
+
+  it("puts status groups inside a list's own groups (Incoming's), or keeps its own alone", () => {
+    expect(fileListGroupsOf(ownGroups, true, facts)![0]!.subgroups!.map((group) => group.label)).toEqual(['Changed', 'Added']);
+    expect(fileListGroupsOf(ownGroups, false, facts)).toBe(ownGroups.groups);
+  });
+
+  it('keeps the own groups of a list that offers no status groups (the merge page), whatever is chosen', () => {
+    expect(fileListGroupsOf(ownGroups, true, { toneOf })).toBe(ownGroups.groups);
   });
 });

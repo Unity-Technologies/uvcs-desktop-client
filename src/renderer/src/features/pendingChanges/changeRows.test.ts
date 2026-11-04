@@ -202,6 +202,19 @@ describe('changeTreeArrowRows', () => {
   });
 });
 
+describe('changeTreeArrowRows in groups inside groups', () => {
+  it('steps from a file out to its status group, closes that, then steps out to its changelist', () => {
+    const rows = buildChangeRows({ ...base, changes: [change('src/a.ts', ['changed'])], layout: 'tree', grouping: 'changelist', groupByStatus: true });
+    const at = (key: string) => rows.findIndex((row) => row.key === key);
+    expect(rows.map((row) => row.key)).toEqual(['changelist:', 'status:changelist::changed', 'folder:status:changelist::changed:src', 'change:src/a.ts']);
+    const arrowRows = changeTreeArrowRows(rows);
+    expect(treeArrowMove(arrowRows, at('change:src/a.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -1 });
+    expect(treeArrowMove(arrowRows, at('status:changelist::changed'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    const closed = collapseRows(layoutChangeRows({ ...base, sorted: [change('src/a.ts', ['changed'])], layout: 'tree', grouping: 'changelist', groupByStatus: true }), new Set(['status:changelist::changed']));
+    expect(treeArrowMove(changeTreeArrowRows(closed), 1, 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -1 });
+  });
+});
+
 describe('menuTargetOf', () => {
   const rows = buildChangeRows({
     ...base,

@@ -70,3 +70,13 @@ export function withStatusGroups<T, G>(content: FileListContent<T, G>, { toneOf,
   if (!('groups' in content)) return byStatus(content.sorted, 'all');
   return content.groups.map((group) => ({ ...group, subgroups: byStatus(group.sorted, group.key) }));
 }
+
+/**
+ * The groups a list shows: its own, with a group per status inside each when grouping by status (`withStatusGroups`);
+ * the status groups alone for a list without groups of its own; null for a list shown without groups. A list that
+ * offers no status groups (`statusGroup` undefined: the merge page) keeps its own groups whatever is chosen.
+ */
+export function fileListGroupsOf<T, G>(content: FileListContent<T, G>, groupByStatus: boolean, facts: GroupedFileListFacts<T, G>): readonly TreeGroup<T, G>[] | null {
+  if (groupByStatus && facts.statusGroup) return withStatusGroups(content, facts);
+  return 'groups' in content ? content.groups : null;
+}

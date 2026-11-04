@@ -5,7 +5,7 @@ import { useCollapsedFolders } from './collapsedFoldersStore';
 import { fileListOrder } from './fileListOrder';
 import { useFileListViewStore } from './fileListViewStore';
 import { useFileTreeFolding, type FileTreeFolding } from './fileTreeFolding';
-import { withStatusGroups, type FileListContent, type GroupedFileListFacts } from './statusGroups';
+import { fileListGroupsOf, type FileListContent, type GroupedFileListFacts } from './statusGroups';
 import { useOpenToSelected } from './useOpenToSelected';
 
 export type { FileListContent, GroupedFileListFacts } from './statusGroups';
@@ -38,13 +38,12 @@ export function useGroupedFileTree<T extends { path: string }, G>(
   const { layout, sort, groupByStatus } = useFileListViewStore();
   const { collapsed, toggleCollapsed, openFolders, closeOnly } = useCollapsedFolders(scope);
   const tree = layout === 'tree';
-  const byStatus = groupByStatus && facts.statusGroup !== undefined;
   const laidOut = useMemo<GroupedTreeRow<T, G>[]>(() => {
     const order = fileListOrder(sort, facts);
-    const groups = byStatus ? withStatusGroups(content, facts) : 'groups' in content ? content.groups : null;
+    const groups = fileListGroupsOf(content, groupByStatus, facts);
     if (groups) return layoutGroupedTree(groups, keyOf, tree, order);
-    return layoutPathItems((content as { sorted: T[] }).sorted, keyOf, { tree, folderScope: 'all', order });
-  }, [content, keyOf, tree, sort, byStatus, facts]);
+    return 'sorted' in content ? layoutPathItems(content.sorted, keyOf, { tree, folderScope: 'all', order }) : [];
+  }, [content, keyOf, tree, sort, groupByStatus, facts]);
   const rows = useMemo(() => collapseGroupedTreeRows(laidOut, collapsed), [laidOut, collapsed]);
   useOpenToSelected(laidOut, keyOf, groupedRowsHolding, selectedKey, openFolders);
   const rowKeyOf = useCallback((itemKey: string) => rowKeyShowing(laidOut, itemKey, keyOf), [laidOut, keyOf]);
