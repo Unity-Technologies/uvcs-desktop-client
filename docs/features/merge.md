@@ -367,7 +367,7 @@ folder added on both sides, a file moved on one side and deleted on the other).
 ### Stepping through conflicts
 
 A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
-with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at the end of its
+with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and "2 of 3" then its arrows at the end of its
 view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
 segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
 top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
