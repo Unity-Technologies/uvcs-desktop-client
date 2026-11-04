@@ -38,55 +38,105 @@ export interface PathTreeInput<T extends { path: string }> {
 /**
  * The rows of a tree of files: each folder (folders that only hold the next one sharing a row), then what it holds.
  * A folder that is an item itself and holds others is their folder's row, not one more row beside it. Every row, as if
- * nothing was collapsed: opening or closing a folder only leaves rows out (`collapseTreeRows`). In n·log n work: tens
- * of thousands of items lay out on every change of the list.
+ * nothing was collapsed: opening or closing a folder only leaves rows out (`collapseTreeRows`).
+ *
+ * One pass over the items, in work that grows with the items and the folders, not with how deep they sit: in
+ * `comparePaths` order a folder's items are one run of the list, so the rows open around an item are those it shares
+ * with the one before, a folder row holds its run (`ItemRange`) instead of a copy, and only the folders shown are cut
+ * out of a path. Each key typed in a filter lays out a tree of up to a million items again.
  */
 export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, folderScope }: PathTreeInput<T>): PathTreeRow<T>[] {
   const rows: PathTreeRow<T>[] = [];
-  const byPath = new Map(sorted.map((item) => [item.path, item]));
-  // Each item's path and the folders above it ("a", "a/b", "a/b/c.txt"), built once: every level is looked up by them.
-  const prefixes = sorted.map((item) => pathPrefixes(item.path));
-  const folders = new Set<string>();
-  for (const paths of prefixes) for (let level = 0; level < paths.length - 1; level++) folders.add(paths[level]!);
-  // The row showing each folder: folders that only hold the next one share its row.
-  const folderRows = new Map<string, TreeFolderRow<T>>();
-  // The level of the innermost folder each row shows.
-  const lastLevels = new Map<TreeFolderRow<T>, number>();
-
+  // The folder rows holding the item at hand, outermost first: a row holds every item until its run ends.
+  const open: TreeFolderRow<T>[] = [];
   sorted.forEach((item, index) => {
-    const paths = prefixes[index]!;
-    const pathAt = (level: number): string => paths[level]!;
-    const isFolder = folders.has(item.path);
-    const folderCount = isFolder ? paths.length : paths.length - 1;
-    let depth = 0;
-    for (let level = 0; level < folderCount; level++) {
-      let row = folderRows.get(pathAt(level));
-      if (!row) {
-        const held: ItemRange<T> = { list: sorted, start: index, end: folderEnd(sorted, index, pathAt(level)) };
-        let last = level;
-        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(held, pathAt(last + 1))) last++;
-        const path = pathAt(last);
-        row = {
-          type: 'folder',
-          key: `folder:${folderScope}:${path}`,
-          path,
-          name: level === 0 ? path : path.slice(pathAt(level - 1).length + 1),
-          depth,
-          item: byPath.get(path),
-          held,
-          collapsed: false,
-        };
-        rows.push(row);
-        lastLevels.set(row, last);
-        for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
-      }
-      level = lastLevels.get(row)!;
-      depth = row.depth + 1;
+    while (open.length > 0 && open.at(-1)!.held.end <= index) open.pop();
+    const holdsOthers = isInFolder(sorted[index + 1]?.path, item.path);
+    for (let folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers); folderEnd !== -1; folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers)) {
+      const row = folderRowAt({ sorted, index, folderEnd, holdsOthers, parent: open.at(-1), folderScope });
+      rows.push(row);
+      open.push(row);
     }
-
-    if (!isFolder) rows.push({ type: 'file', key: keyOf(item), item, depth });
+    if (!holdsOthers) rows.push({ type: 'file', key: keyOf(item), item, depth: open.length });
   });
   return rows;
+}
+
+interface FolderPlace<T> {
+  sorted: readonly T[];
+  /** The first item in the folder: the folder itself when it is an item. */
+  index: number;
+  /** Where the folder's name ends in that item's path. */
+  folderEnd: number;
+  /** Whether that item is a folder holding the items after it. */
+  holdsOthers: boolean;
+  /** The row of the folder holding this one, if any. */
+  parent: TreeFolderRow<T> | undefined;
+  folderScope: string;
+}
+
+/**
+ * The row of the folder whose name ends at `folderEnd` in the path of the item at `index`, with the folders below it
+ * that hold only the next one, down to one that is an item itself (it keeps its status).
+ */
+function folderRowAt<T extends { path: string }>({ sorted, index, folderEnd, holdsOthers, parent, folderScope }: FolderPlace<T>): TreeFolderRow<T> {
+  const item = sorted[index]!;
+  const folder = item.path.slice(0, folderEnd);
+  const held: ItemRange<T> = { list: sorted, start: index, end: runEnd(sorted, index, folder, parent?.held.end ?? sorted.length) };
+  // Sorted by `comparePaths`, the first item and the last tell whether everything in the folder is in the next one.
+  const lastPath = sorted[held.end - 1]!.path;
+  let shownEnd = folderEnd;
+  while (shownEnd < item.path.length) {
+    const nextEnd = nameEnd(item.path, shownEnd + 1, holdsOthers);
+    if (nextEnd === -1 || !isInFolder(lastPath, item.path.slice(0, nextEnd))) break;
+    shownEnd = nextEnd;
+  }
+  const path = shownEnd === folderEnd ? folder : item.path.slice(0, shownEnd);
+  return {
+    type: 'folder',
+    key: `folder:${folderScope}:${path}`,
+    path,
+    name: parent ? path.slice(parent.path.length + 1) : path,
+    depth: parent ? parent.depth + 1 : 0,
+    item: shownEnd === item.path.length ? item : undefined,
+    held,
+    collapsed: false,
+  };
+}
+
+/** Where the next folder of `path` below the `parent` row ends; -1 when none is left. */
+function nextFolderEnd<T>(path: string, parent: TreeFolderRow<T> | undefined, holdsOthers: boolean): number {
+  return nameEnd(path, parent ? parent.path.length + 1 : 0, holdsOthers);
+}
+
+/** Where the name starting at `from` in `path` ends, if it is a folder's: at a "/", or at the path's end when it holds others. */
+function nameEnd(path: string, from: number, holdsOthers: boolean): number {
+  const slash = path.indexOf('/', from);
+  if (slash !== -1) return slash;
+  return holdsOthers && from <= path.length ? path.length : -1;
+}
+
+/** Whether `path` is `folder` or in it, telling without making a string. */
+function isInFolder(path: string | undefined, folder: string): boolean {
+  if (path === undefined || !path.startsWith(folder)) return false;
+  return path.length === folder.length || path.charCodeAt(folder.length) === SLASH;
+}
+
+const SLASH = '/'.charCodeAt(0);
+
+/**
+ * Where the items in `folder` end, the first of them at `first`, before `limit` (where the folder holding it ends): in
+ * `comparePaths` order they are one run, so its end is found by halves.
+ */
+function runEnd<T extends { path: string }>(sorted: readonly T[], first: number, folder: string, limit: number): number {
+  let low = first + 1;
+  let high = limit;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (isInFolder(sorted[middle]!.path, folder)) low = middle + 1;
+    else high = middle;
+  }
+  return low;
 }
 
 /** The rows of a flat list: every item at depth 0. */
@@ -226,28 +276,6 @@ export function firstFilesOf<T>(rows: PathTreeRow<T>[], limit: number): { rows: 
   const unlistedFiles = rows.slice(end).filter((row) => row.type === 'file').length;
   while (end > 0 && rows[end - 1]!.type === 'folder') end--;
   return { rows: rows.slice(0, end), unlistedFiles };
-}
-
-/** Whether all a folder holds is `child`, one of its folders, or in it. */
-function holdsOnly<T extends { path: string }>({ list, start, end }: ItemRange<T>, child: string): boolean {
-  // Sorted by `comparePaths`, the first and the last item tell for all of them.
-  return [list[start]!, list[end - 1]!].every((item) => item.path === child || item.path.startsWith(`${child}/`));
-}
-
-/** Where the items in a folder end, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
-function folderEnd<T extends { path: string }>(sorted: readonly T[], first: number, folder: string): number {
-  const inside = `${folder}/`;
-  let end = first;
-  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(inside))) end++;
-  return end;
-}
-
-/** "a/b/c.txt" is in "a" and "a/b": ["a", "a/b", "a/b/c.txt"]. */
-function pathPrefixes(path: string): string[] {
-  const prefixes: string[] = [];
-  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) prefixes.push(path.slice(0, end));
-  prefixes.push(path);
-  return prefixes;
 }
 
 /**
