@@ -94,6 +94,57 @@ export function layoutPathList<T>(items: T[], keyOf: (item: T) => string): TreeF
 }
 
 /**
+ * How a list orders its items when not by path: two items compared, ties left as they come (sorting is stable, and
+ * the items come in `comparePaths` order, so ties stay in path order). Undefined keeps the path order.
+ */
+export type ItemOrder<T> = (a: T, b: T) => number;
+
+interface PathItemsLayout<T> {
+  tree: boolean;
+  /** Tells the folder rows of one tree from another's on the same list (`PathTreeInput.folderScope`). */
+  folderScope: string;
+  order?: ItemOrder<T>;
+}
+
+/**
+ * The rows of `sorted` (in `comparePaths` order) as a list or a tree, in `order`: a list sorts every item by it; a
+ * tree keeps its folders in path order, first, and sorts the files of each folder by it after them
+ * (`orderTreeRows`). Without an order, the path order of either.
+ */
+export function layoutPathItems<T extends { path: string }>(sorted: T[], keyOf: (item: T) => string, { tree, folderScope, order }: PathItemsLayout<T>): PathTreeRow<T>[] {
+  if (!tree) return layoutPathList(order ? [...sorted].sort(order) : sorted, keyOf);
+  const rows = layoutPathTree({ sorted, keyOf, folderScope });
+  return order ? orderTreeRows(rows, order) : rows;
+}
+
+/**
+ * A tree's rows (`layoutPathTree`) with each folder's rows in `order`: its folders first, in the order they came
+ * (by path), each with what it holds, then its files sorted. A sort by status or by date is about the files: folders
+ * keep their place, as a file browser's do.
+ */
+export function orderTreeRows<T>(rows: readonly PathTreeRow<T>[], order: ItemOrder<T>): PathTreeRow<T>[] {
+  const ordered: PathTreeRow<T>[] = [];
+  let next = 0;
+  // The rows from `next` on that sit at `depth` or deeper: one folder's contents, ordered into `ordered`.
+  const orderLevel = (depth: number): void => {
+    const files: TreeFileRow<T>[] = [];
+    while (next < rows.length && rows[next]!.depth >= depth) {
+      const row = rows[next++]!;
+      if (row.type === 'file') {
+        files.push(row);
+      } else {
+        ordered.push(row);
+        orderLevel(depth + 1);
+      }
+    }
+    files.sort((a, b) => order(a.item, b.item));
+    for (const file of files) ordered.push(file);
+  };
+  orderLevel(0);
+  return ordered;
+}
+
+/**
  * The rows but for what collapsed rows hold: the rows after a collapsed one at a deeper `levelOf` (its depth, unless
  * the list has rows of its own above the tree's, e.g. changelists).
  */

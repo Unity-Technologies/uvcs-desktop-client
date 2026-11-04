@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathItems, layoutPathList, layoutPathTree, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
 
 interface Item {
   path: string;
@@ -98,6 +98,41 @@ describe('layoutPathList', () => {
     expect(layoutPathList(sortedItems(['b/x.ts', 'a.ts']), keyOf).map((row) => [row.key, row.depth])).toEqual([
       ['a.ts', 0],
       ['b/x.ts', 0],
+    ]);
+  });
+});
+
+describe('layoutPathItems', () => {
+  // By the file's name, last letter first: an order the path order never gives.
+  const byLastLetter = (a: { path: string }, b: { path: string }): number => a.path.at(-1)!.localeCompare(b.path.at(-1)!);
+  const keys = (rows: PathTreeRow<{ path: string }>[]) => rows.map((row) => (row.type === 'folder' ? `${row.path}/` : row.key));
+
+  it('keeps the path order without an order to follow', () => {
+    const sorted = sortedItems(['a/c.ts', 'b.tsx']);
+    expect(keys(layoutPathItems(sorted, keyOf, { tree: false, folderScope: 'all' }))).toEqual(['a/c.ts', 'b.tsx']);
+    expect(keys(layoutPathItems(sorted, keyOf, { tree: true, folderScope: 'all' }))).toEqual(['a/', 'a/c.ts', 'b.tsx']);
+  });
+
+  it('sorts every item of a list, keeping the path order between items the order ties', () => {
+    const rows = layoutPathItems(sortedItems(['z/q.tsx', 'a/b.ts', 'm.tsx', 'c.ts']), keyOf, { tree: false, folderScope: 'all', order: byLastLetter });
+    expect(keys(rows)).toEqual(['a/b.ts', 'c.ts', 'm.tsx', 'z/q.tsx']);
+  });
+
+  it("sorts each folder's files in a tree, after its folders", () => {
+    const rows = layoutPathItems(sortedItems(['src/b.tsx', 'src/a.ts', 'src/lib/z.ts', 'readme.ts', 'app.tsx']), keyOf, { tree: true, folderScope: 'all', order: byLastLetter });
+    expect(keys(rows)).toEqual(['src/', 'src/lib/', 'src/lib/z.ts', 'src/a.ts', 'src/b.tsx', 'readme.ts', 'app.tsx']);
+  });
+});
+
+describe('orderTreeRows', () => {
+  it('keeps a folder that is an item itself with what it holds', () => {
+    const rows = layoutPathTree({ sorted: sortedItems(['new', 'new/b.ts', 'new/a.ts', 'top.ts']), keyOf, folderScope: 'all' });
+    const ordered = orderTreeRows(rows, (a, b) => b.path.localeCompare(a.path));
+    expect(ordered.map((row) => [row.type, row.type === 'folder' ? row.path : row.key, row.depth])).toEqual([
+      ['folder', 'new', 0],
+      ['file', 'new/b.ts', 1],
+      ['file', 'new/a.ts', 1],
+      ['file', 'top.ts', 0],
     ]);
   });
 });
