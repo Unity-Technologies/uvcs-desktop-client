@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { openingStep, positionLabel } from './changeNavigation';
-import { headerArrows, headerKeepsFor, isSelectedFile } from './diffFrameHost';
+import { openingStep, positionLabel, type ChangePosition } from './changeNavigation';
+import { headerArrows } from './diffFrameHost';
 import { fileSteps, pendingArrival } from './fileSteps';
-import { pressStep, stepGoal } from './stepNavigation';
-import { drainKept, drainsKept, followStep, pressTarget, type PressEffect } from './stepQueue';
+import { applyPress, pressGoal, takesKept, type PressEffect, type PressSpot } from './pressRouting';
+import { drainKept } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
 
 /** Stands for a published navigation: `headerArrows` only asks whose it is. */
 const NAVIGATION = { noun: 'change' } as StepNavigation;
 
+/** The header's own navigation has no steps: it keeps presses or goes from file to file. */
+const NO_STEPS: ChangePosition = { count: 0, current: null, above: 0 };
+
+/** A navigation as the app holds one: where its presses go (`PressSpot`), where it stands, and how it moves. */
+interface Navigator {
+  spot: PressSpot;
+  position: ChangePosition;
+  moveTo: (index: number) => void;
+}
+
 /**
  * Clicking ↓ through a list of files whose diffs are read from the cache (the fast path), as `SteppedDiffFrame` and
- * `LoadedFileDiff` do, through the same decisions: whose the arrows are (`headerArrows`), which file the header keeps
- * a press for (`headerKeepsFor`), where a diff's own goes (`pressTarget`), when a diff takes the presses kept for it
- * (`drainsKept`, `drainKept`: a render coming only where the app's would, a move, a change of the list's selection,
- * the diff opening), and how kept presses follow a step (`followStep`), are replayed from a file that couldn't be read
- * (`replaysKept`) or are dropped when the selection leaves their file (`StepQueue.keepOnly`). A diff page and Incoming ask for the file selected at once;
- * Changes once its selection settled (`settles`). A file with no changes (0) is an image: it opens as it's drawn; a
- * text diff opens at its arrival a frame later (`frame`).
+ * `LoadedFileDiff` do, through the very decisions they take: whose the arrows are (`headerArrows`), where a press goes
+ * and what it does (`pressGoal`, `applyPress`, both on `routePress`), and when a navigation takes the presses kept for
+ * it (`takesKept`, `drainKept`: a render coming only where the app's would, a move, a change of the list's selection,
+ * the diff opening). A diff page and Incoming ask for the file selected at once; Changes once its selection settled
+ * (`settles`). A file with no changes (0) is an image: it opens as it's drawn; a text diff opens at its arrival a frame
+ * later (`frame`).
  */
 class CachedDiffs {
   private listCurrent = '';
@@ -46,11 +55,7 @@ class CachedDiffs {
     return label ? `${this.listCurrent}: ${label}` : this.listCurrent;
   }
 
-  /**
-   * ↓ (1) or ↑ (-1) on the header's arrows, as `SteppedDiffFrame` wires them: the body's navigation once it's the
-   * selected file's, else the header's own, which keeps the press (`headerKeepsFor`) or, where the file couldn't be
-   * read, steps to the file beside it.
-   */
+  /** ↓ (1) or ↑ (-1) on the header's arrows, as `SteppedDiffFrame` shows them: the body's once it's the selected file's, else its own. */
   press(direction: 1 | -1): this {
     this.pressUnrendered(direction);
     return this.renders();
@@ -63,12 +68,10 @@ class CachedDiffs {
   }
 
   private pressUnrendered(direction: 1 | -1): void {
-    const arrows = this.arrows();
-    // A click on an arrow disabled (`stepGoal`: nowhere to go) does nothing.
-    if (this.goal(arrows, direction) === null) return;
-    if (arrows.body) this.bodyGo(direction);
-    else if (arrows.queues) this.queue.push(headerKeepsFor({ steppingTo: this.steps().steppingTo(), requestedPath: this.requested }), direction);
-    else this.steps().step(direction);
+    const navigator = this.arrows().body ? this.bodyNavigator()! : this.headerNavigator();
+    // A click on an arrow disabled (nowhere to go) does nothing.
+    if (pressGoal(navigator.spot, navigator.position, direction, this.steps()) === null) return;
+    this.go(navigator, direction);
   }
 
   /** A file picked in the list: a diff page and Incoming ask for it as they render next. */
@@ -131,10 +134,7 @@ class CachedDiffs {
     this.rendersDue = true;
   }
 
-  /**
-   * Each render: the header replays as file steps the presses kept for a file that couldn't be read; the diff takes
-   * the presses kept for it, once it may (`drainKept`).
-   */
+  /** Each render: the header's own navigation and the diff's each take the presses kept for them, if they may. */
   private renders(): this {
     while (this.rendersDue) {
       this.rendersDue = false;
@@ -146,38 +146,39 @@ class CachedDiffs {
         this.requestDue = false;
         this.request(this.listCurrent);
       }
-      const failed = this.requested;
-      if (this.arrows().replaysKept) drainKept(this.queue, failed, (direction) => followStep(this.queue, failed, this.steps().step(direction)));
-      const body = this.body;
-      if (!body || !drainsKept({ opened: body.opened, selected: isSelectedFile(body.path, this.requested) })) continue;
-      drainKept(this.queue, body.path, (direction) => this.bodyGo(direction));
+      this.drain(this.headerNavigator(), true);
+      const body = this.bodyNavigator();
+      if (body) this.drain(body, body.spot.path === this.requested);
     }
     return this;
   }
 
-  /** The diff's own go: kept for the file it's for, else a step, the presses left for it following a step to a file. */
-  private bodyGo(direction: 1 | -1): PressEffect {
-    const body = this.body!;
-    const target = pressTarget({ opens: true, opened: body.opened, steppingTo: this.steps().steppingTo(), path: body.path });
-    if (target.kind === 'keep') {
-      this.queue.push(target.path, direction);
-      return 'kept';
-    }
-    const outcome = pressStep({ count: this.files[body.path]!, current: body.current, above: 0 }, direction, this.steps(), () => 0);
-    if (typeof outcome !== 'number') return followStep(this.queue, body.path, outcome?.file ?? null);
-    body.current = outcome;
-    this.rendersDue = true;
-    return 'moved';
+  private drain(navigator: Navigator, selected: boolean): void {
+    if (!takesKept(navigator.spot.holder, { opened: navigator.spot.opened, selected })) return;
+    drainKept(this.queue, navigator.spot.path, (direction) => this.go(navigator, direction));
   }
 
-  /** Where an arrow goes, as its navigation says (`StepNavigation.goesTo`): the body's, else the header's own. */
-  private goal(arrows: ReturnType<CachedDiffs['arrows']>, direction: 1 | -1) {
+  private go(navigator: Navigator, direction: 1 | -1): PressEffect {
+    return applyPress(direction, navigator.spot, { position: navigator.position, files: this.steps(), queue: this.queue, readAbove: () => 0, moveTo: navigator.moveTo });
+  }
+
+  /** The diff's own navigation (`LoadedFileDiff`), while one is drawn. */
+  private bodyNavigator(): Navigator | null {
     const body = this.body;
-    if (arrows.body && body) {
-      const target = pressTarget({ opens: true, opened: body.opened, steppingTo: this.steps().steppingTo(), path: body.path });
-      return stepGoal({ count: this.files[body.path]!, current: body.current, above: 0 }, direction, this.steps(), target.kind === 'keep');
-    }
-    return stepGoal({ count: 0, current: null, above: 0 }, direction, this.steps(), arrows.queues);
+    if (!body) return null;
+    return {
+      spot: { holder: 'view', path: body.path, opened: body.opened, steppingTo: this.steps().steppingTo() },
+      position: { count: this.files[body.path]!, current: body.current, above: 0 },
+      moveTo: (index) => {
+        body.current = index;
+        this.rendersDue = true;
+      },
+    };
+  }
+
+  /** The header's own navigation (`SteppedDiffFrame`): waiting for the selected file's diff, or stepless where it failed. */
+  private headerNavigator(): Navigator {
+    return { spot: { holder: this.arrows().own, path: this.requested, opened: false, steppingTo: this.steps().steppingTo() }, position: NO_STEPS, moveTo: () => undefined };
   }
 
   private steps() {

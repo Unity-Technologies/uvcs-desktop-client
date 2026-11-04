@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { adjacentKey, fileSteps, pendingArrival } from './fileSteps';
-import { followStep } from './stepQueue';
 
 describe('adjacentKey', () => {
   const keys = ['a', 'b', 'c'];
@@ -98,7 +97,7 @@ describe('fileSteps', () => {
     const path = (key: string) => `src/${key}.ts`;
     const diffs = fileSteps(['a', 'b'], 'a', { select: () => undefined, pathOf: path }, pending);
     diffs.kept.push('src/a.ts', -1);
-    followStep(diffs.kept, 'src/a.ts', diffs.step(1));
+    diffs.kept.retag('src/a.ts', diffs.step(1)!);
     // The conflict's view, with no diff header of its own, takes them from its list.
     const conflicts = fileSteps(['b'], 'b', { select: () => undefined, pathOf: path }, pending);
     expect([conflicts.kept.take('src/b.ts'), conflicts.kept.take('src/b.ts')]).toEqual([-1, undefined]);

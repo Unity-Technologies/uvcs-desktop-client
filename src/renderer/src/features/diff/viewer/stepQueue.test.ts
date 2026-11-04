@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { drainKept, drainsKept, followStep, keptPressesOf, pressTarget, StepQueue, type PressEffect } from './stepQueue';
+import type { PressEffect } from './pressRouting';
+import { drainKept, StepQueue } from './stepQueue';
 
 describe('StepQueue', () => {
   it('gives the presses kept for a file back to that file, in order, once each', () => {
@@ -39,72 +40,6 @@ describe('StepQueue', () => {
     queue.push('b.cs', 1);
     queue.clear();
     expect(queue.take('b.cs')).toBeUndefined();
-  });
-});
-
-describe('pressTarget', () => {
-  const press = { opens: true, opened: true, steppingTo: null, path: 'a.cs' };
-
-  it('steps through the diff shown once it opened, with no step to another file in flight', () => {
-    expect(pressTarget(press)).toEqual({ kind: 'step' });
-  });
-
-  it("keeps a press for the file a step went to while the diff shown is still the previous one's (its selection settling)", () => {
-    expect(pressTarget({ ...press, steppingTo: 'b.cs' })).toEqual({ kind: 'keep', path: 'b.cs' });
-  });
-
-  it('keeps a press for the diff itself until it opened at its arrival', () => {
-    expect(pressTarget({ ...press, opened: false })).toEqual({ kind: 'keep', path: 'a.cs' });
-    expect(pressTarget({ ...press, opened: false, steppingTo: 'a.cs' })).toEqual({ kind: 'keep', path: 'a.cs' });
-  });
-
-  it('steps at once where it opens nothing (a header with no diff of its own, an xlink)', () => {
-    expect(pressTarget({ ...press, opens: false, opened: false, steppingTo: 'b.cs' })).toEqual({ kind: 'step' });
-  });
-});
-
-describe('drainsKept', () => {
-  it("lets a diff take its kept presses once it opened at its arrival, while it's the selected file's", () => {
-    expect(drainsKept({ opened: true, selected: true })).toBe(true);
-  });
-
-  it('not before it opened, nor while it stays on screen for a previous file as the next one is read', () => {
-    expect(drainsKept({ opened: false, selected: true })).toBe(false);
-    expect(drainsKept({ opened: true, selected: false })).toBe(false);
-  });
-});
-
-describe('keptPressesOf', () => {
-  const own = { queue: new StepQueue(), takes: true };
-  const files = { kept: new StepQueue() };
-
-  it("takes the presses a diff header hands it (`LoadedFileDiff`'s), while it's the selected file's", () => {
-    const frame = { queue: new StepQueue(), takes: false };
-    expect(keptPressesOf(frame, files, own)).toBe(frame);
-  });
-
-  it("else its list's, which the lists of one view share, so a conflict's view takes the presses a step from a diff left it", () => {
-    expect(keptPressesOf(undefined, files, own)).toEqual({ queue: files.kept, takes: true });
-  });
-
-  it('else its own, with no list beside it', () => {
-    expect(keptPressesOf(undefined, null, own)).toBe(own);
-  });
-});
-
-describe('followStep', () => {
-  it('sends the presses left for a file on to the file a press went to', () => {
-    const queue = new StepQueue();
-    queue.push('b.cs', -1);
-    expect(followStep(queue, 'b.cs', 'c.cs')).toBe('file');
-    expect([queue.take('b.cs'), queue.take('c.cs')]).toEqual([undefined, -1]);
-  });
-
-  it('did nothing where there was no file to go on to (past the last change of the last file): the presses stay', () => {
-    const queue = new StepQueue();
-    queue.push('b.cs', -1);
-    expect(followStep(queue, 'b.cs', null)).toBe('none');
-    expect(queue.take('b.cs')).toBe(-1);
   });
 });
 
