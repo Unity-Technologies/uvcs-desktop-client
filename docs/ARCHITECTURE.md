@@ -1296,8 +1296,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
     sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
     (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
-    the path order costs nothing; Changes, filtered as the user types over up to a million changes, ranks every change
-    once a read (`rankedOrder`) and sorts what the filter leaves by those ranks, never by names again. No direction:
+    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
+    when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
+    million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
+    leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
+    a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
+    the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
     nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
     entries have none, so it would mean reading the disk or the server for every file.
   - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
