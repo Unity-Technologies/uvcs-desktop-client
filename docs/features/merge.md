@@ -367,8 +367,8 @@ folder added on both sides, a file moved on one side and deleted on the other).
 ### Stepping through conflicts
 
 A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
-with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and "2 of 3" then its arrows at the end of its
-view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
+with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and its arrows at the end of its
+view bar, "2 of 3" before them while a conflict is current, as a diff's (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
 segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
 top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
 end marker). Every conflict shown is one still to decide: resolving one with its header's choices (`resolve` in
@@ -376,9 +376,9 @@ end marker). Every conflict shown is one still to decide: resolving one with its
 back to the one before it (`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the
 view is scrolled more than a few rows away, however it scrolls (the shorter text pulling it back at the end of the file
 doesn't count), or the conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the
-version to keep is one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views
+version to keep is one conflict; a file that couldn't be read has none, and its arrows still go on. The views
 that are diffs (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file
-whose last conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", until the
+whose last conflict is resolved while it shows keeps the conflict arrows over its Changes, with no label, until the
 user leaves the file: the next move goes straight on to the next file that waits instead of through the changes the
 merge makes (`justDecided`, `LoadedFileDiff`'s `stepsThroughChanges`). Started over, the file opens on its conflicts
 again (`rememberConflicts`).

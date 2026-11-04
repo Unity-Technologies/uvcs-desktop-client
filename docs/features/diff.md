@@ -327,7 +327,7 @@ file's first change or the previous file's last, asking about unsaved edits firs
 starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
 until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It
 opens so once, as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added
-or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a model, a binary, identical
+or deleted file) is one change; a file with none to step through (an image, a model, a binary, identical
 versions, one still loading) keeps the arrows, which go from file to file ("Previous file", "Next file", no label), so
 stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order, layout and groups, are
@@ -341,13 +341,17 @@ merge page steps through conflicts with it (merge.md "Stepping through conflicts
 People click ↓ many times in a row through a changeset, past each file's last change into the next file, so the arrow
 must never move under the pointer. The arrows are the header's last slot, side by side at its right edge, in every
 diff's header alike (`DiffViewerFrame`'s `navigator`): text, image, model, binary, identical, loading, an error, an
-xlink. Before them, where it stands ("12 changes", then "3 of 12", "No changes" for a text diff without any) is
-right-aligned with tabular figures, so a longer label grows leftward; then the Expand button and the view's controls.
-What they show is `changeNavigatorView`: beside a list of files always (disabled at its ends rather than gone), with
-no list only for steps of its own, so per host they either always show or never do. A diff not loaded yet draws
-`FileOnlyNavigator`, which steps files and names no file, so the arrival meant for the diff that loads stays its own.
-Narrow, the label gives way (`data-toolbar-extra`) and the arrows keep the edge. The merge page's conflict arrows share
-the order (`ConflictNavigator`).
+xlink. Right before them, with no room reserved, the label has one form, "3 of 12", and only while a change is current
+(`positionLabel`); otherwise it is empty, as the line counts and the diff itself (identical, binary) already say how
+many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). "12 changes" and "No changes"
+were dropped: three forms of one label read as noise, and a reserved width left "1 of 1" floating in a gap. It grows
+leftward, in tabular figures; then the Expand button and the view's controls. What they show is `changeNavigatorView`:
+beside a list of files always (disabled at its ends rather than gone), with no list only for steps of its own, so per
+host they either always show or never do. A diff not loaded yet (or failed, or an xlink) draws `FileOnlyNavigator`,
+which steps files at once and names no file, so the arrival meant for the diff that loads stays its own; the loaded
+diff's arrows take its place in the same commit, at the same pixel. Narrow, the label gives way
+(`data-toolbar-extra`) and the arrows keep the edge. The merge page's conflict arrows share the order and the label
+(`ConflictNavigator`).
 
 ## Expanding the diff
 
