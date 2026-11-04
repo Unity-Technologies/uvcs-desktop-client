@@ -4,7 +4,8 @@ import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
-import { positionAfterChange, pressStep, pressWhileOpening } from './stepNavigation';
+import { positionAfterChange, pressStep } from './stepNavigation';
+import { StepQueue, type StepDirection } from './stepQueue';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
 const ARRIVAL_MAX_FRAMES = 60;
@@ -72,8 +73,22 @@ interface StepNavigationOptions {
   opens?: boolean;
   /** The view will never have steps of its own (an image, a binary): it opens at once, taking the arrival. */
   noStepsComing?: boolean;
-  /** Where a move goes instead of through the steps: kept for the file that loads (`queuedStep`). */
+  /**
+   * Where a move goes instead of through the steps: kept for the file that loads (`StepQueue`). Its arrows are then
+   * enabled both ways, as the keys are, whatever the list beside it.
+   */
   goes?: (direction: 1 | -1) => void;
+  /**
+   * Where presses made before the view opened at its arrival wait, taken once it did: the frame's (`StepQueue`, shared
+   * with its header's presses while the file was read); a queue of its own by default.
+   */
+  kept?: KeptPresses;
+}
+
+/** A queue of presses, bound to the view whose they are (`StepQueue` with that view's key). */
+export interface KeptPresses {
+  push: (direction: StepDirection) => void;
+  take: () => StepDirection | undefined;
 }
 
 /**
@@ -83,7 +98,7 @@ interface StepNavigationOptions {
  * past the last step goes on to the next file's first, and past the first to the previous file's last, as in the
  * official client.
  */
-export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, active = true, opens = true, noStepsComing = false, goes }: StepNavigationOptions): StepNavigation {
+export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, active = true, opens = true, noStepsComing = false, goes, kept }: StepNavigationOptions): StepNavigation {
   const files = useContext(FileStepsContext);
   const [current, setCurrent] = useState<number | null>(null);
   const [above, setAbove] = useState(0);
@@ -119,11 +134,13 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     setCurrent(target);
     latestView.current.reveal(target);
   };
-  // Presses made before the view opened at its arrival, applied once it did (`pressWhileOpening`).
-  const keptPresses = useRef<(1 | -1)[]>([]);
+  // Presses made before the view opened at its arrival wait for it: else ↓ just after stepping to a file would move from
+  // the top, and the arrival move there again, the press lost.
+  const ownKept = useOwnKeptPresses();
+  const keptPresses = kept ?? ownKept;
   const go = (direction: 1 | -1): void => {
     if (goes) return goes(direction);
-    if (pressWhileOpening(opens, opened) === 'keep') return void keptPresses.current.push(direction);
+    if (opens && !opened) return keptPresses.push(direction);
     const outcome = pressStep(position, direction, files, readAbove);
     if (typeof outcome === 'number') moveTo(outcome);
   };
@@ -167,8 +184,8 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   // Once opened, the presses kept meanwhile, one per render: each moves from where the last one left it.
   useEffect(() => {
     if (!opened) return;
-    const kept = keptPresses.current.shift();
-    if (kept !== undefined) latestGo.current(kept);
+    const press = keptPresses.take();
+    if (press !== undefined) latestGo.current(press);
   });
 
   const hasFiles = files !== null;
@@ -192,7 +209,8 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     shortcuts,
     count: steps.length,
     current,
-    goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
+    // Kept for the file that loads: enabled both ways, as the keys are, wherever that file sits in the list.
+    goesTo: (direction) => (goes ? 'step' : (plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null)),
     go,
     onViewScroll,
   };
@@ -209,6 +227,15 @@ export const STEP_FRAME = { 'data-step-frame': '' } as const;
  * (`STEP_FRAME`), in the list beside it, or with nothing focused (a header button disabled at the last step lets go
  * of the focus).
  */
+/** A view's own queue of presses kept until it opened, where no frame shares one (the merge page's conflicts). */
+function useOwnKeptPresses(): KeptPresses {
+  const [own] = useState<KeptPresses>(() => {
+    const queue = new StepQueue();
+    return { push: (direction) => queue.push('own', direction), take: () => queue.take('own') };
+  });
+  return own;
+}
+
 function takesKeysFrom(frame: HTMLElement | null, target: EventTarget | null): boolean {
   if (!frame || !(target instanceof Element) || target.closest('input, textarea, select, [contenteditable="true"]')) return false;
   if (frame.contains(target) || frame.closest('[data-step-frame]')?.contains(target)) return true;

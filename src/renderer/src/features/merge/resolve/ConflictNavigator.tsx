@@ -33,6 +33,6 @@ export function ConflictNavigator({ count, view, frame, path }: ConflictNavigato
     return () => panel?.removeEventListener('scroll', onViewScroll, { capture: true });
   }, [frame, onViewScroll]);
 
-  // Always there while the file has conflicts to count, disabled once there is nowhere to go: they never come and go.
+  // Always there while the file shows, disabled once there is nowhere to go: they never come and go.
   return <ChangeNavigator className={styles.navigator} navigation={navigation} stepsOwn />;
 }

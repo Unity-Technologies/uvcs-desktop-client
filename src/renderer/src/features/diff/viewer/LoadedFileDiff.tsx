@@ -14,7 +14,7 @@ import { extensionOf } from '../../../lib/text';
 import { editedFileIn, typesIntoDiff } from './canEditInPlace';
 import { DiffFrameHostContext, type DiffFrameHost } from './diffFrameHost';
 import type { ChangeView } from './changeView';
-import { diffBodyOf } from './diffBody';
+import { diffBodyOf, stepsCanCome } from './diffBody';
 import { diffDiscards } from './diffDiscards';
 import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
@@ -62,15 +62,13 @@ interface LoadedFileDiffProps {
   onMatchesBase?: () => void;
   /** Steps through its changes with the header's arrows and keys (`useChangeNavigation`); off where a view around it steps. */
   stepsThroughChanges?: boolean;
-  /** Its step keys work: not while another file is selected and loading, this diff kept on screen meanwhile. */
-  keysStep?: boolean;
 }
 
 /**
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true, keysStep = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editedFile = editedFileIn(place, contents.original, contents.modified);
   const editableInPlace = editedFile !== null;
@@ -110,17 +108,21 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const wholeFile = typedIntoWhole(editable, diffs.saved);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
   const viewControls = !metaAsModel && showsLines(presentation, editable);
+  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   // The header and its arrows are the frame's around it (`SteppedDiffFrame`), which outlives this diff: it hands them
-  // its navigation each time it renders, and draws its controls into the header.
+  // its navigation each time it renders, saying whose it is, and draws its controls into the header.
   const host = useDiffFrameHost();
+  const ownKey = metaVersions;
   const changeView = useRef<ChangeView>(null);
-  const stepsExpected = stepsThroughChanges && viewControls && !wholeFile;
-  const steppedDiff = stepsExpected ? (diffs.current?.meta ?? null) : null;
-  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, keysStep, !stepsExpected);
+  const stepsCome = stepsCanCome(bodyKind, { wholeFile, stepsThroughChanges });
+  const steppedDiff = stepsCome ? (diffs.current?.meta ?? null) : null;
+  // Presses made before it opened (the header's, while it was read, then its own) wait in the frame's queue, for it.
+  const kept = useMemo(() => ({ push: (direction: 1 | -1) => host.queue.push(ownKey, direction), take: () => host.queue.take(ownKey) }), [host.queue, ownKey]);
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: ownKey === host.requestedKey, noStepsComing: !stepsCome, kept });
   const stepsOwn = steppedDiff !== null;
-  useLayoutEffect(() => host.publish({ navigation, stepsOwn }));
+  useLayoutEffect(() => host.publish({ navigation, stepsOwn, key: ownKey }));
   useLayoutEffect(() => () => host.publish(null), [host.publish]);
   const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
   const discards = diffDiscards(place, buffer, onMatchesBase);
@@ -195,7 +197,6 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   );
 
   let body: ReactNode;
-  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   switch (bodyKind) {
     case 'metaModel':
       body = (

@@ -24,14 +24,6 @@ export function pressStep(position: ChangePosition, direction: 1 | -1, files: Fi
   return move?.index ?? null;
 }
 
-/**
- * What a press does before the view opened at its arrival (`openingStep`, a frame or so after the diff draws): it waits
- * for it, else ↓ pressed just after stepping to a file would move from the top and the arrival move there again, the
- * press lost. A navigation that opens nothing steps at once.
- */
-export function pressWhileOpening(opens: boolean, opened: boolean): 'keep' | 'step' {
-  return opens && !opened ? 'keep' : 'step';
-}
 
 /**
  * The position once the steps changed (typed into a diff, a conflict resolved): the step moved to stays while there

@@ -3,7 +3,7 @@ import { useMemo, useRef, type RefObject } from 'react';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
 import { changesAbove } from './changeNavigation';
 import type { ChangeView } from './changeView';
-import { useStepNavigation, type StepNavigation, type StepShortcuts } from './useStepNavigation';
+import { useStepNavigation, type KeptPresses, type StepNavigation, type StepShortcuts } from './useStepNavigation';
 
 export const CHANGE_SHORTCUTS: StepShortcuts = { next: 'nextChange', previous: 'previousChange' };
 
@@ -18,10 +18,18 @@ export function useChangeNavigation(
   frame: RefObject<HTMLElement | null>,
   /** The file shown, as the list beside it names it. */
   path: string,
-  /** Its keys work: not while the file selected is another, still loading (`headerArrows`). */
-  active = true,
-  /** The diff will never have changes to step through (an image, a binary, identical versions): it opens at once. */
-  noStepsComing = false,
+  {
+    active = true,
+    noStepsComing = false,
+    kept,
+  }: {
+    /** Its keys work: not while the file selected is another, still loading (`headerArrows`). */
+    active?: boolean;
+    /** The diff will never have changes to step through (`stepsCanCome`): it opens at once. */
+    noStepsComing?: boolean;
+    /** Where presses made before it opened wait: its frame's queue (`StepQueue`), bound to this diff. */
+    kept?: KeptPresses;
+  } = {},
 ): StepNavigation {
   const blocks = useMemo(() => (diff ? listChangeBlocks(diff) : []), [diff]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
@@ -47,5 +55,6 @@ export function useChangeNavigation(
     shortcuts: CHANGE_SHORTCUTS,
     active,
     noStepsComing,
+    kept,
   });
 }
