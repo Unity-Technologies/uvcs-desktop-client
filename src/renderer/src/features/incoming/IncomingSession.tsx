@@ -13,6 +13,8 @@ import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
@@ -80,6 +82,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const run = useResolveRun({ states, mergerFor, resolveInTool, onOpen: followRun, onEnd: () => undefined });
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
+  const diffExpanded = useDiffExpanded();
 
   const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
@@ -188,16 +191,18 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   return (
     <>
-      {header(incomingSubtitle(incoming.branch, changesetList))}
-      <UpdateBar
-        incoming={incoming}
-        pendingConflictCount={pendingConflictPaths.size}
-        canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
-        updating={updating}
-        onUpdate={() => void update()}
-        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
-        run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
-      />
+      <Stowable stowed={diffExpanded}>
+        {header(incomingSubtitle(incoming.branch, changesetList))}
+        <UpdateBar
+          incoming={incoming}
+          pendingConflictCount={pendingConflictPaths.size}
+          canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
+          updating={updating}
+          onUpdate={() => void update()}
+          onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
+          run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
+        />
+      </Stowable>
       <IncomingPanes
         list={
           <>
