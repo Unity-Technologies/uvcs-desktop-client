@@ -6,7 +6,7 @@ import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
-import { useFileListLayoutStore } from '../../components/fileListLayoutStore';
+import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -84,7 +84,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
-  const layout = useFileListLayoutStore((state) => state.layout);
+  const layout = useFileListViewStore((state) => state.layout);
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const checkinChoice = useCheckinChoice(workspacePath);
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);

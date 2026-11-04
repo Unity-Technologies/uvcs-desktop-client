@@ -16,7 +16,7 @@ const PENDING_CHANGES_VIEW_KEY = 'pending-changes-view';
  * The one layout of every list of changed files (Changes, the diffs, the details panels, Incoming, the merge page):
  * switched in any of them, it changes in all, and stays across sessions.
  */
-export const useFileListLayoutStore = create<FileListLayoutStore>()(
+export const useFileListViewStore = create<FileListLayoutStore>()(
   persist(
     (set) => ({
       layout: layoutFromPendingChangesView(storedPendingChangesView()),

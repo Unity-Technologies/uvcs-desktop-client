@@ -1,5 +1,5 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import type { FileListLayout } from '../../components/fileListLayoutStore';
+import type { FileListLayout } from '../../components/fileListViewStore';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow } from '../../lib/groupedPathTree';
 import { layoutPathList, layoutPathTree } from '../../lib/pathTree';
 

@@ -1295,7 +1295,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
     give.
-  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
+  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListViewStore`, which took the
     one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), follows the
     status chips, so it is in the same place in each list; a details panel too short for a filter bar has it in its
     title. Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle).

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useCollapsedFolders } from '../../components/collapsedFoldersStore';
-import type { FileListLayout } from '../../components/fileListLayoutStore';
+import type { FileListLayout } from '../../components/fileListViewStore';
 import { topLevelCheckboxInset } from './changeRowLevels';
 import { changeKey, collapseRows, layoutChangeRows, type ChangeRow, type ChangesGrouping } from './changeRows';
 

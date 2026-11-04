@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import type { FileListLayout } from '../../components/fileListLayoutStore';
+import type { FileListLayout } from '../../components/fileListViewStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { candidatesUnderRow, checkStateOver } from './changeRowChecks';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel } from './changeRowLevels';

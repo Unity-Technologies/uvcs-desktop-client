@@ -2,7 +2,7 @@ import { ChevronDown, List, ListTree } from 'lucide-react';
 import type { MenuEntry } from '../lib/actions';
 import { Button } from '../ui/Button';
 import { ActionDropdownMenu } from '../ui/menu/ActionDropdownMenu';
-import { useFileListLayoutStore, type FileListLayout } from './fileListLayoutStore';
+import { useFileListViewStore, type FileListLayout } from './fileListViewStore';
 import styles from './FileListLayoutMenu.module.css';
 
 const LAYOUTS: { value: FileListLayout; label: string; icon: typeof List }[] = [
@@ -16,8 +16,8 @@ const LAYOUTS: { value: FileListLayout; label: string; icon: typeof List }[] = [
  * in every filter bar. The button shows the current layout's icon, and its chevron says it opens a menu.
  */
 export function FileListLayoutMenu() {
-  const layout = useFileListLayoutStore((state) => state.layout);
-  const setLayout = useFileListLayoutStore((state) => state.setLayout);
+  const layout = useFileListViewStore((state) => state.layout);
+  const setLayout = useFileListViewStore((state) => state.setLayout);
   const current = LAYOUTS.find((option) => option.value === layout) ?? LAYOUTS[0]!;
   const entries: MenuEntry[] = LAYOUTS.map((option) => ({
     id: option.value,

@@ -2,14 +2,14 @@ import { useCallback, useMemo } from 'react';
 import { collapseGroupedTreeRows, groupedRowsHolding, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from '../lib/groupedPathTree';
 import { layoutPathList, layoutPathTree, rowKeyShowing } from '../lib/pathTree';
 import { useCollapsedFolders } from './collapsedFoldersStore';
-import { useFileListLayoutStore } from './fileListLayoutStore';
+import { useFileListViewStore } from './fileListViewStore';
 import { useOpenToSelected } from './useOpenToSelected';
 
 /** What a list of changed files shows: its items in groups, each with its header, or all of them without any. */
 export type FileListContent<T, G> = { groups: readonly TreeGroup<T, G>[] } | { sorted: T[] };
 
 interface GroupedFileTree<T, G> {
-  /** The rows shown, as a list or a tree as every list of files is (`useFileListLayoutStore`), closed groups' and folders' contents left out. */
+  /** The rows shown, as a list or a tree as every list of files is (`useFileListViewStore`), closed groups' and folders' contents left out. */
   rows: GroupedTreeRow<T, G>[];
   tree: boolean;
   toggleCollapsed: (key: string) => void;
@@ -29,7 +29,7 @@ export function useGroupedFileTree<T extends { path: string }, G>(
   scope: string,
   selectedKey?: string | null,
 ): GroupedFileTree<T, G> {
-  const layout = useFileListLayoutStore((state) => state.layout);
+  const layout = useFileListViewStore((state) => state.layout);
   const { collapsed, toggleCollapsed, openFolders } = useCollapsedFolders(scope);
   const tree = layout === 'tree';
   const laidOut = useMemo<GroupedTreeRow<T, G>[]>(() => {
