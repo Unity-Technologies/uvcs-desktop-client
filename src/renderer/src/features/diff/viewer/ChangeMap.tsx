@@ -21,7 +21,8 @@ interface ChangeMapProps {
  * marks scrolls there. The keys and the arrows already reach every change, so it's for the pointer only.
  *
  * It's inside the diff's scrolling element, first, standing still at its top (`ChangeMap.module.css`), so the wheel
- * over it scrolls the diff as anywhere else.
+ * over it scrolls the diff as anywhere else. A press on it takes no focus, and it's no press in the diff: the caret
+ * typing in the diff stays where it was, and the lines aren't picked.
  */
 export function ChangeMap({ view, count, current, onGoTo, containerRef }: ChangeMapProps) {
   const onClick = (event: MouseEvent<HTMLDivElement>): void => {
@@ -35,6 +36,8 @@ export function ChangeMap({ view, count, current, onGoTo, containerRef }: Change
       className={styles.map}
       style={{ height: view.viewHeight, marginBottom: -view.viewHeight }}
       aria-hidden
+      onMouseDown={(event) => event.preventDefault()}
+      onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
     >
       {view.marks.map((mark) => (
