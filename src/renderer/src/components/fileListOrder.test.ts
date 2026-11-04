@@ -82,7 +82,7 @@ describe('the orders that arrange in buckets', () => {
     ['Makefile', 'changed'],
   ]);
 
-  it.each(['status', 'extension'] as const)('arranges a list by %s as sorting it would, ties in path order', (sort) => {
+  it.each(['name', 'status', 'extension'] as const)('arranges a list by %s as sorting it would, ties in path order', (sort) => {
     const order = fileListOrder(sort, facts)!;
     expect(order.arrange!(sample)).toEqual([...sample].sort(order.compare));
   });

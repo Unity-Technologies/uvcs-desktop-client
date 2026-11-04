@@ -12,16 +12,17 @@ export interface FileListFacts<T> {
 
 /**
  * How a list orders its files for a sort (`layoutPathItems`): undefined for the path order the items already come in.
- * By name compares the files' names as `comparePaths` compares a folder's (`file_2` before `file_10`), each name read
- * once; by extension, files without one first; by status, in the chips' order (`toneRank`). Ties keep the path order.
- * Status and extension arrange a whole list in buckets, in one pass, without comparing items (`bucketOrder`).
+ * By name compares the files' names as `comparePaths` compares a folder's (`file_2` before `file_10`); by extension,
+ * files without one first; by status, in the chips' order (`toneRank`). Ties keep the path order. Each arranges a whole
+ * list in buckets, one per name, extension or status, comparing only those (`bucketOrder`): a project's files share
+ * names (`index.ts`, `README.md`, a `.prefab` in each scene), and a million changes compared one by one by name took 4 s.
  */
 export function fileListOrder<T extends { path: string }>(sort: FileListSort, { toneOf }: FileListFacts<T>): ItemOrder<T> | undefined {
   switch (sort) {
     case 'path':
       return undefined;
     case 'name':
-      return { compare: compareByKey((item: T) => nameOf(item.path), compareNames) };
+      return bucketOrder((item: T) => nameOf(item.path), compareNames);
     case 'extension':
       return bucketOrder((item: T) => extensionOf(item.path), compareNames);
     case 'status':
@@ -42,9 +43,9 @@ function compareByKey<T, K>(keyOf: (item: T) => K, compareKeys: (a: K, b: K) => 
 }
 
 /**
- * An order by a key few items differ in (a status, an extension): a list is arranged by putting each item in its key's
+ * An order by a key items share (a status, an extension, a name): a list is arranged by putting each item in its key's
  * bucket, in the order it comes, then the buckets in their keys' order. One pass over the items, and a sort of the
- * few distinct keys only.
+ * distinct keys only.
  */
 function bucketOrder<T, K>(keyOf: (item: T) => K, compareKeys: (a: K, b: K) => number): ItemOrder<T> {
   const compare = compareByKey(keyOf, compareKeys);
