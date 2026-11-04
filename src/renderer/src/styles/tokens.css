@@ -189,6 +189,12 @@
   --text-secondary: #59636e;
   --text-tertiary: #687280;
   --text-inverse: #ffffff;
+  /* Code colored by kind (the command log's command lines, `commandLineTokens`): GitHub's code colors. */
+  --syntax-command: #8250df;
+  --syntax-option: #0550ae;
+  --syntax-variable: #953800;
+  --syntax-string: #0a3069;
+  --syntax-keyword: #cf222e;
   --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
   --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.12), 0 1px 3px rgba(31, 35, 40, 0.06);
   --shadow-lg: 0 12px 40px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
@@ -300,6 +306,11 @@
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;
   --text-inverse: #0d1117;
+  --syntax-command: #d2a8ff;
+  --syntax-option: #79c0ff;
+  --syntax-variable: #ffa657;
+  --syntax-string: #a5d6ff;
+  --syntax-keyword: #ff7b72;
   --shadow-sm: 0 1px 0 rgba(1, 4, 9, 0.3);
   --shadow-md: 0 6px 20px rgba(1, 4, 9, 0.5), 0 1px 3px rgba(1, 4, 9, 0.35);
   --shadow-lg: 0 16px 48px rgba(1, 4, 9, 0.65), 0 2px 8px rgba(1, 4, 9, 0.4);

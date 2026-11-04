@@ -15,7 +15,19 @@ const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
 /** The opaque backgrounds text sits on. */
 const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-raised', '--bg-subtle', '--bg-input', '--bg-code'];
 /** Text down to 11px: WCAG AA asks 4.5:1. */
-const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--label-text', '--status-changed'];
+const TEXT = [
+  '--text-primary',
+  '--text-secondary',
+  '--text-tertiary',
+  '--accent-text',
+  '--label-text',
+  '--status-changed',
+  '--syntax-command',
+  '--syntax-option',
+  '--syntax-variable',
+  '--syntax-string',
+  '--syntax-keyword',
+];
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed', '--permission-allowed', '--permission-denied'];
 const BADGE_TINT = 0.16;
