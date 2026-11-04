@@ -7,7 +7,6 @@ const navigation = (noun: string, more: Partial<StepNavigation> = {}): StepNavig
   shortcuts: { next: 'nextChange', previous: 'previousChange' },
   count: 0,
   current: null,
-  opened: false,
   goesTo: () => null,
   go: () => undefined,
   onViewScroll: () => undefined,
@@ -46,12 +45,11 @@ describe('queuedStep', () => {
     expect(queuedStep([1], waiting)).toEqual({ kind: 'wait' });
   });
 
-  it('waits for the loaded diff to arrive at its first change before applying them: ↓ during the load lands on the 2nd', () => {
-    expect(queuedStep([1], onBody(navigation('b.cs', { count: 3, opened: false })))).toEqual({ kind: 'wait' });
-    expect(queuedStep([1], onBody(navigation('b.cs', { count: 3, current: 0, opened: true })))).toEqual({ kind: 'apply', direction: 1 });
+  it("hands them to the loaded diff once it's the selected file's, which keeps them until it opened at its arrival (`pressWhileOpening`)", () => {
+    expect(queuedStep([1], onBody(navigation('b.cs', { count: 3 })))).toEqual({ kind: 'apply', direction: 1 });
   });
 
-  it('applies them at once to a diff with no changes of its own (an image), which steps on to the next file', () => {
+  it('hands them the same to a diff with no changes of its own (an image), which steps on to the next file', () => {
     expect(queuedStep([-1], onBody(navigation('logo.png'), false))).toEqual({ kind: 'apply', direction: -1 });
   });
 
@@ -60,6 +58,6 @@ describe('queuedStep', () => {
   });
 
   it('has nothing to do with no press waiting', () => {
-    expect(queuedStep([], onBody(navigation('b.cs', { opened: true })))).toEqual({ kind: 'none' });
+    expect(queuedStep([], onBody(navigation('b.cs')))).toEqual({ kind: 'none' });
   });
 });
