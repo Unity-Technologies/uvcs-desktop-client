@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { create } from 'zustand';
 import { isInFront } from '../lib/inFront';
+import { focusAs } from '../lib/focusRing';
 import { focusMain } from '../lib/mainFocus';
 import type { ShortcutId } from '../lib/shortcutRegistry';
 import {
@@ -43,11 +44,14 @@ export function collapseDiff(): void {
 
 /**
  * Collapses the expanded diff as the user asked (Esc, the command, the button), leaving the keyboard on its code where
- * it would be left nowhere or on a button (`focusGoesToDiffOnCollapse`): given while the code is still the main focus.
+ * it would be left nowhere or on a button (`focusGoesToDiffOnCollapse`): given while the code is still the main focus,
+ * ringless, as the app moved it. A click leaves the button it pressed focused, ringless too.
  */
 export function collapseDiffAsAsked(by: AskedBy): void {
   if (!isDiffExpanded()) return;
-  if (focusGoesToDiffOnCollapse(focusHolder(), by)) focusMain(document);
+  const holder = focusHolder();
+  if (focusGoesToDiffOnCollapse(holder, by)) focusMain(document, 'app');
+  else if (by === 'pointer' && holder.onButton) focusAs(document.activeElement as HTMLElement, 'pointer');
   collapseDiff();
 }
 
@@ -124,7 +128,7 @@ function countRegistration(): void {
 function focusExpandedDiff(): void {
   if (![...mounted].some((candidate) => isInFront(candidate.element))) return;
   // The code is the window's main focus while expanded (`useExpandedDiffFocus`); an image or a model has none to take.
-  if (focusGoesToDiff(focusHolder())) focusMain(document);
+  if (focusGoesToDiff(focusHolder())) focusMain(document, 'app');
 }
 
 /** What holds the keyboard now. */

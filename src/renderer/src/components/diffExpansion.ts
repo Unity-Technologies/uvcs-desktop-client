@@ -4,6 +4,7 @@
  * (View ▸ Enter Full Screen), which stacks with it independently. What decides when it starts, lasts and ends is here;
  * `diffExpansionStore` holds it for the window.
  */
+import type { FocusMover } from '../lib/focusRing';
 import type { ShortcutId } from '../lib/shortcutRegistry';
 
 /** Where the window's navigation stands: the view, and how many pages are open over it. */
@@ -51,12 +52,7 @@ export function focusGoesToDiff(holder: FocusHolder): boolean {
 }
 
 /** How the user asked to expand or collapse: a key (Esc, the shortcut, the palette, the menu, Enter on the button) or a click. */
-export type AskedBy = 'keyboard' | 'pointer';
-
-/** How the Expand button was pressed, from its click's `detail` (the pointer's presses): 0 for Enter or Space. */
-export function askedBy(clickDetail: number): AskedBy {
-  return clickDetail === 0 ? 'keyboard' : 'pointer';
-}
+export type AskedBy = Exclude<FocusMover, 'app'>;
 
 /**
  * Whether the keyboard goes to the diff's code as the user collapses it from the keyboard: from nowhere (a step to
@@ -66,6 +62,14 @@ export function askedBy(clickDetail: number): AskedBy {
  */
 export function focusGoesToDiffOnCollapse(holder: FocusHolder, by: AskedBy): boolean {
   return by === 'keyboard' && focusGoesToDiff(holder);
+}
+
+/**
+ * What gives back focus that fell to the page (a menu or dialog closed): while expanded, the app, giving the code the
+ * keyboard on its own, so no ring shows until a Tab (`focusAs`); otherwise as ever, the ring as Chromium decides.
+ */
+export function restoredFocusMover(expanded: boolean): FocusMover {
+  return expanded ? 'app' : 'keyboard';
 }
 
 /** Whether Expand Diff's command is offered (the palette's entry): to collapse, or with a diff in front to expand. */
