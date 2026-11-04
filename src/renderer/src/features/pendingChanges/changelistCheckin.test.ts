@@ -338,10 +338,25 @@ describe('checking in or shelving the default changelist', () => {
     expect(steps.shelves).toEqual([expect.objectContaining({ changes: [defaultChanges[0]] })]);
   });
 
-  it('holds while a change outside every user changelist is pending, and ends once none is', () => {
+  // Every new edit lands in the default changelist: were it read by membership, as a user changelist is, it would never end.
+  it('holds while one of its readied changes is pending, a change made meanwhile left unchecked', () => {
     prepare(null);
 
-    expect(selection([defaultChanges[0]!, ...uiChanges]).included).toEqual([defaultChanges[0]]);
-    expect(selection([...uiChanges, artChange]).included).toEqual([...uiChanges, artChange]);
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([defaultChanges[0]!, edited, ...uiChanges]).included).toEqual([defaultChanges[0]]);
+  });
+
+  it('ends once none of its readied changes is pending, though new ones are in it: they are checked again', () => {
+    prepare(null);
+
+    const edited = change('src/game/Enemy.cs', ['changed']);
+    expect(selection([edited, ...uiChanges]).included).toEqual([edited, ...uiChanges]);
+  });
+
+  it('ends once its readied changes moved to a user changelist', () => {
+    prepare(null);
+
+    const moved = { ...defaultChanges[0]!, kinds: ['checkedOut' as const, 'changed' as const], changelist: 'ui' };
+    expect(selection([moved, ...uiChanges]).included).toEqual([moved, ...uiChanges]);
   });
 });
