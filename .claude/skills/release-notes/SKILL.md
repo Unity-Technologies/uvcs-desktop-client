@@ -72,9 +72,18 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 
 ## Pictures and GIFs
 
-A picture earns its place only when it shows what the note delivers better than words: a new dialog, menu or panel,
-a before and after, a layout the user has to see. Most fixes and many improvements need none. When in doubt, leave it
-out: a note without a picture reads well; a picture that doesn't help makes the note harder to read.
+A picture is never required. Decide three things, in this order, every time you write a note:
+
+1. **Whether it gets a picture at all.** A picture earns its place only when it shows what the note delivers better
+   than words: a new dialog, menu, tab, panel or layout, a before and after. Fixes and changes with nothing to show
+   (faster, a crash gone, a word changed) get none, and so does anything a sentence already says. When in doubt,
+   leave it out: a note without a picture reads well; a picture that doesn't help makes the note harder to read.
+2. **A still or a GIF.** A GIF when what it delivers is a movement: a drag, something following the pointer, an
+   animation, a short flow, something that now stays in place ("GIFs" below). Otherwise a still.
+3. **Which part of the screen.** Cropped to the area it's about, with just enough around it to place it, by the
+   rules below.
+
+When the note gets one, it is also what reviewers look at (CLAUDE.md, "Delivering work", step 6).
 
 What's New shows a picture inside the note, as wide as the text (about 600 pixels) and at most 360 pixels tall, and
 a click shows it larger. So a picture must read at that size:
@@ -92,9 +101,11 @@ a click shows it larger. So a picture must read at that size:
   to the note and shows it larger on a click.
 - **Name it**: the alt text says what the picture shows (`![The Tools page in Settings](./tools.png)`); it is what a
   screen reader says and what shows if the picture can't load.
-- **Reuse the pull request's screenshot** when it already is that crop: reference the same file in the note and
-  `gh pr create --attach ./tools.png` uploads it once for both. The pull request's own picture may show more for
-  reviewers; the note's is cropped for users.
+- **Attach it where the note references it**: `![The Tools page in Settings](./tools.png)` after the description,
+  and `gh pr create --attach ./tools.png` (or `gh pr edit --attach`), which uploads the file and puts its link there.
+  An unreferenced one is appended after the closing line, outside `## Release note`, where What's New never shows it.
+  The Release note check (`misplacedPicture`) fails a body like that. A reviewer's shot, wider or for a change whose
+  note has no picture, goes under "Behavior with this pull request" the same way.
 
 ### GIFs
 
