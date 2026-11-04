@@ -362,18 +362,23 @@ from the selected file's key and how its read stands: with that file's diff publ
 otherwise (the file being read, the previous file's diff still on screen; read fast, its diff mounted while the
 previous one's navigation is still the one published, as publishing follows the render; its viewer's code loading)
 the header's own, with no label (never the previous file's "3 of 3" beside the new title), both arrows enabled with a
-neutral tip, each press kept for the file selected; where it couldn't be read, file to file at once. Kept presses go
-in one queue for the frame (`StepQueue`), tagged with the path of the file they're for. A diff keeps its own there
-too (`pressTarget`): until it opened at the step it was stepped to, and while a step it made is in flight
-(`FileSteps.steppingTo`: the list already on the next file, the diff pane still showing this one while the selection
-settles and the next file is read), for that next file, never stepping from this one's place. Once open, the selected
-file's diff takes its own one at a time through its own navigation, one per render (`drainsKept`); the previous file's
-diff, still on screen during Changes' settle, takes none, and drawing it again drops nothing. A step from a file takes
-the presses still left for it along to the next file, in order (`StepQueue.retag`), so a burst across a one-change file
-or an image loses none. Presses are dropped only when the selection leaves their file: as the diff pane asks for
-another file, those neither for it nor for a file a step is on its way to go (`StepQueue.keepOnly`), so a file picked
-in the list while another loads opens at its top; and all of them when the selected file couldn't be read
-(`HeaderArrows.dropsKept`). A diff that will never have changes to step through (`stepsCanCome`: anything but a text
+neutral tip (`ArrowGoal` `'queued'`), each press kept for the file selected, or for the file a step is on its way to
+(`headerKeepsFor`); where it couldn't be read, file to file at once. Kept presses go in one queue (`StepQueue`), tagged
+with the path of the file they're for: the list's (`FileSteps.kept`, which the lists of one view share with their
+pending arrival, so a step from an Incoming diff into a conflicting file hands the conflict's view the presses left),
+else the frame's own. A diff keeps its own there too (`pressTarget`): until it opened at the step it was stepped to,
+and while a step it made is in flight (`FileSteps.steppingTo`: the list already on the next file, the diff pane still
+showing this one while the selection settles and the next file is read), for that next file, never stepping from
+this one's place. Once open, the selected file's diff takes its own through its own navigation (`drainsKept`,
+`drainKept`): one that moves the view is the last until the render it brings, one that does nothing (past the last
+change of the last file) brings no render, so the next is taken at once. The previous file's diff, still on screen
+during Changes' settle, takes none, and drawing it again drops nothing. A step from a file takes the presses still left
+for it along to the next file, in order (`followStep`), so a burst across a one-change file or an image loses none;
+where the selected file couldn't be read, its presses step on from it the same way (`HeaderArrows.replaysKept`).
+Presses are dropped in two cases, both when the selection leaves their file: as the list moves to another file
+(`FileSteps.dropLeftPresses`) and as the diff pane asks for one (`StepQueue.keepOnly`), those neither for it nor for a
+file a step is on its way to go, so a file picked in the list while another loads opens at its top. A diff that will
+never have changes to step through (`stepsCanCome`: anything but a text
 diff, or a file typed into as a diff) opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends
 on B's 2nd change, and ↓↓↓ on its 3rd: no click lost to a button swapped under the pointer, none landing on the wrong
 file.
