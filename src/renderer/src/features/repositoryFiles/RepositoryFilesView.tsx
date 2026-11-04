@@ -11,6 +11,8 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { useBranch } from '../branches/useBranches';
 import { browseOpening } from '../browseRepository/browseOpening';
 import { RepositoryTree, RepositoryTreeSkeleton } from '../browseRepository/RepositoryTree';
@@ -38,6 +40,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const branchRead = useBranch(filesBranchToRead(chosen));
   const body = repositoryFilesBodyOf({ data: branchRead.data, error: branchRead.error }, chosen);
   const [filter, setFilter] = useState('');
+  const diffExpanded = useDiffExpanded();
   const [shownPath, setShownPath] = useState<string | null>(null);
   // A reveal opens the tree anew on its path: the tree reads where it opens only as it mounts.
   const [reveals, setReveals] = useState(0);
@@ -84,7 +87,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
 
   return (
     <>
-      {header}
+      <Stowable stowed={diffExpanded}>{header}</Stowable>
       {body.kind === 'error' && <EmptyState title="Couldn't read the branch" description={body.message} />}
       {body.kind === 'pickBranch' && <EmptyState title="No /main branch" description="Pick the branch whose latest files to show." />}
       {(body.kind === 'loading' || body.kind === 'chosenGone') && <RepositoryTreeSkeleton detailsKey={DETAILS_KEY} />}

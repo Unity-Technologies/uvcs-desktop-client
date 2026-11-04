@@ -86,6 +86,7 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
       detailsKey={detailsKey}
       widthLimits={FILE_TREE_WIDTH}
       sized="list"
+      diffInDetails
       list={
           <HighlightQuery query={shownFilter}>
             <FileTreeTable

@@ -4,7 +4,9 @@ import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
+import { Stowable } from '../../ui/Stowable';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { browseOpening } from './browseOpening';
 import { RepositoryTree } from './RepositoryTree';
 import { publishShownBrowseItem } from './shownBrowseItem';
@@ -19,6 +21,7 @@ const DETAILS_KEY = 'browseRepositoryTree';
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const [filter, setFilter] = useState('');
   const [opening] = useState(() => browseOpening(page));
+  const diffExpanded = useDiffExpanded();
   // What the page's link names (its header, ⇧⌘C): the item selected now, not the one it opened on.
   const publish = (path: string | null): void => publishShownBrowseItem(path === null ? null : { changesetId: page.changesetId, path });
   useEffect(() => () => publishShownBrowseItem(null), []);
@@ -28,9 +31,11 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
 
   return (
     <>
-      <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only" detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}>
-        <FilterBar text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />} />
-      </ViewHeader>
+      <Stowable stowed={diffExpanded}>
+        <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only" detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}>
+          <FilterBar text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />} />
+        </ViewHeader>
+      </Stowable>
       <RepositoryTree changesetId={page.changesetId} opening={opening} filter={filter} detailsKey={DETAILS_KEY} onShownItem={publish} />
     </>
   );

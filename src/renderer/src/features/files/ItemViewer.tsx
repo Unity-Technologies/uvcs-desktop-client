@@ -6,6 +6,7 @@ import { focusMain } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { AnnotationPane } from '../annotate/AnnotationPane';
 import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
@@ -59,8 +60,10 @@ export function ItemViewer({ place, item, comparison, comment, listings, viewSho
     if (viewer.contains(document.activeElement)) focusMain(document);
     else viewerFocusTarget(viewer).focus({ preventScroll: true });
   });
+  const diffExpanded = useDiffExpanded();
   const leave = (event: React.KeyboardEvent): void => {
-    if (event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('leaveFileViewer'))) return;
+    // Expanded, the tree is out of sight: Esc is the window's, which collapses the diff (`escapeCollapsesDiff`).
+    if (diffExpanded || event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('leaveFileViewer'))) return;
     event.preventDefault();
     focusMain(document);
   };
