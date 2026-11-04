@@ -2,6 +2,7 @@ import { useContext, type ReactNode, type Ref } from 'react';
 import { ExpandableDiffContext } from '../../../components/expandableDiffContext';
 import { ExpandDiffButton } from '../../../components/ExpandDiffButton';
 import { PaneToolbar } from '../../../ui/PaneToolbar';
+import { FileOnlyNavigator } from './FileOnlyNavigator';
 import styles from './DiffViewerFrame.module.css';
 
 interface DiffViewerFrameProps {
@@ -9,21 +10,26 @@ interface DiffViewerFrameProps {
   title?: ReactNode;
   /** Right of the toolbar: how to view the diff. */
   controls?: ReactNode;
+  /** The diff's change arrows (`ChangeNavigator`); without, those of a diff not loaded yet (`FileOnlyNavigator`). */
+  navigator?: ReactNode;
   children?: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * A diff under its header. Where its host can give it the whole window (`ExpandableDiffContext`), the header ends with
- * the Expand button, after the change arrows: in the same place for every file and while one loads.
+ * A diff under its header: its title, how to view it, the Expand button where its host can give it the whole window
+ * (`ExpandableDiffContext`), and last, at the right edge, the change arrows. Every diff of a host draws the same slots
+ * (text, image, model, binary, identical, loading, an error), so the arrows stand in the same place from file to file
+ * and never move under a pointer clicking ↓ through a changeset.
  */
-export function DiffViewerFrame({ title, controls, children, ref }: DiffViewerFrameProps) {
+export function DiffViewerFrame({ title, controls, navigator = <FileOnlyNavigator />, children, ref }: DiffViewerFrameProps) {
   const expandable = useContext(ExpandableDiffContext);
   return (
     <div ref={ref} className={styles.viewer}>
       <PaneToolbar title={title}>
         {controls}
         {expandable && <ExpandDiffButton />}
+        {navigator}
       </PaneToolbar>
       {children}
     </div>

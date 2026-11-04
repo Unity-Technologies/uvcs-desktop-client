@@ -38,7 +38,6 @@ import { useChangeNavigation } from './useChangeNavigation';
 import type { DiffContents } from './useDiffContents';
 import { useFileBuffer } from './useFileBuffer';
 import { useLineDiffs } from './useLineDiffs';
-import { goesSomewhere } from './useStepNavigation';
 import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 import { WholeFileNotice } from './WholeFileNotice';
 
@@ -114,8 +113,9 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   const frame = useRef<HTMLDivElement>(null);
   const changeView = useRef<ChangeView>(null);
-  const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
-  const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
+  const steppedDiff = stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null;
+  const navigation = useChangeNavigation(steppedDiff, changeView, frame, fileName);
+  const navigator = <ChangeNavigator navigation={navigation} stepsOwn={steppedDiff !== null} keysWhileTyping />;
   const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
   const discards = diffDiscards(place, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
@@ -128,10 +128,10 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
     <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
   );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
-  // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
-  // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them. The compare
-  // controls (`.meta`, Since review) come right before them, so they stay put too whatever controls a file has (a text
-  // file's, an image's or a binary file's none): toggling a binary file's `.meta` leaves the button under the pointer.
+  // of the others. The change arrows aren't controls: the frame draws them last, at the header's right edge, in the
+  // same place for every file (`DiffViewerFrame`). The compare controls (`.meta`, Since review) come last of these, so
+  // they stay put too whatever controls a file has (a text file's, an image's or a binary file's none): toggling a
+  // binary file's `.meta` leaves the button under the pointer.
   const controls = (
     <>
       {dirty && <UnsavedEditsControls buffer={buffer} />}
@@ -151,7 +151,6 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
       {representationSwitch}
       {metaModel !== null && <RepresentationSwitch value={metaAsModel ? 'model' : 'text'} rendered="model" onChange={(value) => setRepresentation('meta', value)} />}
       {compareControls}
-      {navigator}
     </>
   );
 
@@ -281,7 +280,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
 
   const purgedLine = purgedNotice(purged);
   return (
-    <DiffViewerFrame ref={frame} title={title} controls={controls}>
+    <DiffViewerFrame ref={frame} title={title} controls={controls} navigator={navigator}>
       {purgedLine && (
         <DiffNotice tone="info" icon={<ArchiveX size={13} />}>
           {purgedLine}

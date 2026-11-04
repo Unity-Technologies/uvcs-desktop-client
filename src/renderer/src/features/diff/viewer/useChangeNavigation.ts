@@ -5,7 +5,7 @@ import { changesAbove } from './changeNavigation';
 import type { ChangeView } from './changeView';
 import { useStepNavigation, type StepNavigation, type StepShortcuts } from './useStepNavigation';
 
-const CHANGE_SHORTCUTS: StepShortcuts = { next: 'nextChange', previous: 'previousChange' };
+export const CHANGE_SHORTCUTS: StepShortcuts = { next: 'nextChange', previous: 'previousChange' };
 
 /**
  * Moving from change to change in the diff shown (`diff`, the one `lineDiff` of the text as it is now, so the changes
