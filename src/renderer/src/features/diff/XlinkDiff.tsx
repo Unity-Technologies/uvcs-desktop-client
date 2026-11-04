@@ -8,6 +8,7 @@ import { diffEntryStatus } from './diffEntrySources';
 import { useXlinkSides } from './useXlinkSides';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { DiffViewerFrame } from './viewer/DiffViewerFrame';
+import { FileOnlyNavigator } from './viewer/FileOnlyNavigator';
 import { xlinkDiffView } from './xlinkDiffView';
 import styles from './XlinkDiff.module.css';
 
@@ -27,7 +28,7 @@ export function XlinkDiff({ place, target, xlink, entries, onOpen }: XlinkDiffPr
   const view = xlinkDiffView(target, xlink, sides.data, entries);
 
   return (
-    <DiffViewerFrame title={<DiffFileTitle status={diffEntryStatus(xlink)} path={xlink.path} oldPath={xlink.oldPath} />}>
+    <DiffViewerFrame title={<DiffFileTitle status={diffEntryStatus(xlink)} path={xlink.path} oldPath={xlink.oldPath} />} navigator={<FileOnlyNavigator />}>
       <div className={styles.body}>
         <DetailsSection title={view.kind}>
           {sides.error ? (
