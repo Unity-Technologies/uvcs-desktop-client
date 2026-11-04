@@ -148,7 +148,6 @@ export function mergeItemGroups(items: MergeItem[]): TreeGroup<MergeItem, MergeG
   return groups.filter((group) => group.sorted.length > 0);
 }
 
-/** An item's statuses for the filter's chips: what the merge does to it, and "Conflicts" for a conflict. */
 /**
  * What the merge page's list knows of each item to sort it (`useGroupedFileTree`): its own status. No status groups:
  * its own groups already say what the merge does to each item.
@@ -158,6 +157,7 @@ export const MERGE_ITEM_FACTS: GroupedFileListFacts<MergeItem, MergeGroup> = { t
 /** The merge page's view menu offers no grouping: its own groups already say what the merge does to each item. */
 export const MERGE_VIEW_OFFER: FileListViewOffer = { statusGroups: false };
 
+/** An item's statuses for the filter's chips: what the merge does to it, and "Conflicts" for a conflict. */
 export function mergeItemTones(item: MergeItem): readonly StatusTone[] {
   switch (item.kind) {
     case 'directoryConflict':

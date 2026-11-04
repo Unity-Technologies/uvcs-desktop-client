@@ -1,5 +1,6 @@
 import { ArrowDownUp, CircleDot, List, ListTree } from 'lucide-react';
-import { FILE_LIST_SORTS, type FileListLayout, type FileListSort, type FileListView } from '../../components/fileListViewStore';
+import { SORTS } from '../../components/fileListViewMenuModel';
+import type { FileListLayout, FileListSort, FileListView } from '../../components/fileListViewStore';
 import type { Command } from './commandStore';
 
 interface FileListViewChanges {
@@ -7,8 +8,6 @@ interface FileListViewChanges {
   setSort: (sort: FileListSort) => void;
   setGroupByStatus: (on: boolean) => void;
 }
-
-const SORT_LABELS: Record<FileListSort, string> = { path: 'path', name: 'name', status: 'status', extension: 'extension' };
 
 /**
  * The view menu of every list of files (`FileListViewMenu`) from the palette: the other layout, grouping by status on
@@ -33,15 +32,15 @@ export function fileListViewCommands(view: FileListView, change: FileListViewCha
       keywords: ['changed', 'added', 'deleted', 'moved', 'private', 'view'],
       run: () => change.setGroupByStatus(!view.groupByStatus),
     },
-    ...FILE_LIST_SORTS.map(
+    ...SORTS.map(
       (sort): Command => ({
-        id: `files.sort.${sort}`,
+        id: `files.sort.${sort.value}`,
         group: 'Files',
-        label: `Sort files by ${SORT_LABELS[sort]}`,
+        label: `Sort files by ${sort.label.toLowerCase()}`,
         icon: ArrowDownUp,
         keywords: ['order', 'view'],
-        checked: sort === view.sort,
-        run: () => change.setSort(sort),
+        checked: sort.value === view.sort,
+        run: () => change.setSort(sort.value),
       }),
     ),
   ];

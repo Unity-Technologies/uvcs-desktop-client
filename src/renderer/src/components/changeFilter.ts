@@ -38,6 +38,7 @@ export function toneRank(tone: StatusTone): number {
 export function ownTone(tones: readonly StatusTone[]): StatusTone {
   return tones[tones.length - 1]!;
 }
+
 const ALWAYS_OFFERED: ReadonlySet<StatusTone> = new Set(['added', 'changed', 'deleted', 'moved']);
 
 /** The status chips to offer: the common ones always, the rest only while some change has them. */

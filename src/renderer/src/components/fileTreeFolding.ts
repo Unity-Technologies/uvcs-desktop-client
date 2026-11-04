@@ -20,11 +20,11 @@ interface FoldableRow {
  * no group or folder to fold (a flat list). `closeOnly` closes exactly the keys it is given (`useCollapsedFolders`).
  */
 export function fileTreeFoldingOf(laidOut: readonly FoldableRow[], shown: readonly FoldableRow[], closeOnly: (keys: readonly string[]) => void): FileTreeFolding | null {
-  const headerKeys = laidOut.filter((row) => row.type !== 'file').map((row) => row.key);
-  if (headerKeys.length === 0) return null;
+  if (!laidOut.some((row) => row.type !== 'file')) return null;
   return {
     anyOpen: shown.some((row) => row.type !== 'file' && !row.collapsed),
-    collapseAll: () => closeOnly(headerKeys),
+    // Worked out when asked for: a list of a million changes is laid out again on every folder opened.
+    collapseAll: () => closeOnly(laidOut.filter((row) => row.type !== 'file').map((row) => row.key)),
     expandAll: () => closeOnly([]),
   };
 }

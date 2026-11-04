@@ -23,7 +23,7 @@ export interface FileListViewMenuModel {
   groupings: (ViewMenuChoice<FileListGrouping> & { on: boolean })[];
   sorts: ViewMenuChoice<FileListSort>[];
   sort: FileListSort;
-  /** The button's tooltip and name: the view as it is ("Tree, by changelist and status, by name"). */
+  /** The button's tooltip and name: the view as it is ("Show files as: Tree, grouped by changelist and status, sorted by name"). */
   summary: string;
 }
 
@@ -32,7 +32,7 @@ const LAYOUTS: ViewMenuChoice<FileListLayout>[] = [
   { value: 'tree', label: 'Tree' },
 ];
 
-const SORTS: ViewMenuChoice<FileListSort>[] = [
+export const SORTS: ViewMenuChoice<FileListSort>[] = [
   { value: 'path', label: 'Path' },
   { value: 'name', label: 'Name' },
   { value: 'status', label: 'Status' },

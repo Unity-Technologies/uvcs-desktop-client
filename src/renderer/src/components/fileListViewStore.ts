@@ -10,8 +10,6 @@ export type FileListLayout = 'list' | 'tree';
  */
 export type FileListSort = 'path' | 'name' | 'status' | 'extension';
 
-export const FILE_LIST_SORTS: readonly FileListSort[] = ['path', 'name', 'status', 'extension'];
-
 /** How every list of changed files shows them, chosen in any of them (`FileListViewMenu`). */
 export interface FileListView {
   layout: FileListLayout;

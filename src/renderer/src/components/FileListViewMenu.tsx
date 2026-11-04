@@ -117,11 +117,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Choice({ value, icon: ChoiceIcon, label, checked }: { value: string; icon?: Icon; label: string; checked: boolean }) {
   return (
     <DropdownMenu.RadioItem className={menuStyles.item} value={value} onSelect={keepOpen}>
-      {ChoiceIcon && (
-        <span className={menuStyles.icon}>
-          <ChoiceIcon size={14} />
-        </span>
-      )}
+      {/* Always there, empty for a sort, so every label of the menu starts in the same column. */}
+      <span className={menuStyles.icon}>{ChoiceIcon && <ChoiceIcon size={14} />}</span>
       <span className={menuStyles.label}>{label}</span>
       <Mark shown={checked} />
     </DropdownMenu.RadioItem>

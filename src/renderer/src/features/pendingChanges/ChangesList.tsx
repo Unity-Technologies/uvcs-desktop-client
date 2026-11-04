@@ -13,7 +13,7 @@ import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded }
 import { indexChangeRows, perRow } from './changeRowIndex';
 import { candidatesUnderRow, checkStateOver, spaceToggle } from './changeRowChecks';
 import type { ShownChecks } from './checkinSelection';
-import { changeTreeArrowRows, rowIndent, rowLevel, treeLevel, type RowLevels } from './changeRowLevels';
+import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, rowLevel, treeLevel, type RowLevels } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -272,7 +272,7 @@ export function ChangesList({
 
 /** Where a row sits, how far in it starts, and the indent guides it draws (`ChangesList.module.css`). */
 function guideStyle(row: ChangeRow, levels: RowLevels, top: number): CSSProperties {
-  return { top, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, levels)}px`, '--guide-levels': rowLevel(row, levels) } as CSSProperties;
+  return { top, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, levels)}px`, '--guide-levels': rowLevel(row, levels), '--level-indent': `${LEVEL_INDENT}px` } as CSSProperties;
 }
 
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
