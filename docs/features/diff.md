@@ -315,29 +315,30 @@ into whole, nor Split | Unified for a version shown alone.
 
 ## Moving through changes
 
-Every text diff of two versions steps through its changes (`useChangeNavigation`: the regions of the one `lineDiff`,
-so they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines while typing) and the header's
-arrows (see "The arrows never move" below), from the diff or the list beside it; the first move goes from the top of
-the view. The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered
-there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one, as changes
-are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or
-first change, a diff beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next
-file's first change or the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting
-files step through different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last
-change into a conflicting file lands on its first conflict, and no arrival is left waiting for a file opened later. A
-diff opened any other way (picked in a list, from a link, on a page) opens with its first change in view, a few rows
-from the top unless it starts in view already (a collapsed diff's first hunk, whose bar stays above it:
-`ChangeScroll`), not lit nor counted until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on
-a link's lines stays on them. It opens so once, as the diff first shows: changes typed or read later leave the view
-where it is. A version shown alone (an added or deleted file) is one change; a file with none to step through (an
-image, a model, a binary, identical versions) keeps the arrows, which go from file to file ("Previous file", "Next
-file", no label), so stepping through the list never stops there. It steps through the files as the list shows them,
-never on to a folder (private, deleted or moved), which has no diff (`fileRowKeys`, Changes' too); in a tree, those in
-a closed folder are skipped. The list itself, its order, layout and groups, are every list of
-changed files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it shows how many
-changes it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
-`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and
-the merge page steps through conflicts with it (merge.md "Stepping through conflicts").
+Every text diff of two versions steps through its changes (`useChangeNavigation`: the regions of the one `lineDiff`, so
+they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines while typing) and the header's arrows
+(see "The arrows never move" below), from the diff or the list beside it; the first move goes from the top of the view.
+The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered there yet is
+scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one, as changes are always in the
+hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
+beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or
+the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting files step through
+different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting
+file lands on its first conflict, and no arrival is left waiting for a file opened later. A diff opened any other way
+(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it starts
+in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted until the
+first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It opens so once,
+as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added or
+deleted file) is one change; a file with none to step through (an image, a model, a binary, identical versions) keeps
+the arrows, which go from file to file ("Previous file", "Next file", no label), so stepping through the list never
+stops there. It steps through the files as the list shows them, never on to a folder (private, deleted or moved), which
+has no diff (`fileRowKeys`, Changes' too), though a folder's `.meta` diff shown in Changes steps on from the folder's
+place (`FileStepsOptions.rowOrder`); in a tree, those in a closed folder are skipped. With only folders pending, Changes
+selects the first of them (`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed
+files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it shows how many changes it
+holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
+`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
+merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
 ### The arrows never move
 
