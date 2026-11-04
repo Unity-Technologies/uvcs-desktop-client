@@ -24,8 +24,7 @@ describe('sameChangeColors', () => {
 describe("Pierre's row tints", () => {
   it('are on its host, where the change map reads them: an update that moves them fails here', () => {
     const style = readFileSync(join(__dirname, '../../../../../../node_modules/@pierre/diffs/dist/style.js'), 'utf8');
-    const host = style.slice(style.indexOf(':host{'));
-    expect(host).toMatch(/--diffs-bg-deletion:/);
-    expect(host).toMatch(/--diffs-bg-addition:/);
+    expect(style).toMatch(/:host\{[^}]*--diffs-bg-deletion:/);
+    expect(style).toMatch(/:host\{[^}]*--diffs-bg-addition:/);
   });
 });

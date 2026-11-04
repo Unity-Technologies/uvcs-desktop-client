@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { scrollTopForTrackPoint } from './changeMarks';
 import { MIN_THUMB_HEIGHT, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
 
 const sizes = { contentHeight: 4000, viewHeight: 500, trackHeight: 500 };
@@ -42,5 +43,13 @@ describe('scrollTopAfterDrag', () => {
 
   it('scrolls nothing when the content fits', () => {
     expect(scrollTopAfterDrag(0, 100, { ...sizes, contentHeight: 400 })).toBe(0);
+  });
+});
+
+describe('a press on the track', () => {
+  it('scrolls to center the point pressed, and a drag from there goes on from it, as on macOS', () => {
+    const pressed = scrollTopForTrackPoint(250, sizes);
+    expect(pressed).toBe(1750);
+    expect(scrollTopAfterDrag(pressed, 40, sizes)).toBe(2070);
   });
 });

@@ -7,7 +7,8 @@ import { changeKindOf, changeMarkLabel, changeMarks, FUSE_GAP, FUSE_LINES, MIN_M
 const ROW = 20;
 const removed = (lineNumber: number): ChangedLine => ({ side: 'deletions', lineNumber });
 const added = (lineNumber: number): ChangedLine => ({ side: 'additions', lineNumber });
-const region = (index: number, ...lines: ChangedLine[]): ChangeRegion => ({ index, lines, newStart: lines.find((line) => line.side === 'additions')?.lineNumber ?? 1 });
+/** A change; with no line shifted before it, a removed line stands at its own number in the modified file. */
+const region = (index: number, ...lines: ChangedLine[]): ChangeRegion => ({ index, lines, newStart: (lines.find((line) => line.side === 'additions') ?? lines[0]!).lineNumber });
 
 const regionsOf = (original: string, modified: string): ChangeRegion[] =>
   listChangeRegions(listChangeBlocks(parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified })));
@@ -15,8 +16,8 @@ const text = (lines: string[]): string => lines.map((line) => `${line}\n`).join(
 const numbered = (count: number): string[] => Array.from({ length: count }, (_, index) => `line ${index + 1}`);
 
 /** A layout where every line of the modified side is a row of its own, as Pierre lays out a split diff of these. */
-function rowsLayout(rows: number, stripHeight: number, boxOf: (line: ChangedLine) => LineBox | undefined = ({ lineNumber }) => ({ top: (lineNumber - 1) * ROW, height: ROW })): ChangeMapLayout {
-  return { boxOf, lineCounts: { deletions: rows, additions: rows }, contentHeight: rows * ROW, stripHeight };
+function rowsLayout(rows: number, trackHeight: number, boxOf: (line: ChangedLine) => LineBox | undefined = ({ lineNumber }) => ({ top: (lineNumber - 1) * ROW, height: ROW })): ChangeMapLayout {
+  return { boxOf, lineCounts: { deletions: rows, additions: rows }, contentHeight: rows * ROW, trackHeight };
 }
 
 describe('showsChangeMap', () => {
@@ -56,7 +57,7 @@ describe('changeKindOf', () => {
  * Pierre's split layout of a diff with its unchanged lines collapsed: each hunk's rows (as many as its longer side),
  * a bar for the lines folded between hunks. A line's row is its offset in its side of the hunk.
  */
-function collapsedLayout(original: string, modified: string, stripHeight: number): ChangeMapLayout {
+function collapsedLayout(original: string, modified: string, trackHeight: number): ChangeMapLayout {
   const BAR = 30;
   const { hunks } = parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified });
   const tops: number[] = [];
@@ -76,7 +77,7 @@ function collapsedLayout(original: string, modified: string, stripHeight: number
     const start = side === 'additions' ? hunk.additionStart : hunk.deletionStart;
     return { top: tops[index]! + (lineNumber - start) * ROW, height: ROW };
   };
-  return { boxOf, lineCounts: { deletions: 1500, additions: 1500 }, contentHeight: top + BAR, stripHeight };
+  return { boxOf, lineCounts: { deletions: 1500, additions: 1500 }, contentHeight: top + BAR, trackHeight };
 }
 
 /** A long file with its changes spread through it, as `scripts/sandboxes` would build one: groups far apart, and a run of close one-line edits. */
@@ -137,11 +138,33 @@ describe('changeMarks', () => {
     ]);
   });
 
-  it('fuses blocks closer than the gap the eye can read, of one kind when all are', () => {
+  it('fuses blocks of different kinds closer than the gap the eye can read into one split band', () => {
     const marks = changeMarks([region(0, added(10)), region(1, added(20)), region(2, removed(30)), region(3, added(900))], rowsLayout(1000, 200));
     expect(marks.map(({ kind, first, last }) => ({ kind, first, last }))).toEqual([
       { kind: 'both', first: 0, last: 2 },
       { kind: 'added', first: 3, last: 3 },
+    ]);
+  });
+
+  it('keeps a band of one kind when all its changes are', () => {
+    const tall = (line: ChangedLine): LineBox => ({ top: (line.lineNumber - 1) * 100, height: 100 });
+    const layout = { ...rowsLayout(100, 1000, tall), contentHeight: 10_000 };
+    const additions = changeMarks([region(0, added(10)), region(1, added(13)), region(2, added(16))], layout);
+    expect(additions.map(({ kind, first, last }) => ({ kind, first, last }))).toEqual([{ kind: 'added', first: 0, last: 2 }]);
+    const deletions = changeMarks([region(0, removed(10)), region(1, removed(13)), region(2, removed(16))], layout);
+    expect(deletions.map(({ kind, first, last }) => ({ kind, first, last }))).toEqual([{ kind: 'deleted', first: 0, last: 2 }]);
+  });
+
+  it(`fuses changes up to ${FUSE_LINES} unchanged lines apart, and no farther`, () => {
+    const tall = (line: ChangedLine): LineBox => ({ top: (line.lineNumber - 1) * 100, height: 100 });
+    const layout = { ...rowsLayout(100, 1000, tall), contentHeight: 10_000 };
+    // Line 10 changed: the unchanged lines after it start at 11.
+    const joined = 11 + FUSE_LINES;
+    const apart = joined + 1 + FUSE_LINES + 1;
+    const marks = changeMarks([region(0, added(10)), region(1, added(joined)), region(2, added(apart))], layout);
+    expect(marks.map(({ first, last }) => ({ first, last }))).toEqual([
+      { first: 0, last: 1 },
+      { first: 2, last: 2 },
     ]);
   });
 
@@ -182,7 +205,7 @@ describe('changeMarks', () => {
 });
 
 describe('scrollTopForTrackPoint', () => {
-  const sizes = { contentHeight: 10_000, stripHeight: 500, viewHeight: 400 };
+  const sizes = { contentHeight: 10_000, trackHeight: 500, viewHeight: 400 };
 
   it('scrolls the view to center the point clicked, on a block or between blocks alike', () => {
     expect(scrollTopForTrackPoint(100, sizes)).toBe(1800);
@@ -195,7 +218,7 @@ describe('scrollTopForTrackPoint', () => {
   });
 
   it('stays at the top before the track has a size', () => {
-    expect(scrollTopForTrackPoint(10, { ...sizes, stripHeight: 0 })).toBe(0);
+    expect(scrollTopForTrackPoint(10, { ...sizes, trackHeight: 0 })).toBe(0);
   });
 });
 
