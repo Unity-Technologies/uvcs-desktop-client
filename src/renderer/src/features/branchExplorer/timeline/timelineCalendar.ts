@@ -108,6 +108,7 @@ export function axisLabelCandidates(columnTimes: Float64Array, calendar: Timelin
   const labels: AxisLabel[] = [{ column: 0, text: shortDate(columnTimes[0]!, calendar) }];
   const firstDay = Math.floor(local(calendar, columnTimes[0]!) / DAY);
   let previousMonth = monthOf(firstDay);
+  let previousMonthNamed = previousMonth;
   // Most columns fall on the day of the one before: only one past the day's end reads the calendar again.
   let dayEnd = instant(calendar, (firstDay + 1) * DAY);
   for (let column = 1; column < columnTimes.length; column++) {
@@ -122,8 +123,10 @@ export function axisLabelCandidates(columnTimes: Float64Array, calendar: Timelin
     const month = monthOf(day);
     if (month === previousMonth) continue;
     previousMonth = month;
-    const date = new Date(day * DAY);
-    labels.push({ column, text: write(calendar, day * DAY, date.getUTCMonth() === 0 ? { month: 'short', year: 'numeric' } : { month: 'short' }) });
+    // A month in another year than the label before it (January, or after a gap) says its year.
+    const newYear = Math.floor(month / 12) !== Math.floor(previousMonthNamed / 12);
+    previousMonthNamed = month;
+    labels.push({ column, text: write(calendar, day * DAY, newYear ? { month: 'short', year: 'numeric' } : { month: 'short' }) });
   }
   return labels;
 }

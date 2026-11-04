@@ -73,6 +73,11 @@ describe('axisLabelCandidates', () => {
     ]);
   });
 
+  it('says the year of a month in another year than the label before it, after a gap too', () => {
+    const times = Float64Array.from([at('2025-04-20T09:00:00Z'), at('2025-05-02T09:00:00Z'), at('2026-03-01T09:00:00Z'), at('2026-06-01T09:00:00Z')]);
+    expect(axisLabelCandidates(times, utc).map(({ text }) => text)).toEqual(['Apr 20', 'May', 'Mar 2026', 'Jun']);
+  });
+
   it('names nothing for a changeset dated before the one to its left', () => {
     const times = Float64Array.from([at('2026-09-02T09:00:00Z'), at('2026-09-01T09:00:00Z'), at('2026-09-03T09:00:00Z')]);
     expect(axisLabelCandidates(times, utc).map(({ column }) => column)).toEqual([0, 2]);
