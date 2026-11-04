@@ -363,10 +363,13 @@ otherwise (the file being read, the previous file's diff still on screen; read f
 previous one's navigation is still the one published, as publishing follows the render; its viewer's code loading)
 the header's own, with no label (never the previous file's "3 of 3" beside the new title), both arrows enabled with a
 neutral tip, each press kept for the file selected; where it couldn't be read, file to file at once. Kept presses go
-in one queue for the frame (`StepQueue`), tagged with the file selected, and a diff puts its own there too until it
-opened at the step it was stepped to. Once open, the selected file's diff takes them one at a time through its own
-navigation; presses tagged with another file are dropped, so a file picked in the list while another loads opens at
-its top. A diff that will never have changes to step through (`stepsCanCome`: anything but a text diff, or a file
+in one queue for the frame (`StepQueue`), tagged with the path of the file they're for. A diff keeps its own there
+too (`pressTarget`): until it opened at the step it was stepped to, and while a step it made is in flight
+(`FileSteps.steppingTo`: the list already on the next file, the diff pane still showing this one while the selection
+settles and the next file is read), for that next file, never stepping from this one's place. Once open, the selected
+file's diff takes its own one at a time through its own navigation (a diff still on screen for a previous file takes
+none); presses tagged with another file are dropped, so a file picked in the list while another loads opens at its
+top. A diff that will never have changes to step through (`stepsCanCome`: anything but a text diff, or a file
 typed into as a diff) opens at once. So ↓ onto file B and ↓ again while B loads, or just after, ends on B's 2nd change,
 and ↓↓↓ on its 3rd: no click lost to a button swapped under the pointer, none landing on the wrong file.
 
