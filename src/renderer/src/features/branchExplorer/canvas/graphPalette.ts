@@ -84,7 +84,8 @@ const CAPTION_FONT_WEIGHT = 500;
 export function readGraphPalette(element: Element): GraphPalette {
   const style = getComputedStyle(element);
   const variable = (name: string): string => style.getPropertyValue(name).trim();
-  // The token spans several lines; a canvas font string takes it as one.
+  // The token spans several lines. Chromium's canvas reads it the same either way (checked: `ctx.font` comes back
+  // identical), so this changes nothing drawn; it keeps the font strings the palette builds on one line.
   const fontUi = variable('--font-ui').replace(/\s+/g, ' ');
 
   return {
