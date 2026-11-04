@@ -108,6 +108,13 @@
   background: var(--bg-active);
 }
 
+/* A toggle that is on (`aria-pressed`), such as a view's Timeline button: tinted in the accent. */
+.ghost[aria-pressed='true'],
+.ghost[aria-pressed='true']:hover:not([aria-disabled='true']) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
 .danger {
   background: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 80%, black);
