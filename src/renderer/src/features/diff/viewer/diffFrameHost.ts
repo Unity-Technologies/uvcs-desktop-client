@@ -57,8 +57,11 @@ export interface HeaderArrows {
   headerKeys: boolean;
   /** The header's presses wait for the selected file's diff (`StepQueue`), rather than stepping from another file. */
   queues: boolean;
-  /** The presses kept are dropped: the selected file couldn't be read, so the diff they were meant for never comes. */
-  dropsKept: boolean;
+  /**
+   * The presses kept for the selected file are replayed as steps from it, to the files around it (`drainKept`): it
+   * couldn't be read, so the diff they were meant for never comes, and a burst across it goes on.
+   */
+  replaysKept: boolean;
 }
 
 /**
@@ -69,10 +72,10 @@ export interface HeaderArrows {
  * previous one's navigation is still the one published (publishing follows the render).
  */
 export function headerArrows({ published, requestedKey, error, hasData, isPlaceholderData }: HeaderState): HeaderArrows {
-  if (error) return { body: null, headerKeys: true, queues: false, dropsKept: true };
+  if (error) return { body: null, headerKeys: true, queues: false, replaysKept: true };
   const current = hasData && !isPlaceholderData && published !== null && isSelectedFile(published.key, requestedKey);
-  if (current) return { body: published, headerKeys: false, queues: false, dropsKept: false };
-  return { body: null, headerKeys: true, queues: true, dropsKept: false };
+  if (current) return { body: published, headerKeys: false, queues: false, replaysKept: false };
+  return { body: null, headerKeys: true, queues: true, replaysKept: false };
 }
 
 /** Whether a diff is the selected file's, not a previous one kept on screen while the next is read: by its versions. */

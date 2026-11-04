@@ -5,7 +5,7 @@ import { ChangeNavigator } from './ChangeNavigator';
 import { DiffFrameHostContext, headerArrows, headerPress, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { FileStepsContext } from './fileSteps';
-import { StepQueue } from './stepQueue';
+import { drainKept, followStep, StepQueue } from './stepQueue';
 import { useFileOnlyNavigation } from './useFileOnlyNavigation';
 import styles from './SteppedDiffFrame.module.css';
 
@@ -74,9 +74,9 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? keep : undefined);
   // The selection left a file: the presses kept for it (not for this one, nor for one a step is on its way to) go.
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
-  // A file that couldn't be read: the presses kept for it were meant for a diff that never came.
+  // A file that couldn't be read: the presses kept for it, meant for a diff that never came, step on from it.
   useEffect(() => {
-    if (arrows.dropsKept) queue.clear();
+    if (arrows.replaysKept) drainKept(queue, path, (direction) => followStep(queue, path, files?.step(direction) ?? null));
   });
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;
