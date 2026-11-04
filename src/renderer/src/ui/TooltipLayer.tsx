@@ -20,7 +20,7 @@ export const TOOLTIP_SHOW_DELAY = 120;
  * system `title`. `data-tip-overflow` shows it only while the element's text is clipped. Labels cut off by CSS
  * `text-overflow: ellipsis` reveal their full text without any attribute. While it shows, it follows its element: new
  * words under the still pointer (the status bar after a switch) show at once, and it goes when the element does. It
-holds still while the pointer moves over the element's parts (`hoverOutcome`).
+ * holds still while the pointer moves over the element's parts (`hoverOutcome`).
  */
 export function TooltipLayer() {
   const [tip, setTip] = useState<Tip | null>(null);
@@ -54,8 +54,11 @@ export function TooltipLayer() {
       const found = (origin instanceof Element && origin !== event.target ? findTip(origin) : null) ?? findTip(event.target as Element | null);
       const outcome = hoverOutcome({ shownHost: shownHost.current, hoveredHost: found?.host ?? null, allowsHover: gate.current.allowsHover });
       if (outcome === 'hide' || !found) return hide();
+      // Back on the element showing its tip before another's showed: that other one never does.
       clearTimeout(timer.current);
       if (outcome === 'show') timer.current = setTimeout(() => show(found), TOOLTIP_SHOW_DELAY);
+      // A clipped label's words are its text, which no observer follows: read them again while it stays.
+      else setTip((shown) => shown && followTip(shown, found));
     };
 
     const unwire = listenForTooltips({ document, window }, { move: onMove, over: onOver, hide });
@@ -70,10 +73,12 @@ export function TooltipLayer() {
   const host = tip?.host;
   useEffect(() => {
     if (!host) return;
+    // Until this effect runs again, the tip shown may already be another element's: only this one's is followed.
     const follow = (): void => {
+      if (shownHost.current !== host) return;
       const now = host.isConnected ? findTip(host) : null;
       if (!now) shownHost.current = null;
-      setTip((shown) => shown && followTip(shown, now));
+      setTip((shown) => (shown?.host === host ? followTip(shown, now) : shown));
     };
     const observer = new MutationObserver(follow);
     observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-tip-move-from', 'data-tip-move-to', 'data-state'] });
