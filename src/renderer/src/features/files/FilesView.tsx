@@ -14,7 +14,8 @@ import { IconButton } from '../../ui/IconButton';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { Stowable } from '../../ui/Stowable';
-import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { selectedFileDiffs } from '../../components/diffExpansion';
+import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { LineLinksContext } from '../diff/viewer/lineLinks';
 import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
@@ -62,6 +63,8 @@ export function FilesView() {
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, root }), [childrenByDirectory, expanded, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  // Expanded, the file's diff in the details ends with the file: deleted, or the selection cleared by a refresh.
+  useCollapseWithHost(selectedFileDiffs({ read: !isLoadingRoot, selected: selection.anchor !== null, itemType: focused?.itemType }));
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
   const lineLinks = useFilesItemLinks(workspace, focused, pendingIndex);
 
