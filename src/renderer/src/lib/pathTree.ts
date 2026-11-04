@@ -52,10 +52,13 @@ export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, fold
   sorted.forEach((item, index) => {
     while (open.length > 0 && open.at(-1)!.held.end <= index) open.pop();
     const holdsOthers = isInFolder(sorted[index + 1]?.path, item.path);
-    for (let folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers); folderEnd !== -1; folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers)) {
+    // The folders of the item's path below the rows open around it, the item itself last when it holds others.
+    let folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers);
+    while (folderEnd !== -1) {
       const row = folderRowAt({ sorted, index, folderEnd, holdsOthers, parent: open.at(-1), folderScope });
       rows.push(row);
       open.push(row);
+      folderEnd = nextFolderEnd(item.path, row, holdsOthers);
     }
     if (!holdsOthers) rows.push({ type: 'file', key: keyOf(item), item, depth: open.length });
   });
