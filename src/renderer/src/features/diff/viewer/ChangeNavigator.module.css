@@ -1,11 +1,3 @@
-/* Last in the header, the arrows side by side at its right edge: nothing after them, so they never move. */
-.navigator {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-}
-
 /* "3 of 12", right before the arrows with no room reserved, so nothing floats between them: it grows leftward, and
    tabular figures keep "3 of 12" to "4 of 12" still. Empty, it takes no room at all. */
 .position {

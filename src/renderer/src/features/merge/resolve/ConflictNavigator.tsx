@@ -33,9 +33,6 @@ export function ConflictNavigator({ count, view, frame, path }: ConflictNavigato
     return () => panel?.removeEventListener('scroll', onViewScroll, { capture: true });
   }, [frame, onViewScroll]);
 
-  return (
-    <div className={styles.navigator}>
-      <ChangeNavigator navigation={navigation} stepsOwn />
-    </div>
-  );
+  // Nothing at all, not even its place, while there is nowhere to go (`changeNavigatorView`).
+  return <ChangeNavigator className={styles.navigator} navigation={navigation} stepsOwn />;
 }

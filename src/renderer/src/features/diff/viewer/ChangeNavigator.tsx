@@ -3,6 +3,7 @@ import { useContext, type Ref } from 'react';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { hotkey, hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { IconButton } from '../../../ui/IconButton';
+import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
 import { changeNavigatorView } from './changeNavigatorView';
 import { FileStepsContext } from './fileSteps';
 import type { StepNavigation } from './useStepNavigation';
@@ -16,6 +17,8 @@ interface ChangeNavigatorProps {
   hostSteps?: boolean;
   /** The second key of each shortcut also works while typing in the view (F7 in a diff's editor). */
   keysWhileTyping?: boolean;
+  /** Where it sits, beyond the header's end (`ConflictNavigator`'s view bar). */
+  className?: string;
   /** The arrows' element: what the keys of a navigation with no view of its own work from (`FileOnlyNavigator`). */
   ref?: Ref<HTMLDivElement>;
 }
@@ -25,13 +28,13 @@ interface ChangeNavigatorProps {
  * stands ("3 of 12"), right-aligned so it grows leftward, then previous and next, side by side at the edge. Past the
  * first or last, beside a list of files, the arrows go on to the file before or after (`changeNavigatorView`).
  */
-export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWhileTyping = false, ref }: ChangeNavigatorProps) {
+export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWhileTyping = false, className, ref }: ChangeNavigatorProps) {
   const besideFiles = useContext(FileStepsContext) !== null;
   const { noun, shortcuts, count, current } = navigation;
   const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles, hostSteps });
   if (!view) return null;
   return (
-    <div ref={ref} className={styles.navigator}>
+    <PaneToolbarGroup ref={ref} className={className}>
       <span className={styles.position} data-toolbar-extra aria-live="polite">
         {view.label}
       </span>
@@ -53,7 +56,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
         disabled={!view.next.enabled}
         onClick={() => navigation.go(1)}
       />
-    </div>
+    </PaneToolbarGroup>
   );
 }
 
