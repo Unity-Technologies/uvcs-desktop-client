@@ -1,8 +1,9 @@
-import { ChartArea, FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, RefreshCw, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
+import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, RefreshCw, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
 import { toggleDetailsInFront } from '../../components/detailsInFront';
+import { TimelineIcon } from '../../components/TimelineIcon';
 import { useBranchExplorerPreferences } from '../../features/branchExplorer/branchExplorerStore';
 import { timelineToggle } from '../../features/branchExplorer/timeline/timelineToggle';
 import { openOwnRepositoryPermissions } from '../../features/permissions/openPermissions';
@@ -76,7 +77,7 @@ export function usePlaceCommands(): void {
         id: 'branchExplorer.timeline',
         group: 'Branch Explorer',
         label: timeline.label,
-        icon: ChartArea,
+        icon: TimelineIcon,
         keywords: ['minimap', 'overview', 'activity'],
         shortcut: hotkey('graphTimeline'),
         run: () => {

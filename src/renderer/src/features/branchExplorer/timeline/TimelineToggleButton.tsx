@@ -1,4 +1,4 @@
-import { ChartArea } from 'lucide-react';
+import { TimelineIcon } from '../../../components/TimelineIcon';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { IconButton } from '../../../ui/IconButton';
 import { useBranchExplorerPreferences } from '../branchExplorerStore';
@@ -11,7 +11,7 @@ export function TimelineToggleButton() {
   const toggle = timelineToggle(shown, true);
   return (
     <IconButton
-      icon={<ChartArea size={14} />}
+      icon={<TimelineIcon size={14} />}
       label={toggle.label}
       shortcut={hotkey('graphTimeline')}
       aria-pressed={shown}
