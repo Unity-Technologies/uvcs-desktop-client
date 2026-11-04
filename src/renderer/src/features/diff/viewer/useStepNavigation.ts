@@ -5,7 +5,7 @@ import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
-import { drainsKept, pressTarget, StepQueue } from './stepQueue';
+import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
 import type { ArrowGoal } from './changeNavigatorView';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
@@ -140,17 +140,25 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   // Presses meant for a file whose view hasn't opened at its arrival wait for it (`pressTarget`), tagged with that file.
   const ownKept = useOwnKeptPresses();
   const keptPresses = kept ?? ownKept;
-  const go = (direction: 1 | -1): void => {
-    if (goes) return goes(direction);
+  const press = (direction: 1 | -1): PressEffect => {
+    if (goes) {
+      goes(direction);
+      return 'kept';
+    }
     const target = pressTarget({ opens, opened, steppingTo: files?.steppingTo() ?? null, path });
-    if (target.kind === 'keep') return keptPresses.queue.push(target.path, direction);
+    if (target.kind === 'keep') {
+      keptPresses.queue.push(target.path, direction);
+      return 'kept';
+    }
     const outcome = pressStep(position, direction, files, readAbove);
-    if (typeof outcome === 'number') moveTo(outcome);
     // On to the next file: the presses left for this one follow it there, in order.
-    else if (outcome !== null) keptPresses.queue.retag(path, outcome.file);
+    if (typeof outcome !== 'number') return followStep(keptPresses.queue, path, outcome?.file ?? null);
+    moveTo(outcome);
+    return 'moved';
   };
-  const latestGo = useRef(go);
-  latestGo.current = go;
+  const go = (direction: 1 | -1): void => void press(direction);
+  const latestPress = useRef(press);
+  latestPress.current = press;
   const latestMoveTo = useRef(moveTo);
   latestMoveTo.current = moveTo;
 
@@ -186,12 +194,10 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     return () => cancelAnimationFrame(frame);
   }, [files, path, steps.length, opens, opened, noStepsComing]);
 
-  // Once opened, the presses kept for this file, one per render, each moving from where the last one left it; not by a
+  // Once opened, the presses kept for this file (`drainKept`), each moving from where the last one left it; not by a
   // view kept on screen while another file is read, which isn't the one they're for.
   useEffect(() => {
-    if (!drainsKept({ opened, selected: keptPresses.takes })) return;
-    const press = keptPresses.queue.take(path);
-    if (press !== undefined) latestGo.current(press);
+    if (drainsKept({ opened, selected: keptPresses.takes })) drainKept(keptPresses.queue, path, (direction) => latestPress.current(direction));
   });
 
   const hasFiles = files !== null;
@@ -204,7 +210,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
       const direction = pressed(shortcuts.next) ? 1 : pressed(shortcuts.previous) ? -1 : 0;
       if (direction === 0) return;
       event.preventDefault();
-      latestGo.current(direction);
+      latestPress.current(direction);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);

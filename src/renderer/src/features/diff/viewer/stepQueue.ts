@@ -57,3 +57,28 @@ export function pressTarget({ opens, opened, steppingTo, path }: { opens: boolea
 export function drainsKept({ opened, selected }: { opened: boolean; selected: boolean }): boolean {
   return opened && selected;
 }
+
+/**
+ * What a press did: moved the view to a step, went on to another file, was kept for a file whose view hasn't opened,
+ * or nothing (past the last change of the last file, before the first of the first).
+ */
+export type PressEffect = 'moved' | 'file' | 'kept' | 'none';
+
+/** A press that went on to the file `to` (or nowhere: `null`): the presses left for `from` follow it there. */
+export function followStep(queue: StepQueue, from: string, to: string | null): PressEffect {
+  if (to === null) return 'none';
+  queue.retag(from, to);
+  return 'file';
+}
+
+/**
+ * Hands the presses kept for `path` to its view (`go`), once it may (`drainsKept`). A press that does something is the
+ * last for now: the render a move brings takes the next, from where it left the view, and a press gone on to another
+ * file, or kept for one, leaves the rest to that file. A press that does nothing brings no render, so the next is taken
+ * at once, never left waiting for one.
+ */
+export function drainKept(queue: StepQueue, path: string, go: (direction: StepDirection) => PressEffect): void {
+  for (let press = queue.take(path); press !== undefined; press = queue.take(path)) {
+    if (go(press) !== 'none') return;
+  }
+}
