@@ -320,8 +320,7 @@ regions of the one `lineDiff`, so they follow what's typed) with ⌥↓ ⌥↑, 
 while typing) and the header's arrows around "3 of 12" (last in the header, so ▼ stays put from file to file), from the diff or the list beside it; the first move goes from
 the top of the view. The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff
 not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
-as changes are always in the hunks shown; a move to a change rendered already but farther than a view jumps and glides
-only the end, `smoothScrollPlan`), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
+as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
 the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
 file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
 (picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
@@ -335,6 +334,11 @@ every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folde
 shows how many changes it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
+
+A move to a change, or to a conflict on the merge page (they share `scrollToRows`), that is rendered already but more
+than a view away jumps to a quarter of a view short of it and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), as a
+click on the change map does: a smooth scroll the whole way would pass through rows Pierre renders one screen after
+another.
 
 ## The change map
 
@@ -358,14 +362,17 @@ browser's scrollbar stays, as everywhere. While it shows, the browser's vertical
 (`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top
 as it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls
 the diff, and no code goes under it. The thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks,
-translucent in the app's thumb colors, and dragged with the pointer captured. `useChangeMap` places the marks again
+translucent in the app's hovered thumb color (`--diff-scrollbar-thumb`: the resting one was too faint over the marks
+in the dark theme), and dragged with the pointer captured; it moves on the scroll event itself (`useScrollTop`), with
+the content, not a frame behind. `useChangeMap` places the marks again
 (`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines above the last
 change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a resize or as Pierre
 renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are read anew each time,
 so a theme switch recolors the map.
 
-A click anywhere in the track, on a block or between blocks, scrolls smoothly so that point is in the middle of the
-view (`scrollTopForTrackPoint`; at once under reduced motion). Farther than a view, it jumps to a quarter of a view
+A press anywhere in the track off the thumb, on a block or between blocks, scrolls smoothly so that point is in the
+middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
+that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view
 short of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a
 smooth scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye
 can predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is
