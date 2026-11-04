@@ -75,6 +75,15 @@ describe('changeNavigatorView', () => {
     });
   });
 
+  it('keeps a merged file\'s conflict arrows, disabled, with no conflict left and nowhere to go: they never come and go', () => {
+    const nothingLeft = { ...textBeforeStepping, count: 0, noun: 'conflict', besideFiles: false, previous: null, next: null } as const;
+    expect(changeNavigatorView(nothingLeft)).toEqual({
+      label: '',
+      previous: { tip: 'Previous conflict', enabled: false },
+      next: { tip: 'Next conflict', enabled: false },
+    });
+  });
+
   it("names the merge page's steps by its noun", () => {
     const conflicts = { ...textBeforeStepping, count: 3, current: 0, noun: 'conflict', previous: 'file', next: 'step' } as const;
     expect(changeNavigatorView(conflicts)).toEqual({

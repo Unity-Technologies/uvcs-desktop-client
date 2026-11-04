@@ -358,8 +358,8 @@ it takes the keys only then, opens nothing and names no file, so the arrival mea
 own: `hostedNavigation`, `headerTakesKeys`). So a burst of ↓ clicks during a 50–200 ms load never loses one to a
 button swapped under the pointer. Hosts keep `FileDiffViewer` mounted from file to file (Incoming's isn't keyed by
 the file). An xlink's header draws `FileOnlyNavigator`. Narrow, the label gives way (`data-toolbar-extra`) and the
-arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and leave
-no place while there is nowhere to go.
+arrows keep the edge. The merge page's conflict arrows share the order and the label (`ConflictNavigator`), and stay,
+disabled, once there is nowhere to go (merge.md "Stepping through conflicts").
 
 ## Expanding the diff
 

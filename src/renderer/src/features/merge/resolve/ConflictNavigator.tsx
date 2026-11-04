@@ -33,6 +33,6 @@ export function ConflictNavigator({ count, view, frame, path }: ConflictNavigato
     return () => panel?.removeEventListener('scroll', onViewScroll, { capture: true });
   }, [frame, onViewScroll]);
 
-  // Nothing at all, not even its place, while there is nowhere to go (`changeNavigatorView`).
+  // Always there while the file has conflicts to count, disabled once there is nowhere to go: they never come and go.
   return <ChangeNavigator className={styles.navigator} navigation={navigation} stepsOwn />;
 }
