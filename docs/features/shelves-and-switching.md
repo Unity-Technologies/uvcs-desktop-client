@@ -95,7 +95,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm
   checkin` or shelve of those paths, the empty-comment warning, "Update & check in". Running at once was dropped: it
   skipped reading the comment, which a changelist's description only suggests. "Undo N changes…" opens the Undo dialog
-  on its changes. The default changelist has no menu of its own: right-clicking it acts on its files.
+  on its changes. The default changelist offers the same, checked by being in no user changelist (`PreparedChangelist`'s
+  `name` is null, `changelistNameOf`), with no description to suggest, and "Default changelist" under the button
+  (`preparedChangelistNote`); changes.md "Changelist menus" holds the whole menu.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
