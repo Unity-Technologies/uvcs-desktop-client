@@ -58,10 +58,13 @@ export function withEverythingIncluded(choice: CheckinChoice, paths: string[]): 
 }
 
 /**
- * Whether the prepared changelist still holds a pending change, checked or not. By the changelist, not the paths: an
- * added file undone stays on disk, private, at its path, and files the user checked besides don't keep it going.
+ * Whether the prepared changelist still holds a pending change, checked or not. A user changelist is read by the
+ * changelist, not the paths: an added file undone stays on disk, private, at its path, and files the user checked
+ * besides don't keep it going. The default changelist is read by its prepared paths still in it: every new edit lands
+ * there, so it would never end otherwise.
  */
 export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
+  if (prepared.name === null) return allChanges.some((change) => changelistNameOf(change) === null && prepared.paths.has(change.path));
   return allChanges.some((change) => changelistNameOf(change) === prepared.name);
 }
 
