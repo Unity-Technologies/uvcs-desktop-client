@@ -1,6 +1,5 @@
 import { GitGraph } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
@@ -36,7 +35,7 @@ import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { NO_RULE_COLORS, ruleColors as ruleColorsOf } from './model/ruleColors';
-import { changesetUserHues, withUserColors } from './model/userColors';
+import { changesetUserHues, historyAuthors, withUserColors } from './model/userColors';
 import { describeSelection } from './model/describeSelection';
 import { homeTarget } from './model/homeTarget';
 import { pendingBranchOf } from './model/pendingChangeset';
@@ -107,7 +106,7 @@ export function BranchExplorerView() {
     () => (data ? withUserColors(formatColors, rememberedPerHistory(data, 'userHues', [userColors], () => changesetUserHues(data, userColors))) : formatColors),
     [data, formatColors, userColors],
   );
-  const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
+  const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => historyAuthors(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
   const { data: reviews } = useReviewsByBranch(data !== undefined);
@@ -349,10 +348,4 @@ export function BranchExplorerView() {
       </div>
     </>
   );
-}
-
-function authorsOf(data: BranchExplorerData): string[] {
-  const authors = new Set<string>();
-  for (const changeset of data.changesets) authors.add(changeset.owner);
-  return [...authors];
 }

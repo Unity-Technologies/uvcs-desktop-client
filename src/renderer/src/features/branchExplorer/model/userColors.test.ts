@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BRANCH_HUES } from './branchHue';
 import { changeset, sampleHistory } from './graphFixtures';
 import { NO_RULE_COLORS, type RuleColors } from './ruleColors';
-import { changesetUserHues, DEFAULT_USER_COLORS, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, type UserColors } from './userColors';
+import { changesetUserHues, DEFAULT_USER_COLORS, historyAuthors, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, type UserColors } from './userColors';
 
 const [first, second, third] = BRANCH_HUES;
 
@@ -42,6 +42,14 @@ describe('withUserRemoved and withUserHue', () => {
 
   it("changes one person's hue", () => {
     expect(withUserHue(colorsOf(['ana', 1], ['bo', 2]), 'bo', 9)).toEqual(colorsOf(['ana', 1], ['bo', 9]));
+  });
+});
+
+describe('historyAuthors', () => {
+  it('names each author once', () => {
+    const owners = ['jane@example.com', 'bo@example.com', 'jane@example.com'];
+    const history = { ...sampleHistory(), changesets: owners.map((owner, id) => ({ ...changeset(id, '/main', id - 1), owner })) };
+    expect(historyAuthors(history).sort()).toEqual(['bo@example.com', 'jane@example.com']);
   });
 });
 

@@ -43,6 +43,13 @@ export function withUserHue(colors: UserColors, user: string, hue: number): User
   return { ...colors, users: colors.users.map((color) => (color.user === user ? { user, hue } : color)) };
 }
 
+/** Everyone who made a changeset in `data`, each once. */
+export function historyAuthors(data: BranchExplorerData): string[] {
+  const authors = new Set<string>();
+  for (const changeset of data.changesets) authors.add(changeset.owner);
+  return [...authors];
+}
+
 /** The people who can be added: those in `authors` without a color yet, by name. */
 export function usersToAdd(authors: readonly string[], colors: UserColors): string[] {
   const colored = new Set(colors.users.map((color) => color.user));
