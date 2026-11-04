@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel } from './changeNavigation';
 import { headerArrows, headerKeepsFor, isSelectedFile } from './diffFrameHost';
 import { fileSteps, pendingArrival } from './fileSteps';
-import { pressStep } from './stepNavigation';
+import { pressStep, stepGoal } from './stepNavigation';
 import { drainKept, drainsKept, followStep, pressTarget, type PressEffect } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
 
@@ -64,6 +64,8 @@ class CachedDiffs {
 
   private pressUnrendered(direction: 1 | -1): void {
     const arrows = this.arrows();
+    // A click on an arrow disabled (`stepGoal`: nowhere to go) does nothing.
+    if (this.goal(arrows, direction) === null) return;
     if (arrows.body) this.bodyGo(direction);
     else if (arrows.queues) this.queue.push(headerKeepsFor({ steppingTo: this.steps().steppingTo(), requestedPath: this.requested }), direction);
     else this.steps().step(direction);
@@ -168,6 +170,16 @@ class CachedDiffs {
     return 'moved';
   }
 
+  /** Where an arrow goes, as its navigation says (`StepNavigation.goesTo`): the body's, else the header's own. */
+  private goal(arrows: ReturnType<CachedDiffs['arrows']>, direction: 1 | -1) {
+    const body = this.body;
+    if (arrows.body && body) {
+      const target = pressTarget({ opens: true, opened: body.opened, steppingTo: this.steps().steppingTo(), path: body.path });
+      return stepGoal({ count: this.files[body.path]!, current: body.current, above: 0 }, direction, this.steps(), target.kind === 'keep');
+    }
+    return stepGoal({ count: 0, current: null, above: 0 }, direction, this.steps(), arrows.queues);
+  }
+
   private steps() {
     return fileSteps(Object.keys(this.files), this.rendered, { select: (key) => this.pick(key), pathOf: (key) => key }, this.pending);
   }
@@ -202,6 +214,10 @@ describe('a burst of ↓ across diffs read from the cache', () => {
 
   it('keeps for the next file the presses made before the list rendered on it, never stepping from the previous file again', () => {
     expect(atLastChangeOfA({ 'b.cs': 2 }).burst(1, 1, 1).press(-1).frame().header).toBe('b.cs: 1 of 2');
+  });
+
+  it("keeps ↓ enabled while a step to the list's last file settles in Changes: ↓↓↓↑ there loses no click", () => {
+    expect(atLastChangeOfA({ 'b.cs': 2 }, true).press(1).press(1).press(1).press(-1).settle().frame().header).toBe('b.cs: 1 of 2');
   });
 
   it('the same in Changes, whose diff follows the selection once it settled', () => {
