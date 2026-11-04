@@ -113,13 +113,13 @@ It shows only what the graph loaded and draws (the same range and filters), and 
   (`axisLabelCandidates`, `spacedAxisLabels`).
 - **Pointer** (`timelineTargetAt`, `timelinePress`): a click glides the canvas there and brings the row it lands on into
   view (`viewportAtColumn`, `clickedColumn`: a label tick to its newest label, a gap to where history resumes); press
-  and drag scrubs; after a drag the landed row comes into view (`viewportShowingRow`). The wheel pans the canvas, with
+  and drag scrubs (`viewportForDrag`); after a drag the landed row comes into view (`viewportAfterDrag`). The wheel pans the canvas, with
   ⌘ or Ctrl it zooms (`timelineWheel`). Hovering an empty spot shows a dashed frame where a click would land
   (`ghostFrame`), and every target has a card (`timelineCard`): the hour, day or week under the pointer
   (`bucketSize`) with "N changesets · M yours · K merged to /main" and its labels; the frame's dates, zoom and
   changesets on screen; home, gaps, labels and hits their own.
 
-Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary searches,
+What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it. Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary searches,
 `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
 (`countCalls`).
 

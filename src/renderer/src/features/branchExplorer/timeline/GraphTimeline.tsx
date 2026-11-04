@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useMemo,
 import { TooltipBubble } from '../../../ui/TooltipBubble';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHit } from '../model/searchGraph';
-import { branchColor, type GraphPalette } from '../canvas/graphPalette';
+import type { GraphPalette } from '../canvas/graphPalette';
 import type { GraphViewport } from '../canvas/graphViewport';
 import { followPointerDrag } from '../canvas/pointerDrag';
 import { useCanvasSize } from '../canvas/useCanvasSize';
@@ -10,13 +10,15 @@ import { useWheel } from '../canvas/useWheel';
 import type { Size } from '../canvas/viewport';
 import { activityCurve } from './activityCurve';
 import { drawTimeline, measureAxisText } from './drawTimeline';
-import { columnAtStrip, stripXOfColumn, timelineAxis } from './timelineAxis';
+import { stripXOfColumn, timelineAxis } from './timelineAxis';
 import { axisLabelCandidates, LOCAL_CALENDAR, spacedAxisLabels } from './timelineCalendar';
 import { timelineCard } from './timelineCard';
-import { viewportAtColumn, viewportCenteredAt, viewportFrame, viewportPannedBy, viewportShowingRow, viewportWithEdgeAt } from './timelineFrame';
+import { viewportAfterDrag, viewportForDrag } from './timelineDrag';
+import { timelineDrawing } from './timelineDrawing';
+import { viewportAtColumn, viewportFrame } from './timelineFrame';
 import { timelineHistory, timelineShare } from './timelineHistory';
-import { branchLifetime, hitTicks, homeMark, labelTicks, searchHitColumns, timelineGaps } from './timelineMarks';
-import { clickedColumn, gapsClearOfHome, ghostFrame, homeSpots, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots, type TimelineTarget } from './timelineTargets';
+import { hitTicks, homeMark, labelTicks, searchHitColumns, timelineGaps } from './timelineMarks';
+import { clickedColumn, gapsClearOfHome, homeSpots, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots, type TimelineTarget } from './timelineTargets';
 import { timelineWheel, zoomAnchorX } from './timelineWheel';
 import styles from './GraphTimeline.module.css';
 
@@ -92,33 +94,13 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     ...homePlaces,
   });
 
-  const selectedColumn = selectedChangeset === null ? undefined : layout.nodes.get(selectedChangeset)?.column;
-  const lifetime = branchLifetime(layout, axis, selectedBranch);
   const drawRef = useRef<() => void>(() => {});
   drawRef.current = () => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx || width === 0) return;
     const { frame } = spots();
-    drawTimeline(
-      ctx,
-      {
-        width,
-        palette,
-        curve,
-        frame,
-        ghost: hover ? ghostFrame(hover.target, frame, hover.x) : null,
-        axisLabels,
-        labels,
-        gaps,
-        hits,
-        ...homePlaces,
-        homeOlderThanRange: home?.kind === 'olderThanRange',
-        newestMainX: history.newestMainColumn === null ? null : stripXOfColumn(axis, history.newestMainColumn),
-        selectedChangesetX: selectedColumn === undefined ? null : stripXOfColumn(axis, selectedColumn),
-        selectedBranch: lifetime && selectedBranch !== null ? { ...lifetime, color: branchColor(palette, selectedBranch) } : null,
-      },
-      window.devicePixelRatio,
-    );
+    const drawing = timelineDrawing({ layout, history, axis, palette, curve, frame, hover, axisLabels, labels, gaps, hits, home, homePlaces, selectedChangeset, selectedBranch });
+    drawTimeline(ctx, drawing, window.devicePixelRatio);
   };
   // Every render may change what is drawn (the selection, a search, the hover's ghost frame): drawn before it is painted.
   useLayoutEffect(() => drawRef.current());
@@ -163,15 +145,6 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
   const localX = (clientX: number): number => clientX - containerRef.current!.getBoundingClientRect().left;
   const localY = (clientY: number): number => clientY - containerRef.current!.getBoundingClientRect().top;
 
-  /** After a drag, the row of the changeset the frame landed on comes into view. */
-  const revealLandedRow = (): void => {
-    const { frame } = spots();
-    const column = columnAtStrip(axis, (frame.left + frame.right) / 2);
-    const current = view.viewportRef.current;
-    const shown = viewportShowingRow(layout, current, screenSize(), column);
-    if (shown !== current) view.glideTo(shown);
-  };
-
   const onPointerDown = (event: React.PointerEvent): void => {
     if (event.button !== 0) return;
     focusGraph();
@@ -183,14 +156,12 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     followPointerDrag(event, {
       onDrag: (dx, _dy, move) => {
         containerRef.current?.setAttribute('data-dragging', press.kind);
-        const current = view.viewportRef.current;
-        if (press.kind === 'pan') view.jumpTo(viewportPannedBy(current, axis, dx));
-        else if (press.kind === 'zoom') view.jumpTo(viewportWithEdgeAt(current, axis, screenSize(), press.edge, localX(move.clientX)));
-        else view.jumpTo(viewportCenteredAt(current, axis, screenSize(), localX(move.clientX)));
+        view.jumpTo(viewportForDrag(press, view.viewportRef.current, axis, screenSize(), { dx, x: localX(move.clientX) }));
       },
       onDragEnd: () => {
         containerRef.current?.removeAttribute('data-dragging');
-        revealLandedRow();
+        const landed = viewportAfterDrag(layout, view.viewportRef.current, axis, screenSize());
+        if (landed) view.glideTo(landed);
       },
       onClick: () => view.glideTo(viewportAtColumn(layout, view.viewportRef.current, axis, screenSize(), clickedColumn(target, x, axis, home))),
     });
