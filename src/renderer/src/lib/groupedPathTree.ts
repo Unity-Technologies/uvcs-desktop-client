@@ -1,3 +1,4 @@
+import { wholeList, type ItemRange } from './itemRange';
 import { collapseTreeRows, layoutPathItems, rowsHolding, type ItemOrder, type PathTreeRow, type TreeFolderRow } from './pathTree';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
@@ -10,8 +11,8 @@ export interface TreeGroupRow<T, G> {
   key: string;
   label: string;
   group: G;
-  /** Every item in the group, in order. */
-  items: T[];
+  /** Every item in the group, in order: the group's own list (`TreeGroup.sorted`). */
+  held: ItemRange<T>;
   /** How many groups hold it: 0 for a top group, 1 for one inside it (a changelist's changes of one status). */
   depth: number;
   collapsed: boolean;
@@ -26,7 +27,7 @@ export interface TreeGroup<T, G> {
   label: string;
   group: G;
   /** The group's items, sorted by `comparePaths` (`@shared/pathOrder`). */
-  sorted: T[];
+  sorted: readonly T[];
   /**
    * The groups its items fall in, laid out in its place (a changelist's changes by status): every group of a list
    * has them or none does, so every item sits as many groups in.
@@ -43,7 +44,7 @@ export function layoutGroupedTree<T extends { path: string }, G>(groups: readonl
   const rows: GroupedTreeRow<T, G>[] = [];
   const layOut = (inGroups: readonly TreeGroup<T, G>[], depth: number): void => {
     for (const { key, label, group, sorted, subgroups } of inGroups) {
-      rows.push({ type: 'group', key, label, group, items: sorted, depth, collapsed: false });
+      rows.push({ type: 'group', key, label, group, held: wholeList(sorted), depth, collapsed: false });
       if (subgroups) {
         layOut(subgroups, depth + 1);
         continue;

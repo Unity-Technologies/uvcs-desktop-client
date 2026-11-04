@@ -5,6 +5,7 @@ import type { MenuEntry } from '../../lib/actions';
 import type { FileTreeFolding } from '../../components/fileTreeFolding';
 import type { StatusGroup } from '../../components/statusGroups';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { itemsIn } from '../../lib/itemRange';
 import type { PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -46,8 +47,8 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, folding, query, fil
 
   const renderItem = (row: DiffEntryRowItem, level: number) => {
     if (row.type === 'folder') {
-      const status = on ? groupReviewStatus(row.items, statusOf) : null;
-      const toggleFolder = status && <ReviewToggle folder status={status} partial={partialReviewCount(row.items, statusOf)} onToggle={() => toggle(row.items)} />;
+      const status = on ? groupReviewStatus(row.held, statusOf) : null;
+      const toggleFolder = status && <ReviewToggle folder status={status} partial={partialReviewCount(row.held, statusOf)} onToggle={() => toggle(itemsIn(row.held))} />;
       return <DiffEntryRow row={row} level={level} tree={tree} extras={toggleFolder} faded={status === 'reviewed'} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />;
     }
     const status = on ? statusOf(row.item) : null;

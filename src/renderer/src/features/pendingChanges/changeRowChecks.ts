@@ -1,11 +1,22 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
+import { countIn, wholeList, type ItemRange } from '../../lib/itemRange';
 import { isCheckinCandidate } from './changeCategories';
-import { changesUnderRow, type ChangeRow } from './changeRows';
+import type { ChangeRow } from './changeRows';
 
-/** What a row holds that can go into a check-in: found once per layout, as a folder can hold a million. */
-export function candidatesUnderRow(row: ChangeRow): PendingChange[] {
-  return changesUnderRow(row).filter(isCheckinCandidate);
+/** What a row holds, and how many of those changes can go into a check-in (`candidatesUnderRow`). */
+export interface RowCandidates {
+  held: ItemRange<PendingChange>;
+  count: number;
+}
+
+/**
+ * What a row holds that can go into a check-in: counted once per layout, as a folder can hold a million, and counted
+ * where the changes are, never copied.
+ */
+export function candidatesUnderRow(row: ChangeRow): RowCandidates {
+  const held = row.type === 'file' ? wholeList([row.item]) : row.held;
+  return { held, count: countIn(held, isCheckinCandidate) };
 }
 
 /**
@@ -15,14 +26,12 @@ export function candidatesUnderRow(row: ChangeRow): PendingChange[] {
  * how many changes shown can go in, and how many are checked; a row holding as many holds them all (the folders above
  * everything), and takes its check from them without asking.
  */
-export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownCount): CheckState | null {
-  if (candidates.length === 0) return null;
+export function checkStateOver(candidates: RowCandidates, isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownCount): CheckState | null {
+  if (candidates.count === 0) return null;
   if (isChosen === null) return true;
-  let checked = 0;
-  if (shown && candidates.length === shown.candidates) checked = shown.checked;
-  else for (const change of candidates) if (isChosen(change)) checked++;
+  const checked = shown && candidates.count === shown.candidates ? shown.checked : countIn(candidates.held, (change) => isChosen(change) && isCheckinCandidate(change));
   if (checked === 0) return false;
-  return checked === candidates.length ? true : 'mixed';
+  return checked === candidates.count ? true : 'mixed';
 }
 
 /** How many changes shown can go into a check-in, and how many of them are checked (`shownChecksOf`). */

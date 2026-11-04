@@ -6,6 +6,7 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
@@ -180,7 +181,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
-      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(focusedGroup.items.length, 'change')}. Select a file to see its diff.`} />;
+      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />;
     }
     return <EmptyState title="Select a changeset or a file" />;
   };

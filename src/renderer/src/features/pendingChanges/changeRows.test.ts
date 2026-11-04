@@ -3,6 +3,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import type { FileListLayout } from '../../components/fileListViewStore';
+import { rangeLength } from '../../lib/itemRange';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { candidatesUnderRow, checkStateOver } from './changeRowChecks';
 import { fileListOrder, rankedOrder } from '../../components/fileListOrder';
@@ -59,7 +60,7 @@ describe('buildChangeRows', () => {
         { name: 'Empty', description: '' },
       ],
     });
-    expect(rows.filter((row) => row.type === 'group').map((row) => [row.key, row.type === 'group' && row.items.length])).toEqual([
+    expect(rows.filter((row) => row.type === 'group').map((row) => [row.key, row.type === 'group' && rangeLength(row.held)])).toEqual([
       ['changelist:', 3],
       ['changelist:UI', 1],
       ['changelist:Empty', 0],

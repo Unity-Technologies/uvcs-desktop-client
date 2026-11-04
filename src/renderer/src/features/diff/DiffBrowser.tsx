@@ -10,6 +10,7 @@ import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { rangeLength } from '../../lib/itemRange';
 import { pluralize } from '../../lib/text';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -180,7 +181,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
         ) : pane === 'folder' && focusedFolder ? (
-          <EmptyState icon={<Folder size={24} />} title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
+          <EmptyState icon={<Folder size={24} />} title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path} description={`${pluralize(rangeLength(focusedFolder.held), 'change')}. Select a file to see its diff.`} />
         ) : null,
         slots.diff,
       )}

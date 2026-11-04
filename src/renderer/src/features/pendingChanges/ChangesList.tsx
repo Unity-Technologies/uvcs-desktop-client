@@ -94,7 +94,7 @@ export function ChangesList({
   const candidatesOf = useMemo(() => perRow(candidatesUnderRow), [rows]);
   const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), shownChecks.isChosen, { candidates: shownChecks.candidates.length, checked: shownChecks.checked })), [candidatesOf, shownChecks]);
   const reviewStatusOf = useMemo(() => perRow((row) => (review.on ? rowReviewStatus(row, review.statusOf) : null)), [rows, review.on, review.statusOf]);
-  const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.items, review.statusOf) : null)), [rows, review.on, review.statusOf]);
+  const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.held, review.statusOf) : null)), [rows, review.on, review.statusOf]);
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -288,5 +288,5 @@ function guideStyle(row: ChangeRow, levels: RowLevels, top: number): CSSProperti
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
 function rowReviewStatus(row: ChangeRow, statusOf: ReviewStatusOf<PendingChange>): ReviewStatus | null {
   if (row.type === 'file') return statusOf(row.item);
-  return row.type === 'folder' ? groupReviewStatus(row.items, statusOf) : null;
+  return row.type === 'folder' ? groupReviewStatus(row.held, statusOf) : null;
 }

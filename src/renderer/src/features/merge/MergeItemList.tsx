@@ -8,7 +8,7 @@ import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
-import type { PathTreeRow } from '../../lib/pathTree';
+import { folderItemCount, type PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
@@ -45,7 +45,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, folding, 
     if (row.type === 'folder') {
       return (
         <FileTreeCell depth={level} tree={tree} folder>
-          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={row.items.length - (row.item ? 1 : 0)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
+          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={folderItemCount(row)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
         </FileTreeCell>
       );
     }

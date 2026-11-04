@@ -2,6 +2,7 @@ import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/me
 import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import type { GroupProgress } from '../../components/TreeGroupLabel';
+import { forEachIn, type ItemRange } from '../../lib/itemRange';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
 import { directoryResolutionOf, fileStateOf, isApplying, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
@@ -200,9 +201,14 @@ export function groupProgress(statuses: ConflictStatus[]): GroupProgress {
 }
 
 /** What a merge list group's header says instead of its count: how many of its conflicts are resolved; none for the changes. */
-export function mergeGroupProgress(group: MergeGroup, items: MergeItem[], progress: MergeProgress): GroupProgress | undefined {
+export function mergeGroupProgress(group: MergeGroup, held: ItemRange<MergeItem>, progress: MergeProgress): GroupProgress | undefined {
   if (group === 'changes') return undefined;
-  return groupProgress(items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null));
+  const statuses: ConflictStatus[] = [];
+  forEachIn(held, (item) => {
+    const status = conflictStatusOf(item, progress);
+    if (status !== null) statuses.push(status);
+  });
+  return groupProgress(statuses);
 }
 
 function tally(statuses: ConflictStatus[]): { resolved: number; waiting: number } {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
-import { itemsUnderRows, layoutPathTree } from './pathTree';
+import { itemsIn } from './itemRange';
+import { itemsUnderRows } from './pathTree';
+import { layoutPathTree } from './pathTreeLayout';
 
 interface Item {
   path: string;
@@ -79,6 +81,16 @@ describe('layoutGroupedTree', () => {
     const sorted = (tree: boolean) => shape(layoutGroupedTree([group('changes', ['b/z.ts', 'a/y.ts', 'b/x.ts'])], keyOf, tree, byName));
     expect(sorted(false).map(([name]) => name)).toEqual(['[CHANGES]', 'b/x.ts', 'a/y.ts', 'b/z.ts']);
     expect(sorted(true).map(([name]) => name)).toEqual(['[CHANGES]', 'a/', 'a/y.ts', 'b/', 'b/x.ts', 'b/z.ts']);
+  });
+
+  it("points each group's folders into that group's own list", () => {
+    const groups = [group('conflicts', ['src/a.ts', 'src/b.ts']), group('changes', ['src/c.ts', 'z.ts'])];
+    const folders = layoutGroupedTree(groups, keyOf, true).filter((row) => row.type === 'folder');
+    expect(folders.map((row) => row.type === 'folder' && [row.key, row.held.list === groups[0]!.sorted, itemsIn(row.held).map(keyOf)])).toEqual([
+      ['folder:conflicts:src', true, ['src/a.ts', 'src/b.ts']],
+      ['folder:changes:src', false, ['src/c.ts']],
+    ]);
+    expect(folders[1]!.type === 'folder' && folders[1]!.held.list).toBe(groups[1]!.sorted);
   });
 
   it('gives a group every item it holds, for its count and for what acting on it means', () => {
