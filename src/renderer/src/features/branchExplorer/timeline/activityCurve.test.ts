@@ -36,11 +36,11 @@ describe('columnActivity', () => {
 
 describe('perPixelMean', () => {
   /** Columns land at world 56 + 64 × column; with this axis, 1 world px is 1 strip px. */
-  const axis: TimelineAxis = { worldWidth: 400, width: 400, columnCount: 4 };
+  const axis: TimelineAxis = { worldWidth: 400, width: 400, inset: 0, columnCount: 4 };
 
   it('takes the mean of the columns in a pixel', () => {
     // 640 world px per strip px: the four columns (world 56 to 248) all fall in the first pixel.
-    const crowded: TimelineAxis = { worldWidth: 64_000, width: 100, columnCount: 4 };
+    const crowded: TimelineAxis = { worldWidth: 64_000, width: 100, inset: 0, columnCount: 4 };
     expect(perPixelMean(Float64Array.from([2, 4, 6, 8]), crowded)[0]).toBe(5);
   });
 

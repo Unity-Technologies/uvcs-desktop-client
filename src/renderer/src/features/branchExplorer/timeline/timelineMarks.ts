@@ -52,7 +52,7 @@ export interface TimelineGap {
 }
 
 /** Break marks closer than this (px) would read as a smudge: of those, only the longest gap keeps its mark. */
-export const GAP_MARK_SPACING = 12;
+export const GAP_MARK_SPACING = 24;
 
 /**
  * Where more than `GAP_MIN_DAYS` pass between two columns with no changeset in between (a "+N" node's may be), the

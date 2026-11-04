@@ -1,7 +1,7 @@
 import type { GraphLayout } from '../model/layoutGraph';
 import { rowY } from '../canvas/geometry';
 import { centerOn, MAX_ZOOM, MIN_ZOOM, toWorld, type Size, type Viewport } from '../canvas/viewport';
-import { stripXOfColumn, stripXOfWorld, worldXOfStrip, type TimelineAxis } from './timelineAxis';
+import { stripXOfColumn, stripXOfWorld, worldPerStripPx, worldXOfStrip, type TimelineAxis } from './timelineAxis';
 
 /** The part of the strip the canvas shows: the viewport, in strip px. */
 export interface TimelineFrame {
@@ -38,7 +38,7 @@ export function frameCenteredAt(frame: TimelineFrame, x: number): TimelineFrame 
 
 /** The view dragged with the frame by `dx` strip px: the canvas pans, at the same zoom. */
 export function viewportPannedBy(viewport: Viewport, axis: TimelineAxis, dx: number): Viewport {
-  return { ...viewport, panX: viewport.panX - worldXOfStrip(axis, dx) * viewport.zoom };
+  return { ...viewport, panX: viewport.panX - dx * worldPerStripPx(axis) * viewport.zoom };
 }
 
 /** The view with the frame centered on `x`, at the same zoom and height. */

@@ -9,7 +9,7 @@ import { branchLifetime, hitTicks, homeMark, labelTicks, LABEL_MERGE_DISTANCE, s
 const label = (name: string, changeset: number): GraphLabel => ({ name, changeset, owner: 'jane', date: '', comment: '' });
 
 /** One world px per strip px: column c at x = 56 + 64c. */
-const wide = (columnCount: number): TimelineAxis => ({ worldWidth: 10_000, width: 10_000, columnCount });
+const wide = (columnCount: number): TimelineAxis => ({ worldWidth: 10_000, width: 10_000, inset: 0, columnCount });
 
 describe('labelTicks', () => {
   const dates = Array.from({ length: 10 }, (_, day) => `2026-09-${String(day + 1).padStart(2, '0')}T10:00:00Z`);
@@ -23,7 +23,7 @@ describe('labelTicks', () => {
 
   it('merges ticks closer than 5 px into one, at their middle, oldest first', () => {
     // 64 world px per column at 1/16: 4 strip px apart.
-    const narrow: TimelineAxis = { worldWidth: 16_000, width: 1_000, columnCount: 10 };
+    const narrow: TimelineAxis = { worldWidth: 16_000, width: 1_000, inset: 0, columnCount: 10 };
     const ticks = labelTicks(history, narrow);
     expect(ticks.map((tick) => tick.labels.map(({ label }) => label.name))).toEqual([['v1', 'v2'], ['v3'], ['v4']]);
     expect(ticks[0]!.x).toBeCloseTo((stripXOfColumn(narrow, 0) + stripXOfColumn(narrow, 1)) / 2);
@@ -32,7 +32,7 @@ describe('labelTicks', () => {
   it('never chains a run of close ticks into one: a tick spans less than 5 px', () => {
     const daily = datedHistory(dates);
     daily.labels = dates.map((_, index) => label(`b${index}`, index));
-    const ticks = labelTicks(timelineHistory(layoutGraph(daily)), { worldWidth: 25_600, width: 1_000, columnCount: 10 });
+    const ticks = labelTicks(timelineHistory(layoutGraph(daily)), { worldWidth: 25_600, width: 1_000, inset: 0, columnCount: 10 });
     expect(ticks.length).toBeGreaterThan(1);
     for (const tick of ticks) expect(tick.labels.length).toBeLessThanOrEqual(Math.ceil(LABEL_MERGE_DISTANCE / 2.5));
   });
@@ -49,7 +49,7 @@ describe('timelineGaps', () => {
 
   it('keeps only the longest of the gaps closer than a few px, so a sparse history isn’t a row of marks', () => {
     const history = timelineHistory(layoutGraph(datedHistory(['2026-01-01T10:00:00Z', '2026-01-10T10:00:00Z', '2026-02-10T10:00:00Z', '2026-02-20T10:00:00Z'])));
-    const crowded: TimelineAxis = { worldWidth: 64_000, width: 1_000, columnCount: 4 };
+    const crowded: TimelineAxis = { worldWidth: 64_000, width: 1_000, inset: 0, columnCount: 4 };
     expect(timelineGaps(history, crowded).map(({ days }) => days)).toEqual([31]);
     expect(timelineGaps(history, wide(4)).map(({ days }) => days)).toEqual([9, 31, 10]);
   });
@@ -105,7 +105,7 @@ describe('search marks', () => {
   });
 
   it('draw one tick per pixel, counting the hits in it', () => {
-    const axis: TimelineAxis = { worldWidth: 6_400, width: 100, columnCount: 3 };
+    const axis: TimelineAxis = { worldWidth: 6_400, width: 100, inset: 0, columnCount: 3 };
     expect(hitTicks([0, 0, 2], axis)).toEqual([
       { x: Math.floor(stripXOfColumn(axis, 0)) + 0.5, count: 2 },
       { x: Math.floor(stripXOfColumn(axis, 2)) + 0.5, count: 1 },

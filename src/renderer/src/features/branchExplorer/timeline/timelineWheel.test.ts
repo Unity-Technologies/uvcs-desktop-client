@@ -25,7 +25,7 @@ describe('timelineWheel', () => {
 });
 
 describe('zoomAnchorX', () => {
-  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, columnCount: 150 };
+  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, inset: 0, columnCount: 150 };
   const screen = { width: 800, height: 600 };
 
   it('zooms around the point of the graph under the pointer, kept within the screen', () => {

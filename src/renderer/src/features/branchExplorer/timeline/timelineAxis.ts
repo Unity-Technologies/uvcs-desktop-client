@@ -12,21 +12,31 @@ export interface TimelineAxis {
   worldWidth: number;
   /** The strip's width in screen px. */
   width: number;
+  /** Room left at each end (px), so a frame or a house at either end of the history stays whole and in reach. */
+  inset: number;
   columnCount: number;
 }
 
+/** The room `timelineAxis` leaves at each end of the strip. */
+export const TIMELINE_INSET = 10;
+
 export function timelineAxis(layout: GraphLayout, width: number): TimelineAxis {
-  return { worldWidth: graphExtent(layout).width, width, columnCount: layout.columnCount };
+  return { worldWidth: graphExtent(layout).width, width, inset: Math.min(TIMELINE_INSET, width / 4), columnCount: layout.columnCount };
 }
 
 /** Where a world x falls on the strip. */
 export function stripXOfWorld(axis: TimelineAxis, worldX: number): number {
-  return (worldX * axis.width) / axis.worldWidth;
+  return axis.inset + (worldX * (axis.width - 2 * axis.inset)) / axis.worldWidth;
 }
 
 /** The world x under a point of the strip. */
 export function worldXOfStrip(axis: TimelineAxis, x: number): number {
-  return (x * axis.worldWidth) / axis.width;
+  return ((x - axis.inset) * axis.worldWidth) / (axis.width - 2 * axis.inset);
+}
+
+/** How many world px a strip px stands for: a drag of the frame by one pans the canvas by that, times the zoom. */
+export function worldPerStripPx(axis: TimelineAxis): number {
+  return axis.worldWidth / (axis.width - 2 * axis.inset);
 }
 
 /** Where a column (a changeset, a "+N" node, the pending changes past them) falls on the strip. */

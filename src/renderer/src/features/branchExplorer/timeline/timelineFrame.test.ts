@@ -4,7 +4,7 @@ import { sampleHistory } from '../model/graphFixtures';
 import { columnX, rowY } from '../canvas/geometry';
 import { graphExtent } from '../canvas/laneShape';
 import { MAX_ZOOM, MIN_ZOOM, toWorld, type Viewport } from '../canvas/viewport';
-import { columnAtStrip, columnsBetween, stripXOfColumn, stripXOfWorld, timelineAxis, worldXOfStrip, type TimelineAxis } from './timelineAxis';
+import { columnAtStrip, columnsBetween, stripXOfColumn, stripXOfWorld, TIMELINE_INSET, timelineAxis, worldXOfStrip, type TimelineAxis } from './timelineAxis';
 import {
   frameCenteredAt,
   frameShape,
@@ -17,7 +17,7 @@ import {
 } from './timelineFrame';
 
 /** A graph 10,000 world px wide on a strip 1,000 px wide: 10 world px per strip px. */
-const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, columnCount: 150 };
+const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, inset: 0, columnCount: 150 };
 const screen = { width: 800, height: 600 };
 
 describe('timelineAxis', () => {
@@ -25,8 +25,10 @@ describe('timelineAxis', () => {
     const layout = layoutGraph(sampleHistory());
     const real = timelineAxis(layout, 500);
     expect(real.worldWidth).toBe(graphExtent(layout).width);
-    expect(stripXOfWorld(real, real.worldWidth)).toBe(500);
-    expect(stripXOfColumn(real, 3)).toBeCloseTo((columnX(3) * 500) / real.worldWidth);
+    // The graph's ends a few px in from the strip's, so a frame or a house there stays whole and in reach.
+    expect(stripXOfWorld(real, 0)).toBe(TIMELINE_INSET);
+    expect(stripXOfWorld(real, real.worldWidth)).toBe(500 - TIMELINE_INSET);
+    expect(stripXOfColumn(real, 3)).toBeCloseTo(TIMELINE_INSET + (columnX(3) * (500 - 2 * TIMELINE_INSET)) / real.worldWidth);
   });
 
   it('maps strip and world x both ways', () => {
