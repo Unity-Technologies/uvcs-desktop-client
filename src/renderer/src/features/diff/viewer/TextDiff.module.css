@@ -7,6 +7,11 @@
   user-select: text;
 }
 
+/* Room for the change map (`ChangeMap`) just left of the vertical scrollbar, so no code goes under it. */
+.diff[data-change-map] {
+  padding-right: var(--change-map-size);
+}
+
 .diff:focus {
   outline: none;
 }

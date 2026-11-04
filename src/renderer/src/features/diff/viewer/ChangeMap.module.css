@@ -1,0 +1,43 @@
+/* The lane just left of the diff's vertical scrollbar, the height of its track: the diff leaves room for it
+   (`TextDiff.module.css`), so no code goes under it. Not under the scrollbar itself, whose track pages on a click. */
+.map {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  width: var(--change-map-size);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+
+.mark {
+  position: absolute;
+  right: 1px;
+  left: 1px;
+  border-radius: 1px;
+  opacity: 0.75;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.mark:hover,
+.mark[data-current] {
+  opacity: 1;
+}
+
+/* The change moved to stands out from those around it, in either theme, by a rule in the text's color beside it. */
+.mark[data-current] {
+  left: 0;
+  right: 0;
+  box-shadow: 0 0 0 1px var(--text-primary);
+}
+
+.mark[data-kind='added'] {
+  background: var(--change-added);
+}
+
+.mark[data-kind='deleted'] {
+  background: var(--change-deleted);
+}
+
+.mark[data-kind='changed'] {
+  background: var(--change-changed);
+}

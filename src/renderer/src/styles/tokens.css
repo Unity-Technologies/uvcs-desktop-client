@@ -45,6 +45,8 @@
   --pane-toolbar-height: 38px;
   /* How thick the app's scrollbars are (global.css), on every OS: styled, they take room instead of overlaying. */
   --scrollbar-size: 10px;
+  /* How wide a text diff's change map is (`ChangeMap`), the lane just left of its vertical scrollbar. */
+  --change-map-size: 8px;
 
   /* Motion. Everything that appears eases out (fast start, soft landing); what moves between two places eases in
      and out. Durations drop to zero under prefers-reduced-motion (global.css), so animations built on them are
