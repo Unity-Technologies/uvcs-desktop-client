@@ -10,29 +10,30 @@
   width: var(--diff-scrollbar-size);
   margin-right: calc(-1 * var(--diff-scrollbar-size));
   margin-left: auto;
+  /* Outside the track's width, over the code's last pixel, so the marks keep an even width to split in two. */
+  border-left: 1px solid var(--border-default);
   background: var(--bg-surface);
 }
 
-/* A solid block per change (or band of changes), the track's width less a small inset, filled with the changed rows'
-   own tint (read from Pierre: `pierreChangeColors`). A block that removes and adds is split down the middle, removed on
-   the left as in a Split diff, each half in its own tint. */
+/* A block per change (or band of changes), all in one color: the app's "changed" blue (the C of the file lists),
+   tinted as Pierre tints changed rows (the color mixed into the background, 12% light, 20% dark), and edged in a
+   stronger tint of the same blue, which keeps a pale block visible on the track and apart from the rows beside it. The map says
+   where the changes are; the rows themselves say what they are. */
 .mark {
   position: absolute;
-  right: 2px;
-  left: 2px;
+  right: 3px;
+  left: 3px;
+  box-sizing: border-box;
+  border: 1px solid
+    light-dark(
+      color-mix(in lab, var(--bg-surface) 60%, var(--change-changed)),
+      color-mix(in lab, var(--bg-surface) 50%, var(--change-changed))
+    );
   border-radius: 2px;
-}
-
-.mark[data-kind='deleted'] {
-  background: var(--map-deleted);
-}
-
-.mark[data-kind='added'] {
-  background: var(--map-added);
-}
-
-.mark[data-kind='both'] {
-  background: linear-gradient(to right, var(--map-deleted) 50%, var(--map-added) 50%);
+  background: light-dark(
+    color-mix(in lab, var(--bg-surface) 88%, var(--change-changed)),
+    color-mix(in lab, var(--bg-surface) 80%, var(--change-changed))
+  );
 }
 
 /* Over the marks, translucent so they show through it, as the app's thumbs look (global.css). */

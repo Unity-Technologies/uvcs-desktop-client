@@ -51,8 +51,8 @@
   /* Its thumb, drawn over the marks: the app's hovered thumb color (global.css's --border-strong), translucent so the
      marks show through, and stronger hovered or dragged. The app's resting --border-default was too faint over them in
      the dark theme. */
-  --diff-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 60%, transparent);
-  --diff-scrollbar-thumb-hover: color-mix(in srgb, var(--border-strong) 85%, transparent);
+  --diff-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 40%, transparent);
+  --diff-scrollbar-thumb-hover: color-mix(in srgb, var(--border-strong) 65%, transparent);
 
   /* Motion. Everything that appears eases out (fast start, soft landing); what moves between two places eases in
      and out. Durations drop to zero under prefers-reduced-motion (global.css), so animations built on them are
