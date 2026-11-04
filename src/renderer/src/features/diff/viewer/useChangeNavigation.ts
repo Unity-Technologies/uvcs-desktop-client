@@ -20,6 +20,8 @@ export function useChangeNavigation(
   path: string,
   /** Its keys work: not while the file selected is another, still loading (`headerArrows`). */
   active = true,
+  /** The diff will never have changes to step through (an image, a binary, identical versions): it opens at once. */
+  noStepsComing = false,
 ): StepNavigation {
   const blocks = useMemo(() => (diff ? listChangeBlocks(diff) : []), [diff]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
@@ -44,5 +46,6 @@ export function useChangeNavigation(
     noun: 'change',
     shortcuts: CHANGE_SHORTCUTS,
     active,
+    noStepsComing,
   });
 }

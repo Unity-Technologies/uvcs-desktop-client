@@ -116,8 +116,9 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   // its navigation each time it renders, and draws its controls into the header.
   const host = useDiffFrameHost();
   const changeView = useRef<ChangeView>(null);
-  const steppedDiff = stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null;
-  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, keysStep);
+  const stepsExpected = stepsThroughChanges && viewControls && !wholeFile;
+  const steppedDiff = stepsExpected ? (diffs.current?.meta ?? null) : null;
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, keysStep, !stepsExpected);
   const stepsOwn = steppedDiff !== null;
   useLayoutEffect(() => host.publish({ navigation, stepsOwn }));
   useLayoutEffect(() => () => host.publish(null), [host.publish]);

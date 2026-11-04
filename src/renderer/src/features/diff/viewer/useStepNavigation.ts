@@ -4,7 +4,7 @@ import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
-import { positionAfterChange, pressStep } from './stepNavigation';
+import { positionAfterChange, pressStep, pressWhileOpening } from './stepNavigation';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
 const ARRIVAL_MAX_FRAMES = 60;
@@ -19,8 +19,6 @@ export interface StepNavigation {
   count: number;
   /** The step moved to, by index; none before the first move or once the steps are others. */
   current: number | null;
-  /** It opened the view (at the step a step from the file beside it arrived at, `openingStep`), or gave up on it. */
-  opened: boolean;
   /** Where a move goes: to a step, on to the file beside it in the list (past the ends), or nowhere. */
   goesTo: (direction: 1 | -1) => 'step' | 'file' | null;
   go: (direction: 1 | -1) => void;
@@ -72,6 +70,8 @@ interface StepNavigationOptions {
    * no view of its own (the arrows of a diff not loaded yet) opens nothing and leaves the arrival to the diff that loads.
    */
   opens?: boolean;
+  /** The view will never have steps of its own (an image, a binary): it opens at once, taking the arrival. */
+  noStepsComing?: boolean;
   /** Where a move goes instead of through the steps: kept for the file that loads (`queuedStep`). */
   goes?: (direction: 1 | -1) => void;
 }
@@ -83,7 +83,7 @@ interface StepNavigationOptions {
  * past the last step goes on to the next file's first, and past the first to the previous file's last, as in the
  * official client.
  */
-export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, active = true, opens = true, goes }: StepNavigationOptions): StepNavigation {
+export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, active = true, opens = true, noStepsComing = false, goes }: StepNavigationOptions): StepNavigation {
   const files = useContext(FileStepsContext);
   const [current, setCurrent] = useState<number | null>(null);
   const [above, setAbove] = useState(0);
@@ -119,8 +119,11 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     setCurrent(target);
     latestView.current.reveal(target);
   };
+  // Presses made before the view opened at its arrival, applied once it did (`pressWhileOpening`).
+  const keptPresses = useRef<(1 | -1)[]>([]);
   const go = (direction: 1 | -1): void => {
     if (goes) return goes(direction);
+    if (pressWhileOpening(opens, opened) === 'keep') return void keptPresses.current.push(direction);
     const outcome = pressStep(position, direction, files, readAbove);
     if (typeof outcome === 'number') moveTo(outcome);
   };
@@ -133,11 +136,13 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   // view (`openingStep`). Once, as the view first shows (or never, given up on): steps that come later, typed or
   // read again, leave the view where it is.
   const arrival = useRef<Arrival | null | undefined>(undefined);
-  const opened = useRef(false);
-  const [openedShown, setOpenedShown] = useState(false);
+  const [opened, setOpened] = useState(false);
   useEffect(() => {
-    if (opened.current || !opens) return;
+    if (opened || !opens) return;
     if (arrival.current === undefined) arrival.current = files?.takeArrival(path) ?? null;
+    // Nothing to arrive at, ever (an image, a binary, identical versions): open at once, the arrival taken, so presses
+    // don't wait on a view that will never show steps. A text diff's steps may come a render later: it waits for them.
+    if (noStepsComing) return setOpened(true);
     const from = arrival.current;
     let frames = 0;
     let frame = 0;
@@ -148,8 +153,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
         frame = requestAnimationFrame(arrive);
         return;
       }
-      opened.current = true;
-      setOpenedShown(true);
+      setOpened(true);
       const at = shown ? openingStep(from, steps.length, view.opensOnLines?.() ?? false) : null;
       if (at?.movesTo) latestMoveTo.current(at.index);
       else if (at) view.show?.(at.index);
@@ -158,7 +162,14 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     // which would stop the scroll started here, then this effect again, which would find the view opened already.
     frame = requestAnimationFrame(arrive);
     return () => cancelAnimationFrame(frame);
-  }, [files, path, steps.length, opens]);
+  }, [files, path, steps.length, opens, opened, noStepsComing]);
+
+  // Once opened, the presses kept meanwhile, one per render: each moves from where the last one left it.
+  useEffect(() => {
+    if (!opened) return;
+    const kept = keptPresses.current.shift();
+    if (kept !== undefined) latestGo.current(kept);
+  });
 
   const hasFiles = files !== null;
   useEffect(() => {
@@ -181,7 +192,6 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     shortcuts,
     count: steps.length,
     current,
-    opened: openedShown,
     goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
     go,
     onViewScroll,

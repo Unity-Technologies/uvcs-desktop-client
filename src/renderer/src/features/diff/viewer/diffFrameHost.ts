@@ -58,17 +58,14 @@ export function headerArrows({ published, bodyCurrent, loading }: HeaderState): 
 export type QueuedStep = { kind: 'none' } | { kind: 'wait' } | { kind: 'apply'; direction: 1 | -1 } | { kind: 'drop' };
 
 /**
- * The presses kept while a file loaded, one at a time: once its diff is the body and arrived (at its first change after
- * ↓, `StepNavigation.opened`), the next one applies, so ↓ ↓ in a burst ends on the second file's 2nd change, no click
- * lost nor landing on the wrong file. A diff with no changes of its own steps on at once; a file that couldn't be read
- * drops them, as they were meant for a diff that never came.
+ * The presses kept while a file loaded, one at a time: once its diff is the body, each goes to it, which keeps it in
+ * turn until it opened at its arrival (`pressWhileOpening`), so ↓ ↓ in a burst ends on the second file's 2nd change, no
+ * click lost nor landing on the wrong file. A file that couldn't be read drops them: they were meant for a diff that
+ * never came.
  */
 export function queuedStep(queue: readonly (1 | -1)[], arrows: HeaderArrows): QueuedStep {
   const next = queue[0];
   if (next === undefined) return { kind: 'none' };
   if (arrows.queues) return { kind: 'wait' };
-  if (!arrows.body) return { kind: 'drop' };
-  const { navigation, stepsOwn } = arrows.body;
-  const arrived = !stepsOwn || navigation.count === 0 || navigation.opened;
-  return arrived ? { kind: 'apply', direction: next } : { kind: 'wait' };
+  return arrows.body ? { kind: 'apply', direction: next } : { kind: 'drop' };
 }
