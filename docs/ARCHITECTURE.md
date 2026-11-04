@@ -1353,7 +1353,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's
     own: "Open .meta diff" (`metaDiff`), "View .meta history" (`metaHistory`), and in Changes "Open .meta". Selecting
     the row shows the asset's diff; the `.meta` toggle in the diff's toolbar, there whatever the asset's diff is (text,
-    image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`) or "Open
+    image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`), right
+    before the change arrows so it doesn't move as the asset's and the meta's controls differ, or "Open
     .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
     "Since review" shares that slot, whatever the diff is: a committed file's (`EntryDiff`) compares the reviewed
     revision with the current one, which an image or a model shows as for any two revisions; in Changes it needs a
