@@ -4,15 +4,21 @@ import styles from './FileTree.module.css';
 interface FileTreeCellProps {
   /** How many groups and folders hold the row: its indent, and the guides it draws, one under each one's chevron. */
   depth: number;
-  /** The list is a tree: a file leaves the room of the chevron its sibling folders have. */
+  /** The list is a tree: a file leaves the room of the chevron its sibling folders have (in a grouped list too: `RowGuides`). */
   tree: boolean;
   folder: boolean;
   children: ReactNode;
 }
 
-/** The indent guides of a row: drawn, and the level of the one drawn stronger (`activeIndentGuide`), if any. */
+/** How a row of `FileTreeList` sits among the others: its guides, and whether the list has a column for chevrons. */
 export interface RowGuides {
+  /** The level of the guide drawn stronger (`activeIndentGuide`), if any. */
   active: number | undefined;
+  /**
+   * The list is a tree or has groups: a file leaves the room of a chevron, so what a group or folder holds starts
+   * under its name, not under its chevron and badge.
+   */
+  chevronColumn: boolean;
 }
 
 /**
@@ -33,7 +39,7 @@ export function FileTreeCell({ depth, tree, folder, children }: FileTreeCellProp
     <span
       className={styles.cell}
       style={style}
-      data-chevron-room={(tree && !folder) || undefined}
+      data-chevron-room={((tree || guides?.chevronColumn) && !folder) || undefined}
       data-guides={guides !== null || undefined}
       data-active-guide={active !== undefined || undefined}
     >

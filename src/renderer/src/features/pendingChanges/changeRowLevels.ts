@@ -1,4 +1,4 @@
-import { groupedRowLevel, groupedTreeArrowRows, groupLevelsOf } from '../../lib/groupedPathTree';
+import { groupedRowLevel, groupedTreeArrowRows, groupLevelsOf, hasChevronColumn } from '../../lib/groupedPathTree';
 import type { TreeArrowRow } from '../../lib/treeArrowMove';
 import type { ChangeRow } from './changeRows';
 
@@ -23,7 +23,7 @@ export interface RowLevels {
 /** How the rows sit: in a tree, or once grouped, every row leaves the chevron's column, even while no folder shows. */
 export function rowLevelsOf(rows: readonly ChangeRow[], tree: boolean): RowLevels {
   const groupLevels = groupLevelsOf(rows);
-  return { groupLevels, chevronColumn: tree || groupLevels > 0 };
+  return { groupLevels, chevronColumn: hasChevronColumn(groupLevels, tree) };
 }
 
 /** How many changelists, status groups and folders hold the row: the indent guides it draws, one under each one's chevron. */

@@ -1,6 +1,6 @@
 import { useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../lib/actions';
-import { groupedRowLevel, groupedTreeKeyMove, groupLevelsOf, type GroupedTreeRow, type TreeGroupRow } from '../lib/groupedPathTree';
+import { groupedRowLevel, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, type GroupedTreeRow, type TreeGroupRow } from '../lib/groupedPathTree';
 import { activeGuideLevelAt, activeIndentGuide } from '../lib/indentGuides';
 import { itemsUnderRows, type PathTreeRow } from '../lib/pathTree';
 import type { SelectionState } from '../lib/selection';
@@ -91,7 +91,7 @@ export function FileTreeList<T, G>({
       id: 'path',
       header: 'File',
       render: (row) => (
-        <RowGuidesContext.Provider value={{ active: activeGuideLevelAt(activeGuide, rowIndexes.get(row.key) ?? -1) }}>
+        <RowGuidesContext.Provider value={{ active: activeGuideLevelAt(activeGuide, rowIndexes.get(row.key) ?? -1), chevronColumn: hasChevronColumn(groupLevels, tree) }}>
           {row.type === 'group' ? (
             <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.items)} />
           ) : (

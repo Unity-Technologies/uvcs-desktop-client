@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, groupLevelsOf, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
+import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
 import { itemsUnderRows, layoutPathTree } from './pathTree';
 
 interface Item {
@@ -97,6 +97,14 @@ describe('groupLevelsOf', () => {
   it('still counts two while the first group is closed, from the subgroups of the next', () => {
     const rows = layoutGroupedTree([nested('one', [group('one:a', ['a.ts'])]), nested('two', [group('two:a', ['b.ts'])])], keyOf, true);
     expect(groupLevelsOf(collapseGroupedTreeRows(rows, new Set(['one'])))).toBe(2);
+  });
+});
+
+describe('hasChevronColumn', () => {
+  it('leaves the chevron column in a tree or once grouped, so files start under a group\'s name; a flat list stays flush', () => {
+    expect(hasChevronColumn(0, false)).toBe(false);
+    expect(hasChevronColumn(0, true)).toBe(true);
+    expect(hasChevronColumn(1, false)).toBe(true);
   });
 });
 

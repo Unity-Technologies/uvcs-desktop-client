@@ -75,6 +75,15 @@ export function groupLevelsOf<T, G>(rows: readonly GroupedTreeRow<T, G>[]): numb
   return levels;
 }
 
+/**
+ * Whether the rows leave a column for the chevrons of the groups and folders: in a tree, or once grouped, a file starts
+ * past it, so what a group or folder holds starts under its name, not under its chevron. Only a flat list without
+ * groups has none: its rows stay flush.
+ */
+export function hasChevronColumn(groupLevels: number, tree: boolean): boolean {
+  return tree || groupLevels > 0;
+}
+
 /** How many levels in a row sits: groups at the top, then what they hold, folder by folder (a row's `depth`). */
 export function groupedRowLevel<T, G>(row: GroupedTreeRow<T, G>, groupLevels: number): number {
   return row.type === 'group' ? row.depth : row.depth + groupLevels;
