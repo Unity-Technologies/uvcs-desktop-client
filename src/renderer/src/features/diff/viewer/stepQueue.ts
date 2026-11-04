@@ -52,3 +52,8 @@ export function pressTarget({ opens, opened, steppingTo, path }: { opens: boolea
   if (steppingTo !== null && steppingTo !== path) return { kind: 'keep', path: steppingTo };
   return opened ? { kind: 'step' } : { kind: 'keep', path };
 }
+
+/** Whether a diff takes the presses kept for it: once it opened at its arrival, while it's the selected file's. */
+export function drainsKept({ opened, selected }: { opened: boolean; selected: boolean }): boolean {
+  return opened && selected;
+}

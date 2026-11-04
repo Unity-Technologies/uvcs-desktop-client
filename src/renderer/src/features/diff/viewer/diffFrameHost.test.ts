@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drainsKept, headerArrows, headerPress, isSelectedFile, type HeaderArrows, type HeaderState } from './diffFrameHost';
+import { headerArrows, headerPress, isSelectedFile, type HeaderArrows, type HeaderState } from './diffFrameHost';
 import type { StepNavigation } from './useStepNavigation';
 
 const navigation = { noun: 'change' } as StepNavigation;
@@ -46,17 +46,6 @@ describe('headerPress', () => {
 
   it("goes from file to file at once where the file couldn't be read", () => {
     expect(headerPress(failed, { steppingTo: null, requestedPath: 'b.cs' })).toEqual({ kind: 'step' });
-  });
-});
-
-describe('drainsKept', () => {
-  it("lets a diff take its kept presses once it opened at its arrival, while it's the selected file's", () => {
-    expect(drainsKept({ opened: true, selected: true })).toBe(true);
-  });
-
-  it('not before it opened, nor while it stays on screen for a previous file as the next one is read', () => {
-    expect(drainsKept({ opened: false, selected: true })).toBe(false);
-    expect(drainsKept({ opened: true, selected: false })).toBe(false);
   });
 });
 

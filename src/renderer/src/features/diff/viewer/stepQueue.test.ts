@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pressTarget, StepQueue } from './stepQueue';
+import { drainsKept, pressTarget, StepQueue } from './stepQueue';
 
 describe('StepQueue', () => {
   it('gives the presses kept for a file back to that file, in order, once each', () => {
@@ -60,5 +60,16 @@ describe('pressTarget', () => {
 
   it('steps at once where it opens nothing (a header with no diff of its own, an xlink)', () => {
     expect(pressTarget({ ...press, opens: false, opened: false, steppingTo: 'b.cs' })).toEqual({ kind: 'step' });
+  });
+});
+
+describe('drainsKept', () => {
+  it("lets a diff take its kept presses once it opened at its arrival, while it's the selected file's", () => {
+    expect(drainsKept({ opened: true, selected: true })).toBe(true);
+  });
+
+  it('not before it opened, nor while it stays on screen for a previous file as the next one is read', () => {
+    expect(drainsKept({ opened: false, selected: true })).toBe(false);
+    expect(drainsKept({ opened: true, selected: false })).toBe(false);
   });
 });

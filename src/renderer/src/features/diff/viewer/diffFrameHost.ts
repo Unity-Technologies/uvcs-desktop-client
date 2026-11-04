@@ -92,8 +92,3 @@ export function headerPress(arrows: HeaderArrows, { steppingTo, requestedPath }:
   if (arrows.body) return { kind: 'body' };
   return arrows.queues ? { kind: 'keep', path: steppingTo ?? requestedPath } : { kind: 'step' };
 }
-
-/** Whether a diff takes the presses kept for it: once it opened at its arrival, while it's the selected file's. */
-export function drainsKept({ opened, selected }: { opened: boolean; selected: boolean }): boolean {
-  return opened && selected;
-}

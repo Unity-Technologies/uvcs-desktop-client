@@ -5,8 +5,7 @@ import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep, plannedMove } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
-import { pressTarget, StepQueue } from './stepQueue';
-import { drainsKept } from './diffFrameHost';
+import { drainsKept, pressTarget, StepQueue } from './stepQueue';
 import type { ArrowGoal } from './changeNavigatorView';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */

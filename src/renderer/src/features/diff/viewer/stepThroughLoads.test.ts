@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel } from './changeNavigation';
-import { drainsKept, headerArrows, headerPress, isSelectedFile } from './diffFrameHost';
+import { headerArrows, headerPress, isSelectedFile } from './diffFrameHost';
 import { fileSteps, type PendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
-import { pressTarget, StepQueue } from './stepQueue';
+import { drainsKept, pressTarget, StepQueue } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
 
 /** Stands for a published navigation: `headerArrows` only asks whose it is. */
