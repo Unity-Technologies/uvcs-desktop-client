@@ -51,7 +51,8 @@ export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, fold
   const open: TreeFolderRow<T>[] = [];
   sorted.forEach((item, index) => {
     while (open.length > 0 && open.at(-1)!.held.end <= index) open.pop();
-    const holdsOthers = isInFolder(sorted[index + 1]?.path, item.path);
+    // Strictly in it: the next item at the same path is the same path listed twice, not something the item holds.
+    const holdsOthers = isStrictlyInFolder(sorted[index + 1]?.path, item.path);
     // The folders of the item's path below the rows open around it, the item itself last when it holds others.
     let folderEnd = nextFolderEnd(item.path, open.at(-1), holdsOthers);
     while (folderEnd !== -1) {
@@ -127,6 +128,11 @@ function isInFolder(path: string | undefined, folder: string): boolean {
   if (path === undefined) return false;
   if (path.length !== folder.length && path.charCodeAt(folder.length) !== SLASH) return false;
   return path.startsWith(folder);
+}
+
+/** Whether `path` is in `folder`, below it: not the folder itself. */
+function isStrictlyInFolder(path: string | undefined, folder: string): boolean {
+  return path !== undefined && path.length > folder.length && isInFolder(path, folder);
 }
 
 const SLASH = '/'.charCodeAt(0);
