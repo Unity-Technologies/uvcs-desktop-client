@@ -33,6 +33,19 @@ interface FileStepsOptions {
   /** Selects a file, as the list does (asking first about unsaved edits: `selectAfterLeaving`). */
   select: (key: string) => void;
   pathOf: (key: string) => string;
+  /**
+   * Where a step leaves the arrival of the file it goes to (`usePendingArrival`), shared by the lists of one view whose
+   * files open under either (Incoming's diffs and conflicts): the file stepped to takes it, whichever list it shows in.
+   */
+  pending?: PendingArrivalRef;
+}
+
+/** Where a step leaves the arrival of the file it selects, until that file's view takes it. */
+export type PendingArrivalRef = { current: PendingArrival | null };
+
+/** One pending arrival, to share between the file steps of one view (`FileStepsOptions.pending`). */
+export function usePendingArrival(): PendingArrivalRef {
+  return useRef<PendingArrival | null>(null);
 }
 
 /** A step to a file whose diff hasn't opened yet: where it opens. */
@@ -49,7 +62,7 @@ export function fileSteps(
   keys: readonly string[],
   current: string | null,
   list: Pick<FileStepsOptions, 'select' | 'pathOf'>,
-  pending: { current: PendingArrival | null },
+  pending: PendingArrivalRef,
 ): FileSteps {
   return {
     canStep: (direction) => adjacentKey(keys, current, direction) !== null,
@@ -68,12 +81,13 @@ export function fileSteps(
 }
 
 /** Steps through a list's files for the diff beside it. */
-export function useFileSteps({ keys, current, select, pathOf }: FileStepsOptions): FileSteps {
-  const arrival = useRef<PendingArrival | null>(null);
+export function useFileSteps({ keys, current, select, pathOf, pending }: FileStepsOptions): FileSteps {
+  const ownArrival = usePendingArrival();
+  const arrival = pending ?? ownArrival;
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
   return useMemo(
     () => fileSteps(keys, current, { select: (key) => latest.current.select(key), pathOf: (key) => latest.current.pathOf(key) }, arrival),
-    [keys, current],
+    [keys, current, arrival],
   );
 }
