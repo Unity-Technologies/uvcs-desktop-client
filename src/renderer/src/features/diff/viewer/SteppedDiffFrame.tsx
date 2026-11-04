@@ -2,10 +2,10 @@ import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type 
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ChangeNavigator } from './ChangeNavigator';
-import { DiffFrameHostContext, headerArrows, headerKeepsFor, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
+import { DiffFrameHostContext, headerArrows, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { FileStepsContext } from './fileSteps';
-import { drainKept, followStep, StepQueue } from './stepQueue';
+import { StepQueue } from './stepQueue';
 import { useFileOnlyNavigation } from './useFileOnlyNavigation';
 import styles from './SteppedDiffFrame.module.css';
 
@@ -69,17 +69,13 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   const { key, path, ...read } = requested;
   const arrows = headerArrows({ published, requestedKey: key, ...read });
   // The arrows step with the body's navigation once it's the selected file's (`shown`); else with the header's own,
-  // which keeps the presses (`headerKeepsFor`) or, where the file couldn't be read, steps from file to file.
-  const keep = (direction: 1 | -1): void => queue.push(headerKeepsFor({ steppingTo: files?.steppingTo() ?? null, requestedPath: path }), direction);
-  const header = useFileOnlyNavigation(frame, arrows.headerKeys, arrows.queues ? keep : undefined);
+  // which keeps the presses for that file's diff or, where it couldn't be read, replays them from file to file.
+  const kept = useMemo(() => ({ queue, takes: true }), [queue]);
+  const header = useFileOnlyNavigation(frame, { active: arrows.body === null, holder: arrows.own, path, kept });
   // The selection left a file: the presses kept for it (not for this one, nor for one a step is on its way to) go.
   // Only as the file asked for changes (`[path]`): that is when the selection leaves one. Other renders leave nothing,
   // and the queue may be the list's, shared with a view this frame doesn't see (Incoming's conflicts).
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
-  // A file that couldn't be read: the presses kept for it, meant for a diff that never came, step on from it.
-  useEffect(() => {
-    if (arrows.replaysKept) drainKept(queue, path, (direction) => followStep(queue, path, files?.step(direction) ?? null));
-  });
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;
 }

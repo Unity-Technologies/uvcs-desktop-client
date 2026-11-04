@@ -51,17 +51,13 @@ export interface HeaderState {
 
 /** What the header's arrows show and do. */
 export interface HeaderArrows {
-  /** The body's navigation the arrows step with; none while they're the header's own (no label). */
+  /** The body's navigation the arrows step with (its label, its keys); none while they're the header's own. */
   body: PublishedNavigation | null;
-  /** The header's own navigation takes the keys (never both it and the body's). */
-  headerKeys: boolean;
-  /** The header's presses wait for the selected file's diff (`StepQueue`), rather than stepping from another file. */
-  queues: boolean;
   /**
-   * The presses kept for the selected file are replayed as steps from it, to the files around it (`drainKept`): it
-   * couldn't be read, so the diff they were meant for never comes, and a burst across it goes on.
+   * What the header's own navigation holds (`PressHolder`): waiting for the selected file's diff, read or drawn, its
+   * presses kept for it; or, where that file couldn't be read, nothing to step through, from file to file at once.
    */
-  replaysKept: boolean;
+  own: 'waiting' | 'stepless';
 }
 
 /**
@@ -72,21 +68,7 @@ export interface HeaderArrows {
  * previous one's navigation is still the one published (publishing follows the render).
  */
 export function headerArrows({ published, requestedKey, error, hasData, isPlaceholderData }: HeaderState): HeaderArrows {
-  if (error) return { body: null, headerKeys: true, queues: false, replaysKept: true };
-  const current = hasData && !isPlaceholderData && published !== null && isSelectedFile(published.key, requestedKey);
-  if (current) return { body: published, headerKeys: false, queues: false, replaysKept: false };
-  return { body: null, headerKeys: true, queues: true, replaysKept: false };
-}
-
-/** Whether a diff is the selected file's, not a previous one kept on screen while the next is read: by its versions. */
-export function isSelectedFile(ownKey: string, requestedKey: string): boolean {
-  return ownKey === requestedKey;
-}
-
-/**
- * The file a press on the header's own arrows is kept for while they keep presses (`HeaderArrows.queues`: the selected
- * file's diff read or drawn): the file a step is on its way to (`FileSteps.steppingTo`), else the file asked for.
- */
-export function headerKeepsFor({ steppingTo, requestedPath }: { steppingTo: string | null; requestedPath: string }): string {
-  return steppingTo ?? requestedPath;
+  if (error) return { body: null, own: 'stepless' };
+  const current = hasData && !isPlaceholderData && published !== null && published.key === requestedKey;
+  return { body: current ? published : null, own: 'waiting' };
 }

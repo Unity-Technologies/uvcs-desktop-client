@@ -12,7 +12,7 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
 import { editedFileIn, typesIntoDiff } from './canEditInPlace';
-import { DiffFrameHostContext, diffContentsKey, isSelectedFile, type DiffFrameHost } from './diffFrameHost';
+import { DiffFrameHostContext, diffContentsKey, type DiffFrameHost } from './diffFrameHost';
 import type { ChangeView } from './changeView';
 import { diffBodyOf, stepsCanCome } from './diffBody';
 import { diffDiscards } from './diffDiscards';
@@ -120,7 +120,8 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const steppedDiff = stepsCome ? (diffs.current?.meta ?? null) : null;
   // Presses kept for this file (the header's, while it was read, then its own until it opened) wait in the frame's
   // queue; it takes them once opened, while it is the selected file's diff, not a previous one kept on screen.
-  const selected = isSelectedFile(versionsKey, host.requestedKey);
+  // The selected file's diff, not a previous one kept on screen while the next is read: by the versions it shows.
+  const selected = versionsKey === host.requestedKey;
   const kept = useMemo(() => ({ queue: host.queue, takes: selected }), [host.queue, selected]);
   const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: selected, noStepsComing: !stepsCome, kept });
   const stepsOwn = steppedDiff !== null;

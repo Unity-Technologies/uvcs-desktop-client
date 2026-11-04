@@ -1,5 +1,4 @@
 import { currentAfterChange, plannedMove, type ChangePosition } from './changeNavigation';
-import type { ArrowGoal } from './changeNavigatorView';
 import type { FileSteps } from './fileSteps';
 
 /**
@@ -18,7 +17,7 @@ export type PressOutcome = number | { file: string } | null;
  * then); past the last or first step, on to the file after or before it in the list beside the view (`files`), which
  * it selects.
  */
-export function pressStep(position: ChangePosition, direction: 1 | -1, files: FileSteps | null, readAbove: () => number): PressOutcome {
+export function pressStep(position: ChangePosition, direction: 1 | -1, files: Pick<FileSteps, 'canStep' | 'step'> | null, readAbove: () => number): PressOutcome {
   const from = position.current === null ? { ...position, above: readAbove() } : position;
   const move = plannedMove(from, direction, files?.canStep(direction) ?? false);
   if (move?.to === 'file') {
@@ -26,17 +25,6 @@ export function pressStep(position: ChangePosition, direction: 1 | -1, files: Fi
     return file === null ? null : { file };
   }
   return move?.index ?? null;
-}
-
-/**
- * Where an arrow goes (`StepNavigation.goesTo`: its tip, and whether it's enabled). While its presses are kept
- * (`pressTarget`, a header's queue), `'queued'`: enabled both ways, as the keys are, whatever the list beside it says,
- * which may already be on its last file while the diff shown is still the previous one's. Otherwise through the steps,
- * on to the file beside it past the ends, or nowhere.
- */
-export function stepGoal(position: ChangePosition, direction: 1 | -1, files: Pick<FileSteps, 'canStep'> | null, kept: boolean): ArrowGoal {
-  if (kept) return 'queued';
-  return plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null;
 }
 
 /**
