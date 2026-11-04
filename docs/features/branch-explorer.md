@@ -83,7 +83,10 @@ Ctrl off Mac) move the selected branch, or the branch of the selected changeset.
 branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository, by
 its spec (`pinsByRepository` in `useBranchExplorerPreferences`), because a branch id means nothing in another one.
 `placeLanes` places pinned lanes first, the one moved last first, each on the first free row from the one it asks for.
-Their children follow below them. Rows nothing ends up on close, and pins of branches not drawn are ignored.
+Their children follow below them, but a child moved itself may sit above its parent. Rows nothing ends up on close,
+and pins of branches not drawn are ignored; pins are never pruned, since a branch deleted later is just not drawn. A
+pin's row counts the branches drawn when it was made: under another filter it lands on the first free row from that
+number, so a move to the bottom stays at the bottom.
 `branchMoves` decides which moves are offered: none up from the top row, none down for a branch alone on the last
 row. Reset position (`withoutPin`) puts one branch back where the layout places it. Reset all positions… asks first
 (`resetAllPositions`), then clears the repository's pins. The reset has no key: ⌘⇧C, the one the official client

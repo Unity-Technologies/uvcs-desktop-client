@@ -132,6 +132,20 @@ describe('layoutGraph with moved branches', () => {
     expect(layout.rowCount).toBe(4);
   });
 
+  it('lets a moved child sit above its parent', () => {
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 4, row: 0 }]))).toMatchObject({ '/main/a/fix': 0 });
+  });
+
+  it('reads a row as a row of the branches drawn: with fewer drawn, a move to the bottom still lands at the bottom', () => {
+    // A move to the bottom asks for the row past the last one drawn when it was made (`movedBranch`); with a filter
+    // hiding a branch, the same pin lands below the rows left.
+    const data = withIds();
+    const fewer = { ...data, branches: data.branches.filter((each) => each.name !== '/main/b'), changesets: data.changesets.filter((each) => each.branch !== '/main/b') };
+    const layout = layoutGraph(fewer, undefined, null, [{ branch: 2, row: 4 }]);
+    expect(rowsOf(layout)).toMatchObject({ '/main': 0, '/main/a': 1, '/main/a/fix': 2 });
+    expect(layout.rowCount).toBe(3);
+  });
+
   it('ignores the moves of branches the graph does not draw', () => {
     expect(layoutGraph(withIds(), undefined, null, [{ branch: 99, row: 0 }]).lanes).toEqual(layoutGraph(withIds()).lanes);
   });
