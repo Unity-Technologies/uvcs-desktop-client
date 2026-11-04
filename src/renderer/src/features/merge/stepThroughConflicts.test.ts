@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arrivalChange, plannedMove, positionLabel, type ChangePosition } from '../diff/viewer/changeNavigation';
-import { fileSteps, type PendingArrival } from '../diff/viewer/fileSteps';
+import { fileSteps, pendingArrival } from '../diff/viewer/fileSteps';
 import { positionAfterChange, pressStep } from '../diff/viewer/stepNavigation';
 import { conflictStepKeys } from './conflictSteps';
 import { ConflictPlace } from './resolve/conflictRows';
@@ -30,7 +30,7 @@ class MergePage {
   private shown = '';
   private position: ChangePosition = { count: 0, current: null, above: 0 };
   private place = new ConflictPlace();
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
 
   constructor(private readonly files: Record<string, ListedFile>) {
     this.open(Object.keys(files)[0]!);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
 import { openingStep, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
-import { fileSteps, type PendingArrival } from './fileSteps';
+import { fileSteps, pendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
 import { lineDiff } from './lineDiff';
 
@@ -18,7 +18,7 @@ const changesOf = (original: string, modified: string): number => listChangeRegi
 class DiffBesideList {
   private shown = '';
   private current: number | null = null;
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
 
   /** `files`: each file of the list and how many changes its diff has. */
   constructor(private readonly files: Record<string, number>) {

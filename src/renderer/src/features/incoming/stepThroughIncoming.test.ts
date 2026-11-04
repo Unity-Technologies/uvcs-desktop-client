@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel } from '../diff/viewer/changeNavigation';
-import { fileSteps, type PendingArrival } from '../diff/viewer/fileSteps';
+import { fileSteps, pendingArrival } from '../diff/viewer/fileSteps';
 import { pressStep } from '../diff/viewer/stepNavigation';
 
 /**
@@ -12,7 +12,7 @@ import { pressStep } from '../diff/viewer/stepNavigation';
 class IncomingList {
   private shown = '';
   private current: number | null = null;
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
 
   /** `files`: each file of the list, how many changes or conflicts it has, and whether it conflicts. */
   constructor(private readonly files: Record<string, { steps: number; conflicts?: true }>) {

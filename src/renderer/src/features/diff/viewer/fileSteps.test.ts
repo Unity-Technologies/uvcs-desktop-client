@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { adjacentKey, fileSteps, type PendingArrival } from './fileSteps';
+import { adjacentKey, fileSteps, pendingArrival } from './fileSteps';
+import { followStep } from './stepQueue';
 
 describe('adjacentKey', () => {
   const keys = ['a', 'b', 'c'];
@@ -20,7 +21,7 @@ describe('adjacentKey', () => {
 describe('fileSteps', () => {
   const list = (current: string) => {
     const selected: string[] = [];
-    const pending: { current: PendingArrival | null } = { current: null };
+    const pending = pendingArrival();
     const steps = fileSteps(['a', 'b', 'c'], current, { select: (key) => void selected.push(key), pathOf: (key) => `src/${key}.ts` }, pending);
     return { steps, selected };
   };
@@ -51,7 +52,7 @@ describe('fileSteps', () => {
   });
 
   it("says which file a step went to while its diff hasn't arrived, so a press meanwhile waits for that file", () => {
-    const pending: { current: PendingArrival | null } = { current: null };
+    const pending = pendingArrival();
     const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
     expect(at('a').steppingTo()).toBeNull();
     at('a').step(1);
@@ -62,7 +63,7 @@ describe('fileSteps', () => {
   });
 
   it('forgets a step once the list is on another file (picked with a click): presses then go to that one', () => {
-    const pending: { current: PendingArrival | null } = { current: null };
+    const pending = pendingArrival();
     const at = (current: string) => fileSteps(['a', 'b', 'c'], current, { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending);
     at('a').step(1);
     expect(at('c').steppingTo()).toBeNull();
@@ -75,5 +76,24 @@ describe('fileSteps', () => {
     steps.step(1);
     expect(selected).toEqual([]);
     expect(steps.takeArrival('src/c.ts')).toBeNull();
+  });
+
+  it("hands the presses left for a diff on to the conflict a step from it went to, the lists of one view sharing them (Incoming's)", () => {
+    const pending = pendingArrival();
+    const path = (key: string) => `src/${key}.ts`;
+    const diffs = fileSteps(['a', 'b'], 'a', { select: () => undefined, pathOf: path }, pending);
+    diffs.kept.push('src/a.ts', -1);
+    followStep(diffs.kept, 'src/a.ts', diffs.step(1));
+    // The conflict's view, with no diff header of its own, takes them from its list.
+    const conflicts = fileSteps(['b'], 'b', { select: () => undefined, pathOf: path }, pending);
+    expect([conflicts.kept.take('src/b.ts'), conflicts.kept.take('src/b.ts')]).toEqual([-1, undefined]);
+  });
+
+  it('drops the presses kept for files the list left, keeping those of the file it is on', () => {
+    const pending = pendingArrival();
+    pending.kept.push('src/a.ts', 1);
+    pending.kept.push('src/b.ts', -1);
+    fileSteps(['a', 'b', 'c'], 'b', { select: () => undefined, pathOf: (key) => `src/${key}.ts` }, pending).dropLeftPresses();
+    expect([pending.kept.take('src/a.ts'), pending.kept.take('src/b.ts')]).toEqual([undefined, -1]);
   });
 });

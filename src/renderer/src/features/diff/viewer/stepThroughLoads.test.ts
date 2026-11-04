@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { openingStep, positionLabel } from './changeNavigation';
 import { headerArrows, headerKeepsFor, isSelectedFile } from './diffFrameHost';
-import { fileSteps, type PendingArrival } from './fileSteps';
+import { fileSteps, pendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
-import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
+import { drainKept, drainsKept, followStep, pressTarget, type PressEffect } from './stepQueue';
 import type { StepNavigation } from './useStepNavigation';
 
 /** Stands for a published navigation: `headerArrows` only asks whose it is. */
@@ -27,8 +27,8 @@ class CachedDiffs {
   private error = false;
   private rendersDue = false;
   private requestDue = false;
-  private readonly queue = new StepQueue();
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
+  private readonly queue = this.pending.kept;
 
   constructor(
     private readonly files: Record<string, number>,

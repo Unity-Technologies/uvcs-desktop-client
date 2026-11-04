@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drainKept, drainsKept, followStep, pressTarget, StepQueue, type PressEffect } from './stepQueue';
+import { drainKept, drainsKept, followStep, keptPressesOf, pressTarget, StepQueue, type PressEffect } from './stepQueue';
 
 describe('StepQueue', () => {
   it('gives the presses kept for a file back to that file, in order, once each', () => {
@@ -71,6 +71,24 @@ describe('drainsKept', () => {
   it('not before it opened, nor while it stays on screen for a previous file as the next one is read', () => {
     expect(drainsKept({ opened: false, selected: true })).toBe(false);
     expect(drainsKept({ opened: true, selected: false })).toBe(false);
+  });
+});
+
+describe('keptPressesOf', () => {
+  const own = { queue: new StepQueue(), takes: true };
+  const files = { kept: new StepQueue() };
+
+  it("takes the presses a diff header hands it (`LoadedFileDiff`'s), while it's the selected file's", () => {
+    const frame = { queue: new StepQueue(), takes: false };
+    expect(keptPressesOf(frame, files, own)).toBe(frame);
+  });
+
+  it("else its list's, which the lists of one view share, so a conflict's view takes the presses a step from a diff left it", () => {
+    expect(keptPressesOf(undefined, files, own)).toEqual({ queue: files.kept, takes: true });
+  });
+
+  it('else its own, with no list beside it', () => {
+    expect(keptPressesOf(undefined, null, own)).toBe(own);
   });
 });
 
