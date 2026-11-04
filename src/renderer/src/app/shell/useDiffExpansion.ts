@@ -1,7 +1,7 @@
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { escapeCollapsesDiff, expandDiffOffered, expandDiffWords, leavesExpandedDiff, type NavigationSpot } from '../../components/diffExpansion';
-import { collapseDiff, isDiffExpanded, isExpandableDiffInFront, toggleDiffExpanded, useDiffExpanded, useExpandableDiffsChanged } from '../../components/diffExpansionStore';
+import { collapseDiff, collapseDiffAsAsked, isDiffExpanded, isExpandableDiffInFront, toggleDiffExpanded, useDiffExpanded, useExpandableDiffsChanged } from '../../components/diffExpansionStore';
 import { isKeyboardTaken } from '../../lib/mainFocus';
 import { windowShortcutMayRun } from '../../lib/modalDialog';
 import { formatShortcut, matchesShortcut } from '../../lib/shortcuts';
@@ -28,7 +28,7 @@ export function useDiffExpansion(): void {
         keywords: ['expand', 'collapse', 'maximize', 'focus', 'zen', 'whole window', 'hide panels'],
         shortcut: hotkey('expandDiff'),
         disabled: !expandDiffOffered(expanded, diffInFront),
-        run: toggleDiffExpanded,
+        run: () => toggleDiffExpanded('keyboard'),
       },
     ],
     [expanded, diffInFront, words.label],
@@ -47,7 +47,7 @@ export function useDiffExpansion(): void {
       };
       if (!escapeCollapsesDiff(isDiffExpanded(), press)) return;
       event.preventDefault();
-      collapseDiff();
+      collapseDiffAsAsked('keyboard');
     };
     const unsubscribe = useNavigation.subscribe((state, previous) => {
       if (leavesExpandedDiff(spotOf(previous), spotOf(state))) collapseDiff();

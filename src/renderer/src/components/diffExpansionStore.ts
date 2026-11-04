@@ -9,8 +9,11 @@ import {
   expandableDiffInFront,
   expandedAfterToggle,
   focusGoesToDiff,
+  focusGoesToDiffOnCollapse,
   shortcutWhileExpanded,
+  type AskedBy,
   type ExpandableDiff,
+  type FocusHolder,
   type HostDiffs,
 } from './diffExpansion';
 
@@ -38,12 +41,22 @@ export function collapseDiff(): void {
   useDiffExpansionStore.setState({ expanded: false });
 }
 
+/**
+ * Collapses the expanded diff as the user asked (Esc, the command, the button), leaving the keyboard on its code where
+ * it would be left nowhere or on a button (`focusGoesToDiffOnCollapse`): given while the code is still the main focus.
+ */
+export function collapseDiffAsAsked(by: AskedBy): void {
+  if (!isDiffExpanded()) return;
+  if (focusGoesToDiffOnCollapse(focusHolder(), by)) focusMain(document);
+  collapseDiff();
+}
+
 /** Expands the diff in front, or collapses an expanded one; nothing where no diff can expand. */
-export function toggleDiffExpanded(): void {
-  const expanded = expandedAfterToggle(isDiffExpanded(), isExpandableDiffInFront());
+export function toggleDiffExpanded(by: AskedBy): void {
+  if (!expandedAfterToggle(isDiffExpanded(), isExpandableDiffInFront())) return collapseDiffAsAsked(by);
   // Drawn at once (`flushSync`): the code is the main focus and the list out of sight before the keyboard moves.
-  flushSync(() => useDiffExpansionStore.setState({ expanded }));
-  if (expanded) focusExpandedDiff();
+  flushSync(() => useDiffExpansionStore.setState({ expanded: true }));
+  focusExpandedDiff();
 }
 
 /**
@@ -105,15 +118,18 @@ function countRegistration(): void {
 
 /**
  * Gives the keyboard to the expanded diff (`focusGoesToDiff`) when what held it went out of sight with the files, or
- * was the Expand button itself: the arrows scroll the code, ⌥↓ steps through its changes and Esc drops a picked
- * change before it collapses the diff.
+ * was a button (the Expand button, a change arrow): the arrows scroll the code, ⌥↓ steps through its changes and Esc
+ * drops a picked change before it collapses the diff.
  */
 function focusExpandedDiff(): void {
-  const active = document.activeElement;
-  const diff = [...mounted].find((candidate) => isInFront(candidate.element));
-  if (!diff) return;
-  const onBody = !(active instanceof HTMLElement) || active === document.body;
-  const holder = { onBody, visible: !onBody && (active as HTMLElement).checkVisibility(), onExpandButton: active === diff.element };
+  if (![...mounted].some((candidate) => isInFront(candidate.element))) return;
   // The code is the window's main focus while expanded (`useExpandedDiffFocus`); an image or a model has none to take.
-  if (focusGoesToDiff(holder)) focusMain(document);
+  if (focusGoesToDiff(focusHolder())) focusMain(document);
+}
+
+/** What holds the keyboard now. */
+function focusHolder(): FocusHolder {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === document.body) return { onBody: true, visible: false, onButton: false };
+  return { onBody: false, visible: active.checkVisibility(), onButton: active.matches('button, [role="button"]') };
 }

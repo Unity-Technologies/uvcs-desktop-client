@@ -31,23 +31,41 @@ export function expandableDiffInFront<Element>(diffs: Iterable<ExpandableDiff<El
   return [...diffs].some((diff) => inFront(diff.element));
 }
 
-/** What held the keyboard as the diff expanded. */
+/** What held the keyboard as the diff expanded or collapsed. */
 export interface FocusHolder {
   /** Nothing: the page itself. */
   onBody: boolean;
   /** It still shows: it wasn't in a part the diff stowed. */
   visible: boolean;
-  /** The diff header's Expand button, pressed with the mouse. */
-  onExpandButton: boolean;
+  /** A button: the diff header's Expand button or change arrows, clicked with the mouse or reached with Tab. */
+  onButton: boolean;
 }
 
 /**
- * Whether the keyboard goes to the expanded diff: from nowhere, from a list that went out of sight, or from the Expand
- * button, so the arrows scroll the code and Esc reaches the diff first (a picked change drops before the diff
- * collapses). What still shows and holds it otherwise (a field) keeps it.
+ * Whether the keyboard goes to the expanded diff: from nowhere, from a list that went out of sight, or from a button
+ * (the Expand button, a change arrow clicked before), so the arrows scroll the code and Esc reaches the diff first (a
+ * picked change drops before the diff collapses). What still shows and holds it otherwise (a field) keeps it.
  */
 export function focusGoesToDiff(holder: FocusHolder): boolean {
-  return holder.onBody || !holder.visible || holder.onExpandButton;
+  return holder.onBody || !holder.visible || holder.onButton;
+}
+
+/** How the user asked to expand or collapse: a key (Esc, the shortcut, the palette, the menu, Enter on the button) or a click. */
+export type AskedBy = 'keyboard' | 'pointer';
+
+/** How the Expand button was pressed, from its click's `detail` (the pointer's presses): 0 for Enter or Space. */
+export function askedBy(clickDetail: number): AskedBy {
+  return clickDetail === 0 ? 'keyboard' : 'pointer';
+}
+
+/**
+ * Whether the keyboard goes to the diff's code as the user collapses it from the keyboard: from nowhere (a step to
+ * another file left it on the page) or a button, whose focus ring the key just pressed would show; never back to the
+ * list it had before expanding. What still shows and takes keys (the code, a field) keeps it, so ⌥↓ and the arrows
+ * work at once. A click on the Expand button leaves it there, ringless.
+ */
+export function focusGoesToDiffOnCollapse(holder: FocusHolder, by: AskedBy): boolean {
+  return by === 'keyboard' && focusGoesToDiff(holder);
 }
 
 /** Whether Expand Diff's command is offered (the palette's entry): to collapse, or with a diff in front to expand. */
