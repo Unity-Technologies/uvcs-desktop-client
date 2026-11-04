@@ -15,6 +15,7 @@ import { allInChoices, leftOutNote, runLabel, runPlans, runPositionText, runStri
 import type { ResolveRun } from './useResolveRun';
 import { toolChoiceEntries } from './toolChoices';
 import { useFileMergers, useMergeTools } from './useMergeTools';
+import { useShortcutOnWhileExpanded } from '../../../components/diffExpansionStore';
 import styles from './ResolveRunControl.module.css';
 
 /** Resolving one by one is offered from two files waiting on: for one, the file's own "Resolve in…" says it all. */
@@ -105,7 +106,9 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
     }
     run.stop();
   };
-  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard());
+  // Off while a diff is expanded: in Incoming this bar is out of sight, and Esc collapses the diff instead.
+  const stopKeyOn = useShortcutOnWhileExpanded('stopResolvingInTool');
+  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard(), stopKeyOn);
 
   if (progress.paused) {
     return (
