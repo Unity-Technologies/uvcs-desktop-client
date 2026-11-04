@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, Eye, List, ListChecks, ListTree } from 'lucide-react';
+import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, ClipboardList, Eye, List, ListTree } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 import type { Icon } from '../lib/actions';
 import { Button } from '../ui/Button';
@@ -11,7 +11,7 @@ import { FileTreeFoldingContext } from './fileTreeFolding';
 import styles from './FileListViewMenu.module.css';
 
 const LAYOUT_ICONS: Record<FileListLayout, Icon> = { list: List, tree: ListTree };
-const GROUPING_ICONS: Record<FileListGrouping, Icon> = { changelist: ListChecks, status: CircleDot };
+const GROUPING_ICONS: Record<FileListGrouping, Icon> = { changelist: ClipboardList, status: CircleDot };
 
 interface FileListViewMenuProps {
   /** What the list offers beyond layout and sort: its groupings. */

@@ -1,4 +1,4 @@
-import { ChevronRight, ListChecks, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
@@ -47,7 +47,7 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
       {row.group.kind === 'status' ? (
         <StatusGroupBadge tone={row.group.tone} />
       ) : (
-        <ListChecks size={14} className={styles.groupIcon} aria-hidden />
+        <ClipboardList size={14} className={styles.groupIcon} aria-hidden />
       )}
       <span className={styles.groupLabel} data-tip={changelist?.description}>
         {row.label}
