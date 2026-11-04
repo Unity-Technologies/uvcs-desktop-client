@@ -3,7 +3,7 @@ import type { ItemType } from '@shared/domain/pendingChanges';
 import { FileTreeCell } from '../../components/FileTreeCell';
 import { FileTreeList } from '../../components/FileTreeList';
 import type { FileTreeFolding } from '../../components/fileTreeFolding';
-import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
@@ -123,7 +123,7 @@ function MergeItemRow({
           itemType={typeOf(item.change.path)}
           oldPath={item.change.oldPath && item.change.oldPath.replace(/^\//, '')}
           status={{ tone: changeTone(item.change), label: describeChange(item.change, labels) }}
-          extras={hasMeta ? <ItemTag>+ meta</ItemTag> : undefined}
+          extras={hasMeta ? <MetaTag /> : undefined}
         />
       );
   }

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { FileTreeCell } from '../../components/FileTreeCell';
-import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { PathTreeRow } from '../../lib/pathTree';
@@ -23,7 +23,7 @@ interface DiffEntryRowProps {
 export function DiffEntryRow({ row, level = row.depth, tree, extras, faded, hasMeta }: DiffEntryRowProps) {
   const tagged = hasMeta ? (
     <>
-      <ItemTag>+ meta</ItemTag>
+      <MetaTag />
       {extras}
     </>
   ) : (

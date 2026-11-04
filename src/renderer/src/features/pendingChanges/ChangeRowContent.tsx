@@ -3,6 +3,7 @@ import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
 import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
@@ -89,7 +90,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {hasMeta && <MetaTag takenAlong />}
             {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
           </>
         }
@@ -118,7 +119,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         faded={reviewStatus === 'reviewed'}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {hasMeta && <MetaTag takenAlong />}
             {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
             {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
             {lock && <LockMark lock={lock} />}
