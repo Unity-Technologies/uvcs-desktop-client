@@ -14,6 +14,34 @@ const sortedItems = (paths: string[]): Item[] => paths.map((path) => ({ path }))
 const tree = (paths: string[]): PathTreeRow<Item>[] => layoutPathTree({ sorted: sortedItems(paths), keyOf, folderScope: 'all' });
 const shape = (rows: PathTreeRow<Item>[]) => rows.map((row) => [row.type === 'folder' ? `${row.name}/` : row.key, row.depth]);
 
+/** A seeded source of numbers in [0, 1): the same trees at every run. */
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+// Names that sort tricky: numbers read as numbers, case only between names otherwise equal, names that read the same
+// ("v01" and "v1", "café" composed and decomposed), and a name that is another's start ("src" and "src-old").
+const NAMES = ['a', 'b', 'A', 'Lap_2', 'Lap_10', 'lap_3', 'v01', 'v1', 'café', 'café', 'src', 'src-old', 'x.txt', 'x'];
+
+/** Paths at random depths, some of them folders that are items themselves, and runs of folders holding only the next. */
+function randomPaths(random: () => number, count: number): string[] {
+  const pick = (names: string[]): string => names[Math.floor(random() * names.length)]!;
+  const paths = new Set<string>();
+  for (let index = 0; index < count; index++) {
+    const depth = Math.floor(random() * 7);
+    const names = Array.from({ length: depth + 1 }, () => pick(NAMES));
+    if (random() < 0.2) names.splice(1, 0, 'chain', 'of', 'folders');
+    paths.add(names.join('/'));
+    // A folder that is an item itself: an added or moved folder.
+    if (depth > 0 && random() < 0.25) paths.add(names.slice(0, 1 + Math.floor(random() * depth)).join('/'));
+  }
+  return [...paths];
+}
+
 describe('layoutPathTree', () => {
   it('gives folders whose names read the same (v01 and v1) a row each, with their own files', () => {
     expect(shape(tree(['Levels/v01/a.txt', 'Levels/v1/b.txt', 'Levels/v01/c.txt']))).toEqual([
@@ -63,6 +91,62 @@ describe('layoutPathTree', () => {
       ['x/', 1],
       ['a/new/x/f.ts', 2],
     ]);
+  });
+
+  it('starts a row of folders below a folder that is an item, and ends one at a folder that is an item', () => {
+    const rows = tree(['top', 'top/one/two/f.ts', 'deep/very/new', 'deep/very/new/g.ts']);
+    expect(shape(rows)).toEqual([
+      ['deep/very/new/', 0],
+      ['deep/very/new/g.ts', 1],
+      ['top/', 0],
+      ['one/two/', 1],
+      ['top/one/two/f.ts', 2],
+    ]);
+    expect(rows.map((row) => row.type === 'folder' && row.item?.path)).toEqual(['deep/very/new', false, 'top', undefined, false]);
+  });
+
+  it('shows a folder that is an item holding only another folder as a row of its own, above it', () => {
+    expect(shape(tree(['a', 'a/b/c.txt', 'a/b/d.txt']))).toEqual([
+      ['a/', 0],
+      ['b/', 1],
+      ['a/b/c.txt', 2],
+      ['a/b/d.txt', 2],
+    ]);
+  });
+
+  it('keeps folders whose names sort tricky apart, each with its own files: numbers, case, a name in two Unicode forms', () => {
+    const rows = tree(['Lap_10/a.txt', 'Lap_2/b.txt', 'lap_2/c.txt', 'café/d.txt', 'café/e.txt']);
+    expect(rows.flatMap((row) => (row.type === 'folder' ? [[row.path, itemsIn(row.held).map(keyOf)]] : []))).toEqual([
+      ['café', ['café/e.txt']],
+      ['café', ['café/d.txt']],
+      ['lap_2', ['lap_2/c.txt']],
+      ['Lap_2', ['Lap_2/b.txt']],
+      ['Lap_10', ['Lap_10/a.txt']],
+    ]);
+  });
+
+  it('gives every folder of generated trees exactly the items in it, and shows every item once', () => {
+    const random = seededRandom(11);
+    for (let trial = 0; trial < 200; trial++) {
+      const sorted = sortedItems(randomPaths(random, 1 + Math.floor(random() * 40)));
+      const rows = layoutPathTree({ sorted, keyOf, folderScope: 'all' });
+      for (const row of rows) {
+        if (row.type === 'folder') expect(itemsIn(row.held)).toEqual(sorted.filter((item) => item.path === row.path || item.path.startsWith(`${row.path}/`)));
+      }
+      const shown = rows.flatMap((row) => (row.type === 'file' ? [row.item] : row.item ? [row.item] : []));
+      expect(new Set(shown).size).toBe(sorted.length);
+      expect(shown).toHaveLength(sorted.length);
+    }
+  });
+
+  it('lays out no rows for no items', () => {
+    expect(tree([])).toEqual([]);
+  });
+
+  it('lays out a list without changing it: its folders point into it', () => {
+    const sorted = Object.freeze(sortedItems(['src/a.ts', 'src/lib/b.ts', 'z.ts']));
+    const [src] = layoutPathTree({ sorted, keyOf, folderScope: 'all' });
+    expect(src).toMatchObject({ type: 'folder', held: { list: sorted, start: 0, end: 2 } });
   });
 
   it('keeps a folder that is an item but holds none a row of an item', () => {
