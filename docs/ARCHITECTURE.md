@@ -1355,6 +1355,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     the row shows the asset's diff; the `.meta` toggle in the diff's toolbar, there whatever the asset's diff is (text,
     image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`) or "Open
     .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
+    "Since review" shares that slot, whatever the diff is: a committed file's (`EntryDiff`) compares the reviewed
+    revision with the current one, which an image or a model shows as for any two revisions; in Changes it needs a
+    snapshot, which `ReviewStore` keeps only of text files.
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
   badge cut into its bottom-right corner (`FolderXlinkIcon`: one color, the cutout and arrow transparent), in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
