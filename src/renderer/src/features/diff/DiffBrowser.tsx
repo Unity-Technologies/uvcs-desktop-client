@@ -25,7 +25,8 @@ import { pairedFocus } from './diffFocus';
 import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
 import { navigation } from '../../app/navigation/navigationStore';
-import { diffPaneOf } from './diffPane';
+import { diffPaneDiffs, diffPaneOf } from './diffPane';
+import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
@@ -126,6 +127,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   );
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focusedAsset !== undefined, folderSelected: focusedFolder !== undefined });
+  useCollapseWithHost(diffPaneDiffs(pane));
 
   // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
   // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).

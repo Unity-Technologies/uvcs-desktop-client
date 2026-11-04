@@ -32,6 +32,8 @@ import { itemComparison } from './itemComparison';
 import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
 import { ItemViewer, type FileViewChoice } from './ItemViewer';
+import { showsDiffOnly } from '../../components/diffExpansion';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { detailsKindOf, type DetailsKind } from './xlinkItem';
 
@@ -95,6 +97,7 @@ export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelec
   // In a repository tree every item is a revision, with a history.
   const showsHistory = pendingIndex ? itemViews(item, pendingIndex).history : !isWorkspaceRoot(item);
   const kind = detailsKindOf(item);
+  const diffExpanded = useDiffExpanded();
 
   const properties: Property[] = isFile
     ? [
@@ -157,6 +160,8 @@ export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelec
       menu={menu}
       primaryActionId="history"
       properties={properties}
+      // The file's diff expanded: the diff alone, under its own header.
+      changesOnly={showsDiffOnly(diffExpanded, isFile)}
       changes={
         isFile &&
         shownComparison && (

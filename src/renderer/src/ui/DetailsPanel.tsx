@@ -38,6 +38,8 @@ interface DetailsPanelProps {
   changes?: ReactNode;
   /** The body fills the panel without padding or scrolling, e.g. for a diff. */
   fill?: boolean;
+  /** Only `changes` shows, the rest kept mounted out of sight: a file's diff expanded to the whole window. */
+  changesOnly?: boolean;
   /** Sections of their own, under the heading. */
   children?: ReactNode;
 }
@@ -58,6 +60,7 @@ export function DetailsPanel({
   properties = [],
   changes,
   fill = false,
+  changesOnly = false,
   children,
 }: DetailsPanelProps) {
   const moreActions = primaryActionId ? withoutAction(menu, primaryActionId) : menu;
@@ -73,7 +76,7 @@ export function DetailsPanel({
 
   return (
     <aside className={styles.panel} data-fill={fill}>
-      <div className={styles.top}>
+      <div className={styles.top} hidden={changesOnly}>
         <header className={styles.hero}>
           <div className={styles.kindRow}>
             <span className={styles.icon}>{icon}</span>

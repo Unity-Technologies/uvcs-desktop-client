@@ -394,6 +394,57 @@ Designs tried on screen and dropped, not to be proposed again:
 - **A click that went to a change** (through the arrows' navigation, "3 of 12"), and scrolled elsewhere between marks:
   two rules for one click, a mark a few pixels tall decided which. A click scrolls there, as on any scrollbar.
 
+## Expanding the diff
+
+Expand Diff gives a diff the whole window to read in: the sidebar, the files beside the diff, the view's or page's
+header (a breadcrumb, filters, a changeset's summary, a review's header, a history's revision, a file's details) and the
+status bar go out of sight, and the diff keeps its own header. The top bar stays: it holds the window's own buttons
+(the traffic lights on macOS, the caption buttons drawn over it on Windows, `titleBarOverlay`), so the diff's header
+never runs under them; Linux keeps its native title bar. So does the command log, when open. It is a layout of the app,
+never the OS's full screen (View ▸ Enter Full Screen, ⌃⌘F, F11), which it stacks with independently, and its name says
+so: "Full screen" names the OS's.
+
+- **Where**: one icon button, last in the diff's header after the change arrows (`ExpandDiffButton`, drawn by
+  `DiffViewerFrame` where its host says it can expand: `ExpandableDiffContext`), pressed while expanded; ⇧⌘E or
+  Ctrl+Shift+E (`expandDiff`: E for Expand, taken by no browser, desktop or the diff's editor); View ▸ Expand Diff and
+  the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
+- **Every diff beside its files**: Changes, a diff page (changeset, branch, shelve, label, range), a code review,
+  History, Incoming, a file's content in Files and Browse repository, and a page window, where it hides that page's
+  files. The merge page offers none, nor do Incoming's conflicts.
+- **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
+  scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
+  past its last change (`FileStepsContext`: Changes, a diff page, a code review), it still does, so a whole changeset is
+  reviewed expanded. Incoming, History, Files and Browse repository step through the file shown only, as they do
+  collapsed.
+- **The keyboard goes to the code** (`focusGoesToDiff`) when what held it went out of sight or was a button a click
+  focused (the Expand button, a change arrow clicked before), and the code is the window's main focus while expanded
+  (`useExpandedDiffFocus`): focus that falls to the page (a menu or dialog closed, the editor left with Esc) comes back
+  to it. A button the keyboard reached (Tab to Expand, then Enter) keeps it, its ring showing where focus is, as a
+  toggle does (`FocusHolder.ringed`). Collapsing from the keyboard (Esc, the shortcut, the palette, the menu, Enter on
+  the button) keeps it where it still shows, normally the code, so ⌥↓ and the arrows work at once; from nowhere (a step
+  to another file left it on the page) or a button a click focused, the code takes it (`focusGoesToDiffOnCollapse`),
+  never the list it had before. A click on the button leaves it there. The app moving focus draws no ring (`focusAs`,
+  ARCHITECTURE.md "Focus").
+- **Keys of what is out of sight** never act on it unseen (`shortcutWhileExpanded`, `runWhileDiffExpanded`): ⌘↩ gives
+  the window back, then checks in (an empty summary takes the caret); Toggle Sidebar only gives the window back, the
+  sidebar showing as it was; Go to file acts, the file picked showing in the diff, as choosing another file does;
+  Incoming's Esc that stops a resolve run is off (`useShortcutOnWhileExpanded`), so Esc collapses the diff instead.
+- **What ends it** (`diffExpansion.ts`): the button pressed again, the shortcut, Esc, the navigation leaving the diff
+  (another view, a page opened over it or gone back from: `leavesExpandedDiff`), the window leaving the place, or the
+  view in front settling with nothing to diff (nothing pending after a check-in or an undo, a diff whose filters hide
+  every file, Incoming up to date, no file selected in Files or Browse repository, no revision left in History:
+  `collapsesWithHost`, from `changesDiffs`, `diffPaneDiffs`, `incomingDiffs`, `selectedFileDiffs`, `listedDiffs`). A
+  view hidden under a page that empties never ends the page's expanded diff, which is still in front. Choosing another file keeps it,
+  and so does a read under way (the next changeset of a branch) or a page window following the selection to another
+  object (a page replaced at the same depth). It belongs to the window and is never remembered.
+- **Esc** collapses only once nothing else took it (`escapeCollapsesDiff`): a menu, the palette or a dialog closing, the
+  picked change dropped, the editor leaving the text, a field typed into, a command bound to Esc (a pending cut in Files
+  cancelled). History's and Files' "Esc back to the list" give way to it while expanded (`escapeBackToList`): the list
+  is out of sight.
+- With no diff in front, the shortcut does nothing (`expandedAfterToggle`) and the palette greys the command out
+  (`expandDiffOffered`). View ▸ Expand Diff stays enabled in every place (the native menu knows only the place shown,
+  `isMenuCommandEnabled`) and does nothing there.
+
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
@@ -460,7 +511,7 @@ reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac p
 right-clicked already in the field), takes only a line that side has and says which it has otherwise. The line scrolls a
 third of the way down (`scrollToLine`; Annotate's own rows in place); typed into, the caret goes to its start, and
 read-only, it is selected where lines are and focus comes back to the pane without its keyboard ring
-(`focusWithoutRing`): the line shows where the user is, and the dialog's keys would make Chromium ring the whole pane. A
+(`focusAs`, as the app moved it): the line shows where the user is, and the dialog's keys would make Chromium ring the whole pane. A
 Tab into it still rings it. A line of a region "Collapse unchanged lines" folds away is shown first (`scrollToShownLine`
 in `TextDiff`, for a link's lines too): Pierre's `FileDiff.revealLine` expands only that region, from its nearer end,
 and an older side's line is the one as far into the same region on the newer side, which Pierre reveals

@@ -6,6 +6,8 @@ import { focusMain } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
+import { escapeBackToList } from '../../components/diffExpansion';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { AnnotationPane } from '../annotate/AnnotationPane';
 import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
@@ -59,8 +61,10 @@ export function ItemViewer({ place, item, comparison, comment, listings, viewSho
     if (viewer.contains(document.activeElement)) focusMain(document);
     else viewerFocusTarget(viewer).focus({ preventScroll: true });
   });
+  const diffExpanded = useDiffExpanded();
   const leave = (event: React.KeyboardEvent): void => {
-    if (event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('leaveFileViewer'))) return;
+    const press = { isEscape: matchesShortcut(event.nativeEvent, hotkey('leaveFileViewer')), defaultPrevented: event.defaultPrevented, keyboardTaken: false };
+    if (!escapeBackToList(diffExpanded, press)) return;
     event.preventDefault();
     focusMain(document);
   };

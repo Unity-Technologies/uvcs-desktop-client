@@ -3,6 +3,8 @@ import { placeId } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { selectedFileDiffs } from '../../components/diffExpansion';
+import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
@@ -69,6 +71,8 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  // Expanded, the file's diff in the details ends with the file: deleted, or the selection cleared by a refresh.
+  useCollapseWithHost(selectedFileDiffs({ read: !isLoadingRoot, selected: selection.anchor !== null, itemType: focused?.itemType }));
   const itemLinks = useFilesItemLinks(linkOrigin, focused);
   const lineLinks = useMemo<LineLinks>(() => (linkOrigin ? { ...itemLinks, focus: linkFocus } : { focus: linkFocus, publishes: true }), [linkOrigin, itemLinks, linkFocus]);
   useEffect(() => onShownItem?.(focused?.path ?? null), [focused?.path]);
@@ -86,6 +90,7 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
       detailsKey={detailsKey}
       widthLimits={FILE_TREE_WIDTH}
       sized="list"
+      diffInDetails
       list={
           <HighlightQuery query={shownFilter}>
             <FileTreeTable

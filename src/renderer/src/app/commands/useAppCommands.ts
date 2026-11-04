@@ -10,6 +10,7 @@ import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
 import { fileListViewCommands } from './fileListViewCommands';
 import { useFileListViewStore } from '../../components/fileListViewStore';
+import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { openShortcutsDialog } from './ShortcutsDialog';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
@@ -44,7 +45,8 @@ export function useAppCommands(): void {
         icon: PanelLeft,
         keywords: ['rail', 'collapse', 'expand', 'navigation'],
         shortcut: SIDEBAR_SHORTCUT,
-        run: toggleSidebar,
+        // While a diff is expanded, it only gives the window back: the sidebar the user asked for shows as it was.
+        run: () => runWhileDiffExpanded('toggleSidebar', toggleSidebar),
       },
       {
         id: 'app.newWindow',

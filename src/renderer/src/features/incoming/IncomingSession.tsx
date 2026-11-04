@@ -13,6 +13,9 @@ import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
@@ -80,6 +83,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const run = useResolveRun({ states, mergerFor, resolveInTool, onOpen: followRun, onEnd: () => undefined });
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
+  const diffExpanded = useDiffExpanded();
 
   const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
@@ -160,18 +164,21 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (hidesAll) return null;
     if (selectedConflict) {
+      // A conflict is resolved beside its files, as on the merge page: its diffs don't expand.
       return (
         <FileStepsContext.Provider value={conflictSteps}>
-          <FileConflictPanel
-            key={selectedConflict.file.key}
-            workspacePath={workspacePath}
-            state={selectedConflict}
-            labels={UPDATE_LABELS}
-            yoursInWorkspace
-            toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
-            onDecide={(decision) => decide(selectedConflict.file.key, decision)}
-            onStartOver={() => reset(selectedConflict.file.key)}
-          />
+          <ExpandableDiffContext.Provider value={false}>
+            <FileConflictPanel
+              key={selectedConflict.file.key}
+              workspacePath={workspacePath}
+              state={selectedConflict}
+              labels={UPDATE_LABELS}
+              yoursInWorkspace
+              toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
+              onDecide={(decision) => decide(selectedConflict.file.key, decision)}
+              onStartOver={() => reset(selectedConflict.file.key)}
+            />
+          </ExpandableDiffContext.Provider>
         </FileStepsContext.Provider>
       );
     }
@@ -188,16 +195,18 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   return (
     <>
-      {header(incomingSubtitle(incoming.branch, changesetList))}
-      <UpdateBar
-        incoming={incoming}
-        pendingConflictCount={pendingConflictPaths.size}
-        canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
-        updating={updating}
-        onUpdate={() => void update()}
-        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
-        run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
-      />
+      <Stowable stowed={diffExpanded}>
+        {header(incomingSubtitle(incoming.branch, changesetList))}
+        <UpdateBar
+          incoming={incoming}
+          pendingConflictCount={pendingConflictPaths.size}
+          canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
+          updating={updating}
+          onUpdate={() => void update()}
+          onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
+          run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
+        />
+      </Stowable>
       <IncomingPanes
         list={
           <>

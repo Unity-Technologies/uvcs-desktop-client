@@ -17,6 +17,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
+import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
@@ -119,7 +120,8 @@ export function CheckinPanel({
       setKeepShelved(false);
     }
   };
-  useShortcut(hotkey('checkin'), () => void act(), canAct);
+  // Never out of sight behind an expanded diff: it gives the window back first (`runWhileDiffExpanded`).
+  useShortcut(hotkey('checkin'), () => runWhileDiffExpanded('checkin', () => void act()), canAct);
 
   // The panel stays on screen while nothing is pending, where the mode caret is disabled: it goes back to checking in.
   useEffect(() => {

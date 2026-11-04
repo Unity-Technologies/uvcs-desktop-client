@@ -3,6 +3,7 @@ import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } f
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { shownText } from '../../../lib/lineBreaks';
+import { useExpandedDiffFocus } from '../../../components/useExpandedDiffFocus';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -264,6 +265,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     layoutKey: `${shownLayout.layout}:${collapseUnchanged}:${wrapLines}`,
   });
   const isTyping = (): boolean => isTypingIn(container.current);
+  const expandedFocus = useExpandedDiffFocus();
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
     const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
@@ -296,6 +298,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           ref={setContainer}
           className={styles.diff}
           tabIndex={0}
+          {...expandedFocus}
           role="region"
           aria-label={`Diff of ${fileName}`}
           data-change-map={changeMap ? '' : undefined}

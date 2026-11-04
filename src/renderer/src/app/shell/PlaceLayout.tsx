@@ -1,5 +1,7 @@
 import { useRef, type ReactNode } from 'react';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { SplitPane } from '../../ui/SplitPane';
+import { Stowable } from '../../ui/Stowable';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
@@ -8,6 +10,7 @@ import { CommandLogPanel } from './CommandLogPanel';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
+import { useDiffExpansion } from './useDiffExpansion';
 import { useMainFocus } from './useMainFocus';
 import { usePlaceCommands } from './usePlaceCommands';
 import styles from './PlaceLayout.module.css';
@@ -35,6 +38,8 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
   usePlaceCommands();
   useCopyLinkCommand();
   useOwnPageWindows();
+  useDiffExpansion();
+  const diffExpanded = useDiffExpanded();
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
@@ -45,7 +50,10 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
     <div className={styles.screen}>
       {topBar}
       <div className={styles.body}>
-        <Sidebar card={sidebarCard} />
+        {/* An expanded diff takes the window but the top bar (the window's buttons, the place) and the command log. */}
+        <Stowable stowed={diffExpanded}>
+          <Sidebar card={sidebarCard} />
+        </Stowable>
         <main className={styles.main}>
           {/* The command log sits under the view, as tall as it was left; the view keeps the rest. */}
           <SplitPane
@@ -59,7 +67,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
             onSizeChange={setCommandLogHeight}
             hidden={commandLogOpen ? undefined : 'second'}
             first={
-              <div ref={contentRef} className={styles.content}>
+              <div ref={contentRef} className={styles.content} data-diff-expanded={diffExpanded || undefined}>
                 {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
                     each one arrives with the view transition. */}
                 <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
@@ -72,7 +80,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
           />
         </main>
       </div>
-      {statusBar}
+      <Stowable stowed={diffExpanded}>{statusBar}</Stowable>
     </div>
   );
 }

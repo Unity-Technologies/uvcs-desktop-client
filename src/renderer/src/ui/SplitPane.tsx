@@ -18,6 +18,11 @@ interface SplitPaneProps {
   sizedPane?: 'first' | 'second';
   /** Hides a pane and the splitter without remounting the other pane, which then fills the split. */
   hidden?: 'first' | 'second';
+  /**
+   * Takes a pane and the splitter out of sight, the other pane filling the split, while keeping the pane mounted: it
+   * shows again as it was left (its scroll, focus and what it drew), as the files beside an expanded diff do.
+   */
+  stowed?: 'first' | 'second';
   first: ReactNode;
   second: ReactNode;
 }
@@ -32,6 +37,7 @@ export function SplitPane({
   direction = 'horizontal',
   sizedPane = 'first',
   hidden,
+  stowed,
   first,
   second,
 }: SplitPaneProps) {
@@ -57,8 +63,15 @@ export function SplitPane({
 
   const sizedStyle = sizedPaneStyle(horizontal, size, minSize, restMinSize);
   const pane = (which: 'first' | 'second', content: ReactNode): ReactNode => {
-    const role = paneRole(which, sizedPane, hidden);
+    const role = paneRole(which, sizedPane, hidden, stowed);
     if (role === 'hidden') return null;
+    if (role === 'stowed') {
+      return (
+        <div className={styles.pane} hidden>
+          {content}
+        </div>
+      );
+    }
     if (role === 'rest') return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
     return (
       <div className={styles.pane} style={sizedStyle}>
@@ -70,7 +83,7 @@ export function SplitPane({
   return (
     <div ref={containerRef} className={styles.split} data-direction={direction}>
       {pane('first', first)}
-      {!hidden && (
+      {!hidden && !stowed && (
         <div
           className={styles.handle}
           onPointerDown={startDrag}

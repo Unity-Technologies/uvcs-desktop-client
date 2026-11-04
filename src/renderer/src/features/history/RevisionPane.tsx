@@ -5,6 +5,9 @@ import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
+import { escapeBackToList } from '../../components/diffExpansion';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { Stowable } from '../../ui/Stowable';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { otherFileView } from '../annotate/fileView';
 import { historyRowKey, type HistoryRow } from './historyRows';
@@ -44,9 +47,11 @@ export function RevisionPane({ path, history, focusedRow, selectedRows, menu, on
   const togglable = focusedRow?.kind === 'revision' && shownRevisionView('annotate', focusedRow.revision.itemType) === 'annotate';
   useShortcut(hotkey('historyToggleView'), () => onPickView(otherFileView(view)), togglable);
   useShortcut(hotkey('historyEnterPane'), () => paneRef.current?.querySelector<HTMLElement>('[role="region"]')?.focus(), Boolean(focusedRow));
+  const diffExpanded = useDiffExpanded();
   const leavePane = (event: KeyboardEvent): void => {
     const inPane = event.target instanceof Node && event.currentTarget.contains(event.target);
-    if (event.defaultPrevented || !inPane || isKeyboardTaken() || !matchesShortcut(event.nativeEvent, hotkey('historyLeavePane'))) return;
+    const press = { isEscape: matchesShortcut(event.nativeEvent, hotkey('historyLeavePane')), defaultPrevented: event.defaultPrevented, keyboardTaken: !inPane || isKeyboardTaken() };
+    if (!escapeBackToList(diffExpanded, press)) return;
     event.preventDefault();
     focusMain(document);
   };
@@ -54,14 +59,16 @@ export function RevisionPane({ path, history, focusedRow, selectedRows, menu, on
   return (
     <div ref={paneRef} className={styles.pane} onKeyDown={leavePane}>
       {focusedRow && (
-        <RevisionHeader
-          key={historyRowKey(focusedRow)}
-          row={focusedRow}
-          path={path}
-          menu={menu([focusedRow])}
-          otherRepository={otherRepository}
-          isWorkspaceRevision={focusedRow.kind === 'revision' && focusedRow.revision.revisionId === history.workspaceRevisionId}
-        />
+        <Stowable stowed={diffExpanded}>
+          <RevisionHeader
+            key={historyRowKey(focusedRow)}
+            row={focusedRow}
+            path={path}
+            menu={menu([focusedRow])}
+            otherRepository={otherRepository}
+            isWorkspaceRevision={focusedRow.kind === 'revision' && focusedRow.revision.revisionId === history.workspaceRevisionId}
+          />
+        </Stowable>
       )}
       {focusedChange ? (
         <PathChangeDetails change={focusedChange} otherRepository={otherRepository} />

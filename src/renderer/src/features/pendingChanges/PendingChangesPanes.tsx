@@ -21,6 +21,9 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
+import { Stowable } from '../../ui/Stowable';
+import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { useChangeset } from '../changesets/useChangeset';
 import { useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
@@ -42,7 +45,7 @@ import { undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
-import { changesPanesState } from './changesPanesState';
+import { changesDiffs, changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin, preparedChangelistNote } from './changelistCheckin';
 import { changelistHasMenu, changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
@@ -94,6 +97,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
   const includeEverything = useCheckinDraftStore((state) => state.includeEverything);
   const [selection, setSelection] = useViewSelection('changes');
+  const diffExpanded = useDiffExpanded();
   const summaryRef = useRef<CommentFieldHandle>(null);
   // Back to checking in each time Changes shows, as a shelve is a detour.
   const [checkinMode, setCheckinMode] = useState<CheckinMode>('checkin');
@@ -199,6 +203,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   const listedCount = snapshot && allChanges.length;
   const panesState = changesPanesState(listedCount, changes.length);
+  useCollapseWithHost(changesDiffs(panesState));
   const listBody =
     panesState === 'reading' ? (
       <ListSkeleton rowHeight={28} />
@@ -248,15 +253,19 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   return (
     <>
       {mergeChanges.length > 0 && (
-        <div className={styles.mergeBanner}>
-          <GitMerge size={14} />
-          <span>A merge is in progress ({mergeChanges[0]!.mergeInfo}). Check in to complete it, or undo the changes to cancel it.</span>
-        </div>
+        <Stowable stowed={diffExpanded}>
+          <div className={styles.mergeBanner}>
+            <GitMerge size={14} />
+            <span>A merge is in progress ({mergeChanges[0]!.mergeInfo}). Check in to complete it, or undo the changes to cancel it.</span>
+          </div>
+        </Stowable>
       )}
       <SplitPane
         initialSize={380}
         minSize={260}
         maxSize={720}
+        // Expanded, the list and the check-in stay mounted out of sight: stepping past the last change goes on to the next file.
+        stowed={diffExpanded ? 'first' : undefined}
         first={
           <div className={styles.listPane}>
             {/* Narrow the list first, then act on what's left: the summary's checkbox and undo sit right above the rows they act on. */}
@@ -326,15 +335,17 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           panesState === 'reading' || panesState === 'noMatches' ? null : panesState === 'nothingPending' ? (
             nothingPending
           ) : (
-            <ChangeSelectionPane
-              workspacePath={workspacePath}
-              selectedCount={countSelected(selection.selected, changesByKey)}
-              diffChange={focused && diffChange}
-              diffMeta={diffChange && pairs.metaOf(diffChange)}
-              focusedFolder={focusedFolder}
-              fileSteps={fileSteps}
-              reviewMarks={review.marks}
-            />
+            <ExpandableDiffContext.Provider value>
+              <ChangeSelectionPane
+                workspacePath={workspacePath}
+                selectedCount={countSelected(selection.selected, changesByKey)}
+                diffChange={focused && diffChange}
+                diffMeta={diffChange && pairs.metaOf(diffChange)}
+                focusedFolder={focusedFolder}
+                fileSteps={fileSteps}
+                reviewMarks={review.marks}
+              />
+            </ExpandableDiffContext.Provider>
           )
         }
       />

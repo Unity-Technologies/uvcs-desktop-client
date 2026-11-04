@@ -13,6 +13,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar } from '../../ui/Skeleton';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { DiffPage } from '../diff/DiffPage';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
@@ -26,6 +28,7 @@ const COMMENTS_HINT = 'Comments are available in the Unity Version Control web d
 /** A code review: who reviews what, its status, and the changes to review. */
 export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
+  const diffExpanded = useDiffExpanded();
 
   // Not in a list already read (opened from a branch chip, the palette, a link): the page's frame, its header a skeleton.
   if (isLoading) {
@@ -41,7 +44,10 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const diffTarget = reviewDiffTarget(review.target);
   return (
     <div className={styles.page}>
-      <ReviewHeader review={review} />
+      {/* Out of sight while the review's diff is expanded, as the diff's own header is. */}
+      <Stowable stowed={diffExpanded}>
+        <ReviewHeader review={review} />
+      </Stowable>
       <div className={styles.changes}>
         {diffTarget ? (
           <DiffPage page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }} />

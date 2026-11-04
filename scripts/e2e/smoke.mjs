@@ -128,6 +128,19 @@ try {
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
   });
+  await step('Expanded diff', async () => {
+    // The header's button, then the key: the sidebar goes out of sight and the diff stays; Esc gives the window back.
+    const sidebar = window.getByRole('navigation');
+    await main.getByRole('button', { name: 'Expand diff' }).click();
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByText('void Jump() { }').first().waitFor();
+    await window.keyboard.press('Escape');
+    await sidebar.waitFor();
+    await window.keyboard.press('ControlOrMeta+Shift+E');
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByRole('button', { name: 'Expand diff', pressed: true }).click();
+    await sidebar.waitFor();
+  });
   await step('A revision read from the disk', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Files( \d+)?$/ }).click();
     await main.getByText('README.md', { exact: true }).first().click();
