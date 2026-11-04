@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
 import { itemsIn } from './itemRange';
-import { itemsUnderRows, layoutPathTree } from './pathTree';
+import { itemsUnderRows } from './pathTree';
+import { layoutPathTree } from './pathTreeLayout';
 
 interface Item {
   path: string;
