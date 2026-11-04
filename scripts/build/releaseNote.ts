@@ -10,9 +10,9 @@
  *   If you close a window during an update or a checkin, the app now waits for it to finish.
  *
  * The Release note workflow (`.github/workflows/release-note.yml`) fails a pull request whose section this can't
- * read, so every change either tells users what it delivers or says why it doesn't, and one with a picture nobody
- * placed (`misplacedPicture`). It reads Markdown lines rather than parsing Markdown, so it needs
- * no package: only what Node runs as it is.
+ * read, so every change either tells users what it delivers or says why it doesn't, and one with a picture left
+ * where nobody placed it (`misplacedPicture`). It reads Markdown lines rather than parsing Markdown, so it needs no
+ * package: only what Node runs as it is.
  *
  *   PULL_REQUEST_BODY="$(gh pr view --json body -q .body)" node scripts/build/releaseNote.ts
  */
@@ -37,18 +37,30 @@ const SETEXT_UNDERLINE = /^\s{0,3}(=+|-+)\s*$/;
 const BARE_NONE = /^None:?$/;
 const NONE = /^None:\s*([\s\S]*)$/;
 const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
-/** A Markdown picture, `![alt](url)`, or an HTML one, `<img …>`, which `gh --attach` and GitHub's editor both write. */
+/** A Markdown picture, `![alt](url)`, or an HTML one, `<img …>`, as `gh --attach` and GitHub's editor write them. */
 const PICTURE = /!\[[^\]]*\]\([^)]*\)|<img\b/i;
+/** A Markdown picture's source, which `gh --attach` turns into the uploaded file's https link. */
+const PICTURE_SOURCE = /!\[[^\]]*\]\(\s*<?([^)\s>]*)/g;
+/** A video `gh --attach` uploads: its link alone on a line (videos take no alt text), which GitHub plays. */
+const VIDEO_LINK = /^\s*https:\/\/github\.com\/user-attachments\/assets\/\S+\s*$/;
 /** Inline code, `…` or ``…``: a picture written in it is shown as text. */
 const CODE_SPAN = /(`+)[^`][\s\S]*?\1/g;
-/** The line an agent closes a body with ("🤖 Generated with [Claude Code](…)"): `gh` appends unreferenced attachments after it. */
+/**
+ * The line an agent closes a body with ("🤖 Generated with [Claude Code](…)"), after the last section: `gh` appends
+ * unreferenced attachments after it.
+ */
 const CLOSING_LINE = /^\W*Generated with\b/;
 /** The template's last section, which holds links to issues, never a picture. */
 const LAST_SECTION = /^##\s+Fixed issues\s*$/i;
 /** What the pull request template asks to be replaced (`.github/pull_request_template.md`). */
 const TEMPLATE_PLACEHOLDER = /<what users can now do>|<A sentence or two\b|<why>/;
 
-const FORMAT = 'Start it with "### New:", "### Improved:" or "### Fixed:" and a title, then a description; or write "None:" and why users have nothing to read.';
+const ATTACH_IT = 'attach it with `gh --attach`, which uploads it and puts its link where the body references it.';
+const PLACE_IT =
+  '`gh --attach` puts a file the body doesn\'t reference there: reference it where it belongs, inside "## Release note" ' +
+  'or under "Behavior with this pull request".';
+
+const FORMAT ='Start it with "### New:", "### Improved:" or "### Fixed:" and a title, then a description; or write "None:" and why users have nothing to read.';
 
 export function readReleaseNote(body: string): ReleaseNoteReading {
   // Comments go first: what they hold (a "##" line, a fence) is never part of the note.
@@ -64,9 +76,9 @@ export function readReleaseNote(body: string): ReleaseNoteReading {
 }
 
 /**
- * What the Release note workflow checks: the note (`readReleaseNote`), then that no picture sits where `gh --attach`
- * appends one nobody placed (`misplacedPicture`). The release's notes read merged pull requests with `readReleaseNote` alone, so a body
- * written before the picture rule still gives its note.
+ * What the Release note workflow checks: the note (`readReleaseNote`), then the body's pictures (`misplacedPicture`).
+ * A release's notes read merged pull requests with `readReleaseNote` alone, so a body written before the picture
+ * rule still gives its note.
  */
 export function checkPullRequestBody(body: string): ReleaseNoteReading {
   const reading = readReleaseNote(body);
@@ -76,23 +88,37 @@ export function checkPullRequestBody(body: string): ReleaseNoteReading {
 }
 
 /**
- * Why a body's picture sits where nobody placed it, or null. `gh --attach` appends a file the body doesn't reference
- * after everything else, past the closing line or in the last section, where What's New never shows it and reviewers
- * find it outside every section. Whether a note has a picture at all is the release-notes skill's call, never this
- * check's: it reads placement only. A picture written as code (in backticks or a fence) is text, not a picture.
+ * Why a body's picture or video is wrong, or null: one left where nobody placed it, or one never uploaded.
+ * `gh --attach` appends a file the body doesn't reference after everything else, past the closing line or in the
+ * last section, where What's New never shows it and reviewers find it outside every section; and a reference to a
+ * local file `gh` wasn't given stays a broken picture. Whether a note has a picture at all is the release-notes
+ * skill's call, never this check's. A picture written as code (in backticks or a fence) is text, not a picture.
  */
 export function misplacedPicture(body: string): string | null {
   const lines = body.replace(/\r\n?/g, '\n').replace(COMMENT, '').split('\n');
+  const outside = outsideCodeIndexes(lines);
+  // Only past the last section is "Generated with" the closing line: earlier, it is a sentence of the body.
+  const lastSection = outside.filter((index) => NEXT_SECTION.test(lines[index]!)).at(-1) ?? -1;
   let section = '';
   let closed = false;
-  for (const index of outsideCodeIndexes(lines)) {
+  for (const index of outside) {
     const line = lines[index]!;
+    const text = line.replace(CODE_SPAN, '');
     if (NEXT_SECTION.test(line)) section = line;
-    if (CLOSING_LINE.test(line)) closed = true;
-    const showsPicture = PICTURE.test(line.replace(CODE_SPAN, ''));
-    if (showsPicture && (closed || LAST_SECTION.test(section))) {
-      return 'A picture sits at the end of the body, where `gh --attach` puts a file the body doesn\'t reference: reference it where it belongs, inside "## Release note" or under "Behavior with this pull request".';
-    }
+    if (index > lastSection && CLOSING_LINE.test(line)) closed = true;
+    const unattached = unattachedSource(text);
+    if (unattached !== null) return `A picture shows a file that was never uploaded (${unattached}): ${ATTACH_IT}`;
+    const showsPicture = PICTURE.test(text) || VIDEO_LINK.test(text);
+    const atTheEnd = closed || LAST_SECTION.test(section);
+    if (showsPicture && atTheEnd) return `A picture sits at the end of the body. ${PLACE_IT}`;
+  }
+  return null;
+}
+
+/** The source of a Markdown picture on this line that isn't a web address, such as `./shot.png`, or null. */
+function unattachedSource(line: string): string | null {
+  for (const [, source = ''] of line.matchAll(PICTURE_SOURCE)) {
+    if (!/^https:\/\//i.test(source)) return source;
   }
   return null;
 }
