@@ -15,6 +15,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
@@ -163,18 +164,21 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (hidesAll) return null;
     if (selectedConflict) {
+      // A conflict is resolved beside its files, as on the merge page: its diffs don't expand.
       return (
         <FileStepsContext.Provider value={conflictSteps}>
-          <FileConflictPanel
-            key={selectedConflict.file.key}
-            workspacePath={workspacePath}
-            state={selectedConflict}
-            labels={UPDATE_LABELS}
-            yoursInWorkspace
-            toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
-            onDecide={(decision) => decide(selectedConflict.file.key, decision)}
-            onStartOver={() => reset(selectedConflict.file.key)}
-          />
+          <ExpandableDiffContext.Provider value={false}>
+            <FileConflictPanel
+              key={selectedConflict.file.key}
+              workspacePath={workspacePath}
+              state={selectedConflict}
+              labels={UPDATE_LABELS}
+              yoursInWorkspace
+              toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
+              onDecide={(decision) => decide(selectedConflict.file.key, decision)}
+              onStartOver={() => reset(selectedConflict.file.key)}
+            />
+          </ExpandableDiffContext.Provider>
         </FileStepsContext.Provider>
       );
     }
