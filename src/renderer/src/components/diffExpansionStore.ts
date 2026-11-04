@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isInFront } from '../lib/inFront';
 import { expandableDiffInFront, expandedAfterToggle, type ExpandableDiff } from './diffExpansion';
 
 /** Whether the window's diff is expanded (`diffExpansion.ts`): one per window, never remembered past it. */
@@ -36,10 +37,6 @@ export function toggleDiffExpanded(): void {
 export function registerExpandableDiff(diff: ExpandableDiff): () => void {
   mounted.add(diff);
   return () => mounted.delete(diff);
-}
-
-function isInFront(element: HTMLElement): boolean {
-  return element.isConnected && element.closest('[hidden]') === null;
 }
 
 /**
