@@ -3,6 +3,8 @@
  * the search hits' ticks along the top edge, the activity curve standing on the baseline (the frame around both), the
  * label ticks hanging under it, then the axis's dates.
  */
+import { HOME_BADGE_SHADOW, homeBadgeRing } from '../canvas/drawHomeMarker';
+
 export const TIMELINE_HEIGHT = 68;
 /** The search hits' ticks, along the top edge: from `HIT_TICK_TOP`, `HIT_TICK_HEIGHT` tall. */
 export const HIT_TICK_TOP = 1;
@@ -28,3 +30,7 @@ export const AXIS_TEXT_MIDDLE = AXIS_TOP + AXIS_LINE_HEIGHT / 2;
 /** The frame (the viewport): a rounded box from `FRAME_TOP`, `FRAME_HEIGHT` tall, around the curve and its baseline. */
 export const FRAME_TOP = 2;
 export const FRAME_HEIGHT = 42;
+/** The house: the graph's home badge at 18 px (`drawHomeBadge`). */
+export const HOUSE_RADIUS = 9;
+/** How far the house reaches from its middle: its disc, half its ring and its shadow. */
+export const HOUSE_REACH = HOUSE_RADIUS + homeBadgeRing(HOUSE_RADIUS) / 2 + HOME_BADGE_SHADOW.blur + HOME_BADGE_SHADOW.offsetY;

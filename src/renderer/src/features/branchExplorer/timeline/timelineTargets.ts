@@ -1,7 +1,7 @@
 import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
 import { frameCenteredAt, frameShape, type TimelineFrame } from './timelineFrame';
-import { BASELINE, HIT_TICK_HEIGHT, HIT_TICK_TOP, MERGED_LABEL_TICK_HEIGHT, MERGED_LABEL_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
+import { BASELINE, HIT_TICK_HEIGHT, HIT_TICK_TOP, HOUSE_RADIUS, MERGED_LABEL_TICK_HEIGHT, MERGED_LABEL_TICK_TOP, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { HitTick, HomeMark, LabelTick, TimelineGap } from './timelineMarks';
 
 export interface Point {
@@ -42,8 +42,7 @@ export function curveTopAt(curve: ActivityCurve, x: number): number {
   return BASELINE - (curve.total[pixel] ?? 0) * PLOT_HEIGHT;
 }
 
-/** The house's badge: an 18 px disc, as the graph's home badge at full size (`drawHomeBadge`). */
-export const HOUSE_RADIUS = 9;
+export { HOUSE_RADIUS };
 /** The house's highest middle: its disc stays under the search hits' ticks along the top edge. */
 const HOUSE_TOP = HIT_TICK_TOP + HIT_TICK_HEIGHT + 1 + HOUSE_RADIUS;
 

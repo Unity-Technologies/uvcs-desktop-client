@@ -1,6 +1,7 @@
 import type { GraphLayout } from '../model/layoutGraph';
 import { COLUMN_WIDTH, columnX, GRAPH_PADDING } from '../canvas/geometry';
 import { graphExtent } from '../canvas/laneShape';
+import { HOUSE_REACH } from './timelineGeometry';
 
 /**
  * The Timeline's horizontal axis: the canvas's own, the whole graph (changesets in column order) squeezed into the
@@ -17,8 +18,8 @@ export interface TimelineAxis {
   columnCount: number;
 }
 
-/** The room `timelineAxis` leaves at each end of the strip. */
-export const TIMELINE_INSET = 10;
+/** The room `timelineAxis` leaves at each end of the strip: the house's whole reach, ring and shadow included, at the last column. */
+export const TIMELINE_INSET = Math.ceil(HOUSE_REACH);
 
 export function timelineAxis(layout: GraphLayout, width: number): TimelineAxis {
   return { worldWidth: graphExtent(layout).width, width, inset: Math.min(TIMELINE_INSET, width / 4), columnCount: layout.columnCount };

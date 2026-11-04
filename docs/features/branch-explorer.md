@@ -90,7 +90,8 @@ in only when the user shows it, never when the view opens with it or mounts it a
 It shows only what the graph loaded and draws (the same range and filters), and asks `cm` nothing.
 
 - **The axis is the canvas's** (`timelineAxis`): the whole graph, changesets in column order, squeezed into the strip,
-  `TIMELINE_INSET` px in from each end. So the viewport is a frame of its own width wherever it goes (`viewportFrame`).
+  `TIMELINE_INSET` px in from each end: room for the whole house at the newest end, ring and shadow included
+  (`HOUSE_REACH`). So the viewport is a frame of its own width wherever it goes (`viewportFrame`).
   A calendar axis was tried and dropped: the frame grew and shrank as it moved.
 - **The curve is smooth activity** (`activityCurve`): for each column, the changesets within a window of its time
   (`activityHalfWindow`: ±1 h for a week, ±12 h for three months, ±3.5 days for a year, growing with the range), as a

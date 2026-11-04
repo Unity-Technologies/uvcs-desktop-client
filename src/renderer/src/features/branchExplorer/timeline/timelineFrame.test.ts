@@ -4,6 +4,7 @@ import { sampleHistory } from '../model/graphFixtures';
 import { columnX, rowY } from '../canvas/geometry';
 import { graphExtent } from '../canvas/laneShape';
 import { MAX_ZOOM, MIN_ZOOM, toWorld, type Viewport } from '../canvas/viewport';
+import { HOUSE_RADIUS, HOUSE_REACH } from './timelineGeometry';
 import { columnAtStrip, columnsBetween, stripXOfColumn, stripXOfWorld, TIMELINE_INSET, timelineAxis, worldXOfStrip, type TimelineAxis } from './timelineAxis';
 import {
   frameCenteredAt,
@@ -29,6 +30,15 @@ describe('timelineAxis', () => {
     expect(stripXOfWorld(real, 0)).toBe(TIMELINE_INSET);
     expect(stripXOfWorld(real, real.worldWidth)).toBe(500 - TIMELINE_INSET);
     expect(stripXOfColumn(real, 3)).toBeCloseTo(TIMELINE_INSET + (columnX(3) * (500 - 2 * TIMELINE_INSET)) / real.worldWidth);
+  });
+
+  it('leaves room at each end for the whole house at the last column, its ring and shadow included', () => {
+    const layout = layoutGraph(sampleHistory());
+    const real = timelineAxis(layout, 800);
+    expect(real.inset).toBeGreaterThanOrEqual(HOUSE_REACH);
+    expect(HOUSE_REACH).toBeGreaterThan(HOUSE_RADIUS + 3);
+    // The newest column, where the house stands with pending changes, keeps the house within the strip.
+    expect(stripXOfColumn(real, layout.columnCount) + HOUSE_REACH).toBeLessThanOrEqual(real.width);
   });
 
   it('maps strip and world x both ways', () => {

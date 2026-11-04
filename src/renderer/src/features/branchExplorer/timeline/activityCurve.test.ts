@@ -3,7 +3,7 @@ import { countCalls } from '@shared/testing/countCalls';
 import { layoutGraph } from '../model/layoutGraph';
 import { activityCurve, activityHalfWindow, BLUR_SIGMA, historyPixels, columnActivity, gaussianBlur, percentile, perPixelMean, SHARE_MIN_HEIGHT, shareHeight } from './activityCurve';
 import { sortedSearch } from './sortedSearch';
-import { stripXOfColumn, timelineAxis, type TimelineAxis } from './timelineAxis';
+import { stripXOfColumn, TIMELINE_INSET, timelineAxis, type TimelineAxis } from './timelineAxis';
 import { datedHistory, datesEvery } from './timelineFixtures';
 import { timelineHistory, timelineShare } from './timelineHistory';
 
@@ -115,7 +115,7 @@ describe('activityCurve', () => {
   it('keeps a steady history’s height to its last changeset, the empty ends of the strip never blurred in', () => {
     const steady = layoutGraph(datedHistory(datesEvery('2026-06-01T08:00:00Z', 2_000, 60)));
     const steadyAxis = timelineAxis(steady, 600);
-    expect(steadyAxis.inset).toBe(10);
+    expect(steadyAxis.inset).toBe(TIMELINE_INSET);
     const curve = activityCurve(timelineHistory(steady), timelineShare(timelineHistory(steady), new Set()), steadyAxis);
     const { first, last } = historyPixels(steadyAxis, steady.columnCount);
     const middle = curve.total[Math.floor((first + last) / 2)]!;

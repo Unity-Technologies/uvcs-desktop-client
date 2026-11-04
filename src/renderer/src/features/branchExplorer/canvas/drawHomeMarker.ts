@@ -36,6 +36,14 @@ export function drawHomeMarker({ ctx, scene, pixelRatio }: DrawContext, center: 
   ctx.restore();
 }
 
+/** The shadow that lifts a home badge drawn over a busy backdrop (`HomeBadgeStyle.shadow`): blur and drop, in px. */
+export const HOME_BADGE_SHADOW = { blur: 3, offsetY: 1 };
+
+/** The width of a home badge's ring, by its radius. */
+export function homeBadgeRing(radius: number): number {
+  return Math.max(1, radius * 0.2);
+}
+
 /** How the home badge is drawn beyond the graph's: dashed for pending changes, lifted by a shadow over a busy backdrop. */
 export interface HomeBadgeStyle {
   dashed?: boolean;
@@ -53,12 +61,12 @@ export function drawHomeBadge(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.fillStyle = palette.surfaceRaised;
   if (shadow) {
     ctx.shadowColor = palette.badgeShadow;
-    ctx.shadowBlur = 3;
-    ctx.shadowOffsetY = 1;
+    ctx.shadowBlur = HOME_BADGE_SHADOW.blur;
+    ctx.shadowOffsetY = HOME_BADGE_SHADOW.offsetY;
   }
   ctx.fill();
   ctx.shadowColor = 'transparent';
-  ctx.lineWidth = Math.max(1, radius * 0.2);
+  ctx.lineWidth = homeBadgeRing(radius);
   ctx.strokeStyle = palette.accent;
   if (dashed) ctx.setLineDash([2.5, 2]);
   ctx.stroke();
