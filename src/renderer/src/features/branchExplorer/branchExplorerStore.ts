@@ -10,7 +10,8 @@ import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPrefe
 import type { BranchChoice } from './model/branchChoice';
 import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
-import { rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
+import { appliedRulesOf, rulesOf, rulesOnIn, withRules, withRulesOn, type RulesByRepository, type RulesOff } from './model/rulesByRepository';
+import { DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
@@ -33,11 +34,19 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
    * repository's branches and people, so another one starts with none.
    */
   rulesByRepository: RulesByRepository;
+  /** The repositories whose rules are turned off (`withRulesOn`). */
+  rulesOff: RulesOff;
+  /** The changeset colors by user, in every repository. */
+  userColors: UserColors;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
-  set: (changes: Partial<Omit<BranchExplorerPreferences, 'set' | 'setRules'>>) => void;
+  set: (changes: Partial<Omit<BranchExplorerPreferences, BranchExplorerActions>>) => void;
   setRules: (repository: string, rules: ExplorerRule[]) => void;
+  setRulesOn: (repository: string, on: boolean) => void;
 }
+
+/** The store's actions, which aren't remembered. */
+export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn';
 
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
@@ -52,14 +61,17 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       structureOnly: false,
       ...DEFAULT_GRAPH_VIEW_OPTIONS,
       rulesByRepository: {},
+      rulesOff: {},
+      userColors: DEFAULT_USER_COLORS,
       revealRequest: null,
       set,
       setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
+      setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withRulesOn(rulesOff, repository, on) })),
     }),
     {
       name: 'branch-explorer-preferences',
       version: 2,
-      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
+      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
@@ -79,6 +91,16 @@ export function showInBranchExplorer(target: RevealTarget): void {
 /** The advanced filters and formats of `repository` (none while it isn't known yet), the same array until they change. */
 export function useExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
   return useBranchExplorerPreferences((state) => rulesOf(state.rulesByRepository, repository));
+}
+
+/** Whether the rules of `repository` apply. */
+export function useExplorerRulesOn(repository: string | undefined): boolean {
+  return useBranchExplorerPreferences((state) => rulesOnIn(state.rulesOff, repository));
+}
+
+/** The rules the graph applies in `repository`: none while they're turned off. */
+export function useAppliedExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+  return useBranchExplorerPreferences((state) => appliedRulesOf(state.rulesByRepository, state.rulesOff, repository));
 }
 
 /** The display options alone, the same object until one of them changes. */
