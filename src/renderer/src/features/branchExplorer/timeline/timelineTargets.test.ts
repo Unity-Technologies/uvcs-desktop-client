@@ -3,7 +3,7 @@ import type { ActivityCurve } from './activityCurve';
 import { columnAtStrip, stripXOfColumn, type TimelineAxis } from './timelineAxis';
 import { BASELINE, PLOT_HEIGHT, PLOT_TOP } from './timelineGeometry';
 import type { LabelTick, TimelineGap } from './timelineMarks';
-import { clickedColumn, curveTopAt, homeSpots, PINNED_HOUSE_X, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots } from './timelineTargets';
+import { clickedColumn, curveTopAt, gapsClearOfHome, ghostFrame, homeSpots, PENDING_RING_RADIUS, PINNED_HOUSE_X, timelineCursor, timelinePress, timelineTargetAt, type TimelineSpots } from './timelineTargets';
 
 const tick = (x: number, columns: number[]): LabelTick => ({
   x,
@@ -67,7 +67,7 @@ describe('a press', () => {
 });
 
 describe('clickedColumn', () => {
-  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, columnCount: 150 };
+  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, inset: 0, columnCount: 150 };
   const home = { kind: 'inRange' as const, column: 50, changeset: 7, pendingColumn: 150 };
 
   it('goes to a tick’s newest label, where history resumes after a gap, home and the pending changes', () => {
@@ -90,18 +90,41 @@ describe('clickedColumn', () => {
 
 describe('homeSpots', () => {
   const curve: ActivityCurve = { total: Float64Array.from({ length: 1_000 }, () => 0.5), share: new Float64Array(1_000), sharePresent: new Uint8Array(1_000) };
-  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, columnCount: 150 };
+  const axis: TimelineAxis = { worldWidth: 10_000, width: 1_000, inset: 0, columnCount: 150 };
 
-  it('stands the house on the curve at the workspace’s column, the pending ring at theirs', () => {
+  it('stands the house on the curve at the workspace’s column, the pending ring on the baseline at theirs', () => {
     const { home, pending } = homeSpots({ kind: 'inRange', column: 50, changeset: 7, pendingColumn: 150 }, axis, curve);
     expect(home!.x).toBeCloseTo(stripXOfColumn(axis, 50));
     expect(home!.y).toBeLessThan(curveTopAt(curve, home!.x));
     expect(curveTopAt(curve, home!.x)).toBe(BASELINE - 0.5 * PLOT_HEIGHT);
-    expect(pending!.x).toBeCloseTo(stripXOfColumn(axis, 150));
+    expect(pending).toEqual({ x: stripXOfColumn(axis, 150), y: BASELINE - PENDING_RING_RADIUS });
+  });
+
+  it('lifts a house close to the ring clear of it, even where the curve is low', () => {
+    const flat: ActivityCurve = { ...curve, total: new Float64Array(1_000) };
+    const { home, pending } = homeSpots({ kind: 'inRange', column: 149, changeset: 7, pendingColumn: 150 }, axis, flat);
+    expect(pending!.y - home!.y).toBeGreaterThanOrEqual(PENDING_RING_RADIUS + 7.5);
   });
 
   it('pins the house at the left edge for a workspace older than the range, and draws none without one', () => {
     expect(homeSpots({ kind: 'olderThanRange', changeset: 3 }, axis, curve)).toEqual({ home: { x: PINNED_HOUSE_X, y: expect.any(Number) }, pending: null });
     expect(homeSpots(null, axis, curve)).toEqual({ home: null, pending: null });
+  });
+});
+
+describe('ghostFrame', () => {
+  it('shows where a click would take the frame over an empty spot only', () => {
+    expect(ghostFrame({ kind: 'moment' }, { left: 100, right: 120 }, 400)).toEqual({ left: 390, right: 410 });
+    expect(ghostFrame({ kind: 'home' }, { left: 100, right: 120 }, 400)).toBeNull();
+    expect(ghostFrame({ kind: 'frame' }, { left: 100, right: 120 }, 110)).toBeNull();
+    expect(ghostFrame(null, { left: 100, right: 120 }, 400)).toBeNull();
+  });
+});
+
+describe('gapsClearOfHome', () => {
+  it('leaves out the break marks under the house', () => {
+    const near: TimelineGap = { ...gap, x: 505 };
+    expect(gapsClearOfHome([gap, near], { x: 500, y: 30 })).toEqual([gap]);
+    expect(gapsClearOfHome([gap, near], null)).toEqual([gap, near]);
   });
 });
