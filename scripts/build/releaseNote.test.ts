@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readReleaseNote } from './releaseNote';
+import { checkPullRequestBody, misplacedPicture, readReleaseNote } from './releaseNote';
 
 /** A pull request's body as the template leaves it, with `section` as its release note. */
 const body = (section: string) =>
@@ -152,5 +152,73 @@ describe('a release note CI refuses', () => {
   it('says there is none, and holds a note or more than one paragraph', () => {
     expect(problem(body('None: tooling\n\n### New: Tools\n\nIn Settings.'))).toMatch(/one line/);
     expect(problem(body('None: tooling\n\nAnd more.'))).toMatch(/one line/);
+  });
+});
+
+/** A body shaped like an agent's: every section of the template, then the closing line. */
+const pullRequest = ({ note = '', behavior = '', fixedIssues = 'None.', after = '' } = {}) =>
+  [
+    '## What does this pull request do?\n\nMove branches up and down.',
+    `## Release note\n\n### New: Move branches up and down in the Branch Explorer\n\nRight-click a branch and choose **Position**.${note}`,
+    '## Current behavior\n\nThe Branch Explorer chooses every row.',
+    `## Behavior with this pull request\n\nA branch's menu has a **Position** submenu.${behavior}`,
+    '## Checklist\n\n- [x] `npm test` passes.',
+    `## Fixed issues\n\n${fixedIssues}`,
+    `🤖 Generated with [Claude Code](https://claude.com/claude-code)${after}`,
+  ].join('\n\n') + '\n';
+
+const cropped = '\n\n![The Position submenu](https://github.com/user-attachments/assets/1)';
+const wide = '\n\n![The Branch Explorer with a branch moved](https://github.com/user-attachments/assets/2)';
+
+describe("a pull request's pictures", () => {
+  it('may be none, for a change nobody sees', () => {
+    expect(misplacedPicture(pullRequest())).toBeNull();
+  });
+
+  it('sit in the release note, cropped to the feature', () => {
+    expect(misplacedPicture(pullRequest({ note: cropped }))).toBeNull();
+  });
+
+  it("may add a wider one for reviewers beside the note's", () => {
+    expect(misplacedPicture(pullRequest({ note: cropped, behavior: wide }))).toBeNull();
+  });
+
+  it('are refused when only the reviewers get one', () => {
+    expect(misplacedPicture(pullRequest({ behavior: wide }))).toMatch(/release note has none/);
+  });
+
+  it("are refused after the closing line, where gh appends an attachment the body doesn't reference", () => {
+    expect(misplacedPicture(pullRequest({ after: `\n${wide}` }))).toMatch(/end of the body/);
+    expect(misplacedPicture(pullRequest({ note: cropped, after: `\n${wide}` }))).toMatch(/end of the body/);
+  });
+
+  it('are refused in the last section, where a body without a closing line ends', () => {
+    expect(misplacedPicture(pullRequest({ note: cropped, fixedIssues: `None.${wide}` }))).toMatch(/end of the body/);
+  });
+
+  it("count an HTML picture, as GitHub's editor writes one", () => {
+    const html = '\n\n<img width="800" alt="The Branch Explorer" src="https://github.com/user-attachments/assets/2" />';
+
+    expect(misplacedPicture(pullRequest({ behavior: html }))).toMatch(/release note has none/);
+  });
+
+  it('ignore pictures in comments and code, as the template shows them', () => {
+    const shown = '\n\n<!-- ![What it shows](./shot.png) -->\n\n```md\n![What it shows](./shot.png)\n```';
+
+    expect(misplacedPicture(pullRequest({ behavior: shown, after: shown }))).toBeNull();
+  });
+
+  it('read a body written on Windows', () => {
+    expect(misplacedPicture(pullRequest({ after: `\n${wide}` }).replace(/\n/g, '\r\n'))).toMatch(/end of the body/);
+  });
+
+  it("are checked once the note reads, so the note's own problem comes first", () => {
+    expect(checkPullRequestBody(pullRequest({ behavior: wide }))).toEqual({ problem: expect.stringMatching(/release note has none/) });
+    expect(checkPullRequestBody(`## Release note\n\n### Feature: Positions\n\nMove branches.\n\n## Behavior${wide}`)).toEqual({
+      problem: expect.stringMatching(/New:, Improved: or Fixed:/),
+    });
+    expect(checkPullRequestBody(pullRequest({ note: cropped }))).toEqual({
+      note: expect.objectContaining({ kind: 'New', title: 'Move branches up and down in the Branch Explorer' }),
+    });
   });
 });
