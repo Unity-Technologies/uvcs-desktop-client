@@ -6,7 +6,7 @@ import { isKeyboardTaken } from '../../lib/mainFocus';
 import { windowShortcutMayRun } from '../../lib/modalDialog';
 import { formatShortcut, matchesShortcut } from '../../lib/shortcuts';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { useCommands, type Command } from '../commands/commandStore';
+import { allCommands, useCommands, type Command } from '../commands/commandStore';
 import { useNavigation } from '../navigation/navigationStore';
 
 /**
@@ -40,6 +40,8 @@ export function useDiffExpansion(): void {
         defaultPrevented: event.defaultPrevented,
         keyboardTaken: isKeyboardTaken(),
         mayRun: windowShortcutMayRun(event),
+        // A command bound to Esc (Files' "Cancel the cut") runs instead, whichever window listener was added first.
+        commandClaims: allCommands().some((command) => command.shortcut && !command.disabled && matchesShortcut(event, command.shortcut)),
       };
       if (!escapeCollapsesDiff(isDiffExpanded(), press)) return;
       event.preventDefault();
