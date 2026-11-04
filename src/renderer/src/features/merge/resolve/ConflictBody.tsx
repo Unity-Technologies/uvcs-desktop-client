@@ -82,6 +82,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
       return (
         <FileStepsContext.Provider value={changeArrows ? fileSteps : null}>
           <SteppedDiffFrame
+            stepsThroughChanges={changeArrows}
             title={
               <span className={styles.diffTitle} data-tip={labels.destination}>
                 {labels.roles.destination.name} now → after the merge

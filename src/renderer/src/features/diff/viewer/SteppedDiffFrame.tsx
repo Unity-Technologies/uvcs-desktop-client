@@ -11,6 +11,8 @@ type PublishedStore = StoreApi<{ published: PublishedNavigation | null }>;
 
 interface SteppedDiffFrameProps {
   title?: ReactNode;
+  /** Its diffs step through their changes (as `LoadedFileDiff`'s `stepsThroughChanges`): off where the view steps instead. */
+  stepsThroughChanges?: boolean;
   /** The diff, loading, loaded (`LoadedFileDiff`, which draws into this header: `DiffFrameHostContext`) or failed. */
   children?: ReactNode;
 }
@@ -21,7 +23,7 @@ interface SteppedDiffFrameProps {
  * an error) the arrows go from file to file; once one does, the same buttons step through its changes. So a burst of ↓
  * clicks through a changeset never lands half a click on a button that went away.
  */
-export function SteppedDiffFrame({ title, children }: SteppedDiffFrameProps) {
+export function SteppedDiffFrame({ title, stepsThroughChanges = true, children }: SteppedDiffFrameProps) {
   const frame = useRef<HTMLDivElement>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
   const [store] = useState<PublishedStore>(() => createStore(() => ({ published: null })));
@@ -29,16 +31,16 @@ export function SteppedDiffFrame({ title, children }: SteppedDiffFrameProps) {
   const publish = useMemo(() => (published: PublishedNavigation | null) => store.setState({ published }), [store]);
   const host = useMemo<DiffFrameHost>(() => ({ frame, controls, publish }), [controls, publish]);
   return (
-    <DiffViewerFrame ref={frame} title={title} controls={<span ref={setControls} className={styles.controls} />} navigator={<HostedNavigator store={store} frame={frame} />}>
+    <DiffViewerFrame ref={frame} title={title} controls={<span ref={setControls} className={styles.controls} />} navigator={<HostedNavigator store={store} frame={frame} hostSteps={stepsThroughChanges} />}>
       <DiffFrameHostContext.Provider value={host}>{children}</DiffFrameHostContext.Provider>
     </DiffViewerFrame>
   );
 }
 
 /** The arrows: the body's navigation once published (`hostedNavigation`), else the header's own, file to file. */
-function HostedNavigator({ store, frame }: { store: PublishedStore; frame: RefObject<HTMLDivElement | null> }) {
+function HostedNavigator({ store, frame, hostSteps }: { store: PublishedStore; frame: RefObject<HTMLDivElement | null>; hostSteps: boolean }) {
   const published = useStore(store, (state) => state.published);
   const header = useFileOnlyNavigation(frame, headerTakesKeys(published));
   const shown = hostedNavigation(published, header);
-  return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} keysWhileTyping />;
+  return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;
 }
