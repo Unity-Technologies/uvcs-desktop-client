@@ -295,8 +295,9 @@
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
-  --tree-guide: var(--border-subtle);
-  --tree-guide-active: var(--border-strong);
+  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
+  --tree-guide: var(--border-default);
+  --tree-guide-active: var(--text-tertiary);
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;
