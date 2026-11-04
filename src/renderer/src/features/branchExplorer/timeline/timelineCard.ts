@@ -85,7 +85,6 @@ function frameHint(frame: TimelineFrame, zoom: number): string {
   return zoom > MIN_ZOOM ? 'Drag to move · zoom out to widen it' : 'Drag to move';
 }
 
-
 /** The workspace: which changeset it loaded and how far /main moved on since; or that it is older than the range. */
 function homeCard({ history, home }: TimelineCardContext): TimelineCard {
   if (home?.kind === 'olderThanRange') {

@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TooltipBubble } from '../../../ui/TooltipBubble';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHit } from '../model/searchGraph';
@@ -15,6 +15,7 @@ import { axisLabelCandidates, LOCAL_CALENDAR, spacedAxisLabels } from './timelin
 import { timelineCard } from './timelineCard';
 import { viewportAfterDrag, viewportForDrag } from './timelineDrag';
 import { timelineDrawing } from './timelineDrawing';
+import { TIMELINE_HEIGHT } from './timelineGeometry';
 import { viewportAtColumn, viewportFrame } from './timelineFrame';
 import { timelineHistory, timelineShare } from './timelineHistory';
 import { hitTicks, homeMark, labelTicks, searchHitColumns, timelineGaps } from './timelineMarks';
@@ -112,6 +113,7 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     cancelAnimationFrame(frameRequest.current);
     frameRequest.current = requestAnimationFrame(() => drawRef.current());
   }, []);
+  useEffect(() => () => cancelAnimationFrame(frameRequest.current), []);
 
   useImperativeHandle(
     ref,
@@ -194,6 +196,7 @@ export const GraphTimeline = forwardRef<GraphTimelineHandle, GraphTimelineProps>
     <div
       ref={containerRef}
       className={styles.timeline}
+      style={{ height: TIMELINE_HEIGHT }}
       data-slide-in={slideIn}
       // Its own slide only: the hover card's animation bubbles here through React's tree.
       onAnimationEnd={(event) => event.target === event.currentTarget && onSlidIn()}

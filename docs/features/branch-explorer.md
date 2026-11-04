@@ -78,12 +78,14 @@ right, a small solid button on the right edge glides back to them.
 ## Timeline
 
 An overview strip over the graph (`timeline/GraphTimeline`), `TIMELINE_HEIGHT` (68 px) tall above the date ruler, as
-wide as the graph's pane. Hidden until the user shows it, then remembered with the view's preferences (`showTimeline`):
-the header button beside the details toggle (`TimelineToggleButton`, pressed while it shows), View ▸ Timeline, the
-palette and ⌥⌘T (Alt+Shift+T off the Mac, where Ctrl+Alt is AltGr: `graphTimeline`). These are one command,
-`branchExplorer.timeline`, registered by every place (`usePlaceCommands`) and in the app's View menu: from another view
-it opens the Branch Explorer with the Timeline shown (`timelineToggle`). It slides in only when the user shows it,
-never when the view opens with it or mounts it again (`slidesIn`, `useTimelineSlideIn`); while the history loads, the skeleton keeps its place (`GraphSkeleton`).
+wide as the graph's pane. Hidden until the user shows it, then remembered with the view's preferences (`showTimeline`).
+One name, "Timeline", everywhere: the header button beside the details toggle ("Show timeline" / "Hide timeline",
+`TimelineToggleButton`, pressed while it shows), the Branch Explorer's View ▸ Timeline, the palette, ⌥⌘T (Alt+Shift+T
+off the Mac, where Ctrl+Alt is AltGr: `graphTimeline`) and the app's View ▸ Branch Explorer Timeline, which needs the
+view's name there. They all run one toggle (`timelineToggle`); the command, `branchExplorer.timeline`, is registered by
+every place (`usePlaceCommands`), and from another view it opens the Branch Explorer with the Timeline shown. It slides
+in only when the user shows it, never when the view opens with it or mounts it again (`slidesIn`,
+`useTimelineSlideIn`); while the history loads, the skeleton keeps its place (`GraphSkeleton`).
 
 It shows only what the graph loaded and draws (the same range and filters), and asks `cm` nothing.
 

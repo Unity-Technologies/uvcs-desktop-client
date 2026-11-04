@@ -1,8 +1,7 @@
-/* `TIMELINE_HEIGHT` (timelineGeometry.ts): the strip over the date ruler, as wide as the graph's pane. */
+/* The strip over the date ruler, as wide as the graph's pane; `TIMELINE_HEIGHT` tall (set by `GraphTimeline`). */
 .timeline {
   position: relative;
   flex: none;
-  height: 68px;
   overflow: hidden;
   touch-action: none;
 }
