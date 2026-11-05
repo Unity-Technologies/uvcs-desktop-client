@@ -1,4 +1,5 @@
 import { StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
+import { issueReferencesChanged } from './issueReferencesFacet';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { editorFocus, hasFocus } from './editorFocus';
 import { liveMarksOf, type LiveMark } from './liveMarks';
@@ -60,7 +61,7 @@ const liveMarks = ViewPlugin.fromClass(
 
     update(update: ViewUpdate): void {
       const focusMoved = update.startState.field(hasFocus) !== update.state.field(hasFocus);
-      if (update.docChanged || update.selectionSet || update.viewportChanged || focusMoved) this.decorations = draw(update.view);
+      if (update.docChanged || update.selectionSet || update.viewportChanged || focusMoved || issueReferencesChanged(update.startState, update.state)) this.decorations = draw(update.view);
     }
   },
   {

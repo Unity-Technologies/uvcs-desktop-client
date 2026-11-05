@@ -1,4 +1,6 @@
 import { EditorState } from '@codemirror/state';
+import { useIssueReferences } from '../issues/useIssueTrackers';
+import { issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -55,6 +57,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   const changed = useRef(onChange);
   changed.current = onChange;
   const codeTheme = pierreThemeName(useResolvedTheme());
+  const issues = useIssueReferences();
 
   // Built in the effect and destroyed in its cleanup, so StrictMode's second mount gets an editor of its own.
   useEffect(() => {
@@ -105,6 +108,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
+  useEffect(() => view?.dispatch({ effects: issueReferencesCompartment.reconfigure(withIssueReferences(issues)) }), [view, issues]);
 
   const handle = useMemo(
     () => ({

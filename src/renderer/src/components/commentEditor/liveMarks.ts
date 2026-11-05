@@ -1,4 +1,5 @@
 import type { EditorState } from '@codemirror/state';
+import { issueReferences } from './issueReferencesFacet';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
@@ -193,7 +194,7 @@ export function referencesIn(state: EditorState, from: number, to: number, optio
   const excluded = excludedRanges(state, from, to, options);
   const found: FoundReference[] = [];
   for (let line = state.doc.lineAt(from); ; line = state.doc.line(line.number + 1)) {
-    for (const reference of findReferences(line.text)) {
+    for (const reference of findReferences(line.text, state.facet(issueReferences) ?? undefined)) {
       const at = { from: line.from + reference.from, to: line.from + reference.to };
       if (at.from >= from && at.to <= to && !excluded.some(([start, end]) => at.from < end && at.to > start)) {
         found.push({ ...at, reference: reference.reference, source: reference.source });
