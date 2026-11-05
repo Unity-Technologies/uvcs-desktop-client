@@ -1,7 +1,7 @@
 import { useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { changeMarkLabel, scrollTopForTrackPoint } from './changeMarks';
-import { scrollTopAfterDrag, thumbOf } from './diffScrollbar';
+import { pressesThumb, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
 import { scrollSmoothlyTo } from './smoothScrollPlan';
 import type { ChangeMapView } from './useChangeMap';
 import { useScrollTop } from './useScrollTop';
@@ -20,14 +20,13 @@ interface Drag {
   startScrollTop: number;
 }
 
-const THUMB = { 'data-thumb': '' } as const;
-
 /**
  * The change map: the diff's own vertical scrollbar while it has changes to show, with the changes marked in its track
  * (a block per change, close ones fused into a band) and its thumb drawn over them, translucent. Dragging the thumb
- * scrolls the diff. A press anywhere else in the track, on a block or not, scrolls smoothly to center that point
- * (`scrollTopForTrackPoint`; far away, it jumps and glides only the end: `smoothScrollPlan`) and drags on from there,
- * as macOS's scrollbars do. The keys and the arrows step from change to change, so it's for the pointer only.
+ * scrolls the diff, and a press anywhere across the track's width on the thumb's rows takes it (`pressesThumb`), so the
+ * slim thumb is as easy to grab as the track is wide. A press anywhere else in the track, on a block or not, scrolls
+ * smoothly to center that point (`scrollTopForTrackPoint`; far away, it jumps and glides only the end:
+ * `smoothScrollPlan`) and drags on from there, as macOS's scrollbars do. The keys and the arrows step from change to change, so it's for the pointer only.
  *
  * It's inside the diff's scrolling element, first, standing still at its top (`ChangeMap.module.css`), so the wheel
  * over it scrolls the diff as anywhere else. A press on it takes no focus, and it's no press in the diff: the caret
@@ -46,8 +45,9 @@ export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
     if (event.button !== 0 || !container) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     let startScrollTop = container.scrollTop;
-    if (!(event.target as Element).closest('[data-thumb]')) {
-      startScrollTop = scrollTopForTrackPoint(event.clientY - event.currentTarget.getBoundingClientRect().top, geometry);
+    const y = event.clientY - event.currentTarget.getBoundingClientRect().top;
+    if (!pressesThumb(y, thumb)) {
+      startScrollTop = scrollTopForTrackPoint(y, geometry);
       scrollSmoothlyTo(container, startScrollTop, prefersReducedMotion());
     }
     drag.current = { startY: event.clientY, startScrollTop };
@@ -77,7 +77,7 @@ export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
       {view.marks.map((mark) => (
         <div key={mark.first} className={styles.mark} style={{ top: mark.top, height: mark.height }} data-kind={mark.kind} data-tip={changeMarkLabel(mark, count)} />
       ))}
-      <div className={styles.thumb} style={{ top: thumb.top, height: thumb.height }} data-dragging={dragging ? '' : undefined} {...THUMB} />
+      <div className={styles.thumb} style={{ top: thumb.top, height: thumb.height }} data-dragging={dragging ? '' : undefined} />
     </div>
   );
 }
