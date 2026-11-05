@@ -105,7 +105,11 @@ and pins of branches not drawn are ignored; pins are never pruned, since a branc
 pin's row counts the branches drawn when it was made: under another filter it lands on the first free row from that
 number, so a move to the bottom stays at the bottom.
 `branchMoves` decides which moves are offered: none up from the top row, none down for a branch alone on the last
-row. Reset position (`withoutPin`) puts one branch back where the layout places it. Reset all positions… asks first
+row. Reset position (`withoutPin`) puts one branch back where the layout places it.
+With several branches selected (or changesets of several branches, for the keys: `keyboardMoveLanes`), Position and
+the keys move them all as one: `movedBranches` moves each in turn, the lowest first, so they keep their order and
+end next to each other at the top or the bottom; `branchesMoves` offers a move when any of them can make it, and
+Reset positions puts them all back. Reset all positions… asks first
 (`resetAllPositions`), then clears the repository's pins. The reset has no key: ⌘⇧C, the one the official client
 uses, copies a link here. The view keeps the selection where it was on screen as the layout changes ("Keeping the
 place"), so the moved branch stays in sight.
