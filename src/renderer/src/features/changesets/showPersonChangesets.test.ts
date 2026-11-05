@@ -14,7 +14,7 @@ function filtersShown() {
 
 describe("Show a person's changesets", () => {
   it('opens the Changesets view on their changesets alone, with no text or picked branch hiding some', () => {
-    useChangesetFilters.getState().update({ text: 'fix', people: EVERYONE, since: 'lastWeek', onlyCurrentBranch: false, ...pickedBranchFilters(workspacePlace('/ws'), '/main/task') });
+    useChangesetFilters.getState().update({ ...pickedBranchFilters(workspacePlace('/ws'), '/main/task'), text: 'fix', people: EVERYONE, since: 'lastWeek', onlyCurrentBranch: false });
 
     showPersonChangesets('ana.diaz@acme.com', 'tom');
 
