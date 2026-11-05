@@ -1,5 +1,5 @@
 import type { Issue, IssueRead, IssueSearch, IssueTrackerKind, ProjectAccess, TrackerAccount } from '@shared/domain/issueTrackers';
-import type { ConnectionHttp, TrackerResponse } from '../TrackerHttp';
+import type { ConnectionHttp, TrackerRequest, TrackerResponse } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
 import type { TrackerCredential } from '../TrackerSecrets';
 
@@ -68,4 +68,24 @@ export function stringOf(value: unknown): string | undefined {
 
 export function numberOf(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * How long a project's count may take. A count only decorates a project's proof ("214 open"), and on a large server
+ * (a Jira Data Center with millions of issues) one may take longer than a request's whole budget.
+ */
+export const COUNT_TIMEOUT_MS = 8_000;
+
+/**
+ * A count's answer, or none when it couldn't be had: out of reach, slow, rate limited, refused by the server. The
+ * project's own read is the proof that the sign-in works, so a count never fails it; only a refused sign-in passes,
+ * which every other request would meet too.
+ */
+export async function countAnswer(http: ConnectionHttp, request: TrackerRequest): Promise<TrackerResponse | undefined> {
+  try {
+    return await http.send({ ...request, signal: AbortSignal.timeout(COUNT_TIMEOUT_MS) });
+  } catch (error) {
+    if (error instanceof TrackerError && error.reason === 'signInRefused') throw error;
+    return undefined;
+  }
 }

@@ -1,7 +1,7 @@
 import type { ProjectAccess } from '@shared/domain/issueTrackers';
 import type { ConnectionHttp } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
-import { isRecord, ISSUE_SEARCH_LIMIT, numberOf, okJson, stringOf, type IssueTrackerProvider, type ProviderConnection } from './IssueTrackerProvider';
+import { countAnswer, isRecord, ISSUE_SEARCH_LIMIT, numberOf, okJson, stringOf, type IssueTrackerProvider, type ProviderConnection } from './IssueTrackerProvider';
 import { JIRA_ISSUE_FIELDS, jiraAccount, jiraFoundIssues, jiraIssueReads, jqlString } from './jiraIssues';
 import { jiraSearchJql } from './issueSearchQueries';
 
@@ -63,13 +63,8 @@ async function whoAmIAt(http: ConnectionHttp, api: string) {
   return account;
 }
 
-/** A JQL's count, approximate as Jira gives it at once; none when Jira won't count (the proof shows the name alone). */
+/** A JQL's count, approximate as Jira gives it at once; none when it can't be had (`countAnswer`): the proof shows the name alone. */
 async function countOf(http: ConnectionHttp, api: string, jql: string): Promise<number | undefined> {
-  try {
-    const response = await http.send({ method: 'POST', url: `${api}/rest/api/3/search/approximate-count`, json: { jql } });
-    return isRecord(response.body) && response.status === 200 ? numberOf(response.body.count) : undefined;
-  } catch (error) {
-    if (error instanceof TrackerError && error.reason !== 'unexpected') throw error;
-    return undefined;
-  }
+  const response = await countAnswer(http, { method: 'POST', url: `${api}/rest/api/3/search/approximate-count`, json: { jql } });
+  return response?.status === 200 && isRecord(response.body) ? numberOf(response.body.count) : undefined;
 }

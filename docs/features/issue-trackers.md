@@ -437,6 +437,11 @@ Only when the user goes through it:
 | Jira Data Center | `GET /rest/api/2/myself`, `GET /rest/api/2/project/<key>`, `GET /rest/api/2/search` with `maxResults=0` twice (its `total`: open, and open assigned to the account). 4 |
 | GitHub | `GET /user`, then one GraphQL query: the repository's open issues (`issues(states: OPEN) { totalCount }`, which counts no pull requests, unlike REST's `open_issues_count`) and the open ones assigned to the viewer (`search(type: ISSUE, …) { issueCount }`). 2, plus the device flow's own |
 
+The project's own read proves the sign-in. Jira's two counts only decorate it ("214 open"): each has `COUNT_TIMEOUT_MS`,
+and one that doesn't answer in time, is out of reach, rate limited or refused by the server is left out, never failing
+the proof (`countAnswer`). Only a refused sign-in fails it. On a large Data Center, a count can take longer than a
+request's whole budget.
+
 ## Sign-in
 
 Each tracker's server offers its methods best first (`signInMethodsFor`): `deviceCode` (OAuth's device flow, RFC
