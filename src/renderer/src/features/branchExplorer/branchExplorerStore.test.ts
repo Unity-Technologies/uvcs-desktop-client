@@ -8,7 +8,7 @@ const preferences = () => useBranchExplorerPreferences.getState();
 const persisted = () => JSON.parse(localStorage.getItem('branch-explorer-preferences')!).state as Record<string, unknown>;
 
 beforeEach(() => {
-  useBranchExplorerPreferences.setState({ rulesByRepository: {}, rulesOff: {}, userColors: DEFAULT_USER_COLORS, revealRequest: null });
+  useBranchExplorerPreferences.setState({ rulesByRepository: {}, rulesOff: {}, userColors: DEFAULT_USER_COLORS, userColorsOff: {}, revealRequest: null });
 });
 
 describe('Branch Explorer preferences', () => {
@@ -23,15 +23,17 @@ describe('Branch Explorer preferences', () => {
   });
 
   it('remembers the changeset colors and which rules are off, but no action or passing request', () => {
-    preferences().set({ userColors: { on: false, users: [{ user: 'ana@example.com', hue: 120 }] } });
+    preferences().set({ userColors: { users: [{ user: 'ana@example.com', hue: 120 }] } });
+    preferences().setUserColorsOn('game@local', false);
     preferences().setRulesOn('game@local', false);
     preferences().set({ revealRequest: { kind: 'changeset', id: 7 } });
 
     const state = persisted();
 
-    expect(state.userColors).toEqual({ on: false, users: [{ user: 'ana@example.com', hue: 120 }] });
+    expect(state.userColors).toEqual({ users: [{ user: 'ana@example.com', hue: 120 }] });
+    expect(state.userColorsOff).toEqual({ 'game@local': true });
     expect(state.rulesOff).toEqual({ 'game@local': true });
-    for (const notRemembered of ['set', 'setRules', 'setRulesOn', 'visibleBranches', 'revealRequest']) {
+    for (const notRemembered of ['set', 'setRules', 'setRulesOn', 'setUserColorsOn', 'visibleBranches', 'revealRequest']) {
       expect(state).not.toHaveProperty(notRemembered);
     }
   });
@@ -41,6 +43,7 @@ describe('Branch Explorer preferences', () => {
 
     expect(remembered.userColors).toEqual(DEFAULT_USER_COLORS);
     expect(remembered.rulesOff).toEqual({});
+    expect(remembered.userColorsOff).toEqual({});
     expect(remembered.dateRange).toBe('lastWeek');
   });
 });

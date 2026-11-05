@@ -12,7 +12,7 @@ import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
 import { isOnIn, withOnIn, type OffByRepository } from './model/offByRepository';
 import { appliedRulesOf, rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
-import { DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
+import { appliedUserColorsOf, DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
@@ -37,17 +37,20 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
   rulesByRepository: RulesByRepository;
   /** The repositories whose rules are turned off (`withOnIn`). */
   rulesOff: OffByRepository;
-  /** The changeset colors by user, in every repository. */
+  /** The changeset colors by user, the same in every repository. */
   userColors: UserColors;
+  /** The repositories whose changeset colors are turned off (`withOnIn`). */
+  userColorsOff: OffByRepository;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
   set: (changes: Partial<Omit<BranchExplorerPreferences, BranchExplorerActions>>) => void;
   setRules: (repository: string, rules: ExplorerRule[]) => void;
   setRulesOn: (repository: string, on: boolean) => void;
+  setUserColorsOn: (repository: string, on: boolean) => void;
 }
 
 /** The store's actions, which aren't remembered. */
-export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn';
+export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn' | 'setUserColorsOn';
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
@@ -63,15 +66,17 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       rulesByRepository: {},
       rulesOff: {},
       userColors: DEFAULT_USER_COLORS,
+      userColorsOff: {},
       revealRequest: null,
       set,
       setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
       setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withOnIn(rulesOff, repository, on) })),
+      setUserColorsOn: (repository, on) => set(({ userColorsOff }) => ({ userColorsOff: withOnIn(userColorsOff, repository, on) })),
     }),
     {
       name: 'branch-explorer-preferences',
       version: 2,
-      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
+      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, setUserColorsOn: _setUserColorsOn, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
@@ -101,6 +106,16 @@ export function useExplorerRulesOn(repository: string | undefined): boolean {
 /** The rules the graph applies in `repository`: none while they're turned off. */
 export function useAppliedExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
   return useBranchExplorerPreferences((state) => appliedRulesOf(state.rulesByRepository, state.rulesOff, repository));
+}
+
+/** Whether the changeset colors apply in `repository`. */
+export function useUserColorsOn(repository: string | undefined): boolean {
+  return useBranchExplorerPreferences((state) => isOnIn(state.userColorsOff, repository));
+}
+
+/** The changeset colors the graph applies in `repository`: none while they're turned off there. */
+export function useAppliedUserColors(repository: string | undefined): UserColors {
+  return useBranchExplorerPreferences((state) => appliedUserColorsOf(state.userColors, state.userColorsOff, repository));
 }
 
 /** The display options alone, the same object until one of them changes. */
