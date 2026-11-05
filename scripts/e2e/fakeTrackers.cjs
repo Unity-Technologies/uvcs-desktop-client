@@ -121,6 +121,8 @@ function jiraDataCenter(url, init) {
   if (token.includes('login')) return answer(302, undefined, { location: `${DATA_CENTER}/plugins/servlet/samlsso?redirectTo=${encodeURIComponent(url.pathname)}` });
   if (init.method !== 'GET') return answer(403, { errorMessages: ['This token allows read access only'], errors: {} });
   const path = url.pathname;
+  // The API Token Authentication app's page asks for a sign-in, as on a server that has it: "Create a token" opens it.
+  if (path === '/plugins/servlet/de.resolution.apitokenauth/admin') return answer(401, undefined);
   if (path === '/rest/api/2/myself') return answer(200, { key: 'JIRAUSER10100', name: 'ana.diaz', displayName: 'Ana Díaz', emailAddress: 'ana@acme-corp.com' });
   const project = /^\/rest\/api\/2\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
