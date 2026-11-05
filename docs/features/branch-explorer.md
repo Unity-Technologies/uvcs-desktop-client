@@ -57,8 +57,8 @@ so opening it asks nothing more. A condition `cm` refuses fails only its own rul
 a question, no earlier answer colors or hides anything (`shownRuleMatches`). A rule's find has no date range or
 `limit`, since it must hold for everything the graph may draw; it prints one field per object matched (`matchRules`).
 
-"Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, `rulesOnIn` and `withRulesOn` in
-`model/rulesByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
+"Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, and `isOnIn` and `withOnIn` in
+`model/offByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
 colored and no rule asks the server anything, and the tab dims them until they're turned back on. With no rule, the tab shows
 no switch, so adding the first one turns the rules on (`addingTurnsRulesOn`).
 

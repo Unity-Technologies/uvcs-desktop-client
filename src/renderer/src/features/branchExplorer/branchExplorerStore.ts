@@ -10,7 +10,8 @@ import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPrefe
 import type { BranchChoice } from './model/branchChoice';
 import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
-import { appliedRulesOf, rulesOf, rulesOnIn, withRules, withRulesOn, type RulesByRepository, type RulesOff } from './model/rulesByRepository';
+import { isOnIn, withOnIn, type OffByRepository } from './model/offByRepository';
+import { appliedRulesOf, rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
 import { DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
@@ -34,8 +35,8 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
    * repository's branches and people, so another one starts with none.
    */
   rulesByRepository: RulesByRepository;
-  /** The repositories whose rules are turned off (`withRulesOn`). */
-  rulesOff: RulesOff;
+  /** The repositories whose rules are turned off (`withOnIn`). */
+  rulesOff: OffByRepository;
   /** The changeset colors by user, in every repository. */
   userColors: UserColors;
   /** Something to select and frame, asked for from another view; cleared once handled. */
@@ -65,7 +66,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       revealRequest: null,
       set,
       setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
-      setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withRulesOn(rulesOff, repository, on) })),
+      setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withOnIn(rulesOff, repository, on) })),
     }),
     {
       name: 'branch-explorer-preferences',
@@ -94,7 +95,7 @@ export function useExplorerRules(repository: string | undefined): readonly Explo
 
 /** Whether the rules of `repository` apply. */
 export function useExplorerRulesOn(repository: string | undefined): boolean {
-  return useBranchExplorerPreferences((state) => rulesOnIn(state.rulesOff, repository));
+  return useBranchExplorerPreferences((state) => isOnIn(state.rulesOff, repository));
 }
 
 /** The rules the graph applies in `repository`: none while they're turned off. */
