@@ -2,10 +2,11 @@
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
@@ -17,10 +18,13 @@ const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
+const VIEWPORT = { width: 1400, height: 880 };
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
-const shots = join(tmpdir(), 'uvcs-e2e-shots');
+// One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own.
+const checkoutHash = createHash('sha1').update(projectFolder).digest('hex').slice(0, 8);
+const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
 rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
@@ -51,12 +55,37 @@ const window = await app.firstWindow();
 window.setDefaultTimeout(TIMEOUT_MS);
 window.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 window.on('console', (message) => message.type() === 'error' && errors.push(`console.error: ${message.text()}`));
-await window.setViewportSize({ width: 1400, height: 880 });
+const browserWindow = await app.browserWindow(window);
+// The window's real size as well as the page's: a screenshot copies the real view (`capture`), which a frame's borders
+// (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
+await browserWindow.evaluate((shown, size) => shown.setContentSize(size.width, size.height), VIEWPORT);
+await window.setViewportSize(VIEWPORT);
 
 const main = window.getByRole('main');
 let shotNumber = 0;
+/** Saves what the page shows, without needing the window drawn on screen (scripts/e2e/README.md). */
 async function screenshot(name) {
-  await window.screenshot({ path: join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`) });
+  await withTimeout(capture(name), TIMEOUT_MS, `screenshot ${name}`);
+}
+
+async function capture(name) {
+  await window.evaluate(() => new Promise((rendered) => requestAnimationFrame(() => requestAnimationFrame(() => rendered()))));
+  const viewport = window.viewportSize();
+  const png = await browserWindow.evaluate(async (shown, area) => (await shown.webContents.capturePage(area)).toPNG().toString('base64'), { x: 0, y: 0, ...viewport });
+  writeFileSync(join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`), Buffer.from(png, 'base64'));
+}
+
+/** `promise`, or a failure naming `what` once `ms` pass: an `evaluate` has no timeout, and a wedged page never answers. */
+async function withTimeout(promise, ms, what) {
+  let timer;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer after ${ms} ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
@@ -70,6 +99,9 @@ async function step(name, run) {
     await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
+    // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that
+    // fails now and then can be read only from its output.
+    console.error(`FAIL  ${name}\n${error.message}`);
     await screenshot(`FAILED-${name.toLowerCase().replaceAll(' ', '-')}`).catch(() => {});
     throw new Error(`${name}: ${error.message.split('\n')[0]}`);
   }
