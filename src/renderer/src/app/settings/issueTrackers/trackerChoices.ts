@@ -70,26 +70,16 @@ export function switchedWords(choice: TrackerChoice): string {
   return `That's a ${trackerChoiceCard(choice).name} link, so this connects ${trackerChoiceCard(choice).name}.`;
 }
 
-/** Where an arrow key moves the focus among the picker's cards: around the row, either way, wrapping. */
-export function choiceKeyMove(index: number, key: string, count: number): number | null {
-  if (count === 0) return null;
-  if (key === 'ArrowRight' || key === 'ArrowDown') return (index + 1) % count;
-  if (key === 'ArrowLeft' || key === 'ArrowUp') return (index - 1 + count) % count;
-  if (key === 'Home') return 0;
-  if (key === 'End') return count - 1;
-  return null;
+/** Connect's title: connecting a repository's tracker, or, in a window with none, a sign-in alone. */
+export function connectWords(card: TrackerChoiceCard, forRepository: boolean): { title: string } {
+  return { title: forRepository ? `Connect ${card.name}` : `Sign in to ${card.name}` };
 }
 
-/**
- * Connect's title and lead, for a repository (its tracker) or a window with none (a sign-in alone, which any
- * repository then connects to in one click).
- */
-export function connectWords(card: TrackerChoiceCard | null, forRepository: boolean): { title: string; intro: string } {
-  if (forRepository) {
-    return { title: card ? `Connect ${card.name}` : 'Connect an issue tracker', intro: "Issue keys and links in this repository's comments show each issue's title and status." };
-  }
-  return { title: card ? `Sign in to ${card.name}` : 'Sign in to an issue tracker', intro: 'Sign in once, and any repository connects to it in one click.' };
-}
-
-/** The first step's two groups, where the computer already keeps sign-ins: those first, then the trackers. */
-export const PICKER_WORDS = { signIns: 'Use a sign-in you already have', others: 'Or sign in to another tracker' };
+/** A repository's card while it has no tracker: what connecting does, its sign-ins to use, or none yet. */
+export const REPOSITORY_START_WORDS = {
+  title: 'Connect an issue tracker',
+  intro: "Issue keys and links in this repository's comments show each issue's title and status.",
+  signIns: 'Use one of your sign-ins',
+  noneTitle: 'No sign-ins yet',
+  none: "Add one with your Jira or GitHub account, then paste a link to any of this repository's issues.",
+};

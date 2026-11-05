@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, switchedWords, trackerChoiceCard, TRACKER_CHOICES } from './trackerChoices';
+import { choiceAfterLink, choiceOf, connectWords, switchedWords, trackerChoiceCard, TRACKER_CHOICES } from './trackerChoices';
 
 describe('the tracker choices', () => {
   it('offers Jira and GitHub, each with only its own link shapes', () => {
@@ -34,22 +34,9 @@ describe('choiceAfterLink', () => {
   });
 });
 
-describe('choiceKeyMove', () => {
-  it('moves around the cards with the arrows, wrapping, and to the ends with Home and End', () => {
-    expect(choiceKeyMove(0, 'ArrowRight', 2)).toBe(1);
-    expect(choiceKeyMove(1, 'ArrowDown', 2)).toBe(0);
-    expect(choiceKeyMove(0, 'ArrowLeft', 2)).toBe(1);
-    expect(choiceKeyMove(1, 'Home', 2)).toBe(0);
-    expect(choiceKeyMove(0, 'End', 2)).toBe(1);
-    expect(choiceKeyMove(0, 'Enter', 2)).toBeNull();
-  });
-});
-
 describe('connectWords', () => {
   it('connects a repository’s tracker, or signs in alone where the window has no repository', () => {
-    expect(connectWords(null, true).title).toBe('Connect an issue tracker');
     expect(connectWords(trackerChoiceCard('jira'), true).title).toBe('Connect Jira');
-    expect(connectWords(null, false)).toEqual({ title: 'Sign in to an issue tracker', intro: 'Sign in once, and any repository connects to it in one click.' });
     expect(connectWords(trackerChoiceCard('github'), false).title).toBe('Sign in to GitHub');
   });
 });

@@ -6,7 +6,8 @@ import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
 import { connectedTrackerOf } from './connectFlow';
-import { ConnectTracker } from './ConnectTracker';
+import { ConnectTracker, type ConnectStart } from './ConnectTracker';
+import { RepositoryStart } from './RepositoryStart';
 import { SignInsCard } from './SignInsCard';
 import { TrackerCard } from './TrackerCard';
 import type { TrackerChoice } from './trackerChoices';
@@ -31,17 +32,21 @@ export function IssueTrackerPane() {
 }
 
 /**
- * Connect while the repository has no tracker (or the user is changing it), alone, so nothing else competes with its
- * steps; once it has one, its card, and the sign-ins this computer keeps quietly under it.
+ * The repository's tracker: with none yet (or changing it), its starting card (`RepositoryStart`: a sign-in to use, or
+ * one to add), then Connect from what was picked; once it has one, its card, and the sign-ins quietly under it.
  */
 function RepositoryTracker({ repository }: { repository: string }) {
   const setup = useIssueTrackerSetup();
   const connected = connectedTrackerOf(setup, repository);
   const [changing, setChanging] = useState(false);
+  const [start, setStart] = useState<ConnectStart | null>(null);
+  const connectedNow = (): void => {
+    setStart(null);
+    setChanging(false);
+  };
 
-  if (!connected || changing) {
-    return <ConnectTracker repository={repository} onConnected={() => setChanging(false)} onCancel={connected ? () => setChanging(false) : undefined} />;
-  }
+  if (start) return <ConnectTracker key={JSON.stringify(start)} repository={repository} start={start} onConnected={connectedNow} onCancel={() => setStart(null)} />;
+  if (!connected || changing) return <RepositoryStart onStart={setStart} {...(connected && { onCancel: () => setChanging(false) })} />;
   return (
     <>
       <TrackerCard repository={repository} connected={connected} onChange={() => setChanging(true)} />
@@ -57,6 +62,6 @@ function RepositoryTracker({ repository }: { repository: string }) {
  */
 function SignInAlone() {
   const [adding, setAdding] = useState<TrackerChoice | null>(null);
-  if (adding) return <ConnectTracker key={adding} startWith={adding} onConnected={() => setAdding(null)} onCancel={() => setAdding(null)} />;
+  if (adding) return <ConnectTracker key={adding} start={{ choice: adding }} onConnected={() => setAdding(null)} onCancel={() => setAdding(null)} />;
   return <SignInsCard onAdd={setAdding} />;
 }

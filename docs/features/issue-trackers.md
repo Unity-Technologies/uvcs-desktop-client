@@ -380,47 +380,50 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
 
 ## Connecting: Settings › Issue tracker
 
-The same pane in every window (`IssueTrackerPane`): the window's repository's tracker, then the sign-ins this
-computer keeps (`SignInsCard`). Connecting shows its steps alone; under a connected tracker the sign-ins are a quiet
-list (a small title, compact rows, a status only when one needs signing in again, Sign out on the row pointed at). Each state is one card (`styles.card`): a tinted header saying what it is and where the
-user stands, its sections parted by hairlines, one obvious next action. Status reads in its own tokens
-(`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. Each tracker shows its own logo (`TrackerLogo`, its
-brand colors as `--brand-*` tokens). What each card shows is decided in pure modules (`connectFlow`,
-`trackerChoices`, `trackerCardContent`); the components only draw it.
+The same pane in every window (`IssueTrackerPane`), built around the sign-ins this computer keeps: on Home they're the
+pane; in a repository's window, the repository's tracker comes first. Each state is one card (`styles.card`): a tinted
+header saying what it is and where the user stands, its sections parted by hairlines, one obvious next action. Status
+reads in its own tokens (`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. Each tracker shows its own
+logo (`TrackerLogo`, its brand colors as `--brand-*` tokens). What each card shows is decided in pure modules
+(`connectFlow`, `trackerChoices`, `trackerCardContent`); the components only draw it.
 
-**Connect** (`ConnectTracker`), its header the title and its steps, Tracker · Link · Sign in (`ConnectSteps`,
-`connectSteps`; the first names the tracker once picked). Back goes one step back, or to the tracker connected.
+**Sign-ins** (`SignInsCard`, `SignInTile`): a small card each, who first (the avatar with its tracker's logo on its
+corner, the name, the server), the repository's own said there, a status only when one needs signing in again, and
+Sign out, which asks first and names how many repositories lose their tracker with it (`signInRows`,
+`signOutQuestion`). On Home they're a card, "No sign-ins yet" when there's none, whose header's "Add a sign-in"
+(`AddSignInMenu`) offers the trackers in a menu, each its logo, its name and its servers (`TRACKER_CHOICES`: Jira,
+"Cloud or Data Center", one entry since the link tells them apart; GitHub, "github.com or Enterprise"; a tracker only
+once it works, no "coming soon"). The one picked opens Connect at its link step, to sign in alone: the link proves
+the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in one
+click. Under a repository's connected tracker they're a quiet section with a small title.
 
-1. **Pick the tracker** (`TrackerPicker`): an upright card each, its logo, name and servers (`TRACKER_CHOICES`: Jira,
-   "Cloud or Data Center", one card, since the link tells them apart; GitHub, "github.com or Enterprise"), reached
-   with the arrow keys too (`choiceKeyMove`). A tracker shows here only once it works: no "coming soon". When the
-   branch comments the window already read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over
-   the cached branch lists, no command), "Your branch comments link to Jira" above the cards, with "Use it", which
-   picks the tracker and fills the link. Never filled in silently. In a repository's window, where the computer already keeps sign-ins
-   that work (`usableSignIns`), they come first, "Use a sign-in you already have", each its card (who, its tracker's
-   logo, the server), and the trackers after them, smaller ("Or sign in to another tracker", `PICKER_WORDS`), so a
-   sign-in made on Home is plainly the way in. Picking one goes to the link step saying whose sign-in it is
-   (`pickedSignInShown`), and the last step is "Connect" (`connectsWithSignIn`): one button, no token.
-2. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it
-   (`TrackerChoiceCard.examples`). Pasted, it's read back with nothing sent, checked: the tracker's kind as a badge,
-   then the host and the project bold (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't
-   an issue says what it is and what to paste instead. A link to another tracker's issue is taken, never refused:
-   the step moves to that tracker and says so (`choiceAfterLink`, `switchedWords`).
-3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: connect with your Jira sign-in"
-   and "Connect", with "Use a different account" beside it (another account's project, a token that can't read this one, a
-   shared computer): the ways to sign in, saying the new account replaces the kept one for every repository that uses
-   it (one sign-in per server: `replaces`). Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
-   `tokenStepWords`): "Get a token from Jira", one line on what to do there and that the app only reads with it, and
-   one button opening its page (and, for Data Center, the other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`);
-   then "Paste it here", the field with Sign in beside it. One
+**A repository with no tracker** (`RepositoryStart`) reads as Home does: "Connect an issue tracker", what it does, the
+sign-ins that work (`usableSignIns`), each with Use, or "No sign-ins yet", and "Add a sign-in" in the header, signing
+in and connecting at once. When the branch comments the window already read hold issue addresses a grammar recognizes
+(`suggestedTrackerLink`, over the cached branch lists, no command), "Your branch comments link to Jira" above them,
+with "Use it", which fills the link. Never filled in silently. "Change tracker…" on a connected tracker opens it with
+Back. A big picker of tracker cards before any of this was tried and dropped: with sign-ins already kept, it hid that
+connecting was one click away.
+
+**Connect** (`ConnectTracker`), from what was picked (`ConnectStart`: the tracker, the sign-in to use, or a suggested
+link), its header the title and its steps (`ConnectSteps`, `connectSteps`): the tracker, done, then Link, then Sign in,
+or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to where it was started.
+
+1. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it
+   (`TrackerChoiceCard.examples`), and, when a sign-in was picked, whose it is above it (`pickedSignInShown`). Pasted,
+   it's read back with nothing sent, checked: the tracker's kind as a badge, then the host and the project bold
+   (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't an issue says what it is and what to
+   paste instead. A link to another tracker's issue is taken, never refused: the step moves to that tracker and says
+   so (`choiceAfterLink`, `switchedWords`).
+2. **Sign in** (`signInStepFor`): when a connection already covers the link, "Connect" (with "Next: connect with your
+   Jira sign-in" when it wasn't picked), and "Use a different account" beside it (another account's project, a token
+   that can't read this one, a shared computer): the ways to sign in, saying the new account replaces the kept one for
+   every repository that uses it (one sign-in per server: `replaces`). Otherwise the tracker's best sign-in method
+   ("Sign-in"). A token is two numbered steps (`TokenSignIn`, `tokenStepWords`): "Get a token from Jira", one line on
+   what to do there and that the app only reads with it, and one button opening its page (and, for Data Center, the
+   other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`); then "Paste it here", the field with Sign in beside it. One
    button leads (`tokenStepLead`): the page's until a token is in the field, then Sign in, and step one is checked.
    A failure is said under it, scrolled into view.
-
-In a window with no repository, Connect signs in alone (`connectWords`: "Sign in to an issue tracker"): the link
-proves the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in
-one click. Home always shows the sign-ins' card ("No sign-ins yet" when there's none); its header's "Add a sign-in"
-offers the trackers in a menu, each its logo, name and servers (`DescribedMenu`), and the one picked opens Connect at
-its link step (`startWith`), Back returning to the sign-ins.
 
 **Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its name, kind and host, how it
 stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Change tracker…" (a repository has one tracker, so it replaces
@@ -440,10 +443,6 @@ it; "Use another tracker" read as adding one) and "Disconnect…", which asks fi
   keyed by the connection, its credential's state and the projects: `useBoundProjects`), removable on hover or focus
   while another stays (`removeProject`); "+ Add a project" opens a row of its own: a full-width field for a link to
   an issue of the other project, read back as pasted, with Add and Cancel.
-
-**Sign-ins** (`SignInsCard`), in every window: a row each with its logo, name, account and pill, the one the
-window's repository uses marked "This repository", and Sign out, which asks first and names how many repositories lose
-their tracker with it (`signInRows`, `signOutQuestion`).
 
 Each failure gets one plain sentence (`connectFailureWords`), and one a new token would fix gets "Create a new token".
 

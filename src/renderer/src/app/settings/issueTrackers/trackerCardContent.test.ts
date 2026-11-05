@@ -72,16 +72,11 @@ describe('disconnectQuestion', () => {
 });
 
 describe('connectSteps and tokenStepLead', () => {
-  it('walks a tracker, a link and signing in, the first step naming the tracker once chosen', () => {
-    expect(connectSteps('tracker')).toEqual([
-      { label: 'Tracker', state: 'current' },
-      { label: 'Link', state: 'next' },
+  it('walks a link and signing in, after the tracker picked', () => {
+    expect(connectSteps('link', 'Jira')).toEqual([
+      { label: 'Jira', state: 'done' },
+      { label: 'Link', state: 'current' },
       { label: 'Sign in', state: 'next' },
-    ]);
-    expect(connectSteps('link', 'Jira').map((step) => [step.label, step.state])).toEqual([
-      ['Jira', 'done'],
-      ['Link', 'current'],
-      ['Sign in', 'next'],
     ]);
     expect(connectSteps('signIn', 'GitHub').map((step) => step.state)).toEqual(['done', 'done', 'current']);
     // With a sign-in already there, the last step only connects.

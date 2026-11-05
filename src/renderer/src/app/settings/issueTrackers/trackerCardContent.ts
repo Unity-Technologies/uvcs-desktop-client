@@ -85,20 +85,22 @@ export function projectNoun(kind: IssueTrackerKind): string {
   return kind === 'github' ? 'repository' : 'project';
 }
 
-/** The steps of Connect, and where the user is: a tracker, a link to one of its issues, then signing in. */
+/** The steps of Connect, and where the user is: the tracker (picked before it opens), a link to one of its issues, then signing in. */
 export type ConnectStepState = 'done' | 'current' | 'next';
 
-export type ConnectStage = 'tracker' | 'link' | 'signIn';
+export type ConnectStage = 'link' | 'signIn';
 
 /**
- * The first step names the tracker once one is chosen ("Jira ✓ · Link · Sign in"); with a sign-in already there
+ * The first step names the tracker picked, done ("Jira ✓ · Link · Sign in"); with a sign-in already there
  * (`signedIn`), the last one only connects ("Connect").
  */
-export function connectSteps(stage: ConnectStage, trackerName?: string, { signedIn = false } = {}): { label: string; state: ConnectStepState }[] {
-  const order: ConnectStage[] = ['tracker', 'link', 'signIn'];
-  const at = order.indexOf(stage);
-  const labels: Record<ConnectStage, string> = { tracker: (stage !== 'tracker' && trackerName) || 'Tracker', link: 'Link', signIn: signedIn ? 'Connect' : 'Sign in' };
-  return order.map((step, index) => ({ label: labels[step], state: index < at ? 'done' : index === at ? 'current' : 'next' }));
+export function connectSteps(stage: ConnectStage, trackerName: string, { signedIn = false } = {}): { label: string; state: ConnectStepState }[] {
+  const later: { stage: ConnectStage; label: string }[] = [
+    { stage: 'link', label: 'Link' },
+    { stage: 'signIn', label: signedIn ? 'Connect' : 'Sign in' },
+  ];
+  const at = later.findIndex((step) => step.stage === stage);
+  return [{ label: trackerName, state: 'done' }, ...later.map((step, index): { label: string; state: ConnectStepState } => ({ label: step.label, state: index < at ? 'done' : index === at ? 'current' : 'next' }))];
 }
 
 /** Which of the token step's buttons leads: "Create a token" until one is in the field, then "Sign in". */

@@ -1,119 +1,99 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { Branch } from '@shared/domain/branch';
+import { ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
 import type { SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
-import { useSession } from '../../workspace/sessionStore';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, usableSignIns, type SignInRow, type SignInStep, type SuggestedLink } from './connectFlow';
+import { connectFailureWords, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, type SignInRow, type SignInStep } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './LinkReadBackLine';
-import { SignInIdentity } from './SignInIdentity';
-import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, PICKER_WORDS, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
+import { choiceAfterLink, connectWords, switchedWords, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 import { TrackerLogo } from './TrackerLogo';
 import { DeviceSignIn } from './DeviceSignIn';
 import { TokenSignIn } from './TokenSignIn';
 import styles from './IssueTrackerPane.module.css';
 
-type SignedIn = Extract<SignInOutcome, { kind: 'signedIn' }>;
+export type SignedIn = Extract<SignInOutcome, { kind: 'signedIn' }>;
+
+/** Where Connect starts: the tracker picked, with the sign-in picked to use, or the link a suggestion fills in. */
+export interface ConnectStart {
+  choice: TrackerChoice;
+  picked?: SignInRow;
+  link?: string;
+}
 
 interface ConnectTrackerProps {
   /** None in a window with no repository: the sign-in alone, kept for any repository to use. */
   repository?: string;
+  start: ConnectStart;
   onConnected: (outcome: SignedIn) => void;
-  /** Changing a tracker already connected: back to it. Adding a sign-in on Home: back to the sign-ins. */
-  onCancel?: () => void;
-  /** The tracker already chosen (Home's "Add a sign-in" menu): no first step to pick one, and Back leaves. */
-  startWith?: TrackerChoice;
+  /** Back: to where Connect was started from (the repository's card, the sign-ins). */
+  onCancel: () => void;
 }
 
 /**
- * Connecting the repository's tracker (docs/features/issue-trackers.md, "Connecting"), one card in three steps
- * (`ConnectSteps`): pick the tracker from its logo (`TRACKER_CHOICES`); paste a link to any of its issues, shown only
- * its own link shapes and read back in words; sign in, or use a sign-in already there. Back goes one step back, or to
- * the tracker connected. A link to another tracker's issue moves to that tracker (`choiceAfterLink`).
+ * Connecting (docs/features/issue-trackers.md, "Connecting"), one card in steps (`ConnectSteps`), the tracker already
+ * picked (a sign-in's Use, or "Add a sign-in"'s menu): paste a link to any of its issues, shown only its own link
+ * shapes and read back in words; sign in, or connect with a sign-in already there. A link to another tracker's issue
+ * moves to that tracker (`choiceAfterLink`). Back leaves.
  */
-export function ConnectTracker({ repository, onConnected, onCancel, startWith }: ConnectTrackerProps) {
-  const [choice, setChoice] = useState<TrackerChoice | null>(startWith ?? null);
-  const [link, setLink] = useState('');
+export function ConnectTracker({ repository, start, onConnected, onCancel }: ConnectTrackerProps) {
+  const [choice, setChoice] = useState<TrackerChoice>(start.choice);
+  const [link, setLink] = useState(start.link ?? '');
   const [switched, setSwitched] = useState(false);
   const [differentAccount, setDifferentAccount] = useState(false);
-  // The sign-in picked in the first step ("Use a sign-in you already have"), carried to the link step.
-  const [picked, setPicked] = useState<SignInRow | null>(null);
+  const picked = start.picked ?? null;
   const read = linkReadBack(link);
-  const suggestion = useSuggestedLink();
   const setup = useIssueTrackerSetup();
   const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup, { differentAccount }) : null;
-  const stage: ConnectStage = !choice ? 'tracker' : read.kind === 'read' ? 'signIn' : 'link';
-  const card = choice ? trackerChoiceCard(choice) : null;
+  const stage: ConnectStage = read.kind === 'read' ? 'signIn' : 'link';
+  const card = trackerChoiceCard(choice);
   const words = connectWords(card, repository !== undefined);
 
-  const choose = (chosen: TrackerChoice | null, text = '', signIn: SignInRow | null = null): void => {
-    setChoice(chosen);
-    setPicked(signIn);
-    setLink(text);
-    setSwitched(false);
-    setDifferentAccount(false);
-  };
   const typed = (text: string): void => {
-    const next = choiceAfterLink(choice ?? 'jira', text);
+    const next = choiceAfterLink(choice, text);
     setLink(text);
     setChoice(next.choice);
     setSwitched(next.switched || (switched && text.trim() !== ''));
     setDifferentAccount(false);
   };
-  const back = choice && !startWith ? () => choose(null) : onCancel;
 
   return (
     <section className={styles.card} aria-label="Connect an issue tracker">
       <header className={styles.cardHeader}>
-        {back && <Button size="small" variant="ghost" className={styles.back} icon={<ChevronLeft size={15} />} aria-label="Back" onClick={back} />}
-        {card && <TrackerLogo choice={card.choice} />}
+        <Button size="small" variant="ghost" className={styles.back} icon={<ChevronLeft size={15} />} aria-label="Back" onClick={onCancel} />
+        <TrackerLogo choice={card.choice} />
         <div className={styles.cardHeaderText}>
           <h2 className={styles.cardTitle}>{words.title}</h2>
-          <ConnectSteps stage={stage} {...(card && { trackerName: card.name })} signedIn={connectsWithSignIn(picked?.id ?? null, read.kind === 'read', step)} />
+          <ConnectSteps stage={stage} trackerName={card.name} signedIn={connectsWithSignIn(picked?.id ?? null, read.kind === 'read', step)} />
         </div>
       </header>
-      {!card && (
-        <TrackerPicker
-          intro={words.intro}
-          suggestion={repository ? suggestion : null}
-          signIns={repository ? usableSignIns(setup) : []}
-          onChoose={choose}
-          onPickSignIn={(signIn) => choose(choiceOf(signIn.kind), '', signIn)}
-        />
-      )}
-      {card && (
-        <div className={styles.section}>
-          {picked && pickedSignInShown(picked.id, read.kind === 'read', step) && (
-            <CheckedLine>
-              With <strong>{picked.account}</strong>'s sign-in at {picked.host}
-            </CheckedLine>
-          )}
-          <TextField className={styles.field} label={card.linkLabel} aria-label="A link to an issue" placeholder={card.placeholder} value={link} onChange={(event) => typed(event.target.value)} autoFocus />
-          {read.kind === 'none' && (
-            <ul className={styles.examples} aria-label="Link shapes">
-              {card.examples.map((example) => (
-                <li key={example.label}>
-                  <span className={styles.exampleLabel}>{example.label}</span>
-                  <span className={styles.exampleShape}>{example.shape}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {read.kind === 'read' && <LinkReadBackLine parts={read.parts} words={read.words} />}
-          {read.kind === 'read' && switched && <p className={styles.note}>{switchedWords(card.choice)}</p>}
-          {read.kind === 'problem' && <p className={styles.problem}>{read.words}</p>}
-        </div>
-      )}
+      <div className={styles.section}>
+        {picked && pickedSignInShown(picked.id, read.kind === 'read', step) && (
+          <CheckedLine>
+            With <strong>{picked.account}</strong>'s sign-in at {picked.host}
+          </CheckedLine>
+        )}
+        <TextField className={styles.field} label={card.linkLabel} aria-label="A link to an issue" placeholder={card.placeholder} value={link} onChange={(event) => typed(event.target.value)} autoFocus />
+        {read.kind === 'none' && (
+          <ul className={styles.examples} aria-label="Link shapes">
+            {card.examples.map((example) => (
+              <li key={example.label}>
+                <span className={styles.exampleLabel}>{example.label}</span>
+                <span className={styles.exampleShape}>{example.shape}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {read.kind === 'read' && <LinkReadBackLine parts={read.parts} words={read.words} />}
+        {read.kind === 'read' && switched && <p className={styles.note}>{switchedWords(card.choice)}</p>}
+        {read.kind === 'problem' && <p className={styles.problem}>{read.words}</p>}
+      </div>
       {read.kind === 'read' && step && (
         <div className={`${styles.section} ${styles.arrives}`}>
           <SignInFor
@@ -129,88 +109,6 @@ export function ConnectTracker({ repository, onConnected, onCancel, startWith }:
         </div>
       )}
     </section>
-  );
-}
-
-/**
- * The first step: a card per tracker, its logo, name and servers, to click or reach with the arrows; above them, the
- * tracker the branch comments link to, in one click with its link filled in. Where the computer already keeps
- * sign-ins, they come first ("Use a sign-in you already have"), and the trackers, smaller, after them.
- */
-interface TrackerPickerProps {
-  intro: string;
-  suggestion: SuggestedLink | null;
-  /** The sign-ins this computer keeps that work, offered first (`usableSignIns`); none in a window with no repository. */
-  signIns: readonly SignInRow[];
-  onChoose: (choice: TrackerChoice, link?: string) => void;
-  onPickSignIn: (signIn: SignInRow) => void;
-}
-
-function TrackerPicker({ intro, suggestion, signIns, onChoose, onPickSignIn }: TrackerPickerProps) {
-  const cards = useRef<(HTMLButtonElement | null)[]>([]);
-  const arrows = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const at = cards.current.findIndex((card) => card === document.activeElement);
-    const next = choiceKeyMove(at, event.key, TRACKER_CHOICES.length);
-    if (at < 0 || next === null) return;
-    event.preventDefault();
-    cards.current[next]?.focus();
-  };
-  const suggested = suggestion && linkReadBack(suggestion.link);
-  return (
-    <div className={styles.section}>
-      <p className={styles.intro}>{intro}</p>
-      {suggestion && suggested?.kind === 'read' && (
-        <div className={styles.suggested}>
-          <TrackerLogo choice={choiceOf(suggested.link.kind)} size={24} />
-          <div className={styles.cardHeaderText}>
-            <span className={styles.nextTitle}>Your branch comments link to {suggestion.trackerName}</span>
-            <span className={styles.personDetail}>
-              {suggestion.words} · {suggestion.seen}
-            </span>
-          </div>
-          <Button size="small" variant="primary" onClick={() => onChoose(choiceOf(suggested.link.kind), suggestion.link)}>
-            Use it
-          </Button>
-        </div>
-      )}
-      {signIns.length > 0 && (
-        <>
-          <h3 className={styles.pickerTitle}>{PICKER_WORDS.signIns}</h3>
-          <ul className={styles.tiles}>
-            {signIns.map((signIn) => (
-              <li key={signIn.id}>
-                <button type="button" className={`${styles.signInTile} ${styles.signInPick}`} onClick={() => onPickSignIn(signIn)} aria-label={`${signIn.account}, ${signIn.title}`}>
-                  <SignInIdentity row={signIn} />
-                  <ChevronRight className={styles.pickChevron} size={15} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <h3 className={styles.pickerTitle}>{PICKER_WORDS.others}</h3>
-        </>
-      )}
-      <div className={styles.choices} data-compact={signIns.length > 0 || undefined} role="group" aria-label="Trackers" onKeyDown={arrows}>
-        {TRACKER_CHOICES.map((card, index) => (
-          <button
-            key={card.choice}
-            ref={(element) => {
-              cards.current[index] = element;
-            }}
-            type="button"
-            className={styles.choiceCard}
-            onClick={() => onChoose(card.choice)}
-            autoFocus={index === 0 && !suggestion && signIns.length === 0}
-          >
-            <TrackerLogo choice={card.choice} size={signIns.length > 0 ? 28 : 44} />
-            <span className={styles.choiceText}>
-              <span className={styles.choiceName}>{card.name}</span>
-              <span className={styles.choiceServers}>{card.servers}</span>
-            </span>
-            <ChevronRight className={styles.choiceChevron} size={14} aria-hidden />
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -312,18 +210,6 @@ function UseConnection(props: {
       {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
     </div>
   );
-}
-
-/** A tracker the branch comments the window already read link to: offered, never filled in. Reads nothing. */
-function useSuggestedLink() {
-  const queryClient = useQueryClient();
-  const place = useSession((state) => state.place);
-  return useMemo(() => {
-    if (!place) return null;
-    const lists = queryClient.getQueriesData<Branch[]>({ queryKey: queryKeys.inPlace(place, 'branches') });
-    const comments = lists.flatMap(([, branches]) => (Array.isArray(branches) ? branches.map((branch) => branch.comment ?? '') : []));
-    return suggestedTrackerLink(comments);
-  }, [queryClient, place]);
 }
 
 /** A quiet way past the sign-in already there: signing in with another account instead (`signInStepFor`). */

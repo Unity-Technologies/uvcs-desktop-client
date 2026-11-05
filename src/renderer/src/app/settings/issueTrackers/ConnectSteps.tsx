@@ -2,8 +2,8 @@ import { Check } from 'lucide-react';
 import { connectSteps, type ConnectStage } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
-/** Tracker · Link · Sign in, the current one marked (`connectSteps`): where the user is in connecting. */
-export function ConnectSteps({ stage, trackerName, signedIn = false }: { stage: ConnectStage; trackerName?: string; signedIn?: boolean }) {
+/** The tracker · Link · Sign in, the current one marked (`connectSteps`): where the user is in connecting. */
+export function ConnectSteps({ stage, trackerName, signedIn = false }: { stage: ConnectStage; trackerName: string; signedIn?: boolean }) {
   const steps = connectSteps(stage, trackerName, { signedIn });
   return (
     <ol className={styles.steps} aria-label="Steps">

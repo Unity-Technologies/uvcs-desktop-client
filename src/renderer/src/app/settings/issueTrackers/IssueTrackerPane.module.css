@@ -68,19 +68,6 @@
   white-space: nowrap;
 }
 
-/* The tracker's glyph on a soft tile, as the card's mark. */
-.tile {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
 .section {
   display: flex;
   flex-direction: column;
@@ -458,151 +445,6 @@
   white-space: nowrap;
 }
 
-/* The picker: a card per tracker, its logo, name and servers, lifting under the pointer. */
-.choices {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-2);
-}
-
-.choiceCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: var(--space-4) var(--space-3) var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
-}
-
-.choiceCard:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.choiceCard:active {
-  transform: none;
-}
-
-.choiceCard:focus-visible {
-  outline: var(--focus-outline);
-  outline-offset: 2px;
-}
-
-.choiceText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.choiceName {
-  color: var(--text-primary);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-}
-
-.choiceServers {
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-
-/* The arrow in the corner, showing the card leads on. */
-.choiceChevron {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  color: var(--text-tertiary);
-  opacity: 0;
-  transition:
-    opacity var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
-}
-
-.choiceCard:hover > .choiceChevron,
-.choiceCard:focus-visible > .choiceChevron {
-  color: var(--accent-text);
-  opacity: 1;
-  transform: translateX(2px);
-}
-
-/* Home with no sign-in yet: what to do, in the card's body. */
-.noSignIns {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) 0;
-}
-
-/* The picker's groups where sign-ins come first: "Use a sign-in you already have", then the other trackers. */
-.pickerTitle {
-  margin: var(--space-1) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-}
-
-/* A sign-in to pick: its card as a button, lifting under the pointer like the trackers' cards. */
-.signInPick {
-  width: 100%;
-  padding-right: var(--space-2);
-  background: var(--bg-surface);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
-}
-
-.signInPick:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-}
-
-.signInPick:focus-visible {
-  outline: var(--focus-outline);
-  outline-offset: 2px;
-}
-
-.pickChevron {
-  flex: none;
-  color: var(--text-tertiary);
-}
-
-.signInPick:hover > .pickChevron {
-  color: var(--accent-text);
-}
-
-/* The trackers after the sign-ins: smaller, a row each card. */
-.choices[data-compact] {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-}
-
-.choices[data-compact] > .choiceCard {
-  flex-direction: row;
-  gap: 10px;
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-}
-
-.choices[data-compact] > .choiceCard > .choiceChevron {
-  display: none;
-}
-
 /* The tracker the branch comments link to, offered above the cards. */
 .suggested {
   display: flex;
@@ -619,18 +461,8 @@
   flex: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .choiceCard,
-  .choiceChevron {
-    transition: none;
-  }
 
-  .choiceCard:hover {
-    transform: none;
-  }
-}
 /* The sign-ins under a connected tracker: no card around them, a small title over their own small cards. */
-/* The sign-ins under a connected tracker: no card, a small title, compact rows; Sign out on the row pointed at. */
 .quietSection {
   display: flex;
   flex-direction: column;
@@ -864,20 +696,4 @@
   .progress::after {
     animation: none;
   }
-}
-
-/* An empty state's mark: the tracker glyph larger, centered over its words. */
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-4);
-  text-align: center;
-}
-
-.empty .tile {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-lg);
 }
