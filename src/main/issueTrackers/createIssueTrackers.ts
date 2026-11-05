@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { clipboard, safeStorage, session } from 'electron';
+import { clipboard, safeStorage, session, shell } from 'electron';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
 import { GITHUB_OAUTH_CLIENT_IDS } from '@shared/issueTrackers/signInMethods';
 import { IssueTrackers } from './IssueTrackers';
@@ -39,6 +39,7 @@ export function createIssueTrackers({ userData, logRequest, changed, development
     newId: randomUUID,
     now: Date.now,
     wait: realWait,
+    openExternal: (url) => void shell.openExternal(url),
     oauthClientIds: development && env.UVCS_GITHUB_OAUTH_CLIENT_ID ? { ...GITHUB_OAUTH_CLIENT_IDS, 'github.com': env.UVCS_GITHUB_OAUTH_CLIENT_ID } : GITHUB_OAUTH_CLIENT_IDS,
   });
 }

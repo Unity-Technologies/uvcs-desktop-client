@@ -32,6 +32,7 @@ export function SignInAgain({ connection, why }: { connection: TrackerConnection
       {askingToken ? (
         <TokenSignIn
           request={{ repository: '', link: connection.server }}
+          pageTarget={{ connectionId: connection.id }}
           link={connection}
           trackerName={name}
           needsEmail={connection.kind === 'jiraCloud'}

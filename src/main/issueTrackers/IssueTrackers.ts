@@ -1,4 +1,4 @@
-import type { RepositorySignIn } from '@shared/api/issueTrackers';
+import type { RepositorySignIn, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { DeviceSignIn, IssueRead, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TokenSource, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
@@ -34,6 +34,8 @@ export interface IssueTrackersDeps {
   /** OAuth apps' client ids by host (`GITHUB_OAUTH_CLIENT_IDS`). */
   oauthClientIds: Readonly<Record<string, string>>;
   providers?: Readonly<Record<IssueTrackerKind, IssueTrackerProvider>>;
+  /** Opens a web page in the browser (`shell.openExternal`): the token pages. */
+  openExternal: (url: string) => void;
 }
 
 type Failed = { kind: 'failed'; failure: SignInFailure };
@@ -54,6 +56,11 @@ export class IssueTrackers {
   /** Connections whose credential the tracker refused this session: their reads fail at once, unsent. */
   private readonly refused = new Set<string>();
   private readonly flows = new Map<string, DeviceFlow>();
+  /**
+   * The servers whose token page main opened this session (`openTokenPage`), by kind and server: a token copied from
+   * the clipboard goes to one of them only, never to a server a window names.
+   */
+  private readonly tokenPagesOpened = new Set<string>();
 
   constructor(private readonly deps: IssueTrackersDeps) {
     this.providers = deps.providers ?? TRACKER_PROVIDERS;
@@ -68,7 +75,7 @@ export class IssueTrackers {
   async signInWithToken(request: RepositorySignIn & { source: TokenSource }): Promise<SignInOutcome> {
     const reading = this.readLink(request.link);
     if ('failure' in reading) return failed(reading.failure);
-    const credential = await this.credentialOf(reading.kind, request.source, request.email);
+    const credential = await this.credentialOf(reading, request.source, request.email);
     if ('failure' in credential) return failed(credential.failure);
     return this.completeSignIn(reading, request.repository, credential, 'token');
   }
@@ -76,7 +83,7 @@ export class IssueTrackers {
   async signInAgain({ connectionId, email, source }: { connectionId: string; email?: string; source: TokenSource }): Promise<SignInOutcome> {
     const connection = this.deps.store.connection(connectionId);
     if (!connection) return failed({ reason: 'unexpected', message: 'This sign-in is gone' });
-    const credential = await this.credentialOf(connection.kind, source, email ?? connection.account.email);
+    const credential = await this.credentialOf(connection, source, email ?? connection.account.email);
     if ('failure' in credential) return failed(credential.failure);
     const provider = this.providers[connection.kind];
     try {
@@ -104,8 +111,17 @@ export class IssueTrackers {
     }
   }
 
-  async clipboardHoldsToken(kind: IssueTrackerKind): Promise<boolean> {
-    return TRACKER_GRAMMARS[kind].tokenShape((await this.deps.clipboard.read()).trim()) === 'known';
+  openTokenPage(target: TokenPageTarget): void {
+    const tracker = this.trackerOf(target);
+    if (!tracker) return;
+    this.tokenPagesOpened.add(tokenPageKey(tracker.kind, tracker.server));
+    this.deps.openExternal(TRACKER_GRAMMARS[tracker.kind].tokenPageUrl(tracker.server));
+  }
+
+  async clipboardHoldsToken(target: TokenPageTarget): Promise<boolean> {
+    const tracker = this.trackerOf(target);
+    if (!tracker || !this.tokenPagesOpened.has(tokenPageKey(tracker.kind, tracker.server))) return false;
+    return TRACKER_GRAMMARS[tracker.kind].tokenShape((await this.deps.clipboard.read()).trim()) === 'known';
   }
 
   async startDeviceSignIn(request: RepositorySignIn): Promise<DeviceSignIn | { failure: SignInFailure }> {
@@ -208,6 +224,13 @@ export class IssueTrackers {
     return reads;
   }
 
+  /** The tracker a token page is for: a link's, read here, or a kept connection's. */
+  private trackerOf(target: TokenPageTarget): { kind: IssueTrackerKind; server: string } | null {
+    if ('connectionId' in target) return this.deps.store.connection(target.connectionId) ?? null;
+    const reading = this.readLink(target.link);
+    return 'failure' in reading ? null : reading;
+  }
+
   private readLink(link: string): RecognizedLink | { failure: SignInFailure } {
     const reading = recognizeTrackerLink(link);
     if (!isRecognizedLink(reading)) return { failure: { reason: 'notAnIssueLink', ...('notAnIssue' in reading && { what: reading.notAnIssue }) } };
@@ -215,8 +238,12 @@ export class IssueTrackers {
     return reading;
   }
 
-  /** The token a sign-in uses, trimmed: typed, or read from the clipboard here, never from the window. */
-  private async credentialOf(kind: IssueTrackerKind, source: TokenSource, email: string | undefined): Promise<TrackerCredential | { failure: SignInFailure }> {
+  /**
+   * The token a sign-in uses, trimmed: typed, or read from the clipboard here, never from the window, and only for a
+   * server whose token page main opened.
+   */
+  private async credentialOf({ kind, server }: { kind: IssueTrackerKind; server: string }, source: TokenSource, email: string | undefined): Promise<TrackerCredential | { failure: SignInFailure }> {
+    if ('copied' in source && !this.tokenPagesOpened.has(tokenPageKey(kind, server))) return { failure: { reason: 'tokenShape' } };
     const token = ('copied' in source ? await this.deps.clipboard.read() : source.token).trim();
     const shape = TRACKER_GRAMMARS[kind].tokenShape(token);
     if (shape === 'none' || ('copied' in source && shape !== 'known')) return { failure: { reason: 'tokenShape' } };
@@ -291,4 +318,8 @@ export class IssueTrackers {
   private announce(): void {
     this.deps.changed(this.setup());
   }
+}
+
+function tokenPageKey(kind: IssueTrackerKind, server: string): string {
+  return `${kind} ${server.toLowerCase()}`;
 }

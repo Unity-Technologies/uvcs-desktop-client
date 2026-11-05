@@ -1,4 +1,4 @@
-import type { DeviceSignIn, IssueRead, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInOutcome, TokenSource } from '../domain/issueTrackers';
+import type { DeviceSignIn, IssueRead, IssueTrackerSetup, SignInFailure, SignInOutcome, TokenSource } from '../domain/issueTrackers';
 
 /** A sign-in for a repository, from a link to one of its tracker's issues: main reads the link itself. */
 export interface RepositorySignIn {
@@ -9,6 +9,9 @@ export interface RepositorySignIn {
   /** Jira Cloud's account email, which its token goes with. */
   email?: string;
 }
+
+/** Whose token page: a link's tracker, or a connection's (signing in again). */
+export type TokenPageTarget = { link: string } | { connectionId: string };
 
 /**
  * Issue trackers (docs/features/issue-trackers.md). The trackers are reached from main only; no credential ever comes
@@ -24,8 +27,13 @@ export interface IssueTrackersApi {
   signInAgain(request: { connectionId: string; email?: string; source: TokenSource }): Promise<SignInOutcome>;
   /** Tries a connection's kept credential once more (`whoAmI`), before asking for a new one. */
   retrySignIn(connectionId: string): Promise<SignInOutcome>;
-  /** Whether the clipboard holds a token shaped as this tracker's: yes or no, never the token. */
-  clipboardHoldsToken(kind: IssueTrackerKind): Promise<boolean>;
+  /**
+   * Opens the tracker's token page in the browser, from main: main remembers the server for the session, and offers a
+   * token copied from the clipboard (`clipboardHoldsToken`, `{ copied: true }`) to that server only.
+   */
+  openTokenPage(target: TokenPageTarget): Promise<void>;
+  /** Whether the clipboard holds a token shaped as the tracker's, whose page main opened: yes or no, never the token. */
+  clipboardHoldsToken(target: TokenPageTarget): Promise<boolean>;
 
   /** Starts GitHub's device flow: the code the user enters on the page it names. */
   startDeviceSignIn(request: RepositorySignIn): Promise<DeviceSignIn | { failure: SignInFailure }>;

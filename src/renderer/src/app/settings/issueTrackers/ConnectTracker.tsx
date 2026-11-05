@@ -118,7 +118,7 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
       {method === 'deviceCode' ? (
         <DeviceSignIn repository={repository} linkText={linkText} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setMethod('token')} />
       ) : (
-        <TokenSignIn request={{ repository, link: linkText }} link={link} trackerName={step.trackerName} needsEmail={step.needsEmail} failure={failure} onOutcome={finish} />
+        <TokenSignIn request={{ repository, link: linkText }} pageTarget={{ link: linkText }} link={link} trackerName={step.trackerName} needsEmail={step.needsEmail} failure={failure} onOutcome={finish} />
       )}
       {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
     </div>

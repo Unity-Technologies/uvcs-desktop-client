@@ -389,12 +389,13 @@ beside the button.
 
 A masked field paste works in, as people know it:
 
-- **"Create a token"** opens the tracker's page, filled in where it allows: GitHub's
+- **"Create a token"** has main open the tracker's page (`openTokenPage`), filled in where it allows: GitHub's
   `<server>/settings/tokens/new?scopes=repo&description=UVCS%20Desktop`, Atlassian's
-  `https://id.atlassian.com/manage-profile/security/api-tokens`.
+  `https://id.atlassian.com/manage-profile/security/api-tokens`. Main remembers that server for the session.
 - **Back in the window** after that page opened, the step asks main whether the clipboard holds a token shaped as the
   tracker's (`clipboardHoldsToken`): main answers yes or no, never the token, and the step offers "Use the copied
-  token", which main reads itself (`{ copied: true }`).
+  token", which main reads itself (`{ copied: true }`). Both hold only for a server whose token page main opened, so
+  a window can't have the clipboard's token sent to a server of its choosing.
 - **Pasting** a token of a known shape (`submitsOnPaste`) signs in at once; Enter or "Sign in" otherwise. A text of no
   token's shape is never sent ("That doesn't look like a GitHub token").
 - The token goes to main once, on submit, and never back; the field forgets it. Signed in, main clears the clipboard
@@ -445,8 +446,10 @@ The registries' `Record`s fail to compile until 2 and 3 exist.
 - **Reading the token only from the clipboard, in main**: it kept the token out of the window entirely, but a hidden
   ⌘V a paste target took over was unlike any sign-in people know, and no field was there for the keyboard or a
   password manager. A masked field, with the copied token offered in one click.
-- **A server sent by the window at sign-in**: a window taken over could send the token to its own host. Main reads the
-  pasted link itself, and "Sign in again" takes the server from the store.
+- **A copied token sent wherever a window says**: any address shaped `https://<host>/<owner>/<repo>/issues/1` reads as
+  GitHub Enterprise Server, so a window taken over could have main send the clipboard's token to its own host. Main
+  sends a copied token only to a server whose token page it opened itself, and "Sign in again" takes the server from
+  the store. A token the user types or pastes in the field goes where the link they pasted names, as they chose.
 - **A generic `fetch` for the renderer**, or the renderer calling trackers itself: the renderer is untrusted and its
   Content-Security-Policy allows no connection out. Typed methods in main only.
 - **`net.fetch` as it is**: it sends the default session's cookies. A session of its own.

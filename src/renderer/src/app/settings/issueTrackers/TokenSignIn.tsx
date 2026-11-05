@@ -1,9 +1,8 @@
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
-import type { RepositorySignIn } from '@shared/api/issueTrackers';
+import type { RepositorySignIn, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { SignInFailure, SignInOutcome, TokenSource } from '@shared/domain/issueTrackers';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
-import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
@@ -14,6 +13,8 @@ import styles from './IssueTrackerPane.module.css';
 interface TokenSignInProps {
   /** The repository and link a first sign-in binds; none when signing in again (`signIn` says how). */
   request: Omit<RepositorySignIn, 'email'>;
+  /** Whose token page main opens, and for whom it offers a token copied there. */
+  pageTarget: TokenPageTarget;
   link: Pick<RecognizedLink, 'kind' | 'server'>;
   trackerName: string;
   needsEmail: boolean;
@@ -32,7 +33,7 @@ interface TokenSignInProps {
  * tracker allows; back in the window, a token copied there is offered in one click, main telling only whether there
  * is one. The token goes to main once, on submit, and the field forgets it.
  */
-export function TokenSignIn({ request, link, trackerName, needsEmail, failure, onOutcome, signIn, keptEmail }: TokenSignInProps) {
+export function TokenSignIn({ request, pageTarget, link, trackerName, needsEmail, failure, onOutcome, signIn, keptEmail }: TokenSignInProps) {
   // Filled in until the user types one: the `cm` user may be read after the step shows.
   const cmUser = usePlaceUser();
   const [typedEmail, setEmail] = useState<string | null>(null);
@@ -40,7 +41,7 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [pageOpened, setPageOpened] = useState(false);
-  const copiedTokenReady = useCopiedToken(link.kind, pageOpened);
+  const copiedTokenReady = useCopiedToken(pageTarget, pageOpened);
   const ready = (!needsEmail || email.trim() !== '') && !busy;
 
   const submit = async (source: TokenSource): Promise<void> => {
@@ -54,7 +55,7 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
   };
   const openTokenPage = (): void => {
     setPageOpened(true);
-    void api.system.openExternal(TRACKER_GRAMMARS[link.kind].tokenPageUrl(link.server));
+    void api.issueTrackers.openTokenPage(pageTarget);
   };
   const pasted = (event: ClipboardEvent<HTMLInputElement>): void => {
     const text = event.clipboardData.getData('text');
@@ -117,19 +118,19 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
  * Whether a token shaped as this tracker's is on the clipboard, asked of main when the window comes back after the
  * token page opened: main answers yes or no, never the token.
  */
-function useCopiedToken(kind: RecognizedLink['kind'], pageOpened: boolean): boolean {
+function useCopiedToken(pageTarget: TokenPageTarget, pageOpened: boolean): boolean {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!pageOpened) return;
     let current = true;
     const check = (): void => {
-      void api.issueTrackers.clipboardHoldsToken(kind).then((holds) => current && setReady(holds));
+      void api.issueTrackers.clipboardHoldsToken(pageTarget).then((holds) => current && setReady(holds));
     };
     window.addEventListener('focus', check);
     return () => {
       current = false;
       window.removeEventListener('focus', check);
     };
-  }, [kind, pageOpened]);
+  }, [JSON.stringify(pageTarget), pageOpened]);
   return ready;
 }
