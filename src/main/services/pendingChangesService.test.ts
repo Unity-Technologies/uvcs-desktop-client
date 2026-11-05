@@ -6,6 +6,7 @@ import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
+import { runsLong } from '../cm/longCommands';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus, recordsOutput } from '../cm/testing/cmOutput';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
@@ -385,6 +386,19 @@ describe('changelists', () => {
       ['changelist', 'Default', 'add', at('a.cs')],
       ['changelist', 'delete', 'UI'],
     ]);
+  });
+
+  // A changelist header's "Move to changelist" moves all its changes. `CmClient` gives a command of more than a few
+  // paths a process of its own (`runsLong`), and one too long for a command line a `cm shell` of its own: never split.
+  it('moves a whole changelist of thousands of items in one command, which runs on its own', async () => {
+    const { service, commands } = pendingChanges({ changelist: '' });
+    const paths = Array.from({ length: 5000 }, (_, index) => `Assets/Textures/Rock_${index}.png`);
+
+    await service.moveToChangelist(WORKSPACE, 'Art', paths);
+
+    expect(commands).toHaveLength(1);
+    expect(commands[0]!.args).toEqual(['changelist', 'Art', 'add', ...paths.map((path) => at(path))]);
+    expect(runsLong(commands[0]!.args)).toBe(true);
   });
 });
 

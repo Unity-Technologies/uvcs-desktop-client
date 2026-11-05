@@ -1,10 +1,14 @@
-import { ChevronRight, ListChecks, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
+import { StatusGroupBadge } from '../../components/StatusBadge';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
+import { itemsIn, rangeLength } from '../../lib/itemRange';
+import { folderItemCount } from '../../lib/pathTree';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { ReviewStatus } from '../review/reviewStatus';
@@ -30,27 +34,40 @@ interface GroupRowContentProps {
   row: GroupRow;
   checkState: CheckState | null;
   onToggleIncluded: ToggleIncluded;
-  changelistMenu: (changelist: Changelist) => MenuEntry[];
+  changelistMenu: (changelist: Changelist | null) => MenuEntry[];
+  /** Whether it has a menu, and so a "…" (`changelistHasMenu`): cheap, unlike building the menu. */
+  hasChangelistMenu: (changelist: Changelist | null) => boolean;
 }
 
-/** A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart from the folders under it. */
-export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: GroupRowContentProps) {
+/**
+ * A changelist's or a status group's header: its check, icon, name, actions and count. A changelist's icon, as in the
+ * official client, sets it apart from the folders under it; a status group's is its status letter, as its rows have it.
+ * Every changelist has its "…", the default one too, unless nothing in its menu applies; the menu is built only when it
+ * opens. A status group has none: right-clicking it opens its changes' menu.
+ */
+export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu, hasChangelistMenu }: GroupRowContentProps) {
+  // The changelist the header is, null for the default one; undefined for a status group.
+  const changelist = row.group.kind === 'changelist' ? (row.group.changelist ?? null) : undefined;
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
-      <ListChecks size={14} className={styles.groupIcon} aria-hidden />
-      <span className={styles.groupLabel} data-tip={row.group?.description}>
+      {row.group.kind === 'status' ? (
+        <StatusGroupBadge tone={row.group.tone} />
+      ) : (
+        <ClipboardList size={14} className={styles.groupIcon} aria-hidden />
+      )}
+      <span className={styles.groupLabel} data-tip={changelist?.description}>
         {row.label}
       </span>
-      {row.group && (
-        <ActionDropdownMenu entries={changelistMenu(row.group)}>
+      {changelist !== undefined && hasChangelistMenu(changelist) && (
+        <ActionDropdownMenu entries={() => changelistMenu(changelist)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>
         </ActionDropdownMenu>
       )}
-      <span className={styles.count}>{row.items.length}</span>
+      <span className={styles.count}>{rangeLength(row.held)}</span>
     </>
   );
 }
@@ -76,12 +93,12 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
       <TreeFolderLabel
         name={row.name}
         collapsed={row.collapsed}
-        count={row.items.length - (row.item ? 1 : 0)}
+        count={folderItemCount(row)}
         before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
-            {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
+            {hasMeta && <MetaTag takenAlong />}
+            {reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(itemsIn(row.held))} />}
           </>
         }
         status={row.item && changeStatus(row.item)}
@@ -109,7 +126,7 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         faded={reviewStatus === 'reviewed'}
         extras={
           <>
-            {hasMeta && <ItemTag>+ meta</ItemTag>}
+            {hasMeta && <MetaTag takenAlong />}
             {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
             {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
             {lock && <LockMark lock={lock} />}

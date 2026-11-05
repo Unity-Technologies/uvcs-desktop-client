@@ -3,13 +3,16 @@ import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
 import { toggleDetailsInFront } from '../../components/detailsInFront';
+import { TimelineIcon } from '../../components/TimelineIcon';
+import { useBranchExplorerPreferences } from '../../features/branchExplorer/branchExplorerStore';
+import { timelineToggle } from '../../features/branchExplorer/timeline/timelineToggle';
 import { openOwnRepositoryPermissions } from '../../features/permissions/openPermissions';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useCommands, type Command } from '../commands/commandStore';
 import { viewCommands } from '../commands/viewCommands';
-import { navigation } from '../navigation/navigationStore';
+import { navigation, useNavigation } from '../navigation/navigationStore';
 import { viewsOf } from '../navigation/viewRegistry';
 import { invalidatePlace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
@@ -38,6 +41,9 @@ export function usePlaceCommands(): void {
   const reviewing = reviewModeWorkspaces.includes(placeId(place));
   const updateSettings = useUpdateSettings();
   const commandLogOpen = useCommandLogStore((state) => state.open);
+  const timelineShown = useBranchExplorerPreferences((state) => state.showTimeline);
+  const inBranchExplorer = useNavigation((state) => state.view === 'branchExplorer' && state.pages.length === 0);
+  const timeline = useMemo(() => timelineToggle(timelineShown, inBranchExplorer), [timelineShown, inBranchExplorer]);
 
   const commands = useMemo<Command[]>(
     () => [
@@ -66,6 +72,18 @@ export function usePlaceCommands(): void {
         keywords: ['panel', 'inspector', 'collapse', 'expand'],
         shortcut: hotkey('toggleDetails'),
         run: toggleDetailsInFront,
+      },
+      {
+        id: 'branchExplorer.timeline',
+        group: 'Branch Explorer',
+        label: timeline.label,
+        icon: TimelineIcon,
+        keywords: ['minimap', 'overview', 'activity'],
+        shortcut: hotkey('graphTimeline'),
+        run: () => {
+          useBranchExplorerPreferences.getState().set({ showTimeline: timeline.show });
+          if (timeline.opensBranchExplorer) navigation.goToView('branchExplorer');
+        },
       },
       { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: goHome },
       {
@@ -119,7 +137,7 @@ export function usePlaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [place, goHome, openWorkspace, theme, reviewing, commandLogOpen, updateSettings],
+    [place, goHome, openWorkspace, theme, reviewing, commandLogOpen, timeline, updateSettings],
   );
 
   useCommands(commands);

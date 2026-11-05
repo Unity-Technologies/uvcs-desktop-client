@@ -1,5 +1,6 @@
 import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
-import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -11,14 +12,13 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
 import { editedFileIn, typesIntoDiff } from './canEditInPlace';
-import { ChangeNavigator } from './ChangeNavigator';
+import { DiffFrameHostContext, diffContentsKey, type DiffFrameHost } from './diffFrameHost';
 import type { ChangeView } from './changeView';
-import { diffBodyOf } from './diffBody';
+import { diffBodyOf, stepsCanCome } from './diffBody';
 import { diffDiscards } from './diffDiscards';
 import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
-import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { hasLineTooLongToDraw } from './longLines';
@@ -38,7 +38,6 @@ import { useChangeNavigation } from './useChangeNavigation';
 import type { DiffContents } from './useDiffContents';
 import { useFileBuffer } from './useFileBuffer';
 import { useLineDiffs } from './useLineDiffs';
-import { goesSomewhere } from './useStepNavigation';
 import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 import { WholeFileNotice } from './WholeFileNotice';
 
@@ -56,9 +55,8 @@ interface LoadedFileDiffProps {
   place: Place;
   contents: DiffContents;
   fileName: string;
-  title?: ReactNode;
   identicalDescription?: string;
-  /** Controls about what to compare, first in the toolbar of a text diff. */
+  /** Controls about what to compare, in the toolbar of every diff (a binary file, an image or a model has its `.meta` too), right before the change arrows. */
   compareControls?: ReactNode;
   /** Discarding changes brought the workspace file back to its loaded revision. */
   onMatchesBase?: () => void;
@@ -70,7 +68,7 @@ interface LoadedFileDiffProps {
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ place, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editedFile = editedFileIn(place, contents.original, contents.modified);
   const editableInPlace = editedFile !== null;
@@ -97,9 +95,10 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const findSibling = useContext(SiblingFinderContext);
   // Where neither side's model was beside it after all (in History, a .meta moved since: `metaModelView`), the .meta is
   // its text, as any other, arrows and notices included; told by ModelMetaDiff once read, for these versions only.
-  const metaVersions = JSON.stringify([contents.original, contents.modified]);
+  // The versions shown, as a key: what a model's absence is told for, and whose this diff's navigation is.
+  const versionsKey = diffContentsKey(contents.original, contents.modified);
   const [modelAbsentFor, setModelAbsentFor] = useState<string | null>(null);
-  const modelFound = modelAbsentFor !== metaVersions;
+  const modelFound = modelAbsentFor !== versionsKey;
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
@@ -110,12 +109,24 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const wholeFile = typedIntoWhole(editable, diffs.saved);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
   const viewControls = !metaAsModel && showsLines(presentation, editable);
+  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
-  const frame = useRef<HTMLDivElement>(null);
+  // The header and its arrows are the frame's around it (`SteppedDiffFrame`), which outlives this diff: it hands them
+  // its navigation each time it renders, saying whose it is, and draws its controls into the header.
+  const host = useDiffFrameHost();
   const changeView = useRef<ChangeView>(null);
-  const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
-  const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
+  const stepsCome = stepsCanCome(bodyKind, { wholeFile, stepsThroughChanges });
+  const steppedDiff = stepsCome ? (diffs.current?.meta ?? null) : null;
+  // Presses kept for this file (the header's, while it was read, then its own until it opened) wait in the frame's
+  // queue; it takes them once opened, while it is the selected file's diff, not a previous one kept on screen.
+  // The selected file's diff, not a previous one kept on screen while the next is read: by the versions it shows.
+  const selected = versionsKey === host.requestedKey;
+  const kept = useMemo(() => ({ queue: host.queue, takes: selected }), [host.queue, selected]);
+  const navigation = useChangeNavigation(steppedDiff, changeView, host.frame, fileName, { active: selected, noStepsComing: !stepsCome, kept });
+  const stepsOwn = steppedDiff !== null;
+  useLayoutEffect(() => host.publish({ navigation, stepsOwn, key: versionsKey }));
+  useLayoutEffect(() => () => host.publish(null), [host.publish]);
   const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
   const discards = diffDiscards(place, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
@@ -128,12 +139,13 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
     <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
   );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
-  // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
-  // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them.
+  // of the others. The change arrows aren't controls: the frame draws them last, at the header's right edge, in the
+  // same place for every file (`DiffViewerFrame`). The compare controls (`.meta`, Since review) come last of these, so
+  // they stay put too whatever controls a file has (a text file's, an image's or a binary file's none): toggling a
+  // binary file's `.meta` leaves the button under the pointer.
   const controls = (
     <>
       {dirty && <UnsavedEditsControls buffer={buffer} />}
-      {isText && compareControls}
       {viewControls && (
         <TextViewControls
           diff={diffs.current}
@@ -149,7 +161,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
       {metaAsModel && <ModelModeSwitch />}
       {representationSwitch}
       {metaModel !== null && <RepresentationSwitch value={metaAsModel ? 'model' : 'text'} rendered="model" onChange={(value) => setRepresentation('meta', value)} />}
-      {navigator}
+      {compareControls}
     </>
   );
 
@@ -171,6 +183,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
         onDiscard={discards?.onDiscard}
         onUndoDiscard={discards?.onUndoDiscard}
         changeViewRef={changeView}
+        changes={navigation}
         onViewScroll={navigation.onViewScroll}
         wrapsLongLines={wrapsLongLines}
       />
@@ -188,7 +201,6 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   );
 
   let body: ReactNode;
-  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   switch (bodyKind) {
     case 'metaModel':
       body = (
@@ -198,7 +210,7 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
-            onModelAbsent={() => setModelAbsentFor(metaVersions)}
+            onModelAbsent={() => setModelAbsentFor(versionsKey)}
           />
         </Suspense>
       );
@@ -279,13 +291,21 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
 
   const purgedLine = purgedNotice(purged);
   return (
-    <DiffViewerFrame ref={frame} title={title} controls={controls}>
+    <>
+      {host.controls && createPortal(controls, host.controls)}
       {purgedLine && (
         <DiffNotice tone="info" icon={<ArchiveX size={13} />}>
           {purgedLine}
         </DiffNotice>
       )}
       {body}
-    </DiffViewerFrame>
+    </>
   );
+}
+
+/** The header this diff draws into; a diff is always drawn in one (`SteppedDiffFrame`). */
+function useDiffFrameHost(): DiffFrameHost {
+  const host = useContext(DiffFrameHostContext);
+  if (!host) throw new Error('LoadedFileDiff is drawn inside a SteppedDiffFrame');
+  return host;
 }

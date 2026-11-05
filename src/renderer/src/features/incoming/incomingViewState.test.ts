@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingChanges } from '@shared/domain/incoming';
-import { incomingHeaderSubtitle, incomingRefreshFailed, incomingViewState } from './incomingViewState';
+import { incomingDiffs, incomingHeaderSubtitle, incomingRefreshFailed, incomingViewState } from './incomingViewState';
+
+describe('incomingDiffs', () => {
+  it('has no diff to keep expanded once up to date, off a branch, or failing with nothing read', () => {
+    expect(incomingDiffs('upToDate')).toBe('none');
+    expect(incomingDiffs('notOnBranch')).toBe('none');
+    expect(incomingDiffs('failed')).toBe('none');
+  });
+
+  it('is reading, or has changes coming in to diff', () => {
+    expect(incomingDiffs('reading')).toBe('reading');
+    expect(incomingDiffs('incoming')).toBe('some');
+  });
+});
 
 const details = { changesets: [], moreChangesets: false, files: [], conflicts: [], blockedPaths: [] };
 const behind: IncomingChanges = {

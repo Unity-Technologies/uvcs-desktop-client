@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { FileTreeCell } from '../../components/FileTreeCell';
 import { FileTreeList } from '../../components/FileTreeList';
-import { ItemTag } from '../../components/ItemTag';
+import type { FileTreeFolding } from '../../components/fileTreeFolding';
+import { MetaTag } from '../../components/MetaTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
-import type { PathTreeRow } from '../../lib/pathTree';
+import { folderItemCount, type PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
@@ -21,6 +22,8 @@ interface MergeItemListProps {
   progress: MergeProgress;
   tree: boolean;
   toggleCollapsed: (key: string) => void;
+  /** Closing or opening every group and folder, from the view menu. */
+  folding: FileTreeFolding | null;
   /** What each repository path of the merge is, for its icon (`mergeItemTypes`). */
   typeOf: (path: string) => ItemType;
   labels: MergeLabels;
@@ -36,13 +39,13 @@ interface MergeItemListProps {
 }
 
 /** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
-export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, noMatches }: MergeItemListProps) {
+export function MergeItemList({ rows, progress, tree, toggleCollapsed, folding, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, noMatches }: MergeItemListProps) {
 
   const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
     if (row.type === 'folder') {
       return (
         <FileTreeCell depth={level} tree={tree} folder>
-          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={row.items.length - (row.item ? 1 : 0)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
+          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={folderItemCount(row)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
         </FileTreeCell>
       );
     }
@@ -58,6 +61,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       rows={rows}
       tree={tree}
       toggleCollapsed={toggleCollapsed}
+      folding={folding}
       renderItem={renderItem}
       groupTip={(group) => MERGE_GROUP_TIPS[group]}
       groupProgress={(group, items) => mergeGroupProgress(group, items, progress)}
@@ -119,7 +123,7 @@ function MergeItemRow({
           itemType={typeOf(item.change.path)}
           oldPath={item.change.oldPath && item.change.oldPath.replace(/^\//, '')}
           status={{ tone: changeTone(item.change), label: describeChange(item.change, labels) }}
-          extras={hasMeta ? <ItemTag>+ meta</ItemTag> : undefined}
+          extras={hasMeta ? <MetaTag /> : undefined}
         />
       );
   }

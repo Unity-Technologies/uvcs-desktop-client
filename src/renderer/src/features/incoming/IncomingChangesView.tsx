@@ -9,7 +9,8 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
-import { incomingHeaderSubtitle, incomingViewState } from './incomingViewState';
+import { incomingDiffs, incomingHeaderSubtitle, incomingViewState } from './incomingViewState';
+import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { useIncomingChanges } from './useIncomingChanges';
 import styles from './IncomingChangesView.module.css';
 
@@ -46,6 +47,7 @@ export function IncomingChangesView() {
   // The panes keep their layout while reading and once up to date; not being on a branch, or failing with nothing
   // read, takes the body.
   const state = incomingViewState(incoming, isPending, error !== null);
+  useCollapseWithHost(incomingDiffs(state.kind));
   if (state.kind === 'reading') {
     return (
       <>

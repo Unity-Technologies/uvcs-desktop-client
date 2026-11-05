@@ -32,4 +32,10 @@ describe('paneRole', () => {
     expect(paneRole('second', 'first', 'second')).toBe('hidden');
     expect(paneRole('first', 'first', 'second')).toBe('rest');
   });
+
+  it('keeps a stowed pane mounted out of sight and gives the other the whole split (the files beside an expanded diff)', () => {
+    expect(paneRole('first', 'first', undefined, 'first')).toBe('stowed');
+    expect(paneRole('second', 'first', undefined, 'first')).toBe('rest');
+    expect(paneRole('second', 'second', undefined, 'first')).toBe('rest');
+  });
 });

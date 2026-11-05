@@ -1,11 +1,11 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { singleSelection, type SelectionState } from '../../lib/selection';
-import { isControlled } from './changeCategories';
+import { changelistNameOf, isControlled } from './changeCategories';
 import type { ChangeRow } from './changeRows';
 
 /** The changes that would actually move into `changelist` (null: the default one): controlled ones not already in it. */
 export function changesToMove(changes: PendingChange[], changelist: string | null): PendingChange[] {
-  return changes.filter((change) => isControlled(change) && (change.changelist ?? null) !== changelist);
+  return changes.filter((change) => isControlled(change) && changelistNameOf(change) !== changelist);
 }
 
 /**
@@ -29,7 +29,8 @@ export function changelistHeadersOf(rows: ChangeRow[]): Map<string, ChangeRow & 
   const headers = new Map<string, ChangeRow & { type: 'group' }>();
   let header: (ChangeRow & { type: 'group' }) | undefined;
   for (const row of rows) {
-    if (row.type === 'group') header = row;
+    // A changelist's header, not a status group's inside it: the whole changelist takes the drop.
+    if (row.type === 'group' && row.depth === 0) header = row;
     if (header) headers.set(row.key, header);
   }
   return headers;

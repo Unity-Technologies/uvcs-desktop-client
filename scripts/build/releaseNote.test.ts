@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readReleaseNote } from './releaseNote';
+import { checkPullRequestBody, misplacedPicture, readReleaseNote } from './releaseNote';
 
 /** A pull request's body as the template leaves it, with `section` as its release note. */
 const body = (section: string) =>
@@ -152,5 +152,114 @@ describe('a release note CI refuses', () => {
   it('says there is none, and holds a note or more than one paragraph', () => {
     expect(problem(body('None: tooling\n\n### New: Tools\n\nIn Settings.'))).toMatch(/one line/);
     expect(problem(body('None: tooling\n\nAnd more.'))).toMatch(/one line/);
+  });
+});
+
+interface BodyParts {
+  note?: string;
+  behavior?: string;
+  checklist?: string;
+  /** The last section's text, or null for a body without it. */
+  fixedIssues?: string | null;
+  /** False for a body a person wrote, without the agent's closing line. */
+  closingLine?: boolean;
+  after?: string;
+}
+
+/** A body shaped like an agent's: every section of the template, then the closing line. */
+const pullRequest = ({ note = '', behavior = '', checklist = '', fixedIssues = 'None.', closingLine = true, after = '' }: BodyParts = {}) =>
+  [
+    '## What does this pull request do?\n\nMove branches up and down.',
+    `## Release note\n\n### New: Move branches up and down in the Branch Explorer\n\nRight-click a branch and choose **Position**.${note}`,
+    '## Current behavior\n\nThe Branch Explorer chooses every row.',
+    `## Behavior with this pull request\n\nA branch's menu has a **Position** submenu.${behavior}`,
+    `## Checklist\n\n- [x] \`npm test\` passes.${checklist}`,
+    ...(fixedIssues === null ? [] : [`## Fixed issues\n\n${fixedIssues}`]),
+    ...(closingLine ? ['🤖 Generated with [Claude Code](https://claude.com/claude-code)'] : []),
+  ].join('\n\n') + after + '\n';
+
+const cropped = '\n\n![The Position submenu](https://github.com/user-attachments/assets/1)';
+const wide = '\n\n![The Branch Explorer with a branch moved](https://github.com/user-attachments/assets/2)';
+
+describe("a pull request's pictures", () => {
+  it('may be none', () => {
+    expect(misplacedPicture(pullRequest())).toBeNull();
+  });
+
+  it('may sit in the release note', () => {
+    expect(misplacedPicture(pullRequest({ note: cropped }))).toBeNull();
+    expect(misplacedPicture(pullRequest({ note: cropped, behavior: wide }))).toBeNull();
+  });
+
+  it('may be the reviewers\' alone, under "Behavior with this pull request", since the note decides its own', () => {
+    expect(misplacedPicture(pullRequest({ behavior: wide }))).toBeNull();
+  });
+
+  it("are refused after the closing line, where gh appends an attachment the body doesn't reference", () => {
+    expect(misplacedPicture(pullRequest({ after: `\n${wide}` }))).toMatch(/end of the body/);
+    expect(misplacedPicture(pullRequest({ note: cropped, after: `\n${wide}` }))).toMatch(/end of the body/);
+  });
+
+  it('are refused in the last section, where a body without a closing line ends', () => {
+    expect(misplacedPicture(pullRequest({ closingLine: false, after: `\n${wide}` }))).toMatch(/end of the body/);
+    expect(misplacedPicture(pullRequest({ note: cropped, fixedIssues: `None.${wide}` }))).toMatch(/end of the body/);
+  });
+
+  it('may follow a body with neither a closing line nor "Fixed issues", in its last section', () => {
+    expect(misplacedPicture(pullRequest({ behavior: wide, fixedIssues: null, closingLine: false }))).toBeNull();
+  });
+
+  it('take "Generated with" before the last section as words, not the closing line', () => {
+    const checklist = `\n\nThe models:\n\n- Generated with the models.sh sandbox, then seen in the app.${wide}`;
+
+    expect(misplacedPicture(pullRequest({ note: cropped, checklist }))).toBeNull();
+  });
+
+  it('count a video, which gh appends as its bare link', () => {
+    const video = '\n\nhttps://github.com/user-attachments/assets/3f0c2a9e-7b1d-4c55-9e0a-1d2b3c4d5e6f';
+
+    expect(misplacedPicture(pullRequest({ behavior: video }))).toBeNull();
+    expect(misplacedPicture(pullRequest({ after: `\n${video}` }))).toMatch(/end of the body/);
+  });
+
+  it('are refused when a local file was referenced but never attached', () => {
+    expect(misplacedPicture(pullRequest({ note: '\n\n![The Position submenu](./position.png)' }))).toMatch(/gh --attach/);
+    expect(misplacedPicture(pullRequest({ behavior: '\n\n![The menu](C:\\shots\\menu.png)' }))).toMatch(/gh --attach/);
+  });
+
+  it("count an HTML picture, as GitHub's editor writes one", () => {
+    const html = '\n\n<img width="800" alt="The Branch Explorer" src="https://github.com/user-attachments/assets/2" />';
+
+    expect(misplacedPicture(pullRequest({ after: `\n${html}` }))).toMatch(/end of the body/);
+  });
+
+  it('ignore pictures written as code or in comments, as docs show them', () => {
+    const shown = [
+      '\n\nReference it as `![What it shows](./shot.png)` or ``![What it shows](./shot.png)``.',
+      '```md\n![What it shows](./shot.png)\n```',
+      '<!-- ![What it shows](./shot.png) -->',
+    ].join('\n\n');
+
+    expect(misplacedPicture(pullRequest({ fixedIssues: `None.${shown}`, after: `\n${shown}` }))).toBeNull();
+  });
+
+  it('count a picture beside code on the same line', () => {
+    expect(misplacedPicture(pullRequest({ after: '\n\n`./shot.png` ![The Position submenu](https://github.com/user-attachments/assets/1)' }))).toMatch(
+      /end of the body/,
+    );
+  });
+
+  it('read a body written on Windows', () => {
+    expect(misplacedPicture(pullRequest({ after: `\n${wide}` }).replace(/\n/g, '\r\n'))).toMatch(/end of the body/);
+  });
+
+  it("are checked once the note reads, so the note's own problem comes first", () => {
+    expect(checkPullRequestBody(pullRequest({ after: `\n${wide}` }))).toEqual({ problem: expect.stringMatching(/end of the body/) });
+    expect(checkPullRequestBody(`## Release note\n\n### Feature: Positions\n\nMove branches.\n\n## Fixed issues${wide}`)).toEqual({
+      problem: expect.stringMatching(/New:, Improved: or Fixed:/),
+    });
+    expect(checkPullRequestBody(pullRequest({ note: cropped }))).toEqual({
+      note: expect.objectContaining({ kind: 'New', title: 'Move branches up and down in the Branch Explorer' }),
+    });
   });
 });

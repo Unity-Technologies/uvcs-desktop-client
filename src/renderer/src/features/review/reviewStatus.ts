@@ -1,3 +1,4 @@
+import { forEachIn, wholeList, type ItemRange } from '../../lib/itemRange';
 import type { MetaPairs } from '../../lib/unityMetaPairs';
 
 export type ReviewStatus = 'unreviewed' | 'reviewed' | 'changedSinceReview';
@@ -36,8 +37,20 @@ export function reviewableOf<T>(items: readonly T[], statusOf: ReviewStatusOf<T>
 }
 
 export function reviewProgress<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): ReviewProgress {
-  const reviewable = reviewableOf(items, statusOf);
-  return { total: reviewable.length, reviewed: reviewable.filter((item) => statusOf(item) === 'reviewed').length };
+  return reviewProgressIn(wholeList(items), statusOf);
+}
+
+/** The review progress of what a folder or a group holds, counted where it is: a folder at the top can hold a million. */
+function reviewProgressIn<T>(held: ItemRange<T>, statusOf: ReviewStatusOf<T>): ReviewProgress {
+  let total = 0;
+  let reviewed = 0;
+  forEachIn(held, (item) => {
+    const status = statusOf(item);
+    if (status === null) return;
+    total++;
+    if (status === 'reviewed') reviewed++;
+  });
+  return { total, reviewed };
 }
 
 /** Toggling a selection marks it all reviewed, unless all of it already is: then it clears the marks. */
@@ -46,15 +59,15 @@ export function shouldMarkReviewed<T>(items: readonly T[], statusOf: ReviewStatu
 }
 
 /** A folder's mark: reviewed once every file in it is; null when it holds nothing to review. */
-export function groupReviewStatus<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): ReviewStatus | null {
-  const { total, reviewed } = reviewProgress(items, statusOf);
+export function groupReviewStatus<T>(held: ItemRange<T>, statusOf: ReviewStatusOf<T>): ReviewStatus | null {
+  const { total, reviewed } = reviewProgressIn(held, statusOf);
   if (total === 0) return null;
   return reviewed === total ? 'reviewed' : 'unreviewed';
 }
 
 /** How far a folder's review went ("2/5") while it is under way: null before the first file and after the last. */
-export function partialReviewCount<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): string | null {
-  const { total, reviewed } = reviewProgress(items, statusOf);
+export function partialReviewCount<T>(held: ItemRange<T>, statusOf: ReviewStatusOf<T>): string | null {
+  const { total, reviewed } = reviewProgressIn(held, statusOf);
   return reviewed > 0 && reviewed < total ? `${reviewed}/${total}` : null;
 }
 

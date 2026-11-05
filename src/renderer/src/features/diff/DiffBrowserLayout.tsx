@@ -1,5 +1,8 @@
 import { useState, type ReactNode } from 'react';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { SplitPane } from '../../ui/SplitPane';
+import { Stowable } from '../../ui/Stowable';
 import styles from './DiffBrowserLayout.module.css';
 
 /** Where a `DiffBrowser` draws its list of files and its diff. */
@@ -26,15 +29,18 @@ interface DiffBrowserLayoutProps {
 export function DiffBrowserLayout({ aboveFiles, aboveDiff, children }: DiffBrowserLayoutProps) {
   const [files, setFiles] = useState<HTMLElement | null>(null);
   const [diff, setDiff] = useState<HTMLElement | null>(null);
+  const diffExpanded = useDiffExpanded();
   const filesSlot = <div ref={setFiles} className={styles.slot} />;
   const diffSlot = <div ref={setDiff} className={styles.slot} />;
 
   return (
-    <>
+    <ExpandableDiffContext.Provider value>
       <SplitPane
         initialSize={340}
         minSize={220}
         maxSize={640}
+        // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.
+        stowed={diffExpanded ? 'first' : undefined}
         // A list above the files that comes or goes (a branch read again gains its second changeset) moves the files'
         // slot, which mounts the browser again: rare enough to keep one plain layout per case.
         first={
@@ -47,7 +53,7 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children }: DiffBrows
         second={
           aboveDiff ? (
             <div className={styles.slot}>
-              {aboveDiff}
+              <Stowable stowed={diffExpanded}>{aboveDiff}</Stowable>
               {diffSlot}
             </div>
           ) : (
@@ -56,6 +62,6 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children }: DiffBrows
         }
       />
       {files && diff && children?.({ files, diff })}
-    </>
+    </ExpandableDiffContext.Provider>
   );
 }

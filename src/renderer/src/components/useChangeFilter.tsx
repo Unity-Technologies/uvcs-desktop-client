@@ -3,34 +3,29 @@ import { formatCount } from '../lib/text';
 import { FilterField } from '../ui/FilterField';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { FileListLayoutMenu } from './FileListLayoutMenu';
-import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
+import type { FileListViewOffer } from './fileListViewMenuModel';
+import { FileListViewMenu } from './FileListViewMenu';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, TONE_LABELS } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
-
-const TONE_LABELS: Record<StatusTone, string> = {
-  added: 'Added',
-  changed: 'Changed',
-  deleted: 'Deleted',
-  moved: 'Moved',
-  permissions: 'Only filesystem permissions',
-  private: 'Private',
-  conflict: 'Conflicts',
-  muted: 'Ignored, cloaked and hidden',
-};
 
 export interface ChangeFilterOptions {
   /** The list a view or page works on (Changes, a diff's files): its field takes ⌘F as every view's filter does. */
   isViewFilter?: boolean;
   /** Words a chip as the list's groups do (Incoming's "Conflicts with your changes"). */
   toneLabels?: Partial<Record<StatusTone, string>>;
-  /** At the row's end, after the List/Tree switch: the list's own modes (the review mode toggle). */
+  /** At the row's end, after the view menu: the list's own modes (the review mode toggle). */
   actions?: ReactNode;
+  /** The groupings the list's view menu offers (`FileListViewMenu`): by status unless said otherwise. */
+  viewOffer?: FileListViewOffer;
+  /** Changes' grouping by changelist turned on or off, from its view menu. */
+  onChangelistsChange?: (on: boolean) => void;
   /** The items are still being read: the field doesn't count them yet, and waits for them to filter anything. */
   reading?: boolean;
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
+const BY_STATUS: FileListViewOffer = { statusGroups: true };
 
 export interface ChangeFilterResult<T> {
   visible: T[];
@@ -38,20 +33,20 @@ export interface ChangeFilterResult<T> {
   query: string;
   /** Empties the text and turns every status chip off. */
   clear: () => void;
-  /** The filter field followed by one toggle chip per status, the List/Tree switch (`FileListLayoutMenu`) and the list's `actions`. */
+  /** The filter field followed by one toggle chip per status, the view menu (`FileListViewMenu`) and the list's `actions`. */
   bar: ReactNode;
 }
 
 /**
  * Filters a list of changed files by path and by status (A, M, D, R...), each file found by any of its statuses
- * (`statusTones`: a moved file that changed by C and M). Its bar also holds the List/Tree switch every list of
+ * (`statusTones`: a moved file that changed by C and M). Its bar also holds the view menu every list of
  * changed files shares, at the same place in each.
  */
 export function useChangeFilter<T>(
   items: T[],
   pathOf: (item: T) => string,
   tonesOf: (item: T) => readonly StatusTone[],
-  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions, reading = false }: ChangeFilterOptions = {},
+  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions, reading = false, viewOffer = BY_STATUS, onChangelistsChange }: ChangeFilterOptions = {},
 ): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
@@ -100,7 +95,7 @@ export function useChangeFilter<T>(
         );
       })}
       <span className={styles.layout}>
-        <FileListLayoutMenu />
+        <FileListViewMenu offer={viewOffer} onChangelistsChange={onChangelistsChange} />
       </span>
       {actions && <span className={styles.actions}>{actions}</span>}
     </div>

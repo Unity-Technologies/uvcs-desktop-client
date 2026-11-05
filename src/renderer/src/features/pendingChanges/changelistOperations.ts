@@ -8,6 +8,7 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
+import { usePendingChangesViewStore } from './pendingChangesViewStore';
 
 /**
  * Only added and checked-out items can live in a changelist, so locally changed files are checked out first. Changelists
@@ -24,12 +25,24 @@ export async function moveToChangelist(workspacePath: string, changelist: string
     },
     needsCheckout.length > 0 ? undefined : isAffectedByWorkspaceState,
   );
-  if (moved) toast.success(`Moved ${pluralize(changes.length, 'change')} to ${changelist ?? DEFAULT_CHANGELIST_LABEL}`);
+  if (!moved) return;
+  toast.success(`Moved ${pluralize(changes.length, 'change')} to ${changelist ?? DEFAULT_CHANGELIST_LABEL}`);
+  if (changelist !== null) showChangelists();
 }
 
-export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[]): Promise<void> {
+/**
+ * Groups the Changes list by changelist, if it wasn't: changes just moved to a changelist, or one just created, would
+ * otherwise look as if nothing happened.
+ */
+function showChangelists(): void {
+  usePendingChangesViewStore.getState().setGrouping('changelist');
+}
+
+/** `beforeMove` runs once a name is given, before the changelist is created: cancelling leaves everything as it was. */
+export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[], beforeMove: () => void = () => {}): Promise<void> {
   const name = await prompt({ title: 'New changelist', label: 'Name', confirmLabel: 'Create' });
   if (!name) return;
+  beforeMove();
 
   const created = await runVoidAction(
     workspacePlace(workspacePath),
@@ -37,7 +50,9 @@ export async function moveToNewChangelist(workspacePath: string, changes: Pendin
     () => api.pendingChanges.createChangelist(workspacePath, { name, description: '' }),
     isAffectedByWorkspaceState,
   );
-  if (created && changes.length > 0) await moveToChangelist(workspacePath, name, changes);
+  if (!created) return;
+  if (changes.length > 0) await moveToChangelist(workspacePath, name, changes);
+  else showChangelists();
 }
 
 export async function renameChangelist(workspacePath: string, changelist: Changelist): Promise<void> {

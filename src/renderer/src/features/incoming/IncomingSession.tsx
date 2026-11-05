@@ -6,18 +6,23 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
+import { ExpandableDiffContext } from '../../components/expandableDiffContext';
+import { fileRowKeys } from '../../components/fileRowKeys';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
-import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
@@ -67,7 +72,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
   const collides = useCallback((file: DiffEntry) => collidesWithLocal(file, conflictPaths, blockedPaths), [conflictPaths, blockedPaths]);
-  const { files, metaOf, filter, rows, tree, toggleCollapsed: toggleFolder } = useIncomingFiles(scope, incoming.files, collides, selection.anchor);
+  const { files, metaOf, filter, rows, tree, toggleCollapsed: toggleFolder, folding } = useIncomingFiles(scope, incoming.files, collides, selection.anchor);
 
   // Resolving the files one by one: the selection follows while the user stays on the file it opened.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
@@ -79,6 +84,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const run = useResolveRun({ states, mergerFor, resolveInTool, onOpen: followRun, onEnd: () => undefined });
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
+  const diffExpanded = useDiffExpanded();
 
   const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
@@ -86,12 +92,19 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     () => conflictStepKeys(rows, selection.anchor, (file: DiffEntry) => pendingConflictPaths.has(file.path)),
     [rows, selection.anchor, pendingConflictPaths],
   );
+  // A diff and a conflicting file step on through different files, but share where a step arrives: ↓ past a diff's last
+  // change into a conflicting file lands on its first conflict, and nothing stale waits for a file opened later.
+  const arrival = usePendingArrival();
   const conflictSteps = useFileSteps({
     keys: conflictKeys,
     current: selection.anchor,
-    select: (key) => selectFiles(singleSelection(key)),
+    select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))),
     pathOf: (key) => key,
+    pending: arrival,
   });
+  // A file's diff goes on past its last or first change to the files around it, as the list shows them.
+  const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
+  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -159,44 +172,54 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (hidesAll) return null;
     if (selectedConflict) {
+      // A conflict is resolved beside its files, as on the merge page: its diffs don't expand.
       return (
         <FileStepsContext.Provider value={conflictSteps}>
-          <FileConflictPanel
-            key={selectedConflict.file.key}
-            workspacePath={workspacePath}
-            state={selectedConflict}
-            labels={UPDATE_LABELS}
-            yoursInWorkspace
-            toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
-            onDecide={(decision) => decide(selectedConflict.file.key, decision)}
-            onStartOver={() => reset(selectedConflict.file.key)}
-          />
+          <ExpandableDiffContext.Provider value={false}>
+            <FileConflictPanel
+              key={selectedConflict.file.key}
+              workspacePath={workspacePath}
+              state={selectedConflict}
+              labels={UPDATE_LABELS}
+              yoursInWorkspace
+              toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
+              onDecide={(decision) => decide(selectedConflict.file.key, decision)}
+              onStartOver={() => reset(selectedConflict.file.key)}
+            />
+          </ExpandableDiffContext.Provider>
         </FileStepsContext.Provider>
       );
     }
     if (focusedFile && diffedFile) {
       const metaToggle = focusedMeta && <MetaDiffButton pressed={diffedFile !== focusedFile} onChange={(pressed) => setMetaShownFor(pressed ? focusedFile.path : null)} />;
-      return <IncomingFileDiff key={`${scope.kind}:${diffedFile.path}`} workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />;
+      // Not keyed by the file: its header and arrows stay from file to file (`SteppedDiffFrame`), as in a diff page.
+      return (
+        <FileStepsContext.Provider value={fileSteps}>
+          <IncomingFileDiff workspacePath={workspacePath} file={diffedFile} compareControls={metaToggle} />
+        </FileStepsContext.Provider>
+      );
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
-      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(focusedGroup.items.length, 'change')}. Select a file to see its diff.`} />;
+      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />;
     }
     return <EmptyState title="Select a changeset or a file" />;
   };
 
   return (
     <>
-      {header(incomingSubtitle(incoming.branch, changesetList))}
-      <UpdateBar
-        incoming={incoming}
-        pendingConflictCount={pendingConflictPaths.size}
-        canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
-        updating={updating}
-        onUpdate={() => void update()}
-        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
-        run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
-      />
+      <Stowable stowed={diffExpanded}>
+        {header(incomingSubtitle(incoming.branch, changesetList))}
+        <UpdateBar
+          incoming={incoming}
+          pendingConflictCount={pendingConflictPaths.size}
+          canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
+          updating={updating}
+          onUpdate={() => void update()}
+          onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
+          run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
+        />
+      </Stowable>
       <IncomingPanes
         list={
           <>
@@ -218,6 +241,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleFolder}
+              folding={folding}
               query={filter.query}
               filterBar={filter.bar}
               noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}

@@ -1,3 +1,5 @@
+import { forEachIn, rangeLength, type ItemRange } from './itemRange';
+import { layoutPathTree } from './pathTreeLayout';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /** A folder of a tree of files: one row, even for folders that only hold the next one ("deep/very/long"). */
@@ -11,8 +13,8 @@ export interface TreeFolderRow<T> {
   depth: number;
   /** The folder's own item, when it is one (a new private folder, an added, deleted or moved one). */
   item?: T;
-  /** Every item in the folder, its own included, in order. */
-  items: T[];
+  /** Every item in the folder, its own included, in order: a range of the list the tree was laid out from. */
+  held: ItemRange<T>;
   collapsed: boolean;
 }
 
@@ -26,71 +28,70 @@ export interface TreeFileRow<T> {
 
 export type PathTreeRow<T> = TreeFolderRow<T> | TreeFileRow<T>;
 
-export interface PathTreeInput<T extends { path: string }> {
-  /** The items, sorted by `comparePaths` (`@shared/pathOrder`): a folder's items come right after it. */
-  sorted: T[];
-  keyOf: (item: T) => string;
-  /** Tells the folder rows of one tree from another's on the same list (e.g. a changelist's): `folder:<scope>:<path>`. */
-  folderScope: string;
+/** The rows of a flat list: every item at depth 0. */
+export function layoutPathList<T>(items: readonly T[], keyOf: (item: T) => string): TreeFileRow<T>[] {
+  return items.map((item) => ({ type: 'file', key: keyOf(item), item, depth: 0 }));
 }
 
 /**
- * The rows of a tree of files: each folder (folders that only hold the next one sharing a row), then what it holds.
- * A folder that is an item itself and holds others is their folder's row, not one more row beside it. Every row, as if
- * nothing was collapsed: opening or closing a folder only leaves rows out (`collapseTreeRows`). In n·log n work: tens
- * of thousands of items lay out on every change of the list.
+ * How a list orders its items when not by path (`fileListOrder`); undefined keeps the path order. `compare` ranks two
+ * items, ties left as they come: sorting is stable, and the items come in `comparePaths` order, so ties stay in path
+ * order. `arrange`, when the order has a faster way than comparing items one pair at a time (buckets, ranks worked out
+ * once: `rankedOrder`), puts a whole list in that order, ties kept as they come too.
  */
-export function layoutPathTree<T extends { path: string }>({ sorted, keyOf, folderScope }: PathTreeInput<T>): PathTreeRow<T>[] {
-  const rows: PathTreeRow<T>[] = [];
-  const byPath = new Map(sorted.map((item) => [item.path, item]));
-  // Each item's path and the folders above it ("a", "a/b", "a/b/c.txt"), built once: every level is looked up by them.
-  const prefixes = sorted.map((item) => pathPrefixes(item.path));
-  const folders = new Set<string>();
-  for (const paths of prefixes) for (let level = 0; level < paths.length - 1; level++) folders.add(paths[level]!);
-  // The row showing each folder: folders that only hold the next one share its row.
-  const folderRows = new Map<string, TreeFolderRow<T>>();
-  // The level of the innermost folder each row shows.
-  const lastLevels = new Map<TreeFolderRow<T>, number>();
-
-  sorted.forEach((item, index) => {
-    const paths = prefixes[index]!;
-    const pathAt = (level: number): string => paths[level]!;
-    const isFolder = folders.has(item.path);
-    const folderCount = isFolder ? paths.length : paths.length - 1;
-    let depth = 0;
-    for (let level = 0; level < folderCount; level++) {
-      let row = folderRows.get(pathAt(level));
-      if (!row) {
-        const inside = itemsInFolder(sorted, index, pathAt(level));
-        let last = level;
-        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(inside, pathAt(last + 1))) last++;
-        const path = pathAt(last);
-        row = {
-          type: 'folder',
-          key: `folder:${folderScope}:${path}`,
-          path,
-          name: level === 0 ? path : path.slice(pathAt(level - 1).length + 1),
-          depth,
-          item: byPath.get(path),
-          items: inside,
-          collapsed: false,
-        };
-        rows.push(row);
-        lastLevels.set(row, last);
-        for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
-      }
-      level = lastLevels.get(row)!;
-      depth = row.depth + 1;
-    }
-
-    if (!isFolder) rows.push({ type: 'file', key: keyOf(item), item, depth });
-  });
-  return rows;
+export interface ItemOrder<T> {
+  compare: (a: T, b: T) => number;
+  arrange?: (items: readonly T[]) => T[];
 }
 
-/** The rows of a flat list: every item at depth 0. */
-export function layoutPathList<T>(items: T[], keyOf: (item: T) => string): TreeFileRow<T>[] {
-  return items.map((item) => ({ type: 'file', key: keyOf(item), item, depth: 0 }));
+interface PathItemsLayout<T> {
+  tree: boolean;
+  /** Tells the folder rows of one tree from another's on the same list (`PathTreeInput.folderScope`). */
+  folderScope: string;
+  order?: ItemOrder<T>;
+}
+
+/**
+ * The rows of `sorted` (in `comparePaths` order) as a list or a tree, in `order`: a list sorts every item by it; a
+ * tree keeps its folders in path order, first, and sorts the files of each folder by it after them
+ * (`orderTreeRows`). Without an order, the path order of either.
+ */
+export function layoutPathItems<T extends { path: string }>(sorted: readonly T[], keyOf: (item: T) => string, { tree, folderScope, order }: PathItemsLayout<T>): PathTreeRow<T>[] {
+  if (!tree) return layoutPathList(order ? arranged(sorted, order) : sorted, keyOf);
+  const rows = layoutPathTree({ sorted, keyOf, folderScope });
+  return order ? orderTreeRows(rows, order) : rows;
+}
+
+/** `items` in `order`: arranged at once when the order knows how, else sorted. */
+export function arranged<T>(items: readonly T[], order: ItemOrder<T>): T[] {
+  return order.arrange ? order.arrange(items) : [...items].sort(order.compare);
+}
+
+/**
+ * A tree's rows (`layoutPathTree`) with each folder's rows in `order`: its folders first, in the order they came
+ * (by path), each with what it holds, then its files sorted. A sort by name, status or extension is about the files:
+ * folders keep their place, as a file browser's do.
+ */
+export function orderTreeRows<T>(rows: readonly PathTreeRow<T>[], order: ItemOrder<T>): PathTreeRow<T>[] {
+  const ordered: PathTreeRow<T>[] = [];
+  let next = 0;
+  // The rows from `next` on that sit at `depth` or deeper: one folder's contents, ordered into `ordered`.
+  const orderLevel = (depth: number): void => {
+    const files: TreeFileRow<T>[] = [];
+    while (next < rows.length && rows[next]!.depth >= depth) {
+      const row = rows[next++]!;
+      if (row.type === 'file') {
+        files.push(row);
+      } else {
+        ordered.push(row);
+        orderLevel(depth + 1);
+      }
+    }
+    files.sort((a, b) => order.compare(a.item, b.item));
+    for (const file of files) ordered.push(file);
+  };
+  orderLevel(0);
+  return ordered;
 }
 
 /**
@@ -132,8 +133,13 @@ export function pathTreeKeyMove<T>(rows: readonly PathTreeRow<T>[], index: numbe
   return treeArrowMove(pathTreeArrowRows(rows), index, key);
 }
 
+/** How many items a folder's row counts: what it holds, but for the folder itself when it is an item. */
+export function folderItemCount<T>(row: TreeFolderRow<T>): number {
+  return rangeLength(row.held) - (row.item ? 1 : 0);
+}
+
 /** A row that stands for items: a file for its own, a folder or a group (`groupedPathTree`) for all it holds. */
-type RowOfItems<T> = { type: 'file'; item: T } | { type: 'folder' | 'group'; items: T[] };
+type RowOfItems<T> = { type: 'file'; item: T } | { type: 'folder' | 'group'; held: ItemRange<T> };
 
 /**
  * The items rows stand for, each once, in the rows' order: a file's own, everything in a folder or a group. What a
@@ -143,7 +149,7 @@ export function itemsUnderRows<T>(rows: readonly RowOfItems<T>[]): T[] {
   const items = new Set<T>();
   for (const row of rows) {
     if (row.type === 'file') items.add(row.item);
-    else for (const item of row.items) items.add(item);
+    else forEachIn(row.held, (item) => items.add(item));
   }
   return [...items];
 }
@@ -159,28 +165,6 @@ export function firstFilesOf<T>(rows: PathTreeRow<T>[], limit: number): { rows: 
   const unlistedFiles = rows.slice(end).filter((row) => row.type === 'file').length;
   while (end > 0 && rows[end - 1]!.type === 'folder') end--;
   return { rows: rows.slice(0, end), unlistedFiles };
-}
-
-/** Whether all a folder holds is `child`, one of its folders, or in it. */
-function holdsOnly<T extends { path: string }>(inside: T[], child: string): boolean {
-  // Sorted by `comparePaths`, the first and the last item tell for all of them.
-  return [inside[0]!, inside.at(-1)!].every((item) => item.path === child || item.path.startsWith(`${child}/`));
-}
-
-/** The items in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
-function itemsInFolder<T extends { path: string }>(sorted: T[], first: number, folder: string): T[] {
-  const inside = `${folder}/`;
-  let end = first;
-  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(inside))) end++;
-  return sorted.slice(first, end);
-}
-
-/** "a/b/c.txt" is in "a" and "a/b": ["a", "a/b", "a/b/c.txt"]. */
-function pathPrefixes(path: string): string[] {
-  const prefixes: string[] = [];
-  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) prefixes.push(path.slice(0, end));
-  prefixes.push(path);
-  return prefixes;
 }
 
 /**

@@ -1,7 +1,7 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
 import { BulkPrivateTally, bulkPrivateFiles, isPrivateFolderAt, privateFoldersOf, type BulkPrivate, type PrivateFolders } from './bulkPrivate';
-import { isCheckinCandidate, isShelvable } from './changeCategories';
+import { changelistNameOf, isCheckinCandidate, isShelvable } from './changeCategories';
 import { UploadTally, uploadKindOf, type UploadKind, type UploadSummary } from './uploadSummary';
 import { consistentlyIncluded, neededWith, type PendingIndex } from './checkinDependencies';
 
@@ -33,8 +33,12 @@ export interface CheckinSelection {
  * that appears meanwhile (an editor saving, a new `.meta`) stays out. Checking files by hand adds or takes them here.
  */
 export interface PreparedChangelist {
-  name: string;
+  /** Null for the default changelist (`changelistNameOf`). */
+  name: string | null;
+  /** What is checked: the paths readied, then as the user checks or unchecks files by hand. */
   paths: ReadonlySet<string>;
+  /** The paths readied, as they were: what the default changelist's end is read by (`preparedStillPending`). */
+  readied: ReadonlySet<string>;
 }
 
 /** What the user checked for the next check-in. */
@@ -57,11 +61,14 @@ export function withEverythingIncluded(choice: CheckinChoice, paths: string[]): 
 }
 
 /**
- * Whether the prepared changelist still holds a pending change, checked or not. By the changelist, not the paths: an
- * added file undone stays on disk, private, at its path, and files the user checked besides don't keep it going.
+ * Whether the prepared changelist still holds a pending change, checked or not. A user changelist is read by the
+ * changelist, not the paths: an added file undone stays on disk, private, at its path, and files the user checked
+ * besides don't keep it going. The default changelist is read by the paths readied still in it, whether the user
+ * unchecked them or not: every new edit lands there, so it would never end otherwise.
  */
 export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
-  return allChanges.some((change) => change.changelist === prepared.name);
+  if (prepared.name === null) return allChanges.some((change) => changelistNameOf(change) === null && prepared.readied.has(change.path));
+  return allChanges.some((change) => changelistNameOf(change) === prepared.name);
 }
 
 /**

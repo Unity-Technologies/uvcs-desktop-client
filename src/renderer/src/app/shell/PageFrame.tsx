@@ -1,4 +1,5 @@
 import { FolderX, PictureInPicture2 } from 'lucide-react';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import type { Page } from '../navigation/pages';
@@ -9,6 +10,7 @@ import { usePlace } from '../workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
 import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
+import { Stowable } from '../../ui/Stowable';
 import { isMovablePage } from '../pageWindow/movablePages';
 import { movePageToNewWindow } from '../pageWindow/openInNewWindow';
 import { CopyLinkButton } from '../links/CopyLinkButton';
@@ -20,24 +22,27 @@ export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
   const place = usePlace();
   const previous = pages.at(-2);
+  const diffExpanded = useDiffExpanded();
   useShortcut(hotkey('back'), goBack);
   useBackButtons(goBack);
 
   return (
     <div className={styles.frame}>
-      <div className={styles.breadcrumb}>
-        <Breadcrumb back={{ label: previous ? pageTitle(previous) : viewDefinition(view).label, onClick: goBack }} current={pageTitle(page)} />
-        <CopyLinkButton className={styles.copyLink} page={page} />
-        {isMovablePage(page) && (
-          <IconButton
-            className={styles.newWindow}
-            size="small"
-            icon={<PictureInPicture2 size={14} />}
-            label="Open in new window"
-            onClick={() => movePageToNewWindow(page)}
-          />
-        )}
-      </div>
+      <Stowable stowed={diffExpanded}>
+        <div className={styles.breadcrumb}>
+          <Breadcrumb back={{ label: previous ? pageTitle(previous) : viewDefinition(view).label, onClick: goBack }} current={pageTitle(page)} />
+          <CopyLinkButton className={styles.copyLink} page={page} />
+          {isMovablePage(page) && (
+            <IconButton
+              className={styles.newWindow}
+              size="small"
+              icon={<PictureInPicture2 size={14} />}
+              label="Open in new window"
+              onClick={() => movePageToNewWindow(page)}
+            />
+          )}
+        </div>
+      </Stowable>
       <div className={styles.content}>
         {showsPage(place, page) ? (
           <PageContent page={page} />

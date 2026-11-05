@@ -11,8 +11,14 @@
   font-size: var(--text-xs);
 }
 
-/* One line each: one too wide is cut to fit by `fitPathParts`, never wrapped. */
+/*
+ * One line each: one too wide is cut to fit by `fitPathParts`, never wrapped. Monospaced, as the diff shows code: the
+ * tinted parts read as a diff, and dots, slashes and look-alike letters (l, I, 1) keep their own width. A step smaller
+ * than the tooltip's text, as the words are, so a mono path costs about the width the UI font's did.
+ */
 .path {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   overflow: hidden;
   white-space: nowrap;
 }

@@ -101,7 +101,11 @@ function OpenPalette({ close }: { close: () => void }) {
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
     if (event.target !== inputRef.current) return event.preventDefault();
-    if (event.key === 'Escape') close();
+    // Taken: the palette closes before the key reaches the window, where Esc would also collapse an expanded diff.
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+    }
     if (event.key === 'Enter' && ranInNewWindow(selectedResult, event)) return;
     // Tab never leaves the palette: it opens the selected result's actions, when it has some.
     if (event.key === 'Tab' || isRowMenuKey(event)) {

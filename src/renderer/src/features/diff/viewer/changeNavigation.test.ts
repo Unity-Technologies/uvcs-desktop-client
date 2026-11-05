@@ -116,14 +116,14 @@ describe('currentAfterChange', () => {
 });
 
 describe('positionLabel', () => {
-  it('counts the changes, then says which one is current', () => {
-    expect(positionLabel({ count: 12, current: null }, 'change')).toBe('12 changes');
-    expect(positionLabel({ count: 1, current: null }, 'change')).toBe('1 change');
-    expect(positionLabel({ count: 1200, current: 2 }, 'change')).toBe('3 of 1,200');
+  it('says which change is current, in one form only', () => {
+    expect(positionLabel({ count: 1200, current: 2 })).toBe('3 of 1,200');
+    expect(positionLabel({ count: 1, current: 0 })).toBe('1 of 1');
   });
 
-  it('says there are none in a file only stepped past (an image, identical versions)', () => {
-    expect(positionLabel({ count: 0, current: null }, 'change')).toBe('No changes');
+  it('says nothing before a change is current, nor with none: the line counts and the diff itself tell that', () => {
+    expect(positionLabel({ count: 12, current: null })).toBe('');
+    expect(positionLabel({ count: 0, current: null })).toBe('');
   });
 });
 

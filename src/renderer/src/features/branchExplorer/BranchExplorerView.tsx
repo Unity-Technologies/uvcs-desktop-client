@@ -18,7 +18,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useBranchPins, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
-import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
+import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
 import { followedPage } from './followedPage';
@@ -50,6 +50,9 @@ import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
 import { useRuleMatches } from './useRuleMatches';
+import { shareOwners } from './timeline/shareOwners';
+import { TimelineToggleButton } from './timeline/TimelineToggleButton';
+import { useTimelineSlideIn } from './timeline/useTimelineSlideIn';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
@@ -60,7 +63,7 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showTimeline } = preferences;
   const viewOptions = useGraphViewOptions();
   const rules = useExplorerRules(placeRepository);
   const pins = useBranchPins(placeRepository);
@@ -130,6 +133,15 @@ export function BranchExplorerView() {
       reviews: reviews ?? NO_REVIEWS,
     }),
     [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
+  );
+  const timelineShare = useMemo(() => shareOwners(people, me), [people, me]);
+  const { slideIn: timelineSlidesIn, slidIn: timelineSlidIn } = useTimelineSlideIn(showTimeline);
+  const timeline = useMemo<TimelineInputs | null>(
+    () =>
+      showTimeline
+        ? { owners: timelineShare.owners, shareWord: timelineShare.word, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn, onSlidIn: timelineSlidIn }
+        : null,
+    [showTimeline, timelineShare, search.shown, searchHits, timelineSlidesIn, timelineSlidIn],
   );
   useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
@@ -253,6 +265,7 @@ export function BranchExplorerView() {
             onLeave={() => canvasRef.current?.focus()}
           />
           <ViewRefreshButton fetching={isFetching} />
+          <TimelineToggleButton />
         </>
       }
     >
@@ -275,7 +288,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY} list={<GraphSkeleton timeline={showTimeline} />} details={null} />
         </div>
       </>
     );
@@ -331,6 +344,7 @@ export function BranchExplorerView() {
               onSelect={select}
               onActivate={activate}
               contextMenu={menuFor}
+              timeline={timeline}
             >
               <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} onOpenOptions={openBranchExplorerOptionsDialog} />
             </GraphCanvas>

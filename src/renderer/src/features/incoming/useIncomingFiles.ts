@@ -9,7 +9,7 @@ import { diffEntryKey } from '../diff/DiffEntryList';
 import { listedEntries } from '../diff/listedEntries';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import { pairIncomingMetas } from './incomingMetaPairs';
-import { INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeKey, type IncomingFileGroup, type IncomingScope } from './incomingScope';
+import { INCOMING_FILE_FACTS, INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeKey, type IncomingListGroup, type IncomingScope } from './incomingScope';
 
 const NO_FILES: DiffEntry[] = [];
 const noMeta = (): DiffEntry | undefined => undefined;
@@ -35,11 +35,11 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
 
   const tonesOf = useCallback((file: DiffEntry) => incomingFileTones(file, collides(file)), [collides]);
   const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, reading: !files, toneLabels: INCOMING_TONE_LABELS });
-  const content = useMemo<FileListContent<DiffEntry, IncomingFileGroup>>(
+  const content = useMemo<FileListContent<DiffEntry, IncomingListGroup>>(
     // Only the whole update is what updating merges: a changeset's files are what it did, without groups.
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),
     [scope.kind, filter.visible, collides],
   );
-  const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), selectedKey);
+  const tree = useGroupedFileTree(content, files ?? NO_FILES, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), INCOMING_FILE_FACTS, selectedKey);
   return { files, metaOf, filter, ...tree };
 }

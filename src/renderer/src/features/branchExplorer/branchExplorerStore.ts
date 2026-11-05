@@ -29,6 +29,8 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
   people: PeoplePick;
   /** Only the changesets that shape the diagram; the linear runs between them collapse into "+N" nodes. */
   structureOnly: boolean;
+  /** The Timeline over the graph (`GraphTimeline`): hidden until the user shows it, then remembered. */
+  showTimeline: boolean;
   /**
    * The advanced filters and formats (`ExplorerRule`) of each repository, by its spec: their conditions name that
    * repository's branches and people, so another one starts with none.
@@ -56,6 +58,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       visibleBranches: null,
       people: EVERYONE,
       structureOnly: false,
+      showTimeline: false,
       ...DEFAULT_GRAPH_VIEW_OPTIONS,
       rulesByRepository: {},
       pinsByRepository: {},

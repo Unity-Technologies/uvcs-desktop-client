@@ -1,5 +1,6 @@
 import { Files, Folder } from 'lucide-react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { rangeLength } from '../../lib/itemRange';
 import { formatCount, pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { FileStepsContext, type FileSteps } from '../diff/viewer/fileSteps';
@@ -38,7 +39,7 @@ export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, 
       <EmptyState
         icon={<Folder size={24} />}
         title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path}
-        description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`}
+        description={`${pluralize(rangeLength(focusedFolder.held), 'change')}. Select a file to see its diff.`}
       />
     );
   }

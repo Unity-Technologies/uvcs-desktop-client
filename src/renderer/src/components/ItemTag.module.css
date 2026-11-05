@@ -8,3 +8,11 @@
   line-height: 16px;
   white-space: nowrap;
 }
+
+/* The status badges' 10px text (`StatusBadge`; tokens.css has no size below 11px): a word or two beside the name, not
+   competing with it. */
+.tag[data-compact] {
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 14px;
+}

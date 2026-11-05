@@ -99,6 +99,13 @@ const FILES = {
     onDisk: 'o Crate\nusemtl Wood_mat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
   },
   'notes.txt': { onDisk: 'Ideas for the next level.\n' },
+  // A sound and its .meta, both changed: the sound's diff is a binary file's (a NUL byte makes it one, `looksBinary`),
+  // and its .meta can be shown instead.
+  'Assets/hurt.wav': { loaded: 'RIFF\u0000\u0000WAVE\u0001', onDisk: 'RIFF\u0000\u0000WAVE\u0002' },
+  'Assets/hurt.wav.meta': {
+    loaded: 'fileFormatVersion: 2\nguid: 9a8b7c6d5e4f40312a1b0c9d8e7f6a5b\nAudioImporter:\n  loadInBackground: 0\n',
+    onDisk: 'fileFormatVersion: 2\nguid: 9a8b7c6d5e4f40312a1b0c9d8e7f6a5b\nAudioImporter:\n  loadInBackground: 1\n',
+  },
 };
 
 /**

@@ -147,6 +147,13 @@ describe('appMenuTemplate', () => {
     expect(hasRole(itemsOf('darwin', 'Window'), 'zoom')).toBe(true);
   });
 
+  it("shows the Branch Explorer's timeline with each OS's keys: Ctrl+Alt is AltGr off macOS", () => {
+    expect(itemsOf('darwin', 'View').find((item) => item.id === 'branchExplorer.timeline')).toMatchObject({ label: 'Branch Explorer Timeline', accelerator: 'CmdOrCtrl+Alt+T' });
+    for (const platform of ['win32', 'linux'] as const) {
+      expect(itemsOf(platform, 'View').find((item) => item.id === 'branchExplorer.timeline')).toMatchObject({ accelerator: 'Alt+Shift+T' });
+    }
+  });
+
   it('marks the Alt letters off macOS and drops the marks on macOS', () => {
     const labels = (platform: NodeJS.Platform) =>
       templateOn(platform).flatMap((menu) => [menu.label ?? '', ...submenuOf(menu).map((item) => item.label ?? '')]);
@@ -156,6 +163,8 @@ describe('appMenuTemplate', () => {
       'Command &Log',
       'Toggle &Sidebar',
       'Toggle &Details',
+      '&Expand Diff',
+      'Branch Explorer &Timeline',
       '&Refresh',
       '&Actual Size',
       'Zoom &In',

@@ -22,6 +22,11 @@
   flex: 1;
 }
 
+/* A stowed pane (`stowed`) stays mounted out of sight: `display: flex` above would show it all the same. */
+.pane[hidden] {
+  display: none;
+}
+
 .handle {
   position: relative;
   flex: none;
