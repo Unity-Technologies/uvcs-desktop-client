@@ -33,7 +33,7 @@ export interface IssueTrackersDeps {
    * Asks the user, in main's own dialog over the calling window, whether to sign in to `server`: a window can't answer
    * it. True when allowed.
    */
-  askHostConsent: (server: string) => Promise<boolean>;
+  askHostConsent: (server: string, kind: IssueTrackerKind) => Promise<boolean>;
 }
 
 type Failed = { kind: 'failed'; failure: SignInFailure };
@@ -264,7 +264,7 @@ export class IssueTrackers {
   }
 
   private async completeSignIn(reading: RecognizedLink, repository: string, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
-    if (!(await this.hostAllowed(reading.server))) return failed({ reason: 'hostDeclined', server: reading.server });
+    if (!(await this.hostAllowed(reading.server, reading.kind))) return failed({ reason: 'hostDeclined', server: reading.server });
     const provider = this.providers[reading.kind];
     let signedIn;
     try {
@@ -294,16 +294,15 @@ export class IssueTrackers {
    * per host at a time: sign-ins on their way wait for its answer. A decline isn't remembered: the next sign-in is the
    * user's own paste again, and asks again.
    */
-  private async hostAllowed(server: string): Promise<boolean> {
+  private async hostAllowed(server: string, kind: IssueTrackerKind): Promise<boolean> {
     const key = server.toLowerCase();
     if (this.consentedServers.has(key) || !needsHostConsent(server, this.deps.store.connections())) return true;
-    const pending = this.consentAsked.get(key) ?? this.askConsent(key, server);
-    return pending;
+    return this.consentAsked.get(key) ?? this.askConsent(key, server, kind);
   }
 
-  private askConsent(key: string, server: string): Promise<boolean> {
+  private askConsent(key: string, server: string, kind: IssueTrackerKind): Promise<boolean> {
     const asked = this.deps
-      .askHostConsent(server)
+      .askHostConsent(server, kind)
       .catch(() => false)
       .then((allowed) => {
         if (allowed) this.consentedServers.add(key);
