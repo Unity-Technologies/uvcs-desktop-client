@@ -7,16 +7,16 @@ const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = [])
 
 describe('linkReadBack', () => {
   it('reads a link back in parts too: the kind for a badge, the host, the project', () => {
-    expect(linkReadBack('https://jira.unity3d.com/browse/VCS-1009081')).toMatchObject({ parts: { kindName: 'Jira Data Center', host: 'jira.unity3d.com', projectNoun: 'project', project: 'VCS' } });
+    expect(linkReadBack('https://jira.acme.com/browse/VCS-1004321')).toMatchObject({ parts: { kindName: 'Jira Data Center', host: 'jira.acme.com', projectNoun: 'project', project: 'VCS' } });
     expect(linkReadBack('https://github.com/acme/game/issues/12')).toMatchObject({ parts: { kindName: 'GitHub', host: 'github.com', project: 'acme/game' } });
   });
 
   it('reads a Jira Data Center link back as Data Center', () => {
-    expect(linkReadBack('https://jira.unity3d.com/browse/VCS-1009081')).toMatchObject({ kind: 'read', words: 'Jira Data Center · jira.unity3d.com · project VCS' });
+    expect(linkReadBack('https://jira.acme.com/browse/VCS-1004321')).toMatchObject({ kind: 'read', words: 'Jira Data Center · jira.acme.com · project VCS' });
   });
 
   it('reads a pasted link back in words, sending nothing', () => {
-    expect(linkReadBack('https://unity3d.atlassian.net/browse/VCS-1009139')).toMatchObject({ kind: 'read', words: 'Jira Cloud · unity3d.atlassian.net · project VCS' });
+    expect(linkReadBack('https://acme.atlassian.net/browse/VCS-1001234')).toMatchObject({ kind: 'read', words: 'Jira Cloud · acme.atlassian.net · project VCS' });
     expect(linkReadBack('https://github.com/acme/game/issues/12')).toMatchObject({ words: 'GitHub · github.com · acme/game' });
     expect(linkReadBack('https://git.acme.com/tools/build/issues/9')).toMatchObject({ words: 'GitHub Enterprise Server · git.acme.com · tools/build' });
   });
@@ -86,8 +86,8 @@ describe('connectFailureWords', () => {
     });
     expect(connectFailureWords({ reason: 'unreachable', server: 'https://acme.atlassian.net' }, { trackerName: 'Jira', server: 'https://acme.atlassian.net' }).words).toBe("Jira couldn't be reached at acme.atlassian.net.");
     expect(connectFailureWords({ reason: 'notGitHubEnterprise', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("This doesn't look like GitHub Enterprise Server.");
-    expect(connectFailureWords({ reason: 'sentToLogin', server: 'https://jira.unity3d.com' }, { trackerName: 'Jira' })).toEqual({
-      words: 'Jira sent this sign-in to its login page at jira.unity3d.com. Check the token, or create a new one.',
+    expect(connectFailureWords({ reason: 'sentToLogin', server: 'https://jira.acme.com' }, { trackerName: 'Jira' })).toEqual({
+      words: 'Jira sent this sign-in to its login page at jira.acme.com. Check the token, or create a new one.',
       offersTokenPage: true,
     });
     expect(connectFailureWords({ reason: 'hostDeclined', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("Not signed in: git.acme.com wasn't allowed.");
@@ -97,14 +97,14 @@ describe('connectFailureWords', () => {
 describe('suggestedTrackerLink', () => {
   it('offers the tracker the branch comments link to most, counting each comment once', () => {
     const comments = [
-      'Fixes https://unity3d.atlassian.net/browse/VCS-1 and https://unity3d.atlassian.net/browse/VCS-2.',
-      'See https://unity3d.atlassian.net/browse/VCS-3',
+      'Fixes https://acme.atlassian.net/browse/VCS-1 and https://acme.atlassian.net/browse/VCS-2.',
+      'See https://acme.atlassian.net/browse/VCS-3',
       'Upstream: https://github.com/acme/game/issues/4',
       'No link here',
     ];
     expect(suggestedTrackerLink(comments)).toEqual({
-      link: 'https://unity3d.atlassian.net/browse/VCS-1',
-      words: 'Jira Cloud · unity3d.atlassian.net · project VCS',
+      link: 'https://acme.atlassian.net/browse/VCS-1',
+      words: 'Jira Cloud · acme.atlassian.net · project VCS',
       trackerName: 'Jira',
       seen: 'Seen in 2 branch comments',
     });

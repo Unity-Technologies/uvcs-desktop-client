@@ -7,7 +7,7 @@ Later features build on the pieces named here.
 ## The principle: the link lives in the text
 
 The app stores no link between an object and an issue. Comments and branch names already name issues
-(`VCS-1009139`, `#123`, a pasted address), and every client (`cm`, the web, the Unity plugin, the official desktop
+(`VCS-1001234`, `#123`, a pasted address), and every client (`cm`, the web, the Unity plugin, the official desktop
 client) sees the same text. The app reads it: a reference is recognized in what is written, and the tracker only fills
 in the title, status, type and assignee. With no tracker reachable, a reference is still a link.
 
@@ -153,7 +153,7 @@ smoke test (`npm run e2e`) visits Settings › Issue tracker, its empty state.
 
 ### Connection: a sign-in to a tracker
 
-`TrackerConnection`: `id` (made by main), `kind`, `server` (`https://unity3d.atlassian.net`, `https://github.com`),
+`TrackerConnection`: `id` (made by main), `kind`, `server` (`https://acme.atlassian.net`, `https://github.com`),
 `scope` (below), `account` (`TrackerAccount`; for Jira Cloud its email, no secret, kept to sign in again),
 `signInMethod` (how it signed in: `deviceCode` or `token`), `access` (what it asked for: reading), `credential` (its
 state, below), and for Jira Cloud the API base the token works with (`apiBase`: the site, or Atlassian's gateway).
@@ -167,7 +167,7 @@ What one sign-in covers depends on the kind, so a connection's identity is its k
 | GitHub | server, for a token of every owner (`scope` `*`: the device flow's, a classic token); server and owner for a fine-grained token (`scope`: the owner, lower case) | A fine-grained token covers one resource owner. |
 
 A second repository whose project a connection covers reuses it (`coveringConnection`: the owner's first, then one of
-every owner): "Use Jira at unity3d.atlassian.net · signed in as Daniel Peñalba" binds it in one click. A fine-grained
+every owner): "Use Jira at acme.atlassian.net · signed in as Ana Díaz" binds it in one click. A fine-grained
 GitHub token for another organization makes a second connection; the first stays as it was. Signing in again to the
 same identity replaces its credential only.
 
@@ -269,7 +269,7 @@ stays that kind.
 
 | Tracker | Written | Read as |
 | --- | --- | --- |
-| Jira | `VCS-1009139`, `#VCS-1009139` | an issue of a bound project, a `#` before its key part of the reference (its chip covers it; `jiraReferencesReader`). `ABC-123`, `UTF-8`, `ISO-8859` are no project's, so nothing |
+| Jira | `VCS-1001234`, `#VCS-1001234` | an issue of a bound project, a `#` before its key part of the reference (its chip covers it; `jiraReferencesReader`). `ABC-123`, `UTF-8`, `ISO-8859` are no project's, so nothing |
 | GitHub | `#123` | an issue of the bound repository, only when the binding has exactly one |
 | GitHub | `owner/repo#123` | that repository's issue, on the same server; a name with a dot isn't read (`docs/a.md#12` is a file's heading), its issue's address is |
 | Either | an issue's own page, as a link showing its own address | that issue: of a bound project on Jira, of any repository of the server on GitHub |

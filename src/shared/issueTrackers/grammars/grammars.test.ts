@@ -8,9 +8,9 @@ const githubIn = (text: string, projects: string[]) => githubGrammar.referencesR
 
 describe('Jira Cloud references', () => {
   it('reads a bound project’s keys, where they start and end', () => {
-    expect(keysIn('Fixes VCS-12 and (VCS-1009139).', ['VCS'])).toEqual([
+    expect(keysIn('Fixes VCS-12 and (VCS-1001234).', ['VCS'])).toEqual([
       { key: 'VCS-12', from: 6, to: 12 },
-      { key: 'VCS-1009139', from: 18, to: 29 },
+      { key: 'VCS-1001234', from: 18, to: 29 },
     ]);
   });
 
@@ -50,8 +50,8 @@ describe('Jira Data Center', () => {
 
   it('opens issues and the personal access tokens page under the server, its context path kept', () => {
     expect(jiraDataCenterGrammar.issueUrl('https://tools.acme.com/jira', 'OPS-7')).toBe('https://tools.acme.com/jira/browse/OPS-7');
-    expect(jiraDataCenterGrammar.tokenPageUrl('https://jira.unity3d.com')).toBe(
-      'https://jira.unity3d.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens',
+    expect(jiraDataCenterGrammar.tokenPageUrl('https://jira.acme.com')).toBe(
+      'https://jira.acme.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens',
     );
   });
 

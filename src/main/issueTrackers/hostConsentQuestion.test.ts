@@ -16,9 +16,9 @@ describe('hostConsentQuestion', () => {
   });
 
   it('names the product the server is meant to be: a company’s Jira for Data Center', () => {
-    expect(hostConsentQuestion('https://jira.unity3d.com', 'jiraDataCenter')).toMatchObject({
-      message: 'Sign in to jira.unity3d.com?',
-      detail: "Your token will be sent to jira.unity3d.com. Sign in only if it's your company's Jira.",
+    expect(hostConsentQuestion('https://jira.acme.com', 'jiraDataCenter')).toMatchObject({
+      message: 'Sign in to jira.acme.com?',
+      detail: "Your token will be sent to jira.acme.com. Sign in only if it's your company's Jira.",
     });
   });
 

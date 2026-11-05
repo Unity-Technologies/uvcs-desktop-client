@@ -247,7 +247,7 @@ export function usableSignIns(setup: IssueTrackerSetup | undefined): SignInRow[]
 }
 
 /**
- * Whether the link step still says which sign-in was picked ("With Daniel Peñalba's sign-in at jira.unity3d.com"):
+ * Whether the link step still says which sign-in was picked ("With Ana Díaz's sign-in at jira.acme.com"):
  * until a link is read, and after while that sign-in covers it; a link to another server goes its own way.
  */
 export function pickedSignInShown(pickedId: string | null, linkRead: boolean, step: SignInStep | null): boolean {

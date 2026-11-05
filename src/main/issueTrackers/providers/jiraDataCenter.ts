@@ -7,7 +7,7 @@ import { jiraSearchJql } from './issueSearchQueries';
 
 /**
  * The longest search address sent: proxies and servers refuse a request line past about 8 KB, and a server's own
- * address and Tomcat's headers count too. 100 keys of a usual length (`VCS-1009081`) take about 2.5 KB.
+ * address and Tomcat's headers count too. 100 keys of a usual length (`VCS-1004321`) take about 2.5 KB.
  */
 export const MAX_SEARCH_URL_LENGTH = 6_000;
 

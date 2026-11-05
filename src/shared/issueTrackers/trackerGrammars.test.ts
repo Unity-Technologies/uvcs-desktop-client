@@ -3,11 +3,11 @@ import { recognizeTrackerLink } from './trackerGrammars';
 
 describe('recognizeTrackerLink', () => {
   it('reads a Jira Cloud issue page: its site, project and key', () => {
-    expect(recognizeTrackerLink('https://unity3d.atlassian.net/browse/VCS-1009139')).toEqual({
+    expect(recognizeTrackerLink('https://acme.atlassian.net/browse/VCS-1001234')).toEqual({
       kind: 'jiraCloud',
-      server: 'https://unity3d.atlassian.net',
+      server: 'https://acme.atlassian.net',
       project: 'VCS',
-      key: 'VCS-1009139',
+      key: 'VCS-1001234',
       shows: 'issuePage',
     });
   });
@@ -26,11 +26,11 @@ describe('recognizeTrackerLink', () => {
   });
 
   it('reads any other host’s /browse/KEY-N as Jira Data Center, its context path part of the server', () => {
-    expect(recognizeTrackerLink('https://jira.unity3d.com/browse/VCS-1009081')).toEqual({
+    expect(recognizeTrackerLink('https://jira.acme.com/browse/VCS-1004321')).toEqual({
       kind: 'jiraDataCenter',
-      server: 'https://jira.unity3d.com',
+      server: 'https://jira.acme.com',
       project: 'VCS',
-      key: 'VCS-1009081',
+      key: 'VCS-1004321',
       shows: 'issuePage',
     });
     expect(recognizeTrackerLink('https://tools.acme.com/jira/browse/OPS-7')).toMatchObject({ kind: 'jiraDataCenter', server: 'https://tools.acme.com/jira', key: 'OPS-7' });

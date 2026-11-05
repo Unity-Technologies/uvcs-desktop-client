@@ -19,7 +19,7 @@ describe('the tracker choices', () => {
 describe('choiceAfterLink', () => {
   it('stays on the tracker chosen for its own links, Cloud or Data Center', () => {
     expect(choiceAfterLink('jira', 'https://acme.atlassian.net/browse/VCS-1')).toEqual({ choice: 'jira', switched: false });
-    expect(choiceAfterLink('jira', 'https://jira.unity3d.com/browse/VCS-1009081')).toEqual({ choice: 'jira', switched: false });
+    expect(choiceAfterLink('jira', 'https://jira.acme.com/browse/VCS-1004321')).toEqual({ choice: 'jira', switched: false });
   });
 
   it('moves to the tracker another tracker’s link names, never refusing it', () => {

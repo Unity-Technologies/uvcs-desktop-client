@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
 import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
 
-const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.unity3d.com', account: { id: 'JIRAUSER10100', name: 'Daniel Peñalba', email: 'daniel@unity3d.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'danipen', name: 'Daniel Peñalba' } };
+const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.acme.com', account: { id: 'JIRAUSER10100', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
+const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'ana-diaz', name: 'Ana Díaz' } };
 
 describe('trackerStatus', () => {
   it('is connected, calm, while the sign-in works', () => {
@@ -19,19 +19,19 @@ describe('trackerStatus', () => {
 
   it('says the tracker can’t be reached when no project answered, where, and what that means', () => {
     expect(trackerStatus(jira, { kind: 'failed', reason: 'unreachable' })).toEqual({ tone: 'danger', label: "Can't reach Jira" });
-    expect(unreachableWords(jira)).toEqual({ title: "Can't reach Jira at jira.unity3d.com", detail: 'Issues show as plain links until it answers.' });
+    expect(unreachableWords(jira)).toEqual({ title: "Can't reach Jira at jira.acme.com", detail: 'Issues show as plain links until it answers.' });
   });
 });
 
 describe('trackerHeader and accountLines', () => {
   it('names the tracker, its kind and its host', () => {
-    expect(trackerHeader(jira)).toEqual({ name: 'Jira', kindName: 'Jira Data Center', host: 'jira.unity3d.com' });
+    expect(trackerHeader(jira)).toEqual({ name: 'Jira', kindName: 'Jira Data Center', host: 'jira.acme.com' });
     expect(trackerHeader(github)).toEqual({ name: 'GitHub', kindName: 'GitHub', host: 'github.com' });
   });
 
   it('shows the email under the name, or a login that says more, never an opaque id', () => {
-    expect(accountLines(jira.account)).toEqual({ name: 'Daniel Peñalba', detail: 'daniel@unity3d.com' });
-    expect(accountLines(github.account)).toEqual({ name: 'Daniel Peñalba', detail: 'danipen' });
+    expect(accountLines(jira.account)).toEqual({ name: 'Ana Díaz', detail: 'ana@acme.com' });
+    expect(accountLines(github.account)).toEqual({ name: 'Ana Díaz', detail: 'ana-diaz' });
     expect(accountLines({ id: '5b10ac8d82e05b22cc7d4ef5', name: 'Ana' })).toEqual({ name: 'Ana' });
     expect(accountLines({ id: 'ana', name: 'ana' })).toEqual({ name: 'ana' });
   });
