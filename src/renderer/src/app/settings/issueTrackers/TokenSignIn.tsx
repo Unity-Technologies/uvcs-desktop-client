@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react';
-import { useEffect, useState, type ClipboardEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import type { RepositorySignIn } from '@shared/api/issueTrackers';
 import type { SignInFailure, SignInOutcome, TokenSource } from '@shared/domain/issueTrackers';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
@@ -62,14 +62,16 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
     event.preventDefault();
     void submit({ token: text });
   };
-  const submitted = (event: FormEvent): void => {
+  // A step inside Settings' own form: Enter signs in here, never submits that form.
+  const enterSignsIn = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== 'Enter') return;
     event.preventDefault();
     if (ready && token.trim()) void submit({ token });
   };
   const failed = failure && connectFailureWords(failure, { trackerName, server: link.server, ...(needsEmail && { email }) });
 
   return (
-    <form className={styles.step} onSubmit={submitted}>
+    <div className={styles.step}>
       {needsEmail && <TextField label="Your Atlassian account email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
       <div className={styles.row}>
         <Button size="small" icon={<ExternalLink size={13} />} onClick={openTokenPage}>
@@ -89,10 +91,11 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
         value={token}
         onChange={(event) => setToken(event.target.value)}
         onPaste={pasted}
+        onKeyDown={enterSignsIn}
         hint={needsEmail ? 'An API token, made on your Atlassian account’s Security page.' : 'Reading issues is all the app asks of it.'}
       />
       <div className={styles.row}>
-        <Button type="submit" size="small" variant={copiedTokenReady ? 'secondary' : 'primary'} disabled={!ready || !token.trim()} loading={busy && !copiedTokenReady}>
+        <Button size="small" variant={copiedTokenReady ? 'secondary' : 'primary'} disabled={!ready || !token.trim()} loading={busy && !copiedTokenReady} onClick={() => void submit({ token })}>
           Sign in
         </Button>
       </div>
@@ -106,7 +109,7 @@ export function TokenSignIn({ request, link, trackerName, needsEmail, failure, o
           )}
         </div>
       )}
-    </form>
+    </div>
   );
 }
 

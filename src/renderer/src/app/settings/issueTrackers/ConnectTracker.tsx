@@ -65,9 +65,11 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
       )}
       {read.kind === 'read' && step && <SignInFor key={link} link={read.link} linkText={link} step={step} repository={repository} onConnected={onConnected} />}
       {onCancel && (
-        <Button size="small" variant="ghost" onClick={onCancel}>
-          Keep the current tracker
-        </Button>
+        <div className={styles.row}>
+          <Button size="small" variant="ghost" onClick={onCancel}>
+            Keep the current tracker
+          </Button>
+        </div>
       )}
     </section>
   );
