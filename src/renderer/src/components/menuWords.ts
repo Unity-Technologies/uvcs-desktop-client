@@ -116,6 +116,8 @@ export const MENU_WORDS = {
   openReview: word('primary', ExternalLink, 'Open review'),
   // The same, in a window of its own (`openInNewWindow`), to read beside the workspace's window, on another display.
   diffInNewWindow: word('primary', PictureInPicture2, 'Open diff in new window'),
+  // A changeset's branch, from where it starts up to the changeset: its work before a later merge from its parent.
+  branchDiffUpTo: word('primary', FileDiff, 'Open branch diff up to this changeset'),
   reviewInNewWindow: word('primary', PictureInPicture2, 'Open review in new window'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),

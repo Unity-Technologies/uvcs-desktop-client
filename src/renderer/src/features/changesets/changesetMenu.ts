@@ -1,3 +1,4 @@
+import type { BranchStart } from '@shared/domain/branch';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { workspacePathOf, type Place } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
@@ -15,6 +16,7 @@ import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
+import { branchDiffBase } from './branchDiffUpTo';
 import {
   deleteChangeset,
   diffWithAnotherChangeset,
@@ -22,6 +24,7 @@ import {
   mergeChangesetTo,
   moveChangesetToBranch,
   changesetDiffPage,
+  openBranchDiffUpTo,
   openChangesetDiff,
   openMerge,
   openRangeDiff,
@@ -37,6 +40,12 @@ export interface ChangesetMenuContext {
   loadedBranch?: string;
   /** The repository, where the changesets don't say it (the Branch Explorer), for the full spec. */
   repository?: string;
+  /**
+   * Where a branch starts, where the view already read it (the Branch Explorer's history, a branch's changesets): the
+   * branch diff up to a changeset is then hidden on the branch's first changeset, and opens with no command. Null, or
+   * left out, reads it when the entry is chosen (`branchDiffBase`).
+   */
+  branchStartOf?: (branch: string) => BranchStart | null;
 }
 
 /** What a changeset is copied as, first what ⌘C copies: `42`, `cs:42`, `cs:42@repo@server`, its comment and GUID. */
@@ -69,10 +78,12 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
   const source = spec.changeset(changeset.id);
   const keys = host.listKeysElsewhere ? {} : { diff: hotkey('listDiff'), copy: hotkey('listCopy'), copyLink: hotkey('copyLink') };
   const canRevertTo = typeof loadedChangeset === 'number' && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
+  const branchDiff = branchDiffBase(changeset, context.branchStartOf?.(changeset.branch) ?? null);
 
   return groupedMenu([
     menuAction('diff', () => openChangesetDiff(changeset), { shortcut: keys.diff }),
     menuAction('diffInNewWindow', () => openInNewWindow(changesetDiffPage(changeset))),
+    branchDiff.kind !== 'none' && menuAction('branchDiffUpTo', () => void openBranchDiffUpTo(place, changeset, branchDiff)),
     workspacePath !== null && menuAction('switch', () => void switchToChangeset(workspacePath, changeset), { label: 'Switch to this changeset' }),
     canRevertTo && menuAction('revert', () => revertWorkspaceToChangeset(changeset, loadedChangeset), { label: 'Revert workspace to this changeset…' }),
     workspacePath !== null && menuAction('merge', () => openMerge({ kind: 'merge', sourceSpec: source })),

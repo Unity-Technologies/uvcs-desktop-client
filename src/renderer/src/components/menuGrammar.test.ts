@@ -432,6 +432,30 @@ describe('text', () => {
   });
 });
 
+describe('the branch diff up to a changeset', () => {
+  const offered = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'primary').map((entry) => entry.label);
+  const graphChangesetMenu = (id: number) => graphMenu({ kind: 'changeset', id }, graphContext);
+
+  it('follows "Open diff in new window" wherever a changeset shows, a repository explored without a workspace too', () => {
+    const expected = ['Open diff', 'Open diff in new window', 'Open branch diff up to this changeset'];
+    expect(offered(MENUS.changeset!())).toEqual(expected);
+    expect(offered(MENUS.graphChangeset!())).toEqual(expected);
+    expect(offered(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expected);
+    expect(offered(changesetResult(changeset, resultContext).menu!())).toEqual(expected);
+  });
+
+  // sampleHistory's /main/a starts from 1 and holds 2, 4 and 5.
+  it("isn't in the Branch Explorer on a branch's first changeset, which knows it from its history, nor on /main", () => {
+    expect(offered(graphChangesetMenu(4))).toContain('Open branch diff up to this changeset');
+    expect(offered(graphChangesetMenu(2))).not.toContain('Open branch diff up to this changeset');
+    expect(offered(graphChangesetMenu(3))).not.toContain('Open branch diff up to this changeset');
+  });
+
+  it("isn't on /main in a list, which can tell a top-level branch by its name", () => {
+    expect(offered(changesetMenu({ place: workspacePlace(ws) }, [{ ...changeset, branch: '/main' }]))).not.toContain('Open branch diff up to this changeset');
+  });
+});
+
 describe('Compare with another', () => {
   const comparing = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => entry.id === 'compare').map((entry) => entry.label);
 
