@@ -383,8 +383,15 @@ scope, `GITHUB_OAUTH_SCOPES`, as GitHub has no narrower scope that reads a priva
 copies it and opens `github.com/login/device`, where the user pastes it and approves. Main polls the token endpoint at
 the server's pace (`pollForToken`, `nextDevicePoll`: `authorization_pending` waits the interval, `slow_down` five
 seconds more, `access_denied` and `expired_token` end it), then signs in as with a token. No client secret is needed,
-so none ships. Leaving the step cancels the polling (`cancelDeviceSignIn`). "Use a token instead" is a quiet link
-beside the button.
+so none ships. "Use a token instead" is a quiet link beside the button.
+
+A flow lives as long as the window that started it waits for it:
+
+- Its outcome waits until the window takes it (`finishDeviceSignIn`), even when it ended first.
+- Leaving the step cancels it (`cancelDeviceSignIn`); a flow that started after its step unmounted (Settings closed
+  while the code was asked for) is cancelled as it starts.
+- Closing the window, or reloading it (a main frame's navigation to another document), ends its flows
+  (`windowClosed`, watched once per window in `issueTrackersService`), and they're forgotten once ended.
 
 ### The token
 
@@ -407,9 +414,12 @@ A GitHub fine-grained token (`github_pat_`) is accepted too, as a connection for
 Any address shaped like an issue on another host (`https://<host>/<owner>/<repo>/issues/1`) reads as GitHub
 Enterprise Server, so a window, untrusted, could name a host of its choosing. Before a credential first goes to a host
 that is none of the trackers' own (github.com, `*.ghe.com`, `*.atlassian.net`, `*.jira.com`) nor a connection's server
-(`needsHostConsent`), main asks the user in its own dialog over the window: "Sign in to git.acme.com?", the host shown
-plainly, Sign In or Cancel (`askHostConsent`). A window can't answer it. The answer holds for the session, and for good
-once the connection is kept; declined, nothing is sent ("Not signed in: git.acme.com wasn't allowed").
+(`needsHostConsent`, built on the grammars' own host rules), main asks the user in its own dialog over the window:
+"Sign in to git.acme.com?", the host shown as the address names it, port and punycode kept, Sign In or Cancel, Cancel
+the default (`askHostConsent`, `hostConsentQuestion`). A window can't answer it; Cancel, Escape and closing it decline.
+Sign-ins to one host meanwhile wait for that one question. An allowance holds for the session, and for good once the
+connection is kept; a decline sends nothing ("Not signed in: git.acme.com wasn't allowed") and isn't remembered: the
+next sign-in is the user's own paste again, and asks again.
 
 ## Economy
 
