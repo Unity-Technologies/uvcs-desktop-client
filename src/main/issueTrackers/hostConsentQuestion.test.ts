@@ -17,6 +17,6 @@ describe('hostConsentQuestion', () => {
 
   it('keeps a port, and shows a look-alike in punycode', () => {
     expect(hostConsentQuestion('https://git.acme.com:8443').message).toBe('Sign in to git.acme.com:8443?');
-    expect(hostConsentQuestion('https://gіthub.com').message).toBe('Sign in to xn--gthub-n4e.com?');
+    expect(hostConsentQuestion('https://gіthub.com').message).toBe('Sign in to xn--gthub-n2e.com?');
   });
 });
