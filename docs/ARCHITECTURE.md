@@ -1053,7 +1053,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   keys' row and the shared ones on a row of their own. Labels, code reviews and people
   are listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
-  suggestions (`indexPeople`); picking one opens the Changesets view on their changesets (`showPersonChangesets`,
+  suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time range it remembers
+  (`showPersonChangesets`,
   the people filter's `onlyPerson`).
 - **Long menus scroll** within the room the window leaves them (`ui/menu/Menu.module.css`: Radix measures it), never
   running off-screen: a picker of many tools, a long "Open with ▸".

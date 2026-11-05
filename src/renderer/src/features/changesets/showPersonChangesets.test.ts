@@ -22,11 +22,17 @@ describe("Show a person's changesets", () => {
     expect(whereTheWindowIs().view).toBe('changesets');
   });
 
-  it('picks Mine for the user, and keeps the time range and "This branch" the view remembers', () => {
+  it('shows them on every branch, "This branch" off, and keeps the time range the view remembers', () => {
     useChangesetFilters.getState().update({ people: EVERYONE, since: 'lastMonth', ...CURRENT_BRANCH });
 
+    showPersonChangesets('ana.diaz', 'tom');
+
+    expect(filtersShown()).toMatchObject({ since: 'lastMonth', onlyCurrentBranch: false, pickedBranch: null });
+  });
+
+  it('picks Mine for the user', () => {
     showPersonChangesets('tom', 'tom');
 
-    expect(filtersShown()).toMatchObject({ people: MINE, since: 'lastMonth', onlyCurrentBranch: true });
+    expect(filtersShown().people).toEqual(MINE);
   });
 });
