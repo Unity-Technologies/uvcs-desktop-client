@@ -4,9 +4,6 @@ Jira Cloud and GitHub (github.com, its data residency hosts and Enterprise Serve
 machine. A repository that uses a tracker shows the issues its comments name as chips, with their title and status.
 Later features build on the pieces named here.
 
-This doc grows with the code: each pull request that builds a part of the issue trackers adds that part here, and
-updates ARCHITECTURE.md "What leaves the device" and "Secrets" where it changes them.
-
 ## The principle: the link lives in the text
 
 The app stores no link between an object and an issue. Comments and branch names already name issues
@@ -22,7 +19,7 @@ A comment shown may send the issues it names to the tracker the user connected f
 other host: never to a host the comment names, never from a place with no binding. Those are a Jira binding's project
 keys, and on GitHub the repositories of the connected server (`#12` of the bound repository, `owner/repo#12` of any).
 Connect sends what the user pasted and signed in with to the tracker of that link. ARCHITECTURE.md "What leaves the
-device" says so; the pull request that added it flagged it to the maintainers, and `PRIVACY.md` is theirs to update.
+device" lists it; `PRIVACY.md` is the maintainers' to update, never a change's.
 
 ## Layers
 
@@ -217,9 +214,10 @@ last only the session, the hosts the device flow serves). Each window puts it in
 connection's `ConnectionHttp`, and only once a connection exists: a user with none never touches the keychain. A
 credential never goes back to a window, and never shows in a log, an error or a toast.
 
-- **Linux without a keyring**: `safeStorage` is unavailable or would use its plain-text backend
-  (`getSelectedStorageBackend()` is `basic_text`). The credential is kept in memory for the session only (`session`),
-  and Settings says so: "Kept until you quit: this computer has no keyring." It's never written in plain text.
+- **No encryption to keep it with**: wherever `safeStorage` isn't available, and on Linux without a keyring, where it
+  would use its plain-text backend (`getSelectedStorageBackend()` is `basic_text`), the credential is kept in memory
+  for the session only (`session`), and Settings says so: "Kept until you quit: this computer has no keyring." It's
+  never written in plain text.
 - **macOS development builds**: the first use asks for the Keychain's "Electron Safe Storage", and a rebuilt
   development app may ask again, as its signature changes; the signed app asks once, by its own name.
 - **Hidden in text**: `hideSecrets.ts` hides the trackers' token shapes (`TRACKER_TOKENS`) in any text logged, as a

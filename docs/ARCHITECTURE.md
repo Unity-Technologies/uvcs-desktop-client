@@ -595,8 +595,8 @@ request and never written into `PRIVACY.md` by the change itself.
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
 - **The issue tracker the user connected** (Jira Cloud, GitHub; docs/features/issue-trackers.md "What leaves the
   device"), from main only (`TrackerHttp`): signing in, and the issues a comment shown names (a Jira binding's
-  project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a comment names, never from a place
-  with no tracker connected.
+  project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a
+  comment names, never from a place with no tracker connected.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
@@ -1468,8 +1468,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
   output. An issue tracker's requests show among the commands (`source: 'tracker'`: method, host and path, a failure
-  as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the
-  command and its subcommand (`lock list`, `find branch`) in one color, option names in another (each kept whole on its
+  as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line
+  is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the command and its subcommand (`lock list`, `find branch`) in one color, option names in another (each kept whole on its
   line), `--format`'s `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and
   numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name
   turns red. Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
