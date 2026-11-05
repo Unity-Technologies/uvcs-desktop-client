@@ -165,15 +165,6 @@ export function signInAgainView(step: SignInAgainStep | null, why: string, token
   return { kind: signInMethodShown(step.methods, tokenChosen) };
 }
 
-/**
- * Whether a token pasted in the field signs in at once: anything shaped like a token (`tokenShape`: a known prefix
- * such as `ghp_` or `ATATT`, or one plausible, as Data Center's have no prefix), the same on every tracker. Text that
- * can't be one (short, with spaces) stays in the field.
- */
-export function submitsOnPaste(kind: IssueTrackerKind, value: string): boolean {
-  return TRACKER_GRAMMARS[kind].tokenShape(value.trim()) !== 'none';
-}
-
 /** The repository's tracker, as the section shows it once connected. */
 export interface ConnectedTracker {
   connection: TrackerConnection;

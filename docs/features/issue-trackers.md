@@ -499,9 +499,9 @@ A masked field paste works in, as people know it:
   `<server>/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`
   (`dataCenterTokenPage`). "Try the other token page", a quiet link under it (`otherTokenPageOffered`), opens the
   other one, so a wrong guess never strands anyone.
-- **Pasting** signs in at once on every tracker alike, whatever is shaped like a token (`submitsOnPaste`: a known
-  prefix, or a plausible token, as Data Center's have none); Enter or "Sign in" otherwise. A text of no token's shape
-  (short, with spaces) stays in the field and is never sent ("That doesn't look like a GitHub token").
+- **Pasting** only fills the field, masked; Sign in (or Enter) signs in, on every tracker alike. A text of no
+  token's shape is never sent ("That doesn't look like a GitHub token"). Signing in at once on a paste was tried and
+  dropped: it left Sign in with no purpose, and pasting then choosing to sign in reads more naturally.
 - The app never reads the clipboard by itself: only a paste the user makes reaches the field. A token pasted and
   signed in with is cleared from the clipboard (written, never read).
 - The token goes to main once, on submit, and never back; the field forgets it.

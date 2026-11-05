@@ -1,5 +1,5 @@
 import { Check, ExternalLink } from 'lucide-react';
-import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { TokenPageTarget } from '@shared/api/issueTrackers';
 import type { IssueTrackerKind, SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
@@ -7,7 +7,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { useWindowUser } from '../../account/accounts';
-import { clearsClipboardAfter, connectFailureWords, OTHER_TOKEN_PAGE_WORDS, otherTokenPageOffered, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
+import { clearsClipboardAfter, connectFailureWords, OTHER_TOKEN_PAGE_WORDS, otherTokenPageOffered, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
 import { tokenStepLead } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
@@ -26,10 +26,10 @@ interface TokenSignInProps {
 }
 
 /**
- * Signing in with a token (docs/features/issue-trackers.md, "The token"): a masked field paste works in, which signs
- * in at once when what's pasted is shaped like a token (`submitsOnPaste`), on every tracker alike; step one opens the
- * tracker's token page, filled in where the tracker allows. The app never reads the clipboard by itself: only a paste the user makes reaches the field. The
- * token goes to main once, on submit, and the field forgets it; a token pasted and signed in with is cleared from the
+ * Signing in with a token (docs/features/issue-trackers.md, "The token"): step one opens the tracker's token page,
+ * filled in where the tracker allows; step two is a masked field paste works in, then Sign in (or Enter), on every
+ * tracker alike. The app never reads the clipboard by itself: only a paste the user makes reaches the field. The token
+ * goes to main once, on submit, and the field forgets it; a token pasted and signed in with is cleared from the
  * clipboard. One button leads (`tokenStepLead`): the token page's until a token is in the field, then "Sign in".
  */
 export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutcome, keptEmail }: TokenSignInProps) {
@@ -40,15 +40,18 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const [typedEmail, setEmail] = useState<string | null>(null);
   const email = typedEmail ?? suggestedEmail(cmUser, keptEmail);
   const [token, setToken] = useState('');
+  // Whether the token in the field came from a paste: the clipboard is cleared once it signs in.
+  const [fromPaste, setFromPaste] = useState(false);
+  const pasting = useRef(false);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (typed: string, { pasted = false } = {}): Promise<void> => {
+  const submit = async (typed: string): Promise<void> => {
     setBusy(true);
     const outcome = await signIn(typed, words.emailLabel ? email.trim() : undefined);
     setToken('');
     setBusy(false);
     // The token the user pasted isn't left on the clipboard to be pasted somewhere by mistake (`clearsClipboardAfter`).
-    if (clearsClipboardAfter(pasted, outcome)) void navigator.clipboard.writeText('').catch(() => undefined);
+    if (clearsClipboardAfter(fromPaste, outcome)) void navigator.clipboard.writeText('').catch(() => undefined);
     onOutcome(outcome);
   };
   const openTokenPage = (): void => {
@@ -57,11 +60,14 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const openOtherTokenPage = (): void => {
     void api.issueTrackers.openTokenPage(pageTarget, 'other');
   };
-  const pasted = (event: ClipboardEvent<HTMLInputElement>): void => {
-    const text = event.clipboardData.getData('text');
-    if (!tokenStepReady(kind, email, text, busy) || !submitsOnPaste(kind, text)) return;
-    event.preventDefault();
-    void submit(text, { pasted: true });
+  // A paste only fills the field, masked: the user signs in with Sign in or Enter, on every tracker alike.
+  const pasted = (): void => {
+    pasting.current = true;
+  };
+  const changed = (value: string): void => {
+    setToken(value);
+    setFromPaste(pasting.current);
+    pasting.current = false;
   };
   // A step inside Settings' own form: Enter signs in here, never submits that form.
   const enterSignsIn = (event: KeyboardEvent<HTMLInputElement>): void => {
@@ -117,7 +123,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
               autoComplete="off"
               placeholder={`Paste the ${words.tokenLabel}`}
               value={token}
-              onChange={(event) => setToken(event.target.value)}
+              onChange={(event) => changed(event.target.value)}
               onPaste={pasted}
               onKeyDown={enterSignsIn}
             />

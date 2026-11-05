@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -63,15 +63,6 @@ describe('connectedTrackerOf', () => {
 });
 
 describe('the token step', () => {
-  it('signs in on paste for anything shaped like a token, on every tracker alike', () => {
-    expect(submitsOnPaste('github', ` ghp_${'a'.repeat(36)}\n`)).toBe(true);
-    expect(submitsOnPaste('jiraCloud', `ATATT${'x'.repeat(40)}`)).toBe(true);
-    // Jira Data Center's tokens have no prefix of their own: one that looks like a token signs in all the same.
-    expect(submitsOnPaste('jiraDataCenter', 'fake-data-center-token-for-tests-0123456789')).toBe(true);
-    expect(submitsOnPaste('jiraDataCenter', 'short')).toBe(false);
-    expect(submitsOnPaste('github', 'a sentence pasted by mistake')).toBe(false);
-  });
-
   it('fills Jira’s email in with the cm user when that’s an address, else the one kept', () => {
     expect(suggestedEmail('ana@acme.com', undefined)).toBe('ana@acme.com');
     expect(suggestedEmail('ana', undefined)).toBe('');
