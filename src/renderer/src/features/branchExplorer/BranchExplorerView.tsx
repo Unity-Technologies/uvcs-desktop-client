@@ -18,7 +18,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
-import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
+import { GraphCanvas, type GraphHighlights, type SelectGesture, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
 import { followedPage } from './followedPage';
@@ -27,7 +27,17 @@ import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
-import { selectionFor, type GraphSelection } from './graphSelection';
+import {
+  leadOf,
+  NOTHING_SELECTED,
+  selectedOnClick,
+  selectedOnContextClick,
+  selectionFor,
+  selectionHighlights,
+  severalSelected,
+  type GraphSelection,
+  type GraphSelections,
+} from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { GraphNavControls } from './GraphNavControls';
@@ -72,7 +82,16 @@ export function BranchExplorerView() {
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const [selection, setSelection] = useState<GraphSelection | null>(null);
+  const [selections, setSelectionsState] = useState<GraphSelections>(NOTHING_SELECTED);
+  // A right-click selects, then asks for the menu in the same event: the menu reads the selection before React renders.
+  const selectionsRef = useRef<GraphSelections>(NOTHING_SELECTED);
+  const setSelections = useCallback((next: GraphSelections) => {
+    selectionsRef.current = next;
+    setSelectionsState(next);
+  }, []);
+  /** The keyboard, the details, the following window and going to an object work on one: the last one picked. */
+  const selection = leadOf(selections);
+  const setSelection = useCallback((next: GraphSelection | null) => setSelections(next ? [next] : NOTHING_SELECTED), [setSelections]);
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   /** How far the last focus reached; the next one starts there. */
   const [focusHops, setFocusHops] = useState(1);
@@ -116,9 +135,7 @@ export function BranchExplorerView() {
   const activeHit = searchHits[search.activeHitIndex] ?? null;
   const highlights = useMemo<GraphHighlights>(
     () => ({
-      selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
-      selectedBranch: selection?.kind === 'branch' ? selection.name : null,
-      selectedPending: selection?.kind === 'pending',
+      ...selectionHighlights(selections),
       homeChangeset,
       pendingChangeCount,
       currentBranch,
@@ -128,7 +145,7 @@ export function BranchExplorerView() {
       options: viewOptions,
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
+    [selections, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
   );
   const timelineShare = useMemo(() => shareOwners(people, me), [people, me]);
   const { slideIn: timelineSlidesIn, slidIn: timelineSlidIn } = useTimelineSlideIn(showTimeline);
@@ -214,12 +231,13 @@ export function BranchExplorerView() {
       goToChangeset,
       showRelatedTo: (name) => focusOn(name, focusHops),
       revealCreatedBranch,
+      selections: selectionsRef.current,
     });
 
-  const select = (target: GraphTarget | null): void => {
+  const select = (target: GraphTarget | null, gesture: SelectGesture): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
-    else setSelection(selectionFor(target));
+    else setSelections((gesture.context ? selectedOnContextClick : selectedOnClick)(selectionsRef.current, target, gesture.toggle));
   };
 
   const activate = (target: GraphTarget): void => {
@@ -325,7 +343,7 @@ export function BranchExplorerView() {
       {header}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
-          {describeSelection(layout, selection, homeChangeset)}
+          {severalSelected(selections) ?? describeSelection(layout, selection, homeChangeset)}
         </div>
         <ListWithDetails
           detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
@@ -346,6 +364,7 @@ export function BranchExplorerView() {
           details={
             <GraphDetails
               selection={selection}
+              several={severalSelected(selections)}
               layout={layout}
               pendingChangeCount={pendingChangeCount}
               menuFor={menuFor}
