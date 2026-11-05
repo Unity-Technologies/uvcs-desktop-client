@@ -340,6 +340,44 @@ The binding reaches the comment readers as an option, never from module state: `
 | The editor (`liveMarks`' chips, the `issueReferences` facet, reconfigured as the place's tracker changes) | Issue chips as typed, read while their card is open |
 | What holds only text (`commentText`, `commentLineText`: the Branch Explorer's canvas, the palette, notifications) | Nothing: a reference already shows as written, so these take no reader, and `mayHoldReference`'s fast path stays as it is |
 
+## Suggesting issues: `#` in the editor
+
+`#` is the comment editor's own trigger (`SUGGESTION_TRIGGERS`, beside `:`; the palette doesn't read it), on only
+where the place's repository has a tracker: `suggestionQueryAt` asks the `issueReferences` facet, so without one `#`
+is plain text, with no list and no hint (`focusModeHints({ issues })`).
+
+- **Not a heading**: a space after `#` (`# Title`) ends the word before it starts, and `##` holds a `#`
+  (`ISSUE_TEXT`: letters, digits, `_` and `-` only), so a heading opens nothing; nor does a `#` inside a word (`C#`,
+  `acme/game#1`).
+- **What it lists** (`issueSuggestionRows`, its reads decided by `issueSuggestionReads`):
+  - On opening, the account's issues not done in the bound projects, most recently updated first: one search
+    (`searchIssues` with no words), kept a minute (`ISSUE_SEARCH_FRESH_MS`).
+  - Typing narrows that list locally, by key, number or title words (`rankCandidates`).
+  - A key or a number that names one issue (`keyTyped`: `VCS-12`, `vcs-12`, or `12` with one project bound) is read by
+    key once typing settles, through the batched reads (`issueQuery`), never searched.
+  - Words are searched on the tracker once typing settles (`SERVER_SEARCH_DELAY_MS`) and from three characters
+    (`ISSUE_WORDS_MIN_LENGTH`), cached per words (`issueSearchQuery`). The issue a key names comes first, then the
+    local matches, then the search's, each once, the best `SUGGESTION_LIMIT`.
+  - Each row: the status's dot, the reference as it will be written, the title.
+- **A pick** writes the reference as the place's comments read it back (`referenceText`): a Jira key, `#12` for the
+  one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes with it (`picked` seeds
+  `issueKeys.issue`), so its chip shows its title and status at once.
+- **When it can't**, one quiet row, never picked (Enter stays a line end, typing goes on as text): "Reading issues…",
+  "No open issues assigned to you", "No issues match “x”", "No issue VCS-99", "Couldn't search Jira", and for a
+  sign-in that needs renewing "Sign in to Jira again in Settings", which asks nothing.
+- **The searches** (`IssueTrackers.searchIssues`, `IssueSearch`): one request each, at most `ISSUE_SEARCH_LIMIT` (20)
+  issues, the user's words only ever inside quotes:
+  - Jira Cloud: `POST /rest/api/3/search/jql`; Jira Data Center: `GET /rest/api/2/search` with `validateQuery=false`.
+    Both take `jiraSearchJql`: `project in (…)`, then `summary ~ "…"` with the words (`jiraTitleWords`: Lucene's
+    reserved characters, quotes and backslashes dropped, lower case so `AND`, `OR` and `NOT` are words, the last word
+    a prefix), or `assignee = currentUser() AND statusCategory != Done`; `ORDER BY updated DESC`.
+  - GitHub: GraphQL's `search` (`GITHUB_SEARCH`), the query as a variable (`githubSearchQuery`: `repo:` per
+    repository, `is:issue`, `sort:updated-desc`, then `in:title` and each word quoted, its quotes dropped, or
+    `is:open assignee:@me`). It counts against GitHub's search limit, hence the settling and the three characters.
+- **A newer search replaces the one running**: per window and repository (`SupersededSearches`), the older request is
+  aborted where it is (`TrackerRequest.signal`) and answers `superseded`, which the list reads as still reading and
+  never keeps (`issueSearchStaleTime`).
+
 ## Connecting: Settings › Issue tracker
 
 One section (`IssueTrackerPane`), for the window's repository; in a window with no repository, the sign-ins this
@@ -449,6 +487,8 @@ next sign-in is the user's own paste again, and asks again.
 The trackers' servers get the care `cm`'s does (CLAUDE.md "Every `cm` command earns its place"):
 
 - One request per connection for every issue on screen (`IssueReadBatch`); never one per issue.
+- `#`: one search as the list opens, kept a minute; then one per settled word of three characters or more, cached per
+  words; a key typed is a batched read; a search a newer one replaced is aborted. Never one per key pressed.
 - Read on a settled selection, a card opened, or a focus once stale; never on a timer.
 - Cached five minutes, a missing issue too; a failure until it may be tried again.
 - Connect's requests only when asked (the table above).
@@ -497,6 +537,11 @@ The registries' `Record`s fail to compile until 2 and 3 exist.
   Content-Security-Policy allows no connection out. Typed methods in main only.
 - **`net.fetch` as it is**: it sends the default session's cookies. A session of its own.
 - **One read per chip**: a comment with fifty keys would be fifty requests. Batched per task and connection.
+- **`#` searching at every key, or from one character**: GitHub's search allows about 30 requests a minute, and a
+  letter matches half a tracker. Settled words from three characters, over the account's open issues filtered locally.
+- **`text ~` for `#`'s words**: it also searches descriptions and comments, which the row doesn't show, so a match
+  looked unrelated. `summary ~`, the title the row shows.
+- **A typed key searched as words**: a key names one issue, which the batched read already gets.
 - **Keying bindings by the repository's GUID**: one more server command per window for a rare rename. The spec, moved
   on the app's own renames.
 - **A setup screen of parameters per tracker** (user, password, host, branch prefix, a working mode), as older

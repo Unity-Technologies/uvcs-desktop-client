@@ -1068,12 +1068,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `cm`'s own specs `cs:` `br:` `lb:` `sh:`, `cr:` for a code review, and `@` for a person. In the command palette each
   narrows the search to its section (`SCOPE_PREFIXES`, `parseScope`), beside the palette's own `>` commands and `/`
   files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
-  editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
+  editor's own `:` emoji and `#` issues. A surface adds prefixes of its own, never another meaning for a shared one
   (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it; a
   changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names that
   shelve or review, first and as a full match (`namedFirst`): with its row when the lists read hold it, else by its
   number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked. `#` is
-  no one's: it's kept for issues. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
   its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
