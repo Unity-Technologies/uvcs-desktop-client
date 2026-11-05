@@ -1,4 +1,4 @@
-import type { IssueTrackerKind, IssueTrackerSetup, ProjectAccess, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
@@ -158,22 +158,11 @@ export function submitsOnPaste(kind: IssueTrackerKind, value: string): boolean {
   return TRACKER_GRAMMARS[kind].tokenShape(value.trim()) === 'known';
 }
 
-/** The proof a sign-in works: the project, its open issues and those assigned to the account. */
-export function proofWords(link: Pick<RecognizedLink, 'kind'>, access: ProjectAccess): string {
-  const project = isJira(link.kind) ? `Project ${access.project}` : access.name;
-  if (access.openIssues === undefined) return project;
-  const assigned = access.assignedToYou === undefined ? '' : `, ${access.assignedToYou} assigned to you`;
-  return `${project} · ${pluralize(access.openIssues, 'open issue')}${assigned}`;
-}
-
 /** The repository's tracker, as the section shows it once connected. */
 export interface ConnectedTracker {
   connection: TrackerConnection;
-  title: string;
-  projects: string;
   /** The bound projects' keys, or GitHub's `owner/repo`. */
   projectKeys: string[];
-  account: string;
   /** Its credential stopped working: "Sign in again", with why. */
   signInAgain?: string;
   /** No keyring on this computer: the sign-in lasts until the app quits. */
@@ -183,11 +172,6 @@ export interface ConnectedTracker {
 /** A connection in words, as the section names it: "Jira at acme.atlassian.net". */
 export function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'server'>): string {
   return `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`;
-}
-
-/** Whether a connection signs in now: "Signed in as Ana", or that it needs signing in again. */
-export function accountWords(connection: Pick<TrackerConnection, 'credential' | 'account'>): string {
-  return connection.credential === 'refused' || connection.credential === 'missing' ? 'Needs signing in again' : `Signed in as ${connection.account.name}`;
 }
 
 /** The sign-ins this computer keeps, as a window with no repository lists them: each with how it stands. */
@@ -214,10 +198,7 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
   const name = TRACKER_GRAMMARS[connection.kind].name;
   return {
     connection,
-    title: connectionTitle(connection),
-    projects: isJira(connection.kind) ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
     projectKeys: binding.projects,
-    account: accountWords(connection),
     ...(connection.credential === 'refused' && { signInAgain: `${name} stopped accepting this sign-in.` }),
     ...(connection.credential === 'missing' && { signInAgain: `This computer no longer has the ${name} sign-in.` }),
     ...(connection.credential === 'session' && { sessionOnly: 'Kept until you quit: this computer has no keyring.' }),

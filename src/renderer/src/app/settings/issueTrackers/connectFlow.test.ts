@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, accountWords, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -51,12 +51,12 @@ describe('signInStepFor', () => {
 
 describe('connectedTrackerOf', () => {
   it('names the repository’s tracker, projects and account', () => {
-    expect(connectedTrackerOf(setup([jira]), 'game@acme@unity')).toEqual({ connection: jira, title: 'Jira at acme.atlassian.net', projects: 'Project VCS', projectKeys: ['VCS'], account: 'Signed in as Ana Díaz' });
+    expect(connectedTrackerOf(setup([jira]), 'game@acme@unity')).toEqual({ connection: jira, projectKeys: ['VCS'] });
     expect(connectedTrackerOf(setup([jira]), 'other@acme@unity')).toBeNull();
   });
 
   it('asks to sign in again when the credential stopped working, and says a session-only one lasts until quitting', () => {
-    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.', account: 'Needs signing in again' });
+    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.' });
     expect(connectedTrackerOf(setup([{ ...jira, credential: 'missing' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'This computer no longer has the Jira sign-in.' });
     expect(connectedTrackerOf(setup([{ ...jira, credential: 'session' }]), 'game@acme@unity')).toMatchObject({ sessionOnly: 'Kept until you quit: this computer has no keyring.' });
   });
@@ -73,14 +73,6 @@ describe('the token step', () => {
     expect(suggestedEmail('ana@acme.com', undefined)).toBe('ana@acme.com');
     expect(suggestedEmail('ana', undefined)).toBe('');
     expect(suggestedEmail('ana@acme.com', 'kept@acme.com')).toBe('kept@acme.com');
-  });
-});
-
-describe('proofWords', () => {
-  it('names the project and its counts, never the pasted issue', () => {
-    expect(proofWords({ kind: 'jiraCloud' }, { project: 'VCS', name: 'Version Control', openIssues: 214, assignedToYou: 6 })).toBe('Project VCS · 214 open issues, 6 assigned to you');
-    expect(proofWords({ kind: 'github' }, { project: 'acme/game', name: 'acme/game', openIssues: 1 })).toBe('acme/game · 1 open issue');
-    expect(proofWords({ kind: 'github' }, { project: 'acme/game', name: 'acme/game' })).toBe('acme/game');
   });
 });
 
@@ -201,7 +193,6 @@ describe('signInRows', () => {
       { id: 'j', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, signOut: 'Sign out of acme.atlassian.net' },
       { id: 'r', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs signing in' }, signOut: 'Sign out of acme.atlassian.net' },
     ]);
-    expect(accountWords({ ...jira, credential: 'missing' })).toBe('Needs signing in again');
     expect(signInRows(undefined)).toEqual([]);
   });
 });
