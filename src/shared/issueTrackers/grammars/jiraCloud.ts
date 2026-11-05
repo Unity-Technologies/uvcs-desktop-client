@@ -1,8 +1,5 @@
-import { escapeRegExp } from '../../escapeRegExp';
-import { isPlausibleToken, REFERENCE_END, REFERENCE_START, type FoundIssueReference, type TrackerGrammar } from '../trackerGrammar';
-
-/** A Jira key: the project's key (a letter, then upper-case letters, digits or `_`), a dash, the issue's number. */
-const KEY = /^([A-Z][A-Z0-9_]+)-([1-9]\d*)$/;
+import { isPlausibleToken, type TrackerGrammar } from '../trackerGrammar';
+import { browsedIssue, JIRA_KEY, jiraIssueUrl, jiraReferencesReader } from './jiraKeys';
 
 /** Atlassian's API tokens since 2023 start so; an older one is 24 letters and digits. */
 const ATLASSIAN_TOKEN = /^ATATT[A-Za-z0-9_\-=]{20,}$/;
@@ -21,26 +18,16 @@ export const jiraCloudGrammar: TrackerGrammar = {
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
     if (!isJiraCloudHost(url.hostname)) return null;
     const server = `https://${url.hostname.toLowerCase()}`;
-    const browsed = /^\/browse\/([^/]+)\/?$/.exec(url.pathname)?.[1];
-    // A key is plain ASCII, never percent-encoded: the path is read as it is, so a malformed one (`%E0`) is no key.
-    const browsedKey = browsed && KEY.exec(browsed);
-    if (browsedKey) return { kind: 'jiraCloud', server, project: browsedKey[1]!, key: browsedKey[0], shows: 'issuePage' };
-    const selected = KEY.exec(url.searchParams.get('selectedIssue') ?? '');
+    const browsed = browsedIssue(url.pathname);
+    if (browsed && !browsed.contextPath) return { kind: 'jiraCloud', server, project: browsed.key[1]!, key: browsed.key[0], shows: 'issuePage' };
+    const selected = JIRA_KEY.exec(url.searchParams.get('selectedIssue') ?? '');
     if (selected) return { kind: 'jiraCloud', server, project: selected[1]!, key: selected[0], shows: 'issueInView' };
     return { kind: 'jiraCloud', notAnIssue: jiraPageName(url.pathname) };
   },
 
-  referencesReader(projects) {
-    if (projects.length === 0) return () => [];
-    const keys = new RegExp(`${REFERENCE_START}(?:${projects.map(escapeRegExp).join('|')})-[1-9]\\d*${REFERENCE_END}`, 'gu');
-    return (text) => {
-      const found: FoundIssueReference[] = [];
-      for (const match of text.matchAll(keys)) found.push({ key: match[0], bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
-      return found;
-    };
-  },
+  referencesReader: jiraReferencesReader,
 
-  issueUrl: (server, key) => `${server}/browse/${encodeURIComponent(key)}`,
+  issueUrl: jiraIssueUrl,
 
   tokenPageUrl: () => 'https://id.atlassian.com/manage-profile/security/api-tokens',
 
