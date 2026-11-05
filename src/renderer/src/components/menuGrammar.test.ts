@@ -129,6 +129,7 @@ const graphContext = {
   goToChangeset: () => {},
   showRelatedTo: () => {},
   revealCreatedBranch: () => {},
+  selections: [],
 };
 const lane = layout.lanesByBranch.get('/main/a')!;
 const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
@@ -238,6 +239,9 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   graphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, graphContext),
   graphCodeReview: () => graphMenu({ kind: 'codeReview', review }, graphContext),
   graphMergeLink: () => graphMenu({ kind: 'mergeLink', link: sampleHistory().mergeLinks[0]! }, graphContext),
+  graphChangesets: () =>
+    graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, selections: [{ kind: 'changeset', id: 4 }, { kind: 'changeset', id: 5 }] }),
+  graphBranches: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, selections: [{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }] }),
 };
 
 /**
