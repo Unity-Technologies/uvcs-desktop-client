@@ -122,6 +122,8 @@ describe('liveMarksOf', () => {
       expect(marksIn('See https://jira.acme.com/browse/OPS-1\n‸')).toEqual([]);
       expect(marksIn('See https://jira.other.com/browse/VCS-12\n‸')).toEqual([]);
       expect(marksIn('See [the bug](https://jira.acme.com/browse/VCS-12)\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
+      // A table drawn whole (the caret elsewhere) draws its own cells: no chip of its own inside it.
+      expect(marksIn('| Issue |\n| --- |\n| https://jira.acme.com/browse/VCS-12 |\n\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
     });
 
     it('draws every reference as its chip', () => {
