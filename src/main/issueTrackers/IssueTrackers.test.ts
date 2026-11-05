@@ -51,6 +51,15 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
 }
 
 describe('IssueTrackers', () => {
+  it('signs in with no repository, from a window that has none: the sign-in is kept, proven, and binds nothing', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    const outcome = await engine.signInWithToken({ link: LINK, token: TOKEN });
+    expect(outcome).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept' }, access: { project: 'acme/game' } });
+    expect(engine.setup().connections.map((connection) => connection.id)).toEqual(['id1']);
+    expect(engine.setup().bindings).toEqual([]);
+    expect(tracker.lines()).toEqual(['GET https://api.github.com/user', GRAPHQL]);
+  });
+
   it('signs in with a token, proves the project and binds the repository to it', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
     const outcome = await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: ` ${TOKEN} ` });
