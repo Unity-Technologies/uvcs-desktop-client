@@ -6,6 +6,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { deviceCodeWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
+import deviceStyles from './DeviceSignIn.module.css';
 
 interface DeviceSignInProps {
   /** A first sign-in by a link, for a repository or alone; or a connection's again. */
@@ -60,13 +61,13 @@ export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: De
     return (
       <div className={styles.next}>
         <p className={styles.intro}>{words.instruction}</p>
-        <div className={styles.preview}>
-          <span className={styles.previewLabel}>Your code</span>
-          <span className={styles.code} aria-label={`Code ${code.userCode}`}>
+        <div className={deviceStyles.preview}>
+          <span className={deviceStyles.previewLabel}>Your code</span>
+          <span className={deviceStyles.code} aria-label={`Code ${code.userCode}`}>
             {code.userCode}
           </span>
         </div>
-        <div className={styles.progress} role="progressbar" aria-label={words.waiting} />
+        <div className={deviceStyles.progress} role="progressbar" aria-label={words.waiting} />
         <div className={styles.row}>
           <span className={styles.note}>{words.waiting}</span>
           <Button size="small" variant="ghost" onClick={() => void api.system.openExternal(code.verificationUri)}>

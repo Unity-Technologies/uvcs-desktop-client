@@ -10,6 +10,7 @@ import { useWindowUser } from '../../account/accounts';
 import { clearsClipboardAfter, connectFailureWords, OTHER_TOKEN_PAGE_WORDS, otherTokenPageOffered, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
 import { tokenStepLead } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
+import tokenStyles from './TokenSignIn.module.css';
 
 interface TokenSignInProps {
   kind: IssueTrackerKind;
@@ -85,12 +86,12 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const lead = tokenStepLead(token);
 
   return (
-    <ol className={styles.guide}>
-      <li className={styles.guideStep} data-done={lead === 'signIn' || undefined}>
-        <span className={styles.guideNumber} aria-hidden>
+    <ol className={tokenStyles.guide}>
+      <li className={tokenStyles.guideStep} data-done={lead === 'signIn' || undefined}>
+        <span className={tokenStyles.guideNumber} aria-hidden>
           {lead === 'signIn' ? <Check size={12} strokeWidth={3} /> : 1}
         </span>
-        <div className={styles.guideBody}>
+        <div className={tokenStyles.guideBody}>
           <p className={styles.nextTitle}>{words.getTitle}</p>
           <p className={styles.note}>{words.createWhere}</p>
           <div className={styles.row}>
@@ -108,14 +109,14 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
           )}
         </div>
       </li>
-      <li className={styles.guideStep}>
-        <span className={styles.guideNumber} aria-hidden>
+      <li className={tokenStyles.guideStep}>
+        <span className={tokenStyles.guideNumber} aria-hidden>
           2
         </span>
-        <div className={styles.guideBody}>
+        <div className={tokenStyles.guideBody}>
           <p className={styles.nextTitle}>Paste it here</p>
           {words.emailLabel && <TextField label={words.emailLabel} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
-          <div className={styles.pasteRow}>
+          <div className={tokenStyles.pasteRow}>
             <TextField
               className={styles.field}
               aria-label={words.tokenLabel}

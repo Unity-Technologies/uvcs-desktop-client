@@ -9,6 +9,7 @@ import { choiceOf, NO_SIGN_INS, REPOSITORY_START_WORDS } from './trackerChoices'
 import { TrackerLogo } from './TrackerLogo';
 import { useSuggestedLink } from './useSuggestedLink';
 import styles from './IssueTrackerPane.module.css';
+import tileStyles from './SignInTiles.module.css';
 
 /**
  * A repository with no tracker yet (docs/features/issue-trackers.md, "Connecting"), as Home's sign-ins read: the sign-ins
@@ -47,10 +48,10 @@ export function RepositoryStart({ onStart, onCancel }: { onStart: (start: Connec
         )}
         {signIns.length > 0 ? (
           <>
-            <h3 className={styles.quietTitle}>{words.signIns}</h3>
-            <ul className={styles.tiles}>
+            <h3 className={tileStyles.quietTitle}>{words.signIns}</h3>
+            <ul className={tileStyles.tiles}>
               {signIns.map((signIn) => (
-                <li key={signIn.id} className={styles.signInTile} aria-label={`${signIn.account}, ${signIn.title}`}>
+                <li key={signIn.id} className={tileStyles.signInTile} aria-label={`${signIn.account}, ${signIn.title}`}>
                   <SignInIdentity row={signIn} />
                   <Button size="small" variant="primary" onClick={() => onStart({ choice: choiceOf(signIn.kind), picked: signIn })}>
                     Use
@@ -60,7 +61,7 @@ export function RepositoryStart({ onStart, onCancel }: { onStart: (start: Connec
             </ul>
           </>
         ) : (
-          <div className={styles.noSignIns}>
+          <div className={tileStyles.noSignIns}>
             <p className={styles.nextTitle}>{NO_SIGN_INS.title}</p>
             <p className={styles.note}>{NO_SIGN_INS.inRepository}</p>
           </div>

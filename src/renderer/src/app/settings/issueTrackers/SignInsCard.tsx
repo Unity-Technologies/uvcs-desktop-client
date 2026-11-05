@@ -8,6 +8,7 @@ import { NO_SIGN_INS, type TrackerChoice } from './trackerChoices';
 import { AddSignInMenu } from './AddSignInMenu';
 import { SignInIdentity } from './SignInIdentity';
 import styles from './IssueTrackerPane.module.css';
+import tileStyles from './SignInTiles.module.css';
 
 /**
  * The sign-ins this computer keeps (docs/features/issue-trackers.md, "Connecting"), a small card each
@@ -18,7 +19,7 @@ import styles from './IssueTrackerPane.module.css';
 export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?: (choice: TrackerChoice) => void }) {
   const rows = signInRows(useIssueTrackerSetup(), repository);
   const tiles = (
-    <ul className={styles.tiles}>
+    <ul className={tileStyles.tiles}>
       {rows.map((row) => (
         <SignInTile key={row.id} row={row} />
       ))}
@@ -26,8 +27,8 @@ export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?
   );
   if (repository) {
     return (
-      <section className={styles.quietSection} aria-label="Sign-ins on this computer">
-        <h3 className={styles.quietTitle}>Sign-ins on this computer</h3>
+      <section className={tileStyles.quietSection} aria-label="Sign-ins on this computer">
+        <h3 className={tileStyles.quietTitle}>Sign-ins on this computer</h3>
         {tiles}
       </section>
     );
@@ -47,7 +48,7 @@ export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?
         {rows.length > 0 ? (
           tiles
         ) : (
-          <div className={styles.noSignIns}>
+          <div className={tileStyles.noSignIns}>
             <p className={styles.nextTitle}>{NO_SIGN_INS.title}</p>
             <p className={styles.note}>{NO_SIGN_INS.onHome}</p>
           </div>
@@ -69,10 +70,10 @@ function SignInTile({ row }: { row: SignInRow }) {
     });
   };
   return (
-    <li className={styles.signInTile} aria-label={`${row.account}, ${row.title}`}>
+    <li className={tileStyles.signInTile} aria-label={`${row.account}, ${row.title}`}>
       <SignInIdentity row={row} />
       {row.needsAttention && <StatusPill status={row.status} />}
-      <Button className={styles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={signOut}>
+      <Button className={tileStyles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={signOut}>
         Sign out
       </Button>
     </li>
