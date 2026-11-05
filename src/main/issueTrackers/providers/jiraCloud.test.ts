@@ -71,6 +71,11 @@ describe('the Jira Cloud provider', () => {
     expect(tracker.requests.map((request) => request.json)).toEqual([undefined, { jql: 'project = "VCS" AND statusCategory != Done' }, { jql: 'project = "VCS" AND statusCategory != Done AND assignee = currentUser()' }]);
   });
 
+  it('proves a project its counts can’t be had for: the counts are left out, never the proof', async () => {
+    const { http } = connected({ [`GET ${SITE}/rest/api/3/project/VCS`]: { json: { key: 'VCS', name: 'Version Control' } }, [`POST ${SITE}/rest/api/3/search/approximate-count`]: { unreachable: true } });
+    expect(await jiraCloudProvider.projectAccess(http, { server: SITE }, 'VCS')).toEqual({ project: 'VCS', name: 'Version Control' });
+  });
+
   it('fails a project the account can’t see as no access', async () => {
     const { http } = connected({ [`GET ${SITE}/rest/api/3/project/VCS`]: { status: 404, json: { errorMessages: ["No project could be found with key 'VCS'."] } } });
     const error = await jiraCloudProvider.projectAccess(http, { server: SITE }, 'VCS').catch((caught: unknown) => caught);

@@ -80,6 +80,17 @@ describe('the Jira Data Center provider', () => {
     expect(tracker.requests.map((request) => request.method)).toEqual(['GET', 'GET', 'GET']);
   });
 
+  it('proves a project its counts can’t be had for: the counts are left out, never the proof', async () => {
+    // A count over a large project may not answer in time; the project itself answered, so the sign-in reads it.
+    const open = 'project = "VCS" AND statusCategory != Done';
+    const { http } = connected({
+      [`GET ${SERVER}/rest/api/2/project/VCS`]: { json: { key: 'VCS', name: 'Version Control' } },
+      [`GET ${searchUrl({ jql: open, maxResults: '0' })}`]: { unreachable: true },
+      [`GET ${searchUrl({ jql: `${open} AND assignee = currentUser()`, maxResults: '0' })}`]: { status: 429, headers: { 'Retry-After': '30' } },
+    });
+    expect(await jiraDataCenterProvider.projectAccess(http, { server: SERVER }, 'VCS')).toEqual({ project: 'VCS', name: 'Version Control' });
+  });
+
   it('reads every key in one search, a missing one as missing, its status by category', async () => {
     // `validateQuery=false`: with Data Center's default (true), one key that doesn't exist fails the whole search.
     const asked = searchUrl({ jql: 'key in ("VCS-12", "VCS-13", "VCS-99")', fields: 'summary,status,issuetype,assignee', maxResults: '3', validateQuery: 'false' });
