@@ -104,9 +104,10 @@ built for every tracker with their fixtures; nothing is stubbed before.
   message names the host and the path, never a query string, a header or a body.
 - **The command log** shows each request beside `cm`'s (`trackerLogEntry`, `CmClient.logEntry`, numbered with them):
   `CommandLogEntry.source` is `tracker`, its line the method, host and path without the query (`POST
-  acme.atlassian.net/rest/api/3/issue/bulkfetch`), its `httpStatus` the answer's. A failure keeps only the
-  `TrackerError`'s words as `output`, never the answer's body; the log words its ending "HTTP 404", or "No answer"
-  (`entryEnding`). A window's log gets the requests its own calls made (`ranInPlace`).
+  acme.atlassian.net/rest/api/3/issue/bulkfetch`), its `httpStatus` the answer's. A failure keeps the
+  `TrackerError`'s words as `output`; a failed answer adds the tracker's own error words (Jira's `errorMessages` and
+  `errors`, GitHub's `message`, at most 300 characters: `failedAnswerWords`), so a request the app got wrong (a 400)
+  says why there, never to the user; the log words its ending "HTTP 404", or "No answer" (`entryEnding`). A window's log gets the requests its own calls made (`ranInPlace`).
 
 ### Errors
 
@@ -119,7 +120,7 @@ Each case has its recorded fixture:
 | `signInRefused` | 401 | 401; a 302 to its login page (`samlsso`, `login.jsp`: an SSO server refusing a token, `toLogin`) | 401 |
 | `noAccess` | 403; 404 on a project | 403; 404 on a project | 403 without a rate limit; a repository that answers null |
 | `rateLimited` | 429, until `Retry-After` | 429, until `Retry-After` | 200 with an error of type `RATE_LIMITED`, until `x-ratelimit-reset`; 403 or 429 with `retry-after` or `x-ratelimit-remaining: 0` (the secondary limit) |
-| one key `missing` | `bulkfetch` leaves it out | the search leaves it out, only warning (`validateQuery: warn`) | its alias is null, with an error of type `NOT_FOUND` at the issue |
+| one key `missing` | `bulkfetch` leaves it out | the search leaves it out (`validateQuery=false`: Data Center's is a boolean, Cloud's `warn` is a 400 there, and its default, true, fails the whole search on one key that doesn't exist) | its alias is null, with an error of type `NOT_FOUND` at the issue |
 | one key `noAccess` | — (Jira leaves out an issue the account can't see: `missing`) | — (likewise `missing`) | an error of type `NOT_FOUND` whose path ends at the repository: the token can't see it |
 | one key `unreadable` | the keys left out when `bulkfetch` lists `issueErrors` (which name issues by id only) | — | its alias's other error |
 
@@ -306,8 +307,9 @@ The chip shows its key; copying gives back the address.
   (`ChipHoverCard`, `issueCard`) shows the title, then the status, type and assignee. A click opens the issue's page in
   the browser. Copying a part of a comment gives the reference as written.
 - **Without a sign-in, or when the tracker fails** (rate limited, out of reach, no access, credential refused), the
-  chip is still a link to the issue's page, and its card says why there's nothing more. Nothing waits on a tracker to
-  draw.
+  chip is still a link to the issue's page, and its card says why there's nothing more; a tracker that refuses the
+  read itself (a 403 to the whole batch) says "Your Jira token can't read issues" ("sign-in" for GitHub). Nothing
+  waits on a tracker to draw.
 - **A missing issue**, by how it's written: a Jira key or `owner/repo#N` stays a chip whose card says "No issue
   VCS-12", as `cs:` does; a bare `#N` starts as text and becomes a chip once read as found, never taken away, and in a
   row stays text, as it has no card to open.
@@ -318,7 +320,8 @@ The chip shows its key; copying gives back the address.
 - **Batched**: each issue is its own query (`issueQuery`, keyed `issueKeys.issue(connectionId, key)`), so a chip
   anywhere finds what another read. Their reads go through `IssueReadBatch`, which gathers every key asked in the same
   task, splits them per connection and asks `issueTrackers.readIssues` once per connection: Jira Cloud's `POST
-  /rest/api/3/issue/bulkfetch`, Jira Data Center's `POST /rest/api/2/search` (`key in (…)`), GitHub's GraphQL with one `issueOrPullRequest` alias per issue, the repositories as
+  /rest/api/3/issue/bulkfetch`, Jira Data Center's `GET /rest/api/2/search` (`key in (…)`; a read-only token allows only GET, and an address past
+  `MAX_SEARCH_URL_LENGTH`, 6,000 characters, splits into more searches: `searchUrls`), GitHub's GraphQL with one `issueOrPullRequest` alias per issue, the repositories as
   variables. The shared request belongs to no one query: cancelling one never aborts it.
 - **Cached**: `staleTime` five minutes (`ISSUE_FRESH_MS`), a missing issue too; `refetchOnWindowFocus`, so a focus
   reads again only the issues on screen and only once stale; no reconnect read and no retry, as `TrackerHttp` and its
@@ -366,7 +369,7 @@ Only when the user goes through it:
 | Tracker | Requests |
 | --- | --- |
 | Jira Cloud | `GET /rest/api/3/myself` on the site; on a 401, `GET /_edge/tenant_info` (the cloud id) and `myself` again through the gateway (a scoped token); `GET /rest/api/3/project/<key>`; `POST /rest/api/3/search/approximate-count` twice (open, and open assigned to the account). 4, or 6 for a scoped token |
-| Jira Data Center | `GET /rest/api/2/myself`, `GET /rest/api/2/project/<key>`, `POST /rest/api/2/search` with `maxResults: 0` twice (its `total`: open, and open assigned to the account). 4 |
+| Jira Data Center | `GET /rest/api/2/myself`, `GET /rest/api/2/project/<key>`, `GET /rest/api/2/search` with `maxResults=0` twice (its `total`: open, and open assigned to the account). 4 |
 | GitHub | `GET /user`, then one GraphQL query: the repository's open issues (`issues(states: OPEN) { totalCount }`, which counts no pull requests, unlike REST's `open_issues_count`) and the open ones assigned to the viewer (`search(type: ISSUE, …) { issueCount }`). 2, plus the device flow's own |
 
 ## Sign-in
@@ -381,7 +384,7 @@ Settings.
 | github.com | The device flow, where the app ships an OAuth App's client id (`GITHUB_OAUTH_CLIENT_IDS`); a token otherwise |
 | `<name>.ghe.com`, Enterprise Server | A token: the device flow needs an app registered on that server |
 | Jira Cloud | An API token and the account's email: Atlassian's OAuth needs a client secret, which a desktop app can't keep |
-| Jira Data Center | A personal access token, sent as Bearer, no email. Browser sign-in would need an application link each site's admin sets up: its `browser` slot stays empty |
+| Jira Data Center | A token sent as Bearer, no email: Jira's own personal access token, or one an app makes where the server turns those off (resolution's API Token Authentication, whose tokens may be read-only: every request is a GET). Browser sign-in would need an application link each site's admin sets up: its `browser` slot stays empty |
 
 ### The device flow
 
@@ -406,16 +409,22 @@ A masked field paste works in, as people know it:
 
 - **"Create a token"** opens the tracker's page (`openTokenPage`), filled in where it allows: GitHub's
   `<server>/settings/tokens/new?scopes=repo&description=UVCS%20Desktop`, Atlassian's
-  `https://id.atlassian.com/manage-profile/security/api-tokens`, Jira Data Center's
-  `<server>/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`.
+  `https://id.atlassian.com/manage-profile/security/api-tokens`. A Jira Data Center has two
+  (`JIRA_DATA_CENTER_TOKEN_PAGES`, `TokenPages`): main first asks, with no credential (so no host consent) but through
+  `TrackerHttp` and the command log, `GET <server>/plugins/servlet/de.resolution.apitokenauth/admin`, once per server
+  while the app runs. A 401 or a 200 means the API Token Authentication app is there, and its page opens; a redirect
+  to the login page (what a server answers a servlet it doesn't have), any other answer or none opens Jira's own,
+  `<server>/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`
+  (`dataCenterTokenPage`). "Other token page", a quiet button beside it (`otherTokenPageOffered`), opens the other
+  one, so a wrong guess never strands anyone.
 - **Pasting** a token of a known shape (`submitsOnPaste`) signs in at once; Enter or "Sign in" otherwise. A text of no
   token's shape is never sent ("That doesn't look like a GitHub token").
 - The app never reads the clipboard by itself: only a paste the user makes reaches the field. A token pasted and
   signed in with is cleared from the clipboard (written, never read).
 - The token goes to main once, on submit, and never back; the field forgets it.
 - Jira Cloud asks for the account's email, filled in with the `cm` user when that is an address (`suggestedEmail`).
-- A Jira Data Center personal access token has no fixed prefix (about 44 base64 characters): it is only plausible, so
-  a paste fills the field and "Sign in" signs in.
+- A Jira Data Center token ("Jira token": Jira's own or the app's) has no fixed prefix (Jira's are about 44 base64
+  characters): it is only plausible, so a paste fills the field and "Sign in" signs in.
 - A server that sends the sign-in to its login page (single sign-on refusing the token) says so: "Jira sent this
   sign-in to its login page at jira.acme.com. Check the token, or create a new one." (`sentToLogin`).
 
