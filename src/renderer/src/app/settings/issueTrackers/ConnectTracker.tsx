@@ -51,8 +51,8 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
         )}
         <div className={styles.cardHeaderText}>
           <h2 className={styles.cardTitle}>Connect an issue tracker</h2>
+          <ConnectSteps linkRead={read.kind === 'read'} />
         </div>
-        <ConnectSteps linkRead={read.kind === 'read'} />
       </header>
       <div className={styles.section}>
         {read.kind === 'none' && !onCancel && (

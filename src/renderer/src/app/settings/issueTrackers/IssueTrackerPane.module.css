@@ -29,7 +29,6 @@
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
-  container: tracker-card / inline-size;
 }
 
 /* The card's title bar: what it is, and where the user stands (a status, or the steps of connecting). */
@@ -343,10 +342,10 @@
   font-weight: var(--weight-semibold);
 }
 
-/* Link · Sign in · Connected, in the header. */
+/* Link · Sign in · Connected, under the card's title. */
 .steps {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
@@ -354,13 +353,6 @@
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   list-style: none;
-}
-
-/* A narrow card keeps its title and Back: the steps go, as the step itself shows where the user is. */
-@container tracker-card (max-width: 460px) {
-  .steps {
-    display: none;
-  }
 }
 
 .stepItem {
