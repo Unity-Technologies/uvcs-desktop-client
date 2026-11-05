@@ -23,6 +23,7 @@ function contextWith(selections: GraphSelections) {
     showRelatedTo: () => {},
     revealCreatedBranch: () => {},
     selections,
+    positions: null,
   };
 }
 

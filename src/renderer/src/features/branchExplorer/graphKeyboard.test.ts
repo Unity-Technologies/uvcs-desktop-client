@@ -2,9 +2,9 @@ import '../../testing/fakeWindow';
 import type { KeyboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphActions } from './graphActions';
-import { handleGraphKey, keyboardMergeSource, type GraphKeyboard } from './graphKeyboard';
+import { handleGraphKey, keyboardMergeSource, keyboardMoveLane, type GraphKeyboard } from './graphKeyboard';
 import type { GraphSelection } from './graphSelection';
-import { sampleHistory } from './model/graphFixtures';
+import { branch, changeset, sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
 describe('keyboardMergeSource', () => {
@@ -42,6 +42,7 @@ function keyboardOn(selection: GraphSelection, selected: (GraphSelection | null)
     zoomBy: () => {},
     toggleDetails: () => {},
     exitFocus: () => {},
+    positions: null,
   };
 }
 
@@ -66,5 +67,25 @@ describe('the keys that act on one object', () => {
     handleGraphKey(keyPressed('Enter'), keyboardOn({ kind: 'changeset', id: 4 }, selected));
     expect(selected).toEqual([{ kind: 'changeset', id: 4 }]);
     expect(diff).toHaveBeenCalledWith(4);
+  });
+});
+
+describe('keyboardMoveLane', () => {
+  const layout = layoutGraph({
+    branches: [branch('/main', '', 1), branch('/main/task', '/main', 2)].map((each, index) => ({ ...each, id: index + 1 })),
+    changesets: [changeset(0, '/main', -1), changeset(1, '/main/task', 0)],
+    mergeLinks: [],
+    labels: [],
+  });
+
+  it('moves the branch selected, or the branch of the changeset selected', () => {
+    expect(keyboardMoveLane(layout, { kind: 'branch', name: '/main/task' })?.branch.name).toBe('/main/task');
+    expect(keyboardMoveLane(layout, { kind: 'changeset', id: 1 })?.branch.name).toBe('/main/task');
+  });
+
+  it('moves nothing with nothing on a drawn branch selected, so the key is left to the rest of the window', () => {
+    expect(keyboardMoveLane(layout, null)).toBeNull();
+    expect(keyboardMoveLane(layout, { kind: 'branch', name: '/main/gone' })).toBeNull();
+    expect(keyboardMoveLane(layout, { kind: 'changeset', id: 99 })).toBeNull();
   });
 });

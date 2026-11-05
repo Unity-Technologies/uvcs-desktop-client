@@ -2,12 +2,13 @@ import type { Place } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
-import { menuAction, type MenuHost } from '../../components/menuWords';
+import { menuAction, menuSubmenu, type MenuHost } from '../../components/menuWords';
 import { branchMenu } from '../branches/branchMenu';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { codeReviewMenu } from '../codeReviews/codeReviewMenu';
 import { labelMenu } from '../labels/labelMenu';
 import type { GraphTarget } from './canvas/graphTargets';
+import { branchPositionEntries, type BranchPositions } from './branchPosition';
 import { graphActions } from './graphActions';
 import { isSelected, type GraphSelection, type GraphSelections } from './graphSelection';
 import { labelInfo, selectedLabel } from './model/graphLabels';
@@ -26,6 +27,8 @@ interface GraphMenuContext {
   revealCreatedBranch: (name: string) => void;
   /** Everything selected: a right-click on one of several gives the menu for all of them. */
   selections: GraphSelections;
+  /** The branches moved in the repository shown: a branch's Position submenu moves it. */
+  positions: BranchPositions | null;
 }
 
 /**
@@ -77,13 +80,14 @@ function graphChangesetMenu(id: number, { place, layout, currentBranch, loadedCh
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 
-function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
+function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository, goToChangeset, showRelatedTo, positions }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { branch, baseChangeset } = lane;
   const menu = branchMenu(place, [{ ...branch, repository }], currentBranch, host);
   return withEntries(menu, [
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),
     menuAction('related', () => showRelatedTo(branch.name)),
+    menuSubmenu('position', branchPositionEntries(layout, lane, positions)),
   ]);
 }
 
