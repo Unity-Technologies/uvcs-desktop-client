@@ -342,13 +342,13 @@
   font-weight: var(--weight-semibold);
 }
 
-/* Link · Sign in · Connected, under the card's title. */
+/* Tracker · Link · Sign in, under the card's title, across its width: the lines between the steps stretch, and turn
+   green as the steps before them are done. */
 .steps {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  margin: 0;
+  width: 100%;
+  margin: 6px 0 2px;
   padding: 0;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
@@ -357,28 +357,45 @@
 
 .stepItem {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
 }
 
+.stepItem + .stepItem {
+  flex: 1;
+}
+
 .stepItem + .stepItem::before {
-  width: 12px;
+  flex: 1;
+  min-width: 12px;
   height: 1px;
-  margin-right: 3px;
+  margin: 0 4px;
   background: var(--border-default);
   content: '';
+  transition: background-color var(--duration-normal) var(--ease-out);
+}
+
+.stepItem[data-state='done'] + .stepItem::before {
+  background: var(--positive-border);
 }
 
 .stepMark {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 1px solid var(--border-default);
   border-radius: 50%;
+  background: var(--bg-surface);
   font-size: 10px;
+  font-weight: var(--weight-semibold);
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
 }
 
 .stepItem[data-state='current'] {
@@ -389,13 +406,25 @@
 .stepItem[data-state='current'] > .stepMark {
   border-color: var(--accent);
   background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
   color: var(--accent-contrast);
+}
+
+.stepItem[data-state='done'] {
+  color: var(--text-secondary);
 }
 
 .stepItem[data-state='done'] > .stepMark {
   border-color: var(--positive-border);
   background: var(--positive-soft);
   color: var(--positive-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepItem + .stepItem::before,
+  .stepMark {
+    transition: none;
+  }
 }
 
 /* A tracker's link shapes under its field: which server, and what its link looks like. */
