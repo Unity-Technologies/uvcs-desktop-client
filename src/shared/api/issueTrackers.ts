@@ -1,4 +1,4 @@
-import type { DeviceSignIn, IssueRead, IssueTrackerSetup, SignInFailure, SignInOutcome, TokenSource } from '../domain/issueTrackers';
+import type { DeviceSignIn, IssueRead, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
 
 /** A sign-in for a repository, from a link to one of its tracker's issues: main reads the link itself. */
 export interface RepositorySignIn {
@@ -22,18 +22,13 @@ export interface IssueTrackersApi {
   setup(): Promise<IssueTrackerSetup>;
 
   /** Signs in with a token and binds the repository to the link's project, proving it. */
-  signInWithToken(request: RepositorySignIn & { source: TokenSource }): Promise<SignInOutcome>;
+  signInWithToken(request: RepositorySignIn & { token: string }): Promise<SignInOutcome>;
   /** A connection whose credential stopped working, with a new token. */
-  signInAgain(request: { connectionId: string; email?: string; source: TokenSource }): Promise<SignInOutcome>;
+  signInAgain(request: { connectionId: string; email?: string; token: string }): Promise<SignInOutcome>;
   /** Tries a connection's kept credential once more (`whoAmI`), before asking for a new one. */
   retrySignIn(connectionId: string): Promise<SignInOutcome>;
-  /**
-   * Opens the tracker's token page in the browser, from main: main remembers the server for the session, and offers a
-   * token copied from the clipboard (`clipboardHoldsToken`, `{ copied: true }`) to that server only.
-   */
+  /** Opens the tracker's token page in the browser, filled in where the tracker allows. */
   openTokenPage(target: TokenPageTarget): Promise<void>;
-  /** Whether the clipboard holds a token shaped as the tracker's, whose page main opened: yes or no, never the token. */
-  clipboardHoldsToken(target: TokenPageTarget): Promise<boolean>;
 
   /**
    * Starts GitHub's device flow: the code the user enters on the page it names. For a repository by a link, or for a

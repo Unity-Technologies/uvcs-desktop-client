@@ -29,10 +29,9 @@ const SIGNED_IN: TrackerAnswers = {
 /** A wait that never ends by itself, only when canceled: the poll it holds back is never sent. */
 const waitUntilCanceled: Wait = (_ms, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('canceled'))));
 
-function trackers(answers: TrackerAnswers = {}, { clipboardText = '', cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
+function trackers(answers: TrackerAnswers = {}, { cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'trackers-'));
   const tracker = fakeTrackerHttp(answers);
-  const clipboard = { text: clipboardText };
   const announced: IssueTrackerSetup[] = [];
   const opened: string[] = [];
   let ids = 0;
@@ -40,7 +39,6 @@ function trackers(answers: TrackerAnswers = {}, { clipboardText = '', cipher = p
     store: new IssueTrackerStore(join(folder, 'issue-trackers.json')),
     secrets: new TrackerSecrets(join(folder, 'secrets.json'), cipher),
     http: tracker.http,
-    clipboard: { read: async () => clipboard.text, clear: () => (clipboard.text = '') },
     changed: (setup) => announced.push(setup),
     newId: () => `id${++ids}`,
     now: () => 0,
@@ -48,13 +46,13 @@ function trackers(answers: TrackerAnswers = {}, { clipboardText = '', cipher = p
     oauthClientIds: clientIds,
     openExternal: (url) => opened.push(url),
   });
-  return { engine, tracker, clipboard, announced, opened };
+  return { engine, tracker, announced, opened };
 }
 
 describe('IssueTrackers', () => {
   it('signs in with a token, proves the project and binds the repository to it', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
-    const outcome = await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: ` ${TOKEN} ` } });
+    const outcome = await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: ` ${TOKEN} ` });
     expect(outcome).toEqual({
       kind: 'signedIn',
       connection: { id: 'id1', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'ana-diaz', name: 'Ana Díaz' }, signInMethod: 'token', access: 'read', credential: 'kept' },
@@ -65,70 +63,46 @@ describe('IssueTrackers', () => {
     expect(JSON.stringify(announced)).not.toContain(TOKEN);
   });
 
-  it('opens the token page itself, then signs in with the token copied there, read by main, and clears the clipboard', async () => {
-    const { engine, clipboard, opened } = trackers(SIGNED_IN, { clipboardText: TOKEN });
+  it('opens the tracker’s token page from main', () => {
+    const { engine, opened } = trackers();
     engine.openTokenPage({ link: LINK });
     expect(opened).toEqual(['https://github.com/settings/tokens/new?scopes=repo&description=UVCS%20Desktop']);
-    expect(await engine.clipboardHoldsToken({ link: LINK })).toBe(true);
-    expect((await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { copied: true } })).kind).toBe('signedIn');
-    expect(clipboard.text).toBe('');
-  });
-
-  it('never sends the copied token to a server whose token page main didn’t open', async () => {
-    const { engine, tracker } = trackers(SIGNED_IN, { clipboardText: TOKEN });
-    engine.openTokenPage({ link: LINK });
-    const elsewhere = 'https://evil.example.com/acme/game/issues/1';
-    expect(await engine.clipboardHoldsToken({ link: elsewhere })).toBe(false);
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: elsewhere, source: { copied: true } })).toEqual({ kind: 'failed', failure: { reason: 'tokenShape' } });
-    expect(tracker.requests).toEqual([]);
-  });
-
-  it('says a token is copied only for one of the tracker’s known shapes', async () => {
-    const { engine } = trackers({}, { clipboardText: 'abcdefghijklmnopqrstuvwx' });
-    engine.openTokenPage({ link: 'https://acme.atlassian.net/browse/VCS-1' });
-    expect(await engine.clipboardHoldsToken({ link: 'https://acme.atlassian.net/browse/VCS-1' })).toBe(false);
-  });
-
-  it('leaves a clipboard alone that holds something else', async () => {
-    const { engine, clipboard } = trackers(SIGNED_IN, { clipboardText: 'notes' });
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
-    expect(clipboard.text).toBe('notes');
   });
 
   it('sends nothing for a text that isn’t a token, nor for Jira without an email, nor for a link that isn’t an issue', async () => {
     const { engine, tracker } = trackers();
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: 'hello there' } })).toEqual({ kind: 'failed', failure: { reason: 'tokenShape' } });
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'https://acme.atlassian.net/browse/VCS-1', source: { token: `ATATT${'x'.repeat(40)}` } })).toEqual({ kind: 'failed', failure: { reason: 'emailNeeded' } });
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'https://acme.atlassian.net/jira/software/projects/VCS/boards/1', source: { token: TOKEN } })).toEqual({
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: 'hello there' })).toEqual({ kind: 'failed', failure: { reason: 'tokenShape' } });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'https://acme.atlassian.net/browse/VCS-1', token: `ATATT${'x'.repeat(40)}` })).toEqual({ kind: 'failed', failure: { reason: 'emailNeeded' } });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'https://acme.atlassian.net/jira/software/projects/VCS/boards/1', token: TOKEN })).toEqual({
       kind: 'failed',
       failure: { reason: 'notAnIssueLink', what: 'a Jira board' },
     });
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'http://git.acme.com/a/b/issues/1', source: { token: TOKEN } })).toEqual({ kind: 'failed', failure: { reason: 'insecure' } });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'http://git.acme.com/a/b/issues/1', token: TOKEN })).toEqual({ kind: 'failed', failure: { reason: 'insecure' } });
     expect(tracker.requests).toEqual([]);
   });
 
   it('says a refused token is refused', async () => {
     const { engine } = trackers({ 'GET https://api.github.com/user': { status: 401 } });
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } })).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN })).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
   });
 
   it('keeps the sign-in but binds nothing when the project can’t be read, naming it', async () => {
     const { engine } = trackers({ ...SIGNED_IN, [GRAPHQL]: { json: { data: { repository: null, search: { issueCount: 0 } }, errors: [{ type: 'NOT_FOUND', path: ['repository'] }] } } });
-    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } })).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game' } });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN })).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game' } });
     expect(engine.setup().connections).toHaveLength(1);
     expect(engine.setup().bindings).toEqual([]);
   });
 
   it('makes a connection per owner for a fine-grained token, never replacing another owner’s', async () => {
     const { engine } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: FINE_GRAINED } });
-    await engine.signInWithToken({ repository: 'tools@acme@unity', link: 'https://github.com/Other/tools/issues/1', source: { token: FINE_GRAINED } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: FINE_GRAINED });
+    await engine.signInWithToken({ repository: 'tools@acme@unity', link: 'https://github.com/Other/tools/issues/1', token: FINE_GRAINED });
     expect(engine.setup().connections.map((connection) => connection.scope)).toEqual(['acme', 'other']);
   });
 
   it('reuses a connection for a second repository, with no sign-in', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const outcome = await engine.useConnection({ repository: 'racer@acme@unity', link: 'https://github.com/acme/game/issues/3', connectionId: 'id1' });
     expect(outcome.kind).toBe('signedIn');
     expect(tracker.lines().filter((line) => line.endsWith('/user'))).toHaveLength(1);
@@ -137,7 +111,7 @@ describe('IssueTrackers', () => {
 
   it('adds a project of the same tracker to a binding', async () => {
     const { engine } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     await engine.addProject({ repository: REPOSITORY, link: 'https://github.com/acme/tools/issues/1' });
     expect(engine.setup().bindings[0]!.projects).toEqual(['acme/game', 'acme/tools']);
     expect(await engine.addProject({ repository: REPOSITORY, link: 'https://acme.atlassian.net/browse/VCS-1' })).toMatchObject({ kind: 'failed' });
@@ -145,7 +119,7 @@ describe('IssueTrackers', () => {
 
   it('reads issues in one request per connection', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const reads = await engine.readIssues('id1', ['acme/game#12']);
     expect(reads).toEqual([{ key: 'acme/game#12', kind: 'found', issue: expect.objectContaining({ title: 'Crash' }) }]);
     expect(tracker.lines().slice(2)).toEqual([GRAPHQL]);
@@ -153,7 +127,7 @@ describe('IssueTrackers', () => {
 
   it('marks a credential refused at the first 401 and sends nothing more until signed in again', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     tracker.answer({ [GRAPHQL]: { status: 401 }, 'GET https://api.github.com/user': [{ status: 401 }, { json: { login: 'ana-diaz' } }] });
     expect(await engine.readIssues('id1', ['acme/game#12'])).toEqual([{ key: 'acme/game#12', kind: 'unreadable', reason: 'signInRefused' }]);
     expect(announced.at(-1)!.connections[0]!.credential).toBe('refused');
@@ -169,7 +143,7 @@ describe('IssueTrackers', () => {
 
   it('tries a refused credential again with one whoAmI, and announces it works again', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     tracker.answer({ [GRAPHQL]: { status: 401 } });
     await engine.readIssues('id1', ['acme/game#12']);
     expect(engine.setup().connections[0]!.credential).toBe('refused');
@@ -181,7 +155,7 @@ describe('IssueTrackers', () => {
 
   it('keeps a credential refused when trying it again finds the tracker out of reach', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     tracker.answer({ [GRAPHQL]: { status: 401 }, 'GET https://api.github.com/user': { unreachable: true } });
     await engine.readIssues('id1', ['acme/game#12']);
     const told = announced.length;
@@ -192,7 +166,7 @@ describe('IssueTrackers', () => {
 
   it('keeps a credential refused when trying it again is refused too', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     tracker.answer({ 'GET https://api.github.com/user': { status: 401 } });
     expect(await engine.retrySignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
     expect(engine.setup().connections[0]!.credential).toBe('refused');
@@ -206,7 +180,7 @@ describe('IssueTrackers', () => {
       },
     };
     const { engine, tracker } = trackers(SIGNED_IN, { cipher: refusing });
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const sent = tracker.requests.length;
     expect(await engine.retrySignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
     expect(tracker.requests).toHaveLength(sent);
@@ -214,14 +188,14 @@ describe('IssueTrackers', () => {
 
   it('moves a binding with its repository’s rename, and tells every window', async () => {
     const { engine, announced } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     engine.repositoryRenamed(REPOSITORY, 'racer@acme@unity');
     expect(announced.at(-1)!.bindings.map((binding) => binding.repository)).toEqual(['racer@acme@unity']);
   });
 
   it('binds nothing with a connection that doesn’t cover the link', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: FINE_GRAINED } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: FINE_GRAINED });
     const sent = tracker.requests.length;
     expect(await engine.useConnection({ repository: 'tools@acme@unity', link: 'https://github.com/other/tools/issues/1', connectionId: 'id1' })).toEqual({
       kind: 'failed',
@@ -233,8 +207,8 @@ describe('IssueTrackers', () => {
 
   it('signs in again with a new token, keeping the bindings', async () => {
     const { engine } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
-    const outcome = await engine.signInAgain({ connectionId: 'id1', source: { token: `ghp_${'c'.repeat(36)}` } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    const outcome = await engine.signInAgain({ connectionId: 'id1', token: `ghp_${'c'.repeat(36)}` });
     expect(outcome).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept' } });
     expect(engine.setup().bindings).toHaveLength(1);
   });
@@ -248,7 +222,7 @@ describe('IssueTrackers', () => {
         },
       },
     });
-    expect((await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } })).kind).toBe('failed');
+    expect((await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN })).kind).toBe('failed');
     const sent = tracker.requests.length;
     expect(engine.setup().connections[0]!.credential).toBe('missing');
     expect(await engine.readIssues('id1', ['acme/game#12'])).toEqual([{ key: 'acme/game#12', kind: 'unreadable', reason: 'signInRefused' }]);
@@ -257,7 +231,7 @@ describe('IssueTrackers', () => {
 
   it('answers every key of a rate-limited batch as unreadable until the limit ends', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     tracker.answer({ [GRAPHQL]: { status: 429, headers: { 'retry-after': '60' } } });
     expect(await engine.readIssues('id1', ['acme/game#12', 'acme/game#13'])).toEqual([
       { key: 'acme/game#12', kind: 'unreadable', reason: 'rateLimited', retryAt: 60_000 },
@@ -290,7 +264,7 @@ describe('IssueTrackers', () => {
       },
       { clientIds: { 'github.com': 'Iv1.app' } },
     );
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const started = await engine.startDeviceSignIn({ connectionId: 'id1' });
     expect(started).toMatchObject({ userCode: 'C' });
     expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept' } });
@@ -352,7 +326,7 @@ describe('IssueTrackers', () => {
 
   it('forgets a connection and its bindings on sign out, and a repository’s binding on disconnect', async () => {
     const { engine } = trackers(SIGNED_IN);
-    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     engine.disconnect(REPOSITORY);
     expect(engine.setup()).toMatchObject({ bindings: [], connections: [{ id: 'id1' }] });
     engine.signOut('id1');

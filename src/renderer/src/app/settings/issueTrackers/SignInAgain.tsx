@@ -50,7 +50,7 @@ export function SignInAgain({ connection, why }: { connection: TrackerConnection
             failure={failure}
             onOutcome={finish}
             {...(connection.account.email && { keptEmail: connection.account.email })}
-            signIn={(source, email) => api.issueTrackers.signInAgain({ connectionId: connection.id, source, ...(email && { email }) })}
+            signIn={(token, email) => api.issueTrackers.signInAgain({ connectionId: connection.id, token, ...(email && { email }) })}
           />
         )}
       </div>

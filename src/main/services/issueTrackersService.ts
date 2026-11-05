@@ -9,7 +9,6 @@ export function createIssueTrackersService({ issueTrackers }: ServiceContext): I
     signInAgain: (request) => issueTrackers.signInAgain(request),
     retrySignIn: (connectionId) => issueTrackers.retrySignIn(connectionId),
     openTokenPage: async (target) => issueTrackers.openTokenPage(target),
-    clipboardHoldsToken: (target) => issueTrackers.clipboardHoldsToken(target),
     startDeviceSignIn: (request) => issueTrackers.startDeviceSignIn(request),
     finishDeviceSignIn: (flowId) => issueTrackers.finishDeviceSignIn(flowId),
     cancelDeviceSignIn: async (flowId) => issueTrackers.cancelDeviceSignIn(flowId),

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { clipboard, safeStorage, session, shell } from 'electron';
+import { safeStorage, session, shell } from 'electron';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
 import { GITHUB_OAUTH_CLIENT_IDS } from '@shared/issueTrackers/signInMethods';
 import { IssueTrackers } from './IssueTrackers';
@@ -35,7 +35,6 @@ export function createIssueTrackers({ userData, logRequest, changed, development
     store: new IssueTrackerStore(join(userData, 'issue-trackers.json')),
     secrets: new TrackerSecrets(join(userData, 'issue-tracker-secrets.json'), safeStorageCipher(safeStorage, process.platform)),
     http: new TrackerHttp({ fetch: fake ? fakeFetch(fake) : sessionFetch(), log: logRequest }),
-    clipboard: { read: () => clipboard.readText(), clear: () => clipboard.clear() },
     changed,
     newId: randomUUID,
     now: Date.now,

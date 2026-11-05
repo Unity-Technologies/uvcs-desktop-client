@@ -124,7 +124,7 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
           pageTarget={{ link: linkText }}
           failure={failure}
           onOutcome={finish}
-          signIn={(source, email) => api.issueTrackers.signInWithToken({ repository, link: linkText, source, ...(email && { email }) })}
+          signIn={(token, email) => api.issueTrackers.signInWithToken({ repository, link: linkText, token, ...(email && { email }) })}
         />
       )}
       {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
