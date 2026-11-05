@@ -105,7 +105,13 @@ and pins of branches not drawn are ignored; pins are never pruned, since a branc
 pin's row counts the branches drawn when it was made: under another filter it lands on the first free row from that
 number, so a move to the bottom stays at the bottom.
 `branchMoves` decides which moves are offered: none up from the top row, none down for a branch alone on the last
-row. Reset position (`withoutPin`) puts one branch back where the layout places it. Reset all positions… asks first
+row. Reset position (`withoutPin`) puts one branch back where the layout places it.
+With several branches selected (or changesets of several branches, for the keys: `keyboardMoveLanes`; a changeset's
+menu has no Position, for one or several), Position and the keys move them all as one: `movedBranches` moves each in
+turn, the lowest first, so they keep their order and end next to each other at the top or the bottom. None passes
+another: to the top or the bottom one already there is pinned with the rest, and one row up or down a branch with no
+room stays, with the selected ones stacked against it. `branchesMoves` offers a move when any of them can make it,
+and Reset positions puts them all back. Reset all positions… asks first
 (`resetAllPositions`), then clears the repository's pins. The reset has no key: ⌘⇧C, the one the official client
 uses, copies a link here. The view keeps the selection where it was on screen as the layout changes ("Keeping the
 place"), so the moved branch stays in sight.
@@ -172,6 +178,24 @@ What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it
 `timelineGeometry`. Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary
 searches, `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
 (`countCalls`).
+
+## Selection
+
+A click selects what it lands on, alone; Ctrl+click (⌘ on macOS, `isModPressed`) adds it to the selection or takes it
+out (`selectedOnClick` in `graphSelection.ts`). A selection holds one kind only, changesets, labels or branches
+(`groupOf`): Ctrl+clicking another kind starts a new one, and a merge link or the pending changes always select
+alone. The last one picked leads (`leadOf`): the keyboard moves from it and collapses the selection to it, and the
+graph keeps it on screen as it is laid out again. Several selected are drawn in `--selection-multiple`, a magenta, in
+place of the accent (`selectionHighlights`, `selectionInks`), as the official client does.
+
+A right-click on something selected keeps the selection (`selectedOnContextClick`), and its menu is the lists' menu
+for all of it (`graphMenu`'s `selectionMenu`): two changesets get their diff, more get none; branches get Hide and
+Delete for all; labels get Delete for all and the diff of two. A right-click elsewhere selects that first and gets
+its own menu. The keys that act on one object (Enter, Shift+Enter, M) act on the lead and leave it alone selected,
+so the graph shows which (`onLead` in `graphKeyboard.ts`); the menu key (Shift+F10) opens the whole selection's menu.
+Several selected keep only what the graph still shows once it is laid out again (`selectionsLaidOut`), so a branch
+just hidden or deleted leaves the selection. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
+object's details.
 
 ## Pending changes
 

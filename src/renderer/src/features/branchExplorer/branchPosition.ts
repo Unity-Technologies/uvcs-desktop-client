@@ -1,7 +1,7 @@
 import type { Action } from '../../lib/actions';
 import { hotkey, type ShortcutId } from '../../lib/shortcutRegistry';
 import { confirm } from '../../ui/dialog/confirm';
-import { branchMoves, movedBranch, NO_PINS, withoutPin, type BranchMove, type BranchPins } from './model/branchRows';
+import { branchesMoves, movedBranches, NO_PINS, withoutPin, type BranchMove, type BranchPins } from './model/branchRows';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
 /** The branches moved in the repository shown, and how to change them (`setPins` in the preferences). */
@@ -30,36 +30,42 @@ export const BRANCH_MOVES: readonly { move: BranchMove; label: string; shortcutI
   { move: 'bottom', label: 'Move to the bottom', shortcutId: 'graphMoveBranchToBottom' },
 ];
 
-/** Moves the lane's branch, when the move changes anything (`branchMoves`). */
-export function moveBranch(layout: GraphLayout, lane: Lane, move: BranchMove, { pins, setPins }: BranchPositions): void {
-  if (branchMoves(layout, lane, pins)[move]) setPins(movedBranch(pins, lane, move, layout.rowCount));
+/** Moves the lanes' branches together, keeping their order, when the move changes anything (`movedBranches`). */
+export function moveBranches(layout: GraphLayout, lanes: readonly Lane[], move: BranchMove, { pins, setPins }: BranchPositions): void {
+  const next = movedBranches(pins, layout, lanes, move);
+  if (next !== pins) setPins(next);
 }
 
 /**
- * The entries of a branch's Position submenu: the moves, then putting it back where the layout puts it, and every
- * branch of the repository back, after asking (the arrangement can't be brought back).
+ * The entries of the Position submenu of the branches selected: the moves, which move them all together, then putting
+ * them back where the layout puts them, and every branch of the repository back, after asking (the arrangement can't
+ * be brought back).
  */
-export function branchPositionEntries(layout: GraphLayout, lane: Lane, positions: BranchPositions | null): Action[] {
-  if (positions === null) return positionEntriesWithNoRepository();
+export function branchPositionEntries(layout: GraphLayout, lanes: readonly Lane[], positions: BranchPositions | null): Action[] {
+  if (positions === null) return positionEntriesWithNoRepository(lanes);
   const { pins, setPins } = positions;
-  const offered = branchMoves(layout, lane, pins);
+  const offered = branchesMoves(layout, lanes, pins);
   return [
     ...BRANCH_MOVES.map(({ move, label, shortcutId }) => ({
       id: `position.${move}`,
       label,
       shortcut: hotkey(shortcutId),
       disabled: !offered[move],
-      run: () => moveBranch(layout, lane, move, positions),
+      run: () => moveBranches(layout, lanes, move, positions),
     })),
-    { id: 'position.reset', label: 'Reset position', disabled: !offered.reset, run: () => setPins(withoutPin(pins, lane.branch.id)) },
+    { id: 'position.reset', label: resetLabel(lanes), disabled: !offered.reset, run: () => setPins(lanes.reduce((next, lane) => withoutPin(next, lane.branch.id), pins)) },
     { id: 'position.resetAll', label: 'Reset all positions…', disabled: !offered.resetAll, run: () => void resetAllPositions(setPins) },
   ];
 }
 
-function positionEntriesWithNoRepository(): Action[] {
+function resetLabel(lanes: readonly Lane[]): string {
+  return lanes.length > 1 ? 'Reset positions' : 'Reset position';
+}
+
+function positionEntriesWithNoRepository(lanes: readonly Lane[]): Action[] {
   return [
     ...BRANCH_MOVES.map(({ move, label, shortcutId }) => ({ id: `position.${move}`, label, shortcut: hotkey(shortcutId), disabled: true, run: () => {} })),
-    { id: 'position.reset', label: 'Reset position', disabled: true, run: () => {} },
+    { id: 'position.reset', label: resetLabel(lanes), disabled: true, run: () => {} },
     { id: 'position.resetAll', label: 'Reset all positions…', disabled: true, run: () => {} },
   ];
 }

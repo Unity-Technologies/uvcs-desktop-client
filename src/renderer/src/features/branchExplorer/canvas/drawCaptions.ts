@@ -58,7 +58,7 @@ function drawCaption(draw: DrawContext, node: NodeLayout): void {
   const metrics = captionMetrics(palette.fonts.caption, palette.captionFontSize);
   const baseline = snap(captionMiddle(node, viewport) + metrics.middleToBaseline, pixelRatio);
   ctx.globalAlpha = detail.captions * (isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1);
-  ctx.fillStyle = scene.selectedChangeset === node.changeset.id ? palette.textPrimary : palette.textSecondary;
+  ctx.fillStyle = scene.selectedChangesets.has(node.changeset.id) ? palette.textPrimary : palette.textSecondary;
   // A halo in the background color keeps the text readable where links cross it.
   ctx.strokeText(text, left, baseline);
   ctx.fillText(text, left, baseline);

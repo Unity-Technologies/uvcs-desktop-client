@@ -56,3 +56,38 @@ export function branchMoves(layout: GraphLayout, lane: Lane, pins: BranchPins): 
     resetAll: pins.length > 0,
   };
 }
+
+/**
+ * The positions once several lanes make one move, each as it would alone (`movedBranch`). The lowest is moved first,
+ * so the top one is placed first (`placeLanes`) and the lanes keep their order. The same pins when none moves.
+ */
+export function movedBranches(pins: BranchPins, layout: GraphLayout, lanes: readonly Lane[], move: BranchMove): BranchPins {
+  const moving = lanesMoving(layout, lanes, pins, move).sort((above, below) => below.row - above.row);
+  return moving.reduce((next, lane) => movedBranch(next, lane, move, layout.rowCount), pins);
+}
+
+/**
+ * Which lanes make the move so that none passes another. To the top or the bottom, all of them once any can: one
+ * already there is pinned too, or the others would be placed past it. One row up or down, a lane the move has no room
+ * for (`branchMoves`) stays, and so does one whose row would be a staying lane's: they stay stacked as they were.
+ */
+function lanesMoving(layout: GraphLayout, lanes: readonly Lane[], pins: BranchPins, move: BranchMove): Lane[] {
+  const canMove = (lane: Lane) => branchMoves(layout, lane, pins)[move];
+  if (move === 'top' || move === 'bottom') return lanes.some(canMove) ? [...lanes] : [];
+  const step = move === 'up' ? -1 : 1;
+  const stayingRows = new Set<number>();
+  return [...lanes]
+    .sort((first, second) => (first.row - second.row) * -step)
+    .filter((lane) => {
+      const moves = canMove(lane) && !stayingRows.has(lane.row + step);
+      if (!moves) stayingRows.add(lane.row);
+      return moves;
+    });
+}
+
+/** The moves offered for several branches: each one any of them can make, and their reset once any of them moved. */
+export function branchesMoves(layout: GraphLayout, lanes: readonly Lane[], pins: BranchPins): BranchMoves {
+  const each = lanes.map((lane) => branchMoves(layout, lane, pins));
+  const any = (key: keyof BranchMoves): boolean => each.some((moves) => moves[key]);
+  return { up: any('up'), down: any('down'), top: any('top'), bottom: any('bottom'), reset: any('reset'), resetAll: pins.length > 0 };
+}

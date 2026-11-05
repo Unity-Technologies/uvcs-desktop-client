@@ -47,7 +47,7 @@ describe('Show changesets', () => {
     expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/task' });
 
     const layout = layoutGraph(sampleHistory());
-    const context = { place: workspacePlace(WORKSPACE), layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {}, positions: { pins: [], setPins: () => {} } };
+    const context = { place: workspacePlace(WORKSPACE), layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {}, selections: [], positions: { pins: [], setPins: () => {} } };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
     expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/a' });

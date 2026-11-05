@@ -79,6 +79,13 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     },
   );
 
+  it("draws the Branch Explorer's multiple selection (--selection-multiple) at 3:1 on every surface and on its halo", () => {
+    for (const surface of SURFACES) expect(ratio(tokens, '--selection-multiple', surface), surface).toBeGreaterThanOrEqual(3);
+    const surface = parseColor(tokens['--bg-surface']!).rgb;
+    const halo = composite(parseColor(tokens['--selection-multiple-soft']!), surface);
+    expect(contrastRatio(parseColor(tokens['--selection-multiple']!).rgb, halo)).toBeGreaterThanOrEqual(3);
+  });
+
   it("draws the Branch Explorer Timeline's label ticks (--label-mark) at 3:1 on its strip (--bg-subtle)", () => {
     expect(ratio(tokens, '--label-mark', '--bg-subtle')).toBeGreaterThanOrEqual(3);
   });

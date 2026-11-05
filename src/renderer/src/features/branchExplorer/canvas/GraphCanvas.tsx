@@ -2,8 +2,10 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
+import { isModPressed } from '../../../lib/shortcuts';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { TooltipBubble } from '../../../ui/TooltipBubble';
+import type { SelectGesture } from '../graphSelection';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHit } from '../model/searchGraph';
 import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeline';
@@ -39,6 +41,9 @@ export type GraphHighlights = Pick<
   | 'selectedChangeset'
   | 'selectedBranch'
   | 'selectedPending'
+  | 'selectedChangesets'
+  | 'selectedBranches'
+  | 'multipleSelection'
   | 'homeChangeset'
   | 'pendingChangeCount'
   | 'currentBranch'
@@ -54,7 +59,8 @@ interface GraphCanvasProps {
   highlights: GraphHighlights;
   /** The colors the format rules give (`ruleColors`). */
   ruleColors: RuleColors;
-  onSelect: (target: GraphTarget | null) => void;
+  /** A click (`toggle` with Ctrl, ⌘ on macOS) or, `context`, the right-click that opens the menu. */
+  onSelect: (target: GraphTarget | null, gesture: SelectGesture) => void;
   onActivate: (target: GraphTarget) => void;
   /** Builds the context menu for what was right-clicked. */
   contextMenu: (target: GraphTarget | null) => MenuEntry[];
@@ -262,7 +268,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     const { palette, highlights } = sceneRef.current;
     if (subject.kind !== 'caption' || !palette) return null;
     const { ascent } = captionMetrics(palette.fonts.caption, palette.captionFontSize);
-    const selected = highlights.selectedChangeset === subject.target.id;
+    const selected = highlights.selectedChangesets.has(subject.target.id);
     return { kind: 'caption', ...captionOnScreen(subject.caption, view.viewportRef.current, ascent), color: selected ? palette.textPrimary : palette.textSecondary };
   };
 
@@ -280,7 +286,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       // The menu covers the hover card's place: it would linger under the menu.
       clearHover();
       contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
-      onSelect(contextTargetRef.current);
+      onSelect(contextTargetRef.current, { toggle: isModPressed(event), context: true });
       return;
     }
     if (event.button !== 0) return;
@@ -300,7 +306,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         containerRef.current?.removeAttribute('data-panning');
         view.inertia.release();
       },
-      onClick: (up) => onSelect(targetAt(up.clientX, up.clientY)),
+      onClick: (up) => onSelect(targetAt(up.clientX, up.clientY), { toggle: isModPressed(up), context: false }),
     });
   };
 

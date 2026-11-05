@@ -3,7 +3,7 @@ import '../../testing/fakeWindow';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { branchPositionEntries, branchPositionsOf, moveBranch, resetAllPositions, type BranchPositions } from './branchPosition';
+import { branchPositionEntries, branchPositionsOf, moveBranches, resetAllPositions, type BranchPositions } from './branchPosition';
 import type { BranchPins } from './model/branchRows';
 import { branch, changeset } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
@@ -24,9 +24,9 @@ function explorer(pins: BranchPins = []) {
   const layout = layoutGraph(history(), undefined, null, pins);
   const saved: BranchPins[] = [];
   const positions: BranchPositions = { pins, setPins: (next) => saved.push(next) };
-  const entries = (name: string) => branchPositionEntries(layout, layout.lanesByBranch.get(name)!, positions);
-  const enabled = (name: string) => entries(name).filter((entry) => !entry.disabled).map((entry) => entry.id);
-  const run = (name: string, id: string) => entries(name).find((entry) => entry.id === id)!.run();
+  const entries = (...names: string[]) => branchPositionEntries(layout, names.map((name) => layout.lanesByBranch.get(name)!), positions);
+  const enabled = (...names: string[]) => entries(...names).filter((entry) => !entry.disabled).map((entry) => entry.id);
+  const run = (names: string | string[], id: string) => entries(...[names].flat()).find((entry) => entry.id === id)!.run();
   return { layout, positions, saved, entries, enabled, run };
 }
 
@@ -72,6 +72,28 @@ describe('branchPositionEntries', () => {
     expect(saved).toEqual([[{ branch: 2, row: 2 }]]);
   });
 
+  it('offers each move one of the branches selected can make', () => {
+    expect(explorer().enabled('/main', '/main/c')).toEqual(['position.up', 'position.down', 'position.top', 'position.bottom']);
+  });
+
+  it('moves every branch selected together, keeping their order', () => {
+    const { run, saved } = explorer();
+    run(['/main/c', '/main/a'], 'position.top');
+    // Both pinned to the top row: /main/a, moved last, is placed first (`placeLanes`), so it stays above /main/c.
+    expect(saved).toEqual([[{ branch: 3, row: 0 }, { branch: 2, row: 0 }]]);
+  });
+
+  it('puts every branch selected back, and keeps the others moved', () => {
+    const { run, saved, entries } = explorer([
+      { branch: 1, row: 2 },
+      { branch: 2, row: 2 },
+      { branch: 3, row: 1 },
+    ]);
+    expect(entries('/main/a', '/main/c').find((entry) => entry.id === 'position.reset')?.label).toBe('Reset positions');
+    run(['/main/a', '/main/c'], 'position.reset');
+    expect(saved).toEqual([[{ branch: 1, row: 2 }]]);
+  });
+
   it('asks before putting every branch back', () => {
     const { run } = explorer([{ branch: 3, row: 1 }]);
     run('/main/a', 'position.resetAll');
@@ -96,7 +118,7 @@ describe('branchPositionsOf', () => {
 describe('branchPositionEntries without a repository', () => {
   it('lists every entry, all disabled', () => {
     const layout = layoutGraph(history(), undefined, null, []);
-    const entries = branchPositionEntries(layout, layout.lanesByBranch.get('/main/a')!, null);
+    const entries = branchPositionEntries(layout, [layout.lanesByBranch.get('/main/a')!], null);
     expect(entries.map(({ id, disabled }) => ({ id, disabled }))).toEqual(
       ['up', 'down', 'top', 'bottom', 'reset', 'resetAll'].map((move) => ({ id: `position.${move}`, disabled: true })),
     );
@@ -118,10 +140,10 @@ describe('resetAllPositions', () => {
   });
 });
 
-describe('moveBranch', () => {
-  it('saves nothing for a move the branch has no room for', () => {
+describe('moveBranches', () => {
+  it('saves nothing for a move no branch has room for', () => {
     const { layout, positions, saved } = explorer();
-    moveBranch(layout, layout.lanesByBranch.get('/main')!, 'up', positions);
+    moveBranches(layout, [layout.lanesByBranch.get('/main')!], 'up', positions);
     expect(saved).toEqual([]);
   });
 });

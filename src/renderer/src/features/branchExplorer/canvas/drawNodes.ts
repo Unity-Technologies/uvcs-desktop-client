@@ -122,7 +122,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   const id = node.changeset.id;
   const hovered = scene.hoveredChangeset === id;
   if (node.collapsed) return drawCollapsedNode(draw, node, hovered);
-  const selected = scene.selectedChangeset === id;
+  const selected = scene.selectedChangesets.has(id);
   const radius = radiusFor(draw);
   const ringWidth = hovered ? HOVERED_RING_WIDTH : RING_WIDTH;
   const isHit = search?.changesets.has(id) ?? false;
