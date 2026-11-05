@@ -1,20 +1,16 @@
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
-import type { SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
-import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
-import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
-import { api } from '../../../api/client';
+import type { SignInOutcome } from '@shared/domain/issueTrackers';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, connectStage, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, type SignInRow, type SignInStep } from './connectFlow';
+import { connectStage, connectsWithSignIn, pickedSignInShown, linkReadBack, signInStepFor, type SignInRow } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './LinkReadBackLine';
+import { SignInFor } from './SignInFor';
 import { choiceAfterLink, connectWords, switchedWords, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
 import { TrackerLogo } from './TrackerLogo';
-import { DeviceSignIn } from './DeviceSignIn';
-import { TokenSignIn } from './TokenSignIn';
 import styles from './IssueTrackerPane.module.css';
 
 export type SignedIn = Extract<SignInOutcome, { kind: 'signedIn' }>;
@@ -108,114 +104,5 @@ export function ConnectTracker({ repository, start, onConnected, onCancel }: Con
         </div>
       )}
     </section>
-  );
-}
-
-interface SignInForProps {
-  link: RecognizedLink;
-  linkText: string;
-  step: SignInStep;
-  repository: string | undefined;
-  /** The sign-in covering the link was picked in the first step, and the link step already says so. */
-  picked: boolean;
-  onConnected: (outcome: SignedIn) => void;
-  /** "Use a different account" over the sign-in already there. */
-  onDifferentAccount: () => void;
-}
-
-/** The sign-in step for a link read back: a sign-in already there in one click, else the tracker's best method. */
-function SignInFor({ link, linkText, step, repository, picked, onConnected, onDifferentAccount }: SignInForProps) {
-  const [failure, setFailure] = useState<SignInFailure | null>(null);
-  const [tokenChosen, setTokenChosen] = useState(false);
-  const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
-  const finish = (outcome: SignInOutcome): void => {
-    if (outcome.kind === 'signedIn') onConnected(outcome);
-    else setFailure(outcome.failure);
-  };
-
-  if (step.kind === 'useConnection') {
-    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} picked={picked} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
-    return (
-      <div className={styles.next}>
-        <p className={styles.nextTitle}>You're already signed in</p>
-        <CheckedLine>
-          Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
-        </CheckedLine>
-        <DifferentAccountLink onClick={onDifferentAccount} />
-      </div>
-    );
-  }
-  return (
-    <div className={styles.next}>
-      {step.replacesWords && <p className={styles.note}>{step.replacesWords}</p>}
-      {method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
-      {method === 'deviceCode' ? (
-        <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
-      ) : (
-        <TokenSignIn
-          kind={link.kind}
-          server={link.server}
-          pageTarget={{ link: linkText }}
-          failure={failure}
-          onOutcome={finish}
-          signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
-        />
-      )}
-      {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
-    </div>
-  );
-}
-
-/**
- * Connecting the repository with a sign-in already there: one click, proven with the link's project. Once the sign-in
- * was picked in the first step, the link step already says whose it is, so this is Connect alone.
- */
-function UseConnection(props: {
-  link: RecognizedLink;
-  linkText: string;
-  step: Extract<SignInStep, { kind: 'useConnection' }>;
-  repository: string;
-  picked: boolean;
-  onConnected: (outcome: SignedIn) => void;
-  onDifferentAccount: () => void;
-}) {
-  const { link, linkText, step, repository, picked, onConnected, onDifferentAccount } = props;
-  const [failure, setFailure] = useState<SignInFailure | null>(null);
-  const [busy, setBusy] = useState(false);
-  const name = TRACKER_GRAMMARS[step.connection.kind].name;
-  const connect = async (): Promise<void> => {
-    setBusy(true);
-    const outcome = await api.issueTrackers.useConnection({ repository, link: linkText, connectionId: step.connection.id });
-    setBusy(false);
-    if (outcome.kind === 'signedIn') onConnected(outcome);
-    else setFailure(outcome.failure);
-  };
-  return (
-    <div className={styles.next}>
-      {!picked && (
-        <>
-          <p className={styles.nextTitle}>Next: connect with your {name} sign-in</p>
-          <CheckedLine>
-            Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
-          </CheckedLine>
-        </>
-      )}
-      <div className={styles.row}>
-        <Button size="small" variant="primary" loading={busy} onClick={() => void connect()}>
-          Connect
-        </Button>
-        <DifferentAccountLink onClick={onDifferentAccount} />
-      </div>
-      {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
-    </div>
-  );
-}
-
-/** A quiet way past the sign-in already there: signing in with another account instead (`signInStepFor`). */
-function DifferentAccountLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" className={styles.textLink} onClick={onClick}>
-      Use a different account
-    </button>
   );
 }
