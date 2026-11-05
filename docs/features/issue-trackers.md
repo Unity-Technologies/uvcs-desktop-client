@@ -486,7 +486,7 @@ Settings.
 
 "Sign in with GitHub" asks for a code (`requestDeviceCode`: `POST /login/device/code`, the client id and the `repo`
 scope, `GITHUB_OAUTH_SCOPES`, as GitHub has no narrower scope that reads a private repository's issues), shows it,
-copies it and opens `github.com/login/device`, where the user pastes it and approves. Main polls the token endpoint at
+copies it (a button beside it copies it again) and opens `github.com/login/device`, where the user pastes it and approves. Main polls the token endpoint at
 the server's pace (`pollForToken`, `nextDevicePoll`: `authorization_pending` waits the interval, `slow_down` five
 seconds more, `access_denied` and `expired_token` end it), then signs in as with a token. No client secret is needed,
 so none ships. "Use a token instead" is a quiet link beside the button.
