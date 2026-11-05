@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeTrackerHttp } from '../testing/fakeTrackerHttp';
-import { deviceCodeOf, nextDevicePoll, pollForToken, realWait, requestDeviceCode } from './deviceFlow';
+import { deviceCodeOf, nextDevicePoll, pollForToken, realWait, requestDeviceCode, type Wait } from './deviceFlow';
 
 const SERVER = { server: 'https://github.com', clientId: 'Iv1.abc', scopes: 'repo' };
 const CODE_URL = 'POST https://github.com/login/device/code';
@@ -32,6 +32,9 @@ describe('nextDevicePoll', () => {
     expect(deviceCodeOf({ error: 'unauthorized_client' }, 0)).toBeNull();
   });
 });
+
+/** `realWait` with no time to wait: what it does with the signal is what the test is about. */
+const realWaitAtOnce: Wait = (_ms, signal) => realWait(0, signal);
 
 describe('the device flow', () => {
   afterEach(() => {
@@ -76,8 +79,28 @@ describe('the device flow', () => {
     const code = { deviceCode: 'd', userCode: 'U', verificationUri: 'https://github.com/login/device', expiresAt: 900_000, intervalMs: 5_000 };
     const polled = pollForToken(tracker.http.bound(['https://github.com'], null), SERVER, code, realWait, () => Date.now(), canceling.signal);
     canceling.abort();
-    await expect(polled).rejects.toThrow('canceled');
+    expect(await polled).toEqual({ failed: 'canceled' });
     await vi.advanceTimersByTimeAsync(60_000);
     expect(tracker.requests).toEqual([]);
+  });
+
+  it('stops when canceled while a poll is on its way, asking no more', async () => {
+    const canceling = new AbortController();
+    const tracker = fakeTrackerHttp({
+      [TOKEN_URL]: () => {
+        canceling.abort();
+        return { json: { error: 'authorization_pending' } };
+      },
+    });
+    const code = { deviceCode: 'd', userCode: 'U', verificationUri: 'https://github.com/login/device', expiresAt: 900_000, intervalMs: 5_000 };
+    const polled = pollForToken(tracker.http.bound(['https://github.com'], null), SERVER, code, realWaitAtOnce, () => 0, canceling.signal);
+    expect(await polled).toEqual({ failed: 'canceled' });
+    expect(tracker.lines()).toEqual([TOKEN_URL]);
+  });
+
+  it('waits no time at all on a signal already aborted', async () => {
+    const aborted = new AbortController();
+    aborted.abort();
+    await expect(realWait(5_000, aborted.signal)).rejects.toThrow('canceled');
   });
 });

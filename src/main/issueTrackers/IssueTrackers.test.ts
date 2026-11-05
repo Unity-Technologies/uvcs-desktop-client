@@ -211,6 +211,26 @@ describe('IssueTrackers', () => {
     expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
   });
 
+  it('binds nothing when the user cancels while a poll is on its way, and forgets the flow', async () => {
+    let cancel = (): void => undefined;
+    const { engine, tracker } = trackers(
+      {
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+        'POST https://github.com/login/oauth/access_token': () => {
+          cancel();
+          return { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } };
+        },
+      },
+      { clientIds: { 'github.com': 'Iv1.app' } },
+    );
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
+    cancel = () => engine.cancelDeviceSignIn('id1');
+    expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
+    expect(engine.setup().connections).toEqual([]);
+    expect(tracker.lines().filter((line) => line.endsWith('/user'))).toEqual([]);
+    expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
+  });
+
   it('offers no device flow without a registered app', async () => {
     const { engine, tracker } = trackers();
     expect(await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK })).toMatchObject({ failure: { reason: 'unexpected' } });
