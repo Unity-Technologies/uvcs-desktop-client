@@ -29,6 +29,12 @@ describe('needsHostConsent', () => {
     expect(needsHostConsent('https://git.acme.com', [{ ...github('e', '*'), server: 'https://GIT.acme.com' }])).toBe(false);
   });
 
+  it('reads a tracker’s host in any case, and a host with a trailing dot as another host', () => {
+    expect(needsHostConsent('https://GitHub.com', [])).toBe(false);
+    expect(needsHostConsent('https://ACME.Atlassian.net', [])).toBe(false);
+    expect(needsHostConsent('https://github.com.', [])).toBe(true);
+  });
+
   it('never takes a look-alike for a tracker’s host', () => {
     expect(needsHostConsent('https://github.com.evil.example', [])).toBe(true);
     expect(needsHostConsent('https://atlassian.net.evil.example', [])).toBe(true);

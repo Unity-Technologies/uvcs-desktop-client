@@ -9,7 +9,7 @@ const ATLASSIAN_TOKEN = /^ATATT[A-Za-z0-9_\-=]{20,}$/;
 const CLASSIC_ATLASSIAN_TOKEN = /^[A-Za-z0-9]{24}$/;
 
 /** Jira Cloud's sites: `<site>.atlassian.net`, and older `<site>.jira.com`. */
-function isJiraCloudHost(host: string): boolean {
+export function isJiraCloudHost(host: string): boolean {
   return /^[a-z0-9-]+\.(atlassian\.net|jira\.com)$/i.test(host);
 }
 
