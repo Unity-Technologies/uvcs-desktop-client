@@ -82,10 +82,15 @@ export const COUNT_TIMEOUT_MS = 8_000;
  * which every other request would meet too.
  */
 export async function countAnswer(http: ConnectionHttp, request: TrackerRequest): Promise<TrackerResponse | undefined> {
+  // A timer, not `AbortSignal.timeout`: its time is the one tests advance.
+  const limit = new AbortController();
+  const timer = setTimeout(() => limit.abort(), COUNT_TIMEOUT_MS);
   try {
-    return await http.send({ ...request, signal: AbortSignal.timeout(COUNT_TIMEOUT_MS) });
+    return await http.send({ ...request, signal: limit.signal });
   } catch (error) {
     if (error instanceof TrackerError && error.reason === 'signInRefused') throw error;
     return undefined;
+  } finally {
+    clearTimeout(timer);
   }
 }
