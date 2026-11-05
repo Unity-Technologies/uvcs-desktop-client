@@ -31,7 +31,9 @@ export type ChipContent =
       cachedAs?: CommentReference;
     }
   | { kind: 'user'; name: string }
-  | { kind: 'emoji'; glyph: string; name: string };
+  | { kind: 'emoji'; glyph: string; name: string }
+  /** An issue of the place's tracker, shown and read by `IssueChip`. */
+  | { kind: 'issue'; key: string; bare: boolean };
 
 /**
  * `placeRepository`: the window's (`game@acme@unity`), so an object named in it however it's written (`cs:12`,
@@ -74,6 +76,8 @@ function chipOf(reference: CommentReference): ChipContent {
       return { kind: 'user', name: reference.name };
     case 'emoji':
       return { kind: 'emoji', glyph: reference.glyph, name: reference.name };
+    case 'issue':
+      return { kind: 'issue', key: reference.key, bare: reference.bare };
     case 'link':
       return linkChip(reference.link);
     case 'file': {

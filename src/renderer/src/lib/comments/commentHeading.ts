@@ -1,4 +1,5 @@
 import { splitComment } from '../comment';
+import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 import { parseMarkdown, type MarkdownBlock, type MarkdownInline } from '../markdown';
 
 /**
@@ -14,12 +15,13 @@ export type CommentHeading =
   | { kind: 'block'; description: string }
   | { kind: 'empty' };
 
-export function commentHeading(comment: string): CommentHeading {
+/** `issues`: the place's tracker, whose issues the title shows as chips (`MarkdownOptions.issues`). */
+export function commentHeading(comment: string, issues?: IssueReferenceReader): CommentHeading {
   const { summary, description } = splitComment(comment);
   if (!summary) return { kind: 'empty' };
-  const opening = openingBlock(comment);
+  const opening = openingBlock(comment, issues);
   // A rule it opens with only separates: the heading is what follows it.
-  if (opening?.kind === 'rule') return description ? commentHeading(description) : { kind: 'empty' };
+  if (opening?.kind === 'rule') return description ? commentHeading(description, issues) : { kind: 'empty' };
   if (!opening || opening.kind === 'code' || opening.kind === 'table') return { kind: 'block', description: comment.trim() };
   return { kind: 'titled', title: firstLineOf(opening), description };
 }
@@ -29,13 +31,13 @@ export function commentHeading(comment: string): CommentHeading {
  * table, that block's first line (code's first line, the table's header). Empty for an empty comment, where the
  * caller says "No comment".
  */
-export function commentLineInlines(comment: string): MarkdownInline[] {
-  const heading = commentHeading(comment);
+export function commentLineInlines(comment: string, issues?: IssueReferenceReader): MarkdownInline[] {
+  const heading = commentHeading(comment, issues);
   switch (heading.kind) {
     case 'titled':
       return heading.title;
     case 'block': {
-      const opening = openingBlock(heading.description);
+      const opening = openingBlock(heading.description, issues);
       return opening ? firstLineOf(opening) : [];
     }
     case 'empty':
@@ -47,10 +49,10 @@ export function commentLineInlines(comment: string): MarkdownInline[] {
  * The block a comment opens with, read from its first lines only (up to the first blank line, where a block ends):
  * a row with a long pasted log costs what its first paragraph does. Code cut there still reads as code.
  */
-function openingBlock(comment: string): MarkdownBlock | undefined {
+function openingBlock(comment: string, issues: IssueReferenceReader | undefined): MarkdownBlock | undefined {
   const text = comment.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '');
   const blank = text.search(/\n[ \t]*\n/);
-  return parseMarkdown(blank < 0 ? text : text.slice(0, blank), { comment: true })[0];
+  return parseMarkdown(blank < 0 ? text : text.slice(0, blank), { comment: true, ...(issues && { issues }) })[0];
 }
 
 /** A block's first line: a paragraph up to its first line break, a list's first item with its marker. */
