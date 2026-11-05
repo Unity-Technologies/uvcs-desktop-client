@@ -72,7 +72,10 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const failed = failure && connectFailureWords(failure, { trackerName, server, ...(words.emailLabel && { email }) });
   // A failure is said where the eye is: under Sign in, scrolled into view when the step is taller than the pane.
   const problem = useRef<HTMLDivElement>(null);
-  useEffect(() => problem.current?.scrollIntoView({ block: 'nearest' }), [failure]);
+  // A block body: Chromium's `scrollIntoView` returns a promise now, which React would take for a clean-up.
+  useEffect(() => {
+    problem.current?.scrollIntoView({ block: 'nearest' });
+  }, [failure]);
   const lead = tokenStepLead(token);
 
   return (
