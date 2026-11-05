@@ -114,6 +114,7 @@ describe('suggestedTrackerLink', () => {
       link: 'https://acme.atlassian.net/browse/VCS-1',
       words: 'Jira Cloud · acme.atlassian.net · project VCS',
       trackerName: 'Jira',
+      choice: 'jira',
       seen: 'Seen in 2 branch comments',
     });
   });
