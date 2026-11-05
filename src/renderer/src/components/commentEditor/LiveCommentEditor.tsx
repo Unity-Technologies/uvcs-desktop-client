@@ -295,7 +295,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!query) setDismissedAt(null);
   }, [query === null]);
 
-  const { rows, reading, searchAll } = useSuggestionRows(open);
+  const { rows, reading, searchAll, picked } = useSuggestionRows(open);
   // The cue at the word typed, apart from the list: the field shows it understood the trigger whatever the list does.
   const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null, reading });
   const cueRange = query && cue ? { from: query.from, to: query.to, state: cue } : null;
@@ -323,7 +323,10 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     const row = rows[index];
     if (!view || !open || !row) return;
     if (row.kind === 'searchAll') searchAll(row.text);
-    else if (row.kind === 'pick') view.dispatch(pickSuggestion(view.state, open, row.suggestion.insert));
+    else if (row.kind === 'pick') {
+      picked(row.suggestion);
+      view.dispatch(pickSuggestion(view.state, open, row.suggestion.insert));
+    }
   };
 
   // The list's keys come before the editor's and the dialog's (Esc would close it): taken on the way down.

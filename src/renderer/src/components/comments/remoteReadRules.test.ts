@@ -20,12 +20,16 @@ describe('reads of other repositories’ objects', () => {
     expect(readers).toEqual([join('components', 'comments', 'ResolvedReferences.tsx'), join('components', 'comments', 'remoteObjects.ts'), join('components', 'comments', 'useRemoteObject.ts')].sort());
   });
 
-  it('of issues, start only where a comment shows in full or an issue chip’s card opens', () => {
+  it('of issues, start only where a comment shows in full, an issue chip’s card opens, or a key typed after `#` settles', () => {
     const readers = filesUnder(RENDERER, isAppSource)
       .filter((path) => !path.endsWith('.test.ts') && /\bissueQuery\(/.test(readFileSync(path, 'utf8')))
       .map((path) => relative(RENDERER, path))
       .sort();
-    expect(readers).toEqual([join('components', 'issues', 'IssueChip.tsx'), join('components', 'issues', 'ResolvedIssues.tsx'), join('components', 'issues', 'issueQueries.ts')].sort());
+    expect(readers).toEqual(
+      [join('components', 'issues', 'IssueChip.tsx'), join('components', 'issues', 'ResolvedIssues.tsx'), join('components', 'issues', 'issueQueries.ts'), join('components', 'commentEditor', 'useIssueSuggestionRows.ts')].sort(),
+    );
+    // `reads.key` is set only once typing settles on a key (`issueSuggestionReads`).
+    expect(readFileSync(join(RENDERER, 'components', 'commentEditor', 'useIssueSuggestionRows.ts'), 'utf8')).toMatch(/issueQuery\([^)]*\), enabled: asking && reads\.key !== null \}/);
     expect(readFileSync(join(RENDERER, 'components', 'issues', 'IssueChip.tsx'), 'utf8')).toMatch(/issueQuery\([^)]*\), enabled: cardOpen \}/);
     expect(readFileSync(join(RENDERER, 'components', 'issues', 'ResolvedIssues.tsx'), 'utf8')).toMatch(/enabled: settled/);
   });

@@ -12,6 +12,8 @@ export const issueKeys = {
   /** Every issue of a connection, which its sign-in changing reads again. */
   ofConnection: (connectionId: string) => ['issue', connectionId] as const,
   issue: (connectionId: string, key: string) => ['issue', connectionId, key] as const,
+  /** The `#` searches, by repository and words (`issueSearchQuery`). */
+  searches: ['issueSearch'] as const,
 };
 
 /**

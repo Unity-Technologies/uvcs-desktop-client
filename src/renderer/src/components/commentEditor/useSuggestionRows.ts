@@ -28,7 +28,9 @@ import {
   shelveIndex,
   shelveSuggestions,
   SUGGESTION_LIMIT,
+  type Suggestion,
 } from './suggestionItems';
+import { useIssueSuggestionRows } from './useIssueSuggestionRows';
 import { suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
 import { listedFrom, peopleListedFrom, suggestionReads, type ListRead, type Listed } from './suggestionSource';
 import type { SuggestionQuery } from './suggestionTrigger';
@@ -44,7 +46,7 @@ const NO_ROWS: SuggestionRow[] = [];
  * newest ones is looked up by its number once typing settles, or found by "Search all changesets", which searches
  * only when picked.
  */
-export function useSuggestionRows(query: SuggestionQuery | null): { rows: SuggestionRow[]; reading: boolean; searchAll: (text: string) => void } {
+export function useSuggestionRows(query: SuggestionQuery | null): { rows: SuggestionRow[]; reading: boolean; searchAll: (text: string) => void; picked: (suggestion: Suggestion) => void } {
   const place = usePlace();
   const placeRepository = usePlaceRepository();
   const placeServer = usePlaceServer();
@@ -126,9 +128,13 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const searched: ChangesetSearch =
     search.term === undefined ? { state: 'none' } : search.found.data ? { state: 'found', text: search.term, suggestions: search.found.data.slice(0, SUGGESTION_LIMIT).map((changeset) => changesetSuggestion(changeset, search.term)) } : { state: 'searching', text: search.term };
 
+  // The tracker's issues: their own reads and rows (`useIssueSuggestionRows`).
+  const issues = useIssueSuggestionRows(kind === 'issue' ? typed : null);
+  if (kind === 'issue') return { rows: issues.rows, reading: issues.reading, searchAll: (text) => search.start(text), picked: issues.picked };
+
   // The best few rows: cheap to lay out again on each render.
   const rows = listed && kind ? suggestionRows(kind, typed, listed, kind === 'changeset' ? { lookup, search: searched } : undefined) : NO_ROWS;
-  return { rows, reading, searchAll: (text) => search.start(text) };
+  return { rows, reading, searchAll: (text) => search.start(text), picked: issues.picked };
 }
 
 /**
