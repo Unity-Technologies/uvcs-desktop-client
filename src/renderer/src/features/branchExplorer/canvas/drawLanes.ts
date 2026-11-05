@@ -4,6 +4,7 @@ import { BAND_HEIGHT, NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor } from './graphPalette';
 import { laneShape, type LaneShape } from './laneShape';
 import { boundsOf, crossesView } from './linkVisibility';
+import { selectionInks } from './drawNodeSelection';
 import { lanesAcross } from './spansInView';
 
 const ELBOW_RADIUS = 16;
@@ -41,7 +42,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
   const { ctx, scene, visible } = draw;
   const name = lane.branch.name;
   const isCurrent = scene.currentBranch === name;
-  const isSelected = scene.selectedBranch === name;
+  const isSelected = scene.selectedBranches.has(name);
   const isHovered = scene.hoveredBranch === name;
   // While a search picks changesets out, the bands recede, unless they hold a hit.
   const recedes = scene.search !== null && !scene.search.litBranches.has(name);
@@ -53,7 +54,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
 
   ctx.save();
   if (isSelected) {
-    ctx.fillStyle = scene.palette.accentSoft;
+    ctx.fillStyle = selectionInks(scene).halo;
     roundRect(draw, left, top, width, BAND_HEIGHT, radius, SELECTION_HALO);
     ctx.fill();
   }
@@ -72,7 +73,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
   }
   if (isSelected) {
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = scene.palette.accent;
+    ctx.strokeStyle = selectionInks(scene).ring;
     ctx.lineWidth = 2;
     roundRect(draw, left, top, width, BAND_HEIGHT, radius, SELECTION_RING);
     ctx.stroke();

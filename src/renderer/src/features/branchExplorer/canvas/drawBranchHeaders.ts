@@ -9,6 +9,7 @@ import { HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, H
 import { HEADER_HOVER_TINT, HEADER_TINT, headerColor, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape, roomBeforeNextLane } from './laneShape';
+import { selectionInks } from './drawNodeSelection';
 import { lanesAcross } from './spansInView';
 import { drawSearchMarks, redrawMarkedLetters } from './searchMarks';
 
@@ -96,7 +97,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const { ctx, pen, scene } = draw;
   const { palette, search } = scene;
   const name = lane.branch.name;
-  const selected = scene.selectedBranch === name;
+  const selected = scene.selectedBranches.has(name);
   const current = scene.currentBranch === name;
   const hovered = scene.hoveredBranch === name;
   const isHit = search?.branches.has(name) ?? false;
@@ -125,7 +126,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.fillStyle = color;
   ctx.globalAlpha = ink * (HEADER_TINT[palette.isDark ? 'dark' : 'light'] + (hovered ? HEADER_HOVER_TINT : 0));
   ctx.fill();
-  ctx.strokeStyle = selected ? palette.accent : color;
+  ctx.strokeStyle = selected ? selectionInks(scene).ring : color;
   ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.75 : 0.55);
   ctx.lineWidth = selected ? 1.5 : 1;
   ctx.stroke();
