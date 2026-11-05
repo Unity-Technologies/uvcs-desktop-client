@@ -317,8 +317,9 @@ its chip while the caret is away, and stays the address as written.
   row stays text, as it has no card to open.
 - **When it reads**, through the same doors as another repository's objects (rich-comments.md "What a chip reads"),
   which `remoteReadRules.test.ts` holds issue reads to: a comment shown in full reads its issues once what it shows
-  stayed put (`ResolvedIssues`, `useKeySettled`, up to `MAX_ISSUES_PER_COMMENT`); a row's chip, a title's, and the
-  editor's read only while their card is open. Arrowing through rows reads nothing.
+  stayed put (`ResolvedIssues`, `useIssueReads`, `useKeySettled`, up to `MAX_ISSUES_PER_COMMENT`), and so does one
+  being written, once its text settles (`editorIssueKeys`), so a key typed or an address pasted shows its title
+  without a hover; a row's chip and a title's read only while their card is open. Arrowing through rows reads nothing.
 - **Batched**: each issue is its own query (`issueQuery`, keyed `issueKeys.issue(connectionId, key)`), so a chip
   anywhere finds what another read. Their reads go through `IssueReadBatch`, which gathers every key asked in the same
   task, splits them per connection and asks `issueTrackers.readIssues` once per connection: Jira Cloud's `POST
@@ -339,7 +340,7 @@ The binding reaches the comment readers as an option, never from module state: `
 | --- | --- |
 | A comment shown in full (`Markdown` with `comment`: details panels, `SummaryComment`, `RevisionHeader`, the annotate card, the Branch Explorer's caption card and tooltip) | Issue chips, read on a settled selection (`ResolvedIssues`) |
 | A comment's line (`CommentLine`, through `commentLineInlines(comment, issues)`: every list, Incoming, the pickers, the headers' titles) | Compact issue chips, read while their card is open |
-| The editor (`liveMarks`' chips, the `issueReferences` facet, reconfigured as the place's tracker changes) | Issue chips as typed, read while their card is open |
+| The editor (`liveMarks`' chips, the `issueReferences` facet, reconfigured as the place's tracker changes) | Issue chips as typed or pasted (a bare address too), read once the text settles (`editorIssueKeys`, `useIssueReads`) |
 | What holds only text (`commentText`, `commentLineText`: the Branch Explorer's canvas, the palette, notifications) | Nothing: a reference already shows as written, so these take no reader, and `mayHoldReference`'s fast path stays as it is |
 
 ## Suggesting issues: `#` in the editor

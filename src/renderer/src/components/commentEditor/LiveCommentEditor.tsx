@@ -1,6 +1,8 @@
 import { EditorState } from '@codemirror/state';
 import { useIssueReferences } from '../issues/useIssueTrackers';
-import { issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
+import { useIssueReads } from '../issues/useIssueReads';
+import { editorIssueKeys } from './editorIssueKeys';
+import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -58,6 +60,11 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   changed.current = onChange;
   const codeTheme = pierreThemeName(useResolvedTheme());
   const issues = useIssueReferences();
+  // The issues the text names read at once, as a comment shown in full reads them, so a pasted one's chip shows its title.
+  // Kept by its text and the tracker the editor reads with, which reaches it a moment after `issues` (a reconfigure).
+  const doc = state?.doc;
+  const reader = state?.facet(issueReferences);
+  useIssueReads(useMemo(() => (state ? editorIssueKeys(state) : []), [doc, reader]));
 
   // Built in the effect and destroyed in its cleanup, so StrictMode's second mount gets an editor of its own.
   useEffect(() => {

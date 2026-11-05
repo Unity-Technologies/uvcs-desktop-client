@@ -10,7 +10,7 @@ const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acm
 
 describe('editorIssueKeys', () => {
   it('names the issues the text being written holds, typed or pasted as an address, each once, so they read at once', () => {
-    expect(editorIssueKeys(editorState('Fixes VCS-13\nhttps://jira.acme.com/browse/VCS-12 and VCS-13‸', tracked))).toEqual(['VCS-12', 'VCS-13']);
+    expect(editorIssueKeys(editorState('Fixes VCS-13\nhttps://jira.acme.com/browse/VCS-12 and VCS-13‸', tracked))).toEqual(['VCS-13', 'VCS-12']);
   });
 
   it('names none where the place has no tracker, nor in code', () => {
