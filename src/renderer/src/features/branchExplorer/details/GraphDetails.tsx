@@ -1,12 +1,12 @@
+import { MousePointerClick } from 'lucide-react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { ObjectLinks } from '../../../components/objectLinks';
-import { MousePointerClick } from 'lucide-react';
 import { NoSelection } from '../../../components/NoSelection';
 import type { MenuEntry } from '../../../lib/actions';
 import { DetailsLink } from '../../../ui/DetailsLink';
 import { EmptyState } from '../../../ui/EmptyState';
 import type { GraphTarget } from '../canvas/graphTargets';
-import type { GraphSelection } from '../graphSelection';
+import type { GraphSelection, SeveralSelected } from '../graphSelection';
 import { LabelDetails } from '../../labels/LabelDetails';
 import { selectedLabel } from '../model/graphLabels';
 import type { GraphLayout } from '../model/layoutGraph';
@@ -17,8 +17,8 @@ import { PendingDetails } from './PendingDetails';
 
 interface GraphDetailsProps {
   selection: GraphSelection | null;
-  /** What several selected are (`severalSelected`): the details show one object, so they say so instead. */
-  several: string | null;
+  /** What several selected are (`severalSelected`): the details show one object, so they say what is selected instead. */
+  several: SeveralSelected | null;
   layout: GraphLayout;
   /** What the pending changes count, when they are selected. */
   pendingChangeCount: number;
@@ -45,7 +45,7 @@ export function GraphDetails({ selection, several, layout, pendingChangeCount, m
     selectBranch,
   };
 
-  if (several) return <EmptyState icon={<MousePointerClick size={22} />} title={several} description="Select one to see its details." />;
+  if (several) return <EmptyState icon={<MousePointerClick size={22} />} title={several.summary} description={several.hint} />;
   if (label) {
     return <LabelDetails key={label.name} place={place} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
   }

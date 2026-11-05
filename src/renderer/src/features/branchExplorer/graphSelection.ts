@@ -139,10 +139,17 @@ const GROUP_NOUNS: Record<SelectionGroup, [singular: string, plural: string]> = 
   pending: ['pending change', 'pending changes'],
 };
 
-/** What a selection of several is, "3 branches selected", for the details and screen readers; null for one or none. */
-export function severalSelected(selections: GraphSelections): string | null {
+/** What the details and screen readers say of a selection of several, since the details show one object. */
+export interface SeveralSelected {
+  /** "3 branches selected". */
+  summary: string;
+  hint: string;
+}
+
+/** What a selection of several is; null for one or none, which the details show as themselves. */
+export function severalSelected(selections: GraphSelections): SeveralSelected | null {
   const lead = leadOf(selections);
   if (!lead || selections.length < 2) return null;
   const [singular, plural] = GROUP_NOUNS[groupOf(lead)];
-  return `${pluralize(selections.length, singular, plural)} selected`;
+  return { summary: `${pluralize(selections.length, singular, plural)} selected`, hint: `Select one ${singular} to see its details.` };
 }

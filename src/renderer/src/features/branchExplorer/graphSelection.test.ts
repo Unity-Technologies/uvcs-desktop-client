@@ -157,9 +157,9 @@ describe('selectionHighlights', () => {
 
 describe('severalSelected says what a selection of several is', () => {
   it('counts them with their kind', () => {
-    expect(severalSelected([{ kind: 'branch', name: '/main' }, { kind: 'branch', name: '/main/a' }, { kind: 'branch', name: '/main/b' }])).toBe('3 branches selected');
-    expect(severalSelected([{ kind: 'changeset', id: 1 }, { kind: 'changeset', id: 2 }])).toBe('2 changesets selected');
-    expect(severalSelected([{ kind: 'changeset', id: 1, label: 'v0' }, { kind: 'changeset', id: 2, label: 'v1' }])).toBe('2 labels selected');
+    expect(severalSelected([{ kind: 'branch', name: '/main' }, { kind: 'branch', name: '/main/a' }, { kind: 'branch', name: '/main/b' }])).toEqual({ summary: '3 branches selected', hint: 'Select one branch to see its details.' });
+    expect(severalSelected([{ kind: 'changeset', id: 1 }, { kind: 'changeset', id: 2 }])?.summary).toBe('2 changesets selected');
+    expect(severalSelected([{ kind: 'changeset', id: 1, label: 'v0' }, { kind: 'changeset', id: 2, label: 'v1' }])?.summary).toBe('2 labels selected');
   });
 
   it('is null for one or none, which the details show as themselves', () => {

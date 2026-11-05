@@ -343,7 +343,7 @@ export function BranchExplorerView() {
       {header}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
-          {severalSelected(selections) ?? describeSelection(layout, selection, homeChangeset)}
+          {severalSelected(selections)?.summary ?? describeSelection(layout, selection, homeChangeset)}
         </div>
         <ListWithDetails
           detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
