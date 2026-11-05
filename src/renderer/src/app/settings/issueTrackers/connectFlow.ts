@@ -229,22 +229,28 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: st
       signOut: `Sign out of ${hostOf(connection.server)}`,
       signOutQuestion: {
         title: `Sign out of ${connectionTitle(connection)}?`,
-        message:
-          used === 0
-            ? `This computer forgets the ${name} sign-in.`
-            : `This computer forgets the ${name} sign-in, and ${pluralize(used, 'repository', 'repositories')} using it go${used === 1 ? 'es' : ''} back to showing issues as plain text.`,
+        message: `This computer forgets the ${name} sign-in${losingTrackers(used, connection.id === here)}.`,
         confirmLabel: 'Sign out',
       },
     };
   });
 }
 
+/** Which repositories signing out leaves showing issues as plain text: the window's own named, the others counted. */
+function losingTrackers(used: number, usedHere: boolean): string {
+  const others = usedHere ? used - 1 : used;
+  if (usedHere && others === 0) return ', and this repository goes back to showing issues as plain text';
+  if (usedHere) return `, and this repository and ${pluralize(others, 'other', 'others')} using it go back to showing issues as plain text`;
+  if (used === 0) return '';
+  return `, and ${pluralize(used, 'repository', 'repositories')} using it go${used === 1 ? 'es' : ''} back to showing issues as plain text`;
+}
+
 /**
  * The sign-ins Connect offers first for a repository ("Use a sign-in you already have"): those that work. One needing
  * signing in again goes through its tracker's card like any other.
  */
-export function usableSignIns(setup: IssueTrackerSetup | undefined): SignInRow[] {
-  return signInRows(setup).filter((row) => !row.needsAttention);
+export function usableSignIns(setup: IssueTrackerSetup | undefined, repository?: string): SignInRow[] {
+  return signInRows(setup, repository).filter((row) => !row.needsAttention);
 }
 
 /**

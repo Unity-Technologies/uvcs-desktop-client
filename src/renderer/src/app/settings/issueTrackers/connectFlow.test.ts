@@ -221,6 +221,8 @@ describe('signInRows', () => {
   it('says the window’s repository is one of those that lose their tracker', () => {
     const [here] = signInRows(setup([jira]), 'game@acme@unity');
     expect(here!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository goes back to showing issues as plain text.');
+    const shared = { ...setup([jira]), bindings: [...setup([jira]).bindings, { repository: 'tools@acme@unity', connectionId: 'j', projects: ['VCS'] }] };
+    expect(signInRows(shared, 'game@acme@unity')[0]!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository and 1 other using it go back to showing issues as plain text.');
   });
 });
 
