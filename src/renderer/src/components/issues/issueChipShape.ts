@@ -31,8 +31,7 @@ export function issueChipShape(reference: IssueReference, source: string, kind: 
   const found = read?.kind === 'found' ? read.issue : undefined;
   return {
     kind: 'chip',
-    // An issue written as its address shows its key: the address is what copying gives back.
-    label: /^<?https?:\/\//i.test(source) ? reference.key : source,
+    label: chipLabel(reference, source, kind),
     title: `${issueNoun(kind, found?.type)} ${reference.key}`,
     ...(found && !compact && { summary: found.title }),
     ...(found && { category: found.statusCategory }),
@@ -87,4 +86,14 @@ function unreadableWords(tracker: string, kind: IssueTrackerKind, reason: Extrac
     default:
       return `Couldn't read it from ${tracker}`;
   }
+}
+
+/**
+ * What a chip names its issue by. A Jira issue by its key: written as its address (the address is what copying gives
+ * back) or with the `#` it was typed with (`#VCS-12`), as a mention's chip drops its `@` and a changeset's its `cs:`.
+ * A GitHub one as written (`#12`, `owner/repo#12`), the `#` being part of how GitHub names it, its address by its key.
+ */
+function chipLabel(reference: IssueReference, source: string, kind: IssueTrackerKind): string {
+  if (kind !== 'github' || /^<?https?:\/\//i.test(source)) return reference.key;
+  return source;
 }
