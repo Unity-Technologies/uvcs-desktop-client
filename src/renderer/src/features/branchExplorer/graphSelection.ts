@@ -1,5 +1,6 @@
 import { pluralize } from '../../lib/text';
 import type { GraphTarget } from './canvas/graphTargets';
+import type { GraphLayout } from './model/layoutGraph';
 
 /**
  * What the details panel shows. Labels and merge links select the changeset they point to (a label naming itself, so
@@ -105,6 +106,29 @@ export interface SelectGesture {
 /** What is selected after a click or a right-click on the target. */
 export function selectedOnGesture(current: GraphSelections, target: GraphTarget | null, gesture: SelectGesture): GraphSelections {
   return (gesture.context ? selectedOnContextClick : selectedOnClick)(current, target, gesture.toggle);
+}
+
+function isLaidOut(selection: GraphSelection, layout: GraphLayout): boolean {
+  switch (selection.kind) {
+    case 'changeset':
+      if (selection.label === undefined) return layout.nodes.has(selection.id);
+      return layout.labelsByChangeset.get(selection.id)?.some((label) => label.name === selection.label) ?? false;
+    case 'branch':
+      return layout.lanesByBranch.has(selection.name);
+    case 'pending':
+      return layout.pending !== null;
+  }
+}
+
+/**
+ * A selection of several keeps only what the graph still shows once it is laid out again, so a menu or a count never
+ * includes a branch just hidden or deleted. One selected stays as it is: going to a changeset selects it before the
+ * graph has laid it out. Unchanged, it is the same array, so nothing renders again.
+ */
+export function selectionsLaidOut(selections: GraphSelections, layout: GraphLayout): GraphSelections {
+  if (selections.length < 2) return selections;
+  const kept = selections.filter((selection) => isLaidOut(selection, layout));
+  return kept.length === selections.length ? selections : kept;
 }
 
 /** What the graph draws as selected (the lead, and every selected changeset and branch), and in which color. */

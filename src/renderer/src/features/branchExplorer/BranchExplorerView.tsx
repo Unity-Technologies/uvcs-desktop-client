@@ -1,5 +1,5 @@
 import { GitGraph } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
@@ -31,6 +31,7 @@ import {
   leadOf,
   NOTHING_SELECTED,
   selectedOnGesture,
+  selectionsLaidOut,
   selectionFor,
   selectionHighlights,
   severalSelected,
@@ -118,6 +119,11 @@ export function BranchExplorerView() {
     rules,
     matches: ruleMatches,
   });
+  useEffect(() => {
+    if (!layout) return;
+    const laidOut = selectionsLaidOut(selectionsRef.current, layout);
+    if (laidOut !== selectionsRef.current) setSelections(laidOut);
+  }, [layout, setSelections]);
 
   const ruleColors = useMemo(
     () => (data ? rememberedPerHistory(data, 'ruleColors', [rules, ruleMatches, currentBranch], () => ruleColorsOf(data, rules, ruleMatches, currentBranch)) : NO_RULE_COLORS),

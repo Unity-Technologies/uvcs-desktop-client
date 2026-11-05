@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphTarget } from './canvas/graphTargets';
-import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectedOnGesture, selectionFor, selectionHighlights, severalSelected } from './graphSelection';
+import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectedOnGesture, selectionFor, selectionHighlights, selectionsLaidOut, severalSelected } from './graphSelection';
 import { sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -126,6 +126,29 @@ describe('isSelected', () => {
     expect(isSelected([{ kind: 'changeset', id: 6, label: 'v1' }], labelOn('v1', 6))).toBe(true);
     expect(isSelected([{ kind: 'changeset', id: 6, label: 'v1' }], changeset(6))).toBe(false);
     expect(isSelected([{ kind: 'changeset', id: 6 }], null)).toBe(false);
+  });
+});
+
+describe('selectionsLaidOut', () => {
+  it('drops from several what the graph no longer shows: a branch hidden, a label or changeset gone', () => {
+    const several = [
+      { kind: 'branch', name: '/main/a' },
+      { kind: 'branch', name: '/main/hidden' },
+    ] as const;
+    expect(selectionsLaidOut(several, layout)).toEqual([{ kind: 'branch', name: '/main/a' }]);
+    const labels = [{ kind: 'changeset', id: 6, label: 'v1' }, { kind: 'changeset', id: 6, label: 'deleted' }] as const;
+    expect(selectionsLaidOut(labels, layout)).toEqual([{ kind: 'changeset', id: 6, label: 'v1' }]);
+    expect(selectionsLaidOut([{ kind: 'changeset', id: 4 }, { kind: 'changeset', id: 999 }], layout)).toEqual([{ kind: 'changeset', id: 4 }]);
+  });
+
+  it('keeps the same selection when everything is still there, so nothing renders again', () => {
+    const shown = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 4 }] as const;
+    expect(selectionsLaidOut(shown, layout)).toBe(shown);
+  });
+
+  it('keeps one selected as it is, which going to a changeset selects before it is laid out', () => {
+    const one = [{ kind: 'changeset', id: 999 }] as const;
+    expect(selectionsLaidOut(one, layout)).toBe(one);
   });
 });
 
