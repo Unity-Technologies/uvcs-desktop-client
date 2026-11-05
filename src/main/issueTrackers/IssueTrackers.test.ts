@@ -255,6 +255,20 @@ describe('IssueTrackers', () => {
     expect(tracker.requests).toEqual([]);
   });
 
+  it('asks nothing of the keychain while no tracker is connected: every window reads the setup', async () => {
+    let asked = 0;
+    const counting: SecretCipher = {
+      ...plainCipher,
+      canKeep: () => {
+        asked++;
+        return true;
+      },
+    };
+    const { engine } = trackers(SIGNED_IN, { cipher: counting });
+    expect(engine.setup()).toMatchObject({ connections: [], sessionOnly: false });
+    expect(asked).toBe(0);
+  });
+
   it('forgets a connection and its bindings on sign out, and a repository’s binding on disconnect', async () => {
     const { engine } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
