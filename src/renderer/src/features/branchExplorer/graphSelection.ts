@@ -1,3 +1,4 @@
+import { pluralize } from '../../lib/text';
 import type { GraphTarget } from './canvas/graphTargets';
 
 /**
@@ -118,4 +119,19 @@ export function selectionHighlights(selections: GraphSelections): SelectionHighl
     selectedBranches: new Set(selections.flatMap((selection) => (selection.kind === 'branch' ? [selection.name] : []))),
     multipleSelection: selections.length > 1,
   };
+}
+
+const GROUP_NOUNS: Record<SelectionGroup, [singular: string, plural: string]> = {
+  changeset: ['changeset', 'changesets'],
+  label: ['label', 'labels'],
+  branch: ['branch', 'branches'],
+  pending: ['pending change', 'pending changes'],
+};
+
+/** What a selection of several is, "3 branches selected", for the details and screen readers; null for one or none. */
+export function severalSelected(selections: GraphSelections): string | null {
+  const lead = leadOf(selections);
+  if (!lead || selections.length < 2) return null;
+  const [singular, plural] = GROUP_NOUNS[groupOf(lead)];
+  return `${pluralize(selections.length, singular, plural)} selected`;
 }

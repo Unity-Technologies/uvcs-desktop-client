@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphTarget } from './canvas/graphTargets';
-import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectionFor, selectionHighlights } from './graphSelection';
+import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectionFor, selectionHighlights, severalSelected } from './graphSelection';
 import { sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -124,5 +124,18 @@ describe('selectionHighlights', () => {
       selectedBranches: new Set(),
       multipleSelection: true,
     });
+  });
+});
+
+describe('severalSelected says what a selection of several is', () => {
+  it('counts them with their kind', () => {
+    expect(severalSelected([{ kind: 'branch', name: '/main' }, { kind: 'branch', name: '/main/a' }, { kind: 'branch', name: '/main/b' }])).toBe('3 branches selected');
+    expect(severalSelected([{ kind: 'changeset', id: 1 }, { kind: 'changeset', id: 2 }])).toBe('2 changesets selected');
+    expect(severalSelected([{ kind: 'changeset', id: 1, label: 'v0' }, { kind: 'changeset', id: 2, label: 'v1' }])).toBe('2 labels selected');
+  });
+
+  it('is null for one or none, which the details show as themselves', () => {
+    expect(severalSelected(NOTHING_SELECTED)).toBeNull();
+    expect(severalSelected([{ kind: 'branch', name: '/main' }])).toBeNull();
   });
 });
