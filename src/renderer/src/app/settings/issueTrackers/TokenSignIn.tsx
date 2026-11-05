@@ -27,10 +27,10 @@ interface TokenSignInProps {
 
 /**
  * Signing in with a token (docs/features/issue-trackers.md, "The token"): a masked field paste works in, which signs
- * in at once when what's pasted has the tracker's known shape; "Create a token" opens its page, filled in where the
- * tracker allows. The app never reads the clipboard by itself: only a paste the user makes reaches the field. The
+ * in at once when what's pasted is shaped like a token (`submitsOnPaste`), on every tracker alike; step one opens the
+ * tracker's token page, filled in where the tracker allows. The app never reads the clipboard by itself: only a paste the user makes reaches the field. The
  * token goes to main once, on submit, and the field forgets it; a token pasted and signed in with is cleared from the
- * clipboard. One button leads (`tokenStepLead`): "Create a token" until a token is in the field, then "Sign in".
+ * clipboard. One button leads (`tokenStepLead`): the token page's until a token is in the field, then "Sign in".
  */
 export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutcome, keptEmail }: TokenSignInProps) {
   const words = tokenStepWords(kind);
