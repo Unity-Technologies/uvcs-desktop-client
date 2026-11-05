@@ -100,7 +100,7 @@ describe('changesets', () => {
   });
 
   // The branch diff up to a changeset starts where the branch does, whatever it merged from its parent since.
-  it("reads where a branch starts with one quick cm find of its first changeset, the branch hidden or not", async () => {
+  it("reads where a branch starts with one quick cm find of its first changeset, asking hidden branches' too", async () => {
     const { service, commands } = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS, { changesetid: 9, parent: 8 }) });
 
     const start = await service.branchStart(IN_WORKSPACE, '/main/task');
