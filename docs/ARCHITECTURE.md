@@ -1473,8 +1473,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   output. An issue tracker's requests show among the commands (`source: 'tracker'`: method, host and path, a failure
   as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line
   is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the command and its subcommand
-  (`lock list`, `find branch`) in one color, option names in another (each kept whole on its line), `--format`'s `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and
-  numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name
+  (`lock list`, `find branch`) in one color, option names in another (each kept whole on its line), `--format`'s
+  `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name
   turns red. Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
