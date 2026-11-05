@@ -147,7 +147,7 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
     connection,
     title: connectionTitle(connection),
     projects: connection.kind === 'jiraCloud' ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
-    account: `Signed in as ${connection.account.name}`,
+    account: accountWords(connection),
     ...(connection.credential === 'refused' && { signInAgain: `${name} stopped accepting this sign-in.` }),
     ...(connection.credential === 'missing' && { signInAgain: `This computer no longer has the ${name} sign-in.` }),
     ...(connection.credential === 'session' && { sessionOnly: 'Kept until you quit: this computer has no keyring.' }),
