@@ -1,10 +1,11 @@
 import { Kbd } from '../../ui/Kbd';
-import { SCOPE_PREFIXES } from './paletteScope';
+import type { Place } from '@shared/domain/place';
+import { offeredPrefixes } from './paletteScope';
 import styles from './CommandPalette.module.css';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 
-/** The keys that drive the palette, and the prefixes that narrow the search (without a workspace, only commands can be searched). */
-export function PaletteFooter({ inWorkspace }: { inWorkspace: boolean }) {
+/** The keys that drive the palette, and the prefixes that narrow the search where it's open (`offeredPrefixes`). */
+export function PaletteFooter({ place }: { place: Place | null }) {
   return (
     <div className={styles.footer}>
       <span className={styles.hint}>
@@ -20,7 +21,7 @@ export function PaletteFooter({ inWorkspace }: { inWorkspace: boolean }) {
         <Kbd keys={hotkey('rowActions')} /> actions
       </span>
       <span className={styles.scopes}>
-        {SCOPE_PREFIXES.filter(({ scope }) => inWorkspace || scope === 'commands').map(({ prefix, hint }) => (
+        {offeredPrefixes(place).map(({ prefix, hint }) => (
           <span key={prefix} className={styles.hint}>
             <Kbd keys={prefix} /> {hint}
           </span>

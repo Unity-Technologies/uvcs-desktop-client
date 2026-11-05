@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isInScope, isSearching, parseScope, SCOPE_PREFIXES } from './paletteScope';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { isInScope, isSearching, offeredPrefixes, parseScope, SCOPE_PREFIXES } from './paletteScope';
 
 describe('parseScope', () => {
   it('searches everything without a prefix', () => {
@@ -56,6 +57,16 @@ describe('SCOPE_PREFIXES', () => {
 
   it('names each section in the footer\'s words', () => {
     expect(SCOPE_PREFIXES.map(({ hint }) => hint)).toEqual(['commands', 'files', 'changesets', 'branches', 'labels', 'shelves', 'code reviews', 'people']);
+  });
+});
+
+describe('offeredPrefixes', () => {
+  const prefixes = (shown: Parameters<typeof offeredPrefixes>[0]) => offeredPrefixes(shown).map(({ prefix }) => prefix);
+
+  it('offers only commands on the home screen, every prefix but files in a repository, and all of them in a workspace', () => {
+    expect(prefixes(null)).toEqual(['>']);
+    expect(prefixes(repositoryPlace('game@local'))).toEqual(['>', 'cs:', 'br:', 'lb:', 'sh:', 'cr:', '@']);
+    expect(prefixes(workspacePlace('/ws'))).toEqual(['>', '/', 'cs:', 'br:', 'lb:', 'sh:', 'cr:', '@']);
   });
 });
 

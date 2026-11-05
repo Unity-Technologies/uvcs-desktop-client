@@ -196,6 +196,8 @@
 
 .scopes {
   display: inline-flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px var(--space-3);
   margin-left: auto;
 }

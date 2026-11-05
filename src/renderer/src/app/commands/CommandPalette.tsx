@@ -170,7 +170,7 @@ function OpenPalette({ close }: { close: () => void }) {
             ))}
           </Cmdk.List>
         </HighlightQuery>
-        <PaletteFooter inWorkspace={workspacePath !== null} />
+        <PaletteFooter place={place} />
       </Cmdk>
     </div>
   );

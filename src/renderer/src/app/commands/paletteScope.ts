@@ -1,3 +1,4 @@
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { KIND_PREFIXES, type PrefixedKind } from '../../lib/kindPrefixes';
 
 /** The kinds of things the palette lists, each in its own section. */
@@ -52,6 +53,16 @@ export const SCOPE_PREFIXES: readonly ScopePrefix[] = [
 
 function scopePrefix(prefix: string, scope: PrefixedSection): ScopePrefix {
   return { prefix, scope, hint: SCOPE_HINTS[scope] };
+}
+
+/**
+ * The prefixes the footer offers where the palette is open: with no place shown (the home screen) only commands are
+ * searched; a repository explored without a workspace has no files; a workspace has every section.
+ */
+export function offeredPrefixes(shown: Place | null): ScopePrefix[] {
+  if (shown === null) return SCOPE_PREFIXES.filter(({ scope }) => scope === 'commands');
+  const inWorkspace = workspacePathOf(shown) !== null;
+  return SCOPE_PREFIXES.filter(({ scope }) => inWorkspace || scope !== 'files');
 }
 
 /**
