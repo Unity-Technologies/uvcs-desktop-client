@@ -54,7 +54,8 @@ one kind.
   whether it is the issue's own page or an issue shown in another view, `issuePage` or `issueInView`), a
   `NotAnIssueLink` that says what it is instead ("a Jira board", "a GitHub repository"), or null when it isn't this
   tracker's. `recognizeTrackerLink(text)` asks every grammar, as "Ambiguous links" orders them.
-- `referencesIn(text, projects)`: the issue references a text holds for the bound projects.
+- `referencesReader(projects)`: what reads the issue references a text holds for the bound projects, its pattern
+  built once per binding.
 - `issueUrl(server, key)`: the issue's page, which a chip opens.
 - `tokenPageUrl(server)`: the page where a token is made, filled in where the tracker allows it.
 - `tokenShape(token)`: `known` (a shape the tracker issues: `ghp_`, `github_pat_`, `gho_`; Atlassian's `ATATT`),
@@ -180,8 +181,10 @@ The first 401 on any request sets `refused`; reads of a `missing` or `refused` c
 `signInRefused`, with no request, and chips stay links, their card saying "Sign in to Jira again to see it".
 `refused` is the session's: the next app start begins from `kept`, so its first read tries the kept credential once
 more. Settings shows "Sign in again" on the connection, keeping its bindings: it first tries the kept credential with
-one `whoAmI` (`retrySignIn`), and asks for a new token only if that is refused too (`signInAgain`). Either way, every
-window reads its issues again (`connectionsToReread`).
+one `whoAmI` (`retrySignIn`). Only a credential the tracker refused asks for a new one, by the server's best method
+(`signInAgainStep`: GitHub's device flow where it can, `startDeviceSignIn({ connectionId })`, else a token,
+`signInAgain`); out of reach or rate limited, the credential stays and the section says why, with "Try again". Either
+way, every window reads its issues again (`connectionsToReread`).
 
 ### Binding: which repositories use it
 
