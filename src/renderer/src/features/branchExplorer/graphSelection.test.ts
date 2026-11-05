@@ -50,6 +50,11 @@ describe('selectedOnClick', () => {
     expect(selectedOnClick([{ kind: 'changeset', id: 5 }], changeset(5), true)).toEqual([]);
   });
 
+  it('gives the lead back to the one picked before when Ctrl+click takes the lead out', () => {
+    const three = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 4 }, { kind: 'changeset', id: 5 }] as const;
+    expect(leadOf(selectedOnClick(three, changeset(5), true))).toEqual({ kind: 'changeset', id: 4 });
+  });
+
   it('selects branches and labels together with their own kind only', () => {
     const branches = selectedOnClick([{ kind: 'branch', name: '/main' }], branch('/main/a'), true);
     expect(branches).toEqual([{ kind: 'branch', name: '/main' }, { kind: 'branch', name: '/main/a' }]);
@@ -64,6 +69,7 @@ describe('selectedOnClick', () => {
     const changesets = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 4 }] as const;
     expect(selectedOnClick(changesets, mergeLink, true)).toEqual([{ kind: 'changeset', id: 6 }]);
     expect(selectedOnClick(changesets, { kind: 'pending' }, true)).toEqual([{ kind: 'pending' }]);
+    expect(selectedOnClick(changesets, { kind: 'pendingMergeLink', link: { type: 'cherryPick', sourceChangeset: 3 } }, true)).toEqual([{ kind: 'changeset', id: 3 }]);
     expect(selectedOnClick([{ kind: 'changeset', id: 6 }], changeset(3), true)).toEqual([{ kind: 'changeset', id: 6 }, { kind: 'changeset', id: 3 }]);
   });
 
@@ -90,6 +96,15 @@ describe('selectedOnContextClick', () => {
   it("selects a merge link alone, even when it goes into a selected changeset", () => {
     const withDestination = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 6 }] as const;
     expect(selectedOnContextClick(withDestination, mergeLink, false)).toEqual([{ kind: 'changeset', id: 6 }]);
+  });
+
+  it('selects the pending changes alone, and keeps them when already selected', () => {
+    expect(selectedOnContextClick(changesets, { kind: 'pending' }, true)).toEqual([{ kind: 'pending' }]);
+    expect(selectedOnContextClick([{ kind: 'pending' }], { kind: 'pending' }, false)).toEqual([{ kind: 'pending' }]);
+  });
+
+  it('clears the selection on empty space', () => {
+    expect(selectedOnContextClick(changesets, null, false)).toEqual([]);
   });
 });
 
