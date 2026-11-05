@@ -5,6 +5,7 @@ import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { isModPressed } from '../../../lib/shortcuts';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { TooltipBubble } from '../../../ui/TooltipBubble';
+import type { SelectGesture } from '../graphSelection';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHit } from '../model/searchGraph';
 import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeline';
@@ -67,12 +68,6 @@ interface GraphCanvasProps {
   timeline: TimelineInputs | null;
   /** Floating controls drawn over the canvas. */
   children?: ReactNode;
-}
-
-/** How something was picked: `toggle` adds it to the selection or takes it out (`selectedOnClick`). */
-export interface SelectGesture {
-  toggle: boolean;
-  context: boolean;
 }
 
 /** What the Timeline shows beyond the graph's own highlights. */

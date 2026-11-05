@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphTarget } from './canvas/graphTargets';
-import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectionFor, selectionHighlights, severalSelected } from './graphSelection';
+import { isSelected, leadOf, NOTHING_SELECTED, selectedOnClick, selectedOnContextClick, selectedOnGesture, selectionFor, selectionHighlights, severalSelected } from './graphSelection';
 import { sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -90,6 +90,19 @@ describe('selectedOnContextClick', () => {
   it("selects a merge link alone, even when it goes into a selected changeset", () => {
     const withDestination = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 6 }] as const;
     expect(selectedOnContextClick(withDestination, mergeLink, false)).toEqual([{ kind: 'changeset', id: 6 }]);
+  });
+});
+
+describe('selectedOnGesture', () => {
+  const changesets = [{ kind: 'changeset', id: 3 }, { kind: 'changeset', id: 4 }] as const;
+
+  it('keeps the selection on a right-click inside it, as a click wouldn’t', () => {
+    expect(selectedOnGesture(changesets, changeset(3), { toggle: false, context: true })).toBe(changesets);
+    expect(selectedOnGesture(changesets, changeset(3), { toggle: false, context: false })).toEqual([{ kind: 'changeset', id: 3 }]);
+  });
+
+  it('toggles with Ctrl', () => {
+    expect(selectedOnGesture(changesets, changeset(3), { toggle: true, context: false })).toEqual([{ kind: 'changeset', id: 4 }]);
   });
 });
 

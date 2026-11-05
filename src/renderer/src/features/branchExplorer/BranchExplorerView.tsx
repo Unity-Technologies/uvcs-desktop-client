@@ -18,7 +18,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences, useExplorerRules, useGraphViewOptions } from './branchExplorerStore';
-import { GraphCanvas, type GraphHighlights, type SelectGesture, type TimelineInputs } from './canvas/GraphCanvas';
+import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
 import { followedPage } from './followedPage';
@@ -30,13 +30,13 @@ import { graphMenu } from './graphMenu';
 import {
   leadOf,
   NOTHING_SELECTED,
-  selectedOnClick,
-  selectedOnContextClick,
+  selectedOnGesture,
   selectionFor,
   selectionHighlights,
   severalSelected,
   type GraphSelection,
   type GraphSelections,
+  type SelectGesture,
 } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
@@ -237,7 +237,7 @@ export function BranchExplorerView() {
   const select = (target: GraphTarget | null, gesture: SelectGesture): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
-    else setSelections((gesture.context ? selectedOnContextClick : selectedOnClick)(selectionsRef.current, target, gesture.toggle));
+    else setSelections(selectedOnGesture(selectionsRef.current, target, gesture));
   };
 
   const activate = (target: GraphTarget): void => {

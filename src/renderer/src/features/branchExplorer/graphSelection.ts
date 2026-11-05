@@ -96,6 +96,17 @@ export function selectedOnContextClick(current: GraphSelections, target: GraphTa
   return selectedOnClick(current, target, toggle);
 }
 
+/** How something was picked: `toggle` with Ctrl (⌘ on macOS), `context` the right-click that opens its menu. */
+export interface SelectGesture {
+  toggle: boolean;
+  context: boolean;
+}
+
+/** What is selected after a click or a right-click on the target. */
+export function selectedOnGesture(current: GraphSelections, target: GraphTarget | null, gesture: SelectGesture): GraphSelections {
+  return (gesture.context ? selectedOnContextClick : selectedOnClick)(current, target, gesture.toggle);
+}
+
 /** What the graph draws as selected (the lead, and every selected changeset and branch), and in which color. */
 export interface SelectionHighlights {
   /** The lead's, when it is a changeset (a label's is its changeset). */
