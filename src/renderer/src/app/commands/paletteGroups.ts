@@ -181,8 +181,11 @@ function byRecency(branches: readonly Branch[], currentBranch: string | undefine
     .map(({ branch }) => branch);
 }
 
-function searchGroups({ context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
+function searchGroups({ scope, context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
   const { term } = context;
+  // A number after `sh:` or `cr:` names that shelve or review, as the spec does in a comment.
+  const shelveId = scope === 'shelves' ? typedId(term) : undefined;
+  const reviewId = scope === 'codeReviews' ? typedId(term) : undefined;
   const workspacePath = workspacePathOf(context.place);
   // A changeset typed (`1234` or `cs:1234`) opens it, whether or not it is recent.
   const changesetNumber = typedChangesetNumber(term);
@@ -229,26 +232,49 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
     {
       section: 'shelves',
       heading: 'Shelves',
-      results: withServerMatches(
-        firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
-          shelveResult(shelve, context),
-        ),
-        server.shelves,
-        (shelve) => shelve.comment,
+      results: namedFirst(
+        lists.shelves?.find((shelve) => shelve.id === shelveId),
         (shelve) => shelveResult(shelve, context),
+        withServerMatches(
+          firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
+            shelveResult(shelve, context),
+          ),
+          server.shelves,
+          (shelve) => shelve.comment,
+          (shelve) => shelveResult(shelve, context),
+        ),
       ),
     },
     {
       section: 'codeReviews',
       heading: 'Code reviews',
-      results: withServerMatches(
-        firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
-        server.codeReviews,
-        (review) => review.title,
+      results: namedFirst(
+        lists.codeReviews?.find((review) => review.id === reviewId),
         (review) => codeReviewResult(review, context),
+        withServerMatches(
+          firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
+          server.codeReviews,
+          (review) => review.title,
+          (review) => codeReviewResult(review, context),
+        ),
       ),
     },
   ];
+}
+
+/** The id a narrowed search's text names when it is a number alone (`sh:4` → 4); undefined for anything else. */
+function typedId(term: string): number | undefined {
+  return /^\d+$/.test(term) ? Number(term) : undefined;
+}
+
+/**
+ * The object the search names by its id (`named`, one of the lists read; undefined for none) first, as a full match,
+ * then the other matches without it, as a changeset typed by number opens (`exactChangeset`).
+ */
+function namedFirst<T>(named: T | undefined, toResult: (item: T) => SearchResult, matches: SearchResult[]): SearchResult[] {
+  if (named === undefined) return matches;
+  const exact = { ...toResult(named), quality: 1 };
+  return [exact, ...matches.filter((result) => result.id !== exact.id)];
 }
 
 function firstOnes<T>(items: readonly T[]): T[] {

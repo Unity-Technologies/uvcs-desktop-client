@@ -1047,7 +1047,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
   editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
   (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it;
-  a changeset's number (`1234`, `cs:1234`) is still found in any search. `#` is no one's: it's kept for issues. The
+  a changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names
+  that shelve or review, first and as a full match, from the lists already read (`namedFirst`). `#` is no one's: it's kept for issues. The
   footer names the prefixes that work where the palette is open (`offeredPrefixes`), its own at the end of the
   keys' row and the shared ones on a row of their own. Labels, code reviews and people
   are listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
