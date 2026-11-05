@@ -3,8 +3,8 @@ import type { OneObjectRead } from '@shared/api/oneObjectRead';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Place } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
-import { findArgs, findQueryArgs } from '../cm/findQuery';
-import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { branchStartQuery, findArgs, findQueryArgs } from '../cm/findQuery';
+import { FOUND_BRANCH_STARTS, FOUND_CHANGESETS } from '../cm/foundObjects';
 import { layoutReader } from '../cm/formatRecords';
 import { readOneObject } from './oneObjectRead';
 import type { ServiceContext } from './ServiceContext';
@@ -39,6 +39,13 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
     },
 
     find: (place, changesetId, read = {}) => findById(place, changesetId, undefined, read),
+
+    async branchStart(place, branch) {
+      const at = cmPlace(place);
+      const args = findQueryArgs(FOUND_BRANCH_STARTS, branchStartQuery(branch), at.repository);
+      const [start] = await cm.queryRecords(args, layoutReader(FOUND_BRANCH_STARTS), at.options);
+      return start ?? null;
+    },
 
     async editComment(place, changesetId, comment) {
       const at = cmPlace(place);

@@ -114,3 +114,13 @@ function ownersCondition(owners: readonly string[]): string {
 export function equalsCondition(field: string, value: string): string {
   return /['"]/.test(value) ? `${field} like '${withoutQuotes(value)}'` : `${field} = '${value}'`;
 }
+
+/**
+ * The `cm find changeset` query of a branch's first changeset, whose parent is where the branch starts: the changeset
+ * it was created from, which no merge from its parent moves (`ChangesetsApi.branchStart`, `xlinkBeforePoint`). One
+ * record, whatever the branch's size. `ignorehidden` brings a hidden branch's changesets in: without it `cm` leaves
+ * them out, and a hidden branch would seem to have none.
+ */
+export function branchStartQuery(branch: string): string {
+  return `where ignorehidden = 'true' and ${equalsCondition('branch', branch)} order by changesetid asc limit 1`;
+}

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { OWN_PROCESS_READ_TIMEOUT_MS } from './oneObjectRead';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
-import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { FOUND_BRANCH_STARTS, FOUND_CHANGESETS } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
@@ -99,6 +99,31 @@ describe('changesets', () => {
     await expect(service.get(IN_WORKSPACE, 7)).rejects.toThrow('Changeset 7 was not found.');
   });
 
+  // The branch diff up to a changeset starts where the branch does, whatever it merged from its parent since.
+  it("reads where a branch starts with one quick cm find of its first changeset, asking hidden branches' too", async () => {
+    const { service, commands } = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS, { changesetid: 9, parent: 8 }) });
+
+    const start = await service.branchStart(IN_WORKSPACE, '/main/task');
+
+    expect(commands).toMatchObject([
+      {
+        via: 'query',
+        args: findQueryArgs(FOUND_BRANCH_STARTS, "where ignorehidden = 'true' and branch = '/main/task' order by changesetid asc limit 1"),
+        options: { cwd: WORKSPACE },
+        readsRecords: true,
+      },
+    ]);
+    expect(start).toEqual({ firstChangeset: 9, base: 8 });
+  });
+
+  it('reads no start for a branch with no changesets, and /main\'s as the root\'s', async () => {
+    const empty = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS) });
+    const main = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS, { changesetid: 0, parent: -1 }) });
+
+    expect(await empty.service.branchStart(IN_WORKSPACE, '/main/empty')).toBeNull();
+    expect(await main.service.branchStart(IN_WORKSPACE, '/main')).toEqual({ firstChangeset: 0, base: -1 });
+  });
+
   it('edits the comment, moves and deletes a changeset with one quick command each', async () => {
     const { service, commands } = changesets({ changeset: '' });
 
@@ -165,11 +190,13 @@ describe('changesets of a repository explored without a workspace', () => {
     await service.list(ON_REPOSITORY, { branch: '/main/task1', limit: 100 });
     await service.get(ON_REPOSITORY, 7);
     await service.get(ON_REPOSITORY, 7, 'lib@local');
+    await service.branchStart(ON_REPOSITORY, '/main/task1');
 
     expect(commands.map(({ args, options }) => [args[2], options])).toEqual([
       ["where ignorehidden = 'true' and branch = '/main/task1' order by changesetid desc limit 100 on repository 'game@local'", OUTSIDE],
       ["where changesetid = 7 on repository 'game@local'", OUTSIDE],
       ["where changesetid = 7 on repository 'lib@local'", OUTSIDE],
+      ["where ignorehidden = 'true' and branch = '/main/task1' order by changesetid asc limit 1 on repository 'game@local'", OUTSIDE],
     ]);
   });
 

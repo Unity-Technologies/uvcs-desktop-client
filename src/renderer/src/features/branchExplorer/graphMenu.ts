@@ -11,6 +11,7 @@ import type { GraphTarget } from './canvas/graphTargets';
 import { branchPositionEntries, type BranchPositions } from './branchPosition';
 import { graphActions } from './graphActions';
 import { isSelected, type GraphSelection, type GraphSelections } from './graphSelection';
+import { branchStartInGraph } from './model/branchStartInGraph';
 import { labelInfo, selectedLabel } from './model/graphLabels';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
@@ -76,7 +77,8 @@ function graphCodeReviewMenu(review: CodeReviewSummary, { place, layout, current
 function graphChangesetMenu(id: number, { place, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   if (!changeset) return [];
-  const menu = changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
+  const branchStartOf = (branch: string) => branchStartInGraph(layout, branch);
+  const menu = changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository, branchStartOf }, [changeset], host);
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 

@@ -59,6 +59,31 @@ keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no 
 under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
 (`useOfferSelectedObjectLink`).
 
+### Up to a changeset
+
+A changeset's menu offers "Open branch diff up to this changeset" (`branchDiffUpTo`, after "Open diff in new window"):
+the branch's work from where it starts up to that changeset, so a branch that later merged its parent in (a "rebase")
+can be read as it was before. It is a range diff (`branchDiffUpToPage`: `cm diff cs:<base> cs:<changeset>`, cached as
+immutable), titled as the branch's ("Branch task up to changeset 12"). The base is where the branch starts
+(`BranchStart`): the parent of its first changeset, as `xlinkBeforePoint` takes it. A merge from the parent doesn't move
+it, and `cm diff br:<branch>` (without `--integration`) starts there too: on a local server, a branch that merged its
+parent in still lists the parent's files that merge brought. What decides is `branchDiffBase`:
+
+- **Hidden** on a branch that starts from no other (its first changeset has no parent: `/main`), and on the branch's
+  first changeset, where the view knows the branch's start; it would be "Open diff" there. Where the start isn't known,
+  only `/main` is told by its name: a top-level branch the app made from a changeset or a label ("Top-level branch" in
+  New branch) has a base like any other. Another root branch, read when chosen, says it starts from no other branch.
+- **Known with no command** where the view already read the branch's start (`ChangesetMenuContext.branchStartOf`): the
+  Branch Explorer from its history (`branchStartInGraph`; not when the date range left out what precedes the branch's
+  first changeset shown), a branch diff's "Changeset by changeset" from the whole branch it lists
+  (`branchStartOfChangesets`).
+- **Read when chosen** everywhere else (Changesets, Incoming, the top bar, the palette): one quick `cm find changeset
+  "where ignorehidden = 'true' and branch = '<branch>' order by changesetid asc limit 1" --format={changesetid}{parent}`
+  (`ChangesetsApi.branchStart`, `branchStartQuery`, which `xlinkBeforePoint` shares), never while the menu is built;
+  `ignorehidden` reads a hidden branch's changesets, which `cm find` leaves out otherwise. Each choice reads it again:
+  one quick command a click, so nothing is cached. Those lists can't tell a branch's first changeset, so
+  they offer it there too; chosen there it opens that changeset's own changes, under the branch's title.
+
 ## Comparing two branches, changesets or labels
 
 Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare
