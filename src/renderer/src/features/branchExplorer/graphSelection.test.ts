@@ -153,27 +153,24 @@ describe('selectionsLaidOut', () => {
 });
 
 describe('selectionHighlights', () => {
-  it('draws one selection in the selection color, led by it', () => {
+  it('draws one selection, led by it', () => {
     expect(selectionHighlights([{ kind: 'branch', name: '/main' }])).toEqual({
       selectedChangeset: null,
       selectedBranch: '/main',
       selectedPending: false,
       selectedChangesets: new Set(),
       selectedBranches: new Set(['/main']),
-      multipleSelection: false,
     });
     expect(selectionHighlights([{ kind: 'pending' }]).selectedPending).toBe(true);
-    expect(selectionHighlights(NOTHING_SELECTED).multipleSelection).toBe(false);
   });
 
-  it("draws several in the multiple selection's color, labels by their changesets, led by the last picked", () => {
+  it('draws every one of several, labels by their changesets, led by the last picked', () => {
     expect(selectionHighlights([{ kind: 'changeset', id: 6, label: 'v1' }, { kind: 'changeset', id: 4, label: 'v2' }])).toEqual({
       selectedChangeset: 4,
       selectedBranch: null,
       selectedPending: false,
       selectedChangesets: new Set([6, 4]),
       selectedBranches: new Set(),
-      multipleSelection: true,
     });
   });
 });

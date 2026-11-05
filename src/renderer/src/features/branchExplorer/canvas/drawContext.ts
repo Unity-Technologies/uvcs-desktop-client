@@ -23,8 +23,6 @@ export interface GraphScene {
   /** Every changeset and branch selected, drawn as selected; the lead's included. */
   selectedChangesets: ReadonlySet<number>;
   selectedBranches: ReadonlySet<string>;
-  /** Several things are selected: they are drawn in `multipleSelection`, not the accent. */
-  multipleSelection: boolean;
   hoveredChangeset: number | null;
   /** The branch whose header or band is under the pointer. */
   hoveredBranch: string | null;

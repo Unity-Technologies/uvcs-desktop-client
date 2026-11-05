@@ -4,7 +4,6 @@ import { BAND_HEIGHT, NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor } from './graphPalette';
 import { laneShape, type LaneShape } from './laneShape';
 import { boundsOf, crossesView } from './linkVisibility';
-import { selectionInks } from './drawNodeSelection';
 import { lanesAcross } from './spansInView';
 
 const ELBOW_RADIUS = 16;
@@ -54,7 +53,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
 
   ctx.save();
   if (isSelected) {
-    ctx.fillStyle = selectionInks(scene).halo;
+    ctx.fillStyle = scene.palette.accentSoft;
     roundRect(draw, left, top, width, BAND_HEIGHT, radius, SELECTION_HALO);
     ctx.fill();
   }
@@ -73,7 +72,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
   }
   if (isSelected) {
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = selectionInks(scene).ring;
+    ctx.strokeStyle = scene.palette.accent;
     ctx.lineWidth = 2;
     roundRect(draw, left, top, width, BAND_HEIGHT, radius, SELECTION_RING);
     ctx.stroke();

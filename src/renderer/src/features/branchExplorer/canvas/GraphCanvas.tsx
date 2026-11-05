@@ -43,7 +43,6 @@ export type GraphHighlights = Pick<
   | 'selectedPending'
   | 'selectedChangesets'
   | 'selectedBranches'
-  | 'multipleSelection'
   | 'homeChangeset'
   | 'pendingChangeCount'
   | 'currentBranch'

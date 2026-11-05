@@ -75,8 +75,6 @@ const palette: GraphPalette = {
   accentContrast: INK,
   accentSoft: INK,
   accentWash: INK,
-  multipleSelection: INK,
-  multipleSelectionSoft: INK,
   searchHit: INK,
   labelBackground: INK,
   labelText: INK,
@@ -129,7 +127,6 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     selectedPending: false,
     selectedChangesets: new Set([focus.changeset.id]),
     selectedBranches: new Set([lane.branch.name]),
-    multipleSelection: false,
     hoveredChangeset: focus.changeset.id,
     hoveredBranch: lane.branch.name,
     hoveredReview: null,
@@ -216,7 +213,6 @@ function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<
     selectedPending: false,
     selectedChangesets: new Set(),
     selectedBranches: new Set(),
-    multipleSelection: false,
     hoveredChangeset: null,
     hoveredBranch: null,
     hoveredReview: null,
@@ -283,20 +279,20 @@ describe('drawGraph draws a selection the same however many things it holds', ()
   const SELECTION_SOFT = 'rgba(9, 105, 218, 0.12)';
   const selectionPalette: GraphPalette = { ...palette, accent: '#0969da', accentSoft: SELECTION_SOFT };
   /** The inks drawing a selection adds to the graph drawn with nothing selected. */
-  const selectionInks = (selection: Partial<GraphScene>) => {
+  const inksOfSelection = (selection: Partial<GraphScene>) => {
     const unselected = drawSample({}, { palette: selectionPalette }).inks;
     return [...drawSample({}, { palette: selectionPalette, ...selection }).inks].filter((ink) => !unselected.has(ink));
   };
 
   it('draws several branches in the selection color, as it draws one', () => {
-    const one = selectionInks({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
+    const one = inksOfSelection({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
     expect(one).toContain(SELECTION_SOFT);
-    expect(selectionInks({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']), multipleSelection: true })).toEqual(one);
+    expect(inksOfSelection({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']) })).toEqual(one);
   });
 
   it('draws several changesets in the selection color, as it draws one', () => {
-    const one = selectionInks({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
+    const one = inksOfSelection({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
     expect(one).toContain(SELECTION_SOFT);
-    expect(selectionInks({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]), multipleSelection: true })).toEqual(one);
+    expect(inksOfSelection({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]) })).toEqual(one);
   });
 });
