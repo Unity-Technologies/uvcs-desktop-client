@@ -179,12 +179,17 @@ export function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'se
   return `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`;
 }
 
-/** A sign-in this computer keeps, as Settings lists them in every window: how it stands, and signing out of it. */
+/**
+ * A sign-in this computer keeps, as Settings shows them in every window: who it is first, then where (the tracker as
+ * its logo, the server by host), how it stands, and signing out of it.
+ */
 export interface SignInRow {
   id: string;
   kind: IssueTrackerKind;
+  /** The tracker and server in words, for screen readers: "Jira at acme.atlassian.net". */
   title: string;
   account: string;
+  host: string;
   status: { tone: 'positive' | 'caution'; label: string };
   /** It needs signing in again: the one status a quiet list shows. */
   needsAttention: boolean;
@@ -205,8 +210,8 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: st
       id: connection.id,
       kind: connection.kind,
       title: connectionTitle(connection),
-      // The account alone: the pill beside it says whether it's signed in.
       account: connection.account.name,
+      host: hostOf(connection.server),
       status: needsSignIn ? { tone: 'caution', label: 'Needs sign-in' } : { tone: 'positive', label: 'Signed in' },
       needsAttention: needsSignIn,
       usedHere: connection.id === here,
