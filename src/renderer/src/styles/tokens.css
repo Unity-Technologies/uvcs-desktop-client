@@ -50,7 +50,8 @@
   --diff-scrollbar-size: var(--scrollbar-size);
   --diff-scrollbar-size-hovered: calc(var(--scrollbar-size) + 6px);
   /* Its thumb, drawn over the marks: the app's hovered thumb color (global.css's --border-strong), translucent so the
-     marks show through, close to the app's resting thumb over an empty track, and stronger hovered or dragged. */
+     marks show through, close to the app's resting thumb over an empty track, and stronger hovered or dragged. The
+     app's resting --border-default was too faint over the marks in the dark theme. */
   --diff-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 55%, transparent);
   --diff-scrollbar-thumb-hover: color-mix(in srgb, var(--border-strong) 75%, transparent);
 

@@ -26,7 +26,8 @@ interface Drag {
  * scrolls the diff, and a press anywhere across the track's width on the thumb's rows takes it (`pressesThumb`), so the
  * slim thumb is as easy to grab as the track is wide. A press anywhere else in the track, on a block or not, scrolls
  * smoothly to center that point (`scrollTopForTrackPoint`; far away, it jumps and glides only the end:
- * `smoothScrollPlan`) and drags on from there, as macOS's scrollbars do. The keys and the arrows step from change to change, so it's for the pointer only.
+ * `smoothScrollPlan`) and drags on from there, as macOS's scrollbars do. The keys and the arrows step from change to
+ * change, so it's for the pointer only.
  *
  * It's inside the diff's scrolling element, first, standing still at its top (`ChangeMap.module.css`), so the wheel
  * over it scrolls the diff as anywhere else. A press on it takes no focus, and it's no press in the diff: the caret
