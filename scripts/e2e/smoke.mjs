@@ -70,6 +70,9 @@ async function step(name, run) {
     await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
+    // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that
+    // fails now and then can be read only from its output.
+    console.error(`FAIL  ${name}\n${error.message}`);
     await screenshot(`FAILED-${name.toLowerCase().replaceAll(' ', '-')}`).catch(() => {});
     throw new Error(`${name}: ${error.message.split('\n')[0]}`);
   }
