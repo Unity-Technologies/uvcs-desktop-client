@@ -69,7 +69,9 @@ export class IssueTrackers {
   setup(): IssueTrackerSetup {
     const { store, secrets } = this.deps;
     const connections = store.connections().map((connection) => this.withCredential(connection));
-    return { connections, bindings: [...store.bindings()], sessionOnly: !secrets.canKeep(), deviceFlowHosts: deviceFlowHostsOf(this.deps.oauthClientIds) };
+    // Every window reads the setup as it shows comments: the keychain is asked only once a tracker is connected.
+    const sessionOnly = connections.length > 0 && !secrets.canKeep();
+    return { connections, bindings: [...store.bindings()], sessionOnly, deviceFlowHosts: deviceFlowHostsOf(this.deps.oauthClientIds) };
   }
 
   async signInWithToken(request: RepositorySignIn & { source: TokenSource }): Promise<SignInOutcome> {
