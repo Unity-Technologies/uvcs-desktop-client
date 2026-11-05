@@ -44,7 +44,8 @@ export function xlinkBeforePoint(target: DiffTarget, repository?: string): Xlink
     case 'branch':
       return {
         kind: 'parentOf',
-        findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`, repository),
+        // `ignorehidden` brings a hidden branch's changesets in: without it `cm find` leaves them out.
+        findArgs: findQueryArgs(FOUND_PARENTS, `where ignorehidden = 'true' and ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`, repository),
       };
     case 'shelve':
       return null;

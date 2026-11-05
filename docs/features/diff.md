@@ -65,8 +65,9 @@ A changeset's menu offers "Open branch diff up to this changeset" (`branchDiffUp
 the branch's work from where it starts up to that changeset, so a branch that later merged its parent in (a "rebase")
 can be read as it was before. It is a range diff (`branchDiffUpToPage`: `cm diff cs:<base> cs:<changeset>`, cached as
 immutable), titled as the branch's ("Branch task up to changeset 12"). The base is where the branch starts
-(`BranchStart`): the parent of its first changeset, as `cm diff br:<branch>` and `xlinkBeforePoint` take it; a merge
-from the parent doesn't move it. What decides is `branchDiffBase`:
+(`BranchStart`): the parent of its first changeset, as `xlinkBeforePoint` takes it. A merge from the parent doesn't move
+it, and `cm diff br:<branch>` (without `--integration`) starts there too: on a local server, a branch that merged its
+parent in still lists the parent's files that merge brought. What decides is `branchDiffBase`:
 
 - **Hidden** on a branch that starts from no other (its first changeset has no parent: `/main`), and on the branch's
   first changeset, where the view knows them; it would be "Open diff" there. Where the start isn't known, only `/main`
@@ -78,7 +79,9 @@ from the parent doesn't move it. What decides is `branchDiffBase`:
   (`branchStartOfChangesets`).
 - **Read when chosen** everywhere else (Changesets, Incoming, the top bar, the palette): one quick `cm find changeset
   "where ignorehidden = 'true' and branch = '<branch>' order by changesetid asc limit 1" --format={changesetid}{parent}`
-  (`ChangesetsApi.branchStart`), never while the menu is built. Those lists can't tell a branch's first changeset, so
+  (`ChangesetsApi.branchStart`), never while the menu is built; `ignorehidden` reads a hidden branch's changesets,
+  which `cm find` leaves out otherwise, as `xlinkBeforePoint` does. Each choice reads it again: one quick command a
+  click, so nothing is cached. Those lists can't tell a branch's first changeset, so
   they offer it there too; chosen there it opens that changeset's own changes, under the branch's title.
 
 ## Comparing two branches, changesets or labels
