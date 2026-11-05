@@ -87,6 +87,11 @@ export class IssueTrackers {
     if (!connection) return failed({ reason: 'unexpected', message: 'This sign-in is gone' });
     const credential = await this.credentialOf(connection, source, email ?? connection.account.email);
     if ('failure' in credential) return failed(credential.failure);
+    return this.renewCredential(connection, credential);
+  }
+
+  /** A connection's new credential, kept once it signs in; its bindings stay. */
+  private async renewCredential(connection: StoredConnection, credential: TrackerCredential): Promise<SignInOutcome> {
     const provider = this.providers[connection.kind];
     try {
       const signedIn = await provider.signIn(this.deps.http.bound(provider.origins(connection.server), provider.authorization(credential)), connection.server);
@@ -126,8 +131,10 @@ export class IssueTrackers {
     return TRACKER_GRAMMARS[tracker.kind].tokenShape((await this.deps.clipboard.read()).trim()) === 'known';
   }
 
-  async startDeviceSignIn(request: RepositorySignIn): Promise<DeviceSignIn | { failure: SignInFailure }> {
-    const reading = this.readLink(request.link);
+  /** A first sign-in for a repository, by a link; or a connection's again, by its id, its bindings kept. */
+  async startDeviceSignIn(request: RepositorySignIn | { connectionId: string }): Promise<DeviceSignIn | { failure: SignInFailure }> {
+    const again = 'connectionId' in request ? this.deps.store.connection(request.connectionId) : undefined;
+    const reading = 'connectionId' in request ? (again ?? { failure: { reason: 'unexpected', message: 'This sign-in is gone' } as const }) : this.readLink(request.link);
     if ('failure' in reading) return reading;
     const clientId = this.deps.oauthClientIds[new URL(reading.server).hostname] ?? '';
     if (reading.kind !== 'github' || !clientId) return { failure: { reason: 'unexpected', message: 'This tracker has no browser sign-in' } };
@@ -143,7 +150,11 @@ export class IssueTrackers {
     const canceling = new AbortController();
     const outcome = pollForToken(http, device, code, this.deps.wait, this.deps.now, canceling.signal)
       .then(
-        (end) => ('token' in end ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed })),
+        (end) => {
+          if (!('token' in end)) return failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed });
+          if (again) return this.renewCredential(again, { token: end.token });
+          return 'repository' in request && 'project' in reading ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: 'canceled' });
+        },
         (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
       )
       // A flow its window stopped waiting for (reloaded meanwhile) is forgotten once it ends.

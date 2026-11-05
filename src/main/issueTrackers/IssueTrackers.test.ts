@@ -270,6 +270,23 @@ describe('IssueTrackers', () => {
     expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer gho_token');
   });
 
+  it('signs a connection in again with the device flow, keeping its bindings', async () => {
+    const { engine, tracker } = trackers(
+      {
+        ...SIGNED_IN,
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_again', token_type: 'bearer', scope: 'repo' } },
+      },
+      { clientIds: { 'github.com': 'Iv1.app' } },
+    );
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    const started = await engine.startDeviceSignIn({ connectionId: 'id1' });
+    expect(started).toMatchObject({ userCode: 'C' });
+    expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept' } });
+    expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer gho_again');
+    expect(engine.setup().bindings).toHaveLength(1);
+  });
+
   it('ends a device flow the user cancels', async () => {
     const { engine } = trackers(
       {

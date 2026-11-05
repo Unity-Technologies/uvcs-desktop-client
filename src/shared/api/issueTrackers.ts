@@ -35,8 +35,11 @@ export interface IssueTrackersApi {
   /** Whether the clipboard holds a token shaped as the tracker's, whose page main opened: yes or no, never the token. */
   clipboardHoldsToken(target: TokenPageTarget): Promise<boolean>;
 
-  /** Starts GitHub's device flow: the code the user enters on the page it names. */
-  startDeviceSignIn(request: RepositorySignIn): Promise<DeviceSignIn | { failure: SignInFailure }>;
+  /**
+   * Starts GitHub's device flow: the code the user enters on the page it names. For a repository by a link, or for a
+   * connection signing in again (its bindings kept).
+   */
+  startDeviceSignIn(request: RepositorySignIn | { connectionId: string }): Promise<DeviceSignIn | { failure: SignInFailure }>;
   /** Waits for the user to approve the code, then signs in and binds as a token would. */
   finishDeviceSignIn(flowId: string): Promise<SignInOutcome>;
   cancelDeviceSignIn(flowId: string): Promise<void>;
