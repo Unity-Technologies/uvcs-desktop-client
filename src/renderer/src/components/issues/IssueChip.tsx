@@ -4,7 +4,7 @@ import { useMemo, useState, type MouseEvent } from 'react';
 import { api } from '../../api/client';
 import { chipName } from '../comments/chipContent';
 import { ChipHoverCard } from '../comments/ChipHoverCard';
-import { issueCard, issueChipShape, type IssueReference } from './issueChipShape';
+import { issueCard, issueChipShape, issueUrlToOpen, type IssueReference } from './issueChipShape';
 import { issueQuery } from './issueQueries';
 import type { PlaceTracker } from './placeTracker';
 import styles from '../comments/ReferenceChip.module.css';
@@ -31,7 +31,7 @@ export function IssueChip({ reference, source, tracker, compact, interactive }: 
   const open = (event: MouseEvent): void => {
     event.stopPropagation();
     event.preventDefault();
-    void api.system.openExternal(read?.kind === 'found' ? read.issue.url : tracker.reader.issueUrl(reference.key));
+    void api.system.openExternal(issueUrlToOpen(read, reference.key, tracker.reader.issueUrl));
   };
   const shown = { className: styles.chip, 'data-icon': 'issue', 'data-source': source, 'data-tip': '' };
   const content = (

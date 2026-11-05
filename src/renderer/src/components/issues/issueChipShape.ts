@@ -44,6 +44,11 @@ function issueNoun(kind: IssueTrackerKind, type: string | undefined): string {
   return type === 'Pull request' ? 'Pull request' : `${TRACKER_GRAMMARS[kind].name} issue`;
 }
 
+/** Where a click on an issue's chip leads: the issue's own page as the tracker gave it, else the one its key names. */
+export function issueUrlToOpen(read: IssueRead | undefined, key: string, urlOfKey: (key: string) => string): string {
+  return read?.kind === 'found' ? read.issue.url : urlOfKey(key);
+}
+
 /**
  * A chip's card: the issue's title first, then its status, type and assignee; or, unread, why ("Sign in to Jira again
  * to see it", "No issue VCS-12"), so a chip is never silent about what it can't show.

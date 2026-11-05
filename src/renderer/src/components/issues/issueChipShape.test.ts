@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Issue, IssueRead, IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { issueCard, issueChipShape } from './issueChipShape';
+import { issueCard, issueChipShape, issueUrlToOpen } from './issueChipShape';
 import { connectionsToReread, issueStaleTime, ISSUE_FRESH_MS } from './issueQueries';
 import { placeTrackerOf } from './placeTracker';
 
@@ -29,6 +29,15 @@ describe('issueChipShape', () => {
     expect(issueChipShape(bare, '#12', 'github', { key: 'acme/game#12', kind: 'missing' }, false)).toEqual({ kind: 'text' });
     expect(issueChipShape(bare, '#12', 'github', pull, false)).toMatchObject({ kind: 'chip', label: '#12', title: 'Pull request acme/game#12' });
     expect(issueChipShape(bare, '#12', 'github', pull, true)).toEqual({ kind: 'text' });
+  });
+});
+
+describe('issueUrlToOpen', () => {
+  it('opens the page the tracker gave, else the one the key names', () => {
+    const named = (key: string) => `https://x.atlassian.net/browse/${key}`;
+    expect(issueUrlToOpen(found, 'VCS-12', named)).toBe(ISSUE.url);
+    expect(issueUrlToOpen({ key: 'VCS-12', kind: 'missing' }, 'VCS-12', named)).toBe('https://x.atlassian.net/browse/VCS-12');
+    expect(issueUrlToOpen(undefined, 'VCS-13', named)).toBe('https://x.atlassian.net/browse/VCS-13');
   });
 });
 
