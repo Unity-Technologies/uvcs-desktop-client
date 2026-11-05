@@ -50,7 +50,6 @@ export interface GraphPalette {
   accentContrast: string;
   /** The soft halo behind a selection. */
   accentSoft: string;
-  /** Several things selected: their rings and outlines, in place of the accent, and their halo. */
   /** The faintest accent fill (the Timeline's frame). */
   accentWash: string;
   /** Search hits glow in this color, whatever the branch color. */
