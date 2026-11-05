@@ -85,21 +85,6 @@ export function projectNoun(kind: IssueTrackerKind): string {
   return kind === 'github' ? 'repository' : 'project';
 }
 
-/** One line of proof that the sign-in works, its key value bold: "Signed in as **Ana**", "Project **VCS** · 214 open…". */
-export interface ProofLine {
-  lead: string;
-  strong: string;
-  after?: string;
-}
-
-export function proofLines(connection: Pick<TrackerConnection, 'kind' | 'account'>, access: ProjectAccess | undefined): ProofLine[] {
-  const lines: ProofLine[] = [{ lead: 'Signed in as', strong: connection.account.name }];
-  if (!access) return lines;
-  const counts = access.openIssues === undefined ? undefined : `${access.openIssues} open issues${access.assignedToYou === undefined ? '' : `, ${access.assignedToYou} assigned to you`}`;
-  const lead = connection.kind === 'github' ? 'Repository' : 'Project';
-  return [...lines, { lead, strong: connection.kind === 'github' ? access.name : access.project, ...(counts && { after: ` · ${counts}` }) }];
-}
-
 /** The steps of Connect, and where the user is: a tracker, a link to one of its issues, then signing in. */
 export type ConnectStepState = 'done' | 'current' | 'next';
 
@@ -126,6 +111,3 @@ export function disconnectQuestion(name: string): { title: string; message: stri
     confirmLabel: 'Disconnect',
   };
 }
-
-/** How long the moment of success stays before the card settles: long enough to read its two lines. */
-export const SUCCESS_SHOWN_MS = 6_000;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, proofLines, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
+import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.unity3d.com', account: { id: 'JIRAUSER10100', name: 'Daniel Peñalba', email: 'daniel@unity3d.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'danipen', name: 'Daniel Peñalba' } };
@@ -58,20 +58,6 @@ describe('projectsExplained', () => {
     expect(projectsExplained('jiraCloud', ['VCS', 'OPS'])).toBe("Keys like VCS-123 in this repository's comments show as chips with the issue's title and status.");
     expect(projectsExplained('github', ['acme/game'])).toBe("#123 and links to its issues in this repository's comments show as chips with the issue's title and status.");
     expect(projectsExplained('github', ['acme/game', 'acme/tools'])).toBe("acme/game#123 and links to their issues in this repository's comments show as chips with the issue's title and status.");
-  });
-});
-
-describe('proofLines', () => {
-  it('proves the account, then the project and its counts, the values bold', () => {
-    expect(proofLines(jira, { project: 'VCS', name: 'Version Control', openIssues: 214, assignedToYou: 6 })).toEqual([
-      { lead: 'Signed in as', strong: 'Daniel Peñalba' },
-      { lead: 'Project', strong: 'VCS', after: ' · 214 open issues, 6 assigned to you' },
-    ]);
-    expect(proofLines(github, { project: 'acme/game', name: 'acme/game' })).toEqual([
-      { lead: 'Signed in as', strong: 'Daniel Peñalba' },
-      { lead: 'Repository', strong: 'acme/game' },
-    ]);
-    expect(proofLines(jira, undefined)).toEqual([{ lead: 'Signed in as', strong: 'Daniel Peñalba' }]);
   });
 });
 

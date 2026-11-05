@@ -420,11 +420,9 @@ one click. With no sign-in yet that's the whole pane; with some, their card, who
 stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Change tracker…" (a repository has one tracker, so it replaces
 it; "Use another tracker" read as adding one) and "Disconnect…", which asks first (`disconnectQuestion`). Then:
 
-- **The moment of success**, right after connecting: a green callout, "Connected to Jira", and the proof, checked,
-  its values bold ("Signed in as **Daniel Peñalba**", "Project **VCS** · 214 open issues, 6 assigned to you",
-  `proofLines`). The pasted issue isn't shown back: it was a sample. It rises in once (none with reduced motion) and
-  settles after `SUCCESS_SHOWN_MS`. Sign-in works but the project can't be read: the message names the project, and
-  nothing is bound.
+- **Right after connecting**, the card itself is the success: its green Connected pill, the account and the project
+  with its counts. A green callout repeating them, shown a moment, was tried and dropped as saying everything twice.
+  Sign-in works but the project can't be read: Connect says so naming the project, and nothing is bound.
 - **Needs sign-in** (a credential `refused` or `missing`): an amber pill and a callout saying why, that issues
   show as plain links until then, and "Sign in again" (`SignInAgain`).
 - **Can't reach Jira** (every project out of reach): a red pill and a callout saying where (`unreachableWords`), with

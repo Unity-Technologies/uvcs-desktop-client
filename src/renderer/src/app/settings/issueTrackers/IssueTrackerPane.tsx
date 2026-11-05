@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
 import { workspacePathOf } from '@shared/domain/place';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { CenteredSpinner } from '../../../ui/Spinner';
@@ -38,18 +37,13 @@ function RepositoryTracker({ repository }: { repository: string }) {
   const setup = useIssueTrackerSetup();
   const connected = connectedTrackerOf(setup, repository);
   const [changing, setChanging] = useState(false);
-  const [justConnected, setJustConnected] = useState<ProjectAccess | 'noProof' | null>(null);
-  const done = (outcome: Extract<SignInOutcome, { kind: 'signedIn' }>): void => {
-    setChanging(false);
-    setJustConnected(outcome.access ?? 'noProof');
-  };
 
   if (!connected || changing) {
-    return <ConnectTracker repository={repository} onConnected={done} onCancel={connected ? () => setChanging(false) : undefined} />;
+    return <ConnectTracker repository={repository} onConnected={() => setChanging(false)} onCancel={connected ? () => setChanging(false) : undefined} />;
   }
   return (
     <>
-      <TrackerCard repository={repository} connected={connected} justConnected={justConnected} onSettled={() => setJustConnected(null)} onChange={() => setChanging(true)} />
+      <TrackerCard repository={repository} connected={connected} onChange={() => setChanging(true)} />
       <SignInsCard repository={repository} />
     </>
   );

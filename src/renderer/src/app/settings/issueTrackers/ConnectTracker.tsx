@@ -14,7 +14,7 @@ import { useSession } from '../../workspace/sessionStore';
 import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep, type SuggestedLink } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
-import { LinkReadBackLine } from './ProofLines';
+import { LinkReadBackLine } from './LinkReadBackLine';
 import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 import { TrackerLogo } from './TrackerLogo';

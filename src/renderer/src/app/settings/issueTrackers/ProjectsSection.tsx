@@ -8,7 +8,7 @@ import { IconButton } from '../../../ui/IconButton';
 import { TextField } from '../../../ui/TextField';
 import { addProjectReady, connectFailureWords, linkReadBack } from './connectFlow';
 import { choiceOf, trackerChoiceCard } from './trackerChoices';
-import { LinkReadBackLine } from './ProofLines';
+import { LinkReadBackLine } from './LinkReadBackLine';
 import { projectNoun, projectRows, projectsExplained } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
