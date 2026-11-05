@@ -41,15 +41,27 @@ export function hostOf(server: string): string {
   return new URL(server).host;
 }
 
-/** What a pasted link reads back as, with nothing sent: "Jira Cloud · acme.atlassian.net · project VCS". */
-export type LinkReadBack = { kind: 'read'; words: string; link: RecognizedLink } | { kind: 'problem'; words: string } | { kind: 'none' };
+/**
+ * What a pasted link reads back as, with nothing sent: "Jira Cloud · acme.atlassian.net · project VCS", in words for
+ * screen readers and in parts for the eye (the tracker's kind as a badge, the project bold).
+ */
+export type LinkReadBack = { kind: 'read'; words: string; parts: LinkParts; link: RecognizedLink } | { kind: 'problem'; words: string } | { kind: 'none' };
+
+export interface LinkParts {
+  kindName: string;
+  host: string;
+  /** "project", or none for a GitHub repository, which names itself. */
+  projectNoun?: string;
+  project: string;
+}
 
 export function linkReadBack(text: string): LinkReadBack {
   if (!text.trim()) return { kind: 'none' };
   const reading = recognizeTrackerLink(text);
   if (isRecognizedLink(reading)) {
-    const project = isJira(reading.kind) ? `project ${reading.project}` : reading.project;
-    return { kind: 'read', words: `${trackerKindName(reading.kind, reading.server)} · ${hostOf(reading.server)} · ${project}`, link: reading };
+    const parts: LinkParts = { kindName: trackerKindName(reading.kind, reading.server), host: hostOf(reading.server), ...(isJira(reading.kind) && { projectNoun: 'project' }), project: reading.project };
+    const project = parts.projectNoun ? `${parts.projectNoun} ${parts.project}` : parts.project;
+    return { kind: 'read', words: `${parts.kindName} · ${parts.host} · ${project}`, parts, link: reading };
   }
   if ('notAnIssue' in reading) return { kind: 'problem', words: `That's a link to ${reading.notAnIssue}, not an issue. Open any issue and copy its address.` };
   if ('notALink' in reading) return { kind: 'problem', words: 'Paste the address of an issue, as your browser shows it.' };

@@ -6,6 +6,11 @@ const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://a
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
 
 describe('linkReadBack', () => {
+  it('reads a link back in parts too: the kind for a badge, the host, the project', () => {
+    expect(linkReadBack('https://jira.unity3d.com/browse/VCS-1009081')).toMatchObject({ parts: { kindName: 'Jira Data Center', host: 'jira.unity3d.com', projectNoun: 'project', project: 'VCS' } });
+    expect(linkReadBack('https://github.com/acme/game/issues/12')).toMatchObject({ parts: { kindName: 'GitHub', host: 'github.com', project: 'acme/game' } });
+  });
+
   it('reads a Jira Data Center link back as Data Center', () => {
     expect(linkReadBack('https://jira.unity3d.com/browse/VCS-1009081')).toMatchObject({ kind: 'read', words: 'Jira Data Center · jira.unity3d.com · project VCS' });
   });
