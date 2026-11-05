@@ -2,7 +2,7 @@
 // (docs/features/issue-trackers.md, "Seams the tests replace"): `UVCS_FAKE_TRACKERS=<this file>` makes main's
 // `TrackerHttp` ask this `fetch` instead of the network (`createIssueTrackers`; a packaged app ignores it). Its answers
 // are shaped as each tracker's (the providers' tests hold recorded ones). Any token of a tracker's shape signs in, but
-// one holding `bad`; GitHub's device flow approves at the second poll. Unknown requests answer 404.
+// one holding `bad`; GitHub's device flow approves at the fourth poll, about twelve seconds in. Unknown requests answer 404.
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -33,8 +33,9 @@ function tokenOf(headers) {
 }
 
 function jira(url, init) {
+  if (url.pathname === '/_edge/tenant_info') return answer(200, { cloudId: 'fake-cloud' });
   if (tokenOf(init.headers).includes('bad')) return answer(401, { errorMessages: ['Client must be authenticated'] });
-  const path = url.pathname;
+  const path = url.pathname.replace(/^\/ex\/jira\/fake-cloud/, '');
   if (path === '/rest/api/3/myself') return answer(200, { accountId: '5b10ac8d', displayName: 'Ana Díaz', emailAddress: 'ana@acme.com' });
   const project = /^\/rest\/api\/3\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
@@ -64,11 +65,11 @@ function github(url, init) {
   const path = url.pathname;
   if (url.host === 'github.com' && path === '/login/device/code') {
     devicePolls = 0;
-    return answer(200, { device_code: 'fake-device', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 2 });
+    return answer(200, { device_code: 'fake-device', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 3 });
   }
   if (url.host === 'github.com' && path === '/login/oauth/access_token') {
     devicePolls++;
-    return answer(200, devicePolls < 2 ? { error: 'authorization_pending' } : { access_token: `gho_${'f'.repeat(36)}`, token_type: 'bearer', scope: 'repo' });
+    return answer(200, devicePolls < 4 ? { error: 'authorization_pending' } : { access_token: `gho_${'f'.repeat(36)}`, token_type: 'bearer', scope: 'repo' });
   }
   if (tokenOf(init.headers).includes('bad')) return answer(401, { message: 'Bad credentials' });
   if (path === '/user') return answer(200, { login: 'ana-diaz', name: 'Ana Díaz' });
