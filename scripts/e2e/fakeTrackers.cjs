@@ -6,7 +6,9 @@
 // A Jira token holding `expiring` shows signing in again: it signs in and proves its project, then its issues answer
 // 401; trying it again finds Jira out of reach once, then refuses it, so a new token is asked for.
 // A Jira Data Center is at https://jira.acme-corp.com (REST API v2, a personal access token as Bearer): any token
-// signs in but one holding `login`, which it sends to its single sign-on page (a 302), as an SSO server does.
+// signs in but one holding `login`, which it sends to its single sign-on page (a 302), as an SSO server does. Its tokens
+// are read-only, as resolution's API Token Authentication makes them: any POST is a 403. A search takes a boolean
+// `validateQuery`, and anything else is a 400, as Data Center answers it.
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -117,12 +119,17 @@ const DATA_CENTER = 'https://jira.acme-corp.com';
 function jiraDataCenter(url, init) {
   const token = tokenOf(init.headers);
   if (token.includes('login')) return answer(302, undefined, { location: `${DATA_CENTER}/plugins/servlet/samlsso?redirectTo=${encodeURIComponent(url.pathname)}` });
+  if (init.method !== 'GET') return answer(403, { errorMessages: ['This token allows read access only'], errors: {} });
   const path = url.pathname;
   if (path === '/rest/api/2/myself') return answer(200, { key: 'JIRAUSER10100', name: 'ana.diaz', displayName: 'Ana Díaz', emailAddress: 'ana@acme-corp.com' });
   const project = /^\/rest\/api\/2\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
   if (path === '/rest/api/2/search') {
-    const { jql } = JSON.parse(init.body);
+    const jql = url.searchParams.get('jql') ?? '';
+    const validateQuery = url.searchParams.get('validateQuery');
+    if (validateQuery !== null && validateQuery !== 'true' && validateQuery !== 'false') {
+      return answer(400, { errorMessages: [`Can not deserialize value of type boolean from String "${validateQuery}"`], errors: {} });
+    }
     const keys = /key in \((.*)\)/.exec(jql);
     if (!keys) return answer(200, { startAt: 0, maxResults: 0, total: jql.includes('currentUser') ? 4 : 128, issues: [] });
     const asked = [...keys[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
