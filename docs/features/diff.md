@@ -68,8 +68,10 @@ immutable), titled as the branch's ("Branch task up to changeset 12"). The base 
 (`BranchStart`): the parent of its first changeset, as `cm diff br:<branch>` and `xlinkBeforePoint` take it; a merge
 from the parent doesn't move it. What decides is `branchDiffBase`:
 
-- **Hidden** on a top-level branch (`/main`), which starts from no other, told by its name; and on the branch's first
-  changeset where the view knows it, as there it would be "Open diff".
+- **Hidden** on a branch that starts from no other (its first changeset has no parent: `/main`), and on the branch's
+  first changeset, where the view knows them; it would be "Open diff" there. Where the start isn't known, only `/main`
+  is told by its name: a top-level branch the app made from a changeset or a label ("Top-level branch" in New branch)
+  has a base like any other. Another root branch, read when chosen, says it starts from no other branch.
 - **Known with no command** where the view already read the branch's start (`ChangesetMenuContext.branchStartOf`): the
   Branch Explorer from its history (`branchStartInGraph`; not when the date range left out what precedes the branch's
   first changeset shown), a branch diff's "Changeset by changeset" from the whole branch it lists

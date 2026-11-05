@@ -13,7 +13,7 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
-import { baseOfStart, type BranchDiffBase } from './branchDiffUpTo';
+import { readStartOutcome, type BranchDiffBase } from './branchDiffUpTo';
 import { pickChangeset } from './ChangesetPickerDialog';
 
 /** The diff of what a changeset changed. */
@@ -58,9 +58,11 @@ async function readBranchBase(place: Place, branch: string): Promise<number | un
   const failure = `Couldn't find where ${branchLabel(branch)} starts`;
   const start = await runRead(failure, () => api.changesets.branchStart(place, branch));
   if (start === undefined) return undefined;
-  const base = baseOfStart(start);
-  if (base === null) toast.error(failure);
-  return base ?? undefined;
+  const outcome = readStartOutcome(start);
+  if (outcome.kind === 'from') return outcome.base;
+  if (outcome.kind === 'root') toast.info(`${branchLabel(branch)} starts from no other branch`);
+  else toast.error(failure, 'It has no changesets.');
+  return undefined;
 }
 
 export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {
