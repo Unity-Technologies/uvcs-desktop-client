@@ -1,3 +1,4 @@
+// The commands that write the workspace. `isOperation` reads them too: each runs in a `cm shell` of its own.
 const WORKSPACE_WRITES = new Set([
   'add',
   'checkin',
