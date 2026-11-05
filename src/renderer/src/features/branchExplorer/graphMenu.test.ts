@@ -13,6 +13,10 @@ const layout = layoutGraph(history);
 const laneA = layout.lanesByBranch.get('/main/a')!;
 const v1 = history.labels[0]!;
 
+function entryWithId(entries: MenuEntry[], id: string): MenuEntry | undefined {
+  return entries.find((entry) => typeof entry === 'object' && entry !== null && 'id' in entry && entry.id === id);
+}
+
 function contextWith(selections: GraphSelections) {
   return {
     place: workspacePlace('/work/game'),
@@ -52,18 +56,21 @@ describe('graphMenu for several selected', () => {
 
   it('moves every branch selected together from Position', () => {
     // The sample's branches share one id, and pins are kept by id: these get their own.
-    const numbered = layoutGraph({ ...history, branches: history.branches.map((each, index) => ({ ...each, id: index + 1 })) });
-    const lane = (name: string) => numbered.lanesByBranch.get(name)!;
+    const numberedHistory = { ...history, branches: history.branches.map((each, index) => ({ ...each, id: index + 1 })) };
+    const numbered = layoutGraph(numberedHistory);
     const saved: BranchPins[] = [];
     const context = {
       ...contextWith([{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }]),
       layout: numbered,
       positions: { pins: [], setPins: (pins: BranchPins) => saved.push(pins) },
     };
-    const position = graphMenu({ kind: 'branch', lane: lane('/main/a') }, context).find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'position');
-    const toTop = (position as { entries: MenuEntry[] }).entries.find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'position.top');
-    (toTop as { run: () => void }).run();
-    expect(saved.map((pins) => pins.map(({ branch }) => branch).sort())).toEqual([[lane('/main/a').branch.id, lane('/main/b').branch.id].sort()]);
+    const position = entryWithId(graphMenu({ kind: 'branch', lane: numbered.lanesByBranch.get('/main/a')! }, context), 'position') as { entries: MenuEntry[] };
+    (entryWithId(position.entries, 'position.top') as { run: () => void }).run();
+    expect(saved).toHaveLength(1);
+    const after = layoutGraph(numberedHistory, undefined, null, saved[0]);
+    const row = (name: string) => after.lanesByBranch.get(name)!.row;
+    // Both above /main, which was alone at the top.
+    expect(Math.max(row('/main/a'), row('/main/b'))).toBeLessThan(row('/main'));
   });
 
   it('is the menu of the one right-clicked when it isn’t in the selection', () => {

@@ -2,8 +2,10 @@ import '../../testing/fakeWindow';
 import type { KeyboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphActions } from './graphActions';
+import { isMac } from '../../lib/platform';
 import { handleGraphKey, keyboardMergeSource, keyboardMoveLanes, type GraphKeyboard } from './graphKeyboard';
 import type { GraphSelection, GraphSelections } from './graphSelection';
+import type { BranchPins } from './model/branchRows';
 import { branch, changeset, sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -68,6 +70,31 @@ describe('the keys that act on one object', () => {
     handleGraphKey(keyPressed('Enter'), keyboardOn({ kind: 'changeset', id: 4 }, selected));
     expect(selected).toEqual([{ kind: 'changeset', id: 4 }]);
     expect(diff).toHaveBeenCalledWith(4);
+  });
+});
+
+describe('the keys that move branches', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', class {}));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('move every branch selected together: ⌘⇧↑ or Ctrl+Shift+↑ takes them all to the top, in their order', () => {
+    const history = { ...sampleHistory(), branches: sampleHistory().branches.map((each, index) => ({ ...each, id: index + 1 })) };
+    const layout = layoutGraph(history);
+    const saved: BranchPins[] = [];
+    const selections: GraphSelections = [{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }];
+    const keyboard: GraphKeyboard = {
+      ...keyboardOn(selections[1]!, []),
+      layout,
+      selections,
+      positions: { pins: [], setPins: (pins) => saved.push(pins) },
+    };
+    const event = keyPressed('ArrowUp');
+    Object.assign(event.nativeEvent, { shiftKey: true, metaKey: isMac, ctrlKey: !isMac });
+    handleGraphKey(event, keyboard);
+    expect(saved).toHaveLength(1);
+    const after = layoutGraph(history, undefined, null, saved[0]);
+    const row = (name: string) => after.lanesByBranch.get(name)!.row;
+    expect(Math.max(row('/main/a'), row('/main/b'))).toBeLessThan(row('/main'));
   });
 });
 
