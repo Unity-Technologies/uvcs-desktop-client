@@ -64,10 +64,19 @@ describe('IssueTrackers', () => {
     expect(JSON.stringify(announced)).not.toContain(TOKEN);
   });
 
-  it('opens the tracker’s token page from main', () => {
+  it('opens the tracker’s token page from main', async () => {
     const { engine, opened } = trackers();
-    engine.openTokenPage({ link: LINK });
+    await engine.openTokenPage({ link: LINK });
     expect(opened).toEqual(['https://github.com/settings/tokens/new?scopes=repo&description=UVCS%20Desktop']);
+  });
+
+  it('opens the token page a Jira Data Center has, and the other one when asked', async () => {
+    const appPage = 'https://jira.acme.com/plugins/servlet/de.resolution.apitokenauth/admin';
+    const { engine, opened, tracker } = trackers({ [`GET ${appPage}`]: { status: 401 } });
+    await engine.openTokenPage({ link: 'https://jira.acme.com/browse/VCS-1' });
+    await engine.openTokenPage({ link: 'https://jira.acme.com/browse/VCS-1' }, 'other');
+    expect(opened).toEqual([appPage, 'https://jira.acme.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens']);
+    expect(tracker.lines()).toEqual([`GET ${appPage}`]);
   });
 
   it('sends nothing for a text that isn’t a token, nor for Jira without an email, nor for a link that isn’t an issue', async () => {

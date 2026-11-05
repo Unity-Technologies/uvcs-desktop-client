@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountWords, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, accountWords, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -133,7 +133,7 @@ describe('the token step’s words and readiness', () => {
   it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
     expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' });
     expect(tokenStepWords('github')).toEqual({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
-    expect(tokenStepWords('jiraDataCenter')).toEqual({ tokenLabel: 'Jira personal access token', hint: 'Made in your Jira profile, under Personal Access Tokens. The app only reads issues with it.' });
+    expect(tokenStepWords('jiraDataCenter')).toEqual({ tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' });
     expect(tokenStepReady('jiraDataCenter', '', 'token', false)).toBe(true);
   });
 
@@ -198,5 +198,13 @@ describe('signInRows', () => {
     ]);
     expect(accountWords({ ...jira, credential: 'missing' })).toBe('Needs signing in again');
     expect(signInRows(undefined)).toEqual([]);
+  });
+});
+
+describe('otherTokenPageOffered', () => {
+  it('offers the other token page only where a tracker has two: Jira Data Center, its own and an app’s', () => {
+    expect(otherTokenPageOffered('jiraDataCenter')).toBe(true);
+    expect(otherTokenPageOffered('jiraCloud')).toBe(false);
+    expect(otherTokenPageOffered('github')).toBe(false);
   });
 });
