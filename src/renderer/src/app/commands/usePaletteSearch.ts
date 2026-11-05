@@ -11,7 +11,8 @@ import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
 import { paletteBranches, paletteGroups } from './paletteGroups';
-import { palettePeople, peopleIndex } from './personResults';
+import { palettePeople } from './personResults';
+import { indexPeople } from '../../lib/peopleIndex';
 import { isSearching, type PaletteScope } from './paletteScope';
 import type { SearchGroup } from './searchResults';
 import { NOWHERE, usePaletteLists } from './usePaletteLists';
@@ -62,7 +63,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const people = useMemo(() => {
     if (!enabled || !asksForPeople) return undefined;
     const owners = [everyBranch, labels.data, changesets.data, shelves.data, codeReviews.data].flatMap((list) => (list ?? []).map((row) => row.owner));
-    return peopleIndex(palettePeople(owners, peopleSeenIn(placeId(place)), me));
+    return indexPeople(palettePeople(owners, peopleSeenIn(placeId(place)), me));
   }, [enabled, asksForPeople, everyBranch, labels.data, changesets.data, shelves.data, codeReviews.data, place, me]);
   const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 

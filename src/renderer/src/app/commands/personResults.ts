@@ -1,8 +1,7 @@
 import { User } from 'lucide-react';
-import { indexCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { showPersonChangesets } from '../../features/changesets/showPersonChangesets';
 import { EVERYONE, offeredPeople } from '../../lib/peopleFilter';
-import { displayName, userFilterTexts } from '../../lib/userName';
+import { displayName } from '../../lib/userName';
 import type { SearchResult } from './searchResults';
 
 /**
@@ -14,14 +13,6 @@ import type { SearchResult } from './searchResults';
 export function palettePeople(owners: Iterable<string>, seen: readonly string[], me: string | undefined): string[] {
   const people = new Set([...owners, ...seen]);
   return [...(me ? [me] : []), ...offeredPeople(people, EVERYONE, me)];
-}
-
-/**
- * The people indexed for each key typed, as a mention's suggestions find them (`rankCandidates`): by the name shown
- * and as `cm` names them, the name typed first, then names starting with it, then names holding it.
- */
-export function peopleIndex(people: readonly string[]): CandidateIndex<string> {
-  return indexCandidates(people, (person) => [person, displayName(person)], userFilterTexts);
 }
 
 /** A person: their name, how `cm` names them, and, picked, the Changesets view on their changesets. */

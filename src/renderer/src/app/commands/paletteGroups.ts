@@ -83,7 +83,7 @@ export interface CachedLists {
   codeReviews?: readonly CodeReviewSummary[];
   /** GUIDs (lowercase) of the branches switched to lately, most recent first. */
   recentBranchGuids: readonly string[];
-  /** Who `@` offers (`palettePeople`, `peopleIndex`); read only once asked for. */
+  /** Who `@` offers (`palettePeople`, `indexPeople`); read only once asked for. */
   people?: CandidateIndex<string>;
 }
 

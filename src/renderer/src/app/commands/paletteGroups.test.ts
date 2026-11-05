@@ -28,7 +28,8 @@ import {
   type ServerMatches,
 } from './paletteGroups';
 import type { PaletteScope } from './paletteScope';
-import { palettePeople, peopleIndex } from './personResults';
+import { palettePeople } from './personResults';
+import { indexPeople } from '../../lib/peopleIndex';
 import { rankGroups, type SearchGroup } from './searchResults';
 
 const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
@@ -443,7 +444,7 @@ describe('lacksServerMatch', () => {
 });
 
 describe('paletteGroups: people', () => {
-  const people = peopleIndex(palettePeople(['ana.diaz', 'tom', 'anabel.ruiz', 'bob'], [], 'tom'));
+  const people = indexPeople(palettePeople(['ana.diaz', 'tom', 'anabel.ruiz', 'bob'], [], 'tom'));
 
   it('lists who `@` offers, the user first, and no one in any other scope', () => {
     expect(labelsIn(groupsFor({ scope: 'people', me: 'tom', lists: { people } }), 'people')).toEqual(['Tom', 'Ana Diaz', 'Anabel Ruiz', 'Bob']);

@@ -17,8 +17,9 @@ import { shelveFilterTexts } from '../../features/shelves/shelveFilterTexts';
 import { lastSegment } from '../../lib/paths';
 import { splitRepositorySpec } from '../../lib/servers';
 
-import { displayName, userFilterTexts } from '../../lib/userName';
+import { displayName } from '../../lib/userName';
 import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
+import { indexPeople } from '../../lib/peopleIndex';
 import type { SuggestionKind } from './suggestionTriggers';
 
 /** How many suggestions a list shows: the best few, never everything (ARCHITECTURE.md "Big lists"). */
@@ -75,7 +76,7 @@ export function codeReviewIndex(reviews: readonly CodeReviewSummary[]): Candidat
 /** People by how `cm` names them and by the name shown; only those a mention reads back whole (`@ana@acme.com`). */
 export function personIndex(people: readonly string[]): CandidateIndex<string> {
   const mentionable = [...new Set(people)].filter((person) => readsBackWhole(`@${person}`));
-  return indexCandidates(mentionable, (person) => [person, displayName(person)], userFilterTexts);
+  return indexPeople(mentionable);
 }
 
 let emojiIndexOnce: CandidateIndex<Gemoji> | undefined;
