@@ -43,6 +43,8 @@ const failed = (failure: SignInFailure): Failed => ({ kind: 'failed', failure })
 interface DeviceFlow {
   canceling: AbortController;
   outcome: Promise<SignInOutcome>;
+  /** The window that started it (its web contents' id): closing it cancels the flow. */
+  ownerId?: number;
 }
 
 /**
@@ -82,15 +84,20 @@ export class IssueTrackers {
     if (!connection) return failed({ reason: 'unexpected', message: 'This sign-in is gone' });
     const credential = this.credentialOf(connection.kind, token, email ?? connection.account.email);
     if ('failure' in credential) return failed(credential.failure);
-    return this.renewCredential(connection, credential);
+    return this.renewCredential(connection, credential, 'token');
   }
 
   /** A connection's new credential, kept once it signs in; its bindings stay. */
-  private async renewCredential(connection: StoredConnection, credential: TrackerCredential): Promise<SignInOutcome> {
+  private async renewCredential(connection: StoredConnection, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
     const provider = this.providers[connection.kind];
     try {
       const signedIn = await provider.signIn(this.deps.http.bound(provider.origins(connection.server), provider.authorization(credential)), connection.server);
-      const updated: StoredConnection = { ...connection, account: { ...signedIn.account, ...(credential.email && { email: credential.email }) }, ...(signedIn.apiBase && { apiBase: signedIn.apiBase }) };
+      const updated: StoredConnection = {
+        ...connection,
+        account: { ...signedIn.account, ...(credential.email && { email: credential.email }) },
+        signInMethod: method,
+        ...(signedIn.apiBase && { apiBase: signedIn.apiBase }),
+      };
       this.keep(updated, credential);
       this.announce();
       return { kind: 'signedIn', connection: this.withCredential(updated) };
@@ -120,7 +127,7 @@ export class IssueTrackers {
   }
 
   /** A first sign-in for a repository, by a link; or a connection's again, by its id, its bindings kept. */
-  async startDeviceSignIn(request: RepositorySignIn | { connectionId: string }): Promise<DeviceSignIn | { failure: SignInFailure }> {
+  async startDeviceSignIn(request: RepositorySignIn | { connectionId: string }, ownerId?: number): Promise<DeviceSignIn | { failure: SignInFailure }> {
     const again = 'connectionId' in request ? this.deps.store.connection(request.connectionId) : undefined;
     const reading = 'connectionId' in request ? (again ?? { failure: { reason: 'unexpected', message: 'This sign-in is gone' } as const }) : this.readLink(request.link);
     if ('failure' in reading) return reading;
@@ -136,18 +143,16 @@ export class IssueTrackers {
     }
     const flowId = this.deps.newId();
     const canceling = new AbortController();
-    const outcome = pollForToken(http, device, code, this.deps.wait, this.deps.now, canceling.signal)
-      .then(
-        (end) => {
-          if (!('token' in end)) return failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed });
-          if (again) return this.renewCredential(again, { token: end.token });
-          return 'repository' in request && 'project' in reading ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: 'canceled' });
-        },
-        (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
-      )
-      // A flow its window stopped waiting for (reloaded meanwhile) is forgotten once it ends.
-      .finally(() => this.flows.delete(flowId));
-    this.flows.set(flowId, { canceling, outcome });
+    // Its outcome is kept until its window takes it (`finishDeviceSignIn`), cancels it, or closes (`windowClosed`).
+    const outcome = pollForToken(http, device, code, this.deps.wait, this.deps.now, canceling.signal).then(
+      (end) => {
+        if (!('token' in end)) return failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed });
+        if (again) return this.renewCredential(again, { token: end.token }, 'deviceCode');
+        return 'repository' in request && 'project' in reading ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: 'canceled' });
+      },
+      (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
+    );
+    this.flows.set(flowId, { canceling, outcome, ...(ownerId !== undefined && { ownerId }) });
     return { flowId, userCode: code.userCode, verificationUri: code.verificationUri, expiresAt: code.expiresAt };
   }
 
@@ -163,6 +168,15 @@ export class IssueTrackers {
 
   cancelDeviceSignIn(flowId: string): void {
     this.flows.get(flowId)?.canceling.abort();
+  }
+
+  /** A window closed: the device flows it started stop, and are forgotten once ended. */
+  windowClosed(ownerId: number): void {
+    for (const [flowId, flow] of this.flows) {
+      if (flow.ownerId !== ownerId) continue;
+      flow.canceling.abort();
+      void flow.outcome.finally(() => this.flows.delete(flowId));
+    }
   }
 
   async useConnection(request: RepositorySignIn & { connectionId: string }): Promise<SignInOutcome> {

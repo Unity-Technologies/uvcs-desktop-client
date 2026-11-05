@@ -25,19 +25,23 @@ export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: De
   const [code, setCode] = useState<DeviceCode | null>(null);
   const [starting, setStarting] = useState(false);
   const flow = useRef<string | null>(null);
+  const mounted = useRef(true);
   // A step left before the code is approved (Settings closed, another link pasted) stops the polling.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       if (flow.current) void api.issueTrackers.cancelDeviceSignIn(flow.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const start = async (): Promise<void> => {
     setStarting(true);
     const started = await api.issueTrackers.startDeviceSignIn(request);
     setStarting(false);
     if ('failure' in started) return onOutcome({ kind: 'failed', failure: started.failure });
+    // Left while the code was asked for: the flow it started stops at once.
+    if (!mounted.current) return void api.issueTrackers.cancelDeviceSignIn(started.flowId);
     flow.current = started.flowId;
     setCode(started);
     void navigator.clipboard.writeText(started.userCode).catch(() => undefined);
