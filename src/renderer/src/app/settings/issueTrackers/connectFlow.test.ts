@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, connectsWithSignIn, pickedSignInShown, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -245,5 +245,22 @@ describe('the sign-ins Connect offers first', () => {
     expect(connectsWithSignIn(null, true, { kind: 'useConnection', connection: jira, words: '' })).toBe(true);
     expect(connectsWithSignIn('j', true, { kind: 'signIn', methods: ['token'], trackerName: 'GitHub' })).toBe(false);
     expect(connectsWithSignIn(null, false, null)).toBe(false);
+  });
+});
+
+describe('repositoryTrackerView', () => {
+  it('shows Connect once something was picked, the start while there is no tracker or it is being changed, else the tracker', () => {
+    expect(repositoryTrackerView({ starting: true, connected: true, changing: false })).toBe('connect');
+    expect(repositoryTrackerView({ starting: false, connected: false, changing: false })).toBe('start');
+    expect(repositoryTrackerView({ starting: false, connected: true, changing: true })).toBe('start');
+    expect(repositoryTrackerView({ starting: false, connected: true, changing: false })).toBe('connected');
+  });
+});
+
+describe('connectStage', () => {
+  it('asks for the link until one reads back, then signs in', () => {
+    expect(connectStage(linkReadBack(''))).toBe('link');
+    expect(connectStage(linkReadBack('https://example.com/x'))).toBe('link');
+    expect(connectStage(linkReadBack('https://acme.atlassian.net/browse/VCS-1'))).toBe('signIn');
   });
 });
