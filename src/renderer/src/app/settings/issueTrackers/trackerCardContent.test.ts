@@ -86,9 +86,18 @@ describe('disconnectQuestion', () => {
 });
 
 describe('connectSteps and tokenStepLead', () => {
-  it('walks Link, Sign in, Connected', () => {
-    expect(connectSteps(false).map((step) => step.state)).toEqual(['current', 'next', 'next']);
-    expect(connectSteps(true).map((step) => step.state)).toEqual(['done', 'current', 'next']);
+  it('walks a tracker, a link and signing in, the first step naming the tracker once chosen', () => {
+    expect(connectSteps('tracker')).toEqual([
+      { label: 'Tracker', state: 'current' },
+      { label: 'Link', state: 'next' },
+      { label: 'Sign in', state: 'next' },
+    ]);
+    expect(connectSteps('link', 'Jira').map((step) => [step.label, step.state])).toEqual([
+      ['Jira', 'done'],
+      ['Link', 'current'],
+      ['Sign in', 'next'],
+    ]);
+    expect(connectSteps('signIn', 'GitHub').map((step) => step.state)).toEqual(['done', 'done', 'current']);
   });
 
   it('leads with Create a token until a token is pasted, then with Sign in', () => {

@@ -100,15 +100,17 @@ export function proofLines(connection: Pick<TrackerConnection, 'kind' | 'account
   return [...lines, { lead, strong: connection.kind === 'github' ? access.name : access.project, ...(counts && { after: ` · ${counts}` }) }];
 }
 
-/** The steps of Connect, and where the user is: a link, then a sign-in, then connected. */
+/** The steps of Connect, and where the user is: a tracker, a link to one of its issues, then signing in. */
 export type ConnectStepState = 'done' | 'current' | 'next';
 
-export function connectSteps(linkRead: boolean): { label: string; state: ConnectStepState }[] {
-  return [
-    { label: 'Link', state: linkRead ? 'done' : 'current' },
-    { label: 'Sign in', state: linkRead ? 'current' : 'next' },
-    { label: 'Connected', state: 'next' },
-  ];
+export type ConnectStage = 'tracker' | 'link' | 'signIn';
+
+/** The first step names the tracker once one is chosen ("Jira ✓ · Link · Sign in"). */
+export function connectSteps(stage: ConnectStage, trackerName?: string): { label: string; state: ConnectStepState }[] {
+  const order: ConnectStage[] = ['tracker', 'link', 'signIn'];
+  const at = order.indexOf(stage);
+  const labels: Record<ConnectStage, string> = { tracker: (stage !== 'tracker' && trackerName) || 'Tracker', link: 'Link', signIn: 'Sign in' };
+  return order.map((step, index) => ({ label: labels[step], state: index < at ? 'done' : index === at ? 'current' : 'next' }));
 }
 
 /** Which of the token step's buttons leads: "Create a token" until one is in the field, then "Sign in". */
