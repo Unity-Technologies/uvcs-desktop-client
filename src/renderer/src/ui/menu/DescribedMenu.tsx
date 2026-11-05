@@ -23,11 +23,13 @@ interface DescribedMenuProps {
   /** A small heading above the items. */
   title?: string;
   align?: 'start' | 'end';
+  /** The items' icons' size; larger for a logo that names the item (a tracker's). */
+  iconSize?: number;
   children: ReactElement;
 }
 
 /** A dropdown whose items explain themselves: a label, a line of description and an optional hover tip. */
-export function DescribedMenu({ items, title, align = 'end', children }: DescribedMenuProps) {
+export function DescribedMenu({ items, title, align = 'end', iconSize = 15, children }: DescribedMenuProps) {
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>{children}</DropdownMenu.Trigger>
@@ -46,7 +48,9 @@ export function DescribedMenu({ items, title, align = 'end', children }: Describ
                 aria-checked={item.checked}
                 onSelect={() => setTimeout(item.run, 0)}
               >
-                <span className={styles.icon}>{ItemIcon && <ItemIcon size={15} />}</span>
+                <span className={styles.icon} style={iconSize > 16 ? { width: iconSize } : undefined}>
+                  {ItemIcon && <ItemIcon size={iconSize} />}
+                </span>
                 <span className={styles.text}>
                   <span className={styles.label}>{item.label}</span>
                   <span className={styles.description}>{item.description}</span>
