@@ -40,7 +40,15 @@ describe('signInStepFor', () => {
   });
 
   it('signs in with a different account when asked, even where a sign-in covers the link', () => {
-    expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([jira]), { differentAccount: true })).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'Jira', replaces: 'Ana Díaz' });
+    expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([jira]), { differentAccount: true })).toEqual({
+      kind: 'signIn',
+      methods: ['token'],
+      trackerName: 'Jira',
+      replacesWords: "Signing in here replaces Ana Díaz's sign-in, for every repository that uses it.",
+    });
+    // On GitHub a token's reach decides whether it replaces the kept one (a fine-grained token is a sign-in of its own): no promise.
+    const github: TrackerConnection = { ...jira, id: 'g', kind: 'github', server: 'https://github.com', scope: '*' };
+    expect(signInStepFor(link('https://github.com/acme/game/issues/1'), setup([github]), { differentAccount: true })).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'GitHub' });
   });
 
   it('asks to sign in where none covers it, or the one there stopped working', () => {

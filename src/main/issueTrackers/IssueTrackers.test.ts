@@ -182,6 +182,19 @@ describe('IssueTrackers', () => {
     expect(engine.setup().connections.map((connection) => connection.scope)).toEqual(['acme', 'other']);
   });
 
+  it('replaces the kept sign-in when another account signs in with the same reach, its bindings kept; another reach is a sign-in of its own', async () => {
+    const OTHER = `ghp_${'b'.repeat(36)}`;
+    const user = (request: { headers: Record<string, string> }) => ({ json: request.headers.Authorization?.includes(OTHER) ? { login: 'ben-li', name: 'Ben Li' } : { login: 'ana-diaz', name: 'Ana Díaz' } });
+    const { engine } = trackers({ ...SIGNED_IN, 'GET https://api.github.com/user': user });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    await engine.signInWithToken({ repository: 'tools@acme@unity', link: LINK, token: OTHER });
+    expect(engine.setup().connections.map((connection) => [connection.id, connection.account.name])).toEqual([['id1', 'Ben Li']]);
+    expect(engine.setup().bindings.map((binding) => binding.connectionId)).toEqual(['id1', 'id1']);
+    // A fine-grained token reaches one owner: a sign-in apart from the classic one, which "Use a different account" can't promise to replace.
+    await engine.signInWithToken({ repository: 'art@acme@unity', link: LINK, token: FINE_GRAINED });
+    expect(engine.setup().connections.map((connection) => connection.scope)).toEqual(['*', 'acme']);
+  });
+
   it('reuses a connection for a second repository, with no sign-in', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
