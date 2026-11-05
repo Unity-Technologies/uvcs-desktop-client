@@ -39,6 +39,10 @@ describe('signInStepFor', () => {
     expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([jira]))).toEqual({ kind: 'useConnection', connection: jira, words: 'Jira at acme.atlassian.net · signed in as Ana Díaz' });
   });
 
+  it('signs in with a different account when asked, even where a sign-in covers the link', () => {
+    expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([jira]), { differentAccount: true })).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'Jira', replaces: 'Ana Díaz' });
+  });
+
   it('asks to sign in where none covers it, or the one there stopped working', () => {
     expect(signInStepFor(link('https://other.atlassian.net/browse/OPS-3'), setup([jira]))).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'Jira' });
     expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([{ ...jira, credential: 'refused' }]))).toMatchObject({ kind: 'signIn' });
