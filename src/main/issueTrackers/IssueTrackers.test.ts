@@ -198,6 +198,34 @@ describe('IssueTrackers', () => {
     expect(tracker.lines().slice(2)).toEqual([GRAPHQL]);
   });
 
+  it('reads each bound project’s name and counts for Settings', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    const sent = tracker.requests.length;
+    expect(await engine.readProjects(REPOSITORY)).toEqual({ kind: 'read', projects: [{ project: 'acme/game', access: { project: 'acme/game', name: 'acme/game', openIssues: 42, assignedToYou: 3 } }] });
+    expect(tracker.requests).toHaveLength(sent + 1);
+  });
+
+  it('reads a project it can’t prove as its key alone, and the tracker out of reach when none answers', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    tracker.answer({ [GRAPHQL]: { status: 500 } });
+    expect(await engine.readProjects(REPOSITORY)).toEqual({ kind: 'read', projects: [{ project: 'acme/game' }] });
+    tracker.answer({ [GRAPHQL]: { unreachable: true } });
+    expect(await engine.readProjects(REPOSITORY)).toEqual({ kind: 'failed', reason: 'unreachable' });
+  });
+
+  it('removes a project from the binding, but never its last one', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    engine.removeProject(REPOSITORY, 'acme/game');
+    expect(engine.setup().bindings[0]!.projects).toEqual(['acme/game']);
+    tracker.answer({ [GRAPHQL]: SIGNED_IN[GRAPHQL]! });
+    await engine.addProject({ repository: REPOSITORY, link: 'https://github.com/acme/tools/issues/1' });
+    engine.removeProject(REPOSITORY, 'acme/game');
+    expect(engine.setup().bindings[0]!.projects).toEqual(['acme/tools']);
+  });
+
   it('searches a repository’s bound projects in one request, of its connection', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });

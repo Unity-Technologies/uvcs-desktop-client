@@ -23,6 +23,8 @@ export function createIssueTrackersService({ issueTrackers }: ServiceContext): I
     cancelDeviceSignIn: async (flowId) => issueTrackers.cancelDeviceSignIn(flowId),
     useConnection: (request) => issueTrackers.useConnection(request),
     addProject: (request) => issueTrackers.addProject(request),
+    removeProject: async (repository, project) => issueTrackers.removeProject(repository, project),
+    readProjects: (repository) => issueTrackers.readProjects(repository),
     disconnect: async (repository) => issueTrackers.disconnect(repository),
     signOut: async (connectionId) => issueTrackers.signOut(connectionId),
     readIssues: (connectionId, keys) => issueTrackers.readIssues(connectionId, keys),

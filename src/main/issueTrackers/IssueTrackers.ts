@@ -1,5 +1,5 @@
 import type { RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
-import type { DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { BoundProject, BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, TrackerErrorReason, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
 import { deviceFlowHostsOf, GITHUB_OAUTH_SCOPES } from '@shared/issueTrackers/signInMethods';
@@ -205,6 +205,50 @@ export class IssueTrackers {
     }
     const projects = binding.projects.includes(reading.project) ? binding.projects : [...binding.projects, reading.project];
     return this.bindProven(connection, request.repository, projects, reading.project);
+  }
+
+  removeProject(repository: string, project: string): void {
+    const binding = this.bindingOf(repository);
+    if (!binding || binding.projects.length < 2 || !binding.projects.includes(project)) return;
+    this.deps.store.bind({ ...binding, projects: binding.projects.filter((kept) => kept !== project) });
+    this.announce();
+  }
+
+  /**
+   * Each bound project's name and counts (`projectAccess`), for Settings: a project that can't be read shows its key
+   * alone. Nothing is asked of a connection that needs signing in again; every project out of reach is the tracker
+   * out of reach.
+   */
+  async readProjects(repository: string): Promise<BoundProjectsAnswer> {
+    const binding = this.bindingOf(repository);
+    const connection = binding && this.deps.store.connection(binding.connectionId);
+    if (!binding || !connection) return { kind: 'failed', reason: 'unexpected' };
+    let http: ConnectionHttp;
+    try {
+      http = this.connectionHttp(connection);
+    } catch {
+      return { kind: 'failed', reason: 'signInRefused' };
+    }
+    const provider = this.providers[connection.kind];
+    const failures: TrackerErrorReason[] = [];
+    const projects = await Promise.all(
+      binding.projects.map(async (project): Promise<BoundProject> => {
+        try {
+          return { project, access: await provider.projectAccess(http, connection, project) };
+        } catch (error) {
+          failures.push(error instanceof TrackerError ? error.reason : 'unexpected');
+          return { project };
+        }
+      }),
+    );
+    const everyOne = (reason: TrackerErrorReason) => failures.length === projects.length && failures.every((failure) => failure === reason);
+    if (everyOne('unreachable')) return { kind: 'failed', reason: 'unreachable' };
+    if (failures.includes('signInRefused')) return { kind: 'failed', reason: 'signInRefused' };
+    return { kind: 'read', projects };
+  }
+
+  private bindingOf(repository: string) {
+    return this.deps.store.bindings().find((kept) => sameRepository(kept.repository, repository));
   }
 
   disconnect(repository: string): void {

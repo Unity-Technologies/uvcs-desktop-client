@@ -1,4 +1,4 @@
-import type { DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
+import type { BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
 
 /** A sign-in for a repository, from a link to one of its tracker's issues: main reads the link itself. */
 export interface RepositorySignIn {
@@ -46,6 +46,10 @@ export interface IssueTrackersApi {
   useConnection(request: RepositorySignIn & { connectionId: string }): Promise<SignInOutcome>;
   /** Adds the link's project to the repository's binding. */
   addProject(request: RepositorySignIn): Promise<SignInOutcome>;
+  /** Takes a project off the repository's binding; its last one stays (Disconnect removes the binding). */
+  removeProject(repository: string, project: string): Promise<void>;
+  /** The repository's bound projects with their names and counts, as Settings shows them: one proof per project. */
+  readProjects(repository: string): Promise<BoundProjectsAnswer>;
   /** The repository stops using its tracker; the connection stays for others. */
   disconnect(repository: string): Promise<void>;
   /** Removes a connection, its credential and its bindings. */

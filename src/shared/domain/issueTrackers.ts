@@ -112,6 +112,15 @@ export type IssueSearchAnswer =
   | { kind: 'failed'; reason: TrackerErrorReason; retryAt?: number }
   | { kind: 'superseded' };
 
+/** A bound project as Settings shows it: its key, and its name and counts once read (none when it couldn't be). */
+export interface BoundProject {
+  project: string;
+  access?: ProjectAccess;
+}
+
+/** The repository's bound projects, read; or why none could be. */
+export type BoundProjectsAnswer = { kind: 'read'; projects: BoundProject[] } | { kind: 'failed'; reason: TrackerErrorReason };
+
 /** Proof that a project can be read: its name and its counts. */
 export interface ProjectAccess {
   project: string;
