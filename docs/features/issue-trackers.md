@@ -381,7 +381,8 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
 ## Connecting: Settings › Issue tracker
 
 The same pane in every window (`IssueTrackerPane`): the window's repository's tracker, then the sign-ins this
-computer keeps (`SignInsCard`). Each state is one card (`styles.card`): a tinted header saying what it is and where the
+computer keeps (`SignInsCard`). Connecting shows its steps alone; under a connected tracker the sign-ins are a quiet
+list (a small title, compact rows, a status only when one needs signing in again, Sign out on the row pointed at). Each state is one card (`styles.card`): a tinted header saying what it is and where the
 user stands, its sections parted by hairlines, one obvious next action. Status reads in its own tokens
 (`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. Each tracker shows its own logo (`TrackerLogo`, its
 brand colors as `--brand-*` tokens). What each card shows is decided in pure modules (`connectFlow`,
@@ -403,14 +404,15 @@ brand colors as `--brand-*` tokens). What each card shows is decided in pure mod
    the step moves to that tracker and says so (`choiceAfterLink`, `switchedWords`).
 3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and "Use
    it". Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
-   `tokenStepWords`): "Get a token from Jira", with one button opening its page (and, for Data Center, the other
-   page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`), then "Paste it here", the field with Sign in beside it. One
+   `tokenStepWords`): "Get a token from Jira", one line on what to do there and that the app only reads with it, and
+   one button opening its page (and, for Data Center, the other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`);
+   then "Paste it here", the field with Sign in beside it. One
    button leads (`tokenStepLead`): the page's until a token is in the field, then Sign in, and step one is checked.
    A failure is said under it, scrolled into view.
 
 In a window with no repository, Connect signs in alone (`connectWords`: "Sign in to an issue tracker"): the link
 proves the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in
-one click. With no sign-in yet that's the whole pane; with some, "Add a sign-in" over their list opens it.
+one click. With no sign-in yet that's the whole pane; with some, their card, whose header's "Add a sign-in" opens it.
 
 **Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its
 name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Use another tracker…" and
