@@ -11,6 +11,7 @@ import { isFormatRule, newRule, type ExplorerRule } from './model/explorerRules'
 import { ruleError } from './model/ruleMatches';
 import {
   ADD_RULE_GROUPS,
+  addingTurnsRulesOn,
   addRule,
   canMoveRule,
   moveRule,
@@ -26,16 +27,23 @@ import styles from './ExplorerRulesTab.module.css';
 
 interface ExplorerRulesTabProps {
   rules: readonly ExplorerRule[];
+  /** Off keeps the rules and applies none of them. */
+  on: boolean;
+  /** The rules the graph applies (none while they're off): only these ask the server, for their errors. */
+  applied: readonly ExplorerRule[];
   onChange: (rules: ExplorerRule[]) => void;
+  onTurn: (on: boolean) => void;
 }
 
 /** The display options' "Advanced filters & format" tab: the repository's inclusions, exclusions and formats. */
-export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
-  const matches = useRuleMatches(rules);
+export function ExplorerRulesTab({ rules, on, applied, onChange, onTurn }: ExplorerRulesTabProps) {
+  const matches = useRuleMatches(applied);
   const body = ruleTabBody(rules);
   const add = async (rule: ExplorerRule): Promise<void> => {
     const saved = await editExplorerRule(rule, true);
-    if (saved) onChange(addRule(rules, saved));
+    if (!saved) return;
+    onChange(addRule(rules, saved));
+    if (addingTurnsRulesOn(rules, on)) onTurn(true);
   };
   const row = (rule: ExplorerRule) => (
     <RuleRow
@@ -73,9 +81,12 @@ export function ExplorerRulesTab({ rules, onChange }: ExplorerRulesTabProps) {
   }
   return (
     <div className={styles.tab}>
-      <div className={styles.toolbar}>{addButton}</div>
+      <div className={styles.toolbar}>
+        <Checkbox label="Apply these rules" checked={on} onChange={onTurn} />
+        {addButton}
+      </div>
       {body.sections.map((section) => (
-        <section key={section.title} className={styles.section}>
+        <section key={section.title} className={styles.section} data-off={!on || undefined}>
           <h3 className={styles.heading}>{section.title}</h3>
           {section.note && <p className={styles.note}>{section.note}</p>}
           <ul className={styles.list}>{section.rules.map(row)}</ul>

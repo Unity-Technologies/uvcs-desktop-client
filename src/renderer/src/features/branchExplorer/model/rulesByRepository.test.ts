@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newRule } from './explorerRules';
-import { rulesOf, withRules } from './rulesByRepository';
+import { appliedRulesOf, rulesOf, withRules } from './rulesByRepository';
 
 const mine = newRule('include', 'r1');
 const theirs = newRule('exclude', 'r2');
@@ -26,5 +26,17 @@ describe('rulesOf', () => {
     // The same array every time: a store selector answering a new one would render forever.
     expect(rulesOf({}, 'game')).toBe(rulesOf({ tools: [theirs] }, undefined));
     expect(rulesOf({}, 'game')).toEqual([]);
+  });
+});
+
+describe('appliedRulesOf', () => {
+  it("applies the repository's rules while they're on", () => {
+    expect(appliedRulesOf({ game: [mine] }, { tools: true }, 'game')).toEqual([mine]);
+  });
+
+  it("applies none while they're off, keeping them", () => {
+    const rulesByRepository = { game: [mine] };
+    expect(appliedRulesOf(rulesByRepository, { game: true }, 'game')).toBe(rulesOf({}, 'game'));
+    expect(rulesOf(rulesByRepository, 'game')).toEqual([mine]);
   });
 });
