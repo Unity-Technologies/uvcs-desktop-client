@@ -296,7 +296,7 @@ describe('IssueTrackers', () => {
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const started = await engine.startDeviceSignIn({ connectionId: 'id1' });
     expect(started).toMatchObject({ userCode: 'C' });
-    expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept' } });
+    expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept', signInMethod: 'deviceCode' } });
     expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer gho_again');
     expect(engine.setup().bindings).toHaveLength(1);
   });
