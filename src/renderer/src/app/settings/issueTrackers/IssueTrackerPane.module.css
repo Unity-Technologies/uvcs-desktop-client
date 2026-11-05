@@ -536,6 +536,72 @@
   }
 }
 
+/* The sign-ins under a connected tracker: no card, a small title, compact rows; Sign out on the row pointed at. */
+.quietSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2) var(--space-1) 0;
+}
+
+.quietTitle {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.quietList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quietRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+}
+
+.quietText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quietAccount {
+  color: var(--text-tertiary);
+}
+
+.quietTag {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.quietRow > .rowAction {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.quietRow:hover > .rowAction,
+.quietRow:focus-within > .rowAction {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quietRow > .rowAction {
+    transition: none;
+  }
+}
+
 /* The token step's two numbered steps, a line joining their numbers; the first checked once a token is pasted. */
 .guide {
   display: flex;

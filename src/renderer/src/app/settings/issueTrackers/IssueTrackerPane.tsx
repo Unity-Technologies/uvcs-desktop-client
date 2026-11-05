@@ -1,9 +1,7 @@
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
 import { workspacePathOf } from '@shared/domain/place';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
-import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
@@ -28,12 +26,14 @@ export function IssueTrackerPane() {
   return (
     <div className={styles.pane}>
       {repository ? <RepositoryTracker repository={repository} /> : <SignInAlone />}
-      {(repository || setup.connections.length > 0) && <SignInsCard {...(repository && { repository })} />}
     </div>
   );
 }
 
-/** Connect while the repository has no tracker (or the user is changing it); the connected card once it has. */
+/**
+ * Connect while the repository has no tracker (or the user is changing it), alone, so nothing else competes with its
+ * steps; once it has one, its card, and the sign-ins this computer keeps quietly under it.
+ */
 function RepositoryTracker({ repository }: { repository: string }) {
   const setup = useIssueTrackerSetup();
   const connected = connectedTrackerOf(setup, repository);
@@ -47,7 +47,12 @@ function RepositoryTracker({ repository }: { repository: string }) {
   if (!connected || changing) {
     return <ConnectTracker repository={repository} onConnected={done} onCancel={connected ? () => setChanging(false) : undefined} />;
   }
-  return <TrackerCard repository={repository} connected={connected} justConnected={justConnected} onSettled={() => setJustConnected(null)} onChange={() => setChanging(true)} />;
+  return (
+    <>
+      <TrackerCard repository={repository} connected={connected} justConnected={justConnected} onSettled={() => setJustConnected(null)} onChange={() => setChanging(true)} />
+      <SignInsCard repository={repository} />
+    </>
+  );
 }
 
 /**
@@ -58,11 +63,5 @@ function SignInAlone() {
   const signIns = useIssueTrackerSetup()?.connections.length ?? 0;
   const [adding, setAdding] = useState(false);
   if (signIns === 0 || adding) return <ConnectTracker onConnected={() => setAdding(false)} {...(signIns > 0 && { onCancel: () => setAdding(false) })} />;
-  return (
-    <div className={styles.row}>
-      <Button size="small" icon={<Plus size={14} />} onClick={() => setAdding(true)}>
-        Add a sign-in
-      </Button>
-    </div>
-  );
+  return <SignInsCard onAdd={() => setAdding(true)} />;
 }
