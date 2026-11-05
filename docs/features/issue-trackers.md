@@ -1,8 +1,8 @@
 # Issue trackers
 
-Jira (Cloud and Data Center) and GitHub (github.com, its data residency hosts and Enterprise Server), connected per
-user on each machine. A repository that uses a tracker shows the issues its comments name as chips, with their title and status.
-Later features build on the pieces named here.
+Jira (Cloud and Data Center) and GitHub (github.com, its data residency hosts and Enterprise Server), connected per user
+on each machine. A repository that uses a tracker shows the issues its comments name as chips, with their title and
+status. Later features build on the pieces named here.
 
 ## The principle: the link lives in the text
 
@@ -104,10 +104,11 @@ built for every tracker with their fixtures; nothing is stubbed before.
   message names the host and the path, never a query string, a header or a body.
 - **The command log** shows each request beside `cm`'s (`trackerLogEntry`, `CmClient.logEntry`, numbered with them):
   `CommandLogEntry.source` is `tracker`, its line the method, host and path without the query (`POST
-  acme.atlassian.net/rest/api/3/issue/bulkfetch`), its `httpStatus` the answer's. A failure keeps the
-  `TrackerError`'s words as `output`; a failed answer adds the tracker's own error words (Jira's `errorMessages` and
-  `errors`, GitHub's `message`, at most 300 characters: `failedAnswerWords`), so a request the app got wrong (a 400)
-  says why there, never to the user; the log words its ending "HTTP 404", or "No answer" (`entryEnding`). A window's log gets the requests its own calls made (`ranInPlace`).
+  acme.atlassian.net/rest/api/3/issue/bulkfetch`), its `httpStatus` the answer's. A failure keeps the `TrackerError`'s
+  words as `output`; a failed answer adds the tracker's own error words (Jira's `errorMessages` and `errors`, GitHub's
+  `message`, at most 300 characters: `failedAnswerWords`), so a request the app got wrong (a 400) says why there, never
+  to the user; the log words its ending "HTTP 404", or "No answer" (`entryEnding`). A window's log gets the requests its
+  own calls made (`ranInPlace`).
 
 ### Errors
 
@@ -279,15 +280,15 @@ a digit, `&`, `/`, `.`, `:`, `#`, `\` or `-`, so `&#123;`, `docs/a.md#12` and `a
 digits (`#112233`) and "the #1 cause" are candidates, as GitHub reads them, so a bare `#N` is a chip only once read
 as found (below).
 
-**Issue addresses** are the one reference read inside a link. Markdown (GitHub's) makes a bare `https://…` a link,
-and `writtenRanges` keeps every reference out of a link, so the reference comes from the link node itself, with no
-second URL parser: `writtenRanges` takes the binding's reader, and a link node whose text is its own address (bare, or
-`<https://…>`) and which `issueAtAddress` reads as an issue's own page becomes that issue's reference, at the node's
-own offsets (`issueAddressOf`). A link with its own text (`[the bug](…)`), an address that only holds a key in its
-query (`?selectedIssue=VCS-12`, `issueInView`), and another server's page stay as they were (`markdownIssues.test.ts`).
-The chip shows its key; copying gives back the address. The comment editor reads them the same way, from its own syntax tree's
-`URL` and `Autolink` nodes (`issueAddressesIn` in `liveMarks`): a pasted address of a bound project's issue draws as
-its chip while the caret is away, and stays the address as written.
+**Issue addresses** are the one reference read inside a link. Markdown (GitHub's) makes a bare `https://…` a link, and
+`writtenRanges` keeps every reference out of a link, so the reference comes from the link node itself, with no second
+URL parser: `writtenRanges` takes the binding's reader, and a link node whose text is its own address (bare, or
+`<https://…>`) and which `issueAtAddress` reads as an issue's own page becomes that issue's reference, at the node's own
+offsets (`issueAddressOf`). A link with its own text (`[the bug](…)`), an address that only holds a key in its query
+(`?selectedIssue=VCS-12`, `issueInView`), and another server's page stay as they were (`markdownIssues.test.ts`). The
+chip shows its key; copying gives back the address. The comment editor reads them the same way, from its own syntax
+tree's `URL` and `Autolink` nodes (`issueAddressesIn` in `liveMarks`): a pasted address of a bound project's issue draws
+as its chip while the caret is away, and stays the address as written.
 
 ### Ambiguous links
 
@@ -305,9 +306,9 @@ its chip while the caret is away, and stays the address as written.
 ## How references show and read
 
 - **The chip** (`IssueChip`, through `ReferenceChip` for `chipContent`'s `issue`): its mark (`IssueStatusIcon`: a circle
-  with a dot, quiet until read, then its status's color), the key, and in a comment shown in full the title once read (`issueChipShape`). Its card
-  (`ChipHoverCard`, `issueCard`) shows the title, then the status, type and assignee. A click opens the issue's page in
-  the browser. Copying a part of a comment gives the reference as written.
+  with a dot, quiet until read, then its status's color), the key, and in a comment shown in full the title once read
+  (`issueChipShape`). Its card (`ChipHoverCard`, `issueCard`) shows the title, then the status, type and assignee. A
+  click opens the issue's page in the browser. Copying a part of a comment gives the reference as written.
 - **Without a sign-in, or when the tracker fails** (rate limited, out of reach, no access, credential refused), the
   chip is still a link to the issue's page, and its card says why there's nothing more; a tracker that refuses the
   read itself (a 403 to the whole batch) says "Your Jira token can't read issues" ("sign-in" for GitHub). Nothing
@@ -323,9 +324,10 @@ its chip while the caret is away, and stays the address as written.
 - **Batched**: each issue is its own query (`issueQuery`, keyed `issueKeys.issue(connectionId, key)`), so a chip
   anywhere finds what another read. Their reads go through `IssueReadBatch`, which gathers every key asked in the same
   task, splits them per connection and asks `issueTrackers.readIssues` once per connection: Jira Cloud's `POST
-  /rest/api/3/issue/bulkfetch`, Jira Data Center's `GET /rest/api/2/search` (`key in (…)`; a read-only token allows only GET, and an address past
-  `MAX_SEARCH_URL_LENGTH`, 6,000 characters, splits into more searches: `searchUrls`), GitHub's GraphQL with one `issueOrPullRequest` alias per issue, the repositories as
-  variables. The shared request belongs to no one query: cancelling one never aborts it.
+  /rest/api/3/issue/bulkfetch`, Jira Data Center's `GET /rest/api/2/search` (`key in (…)`; a read-only token allows only
+  GET, and an address past `MAX_SEARCH_URL_LENGTH`, 6,000 characters, splits into more searches: `searchUrls`), GitHub's
+  GraphQL with one `issueOrPullRequest` alias per issue, the repositories as variables. The shared request belongs to no
+  one query: cancelling one never aborts it.
 - **Cached**: `staleTime` five minutes (`ISSUE_FRESH_MS`), a missing issue too; `refetchOnWindowFocus`, so a focus
   reads again only the issues on screen and only once stale; no reconnect read and no retry, as `TrackerHttp` and its
   cooldown decide when to ask again. A failure is an answer (`unreadable`, with when to try again), fresh for
@@ -362,9 +364,9 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
     (`ISSUE_WORDS_MIN_LENGTH`), cached per words (`issueSearchQuery`). The issue a key names comes first, then the
     local matches, then the search's, each once, the best `SUGGESTION_LIMIT`.
   - Each row: the issue's mark in its status's color, the reference as it will be written, the title.
-- **A pick** writes the reference as the place's comments read it back (`referenceText`), its `#` kept as `@` and
-  `cs:` are: `#VCS-12` on Jira, `#12` for the one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes with it (`picked` seeds
-  `issueKeys.issue`), so its chip shows its title and status at once.
+- **A pick** writes the reference as the place's comments read it back (`referenceText`), its `#` kept as `@` and `cs:`
+  are: `#VCS-12` on Jira, `#12` for the one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes
+  with it (`picked` seeds `issueKeys.issue`), so its chip shows its title and status at once.
 - **When it can't**, one quiet row, never picked (Enter stays a line end, typing goes on as text): "Reading issues…",
   "No open issues assigned to you", "No issues match “x”", "No issue VCS-99", "Couldn't search Jira", and for a
   sign-in that needs renewing "Sign in to Jira again in Settings", which asks nothing.
@@ -400,17 +402,18 @@ once it works, no "coming soon"). The one picked opens Connect at its link step,
 the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in one
 click. Under a repository's connected tracker they're a quiet section with a small title.
 
-**A repository with no tracker** (`RepositoryStart`; which of the repository's cards shows: `repositoryTrackerView`) reads as Home does: "Connect an issue tracker", what it does, the
-sign-ins that work (`usableSignIns`), each with Use, or "No sign-ins yet", and "Add a sign-in" in the header, signing
-in and connecting at once. When the branch comments the window already read hold issue addresses a grammar recognizes
-(`suggestedTrackerLink`, over the cached branch lists, no command), "Your branch comments link to Jira" above them,
-with "Use it", which fills the link. Never filled in silently. "Change tracker…" on a connected tracker opens it with
-Back. A big picker of tracker cards before any of this was tried and dropped: with sign-ins already kept, it hid that
-connecting was one click away.
+**A repository with no tracker** (`RepositoryStart`; which of the repository's cards shows: `repositoryTrackerView`)
+reads as Home does: "Connect an issue tracker", what it does, the sign-ins that work (`usableSignIns`), each with Use,
+or "No sign-ins yet", and "Add a sign-in" in the header, signing in and connecting at once. When the branch comments the
+window already read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over the cached branch lists, no
+command), "Your branch comments link to Jira" above them, with "Use it", which fills the link. Never filled in silently.
+"Change tracker…" on a connected tracker opens it with Back. A big picker of tracker cards before any of this was tried
+and dropped: with sign-ins already kept, it hid that connecting was one click away.
 
 **Connect** (`ConnectTracker`), from what was picked (`ConnectStart`: the tracker, the sign-in to use, or a suggested
-link), its header the title and its steps (`ConnectSteps`, `connectSteps`, `connectStage`): the tracker, done, then Link, then Sign in,
-or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to where it was started.
+link), its header the title and its steps (`ConnectSteps`, `connectSteps`, `connectStage`): the tracker, done, then
+Link, then Sign in, or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to where it was
+started.
 
 1. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it
    (`TrackerChoiceCard.examples`), and, when a sign-in was picked, whose it is above it (`pickedSignInShown`). Pasted,
@@ -420,14 +423,14 @@ or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to 
    so (`choiceAfterLink`, `switchedWords`).
 2. **Sign in** (`signInStepFor`): when a connection already covers the link, "Connect" (with "Next: connect with your
    Jira sign-in" when it wasn't picked), and "Use a different account" beside it (another account's project, a token
-   that can't read this one, a shared computer): the ways to sign in. On Jira it says the new account replaces the
-   kept one for every repository that uses it (one sign-in per server: `replacesWords`); on GitHub a token's reach
-   decides (a fine-grained token is a sign-in of its own), so it promises nothing. Otherwise the tracker's best sign-in method
+   that can't read this one, a shared computer): the ways to sign in. On Jira it says the new account replaces the kept
+   one for every repository that uses it (one sign-in per server: `replacesWords`); on GitHub a token's reach decides (a
+   fine-grained token is a sign-in of its own), so it promises nothing. Otherwise the tracker's best sign-in method
    ("Sign-in"). A token is two numbered steps (`TokenSignIn`, `tokenStepWords`): "Get a token from Jira", one line on
    what to do there and that the app only reads with it, and one button opening its page (and, for Data Center, the
    other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`); then "Paste it here", the field with Sign in beside it. One
-   button leads (`tokenStepLead`): the page's until a token is in the field, then Sign in, and step one is checked.
-   A failure is said under it, scrolled into view.
+   button leads (`tokenStepLead`): the page's until a token is in the field, then Sign in, and step one is checked. A
+   failure is said under it, scrolled into view.
 
 **Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its name, kind and host, how it
 stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Change tracker…" (a repository has one tracker, so it replaces
