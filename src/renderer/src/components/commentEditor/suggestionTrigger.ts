@@ -35,10 +35,11 @@ function triggerAlternatives(): string {
 const EMOJI_NAME = /^[a-z0-9_+-]{2,}$/;
 
 /**
- * What may follow `#` for an issue: a key, a number or a word of its title. Never another `#` (`##` is a heading's
- * start); a space after `#` (`# Title`) ends the word before it starts, so a heading opens nothing.
+ * What may follow `#` for an issue: a key, a number or a word of its title, with the title's own marks
+ * (`[Desktop]`, `(crash)`), which the search drops. Never another `#` (`##` is a heading's start); a space after `#`
+ * (`# Title`) ends the word before it starts, so a heading opens nothing.
  */
-const ISSUE_TEXT = /^[\p{L}\p{N}_-]*$/u;
+const ISSUE_TEXT = /^(?!#)\S*$/u;
 
 /** What a person's name may hold as typed, as `cm` names owners (`DOMAIN\name`, an email address). */
 const PERSON_NAME = /^[\p{L}\p{N}_.+\\@-]*$/u;
