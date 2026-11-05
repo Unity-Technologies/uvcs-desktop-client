@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { CircleDot } from 'lucide-react';
 import { useMemo, useState, type MouseEvent } from 'react';
 import { api } from '../../api/client';
 import { chipName } from '../comments/chipContent';
@@ -8,6 +7,7 @@ import { issueCard, issueChipShape, issueUrlToOpen, type IssueReference } from '
 import { issueQuery } from './issueQueries';
 import type { PlaceTracker } from './placeTracker';
 import styles from '../comments/ReferenceChip.module.css';
+import { IssueStatusIcon } from './IssueStatusIcon';
 
 interface IssueChipProps {
   reference: IssueReference;
@@ -36,7 +36,7 @@ export function IssueChip({ reference, source, tracker, compact, interactive }: 
   const shown = { className: styles.chip, 'data-icon': 'issue', 'data-source': source, 'data-tip': '' };
   const content = (
     <>
-      {shape.category ? <span className={styles.status} data-category={shape.category} aria-hidden /> : <CircleDot className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />}
+      <IssueStatusIcon category={shape.category} size={compact ? 12 : 13} />
       <span className={styles.label}>{shape.label}</span>
       {shape.summary && <span className={styles.summary}>{shape.summary}</span>}
     </>

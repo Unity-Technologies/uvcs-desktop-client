@@ -241,8 +241,8 @@ issue type; "Issue" or "Pull request" on GitHub), `assignee`, `url`.
 Canonical keys: a Jira key as Jira writes it (`VCS-12`); a GitHub one as `owner/repo#12`, owner and repository lower
 case, as GitHub compares them (`githubKey`).
 
-`IssueStatusCategory` is the same four for every tracker, so any UI colors them alike (a dot on the chip, the
-`--issue-*` tokens):
+`IssueStatusCategory` is the same four for every tracker, so any UI colors them alike (the issue's mark,
+`IssueStatusIcon`, on the chip and in the `#` list; the `--issue-*` tokens):
 
 | Category | Jira (`statusCategory.key`) | GitHub issue | GitHub pull request |
 | --- | --- | --- | --- |
@@ -304,8 +304,8 @@ its chip while the caret is away, and stays the address as written.
 
 ## How references show and read
 
-- **The chip** (`IssueChip`, through `ReferenceChip` for `chipContent`'s `issue`): its status's dot (or the issue
-  icon until read), the key, and in a comment shown in full the title once read (`issueChipShape`). Its card
+- **The chip** (`IssueChip`, through `ReferenceChip` for `chipContent`'s `issue`): its mark (`IssueStatusIcon`: a circle
+  with a dot, quiet until read, then its status's color), the key, and in a comment shown in full the title once read (`issueChipShape`). Its card
   (`ChipHoverCard`, `issueCard`) shows the title, then the status, type and assignee. A click opens the issue's page in
   the browser. Copying a part of a comment gives the reference as written.
 - **Without a sign-in, or when the tracker fails** (rate limited, out of reach, no access, credential refused), the
@@ -361,7 +361,7 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
   - Words are searched on the tracker once typing settles (`SERVER_SEARCH_DELAY_MS`) and from three characters
     (`ISSUE_WORDS_MIN_LENGTH`), cached per words (`issueSearchQuery`). The issue a key names comes first, then the
     local matches, then the search's, each once, the best `SUGGESTION_LIMIT`.
-  - Each row: the status's dot, the reference as it will be written, the title.
+  - Each row: the issue's mark in its status's color, the reference as it will be written, the title.
 - **A pick** writes the reference as the place's comments read it back (`referenceText`), its `#` kept as `@` and
   `cs:` are: `#VCS-12` on Jira, `#12` for the one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes with it (`picked` seeds
   `issueKeys.issue`), so its chip shows its title and status at once.
