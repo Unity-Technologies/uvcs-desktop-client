@@ -34,6 +34,7 @@ you touch:
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
+| `features/issue-trackers.md`             | Issue trackers (Jira, GitHub, GitLab, Linear): connecting per user, the tracker's grammar and provider, secrets, issue references in comments and their chips, `#` suggestions, the trackers' request budget |
 
 ## How a request flows
 
