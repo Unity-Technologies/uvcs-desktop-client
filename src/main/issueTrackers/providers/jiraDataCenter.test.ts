@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { signInFailureOf } from '../signIn/signInFailures';
 import { fakeTrackerHttp, type TrackerAnswers } from '../testing/fakeTrackerHttp';
+import { COUNT_TIMEOUT_MS } from './IssueTrackerProvider';
 import { jiraDataCenterProvider, MAX_SEARCH_URL_LENGTH, searchUrls } from './jiraDataCenter';
 
 const SERVER = 'https://jira.acme.com';
@@ -89,6 +90,24 @@ describe('the Jira Data Center provider', () => {
       [`GET ${searchUrl({ jql: `${open} AND assignee = currentUser()`, maxResults: '0' })}`]: { status: 429, headers: { 'Retry-After': '30' } },
     });
     expect(await jiraDataCenterProvider.projectAccess(http, { server: SERVER }, 'VCS')).toEqual({ project: 'VCS', name: 'Version Control' });
+  });
+
+  it('proves a project whose counts never answer once they’ve had their time, the counts left out', async () => {
+    // A count over millions of issues may take longer than a whole request's budget: it must never hold the proof.
+    vi.useFakeTimers();
+    try {
+      const open = 'project = "VCS" AND statusCategory != Done';
+      const { http } = connected({
+        [`GET ${SERVER}/rest/api/2/project/VCS`]: { json: { key: 'VCS', name: 'Version Control' } },
+        [`GET ${searchUrl({ jql: open, maxResults: '0' })}`]: { hangs: true },
+        [`GET ${searchUrl({ jql: `${open} AND assignee = currentUser()`, maxResults: '0' })}`]: { hangs: true },
+      });
+      const proof = jiraDataCenterProvider.projectAccess(http, { server: SERVER }, 'VCS');
+      await vi.advanceTimersByTimeAsync(COUNT_TIMEOUT_MS);
+      expect(await proof).toEqual({ project: 'VCS', name: 'Version Control' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reads every key in one search, a missing one as missing, its status by category', async () => {

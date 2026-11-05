@@ -9,6 +9,8 @@ export interface TrackerAnswer {
   headers?: Record<string, string>;
   /** No answer comes: the network failed. */
   unreachable?: true;
+  /** No answer comes until the request is canceled (its signal aborts): a tracker that takes too long. */
+  hangs?: true;
 }
 
 /** A request the fake was asked, as it was sent. */
@@ -71,6 +73,9 @@ export function fakeTrackerHttp(answers: TrackerAnswers = {}, { now = () => 0 }:
     }
     const answer = typeof found === 'function' ? found(request) : Array.isArray(found) ? nextOf(found, key) : found;
     if (answer.unreachable) throw new Error(`${key}: the network failed`);
+    if (answer.hangs) {
+      await new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error(`${key}: canceled`))));
+    }
     return responseOf(answer);
   };
 
