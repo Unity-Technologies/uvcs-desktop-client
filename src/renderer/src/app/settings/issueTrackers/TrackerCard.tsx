@@ -34,7 +34,7 @@ interface TrackerCardProps {
 export function TrackerCard({ repository, connected, justConnected, onSettled, onChange }: TrackerCardProps) {
   const { connection } = connected;
   const signInNeeded = needsSignIn(connection);
-  const projects = useBoundProjects(repository, connection.id, connected.projectKeys, !signInNeeded);
+  const projects = useBoundProjects(repository, connection, connected.projectKeys, !signInNeeded);
   const status = trackerStatus(connection, projects.data);
   const header = trackerHeader(connection);
   const account = accountLines(connection.account);
