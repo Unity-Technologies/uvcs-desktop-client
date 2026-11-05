@@ -22,7 +22,8 @@ export const jiraCloudGrammar: TrackerGrammar = {
     if (!isJiraCloudHost(url.hostname)) return null;
     const server = `https://${url.hostname.toLowerCase()}`;
     const browsed = /^\/browse\/([^/]+)\/?$/.exec(url.pathname)?.[1];
-    const browsedKey = browsed && KEY.exec(decodeURIComponent(browsed));
+    // A key is plain ASCII, never percent-encoded: the path is read as it is, so a malformed one (`%E0`) is no key.
+    const browsedKey = browsed && KEY.exec(browsed);
     if (browsedKey) return { kind: 'jiraCloud', server, project: browsedKey[1]!, key: browsedKey[0], shows: 'issuePage' };
     const selected = KEY.exec(url.searchParams.get('selectedIssue') ?? '');
     if (selected) return { kind: 'jiraCloud', server, project: selected[1]!, key: selected[0], shows: 'issueInView' };
