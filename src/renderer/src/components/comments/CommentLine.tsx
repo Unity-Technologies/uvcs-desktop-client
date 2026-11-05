@@ -2,6 +2,7 @@ import { memo, useMemo, type ReactNode } from 'react';
 import { commentLineInlines } from '../../lib/comments/commentHeading';
 import type { MarkdownInline } from '../../lib/markdown';
 import { Highlight } from '../../ui/Highlight';
+import { useIssueReferences } from '../issues/useIssueTrackers';
 import { copyAsSource } from './copyAsSource';
 import { ReferenceChip } from './ReferenceChip';
 import styles from './CommentLine.module.css';
@@ -20,7 +21,8 @@ interface CommentLineProps {
  * description instead), links as their text. Its words are marked where the list's filter matched (`Highlight`).
  */
 export const CommentLine = memo(function CommentLine({ comment, interactive = true, placeholder = null }: CommentLineProps) {
-  const inlines = useMemo(() => commentLineInlines(comment), [comment]);
+  const issues = useIssueReferences();
+  const inlines = useMemo(() => commentLineInlines(comment, issues), [comment, issues]);
   if (inlines.length === 0) return placeholder;
   return <span onCopy={copyTitleAsSource}>{renderInlines(inlines, interactive)}</span>;
 });

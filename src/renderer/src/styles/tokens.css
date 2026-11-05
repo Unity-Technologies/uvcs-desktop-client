@@ -150,6 +150,13 @@
   --status-private: #6e7781;
   --status-conflict: #cf222e;
 
+  /* An issue's status category, the same four for every tracker (`IssueStatusCategory`): a dot beside its key. Each
+     theme's own colors, through the tokens they name. */
+  --issue-todo: var(--status-private);
+  --issue-in-progress: var(--focus-color);
+  --issue-done: var(--status-added);
+  --issue-canceled: var(--status-private);
+
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
   --change-changed: #1f6feb;
