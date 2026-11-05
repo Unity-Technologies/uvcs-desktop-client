@@ -61,9 +61,18 @@ you touch:
      workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
-   - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
-     characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
-     So is, on Windows, a command that prints text (see Parsing).
+   - A command that takes a process runs in a `cm shell` of its own, which reads its command line and exits after
+     it (`processCommand`), for one of three reasons; anything else starts `cm` as it is:
+     - It is an operation (`isOperation`: what changes the workspace, a shelve, a sync, a push or a pull), on every
+       OS: `cm` counts a `cm shell`'s commands as the app's, and a plain process's as a script's. The shell's start
+       costs about half a second, so the quick reads that take a process (a connection check, `version`, `cat`, a read
+       before the pooled sessions are warm) don't run in one on macOS and Linux.
+     - Its command line is too long to start a process with (a checkin or shelve of thousands of paths: Windows takes
+       32,767 characters, quotes included): still one command, never split.
+     - On Windows, it prints text (see Parsing).
+     A command with an argument a shell's line can't carry exactly (`canRunInShell`: a quote, a line break, leading or
+     trailing whitespace, an empty argument) starts as it is whatever the reason; comments never do, since they go
+     through `-commentsfile`. The shell reads `exit` after the command, so an operation never asks a question.
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
      `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
@@ -381,7 +390,7 @@ and many people use the same server. Every `cm` command other than local reads (
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
   it, `changesetsService`); merges and labels come either way.
-- Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
+- Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments (`canRunInShell`).
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
   downloads' folders: `removeFoldersOfGoneProcesses`, only a process that is gone, never another app's running beside it).
