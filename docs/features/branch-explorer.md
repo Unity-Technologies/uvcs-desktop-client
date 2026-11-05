@@ -69,9 +69,10 @@ The display options' third tab (`ChangesetColorsTab`) gives each person picked a
 repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
 yet, by name (`usersToAdd`); each one added takes the first of `BRANCH_HUES` no one has (`withUsersAdded`). A
 changeset's color is its format rule's, else its author's, else its branch's: the authors' colors go under the rules'
-(`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off and keeps the list. The first person added
-turns them back on, as the empty tab shows no switch (`withUsersAdded`). The tab
-reads the view's own history query, so opening it asks the server nothing.
+(`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off in the window's repository
+alone and keeps the list, as "Apply these rules" does (`setUserColorsOn`, `useAppliedUserColors`). With no one colored,
+the tab shows no switch, so adding the first person turns the colors on there (`addingTurnsColorsOn`). The tab reads
+the view's own history query, so opening it asks the server nothing.
 
 ## Loading
 
