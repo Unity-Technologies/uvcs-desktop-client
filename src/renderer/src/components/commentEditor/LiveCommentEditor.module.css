@@ -129,6 +129,14 @@
   font-weight: var(--weight-semibold);
 }
 
+/* A line of `#`s alone (`plain`): an issue's `#` being typed, not yet a heading, keeps the text's size and weight. */
+.editor :global(.cm-plainLine .cm-heading1),
+.editor :global(.cm-plainLine .cm-heading2),
+.editor :global(.cm-plainLine .cm-heading3) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .editor :global(.cm-emphasis) {
   font-style: italic;
 }

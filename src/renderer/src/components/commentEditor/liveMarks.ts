@@ -33,8 +33,12 @@ export type LiveMark =
   | { kind: 'selected'; from: number; to: number }
   /** A code block's fences and language, dimmed so the code stands out. */
   | { kind: 'fence'; from: number; to: number }
-  /** A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). */
-  | { kind: 'line'; at: number; block: 'quote' | 'code' | 'codeFirst' | 'codeLast' };
+  /**
+   * A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). Or a line
+   * that is only `#`s (`plain`): Markdown reads it as an empty heading, but it's an issue's `#` being typed, or a
+   * heading before its space, so it keeps the text's size until a space follows.
+   */
+  | { kind: 'line'; at: number; block: 'quote' | 'code' | 'codeFirst' | 'codeLast' | 'plain' };
 
 export interface LiveMarksOptions {
   /**
@@ -98,6 +102,10 @@ function markNode(state: EditorState, node: SyntaxNodeRef, reveals: (from: numbe
       if (parent?.parent?.name === 'BulletList') markBullet(node, reveals, marks);
       return;
     case 'HeaderMark':
+      if (parent?.name.startsWith('ATXHeading') && /^#+$/.test(state.sliceDoc(parent.from, parent.to))) {
+        marks.push({ kind: 'line', at: state.doc.lineAt(node.from).from, block: 'plain' });
+        return;
+      }
       // An underlined heading's `===` stays: only `#`s are a heading's mark before its text.
       if (parent?.name.startsWith('ATXHeading') && !reveals(parent.from, parent.to)) marks.push({ kind: 'hidden', from: node.from, to: withSpaceAfter(state, node.to) });
       return;
