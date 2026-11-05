@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { BrowserWindow, dialog, safeStorage, session, shell } from 'electron';
+import { safeStorage, session, shell } from 'electron';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
 import { GITHUB_OAUTH_CLIENT_IDS } from '@shared/issueTrackers/signInMethods';
-import { currentCaller } from '../ipc/caller';
+import { askHostConsent } from './askHostConsent';
 import { IssueTrackers } from './IssueTrackers';
 import { IssueTrackerStore } from './IssueTrackerStore';
 import { realWait } from './signIn/deviceFlow';
@@ -22,9 +22,10 @@ interface TrackersWiring {
 }
 
 /**
- * The issue trackers' engine with the app's real edges: the files in the user data folder, the system's keychain and
- * clipboard, and a session of its own for the requests, which sends no cookie (docs/features/issue-trackers.md, "The
- * HTTP client").
+ * The issue trackers' engine with the app's real edges: the files in the user data folder, the system's keychain, a
+ * session of its own for the requests, which sends no cookie (docs/features/issue-trackers.md, "The HTTP client"), the
+ * browser for the token pages, and main's own dialog asking before a sign-in goes to a host no tracker is known by
+ * (`askHostConsent`).
  *
  * A development build reads two variables: `UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for
  * GitHub's device flow, and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do
@@ -59,25 +60,4 @@ function sessionFetch(): TrackerFetch {
 function fakeFetch(modulePath: string): TrackerFetch {
   const fake = createRequire(__filename)(modulePath) as { fetch: TrackerFetch };
   return fake.fetch;
-}
-
-/**
- * Main's own question before a credential first goes to a host no tracker is known by (`needsHostConsent`), over the
- * window that asked: the host shown plainly, and only the user answers it.
- */
-async function askHostConsent(server: string): Promise<boolean> {
-  const caller = currentCaller();
-  const window = caller ? BrowserWindow.fromWebContents(caller) : null;
-  const host = new URL(server).host;
-  const question = {
-    type: 'question' as const,
-    message: `Sign in to ${host}?`,
-    detail: `Your token will be sent to ${host}. Sign in only if it's your company's GitHub Enterprise Server.`,
-    buttons: ['Sign In', 'Cancel'],
-    defaultId: 1,
-    cancelId: 1,
-    noLink: true,
-  };
-  const { response } = window ? await dialog.showMessageBox(window, question) : await dialog.showMessageBox(question);
-  return response === 0;
 }
