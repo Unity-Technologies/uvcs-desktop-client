@@ -491,6 +491,11 @@ the server's pace (`pollForToken`, `nextDevicePoll`: `authorization_pending` wai
 seconds more, `access_denied` and `expired_token` end it), then signs in as with a token. No client secret is needed,
 so none ships. "Use a token instead" is a quiet link beside the button.
 
+The app's OAuth App on github.com (its client id in `GITHUB_OAUTH_CLIENT_IDS`) has Device Flow on and "Expire user
+access tokens" off: the app keeps the access token alone, no refresh token, so a token that expired would ask the user
+to sign in again every eight hours. The token lasts until the user signs out or revokes the app on GitHub. Turning
+expiry on first needs the refresh: keeping the `refresh_token` as a secret and trading it for a new access token.
+
 A flow lives as long as the window that started it waits for it:
 
 - Its outcome waits until the window takes it (`finishDeviceSignIn`), even when it ended first.
