@@ -1,5 +1,5 @@
-/* Connect's steps (`ConnectSteps`): the tracker, Link, Sign in or Connect, under the card's title, across its width: the lines between the steps stretch, and turn
-   green as the steps before them are done. */
+/* Connect's steps (`ConnectSteps`): the tracker, Link, Sign in or Connect, under the card's title, across its width.
+   The lines between the steps stretch, and turn green as the steps before them are done. */
 .steps {
   display: flex;
   align-items: center;

@@ -32,6 +32,7 @@ export function TrackerCard({ repository, connected, onChange }: TrackerCardProp
   const projects = useBoundProjects(repository, connection, connected.projectKeys, !signInNeeded);
   const status = trackerStatus(connection, projects.data);
   const header = trackerHeader(connection);
+  const unreachable = unreachableWords(connection);
   const account = accountLines(connection.account);
   const entries = (): MenuEntry[] => [
     { id: 'changeTracker', label: 'Change tracker…', run: onChange },
@@ -73,8 +74,8 @@ export function TrackerCard({ repository, connected, onChange }: TrackerCardProp
       {status.tone === 'danger' && (
         <div className={styles.section}>
           <div className={styles.callout} data-tone="danger" role="alert">
-            <p className={styles.calloutTitle}>{unreachableWords(connection).title}</p>
-            <p className={styles.intro}>{unreachableWords(connection).detail}</p>
+            <p className={styles.calloutTitle}>{unreachable.title}</p>
+            <p className={styles.intro}>{unreachable.detail}</p>
             <div className={styles.row}>
               <Button size="small" loading={projects.isFetching} onClick={() => void projects.refetch()}>
                 Try again

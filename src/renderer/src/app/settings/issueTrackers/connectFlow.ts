@@ -188,7 +188,7 @@ export interface ConnectedTracker {
 }
 
 /** A connection in words, as the section names it: "Jira at acme.atlassian.net". */
-export function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'server'>): string {
+function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'server'>): string {
   return `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`;
 }
 

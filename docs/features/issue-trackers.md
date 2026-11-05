@@ -400,7 +400,7 @@ once it works, no "coming soon"). The one picked opens Connect at its link step,
 the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in one
 click. Under a repository's connected tracker they're a quiet section with a small title.
 
-**A repository with no tracker** (`RepositoryStart`) reads as Home does: "Connect an issue tracker", what it does, the
+**A repository with no tracker** (`RepositoryStart`; which of the repository's cards shows: `repositoryTrackerView`) reads as Home does: "Connect an issue tracker", what it does, the
 sign-ins that work (`usableSignIns`), each with Use, or "No sign-ins yet", and "Add a sign-in" in the header, signing
 in and connecting at once. When the branch comments the window already read hold issue addresses a grammar recognizes
 (`suggestedTrackerLink`, over the cached branch lists, no command), "Your branch comments link to Jira" above them,
@@ -409,7 +409,7 @@ Back. A big picker of tracker cards before any of this was tried and dropped: wi
 connecting was one click away.
 
 **Connect** (`ConnectTracker`), from what was picked (`ConnectStart`: the tracker, the sign-in to use, or a suggested
-link), its header the title and its steps (`ConnectSteps`, `connectSteps`): the tracker, done, then Link, then Sign in,
+link), its header the title and its steps (`ConnectSteps`, `connectSteps`, `connectStage`): the tracker, done, then Link, then Sign in,
 or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to where it was started.
 
 1. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it

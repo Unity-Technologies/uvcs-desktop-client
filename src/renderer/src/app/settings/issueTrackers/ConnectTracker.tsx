@@ -59,7 +59,7 @@ export function ConnectTracker({ repository, start, onConnected, onCancel }: Con
   };
 
   return (
-    <section className={styles.card} aria-label="Connect an issue tracker">
+    <section className={styles.card} aria-label={words.title}>
       <header className={styles.cardHeader}>
         <Button size="small" variant="ghost" className={styles.back} icon={<ChevronLeft size={15} />} aria-label="Back" onClick={onCancel} />
         <TrackerLogo choice={card.choice} />
