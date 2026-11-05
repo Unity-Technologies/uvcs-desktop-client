@@ -11,7 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchStartOfChangesets, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
 import { BranchChangesetList } from './BranchChangesetList';
 import { BranchDescription } from './BranchDescription';
 import { branchChangesetPane } from './branchChangesetPane';
@@ -61,8 +61,15 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   const shown = useMemo(() => filterBranchChangesets(changesets ?? [], query), [changesets, query]);
   const selectedId = selection.anchor === null ? null : Number(selection.anchor);
   const firstId = changesets?.[0]?.id;
-  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to.
-  const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: branchWorkedOn(workspace?.selector) };
+  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to. The whole
+  // branch read tells where it starts, for the branch diff up to a changeset.
+  const start = branchStartOfChangesets(changesets);
+  const menuContext = {
+    place,
+    loadedChangeset: workspace?.loadedChangeset,
+    loadedBranch: branchWorkedOn(workspace?.selector),
+    branchStartOf: (name: string) => (name === branch ? start : null),
+  };
 
   useEffect(() => {
     if (selectedId === null && firstId !== undefined) setSelection(singleSelection(String(firstId)));

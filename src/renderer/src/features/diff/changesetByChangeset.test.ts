@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -98,5 +98,16 @@ describe('changesetFilterPlaceholder', () => {
     expect(changesetFilterPlaceholder(undefined)).toBe('Filter changesets');
     expect(changesetFilterPlaceholder(1)).toBe('Filter 1 changeset');
     expect(changesetFilterPlaceholder(1204)).toBe('Filter 1,204 changesets');
+  });
+});
+
+describe('branchStartOfChangesets', () => {
+  it("is the oldest changeset and its parent, the list being the whole branch, newest first", () => {
+    expect(branchStartOfChangesets(branch)).toEqual({ firstChangeset: 280530, base: 280529 });
+  });
+
+  it("isn't known while the changesets are read, nor for a branch with none", () => {
+    expect(branchStartOfChangesets(undefined)).toBeNull();
+    expect(branchStartOfChangesets([])).toBeNull();
   });
 });
