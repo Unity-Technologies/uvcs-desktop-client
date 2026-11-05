@@ -1,6 +1,7 @@
 import type { BoundProjectsAnswer, IssueTrackerKind, ProjectAccess, TrackerConnection } from '@shared/domain/issueTrackers';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
-import { hostOf, needsSignIn, trackerKindName } from './connectFlow';
+import { needsSignIn } from '@shared/issueTrackers/connections';
+import { hostOf, trackerKindName } from './connectFlow';
 
 /** How a connection stands, as its status pill says it: fine, needing the user, or failing. */
 export type StatusTone = 'positive' | 'caution' | 'danger';

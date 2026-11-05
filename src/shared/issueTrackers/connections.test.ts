@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coveringConnection, needsHostConsent } from './connections';
+import { coveringConnection, needsHostConsent, needsSignIn } from './connections';
 
 const github = (id: string, scope: string) => ({ id, kind: 'github' as const, server: 'https://github.com', scope });
 
@@ -38,5 +38,11 @@ describe('needsHostConsent', () => {
   it('never takes a look-alike for a tracker’s host', () => {
     expect(needsHostConsent('https://github.com.evil.example', [])).toBe(true);
     expect(needsHostConsent('https://atlassian.net.evil.example', [])).toBe(true);
+  });
+});
+
+describe('needsSignIn', () => {
+  it('asks to sign in again only for a credential refused or gone, never for one kept or kept for the session', () => {
+    expect((['kept', 'session', 'refused', 'missing'] as const).map((credential) => needsSignIn({ credential }))).toEqual([false, false, true, true]);
   });
 });

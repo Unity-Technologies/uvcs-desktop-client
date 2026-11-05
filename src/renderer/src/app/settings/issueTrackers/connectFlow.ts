@@ -1,5 +1,5 @@
 import type { IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
-import { coveringConnection } from '@shared/issueTrackers/connections';
+import { coveringConnection, needsSignIn } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
 import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
@@ -22,11 +22,6 @@ export function trackerKindName(kind: IssueTrackerKind, server: string): string 
  */
 export function otherTokenPageOffered(kind: IssueTrackerKind): boolean {
   return kind === 'jiraDataCenter';
-}
-
-/** Whether a connection's credential needs signing in again: refused by the tracker, or gone from this computer. */
-export function needsSignIn(connection: Pick<TrackerConnection, 'credential'>): boolean {
-  return connection.credential === 'refused' || connection.credential === 'missing';
 }
 
 /** A server by its host, as people say it: `acme.atlassian.net`. */

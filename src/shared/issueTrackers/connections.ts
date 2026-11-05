@@ -2,6 +2,11 @@ import type { IssueTrackerKind, TrackerConnection } from '../domain/issueTracker
 import { isGitHubCloud } from './grammars/github';
 import { isJiraCloudHost } from './grammars/jiraCloud';
 
+/** Whether a connection's credential needs signing in again: refused by the tracker, or gone from this computer. */
+export function needsSignIn(connection: Pick<TrackerConnection, 'credential'>): boolean {
+  return connection.credential === 'refused' || connection.credential === 'missing';
+}
+
 /** A GitHub repository's owner (`acme` of `acme/game`), lower case as GitHub compares it. */
 export function ownerOf(project: string): string {
   return project.split('/')[0]!.toLowerCase();

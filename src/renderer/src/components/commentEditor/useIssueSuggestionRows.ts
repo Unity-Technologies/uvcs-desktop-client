@@ -1,5 +1,6 @@
 import { queryOptions, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type { IssueRead, IssueSearch, IssueSearchAnswer } from '@shared/domain/issueTrackers';
+import { needsSignIn } from '@shared/issueTrackers/connections';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../api/client';
 import { SERVER_SEARCH_DELAY_MS } from '../../app/commands/usePaletteServerSearch';
@@ -41,8 +42,8 @@ export function useIssueSuggestionRows(typed: string | null): { rows: Suggestion
   const queryClient = useQueryClient();
   const settled = useDebouncedValue(typed ?? '', SERVER_SEARCH_DELAY_MS);
   const open = typed !== null && tracker !== null && repository !== '';
-  const needsSignIn = tracker !== null && (tracker.connection.credential === 'refused' || tracker.connection.credential === 'missing');
-  const asking = open && !needsSignIn;
+  const signInNeeded = tracker !== null && needsSignIn(tracker.connection);
+  const asking = open && !signInNeeded;
   const reads = open ? issueSuggestionReads(tracker.reader, typed, settled) : { words: null, key: null };
   const mine = useQuery({ ...issueSearchQuery(repository, {}), enabled: asking });
   const words = useQuery({ ...issueSearchQuery(repository, { words: reads.words ?? '' }), enabled: asking && reads.words !== null });
@@ -58,7 +59,7 @@ export function useIssueSuggestionRows(typed: string | null): { rows: Suggestion
     typed,
     reader: tracker.reader,
     trackerName: TRACKER_GRAMMARS[tracker.connection.kind].name,
-    needsSignIn,
+    needsSignIn: signInNeeded,
     mine: searchRead(mine),
     words: reads.words !== null ? searchRead(words) : null,
     keyed: reads.key !== null ? { key: reads.key, read: keyed.isError ? { key: reads.key, kind: 'unreadable', reason: 'unexpected' } : keyed.data } : null,
