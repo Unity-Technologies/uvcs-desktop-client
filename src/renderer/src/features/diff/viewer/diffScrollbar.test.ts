@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { scrollTopForTrackPoint } from './changeMarks';
-import { MIN_THUMB_HEIGHT, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
+import { MIN_THUMB_HEIGHT, pressesThumb, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
 
 const sizes = { contentHeight: 4000, viewHeight: 500, trackHeight: 500 };
 
@@ -51,5 +51,20 @@ describe('a press on the track', () => {
     const pressed = scrollTopForTrackPoint(250, sizes);
     expect(pressed).toBe(1750);
     expect(scrollTopAfterDrag(pressed, 40, sizes)).toBe(2070);
+  });
+});
+
+describe('pressesThumb', () => {
+  const thumb = { top: 100, height: 60 };
+
+  it("takes the thumb from a press on any of its rows, whatever the point across the track's width", () => {
+    expect(pressesThumb(100, thumb)).toBe(true);
+    expect(pressesThumb(130, thumb)).toBe(true);
+    expect(pressesThumb(160, thumb)).toBe(true);
+  });
+
+  it('leaves a press above or below it to the track, which scrolls there', () => {
+    expect(pressesThumb(99, thumb)).toBe(false);
+    expect(pressesThumb(161, thumb)).toBe(false);
   });
 });
