@@ -26,12 +26,12 @@ describe('the prefixes the palette and the comment editor share', () => {
     const editorOwn = Object.keys(SUGGESTION_TRIGGERS).filter((trigger) => !shared.includes(trigger));
 
     expect(paletteOwn).toEqual(['>', '/']);
-    expect(editorOwn).toEqual([':']);
+    expect(editorOwn).toEqual([':', '#']);
     expect(parseScope(':tada').scope).toBe('all');
   });
 
-  it('leave `#` to issues: neither surface reads it', () => {
-    expect(SUGGESTION_TRIGGERS['#']).toBeUndefined();
+  it('give `#` to the editor, for issues; the palette doesn’t read it', () => {
+    expect(SUGGESTION_TRIGGERS['#']).toBe('issue');
     expect(parseScope('#12').scope).toBe('all');
   });
 });

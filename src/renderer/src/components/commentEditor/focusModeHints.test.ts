@@ -12,8 +12,13 @@ describe('focusModeHints', () => {
     ]);
   });
 
+  it('names `#` for issues only where the place has a tracker', () => {
+    expect(focusModeHints({ issues: true }).at(-1)).toEqual({ keys: ['#'], typed: true, label: 'issue' });
+    expect(focusModeHints().some((hint) => hint.keys.includes('#'))).toBe(false);
+  });
+
   it('names every trigger the suggestions take, so the hints follow what the editor reads', () => {
-    const typed = focusModeHints().flatMap((hint) => (hint.typed ? hint.keys : []));
+    const typed = focusModeHints({ issues: true }).flatMap((hint) => (hint.typed ? hint.keys : []));
     expect([...typed].sort()).toEqual(Object.keys(SUGGESTION_TRIGGERS).sort());
   });
 });

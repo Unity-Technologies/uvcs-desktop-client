@@ -1,7 +1,12 @@
 import { KeyHints } from '../../ui/KeyHints';
+import { useIssueReferences } from '../issues/useIssueTrackers';
 import { focusModeHints } from './focusModeHints';
 
-/** The comment editor's hints, a caption under the comment on one line: what the triggers write (`focusModeHints`). */
+/**
+ * The comment editor's hints, a caption under the comment on one line: what the triggers write (`focusModeHints`),
+ * `#` where the place has a tracker.
+ */
 export function FocusModeFooter() {
-  return <KeyHints caption oneLine hints={focusModeHints()} />;
+  const issues = useIssueReferences() !== undefined;
+  return <KeyHints caption oneLine hints={focusModeHints({ issues })} />;
 }

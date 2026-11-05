@@ -9,6 +9,7 @@ import { CHIP_ICONS } from '../comments/chipIcons';
 import { suggestionListPosition, type Box } from './popupPosition';
 import type { Suggestion } from './suggestionItems';
 import type { SuggestionRow } from './suggestionRows';
+import chipStyles from '../comments/ReferenceChip.module.css';
 import styles from './SuggestionList.module.css';
 
 interface SuggestionListProps {
@@ -106,6 +107,7 @@ function SuggestionRowContent({ suggestion }: { suggestion: Suggestion }) {
 function SuggestionIcon({ suggestion }: { suggestion: Suggestion }) {
   if (suggestion.glyph) return <span className={styles.emoji}>{suggestion.glyph}</span>;
   if (suggestion.person) return <Avatar user={suggestion.person} size={18} tip={null} />;
+  if (suggestion.kind === 'issue') return <span className={chipStyles.status} data-category={suggestion.category ?? 'todo'} aria-hidden />;
   if (suggestion.kind === 'emoji' || suggestion.kind === 'person') return null;
   const Icon = CHIP_ICONS[suggestion.kind];
   return <Icon className={styles.icon} size={14} strokeWidth={2.25} aria-hidden />;
