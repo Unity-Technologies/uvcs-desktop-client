@@ -59,15 +59,25 @@ export function linkReadBack(text: string): LinkReadBack {
   return { kind: 'problem', words: "That isn't a Jira or GitHub issue. Open an issue in your tracker and copy its address." };
 }
 
-/** What signing in to a pasted link's tracker takes: a connection already signed in, or the ways to sign in. */
-export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string };
+/**
+ * What signing in to a pasted link's tracker takes: a connection already signed in, or the ways to sign in. With
+ * `differentAccount` (the user chose "Use a different account" over the one there), the ways to sign in, naming the
+ * account the new one replaces: one sign-in per server, for every repository that uses it.
+ */
+export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string; replaces?: string };
 
-export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup): SignInStep {
+export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup, { differentAccount = false } = {}): SignInStep {
   const connection = coveringConnection(setup.connections, link.kind, link.server, link.project);
-  if (connection && (connection.credential === 'kept' || connection.credential === 'session')) {
+  const signedIn = connection && (connection.credential === 'kept' || connection.credential === 'session');
+  if (connection && signedIn && !differentAccount) {
     return { kind: 'useConnection', connection, words: `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)} · signed in as ${connection.account.name}` };
   }
-  return { kind: 'signIn', methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts), trackerName: TRACKER_GRAMMARS[link.kind].name };
+  return {
+    kind: 'signIn',
+    methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts),
+    trackerName: TRACKER_GRAMMARS[link.kind].name,
+    ...(connection && signedIn && { replaces: connection.account.name }),
+  };
 }
 
 /** Jira Cloud's email, filled in with the `cm` user when that's an address (as on Unity Cloud), else the one kept. */

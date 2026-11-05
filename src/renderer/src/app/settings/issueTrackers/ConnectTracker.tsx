@@ -42,10 +42,11 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
   const [choice, setChoice] = useState<TrackerChoice | null>(null);
   const [link, setLink] = useState('');
   const [switched, setSwitched] = useState(false);
+  const [differentAccount, setDifferentAccount] = useState(false);
   const read = linkReadBack(link);
   const suggestion = useSuggestedLink();
   const setup = useIssueTrackerSetup();
-  const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup) : null;
+  const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup, { differentAccount }) : null;
   const stage: ConnectStage = !choice ? 'tracker' : read.kind === 'read' ? 'signIn' : 'link';
   const card = choice ? trackerChoiceCard(choice) : null;
   const words = connectWords(card, repository !== undefined);
@@ -54,12 +55,14 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
     setChoice(chosen);
     setLink(text);
     setSwitched(false);
+    setDifferentAccount(false);
   };
   const typed = (text: string): void => {
     const next = choiceAfterLink(choice ?? 'jira', text);
     setLink(text);
     setChoice(next.choice);
     setSwitched(next.switched || (switched && text.trim() !== ''));
+    setDifferentAccount(false);
   };
   const back = choice ? () => choose(null) : onCancel;
 
@@ -94,7 +97,7 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
       )}
       {read.kind === 'read' && step && (
         <div className={`${styles.section} ${styles.arrives}`}>
-          <SignInFor key={link} link={read.link} linkText={link} step={step} repository={repository} onConnected={onConnected} />
+          <SignInFor key={`${link} ${differentAccount}`} link={read.link} linkText={link} step={step} repository={repository} onConnected={onConnected} onDifferentAccount={() => setDifferentAccount(true)} />
         </div>
       )}
     </section>
@@ -163,10 +166,12 @@ interface SignInForProps {
   step: SignInStep;
   repository: string | undefined;
   onConnected: (outcome: SignedIn) => void;
+  /** "Use a different account" over the sign-in already there. */
+  onDifferentAccount: () => void;
 }
 
 /** The sign-in step for a link read back: a sign-in already there in one click, else the tracker's best method. */
-function SignInFor({ link, linkText, step, repository, onConnected }: SignInForProps) {
+function SignInFor({ link, linkText, step, repository, onConnected, onDifferentAccount }: SignInForProps) {
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [tokenChosen, setTokenChosen] = useState(false);
   const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
@@ -176,18 +181,20 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
   };
 
   if (step.kind === 'useConnection') {
-    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} onConnected={onConnected} />;
+    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
     return (
       <div className={styles.next}>
         <p className={styles.nextTitle}>You're already signed in</p>
         <CheckedLine>
           Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
         </CheckedLine>
+        <DifferentAccountLink onClick={onDifferentAccount} />
       </div>
     );
   }
   return (
     <div className={styles.next}>
+      {step.replaces && <p className={styles.note}>Signing in here replaces {step.replaces}'s sign-in, for every repository that uses it.</p>}
       {method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
       {method === 'deviceCode' ? (
         <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
@@ -207,7 +214,7 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
 }
 
 /** Using a sign-in already there for the repository: one click, proven with the link's project. */
-function UseConnection({ link, linkText, step, repository, onConnected }: { link: RecognizedLink; linkText: string; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; onConnected: (outcome: SignedIn) => void }) {
+function UseConnection({ link, linkText, step, repository, onConnected, onDifferentAccount }: { link: RecognizedLink; linkText: string; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; onConnected: (outcome: SignedIn) => void; onDifferentAccount: () => void }) {
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [busy, setBusy] = useState(false);
   const finish = (outcome: SignInOutcome): void => {
@@ -230,6 +237,7 @@ function UseConnection({ link, linkText, step, repository, onConnected }: { link
         <Button size="small" variant="primary" loading={busy} onClick={() => void use()}>
           Use it
         </Button>
+        <DifferentAccountLink onClick={onDifferentAccount} />
       </div>
       {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
     </div>
@@ -246,4 +254,13 @@ function useSuggestedLink() {
     const comments = lists.flatMap(([, branches]) => (Array.isArray(branches) ? branches.map((branch) => branch.comment ?? '') : []));
     return suggestedTrackerLink(comments);
   }, [queryClient, place]);
+}
+
+/** A quiet way past the sign-in already there: signing in with another account instead (`signInStepFor`). */
+function DifferentAccountLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className={styles.textLink} onClick={onClick}>
+      Use a different account
+    </button>
+  );
 }

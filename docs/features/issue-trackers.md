@@ -403,7 +403,9 @@ brand colors as `--brand-*` tokens). What each card shows is decided in pure mod
    an issue says what it is and what to paste instead. A link to another tracker's issue is taken, never refused:
    the step moves to that tracker and says so (`choiceAfterLink`, `switchedWords`).
 3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and "Use
-   it". Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
+   it", with "Use a different account" beside it (another account's project, a token that can't read this one, a
+   shared computer): the ways to sign in, saying the new account replaces the kept one for every repository that uses
+   it (one sign-in per server: `replaces`). Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
    `tokenStepWords`): "Get a token from Jira", one line on what to do there and that the app only reads with it, and
    one button opening its page (and, for Data Center, the other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`);
    then "Paste it here", the field with Sign in beside it. One
