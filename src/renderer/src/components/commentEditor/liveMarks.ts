@@ -200,7 +200,8 @@ export interface FoundReference {
  */
 export function referencesIn(state: EditorState, from: number, to: number, options: LiveMarksOptions): FoundReference[] {
   const excluded = excludedRanges(state, from, to, options);
-  const found: FoundReference[] = issueAddressesIn(state, from, to);
+  // An address is itself one of the excluded ranges (`URL`, `Autolink`): only the others (code, a table drawn whole) hold it out.
+  const found: FoundReference[] = issueAddressesIn(state, from, to).filter((address) => !excluded.some(([start, end]) => start <= address.from && address.to <= end && (start !== address.from || end !== address.to)));
   for (let line = state.doc.lineAt(from); ; line = state.doc.line(line.number + 1)) {
     for (const reference of findReferences(line.text, state.facet(issueReferences) ?? undefined)) {
       const at = { from: line.from + reference.from, to: line.from + reference.to };
