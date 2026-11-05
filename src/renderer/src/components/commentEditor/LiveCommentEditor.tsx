@@ -295,11 +295,11 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!query) setDismissedAt(null);
   }, [query === null]);
 
-  const { rows, reading, searchAll, picked } = useSuggestionRows(open);
+  const { rows, searchAll, picked } = useSuggestionRows(open);
   // The cue at the word typed, apart from the list: the field shows it understood the trigger whatever the list does.
-  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null, reading });
-  const cueRange = query && cue ? { from: query.from, to: query.to, state: cue } : null;
-  const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}:${cueRange.state}` : '';
+  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null });
+  const cueRange = query && cue ? { from: query.from, to: query.to } : null;
+  const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}` : '';
   useEffect(() => {
     view?.dispatch({ effects: setSuggestionCue.of(cueRange) });
   }, [view, cueKey]);

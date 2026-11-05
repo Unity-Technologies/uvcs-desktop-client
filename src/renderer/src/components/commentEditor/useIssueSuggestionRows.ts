@@ -35,7 +35,7 @@ export function issueSearchQuery(repository: string, search: IssueSearch) {
  * read through the batched reads, words searched once typing settles (`issueSuggestionReads`). `picked` hands a
  * picked issue to its chip, so it shows read at once.
  */
-export function useIssueSuggestionRows(typed: string | null): { rows: SuggestionRow[]; reading: boolean; picked: (suggestion: Suggestion) => void } {
+export function useIssueSuggestionRows(typed: string | null): { rows: SuggestionRow[]; picked: (suggestion: Suggestion) => void } {
   const tracker = usePlaceTracker();
   const repository = usePlaceRepository() ?? '';
   const queryClient = useQueryClient();
@@ -53,7 +53,7 @@ export function useIssueSuggestionRows(typed: string | null): { rows: Suggestion
     const read: IssueRead = { key: suggestion.issue.key, kind: 'found', issue: suggestion.issue };
     queryClient.setQueryData(issueKeys.issue(tracker.connection.id, read.key), read);
   };
-  if (!open) return { rows: NO_ROWS, reading: false, picked };
+  if (!open) return { rows: NO_ROWS, picked };
   const rows = issueSuggestionRows({
     typed,
     reader: tracker.reader,
@@ -63,7 +63,7 @@ export function useIssueSuggestionRows(typed: string | null): { rows: Suggestion
     words: reads.words !== null ? searchRead(words) : null,
     keyed: reads.key !== null ? { key: reads.key, read: keyed.isError ? { key: reads.key, kind: 'unreadable', reason: 'unexpected' } : keyed.data } : null,
   });
-  return { rows, reading: mine.isFetching || words.isFetching || keyed.isFetching, picked };
+  return { rows, picked };
 }
 
 /** A search's query as the rows read it: a call that failed on its way (IPC) is a failed search. */

@@ -348,8 +348,9 @@ when it joins several (the rainbow flag, a white flag and a rainbow joined). A `
 The list opens on the trigger's key, always with a row: a pick, or "Reading branches…" with a spinner (`Spinner`,
 still with reduced motion), or "Couldn't read branches" when the read failed (never "No branches", which would read
 as a repository with none; typing the trigger again reads again). The word typed is underlined in the chips' accent
-from its trigger on (`suggestionCue`, `suggestionCueField`), pulsing gently while its list is read, so the field
-shows it understood `br:` whatever the list does. The list opens under the line or over it, always inside the
+from its trigger on (`suggestionCue`, `suggestionCueField`), so the field shows it understood `br:` whatever the list
+does. It looks the same while its list is read: the list's spinner says so. A pulse on the word was tried and dropped:
+it restarted on every key typed, and the word flickered. The list opens under the line or over it, always inside the
 window, and is placed again as its rows change size (`suggestionListPosition`, a `ResizeObserver`).
 
 The data is sized for a repository of 20,000 branches and 280,000 changesets (`useSuggestionRows`, `listedFrom`).
