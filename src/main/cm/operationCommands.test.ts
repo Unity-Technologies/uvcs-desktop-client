@@ -11,6 +11,8 @@ describe('isOperation', () => {
     ['a shelve', ['shelveset', 'create', '--all', '-commentsfile=/t/c.txt']],
     ['a shelve applied', ['shelveset', 'apply', 'sh:3']],
     ['a sync', ['sync', 'game@local', 'git', 'https://example.com/game.git']],
+    ['a push', ['push', 'br:/main@game@local', 'game@cloud']],
+    ['a pull', ['pull', 'br:/main@game@cloud', 'game@local']],
   ])('counts %s as an operation', (_kind, args) => {
     expect(isOperation(args)).toBe(true);
   });
