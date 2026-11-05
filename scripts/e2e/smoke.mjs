@@ -280,6 +280,7 @@ try {
     // Its empty state reads only the app's own file: no tracker is reached, and no keychain is asked.
     const settings = window.getByRole('dialog', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Issue tracker' }).click();
+    await settings.getByRole('group', { name: 'Trackers' }).getByRole('button', { name: /^Jira/ }).click();
     await settings.getByRole('textbox', { name: 'A link to an issue' }).waitFor({ timeout: TIMEOUT_MS });
   });
 } catch (error) {

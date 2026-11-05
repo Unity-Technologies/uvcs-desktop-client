@@ -15,7 +15,7 @@ import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep, type SuggestedLink } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './ProofLines';
-import { choiceAfterLink, choiceKeyMove, choiceOf, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
+import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 import { TrackerLogo } from './TrackerLogo';
 import { DeviceSignIn } from './DeviceSignIn';
@@ -25,7 +25,8 @@ import styles from './IssueTrackerPane.module.css';
 type SignedIn = Extract<SignInOutcome, { kind: 'signedIn' }>;
 
 interface ConnectTrackerProps {
-  repository: string;
+  /** None in a window with no repository: the sign-in alone, kept for any repository to use. */
+  repository?: string;
   onConnected: (outcome: SignedIn) => void;
   /** Changing a tracker already connected: back to it. */
   onCancel?: () => void;
@@ -47,6 +48,7 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
   const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup) : null;
   const stage: ConnectStage = !choice ? 'tracker' : read.kind === 'read' ? 'signIn' : 'link';
   const card = choice ? trackerChoiceCard(choice) : null;
+  const words = connectWords(card, repository !== undefined);
 
   const choose = (chosen: TrackerChoice | null, text = ''): void => {
     setChoice(chosen);
@@ -67,11 +69,11 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
         {back && <Button size="small" variant="ghost" className={styles.back} icon={<ChevronLeft size={15} />} aria-label="Back" onClick={back} />}
         {card && <TrackerLogo choice={card.choice} />}
         <div className={styles.cardHeaderText}>
-          <h2 className={styles.cardTitle}>{card ? `Connect ${card.name}` : 'Connect an issue tracker'}</h2>
+          <h2 className={styles.cardTitle}>{words.title}</h2>
           <ConnectSteps stage={stage} {...(card && { trackerName: card.name })} />
         </div>
       </header>
-      {!card && <TrackerPicker suggestion={suggestion} onChoose={choose} />}
+      {!card && <TrackerPicker intro={words.intro} suggestion={repository ? suggestion : null} onChoose={choose} />}
       {card && (
         <div className={styles.section}>
           <TextField className={styles.field} label={card.linkLabel} aria-label="A link to an issue" placeholder={card.placeholder} value={link} onChange={(event) => typed(event.target.value)} autoFocus />
@@ -103,7 +105,7 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
  * The first step: a card per tracker, its logo, name and servers, to click or reach with the arrows; above them, the
  * tracker the branch comments link to, in one click with its link filled in.
  */
-function TrackerPicker({ suggestion, onChoose }: { suggestion: SuggestedLink | null; onChoose: (choice: TrackerChoice, link?: string) => void }) {
+function TrackerPicker({ intro, suggestion, onChoose }: { intro: string; suggestion: SuggestedLink | null; onChoose: (choice: TrackerChoice, link?: string) => void }) {
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
   const arrows = (event: KeyboardEvent<HTMLDivElement>): void => {
     const at = cards.current.findIndex((card) => card === document.activeElement);
@@ -115,7 +117,7 @@ function TrackerPicker({ suggestion, onChoose }: { suggestion: SuggestedLink | n
   const suggested = suggestion && linkReadBack(suggestion.link);
   return (
     <div className={styles.section}>
-      <p className={styles.intro}>Issue keys and links in this repository's comments show each issue's title and status.</p>
+      <p className={styles.intro}>{intro}</p>
       {suggestion && suggested?.kind === 'read' && (
         <div className={styles.suggested}>
           <TrackerLogo choice={choiceOf(suggested.link.kind)} size={24} />
@@ -142,12 +144,12 @@ function TrackerPicker({ suggestion, onChoose }: { suggestion: SuggestedLink | n
             onClick={() => onChoose(card.choice)}
             autoFocus={index === 0 && !suggestion}
           >
-            <TrackerLogo choice={card.choice} size={36} />
+            <TrackerLogo choice={card.choice} size={44} />
             <span className={styles.choiceText}>
               <span className={styles.choiceName}>{card.name}</span>
               <span className={styles.choiceServers}>{card.servers}</span>
             </span>
-            <ChevronRight className={styles.choiceChevron} size={16} aria-hidden />
+            <ChevronRight className={styles.choiceChevron} size={14} aria-hidden />
           </button>
         ))}
       </div>
@@ -159,7 +161,7 @@ interface SignInForProps {
   link: RecognizedLink;
   linkText: string;
   step: SignInStep;
-  repository: string;
+  repository: string | undefined;
   onConnected: (outcome: SignedIn) => void;
 }
 
@@ -168,40 +170,27 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [tokenChosen, setTokenChosen] = useState(false);
   const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
-  const [busy, setBusy] = useState(false);
   const finish = (outcome: SignInOutcome): void => {
     if (outcome.kind === 'signedIn') onConnected(outcome);
     else setFailure(outcome.failure);
   };
 
   if (step.kind === 'useConnection') {
-    const name = TRACKER_GRAMMARS[step.connection.kind].name;
-    const use = async (): Promise<void> => {
-      setBusy(true);
-      finish(await api.issueTrackers.useConnection({ repository, link: linkText, connectionId: step.connection.id }));
-      setBusy(false);
-    };
+    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} onConnected={onConnected} />;
     return (
       <div className={styles.next}>
-        <p className={styles.nextTitle}>Next: use your {name} sign-in</p>
+        <p className={styles.nextTitle}>You're already signed in</p>
         <CheckedLine>
           Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
         </CheckedLine>
-        <div className={styles.row}>
-          <Button size="small" variant="primary" loading={busy} onClick={() => void use()}>
-            Use it
-          </Button>
-        </div>
-        {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
       </div>
     );
   }
   return (
     <div className={styles.next}>
-      <p className={styles.nextTitle}>Next: sign in to {step.trackerName}</p>
-      <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>
+      {method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
       {method === 'deviceCode' ? (
-        <DeviceSignIn request={{ repository, link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
+        <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
       ) : (
         <TokenSignIn
           kind={link.kind}
@@ -209,10 +198,40 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
           pageTarget={{ link: linkText }}
           failure={failure}
           onOutcome={finish}
-          signIn={(token, email) => api.issueTrackers.signInWithToken({ repository, link: linkText, token, ...(email && { email }) })}
+          signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
         />
       )}
       {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
+    </div>
+  );
+}
+
+/** Using a sign-in already there for the repository: one click, proven with the link's project. */
+function UseConnection({ link, linkText, step, repository, onConnected }: { link: RecognizedLink; linkText: string; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; onConnected: (outcome: SignedIn) => void }) {
+  const [failure, setFailure] = useState<SignInFailure | null>(null);
+  const [busy, setBusy] = useState(false);
+  const finish = (outcome: SignInOutcome): void => {
+    if (outcome.kind === 'signedIn') onConnected(outcome);
+    else setFailure(outcome.failure);
+  };
+  const name = TRACKER_GRAMMARS[step.connection.kind].name;
+  const use = async (): Promise<void> => {
+    setBusy(true);
+    finish(await api.issueTrackers.useConnection({ repository, link: linkText, connectionId: step.connection.id }));
+    setBusy(false);
+  };
+  return (
+    <div className={styles.next}>
+      <p className={styles.nextTitle}>Next: use your {name} sign-in</p>
+      <CheckedLine>
+        Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
+      </CheckedLine>
+      <div className={styles.row}>
+        <Button size="small" variant="primary" loading={busy} onClick={() => void use()}>
+          Use it
+        </Button>
+      </div>
+      {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { RepositorySignIn } from '@shared/api/issueTrackers';
+import type { LinkSignIn } from '@shared/api/issueTrackers';
 import type { DeviceSignIn as DeviceCode, SignInOutcome } from '@shared/domain/issueTrackers';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
@@ -8,8 +8,8 @@ import { deviceCodeWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 
 interface DeviceSignInProps {
-  /** A first sign-in for a repository, by a link; or a connection's again. */
-  request: RepositorySignIn | { connectionId: string };
+  /** A first sign-in by a link, for a repository or alone; or a connection's again. */
+  request: LinkSignIn | { connectionId: string };
   trackerName: string;
   onOutcome: (outcome: SignInOutcome) => void;
   /** A token instead, for those who'd rather (a quiet link). */

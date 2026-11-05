@@ -79,3 +79,14 @@ export function choiceKeyMove(index: number, key: string, count: number): number
   if (key === 'End') return count - 1;
   return null;
 }
+
+/**
+ * Connect's title and lead, for a repository (its tracker) or a window with none (a sign-in alone, which any
+ * repository then connects to in one click).
+ */
+export function connectWords(card: TrackerChoiceCard | null, forRepository: boolean): { title: string; intro: string } {
+  if (forRepository) {
+    return { title: card ? `Connect ${card.name}` : 'Connect an issue tracker', intro: "Issue keys and links in this repository's comments show each issue's title and status." };
+  }
+  return { title: card ? `Sign in to ${card.name}` : 'Sign in to an issue tracker', intro: 'Sign in once, and any repository connects to it in one click.' };
+}
