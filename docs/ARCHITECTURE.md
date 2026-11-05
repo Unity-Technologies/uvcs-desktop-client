@@ -1041,6 +1041,18 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Prefixes**: one vocabulary for what a prefix names, wherever it's typed (`KIND_PREFIXES`, `lib/kindPrefixes.ts`):
+  `cm`'s own specs `cs:` `br:` `lb:` `sh:`, `cr:` for a code review, and `@` for a person. In the command palette each
+  narrows the search to its section (`SCOPE_PREFIXES`, `parseScope`), beside the palette's own `>` commands and `/`
+  files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
+  editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
+  (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it;
+  a changeset's number (`1234`, `cs:1234`) is still found in any search. `#` is no one's: it's kept for issues. The
+  footer names the prefixes that work where the palette is open (`offeredPrefixes`). Labels, code reviews and people
+  are listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
+  everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
+  suggestions (`peopleIndex`); picking one opens the Changesets view on their changesets (`showPersonChangesets`,
+  the people filter's `onlyPerson`).
 - **Long menus scroll** within the room the window leaves them (`ui/menu/Menu.module.css`: Radix measures it), never
   running off-screen: a picker of many tools, a long "Open with ▸".
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
