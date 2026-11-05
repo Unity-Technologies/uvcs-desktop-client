@@ -5,7 +5,7 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
-import { connectedTrackerOf } from './connectFlow';
+import { connectedTrackerOf, repositoryTrackerView } from './connectFlow';
 import { ConnectTracker, type ConnectStart } from './ConnectTracker';
 import { RepositoryStart } from './RepositoryStart';
 import { SignInsCard } from './SignInsCard';
@@ -45,8 +45,9 @@ function RepositoryTracker({ repository }: { repository: string }) {
     setChanging(false);
   };
 
-  if (start) return <ConnectTracker key={JSON.stringify(start)} repository={repository} start={start} onConnected={connectedNow} onCancel={() => setStart(null)} />;
-  if (!connected || changing) return <RepositoryStart onStart={setStart} {...(connected && { onCancel: () => setChanging(false) })} />;
+  const view = repositoryTrackerView({ starting: start !== null, connected: connected !== null, changing });
+  if (view === 'connect' && start) return <ConnectTracker key={JSON.stringify(start)} repository={repository} start={start} onConnected={connectedNow} onCancel={() => setStart(null)} />;
+  if (view === 'start' || !connected) return <RepositoryStart onStart={setStart} {...(connected && { onCancel: () => setChanging(false) })} />;
   return (
     <>
       <TrackerCard repository={repository} connected={connected} onChange={() => setChanging(true)} />

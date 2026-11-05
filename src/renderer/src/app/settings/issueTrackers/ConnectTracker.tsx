@@ -8,11 +8,10 @@ import { useIssueTrackerSetup } from '../../../components/issues/useIssueTracker
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, type SignInRow, type SignInStep } from './connectFlow';
+import { connectFailureWords, connectStage, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, type SignInRow, type SignInStep } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './LinkReadBackLine';
 import { choiceAfterLink, connectWords, switchedWords, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
-import type { ConnectStage } from './trackerCardContent';
 import { TrackerLogo } from './TrackerLogo';
 import { DeviceSignIn } from './DeviceSignIn';
 import { TokenSignIn } from './TokenSignIn';
@@ -51,7 +50,7 @@ export function ConnectTracker({ repository, start, onConnected, onCancel }: Con
   const read = linkReadBack(link);
   const setup = useIssueTrackerSetup();
   const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup, { differentAccount }) : null;
-  const stage: ConnectStage = read.kind === 'read' ? 'signIn' : 'link';
+  const stage = connectStage(read);
   const card = trackerChoiceCard(choice);
   const words = connectWords(card, repository !== undefined);
 

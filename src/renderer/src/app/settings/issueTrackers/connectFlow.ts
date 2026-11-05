@@ -7,6 +7,7 @@ import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { pluralize } from '../../../lib/text';
 import { choiceOf } from './trackerChoices';
+import type { ConnectStage } from './trackerCardContent';
 
 /** A tracker's kind in words, its server's kind told apart: "Jira Cloud", "GitHub", "GitHub Enterprise Server". */
 export function trackerKindName(kind: IssueTrackerKind, server: string): string {
@@ -264,6 +265,20 @@ export function pickedSignInShown(pickedId: string | null, linkRead: boolean, st
 /** Whether connecting goes through a sign-in already there: one picked first, or one covering the link pasted. */
 export function connectsWithSignIn(pickedId: string | null, linkRead: boolean, step: SignInStep | null): boolean {
   return step?.kind === 'useConnection' || (pickedId !== null && !linkRead);
+}
+
+/**
+ * What a repository's part of Settings shows: Connect once a sign-in or a tracker was picked (`starting`); its
+ * starting card while it has no tracker, or the user is changing it; else its tracker's card.
+ */
+export function repositoryTrackerView(state: { starting: boolean; connected: boolean; changing: boolean }): 'connect' | 'start' | 'connected' {
+  if (state.starting) return 'connect';
+  return !state.connected || state.changing ? 'start' : 'connected';
+}
+
+/** Connect's step: the link until one reads back, then signing in (`connectSteps`). */
+export function connectStage(read: LinkReadBack): ConnectStage {
+  return read.kind === 'read' ? 'signIn' : 'link';
 }
 
 export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: string | undefined): ConnectedTracker | null {
