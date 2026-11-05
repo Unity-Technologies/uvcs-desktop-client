@@ -42,6 +42,10 @@ describe('a comment’s issues', () => {
     expect(paragraph('<https://x.atlassian.net/browse/VCS-12>')).toEqual([issue('VCS-12', '<https://x.atlassian.net/browse/VCS-12>')]);
   });
 
+  it('reads no other reference inside an issue’s address', () => {
+    expect(paragraph('https://x.atlassian.net/browse/VCS-12?by=@a&tab=all')).toEqual([issue('VCS-12', 'https://x.atlassian.net/browse/VCS-12?by=@a&tab=all')]);
+  });
+
   it('leaves a link with its own text a link, its key unread', () => {
     expect(paragraph('[the bug](https://x.atlassian.net/browse/VCS-12)')).toEqual([{ kind: 'link', url: 'https://x.atlassian.net/browse/VCS-12', children: [{ kind: 'text', text: 'the bug' }] }]);
   });
