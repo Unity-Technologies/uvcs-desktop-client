@@ -37,8 +37,9 @@ export function SignInAgain({ connection, why }: { connection: TrackerConnection
   switch (view.kind) {
     case 'retry':
       return (
-        <div className={styles.step}>
-          <p className={styles.problem}>{view.words}</p>
+        <div className={styles.next}>
+          <p className={styles.calloutTitle}>{view.words}</p>
+          <p className={styles.intro}>Issues show as plain links until you do.</p>
           <div className={styles.row}>
             <Button size="small" variant="primary" loading={busy} onClick={() => void retry()}>
               {view.button}
@@ -48,16 +49,16 @@ export function SignInAgain({ connection, why }: { connection: TrackerConnection
       );
     case 'deviceCode':
       return (
-        <div className={styles.step}>
-          <p className={styles.problem}>{why}</p>
+        <div className={styles.next}>
+          <p className={styles.calloutTitle}>{why}</p>
           <DeviceSignIn request={target} trackerName={name} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
           {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: connection.server }).words}</p>}
         </div>
       );
     case 'token':
       return (
-        <div className={styles.step}>
-          <p className={styles.problem}>{why}</p>
+        <div className={styles.next}>
+          <p className={styles.calloutTitle}>{why}</p>
           <TokenSignIn
             kind={connection.kind}
             server={connection.server}

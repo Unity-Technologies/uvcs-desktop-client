@@ -1,3 +1,13 @@
+/* Settings › Issue tracker (docs/features/issue-trackers.md, "Connecting"): one card per state, its header a tinted
+   bar, its sections parted by hairlines; status in the positive, caution and danger tokens. */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
 .intro,
 .note {
   margin: 0;
@@ -10,11 +20,390 @@
   color: var(--text-tertiary);
 }
 
-.step {
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  container: tracker-card / inline-size;
+}
+
+/* The card's title bar: what it is, and where the user stands (a status, or the steps of connecting). */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.cardHeaderText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardSubtitle {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The tracker's glyph on a soft tile, as the card's mark. */
+.tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.section + .section {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* How the connection stands: a dot and a word, tinted by tone. */
+.pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.pill::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
+}
+
+.pill[data-tone='positive'],
+.callout[data-tone='positive'] {
+  border-color: var(--positive-border);
+  background: var(--positive-soft);
+  color: var(--positive-text);
+}
+
+.pill[data-tone='caution'],
+.callout[data-tone='caution'] {
+  border-color: var(--caution-border);
+  background: var(--caution-soft);
+  color: var(--caution-text);
+}
+
+.pill[data-tone='danger'],
+.callout[data-tone='danger'] {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+/* Someone signed in: their initials, their name, their email. */
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.personText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.personName {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.personDetail {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  list-style: none;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 4px 4px 10px;
+}
+
+.listRow + .listRow {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Remove and sign out show on the row pointed at or focused, so the list reads as things, not buttons. */
+.listRow > .rowAction {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.listRow:hover > .rowAction,
+.listRow:focus-within > .rowAction {
+  opacity: 1;
+}
+
+.listText {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.listName {
+  overflow: hidden;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listDetail {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* A project's key or a repository, as its references write it. */
+.key {
+  flex: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* The tracker's kind, as a link read back names it. */
+.badge {
+  flex: none;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
+}
+
+/* A line that checks out: a link read, a proof of the sign-in. */
+.checked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.checked > svg {
+  flex: none;
+  color: var(--positive-text);
+}
+
+.checked strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.callout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px var(--space-3);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+}
+
+.callout[data-tone='neutral'] {
+  border-color: var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.calloutTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.callout .checked,
+.callout .intro {
+  color: var(--text-secondary);
+}
+
+/* The moment of success: it rises in once, then the card settles without it. */
+.arrives {
+  animation: arrive var(--duration-slow) var(--ease-out);
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrives {
+    animation: none;
+  }
+
+  .listRow > .rowAction {
+    transition: none;
+  }
+}
+
+/* What comes next: a small bold heading, why, the one button, and a quiet alternative beside it. */
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nextTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* Link · Sign in · Connected, in the header. */
+.steps {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  list-style: none;
+}
+
+/* A narrow card keeps its title and Back: the steps go, as the step itself shows where the user is. */
+@container tracker-card (max-width: 460px) {
+  .steps {
+    display: none;
+  }
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.stepItem + .stepItem::before {
+  width: 12px;
+  height: 1px;
+  margin-right: 3px;
+  background: var(--border-default);
+  content: '';
+}
+
+.stepMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+.stepItem[data-state='current'] {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.stepItem[data-state='current'] > .stepMark {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.stepItem[data-state='done'] > .stepMark {
+  border-color: var(--positive-border);
+  background: var(--positive-soft);
+  color: var(--positive-text);
 }
 
 .examples {
@@ -43,51 +432,34 @@
   white-space: nowrap;
 }
 
-/* What a pasted link was read as, or why it can't be one: right under the field, so the step checks itself. */
-.readBack {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
-
 .problem {
   margin: 0;
-  color: var(--danger);
+  color: var(--danger-text);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
 
-.card {
+.field {
+  width: 100%;
+}
+
+/* A value to look at and type elsewhere: the device flow's code. */
+.preview {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  gap: 2px;
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
 }
 
-.cardTitle {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-}
-
-.cardLine {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+.previewLabel {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
 }
 
 .code {
+  color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
@@ -95,40 +467,54 @@
   user-select: all;
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
+/* Waiting on the browser: a slim bar moving, a muted line under it. */
+.progress {
+  position: relative;
   width: 100%;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  list-style: none;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--border-subtle);
 }
 
-.listRow {
+.progress::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: travel 1.4s var(--ease-in-out) infinite;
+  content: '';
+}
+
+@keyframes travel {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::after {
+    animation: none;
+  }
+}
+
+/* An empty state's mark: the tracker glyph larger, centered over its words. */
+.empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
 }
 
-.listRow + .listRow {
-  border-top: 1px solid var(--border-subtle);
-}
-
-.listText {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  font-size: var(--text-sm);
-}
-
-.listSecondary {
-  color: var(--text-secondary);
-}
-
-.field {
-  width: 100%;
+.empty .tile {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
 }

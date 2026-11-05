@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountLines, connectSteps, projectRows, projectsExplained, proofLines, tokenStepLead, trackerHeader, trackerStatus } from './trackerCard';
+import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, proofLines, tokenStepLead, trackerHeader, trackerStatus } from './trackerCardContent';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.unity3d.com', account: { id: 'JIRAUSER10100', name: 'Daniel Peñalba', email: 'daniel@unity3d.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'danipen', name: 'Daniel Peñalba' } };
@@ -71,6 +71,16 @@ describe('proofLines', () => {
       { lead: 'Repository', strong: 'acme/game' },
     ]);
     expect(proofLines(jira, undefined)).toEqual([{ lead: 'Signed in as', strong: 'Daniel Peñalba' }]);
+  });
+});
+
+describe('disconnectQuestion', () => {
+  it('says what Disconnect changes, and that the sign-in stays', () => {
+    expect(disconnectQuestion('Jira')).toEqual({
+      title: 'Disconnect Jira?',
+      message: "Issues in this repository's comments go back to plain text. Your Jira sign-in stays for other repositories.",
+      confirmLabel: 'Disconnect',
+    });
   });
 });
 

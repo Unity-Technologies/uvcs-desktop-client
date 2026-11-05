@@ -51,7 +51,7 @@ describe('signInStepFor', () => {
 
 describe('connectedTrackerOf', () => {
   it('names the repository’s tracker, projects and account', () => {
-    expect(connectedTrackerOf(setup([jira]), 'game@acme@unity')).toEqual({ connection: jira, title: 'Jira at acme.atlassian.net', projects: 'Project VCS', account: 'Signed in as Ana Díaz' });
+    expect(connectedTrackerOf(setup([jira]), 'game@acme@unity')).toEqual({ connection: jira, title: 'Jira at acme.atlassian.net', projects: 'Project VCS', projectKeys: ['VCS'], account: 'Signed in as Ana Díaz' });
     expect(connectedTrackerOf(setup([jira]), 'other@acme@unity')).toBeNull();
   });
 
@@ -196,10 +196,10 @@ describe('signInAgainView', () => {
 });
 
 describe('signInRows', () => {
-  it('lists each sign-in with its tracker and account, or that it needs signing in again', () => {
+  it('lists each sign-in with its tracker, account and how it stands', () => {
     expect(signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]))).toEqual([
-      { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Signed in as Ana Díaz', signOut: 'Sign out of acme.atlassian.net' },
-      { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Needs signing in again', signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'j', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Signed in as Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'r', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs signing in' }, signOut: 'Sign out of acme.atlassian.net' },
     ]);
     expect(accountWords({ ...jira, credential: 'missing' })).toBe('Needs signing in again');
     expect(signInRows(undefined)).toEqual([]);

@@ -111,5 +111,14 @@ export function tokenStepLead(token: string): 'createToken' | 'signIn' {
   return token.trim() === '' ? 'createToken' : 'signIn';
 }
 
+/** What Disconnect asks before it unbinds the repository: what changes, and that the sign-in stays. */
+export function disconnectQuestion(name: string): { title: string; message: string; confirmLabel: string } {
+  return {
+    title: `Disconnect ${name}?`,
+    message: `Issues in this repository's comments go back to plain text. Your ${name} sign-in stays for other repositories.`,
+    confirmLabel: 'Disconnect',
+  };
+}
+
 /** How long the moment of success stays before the card settles: long enough to read its two lines. */
 export const SUCCESS_SHOWN_MS = 6_000;

@@ -1,9 +1,9 @@
+import { ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RepositorySignIn } from '@shared/api/issueTrackers';
 import type { DeviceSignIn as DeviceCode, SignInOutcome } from '@shared/domain/issueTrackers';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
-import { Spinner } from '../../../ui/Spinner';
 import { deviceCodeWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 
@@ -58,13 +58,16 @@ export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: De
   if (code) {
     const words = deviceCodeWords(code, trackerName);
     return (
-      <div className={styles.step}>
-        <p className={styles.cardLine}>{words.instruction}</p>
-        <span className={styles.code} aria-label={`Code ${code.userCode}`}>
-          {code.userCode}
-        </span>
+      <div className={styles.next}>
+        <p className={styles.intro}>{words.instruction}</p>
+        <div className={styles.preview}>
+          <span className={styles.previewLabel}>Your code</span>
+          <span className={styles.code} aria-label={`Code ${code.userCode}`}>
+            {code.userCode}
+          </span>
+        </div>
+        <div className={styles.progress} role="progressbar" aria-label={words.waiting} />
         <div className={styles.row}>
-          <Spinner size={13} />
           <span className={styles.note}>{words.waiting}</span>
           <Button size="small" variant="ghost" onClick={() => void api.system.openExternal(code.verificationUri)}>
             Open the page again
@@ -78,7 +81,7 @@ export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: De
   }
   return (
     <div className={styles.row}>
-      <Button size="small" variant="primary" loading={starting} onClick={() => void start()}>
+      <Button size="small" variant="primary" icon={<ExternalLink size={13} />} loading={starting} onClick={() => void start()}>
         Sign in with {trackerName}
       </Button>
       <Button size="small" variant="ghost" onClick={onUseToken}>

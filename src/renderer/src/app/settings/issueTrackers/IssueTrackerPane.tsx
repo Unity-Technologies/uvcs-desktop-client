@@ -1,20 +1,19 @@
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
-import type { IssueTrackerKind, ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
+import type { ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
 import { workspacePathOf } from '@shared/domain/place';
-import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
-import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { CenteredSpinner } from '../../../ui/Spinner';
-import { TextField } from '../../../ui/TextField';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
-import { addProjectReady, connectedTrackerOf, connectFailureWords, proofWords, signInRows } from './connectFlow';
+import { connectedTrackerOf, signInRows } from './connectFlow';
 import { ConnectTracker } from './ConnectTracker';
-import { SignInAgain } from './SignInAgain';
+import { StatusPill } from './StatusPill';
+import { TrackerCard } from './TrackerCard';
+import { TrackerIcon } from './TrackerIcon';
 import styles from './IssueTrackerPane.module.css';
 
 /**
@@ -27,95 +26,58 @@ export function IssueTrackerPane() {
   const repository = place ? repositoryOfPlace(place, info) : undefined;
   const setup = useIssueTrackerSetup();
   if (!setup || (place && !repository)) return <CenteredSpinner />;
-  return repository ? <RepositoryTracker repository={repository} /> : <SignIns />;
+  return <div className={styles.pane}>{repository ? <RepositoryTracker repository={repository} /> : <SignIns />}</div>;
 }
 
+/** Connect while the repository has no tracker (or the user is changing it); the connected card once it has. */
 function RepositoryTracker({ repository }: { repository: string }) {
   const setup = useIssueTrackerSetup();
   const connected = connectedTrackerOf(setup, repository);
   const [changing, setChanging] = useState(false);
-  const [proof, setProof] = useState<string | null>(null);
+  const [justConnected, setJustConnected] = useState<ProjectAccess | 'noProof' | null>(null);
   const done = (outcome: Extract<SignInOutcome, { kind: 'signedIn' }>): void => {
     setChanging(false);
-    setProof(outcome.access ? proofWords(outcome.connection, outcome.access) : null);
+    setJustConnected(outcome.access ?? 'noProof');
   };
 
   if (!connected || changing) {
     return <ConnectTracker repository={repository} onConnected={done} onCancel={connected ? () => setChanging(false) : undefined} />;
   }
-  return (
-    <section className={styles.step} aria-label="Issue tracker">
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>{connected.title}</h2>
-        <p className={styles.cardLine}>{connected.account}</p>
-        <p className={styles.cardLine}>{proof ?? connected.projects}</p>
-        {connected.sessionOnly && <p className={styles.note}>{connected.sessionOnly}</p>}
-        {connected.signInAgain && <SignInAgain connection={connected.connection} why={connected.signInAgain} />}
-        <div className={styles.row}>
-          <Button size="small" onClick={() => setChanging(true)}>
-            Change…
-          </Button>
-          <AddProject repository={repository} kind={connected.connection.kind} onAdded={(access) => setProof(proofWords(connected.connection, access))} />
-          <Button size="small" variant="ghost" onClick={() => void api.issueTrackers.disconnect(repository)}>
-            Disconnect
-          </Button>
-        </div>
-      </div>
-      <p className={styles.note}>Issue keys in this repository’s comments show as chips with their title and status.</p>
-    </section>
-  );
+  return <TrackerCard repository={repository} connected={connected} justConnected={justConnected} onSettled={() => setJustConnected(null)} onChange={() => setChanging(true)} />;
 }
 
-/** Another project of the same tracker, by a link to one of its issues. */
-function AddProject({ repository, kind, onAdded }: { repository: string; kind: IssueTrackerKind; onAdded: (access: ProjectAccess) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [link, setLink] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
-  if (!adding) {
-    return (
-      <Button size="small" onClick={() => setAdding(true)}>
-        Add a project…
-      </Button>
-    );
-  }
-  const add = async (): Promise<void> => {
-    const outcome = await api.issueTrackers.addProject({ repository, link });
-    if (outcome.kind === 'signedIn') {
-      if (outcome.access) onAdded(outcome.access);
-      setAdding(false);
-      setLink('');
-    } else setProblem(connectFailureWords(outcome.failure, { trackerName: TRACKER_GRAMMARS[kind].name }).words);
-  };
-  return (
-    <div className={styles.row}>
-      <TextField className={styles.field} aria-label="A link to an issue of the other project" placeholder="Link to an issue of the project" value={link} onChange={(event) => setLink(event.target.value)} />
-      <Button size="small" variant="primary" disabled={!addProjectReady(link)} onClick={() => void add()}>
-        Add
-      </Button>
-      {problem && <p className={styles.problem}>{problem}</p>}
-    </div>
-  );
-}
-
-/** The sign-ins this computer keeps, with no repository to connect: each can be signed out of. */
+/** The sign-ins this computer keeps, with no repository to connect: each with how it stands, and Sign out. */
 function SignIns() {
   const rows = signInRows(useIssueTrackerSetup());
   return (
-    <section className={styles.step} aria-label="Issue tracker sign-ins">
-      <p className={styles.intro}>Open a workspace or a repository to connect its issue tracker.</p>
-      {rows.length > 0 && (
-        <ul className={styles.list}>
-          {rows.map((row) => (
-            <li key={row.id} className={styles.listRow}>
-              <div className={styles.listText}>
-                <span>{row.title}</span>
-                <span className={styles.listSecondary}>{row.account}</span>
-              </div>
-              <IconButton icon={<LogOut size={14} />} label={row.signOut} onClick={() => void api.issueTrackers.signOut(row.id)} />
-            </li>
-          ))}
-        </ul>
-      )}
+    <section className={styles.card} aria-label="Issue tracker sign-ins">
+      <header className={styles.cardHeader}>
+        <TrackerIcon kind={null} />
+        <div className={styles.cardHeaderText}>
+          <h2 className={styles.cardTitle}>Issue tracker sign-ins</h2>
+          <span className={styles.cardSubtitle}>Open a workspace or a repository to connect its tracker.</span>
+        </div>
+      </header>
+      <div className={styles.section}>
+        {rows.length === 0 && <p className={styles.note}>No sign-ins on this computer yet.</p>}
+        {rows.length > 0 && (
+          <ul className={styles.list}>
+            {rows.map((row) => (
+              <li key={row.id} className={styles.listRow}>
+                <TrackerIcon kind={row.kind} size={14} />
+                <div className={styles.personText}>
+                  <span className={styles.personName}>{row.title}</span>
+                  <span className={styles.personDetail}>{row.account}</span>
+                </div>
+                <span className={styles.listDetail}>
+                  <StatusPill status={row.status} />
+                </span>
+                <IconButton className={styles.rowAction} size="small" icon={<LogOut size={14} />} label={row.signOut} onClick={() => void api.issueTrackers.signOut(row.id)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { usePlaceUser } from '../../account/accounts';
 import { clearsClipboardAfter, connectFailureWords, otherTokenPageOffered, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
+import { tokenStepLead } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
 interface TokenSignInProps {
@@ -29,7 +30,7 @@ interface TokenSignInProps {
  * in at once when what's pasted has the tracker's known shape; "Create a token" opens its page, filled in where the
  * tracker allows. The app never reads the clipboard by itself: only a paste the user makes reaches the field. The
  * token goes to main once, on submit, and the field forgets it; a token pasted and signed in with is cleared from the
- * clipboard.
+ * clipboard. One button leads (`tokenStepLead`): "Create a token" until a token is in the field, then "Sign in".
  */
 export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutcome, keptEmail }: TokenSignInProps) {
   const words = tokenStepWords(kind);
@@ -69,12 +70,12 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
     if (tokenStepReady(kind, email, token, busy)) void submit(token);
   };
   const failed = failure && connectFailureWords(failure, { trackerName, server, ...(words.emailLabel && { email }) });
+  const lead = tokenStepLead(token);
 
   return (
-    <div className={styles.step}>
-      {words.emailLabel && <TextField label={words.emailLabel} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
+    <div className={styles.next}>
       <div className={styles.row}>
-        <Button size="small" icon={<ExternalLink size={13} />} onClick={openTokenPage}>
+        <Button size="small" variant={lead === 'createToken' ? 'primary' : 'secondary'} icon={<ExternalLink size={13} />} onClick={openTokenPage}>
           Create a token
         </Button>
         {otherTokenPageOffered(kind) && (
@@ -83,6 +84,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
           </Button>
         )}
       </div>
+      {words.emailLabel && <TextField label={words.emailLabel} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
       <TextField
         label={words.tokenLabel}
         type="password"
@@ -95,7 +97,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
         hint={words.hint}
       />
       <div className={styles.row}>
-        <Button size="small" variant="primary" disabled={!tokenStepReady(kind, email, token, busy)} loading={busy} onClick={() => void submit(token)}>
+        <Button size="small" variant={lead === 'signIn' ? 'primary' : 'secondary'} disabled={!tokenStepReady(kind, email, token, busy)} loading={busy} onClick={() => void submit(token)}>
           Sign in
         </Button>
       </div>

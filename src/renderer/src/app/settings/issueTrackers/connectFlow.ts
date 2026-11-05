@@ -171,6 +171,8 @@ export interface ConnectedTracker {
   connection: TrackerConnection;
   title: string;
   projects: string;
+  /** The bound projects' keys, or GitHub's `owner/repo`. */
+  projectKeys: string[];
   account: string;
   /** Its credential stopped working: "Sign in again", with why. */
   signInAgain?: string;
@@ -188,14 +190,19 @@ export function accountWords(connection: Pick<TrackerConnection, 'credential' | 
   return connection.credential === 'refused' || connection.credential === 'missing' ? 'Needs signing in again' : `Signed in as ${connection.account.name}`;
 }
 
-/** The sign-ins this computer keeps, as a window with no repository lists them. */
-export function signInRows(setup: IssueTrackerSetup | undefined): { id: string; title: string; account: string; signOut: string }[] {
-  return (setup?.connections ?? []).map((connection) => ({
-    id: connection.id,
-    title: connectionTitle(connection),
-    account: accountWords(connection),
-    signOut: `Sign out of ${hostOf(connection.server)}`,
-  }));
+/** The sign-ins this computer keeps, as a window with no repository lists them: each with how it stands. */
+export function signInRows(setup: IssueTrackerSetup | undefined): { id: string; kind: IssueTrackerKind; title: string; account: string; status: { tone: 'positive' | 'caution'; label: string }; signOut: string }[] {
+  return (setup?.connections ?? []).map((connection) => {
+    const needsSignIn = connection.credential === 'refused' || connection.credential === 'missing';
+    return {
+      id: connection.id,
+      kind: connection.kind,
+      title: connectionTitle(connection),
+      account: needsSignIn ? connection.account.name : accountWords(connection),
+      status: needsSignIn ? { tone: 'caution', label: 'Needs signing in' } : { tone: 'positive', label: 'Signed in' },
+      signOut: `Sign out of ${hostOf(connection.server)}`,
+    };
+  });
 }
 
 export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: string | undefined): ConnectedTracker | null {
@@ -208,6 +215,7 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
     connection,
     title: connectionTitle(connection),
     projects: isJira(connection.kind) ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
+    projectKeys: binding.projects,
     account: accountWords(connection),
     ...(connection.credential === 'refused' && { signInAgain: `${name} stopped accepting this sign-in.` }),
     ...(connection.credential === 'missing' && { signInAgain: `This computer no longer has the ${name} sign-in.` }),
