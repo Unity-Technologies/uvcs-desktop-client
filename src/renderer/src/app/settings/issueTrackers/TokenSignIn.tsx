@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react';
-import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import type { TokenPageTarget } from '@shared/api/issueTrackers';
 import type { IssueTrackerKind, SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
@@ -70,6 +70,9 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
     if (tokenStepReady(kind, email, token, busy)) void submit(token);
   };
   const failed = failure && connectFailureWords(failure, { trackerName, server, ...(words.emailLabel && { email }) });
+  // A failure is said where the eye is: under Sign in, scrolled into view when the step is taller than the pane.
+  const problem = useRef<HTMLDivElement>(null);
+  useEffect(() => problem.current?.scrollIntoView({ block: 'nearest' }), [failure]);
   const lead = tokenStepLead(token);
 
   return (
@@ -102,7 +105,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
         </Button>
       </div>
       {failed && (
-        <div className={styles.row}>
+        <div ref={problem} className={styles.row} role="alert">
           <p className={styles.problem}>{failed.words}</p>
           {failed.offersTokenPage && (
             <Button size="small" variant="ghost" onClick={openTokenPage}>

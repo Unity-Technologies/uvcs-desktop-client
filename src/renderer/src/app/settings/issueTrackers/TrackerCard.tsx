@@ -34,7 +34,7 @@ interface TrackerCardProps {
 export function TrackerCard({ repository, connected, justConnected, onSettled, onChange }: TrackerCardProps) {
   const { connection } = connected;
   const signInNeeded = needsSignIn(connection);
-  const projects = useBoundProjects(repository, connected.projectKeys, !signInNeeded);
+  const projects = useBoundProjects(repository, connection.id, connected.projectKeys, !signInNeeded);
   const status = trackerStatus(connection, projects.data);
   const header = trackerHeader(connection);
   const account = accountLines(connection.account);
@@ -78,7 +78,7 @@ export function TrackerCard({ repository, connected, justConnected, onSettled, o
       )}
       {!justConnected && (
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Signed in</h3>
+          <h3 className={styles.sectionTitle}>Account</h3>
           <div className={styles.person}>
             <Avatar user={account.name} size={28} tip={null} />
             <div className={styles.personText}>
