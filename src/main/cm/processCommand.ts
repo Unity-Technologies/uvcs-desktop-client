@@ -22,7 +22,7 @@ interface ProcessCommand {
  */
 export function processCommand(args: string[], platform: NodeJS.Platform = process.platform): ProcessCommand {
   const asIs = fitsCommandLine(args) && !isOperation(args) && (platform !== 'win32' || !printsInConsoleCodePage(args));
-  // A path with a quote or a line break can't be written on a shell's line: it's left to the process as it is.
+  // An argument a shell's line can't carry exactly (`canRunInShell`) is left to the process as it is.
   if (asIs || !canRunInShell(args)) return { args };
   return { args: [...SHELL_ARGS], input: `${toShellCommandLine(args)}\nexit\n` };
 }
