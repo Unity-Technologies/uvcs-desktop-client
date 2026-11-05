@@ -27,10 +27,11 @@ interface Placed {
   transform: number[];
 }
 
-/** A 2D context that records what is placed where, the transforms, and the inks it strokes and fills with. Everything else does nothing. */
-function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Set<unknown> } {
+/** A 2D context that records what is placed where, the transforms, and how often it strokes and fills with each ink. Everything else does nothing. */
+function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Map<unknown, number> } {
   const placed: Placed[] = [];
-  const inks = new Set<unknown>();
+  const inks = new Map<unknown, number>();
+  const use = (ink: unknown) => inks.set(ink, (inks.get(ink) ?? 0) + 1);
   const transforms: number[][] = [];
   const saved: number[][] = [];
   let transform = [1, 0, 0, 1, 0, 0];
@@ -39,8 +40,8 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
     save: () => saved.push(transform),
     restore: () => (transform = saved.pop() ?? transform),
     measureText: (text: string) => ({ width: text.length * 6 }),
-    stroke: () => inks.add(state.strokeStyle),
-    fill: () => inks.add(state.fillStyle),
+    stroke: () => use(state.strokeStyle),
+    fill: () => use(state.fillStyle),
   };
   const state: Record<string | symbol, unknown> = { font: '10px sans-serif', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000' };
   const ctx = new Proxy(state, {
@@ -276,23 +277,30 @@ describe('drawGraph draws only what its display options ask for', () => {
 });
 
 describe('drawGraph draws a selection the same however many things it holds', () => {
+  const SELECTION_RING = '#0969da';
   const SELECTION_SOFT = 'rgba(9, 105, 218, 0.12)';
-  const selectionPalette: GraphPalette = { ...palette, accent: '#0969da', accentSoft: SELECTION_SOFT };
-  /** The inks drawing a selection adds to the graph drawn with nothing selected. */
+  const selectionPalette: GraphPalette = { ...palette, accent: SELECTION_RING, accentSoft: SELECTION_SOFT };
+  /**
+   * The inks drawing a selection uses more than the graph drawn with nothing selected. Counted, not just seen: /main
+   * is drawn in the accent too, so the ring's ink is already there with nothing selected.
+   */
   const inksOfSelection = (selection: Partial<GraphScene>) => {
     const unselected = drawSample({}, { palette: selectionPalette }).inks;
-    return [...drawSample({}, { palette: selectionPalette, ...selection }).inks].filter((ink) => !unselected.has(ink));
+    return [...drawSample({}, { palette: selectionPalette, ...selection }).inks]
+      .filter(([ink, uses]) => uses > (unselected.get(ink) ?? 0))
+      .map(([ink]) => ink)
+      .sort();
   };
 
   it('draws several branches in the selection color, as it draws one', () => {
     const one = inksOfSelection({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
-    expect(one).toContain(SELECTION_SOFT);
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
     expect(inksOfSelection({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']) })).toEqual(one);
   });
 
   it('draws several changesets in the selection color, as it draws one', () => {
     const one = inksOfSelection({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
-    expect(one).toContain(SELECTION_SOFT);
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
     expect(inksOfSelection({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]) })).toEqual(one);
   });
 });
