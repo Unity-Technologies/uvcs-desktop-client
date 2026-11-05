@@ -21,7 +21,7 @@ import {
   type ObjectMatch,
   type ResultContext,
 } from './objectResults';
-import { rankCandidates, type CandidateIndex } from '../../components/commentEditor/suggestionRanking';
+import { rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { isInScope, type PaletteScope } from './paletteScope';
 import { personResult } from './personResults';
 import type { SearchGroup, SearchResult } from './searchResults';

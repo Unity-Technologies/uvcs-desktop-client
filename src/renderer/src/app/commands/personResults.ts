@@ -1,5 +1,5 @@
 import { User } from 'lucide-react';
-import { indexCandidates, type CandidateIndex } from '../../components/commentEditor/suggestionRanking';
+import { indexCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { showPersonChangesets } from '../../features/changesets/showPersonChangesets';
 import { EVERYONE, offeredPeople } from '../../lib/peopleFilter';
 import { displayName, userFilterTexts } from '../../lib/userName';

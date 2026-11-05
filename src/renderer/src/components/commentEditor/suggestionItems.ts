@@ -18,7 +18,7 @@ import { lastSegment } from '../../lib/paths';
 import { splitRepositorySpec } from '../../lib/servers';
 
 import { displayName, userFilterTexts } from '../../lib/userName';
-import { indexCandidates, rankCandidates, type CandidateIndex } from './suggestionRanking';
+import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import type { SuggestionKind } from './suggestionTriggers';
 
 /** How many suggestions a list shows: the best few, never everything (ARCHITECTURE.md "Big lists"). */
