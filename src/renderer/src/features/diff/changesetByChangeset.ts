@@ -45,10 +45,11 @@ export function changesetFilterPlaceholder(count: number | undefined): string {
 }
 
 /**
- * Where the branch starts, from its changesets read whole, newest first (no limit): the oldest one, and its parent. So
- * the list's menus offer the branch diff up to a changeset with no command, and not on the first changeset.
+ * Where `branch` starts, from its changesets read whole, newest first (no limit): the oldest one, and its parent. So
+ * the list's menus offer the branch diff up to a changeset with no command, and not on the first changeset. None while
+ * the list still shows another branch's changesets, kept while the branch's own are read.
  */
-export function branchStartOfChangesets(changesets: readonly Changeset[] | undefined): BranchStart | null {
+export function branchStartOfChangesets(branch: string, changesets: readonly Changeset[] | undefined): BranchStart | null {
   const first = changesets?.at(-1);
-  return first ? { firstChangeset: first.id, base: first.parent } : null;
+  return first && first.branch === branch ? { firstChangeset: first.id, base: first.parent } : null;
 }

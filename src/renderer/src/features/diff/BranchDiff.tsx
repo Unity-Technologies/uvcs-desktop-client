@@ -63,12 +63,12 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   const firstId = changesets?.[0]?.id;
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to. The whole
   // branch read tells where it starts, for the branch diff up to a changeset.
-  const start = branchStartOfChangesets(changesets);
+  const start = branchStartOfChangesets(branch, changesets);
   const menuContext = {
     place,
     loadedChangeset: workspace?.loadedChangeset,
     loadedBranch: branchWorkedOn(workspace?.selector),
-    branchStartOf: (name: string) => (name === branch ? start : null),
+    branchStartOf: () => start,
   };
 
   useEffect(() => {
