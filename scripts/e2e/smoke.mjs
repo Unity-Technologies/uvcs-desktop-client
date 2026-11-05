@@ -18,6 +18,7 @@ const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
+const VIEWPORT = { width: 1400, height: 880 };
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
@@ -53,10 +54,13 @@ const window = await app.firstWindow();
 window.setDefaultTimeout(TIMEOUT_MS);
 window.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 window.on('console', (message) => message.type() === 'error' && errors.push(`console.error: ${message.text()}`));
-await window.setViewportSize({ width: 1400, height: 880 });
+const browserWindow = await app.browserWindow(window);
+// The window's real size as well as the page's: a screenshot copies the real view (`capture`), which a frame's borders
+// (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
+await browserWindow.evaluate((shown, size) => shown.setContentSize(size.width, size.height), VIEWPORT);
+await window.setViewportSize(VIEWPORT);
 
 const main = window.getByRole('main');
-const browserWindow = await app.browserWindow(window);
 let shotNumber = 0;
 /**
  * Saves the page's frame as Electron holds it (`webContents.capturePage`), never waiting for the OS to show one:
