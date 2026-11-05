@@ -66,10 +66,27 @@ let shotNumber = 0;
  * for first put what the step left into the frame captured, which would otherwise be the one before.
  */
 async function screenshot(name) {
+  await withTimeout(capture(name), TIMEOUT_MS, `screenshot ${name}`);
+}
+
+async function capture(name) {
   await window.evaluate(() => new Promise((rendered) => requestAnimationFrame(() => requestAnimationFrame(() => rendered()))));
   const viewport = window.viewportSize();
   const png = await browserWindow.evaluate(async (shown, area) => (await shown.webContents.capturePage(area)).toPNG().toString('base64'), { x: 0, y: 0, ...viewport });
   writeFileSync(join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`), Buffer.from(png, 'base64'));
+}
+
+/** `promise`, or a failure naming `what` once `ms` pass: an `evaluate` has no timeout, and a wedged page never answers. */
+async function withTimeout(promise, ms, what) {
+  let timer;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer after ${ms} ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
