@@ -58,6 +58,8 @@ export type Wait = (ms: number, signal: AbortSignal) => Promise<void>;
 
 export const realWait: Wait = (ms, signal) =>
   new Promise((resolve, reject) => {
+    // A listener added to a signal already aborted never hears it: it rejects at once instead.
+    if (signal.aborted) return reject(new Error('canceled'));
     const timer = setTimeout(resolve, ms);
     signal.addEventListener(
       'abort',
@@ -84,14 +86,23 @@ export async function requestDeviceCode(http: ConnectionHttp, { server, clientId
   return code;
 }
 
-export type DeviceFlowEnd = { token: string } | { failed: 'denied' | 'expired' | 'unexpected' };
+export type DeviceFlowEnd = { token: string } | { failed: 'denied' | 'expired' | 'unexpected' | 'canceled' };
 
-/** Polls the token endpoint at the server's pace until the user approves, denies, the code expires, or `signal` aborts. */
+/**
+ * Polls the token endpoint at the server's pace until the user approves, denies, the code expires, or `signal` aborts:
+ * a cancel during a poll on its way ends it as that poll answers, its answer unused, even a token.
+ */
 export async function pollForToken(http: ConnectionHttp, { server, clientId }: DeviceFlowServer, code: DeviceCode, wait: Wait, now: () => number, signal: AbortSignal): Promise<DeviceFlowEnd> {
   let intervalMs = code.intervalMs;
   for (;;) {
-    await wait(intervalMs, signal);
+    try {
+      await wait(intervalMs, signal);
+    } catch (error) {
+      if (signal.aborted) return { failed: 'canceled' };
+      throw error;
+    }
     const response = await http.send({ method: 'POST', url: `${server}/login/oauth/access_token`, form: { client_id: clientId, device_code: code.deviceCode, grant_type: DEVICE_GRANT } });
+    if (signal.aborted) return { failed: 'canceled' };
     const step = nextDevicePoll(intervalMs, code.expiresAt, response.body, now());
     if (step.kind === 'done') return { token: step.token };
     if (step.kind === 'failed') return { failed: step.reason };

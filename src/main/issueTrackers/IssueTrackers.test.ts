@@ -223,8 +223,8 @@ describe('IssueTrackers', () => {
       },
       { clientIds: { 'github.com': 'Iv1.app' } },
     );
-    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     cancel = () => engine.cancelDeviceSignIn('id1');
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
     expect(engine.setup().connections).toEqual([]);
     expect(tracker.lines().filter((line) => line.endsWith('/user'))).toEqual([]);

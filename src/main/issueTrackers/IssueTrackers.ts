@@ -123,10 +123,13 @@ export class IssueTrackers {
     }
     const flowId = this.deps.newId();
     const canceling = new AbortController();
-    const outcome = pollForToken(http, device, code, this.deps.wait, this.deps.now, canceling.signal).then(
-      (end) => ('token' in end ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed })),
-      (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
-    );
+    const outcome = pollForToken(http, device, code, this.deps.wait, this.deps.now, canceling.signal)
+      .then(
+        (end) => ('token' in end ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed })),
+        (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
+      )
+      // A flow its window stopped waiting for (reloaded meanwhile) is forgotten once it ends.
+      .finally(() => this.flows.delete(flowId));
     this.flows.set(flowId, { canceling, outcome });
     return { flowId, userCode: code.userCode, verificationUri: code.verificationUri, expiresAt: code.expiresAt };
   }
