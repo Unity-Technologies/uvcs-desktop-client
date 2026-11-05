@@ -1,7 +1,7 @@
 # Issue trackers
 
-Jira Cloud and GitHub (github.com, its data residency hosts and Enterprise Server), connected per user on each
-machine. A repository that uses a tracker shows the issues its comments name as chips, with their title and status.
+Jira (Cloud and Data Center) and GitHub (github.com, its data residency hosts and Enterprise Server), connected per
+user on each machine. A repository that uses a tracker shows the issues its comments name as chips, with their title and status.
 Later features build on the pieces named here.
 
 ## The principle: the link lives in the text
@@ -42,9 +42,12 @@ renderer/src/app/settings/issueTrackers/   Settings › Issue tracker, and conne
 Each tracker is two small modules that change together: its **grammar** (`shared/issueTrackers/grammars/<kind>.ts`,
 pure, no network) and its **provider** (`main/issueTrackers/providers/<kind>.ts`, the HTTP calls and the parsing of
 their JSON). A registry of each (`TRACKER_GRAMMARS`, `TRACKER_PROVIDERS`) is a `Record<IssueTrackerKind, …>`, so a new
-kind doesn't compile until it has both. The kinds are `jiraCloud` and `github`: GitHub.com, its data residency hosts
-and Enterprise Server share one API and differ only in where it is (`githubApiBase`, `githubGraphqlUrl`), so they are
-one kind.
+kind doesn't compile until it has both. The kinds are `jiraCloud`, `jiraDataCenter` and `github`. GitHub.com, its data
+residency hosts and Enterprise Server share one API and differ only in where it is (`githubApiBase`,
+`githubGraphqlUrl`), so they are one kind. Jira Cloud and Data Center are two: another sign-in (an email and an API
+token as Basic, against a personal access token as Bearer), another REST API version (v3, against v2) and other
+endpoints for the same read (`issue/bulkfetch`, against one search); their keys and references are one module's
+(`jiraKeys`).
 
 ### The grammar (shared, pure)
 
@@ -111,14 +114,14 @@ built for every tracker with their fixtures; nothing is stubbed before.
 `unexpected`. A batch read answers per key where the tracker does; only an error naming no key fails the request.
 Each case has its recorded fixture:
 
-| Answer | Jira Cloud | GitHub |
-| --- | --- | --- |
-| `signInRefused` | 401 | 401 |
-| `noAccess` | 403; 404 on a project | 403 without a rate limit; a repository that answers null |
-| `rateLimited` | 429, until `Retry-After` | 200 with an error of type `RATE_LIMITED`, until `x-ratelimit-reset`; 403 or 429 with `retry-after` or `x-ratelimit-remaining: 0` (the secondary limit) |
-| one key `missing` | `bulkfetch` leaves it out | its alias is null, with an error of type `NOT_FOUND` at the issue |
-| one key `noAccess` | — (Jira leaves out an issue the account can't see: `missing`) | an error of type `NOT_FOUND` whose path ends at the repository: the token can't see it |
-| one key `unreadable` | the keys left out when `bulkfetch` lists `issueErrors` (which name issues by id only) | its alias's other error |
+| Answer | Jira Cloud | Jira Data Center | GitHub |
+| --- | --- | --- | --- |
+| `signInRefused` | 401 | 401; a 302 to its login page (`samlsso`, `login.jsp`: an SSO server refusing a token, `toLogin`) | 401 |
+| `noAccess` | 403; 404 on a project | 403; 404 on a project | 403 without a rate limit; a repository that answers null |
+| `rateLimited` | 429, until `Retry-After` | 429, until `Retry-After` | 200 with an error of type `RATE_LIMITED`, until `x-ratelimit-reset`; 403 or 429 with `retry-after` or `x-ratelimit-remaining: 0` (the secondary limit) |
+| one key `missing` | `bulkfetch` leaves it out | the search leaves it out, only warning (`validateQuery: warn`) | its alias is null, with an error of type `NOT_FOUND` at the issue |
+| one key `noAccess` | — (Jira leaves out an issue the account can't see: `missing`) | — (likewise `missing`) | an error of type `NOT_FOUND` whose path ends at the repository: the token can't see it |
+| one key `unreadable` | the keys left out when `bulkfetch` lists `issueErrors` (which name issues by id only) | — | its alias's other error |
 
 A rate limit puts the origin to rest until it ends (`TrackerCooldown`): meanwhile its requests fail at once as
 `rateLimited`, without being sent; GitHub's GraphQL `RATE_LIMITED` rests it too (`restOrigin`).
@@ -159,6 +162,7 @@ What one sign-in covers depends on the kind, so a connection's identity is its k
 | Kind | One connection per | Why |
 | --- | --- | --- |
 | Jira Cloud | site (`server`) | A token reaches every project the account can read on its site. |
+| Jira Data Center | server (its context path included) | A personal access token reaches what its account can read there. |
 | GitHub | server, for a token of every owner (`scope` `*`: the device flow's, a classic token); server and owner for a fine-grained token (`scope`: the owner, lower case) | A fine-grained token covers one resource owner. |
 
 A second repository whose project a connection covers reuses it (`coveringConnection`: the owner's first, then one of
@@ -290,6 +294,7 @@ The chip shows its key; copying gives back the address.
 | --- | --- |
 | `*.atlassian.net` or `*.jira.com`, `/browse/KEY-N` | Jira Cloud, an issue page |
 | a Jira Cloud link with `?selectedIssue=KEY-N` (a board, a backlog, a search) | Jira Cloud, the issue in a view |
+| any other host, `<base>/browse/KEY-N` | Jira Data Center, the server `<base>`, its context path kept (`https://tools.acme.com/jira`). Its other pages look like any web page, so only an issue's is read. A key is never `issues` and `browse` holds no number, so this never meets GitHub Enterprise Server's shape |
 | `github.com/<owner>/<repo>/issues/N` or `/pull/N` | GitHub |
 | `<name>.ghe.com/<owner>/<repo>/issues/N` | GitHub with data residency, its API at `api.<name>.ghe.com` |
 | any other host, `/<owner>/<repo>/issues/N` | GitHub Enterprise Server. Sign-in asks its `/api/v3`; a server that doesn't answer it says "This doesn't look like GitHub Enterprise Server" (`NotThisTrackerError`) |
@@ -313,7 +318,7 @@ The chip shows its key; copying gives back the address.
 - **Batched**: each issue is its own query (`issueQuery`, keyed `issueKeys.issue(connectionId, key)`), so a chip
   anywhere finds what another read. Their reads go through `IssueReadBatch`, which gathers every key asked in the same
   task, splits them per connection and asks `issueTrackers.readIssues` once per connection: Jira Cloud's `POST
-  /rest/api/3/issue/bulkfetch`, GitHub's GraphQL with one `issueOrPullRequest` alias per issue, the repositories as
+  /rest/api/3/issue/bulkfetch`, Jira Data Center's `POST /rest/api/2/search` (`key in (…)`), GitHub's GraphQL with one `issueOrPullRequest` alias per issue, the repositories as
   variables. The shared request belongs to no one query: cancelling one never aborts it.
 - **Cached**: `staleTime` five minutes (`ISSUE_FRESH_MS`), a missing issue too; `refetchOnWindowFocus`, so a focus
   reads again only the issues on screen and only once stale; no reconnect read and no retry, as `TrackerHttp` and its
@@ -361,6 +366,7 @@ Only when the user goes through it:
 | Tracker | Requests |
 | --- | --- |
 | Jira Cloud | `GET /rest/api/3/myself` on the site; on a 401, `GET /_edge/tenant_info` (the cloud id) and `myself` again through the gateway (a scoped token); `GET /rest/api/3/project/<key>`; `POST /rest/api/3/search/approximate-count` twice (open, and open assigned to the account). 4, or 6 for a scoped token |
+| Jira Data Center | `GET /rest/api/2/myself`, `GET /rest/api/2/project/<key>`, `POST /rest/api/2/search` with `maxResults: 0` twice (its `total`: open, and open assigned to the account). 4 |
 | GitHub | `GET /user`, then one GraphQL query: the repository's open issues (`issues(states: OPEN) { totalCount }`, which counts no pull requests, unlike REST's `open_issues_count`) and the open ones assigned to the viewer (`search(type: ISSUE, …) { issueCount }`). 2, plus the device flow's own |
 
 ## Sign-in
@@ -375,6 +381,7 @@ Settings.
 | github.com | The device flow, where the app ships an OAuth App's client id (`GITHUB_OAUTH_CLIENT_IDS`); a token otherwise |
 | `<name>.ghe.com`, Enterprise Server | A token: the device flow needs an app registered on that server |
 | Jira Cloud | An API token and the account's email: Atlassian's OAuth needs a client secret, which a desktop app can't keep |
+| Jira Data Center | A personal access token, sent as Bearer, no email. Browser sign-in would need an application link each site's admin sets up: its `browser` slot stays empty |
 
 ### The device flow
 
@@ -399,24 +406,31 @@ A masked field paste works in, as people know it:
 
 - **"Create a token"** opens the tracker's page (`openTokenPage`), filled in where it allows: GitHub's
   `<server>/settings/tokens/new?scopes=repo&description=UVCS%20Desktop`, Atlassian's
-  `https://id.atlassian.com/manage-profile/security/api-tokens`.
+  `https://id.atlassian.com/manage-profile/security/api-tokens`, Jira Data Center's
+  `<server>/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`.
 - **Pasting** a token of a known shape (`submitsOnPaste`) signs in at once; Enter or "Sign in" otherwise. A text of no
   token's shape is never sent ("That doesn't look like a GitHub token").
 - The app never reads the clipboard by itself: only a paste the user makes reaches the field. A token pasted and
   signed in with is cleared from the clipboard (written, never read).
 - The token goes to main once, on submit, and never back; the field forgets it.
 - Jira Cloud asks for the account's email, filled in with the `cm` user when that is an address (`suggestedEmail`).
+- A Jira Data Center personal access token has no fixed prefix (about 44 base64 characters): it is only plausible, so
+  a paste fills the field and "Sign in" signs in.
+- A server that sends the sign-in to its login page (single sign-on refusing the token) says so: "Jira sent this
+  sign-in to its login page at jira.acme.com. Check the token, or create a new one." (`sentToLogin`).
 
 A GitHub fine-grained token (`github_pat_`) is accepted too, as a connection for its owner.
 
 ### Host consent
 
-Any address shaped like an issue on another host (`https://<host>/<owner>/<repo>/issues/1`) reads as GitHub
-Enterprise Server, so a window, untrusted, could name a host of its choosing. Before a credential first goes to a host
+Any address shaped like an issue on another host (`https://<host>/<owner>/<repo>/issues/1`,
+`https://<host>/browse/KEY-1`) reads as GitHub Enterprise Server or Jira Data Center, so a window, untrusted, could name
+a host of its choosing. Before a credential first goes to a host
 that is none of the trackers' own (github.com, `*.ghe.com`, `*.atlassian.net`, `*.jira.com`) nor a connection's server
 (`needsHostConsent`, built on the grammars' own host rules), main asks the user in its own dialog over the window:
 "Sign in to git.acme.com?", the host shown as the address names it, port and punycode kept, Sign In or Cancel, Cancel
-the default (`askHostConsent`, `hostConsentQuestion`). A window can't answer it; Cancel, Escape and closing it decline.
+the default, and what the server is meant to be ("Sign in only if it's your company's Jira", or its GitHub Enterprise
+Server) (`askHostConsent`, `hostConsentQuestion`). A window can't answer it; Cancel, Escape and closing it decline.
 Sign-ins to one host meanwhile wait for that one question. An allowance holds for the session, and for good once the
 connection is kept; a decline sends nothing ("Not signed in: git.acme.com wasn't allowed") and isn't remembered: the
 next sign-in is the user's own paste again, and asks again.
