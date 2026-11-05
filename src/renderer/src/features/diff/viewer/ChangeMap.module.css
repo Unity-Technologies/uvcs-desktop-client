@@ -1,50 +1,79 @@
 /* The diff's own vertical scrollbar while the change map shows, as tall as the view. It's the first thing in the diff's
    scrolling element and stays at its top while it scrolls, as `PaneScrollbars`' bars stay at its bottom, taking no
    room of its own (its height is taken back below it: `marginBottom`); it stands in the room the diff leaves for it at
-   its right (`TextDiff.module.css`), where the browser's bar would be. Under the keyboard's focus ring
-   (`TextDiff.module.css`, `.frame::after`, after it at the same level). */
+   its right (`TextDiff.module.css`), where the browser's bar would be, and looks like the app's other scrollbars: as
+   wide, no divider, the thumb a slim pill. Under the keyboard's focus ring (`TextDiff.module.css`, `.frame::after`,
+   after it at the same level). */
 .track {
+  --track-width: var(--diff-scrollbar-size);
+
   position: sticky;
   top: 0;
   z-index: 1;
-  width: var(--diff-scrollbar-size);
+  width: var(--track-width);
   margin-right: calc(-1 * var(--diff-scrollbar-size));
   margin-left: auto;
   background: var(--bg-surface);
+  transition: width var(--duration-fast) var(--ease-out);
 }
 
-/* A solid block per change (or band of changes), the track's width less a small inset, filled with the changed rows'
-   own tint (read from Pierre: `pierreChangeColors`). A block that removes and adds is split down the middle, removed on
-   the left as in a Split diff, each half in its own tint. */
+/* Wider under the pointer and while dragging, as macOS's scrollbars grow, so the marks and the thumb are easy to take.
+   It grows to the left, over the code's edge, without moving the code: its right margin stays at the room it has. */
+.track:hover,
+.track:has(.thumb[data-dragging]) {
+  --track-width: var(--diff-scrollbar-size-hovered);
+}
+
+/* A block per change (or band of changes) in the color of the changed words inside a changed row: Pierre's
+   translucent word color over the row's tint (`pierreChangeColors`), a little darker than the rows beside it. Removed
+   is red, added green; a block that does both is split down the middle, removed on the left as in a Split diff. */
 .mark {
+  --map-deleted-mark: linear-gradient(var(--map-deleted-words), var(--map-deleted-words)), var(--map-deleted);
+  --map-added-mark: linear-gradient(var(--map-added-words), var(--map-added-words)), var(--map-added);
+
   position: absolute;
-  right: 2px;
-  left: 2px;
+  right: 3px;
+  left: 3px;
   border-radius: 2px;
+  /* A press on it goes to that change. */
+  cursor: pointer;
 }
 
 .mark[data-kind='deleted'] {
-  background: var(--map-deleted);
+  background: var(--map-deleted-mark);
 }
 
 .mark[data-kind='added'] {
-  background: var(--map-added);
+  background: var(--map-added-mark);
 }
 
 .mark[data-kind='both'] {
-  background: linear-gradient(to right, var(--map-deleted) 50%, var(--map-added) 50%);
+  background:
+    linear-gradient(to right, var(--map-deleted-words) 50%, var(--map-added-words) 50%),
+    linear-gradient(to right, var(--map-deleted) 50%, var(--map-added) 50%);
 }
 
-/* Over the marks, translucent so they show through it, as the app's thumbs look (global.css). */
+/* The app's thumb (global.css: 4 px, 3 px in from each side), translucent so the marks show through it. */
 .thumb {
   position: absolute;
-  right: 2px;
-  left: 2px;
+  right: 3px;
+  left: 3px;
   border-radius: var(--radius-full);
   background: var(--diff-scrollbar-thumb);
+  transition:
+    right var(--duration-fast) var(--ease-out),
+    left var(--duration-fast) var(--ease-out);
 }
 
-.thumb:hover,
+/* While the track is wider, the thumb grows only a little (4 to 6 px): the marks take the room. */
+.track:hover .thumb,
+.track:has(.thumb[data-dragging]) .thumb {
+  right: 5px;
+  left: 5px;
+}
+
+/* Darker while the pointer is on the track, which grabs it across its whole width (`pressesThumb`). */
+.track:hover .thumb,
 .thumb[data-dragging] {
   background: var(--diff-scrollbar-thumb-hover);
 }

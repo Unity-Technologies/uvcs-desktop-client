@@ -417,12 +417,14 @@ While a text diff of two versions has changes and scrolls, it draws its own vert
 `--diff-scrollbar-size`), whose track marks where the changes are, as an editor's overview ruler does: the track stands
 for the whole diff, so a change a third of the way down the content is marked a third of the way down the track. Each
 change is a solid block (`changeMarks`, `changeMarks.ts`), at least `MIN_MARK_HEIGHT` (4 px) tall so one line reads as a
-block, filled with the changed rows' own tint, read from Pierre (`pierreChangeColors`: `--diffs-bg-deletion`,
-`--diffs-bg-addition` on its host, which follow the syntax theme), so the map is the diff's colors in any theme. A
-change that removes and adds (`changeKindOf`: `both`) is split down the middle, the removed tint on the left as in a
-Split diff. Changes close together fuse into one band ("Changes 4–24 of 25" in its tooltip): with at most `FUSE_LINES`
-(3) unchanged lines between them, however far apart the diff draws them, or blocks less than `FUSE_GAP` (4 px) apart;
-the clear gaps left are what make the groups readable, and the blocks drawn are bounded by the track, not the file.
+block, in the color the diff marks changed words with inside a changed row: Pierre's translucent word color over the
+row's tint, read from its host (`pierreChangeColors`: `--diffs-bg-deletion-emphasis` over `--diffs-bg-deletion`, and
+the added ones, which follow the syntax theme). So the map is the diff's own colors in any theme, a step darker than
+the changed rows beside it, which it would otherwise run into. A change that removes and adds (`changeKindOf`: `both`)
+is split down the middle, the removed color on the left as in a Split diff. Changes close together fuse into one band
+("Changes 4–24 of 25" in its tooltip): with at most `FUSE_LINES` (3) unchanged lines between them, however far apart
+the diff draws them, or blocks less than `FUSE_GAP` (4 px) apart; the clear gaps left are what make the groups
+readable, and the blocks drawn are bounded by the track, not the file.
 The marks are the regions the arrows step through (`useChangeNavigation`'s `regions`, so they follow what's typed),
 placed where Pierre lays them out (`pierreLineBox`: collapsed unchanged lines and wrapped lines counted) or, until
 Pierre can tell, at the line's share of its side.
@@ -430,25 +432,31 @@ Pierre can tell, at the line's share of its side.
 It shows only for a diff that scrolls, with changes, of two versions (`showsChangeMap`): not for a version shown alone
 (an added or deleted file), a file typed into whole, nor where the arrows don't step (the merge page); then the
 browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
-(`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top
-as it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls
-the diff, and no code goes under it. The thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks,
-translucent in the app's hovered thumb color (`--diff-scrollbar-thumb`: the resting one was too faint over the marks
-in the dark theme), and dragged with the pointer captured; it moves on the scroll event itself (`useScrollTop`), with
-the content, not a frame behind. `useChangeMap` places the marks again
-(`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines above the last
-change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a resize or as Pierre
-renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are read anew each time,
-so a theme switch recolors the map.
+(`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top as
+it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls the
+diff, and at rest no code goes under it. It looks like the app's other scrollbars, so a diff and a file shown alone have
+the same bar: as wide (`--diff-scrollbar-size` is `--scrollbar-size`, 10 px), no divider, the thumb a 4 px pill 3 px in
+from each side, and the marks as wide as the thumb. Under the pointer, and while the thumb is dragged, it grows to 16 px
+(`--diff-scrollbar-size-hovered`), to the left over the code's edge without moving the code, as macOS's scrollbars grow:
+the marks take the room, the thumb only reaches 6 px. A mark shows the hand pointer, as a press on it goes there. The
+thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks, translucent in the app's hovered thumb
+color (`--diff-scrollbar-thumb`, close to the app's resting thumb over an empty track; the resting `--border-default` is
+too faint over the marks in the dark theme; stronger on hover), and dragged with the pointer captured; a press anywhere
+across the track's width on the thumb's rows takes it (`pressesThumb`), so the slim pill is as easy to grab as the track
+is wide. It moves on the scroll event itself (`useScrollTop`), with the content, not a frame behind. `useChangeMap`
+places the marks again (`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines
+above the last change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
+resize or as Pierre renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are
+read anew each time, so a theme switch recolors the map.
 
-A press anywhere in the track off the thumb, on a block or between blocks, scrolls smoothly so that point is in the
-middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
-that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view
-short of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a
-smooth scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye
-can predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is
-no press in the diff: the caret typing in it stays, and no lines are picked. It's for the pointer only
-(`aria-hidden`). Always on, with no setting.
+A press anywhere in the track off the thumb's rows, on a block or between blocks, scrolls smoothly so that point is in
+the middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
+that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view short
+of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a smooth
+scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye can
+predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is no
+press in the diff: the caret typing in it stays, and no lines are picked. It's for the pointer only (`aria-hidden`).
+Always on, with no setting.
 
 Designs tried on screen and dropped, not to be proposed again:
 
@@ -457,8 +465,17 @@ Designs tried on screen and dropped, not to be proposed again:
 - **Colors mirrored as tokens** (Pierre's `--diffs-added-light` and the like copied into `tokens.css`): those are only
   Pierre's fallbacks; the diff's colors come from the syntax theme, so the copies never matched what it shows. They're
   read from Pierre at run time.
-- **Marks in the gutter bars' strong red and green**, or with an edge in them: loud next to the rows' tint, and not
-  what the rows look like. The blocks are the rows' tint alone.
+- **Marks in the gutter bars' strong red and green**, or that color mixed into the track (25% to 45%), full width or
+  in narrow lanes: loud next to the rows' tint, noise beside the code. The changed words' color is the strongest that
+  stays quiet.
+- **The rows' tint alone**: a block beside changed rows ran into them, the map and the code read as one; on white it
+  was too faint to find.
+- **An edge around each mark**, in the gutter's color, a softer tint of it or a neutral gray: long blocks read as
+  empty boxes, and the edges as more lines.
+- **One color for every change** (the "changed" blue, or a neutral gray): the gray ran into the thumb, and the blue
+  was one more color the diff doesn't use.
+- **A wider track with a divider**, or a framed thumb: a bar unlike every other scrollbar in the app, and a frame faint
+  enough to lose. Growing past 16 px under the pointer looked out of proportion.
 - **Two lanes of dots**, removed lines on the left and added on the right, each placed by its own lines: read as a
   texture, not as changes, with no boundary between groups. One column of blocks, close changes fused, reads at a
   glance.
@@ -836,8 +853,9 @@ release that installs.
   the selection is. Checked on screen: several carets copy and paste their own pieces.
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change
   (see Moving through changes), and where the change map places its marks (see The change map).
-- `pierreChangeColors`: the tints Pierre gives removed and added rows, read from its host's computed
-  `--diffs-bg-deletion` and `--diffs-bg-addition`, for the change map's blocks (see The change map).
+- `pierreChangeColors`: the tints Pierre gives removed and added rows and the color it marks their changed words with,
+  read from its host's computed `--diffs-bg-deletion`, `--diffs-bg-addition` and their `-emphasis`, for the change map's
+  blocks (see The change map).
 - `pierreHighlightWorker`: the entry the highlighting worker starts from. Pierre's worker chunks import `worker.js`
   back, and the development server loads it twice when the worker is started by Pierre's own URL: two copies answer
   every request, and the one never set up fails (`pierreHighlightWorker.test.ts`). `electron.vite.config.ts`

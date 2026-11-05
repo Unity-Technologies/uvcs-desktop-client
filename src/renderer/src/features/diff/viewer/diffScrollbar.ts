@@ -42,3 +42,11 @@ export function scrollTopAfterDrag(startScrollTop: number, deltaY: number, geome
   if (maxScroll === 0 || travel <= 0) return Math.min(maxScroll, Math.max(0, startScrollTop));
   return Math.min(maxScroll, Math.max(0, startScrollTop + (deltaY * maxScroll) / travel));
 }
+
+/**
+ * Whether a press at `y` (from the track's top) takes hold of the thumb: anywhere across the track's width on the
+ * thumb's rows, not only on the thin thumb drawn, so the thumb is as easy to grab as the track is wide.
+ */
+export function pressesThumb(y: number, thumb: Thumb): boolean {
+  return y >= thumb.top && y <= thumb.top + thumb.height;
+}

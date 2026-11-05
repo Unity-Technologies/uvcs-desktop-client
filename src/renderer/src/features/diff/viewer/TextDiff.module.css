@@ -8,7 +8,8 @@
 }
 
 /* While the change map shows, the diff draws its own vertical scrollbar (`ChangeMap`), whose track holds the marks: the
-   browser's is hidden, and the code leaves room for the diff's at its right, so no code goes under it. */
+   browser's is hidden, and the code leaves room for the diff's at its right, so at rest no code goes under it (under
+   the pointer it grows over the code's edge: `ChangeMap.module.css`). */
 .diff[data-change-map] {
   padding-right: var(--diff-scrollbar-size);
 }
