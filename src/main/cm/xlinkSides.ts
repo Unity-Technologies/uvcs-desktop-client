@@ -6,7 +6,7 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { XlinkTarget } from '@shared/domain/explorer';
 import { listsTree } from '@shared/domain/specs';
-import { equalsCondition, findQueryArgs } from './findQuery';
+import { branchStartQuery, findQueryArgs } from './findQuery';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
 import { TREE_ITEM_FORMAT, type ListedTreeItem } from './treeItems';
@@ -42,11 +42,7 @@ export function xlinkBeforePoint(target: DiffTarget, repository?: string): Xlink
     case 'range':
       return { kind: 'point', spec: target.fromSpec };
     case 'branch':
-      return {
-        kind: 'parentOf',
-        // `ignorehidden` brings a hidden branch's changesets in: without it `cm find` leaves them out.
-        findArgs: findQueryArgs(FOUND_PARENTS, `where ignorehidden = 'true' and ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`, repository),
-      };
+      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, branchStartQuery(target.branch), repository) };
     case 'shelve':
       return null;
   }

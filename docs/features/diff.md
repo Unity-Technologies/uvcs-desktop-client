@@ -79,9 +79,9 @@ parent in still lists the parent's files that merge brought. What decides is `br
   (`branchStartOfChangesets`).
 - **Read when chosen** everywhere else (Changesets, Incoming, the top bar, the palette): one quick `cm find changeset
   "where ignorehidden = 'true' and branch = '<branch>' order by changesetid asc limit 1" --format={changesetid}{parent}`
-  (`ChangesetsApi.branchStart`), never while the menu is built; `ignorehidden` reads a hidden branch's changesets,
-  which `cm find` leaves out otherwise, as `xlinkBeforePoint` does. Each choice reads it again: one quick command a
-  click, so nothing is cached. Those lists can't tell a branch's first changeset, so
+  (`ChangesetsApi.branchStart`, `branchStartQuery`, which `xlinkBeforePoint` shares), never while the menu is built;
+  `ignorehidden` reads a hidden branch's changesets, which `cm find` leaves out otherwise. Each choice reads it again:
+  one quick command a click, so nothing is cached. Those lists can't tell a branch's first changeset, so
   they offer it there too; chosen there it opens that changeset's own changes, under the branch's title.
 
 ## Comparing two branches, changesets or labels
