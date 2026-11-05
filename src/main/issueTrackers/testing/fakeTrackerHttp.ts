@@ -74,7 +74,11 @@ export function fakeTrackerHttp(answers: TrackerAnswers = {}, { now = () => 0 }:
     const answer = typeof found === 'function' ? found(request) : Array.isArray(found) ? nextOf(found, key) : found;
     if (answer.unreachable) throw new Error(`${key}: the network failed`);
     if (answer.hangs) {
-      await new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error(`${key}: canceled`))));
+      await new Promise((_resolve, reject) => {
+        const canceled = () => reject(new Error(`${key}: canceled`));
+        if (init.signal.aborted) canceled();
+        else init.signal.addEventListener('abort', canceled, { once: true });
+      });
     }
     return responseOf(answer);
   };

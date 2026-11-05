@@ -200,8 +200,7 @@ export interface FoundReference {
  */
 export function referencesIn(state: EditorState, from: number, to: number, options: LiveMarksOptions): FoundReference[] {
   const excluded = excludedRanges(state, from, to, options);
-  // An address is itself one of the excluded ranges (`URL`, `Autolink`): only the others (code, a table drawn whole) hold it out.
-  const found: FoundReference[] = issueAddressesIn(state, from, to).filter((address) => !excluded.some(([start, end]) => start <= address.from && address.to <= end && (start !== address.from || end !== address.to)));
+  const found: FoundReference[] = issueAddressesIn(state, from, to).filter((address) => !insideAnotherExclusion(address, excluded));
   for (let line = state.doc.lineAt(from); ; line = state.doc.line(line.number + 1)) {
     for (const reference of findReferences(line.text, state.facet(issueReferences) ?? undefined)) {
       const at = { from: line.from + reference.from, to: line.from + reference.to };
@@ -212,6 +211,14 @@ export function referencesIn(state: EditorState, from: number, to: number, optio
     if (line.to >= to || line.number === state.doc.lines) break;
   }
   return found.sort((a, b) => a.from - b.from);
+}
+
+/**
+ * Whether an issue address sits inside a range that holds references out (code, a table drawn whole), other than its
+ * own: the address is itself one of the excluded ranges (`URL`, `Autolink`), which never holds it out.
+ */
+function insideAnotherExclusion(address: { from: number; to: number }, excluded: readonly [number, number][]): boolean {
+  return excluded.some(([start, end]) => start <= address.from && address.to <= end && (start !== address.from || end !== address.to));
 }
 
 /**

@@ -251,10 +251,12 @@ describe('the sign-ins Connect offers first', () => {
 
 describe('repositoryTrackerView', () => {
   it('shows Connect once something was picked, the start while there is no tracker or it is being changed, else the tracker', () => {
-    expect(repositoryTrackerView({ starting: true, connected: true, changing: false })).toBe('connect');
-    expect(repositoryTrackerView({ starting: false, connected: false, changing: false })).toBe('start');
-    expect(repositoryTrackerView({ starting: false, connected: true, changing: true })).toBe('start');
-    expect(repositoryTrackerView({ starting: false, connected: true, changing: false })).toBe('connected');
+    const start = { choice: 'jira' as const };
+    const tracker = { id: 't' };
+    expect(repositoryTrackerView({ start, connected: tracker, changing: false })).toEqual({ kind: 'connect', start });
+    expect(repositoryTrackerView({ start: null, connected: null, changing: false })).toEqual({ kind: 'start', changingFrom: null });
+    expect(repositoryTrackerView({ start: null, connected: tracker, changing: true })).toEqual({ kind: 'start', changingFrom: tracker });
+    expect(repositoryTrackerView({ start: null, connected: tracker, changing: false })).toEqual({ kind: 'connected', connected: tracker });
   });
 });
 

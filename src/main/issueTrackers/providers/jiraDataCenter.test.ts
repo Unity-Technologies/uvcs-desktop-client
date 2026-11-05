@@ -142,7 +142,7 @@ describe('the Jira Data Center provider', () => {
   });
 
   it('reads 100 keys in one request whose address stays well under 8 KB', async () => {
-    const keys = Array.from({ length: 100 }, (_, index) => `VCS-${1009000 + index}`);
+    const keys = Array.from({ length: 100 }, (_, index) => `VCS-${1004000 + index}`);
     const asked = searchUrl({ jql: `key in (${keys.map((key) => `"${key}"`).join(', ')})`, fields: 'summary,status,issuetype,assignee', maxResults: '100', validateQuery: 'false' });
     const { tracker, http } = connected({ [`GET ${asked}`]: { json: { issues: [] } } });
     await jiraDataCenterProvider.readIssues(http, { server: SERVER }, keys);
