@@ -1,7 +1,6 @@
-import { api } from '../../../api/client';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
-import { confirm } from '../../../ui/dialog/confirm';
+import { askToSignOut } from './askToSignOut';
 import { signInRows, type SignInRow } from './connectFlow';
 import { StatusPill } from './StatusPill';
 import { NO_SIGN_INS, type TrackerChoice } from './trackerChoices';
@@ -64,16 +63,11 @@ export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?
  * (`signOutQuestion`: the repositories that use it lose their tracker).
  */
 function SignInTile({ row }: { row: SignInRow }) {
-  const signOut = (): void => {
-    void confirm({ ...row.signOutQuestion, danger: true }).then((sure) => {
-      if (sure) void api.issueTrackers.signOut(row.id);
-    });
-  };
   return (
     <li className={tileStyles.signInTile} aria-label={`${row.account}, ${row.title}`}>
       <SignInIdentity row={row} />
       {row.needsAttention && <StatusPill status={row.status} />}
-      <Button className={tileStyles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={signOut}>
+      <Button className={tileStyles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={() => askToSignOut(row)}>
         Sign out
       </Button>
     </li>
