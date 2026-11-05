@@ -30,16 +30,18 @@ interface TrackersWiring {
  * (`scripts/e2e/fakeTrackers.cjs`), to see the flows with no account. A packaged app reads neither.
  */
 export function createIssueTrackers({ userData, logRequest, changed, development, env }: TrackersWiring): IssueTrackers {
+  const fake = development && env.UVCS_FAKE_TRACKERS ? env.UVCS_FAKE_TRACKERS : null;
   return new IssueTrackers({
     store: new IssueTrackerStore(join(userData, 'issue-trackers.json')),
     secrets: new TrackerSecrets(join(userData, 'issue-tracker-secrets.json'), safeStorageCipher(safeStorage, process.platform)),
-    http: new TrackerHttp({ fetch: development && env.UVCS_FAKE_TRACKERS ? fakeFetch(env.UVCS_FAKE_TRACKERS) : sessionFetch(), log: logRequest }),
+    http: new TrackerHttp({ fetch: fake ? fakeFetch(fake) : sessionFetch(), log: logRequest }),
     clipboard: { read: () => clipboard.readText(), clear: () => clipboard.clear() },
     changed,
     newId: randomUUID,
     now: Date.now,
     wait: realWait,
-    openExternal: (url) => void shell.openExternal(url),
+    // Against the fake trackers, a token page would be a real tracker's: it's named in the console instead.
+    openExternal: (url) => (fake ? console.log(`[fake trackers] the token page: ${url}`) : void shell.openExternal(url)),
     oauthClientIds: development && env.UVCS_GITHUB_OAUTH_CLIENT_ID ? { ...GITHUB_OAUTH_CLIENT_IDS, 'github.com': env.UVCS_GITHUB_OAUTH_CLIENT_ID } : GITHUB_OAUTH_CLIENT_IDS,
   });
 }
