@@ -9,6 +9,7 @@
 // signs in but one holding `login`, which it sends to its single sign-on page (a 302), as an SSO server does. Its tokens
 // are read-only, as resolution's API Token Authentication makes them: any POST is a 403. A search takes a boolean
 // `validateQuery`, and anything else is a 400, as Data Center answers it.
+// Searches (`#` in a comment): the account's open issues are those not done; words find the titles holding them all.
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -17,7 +18,35 @@ const JIRA_ISSUES = {
   'VCS-12': { summary: 'Keep the selection when the layout changes', status: 'In Progress', category: 'indeterminate', type: 'Bug', assignee: 'Lena Marsh' },
   'VCS-13': { summary: 'Update fails on paths longer than 260 characters', status: 'To Do', category: 'new', type: 'Task', assignee: null },
   'VCS-14': { summary: 'Show the changes of xlinked repositories in Incoming', status: 'Done', category: 'done', type: 'Story', assignee: 'Ana Díaz' },
+  'VCS-15': { summary: 'Crash when a branch name holds an emoji', status: 'In Review', category: 'indeterminate', type: 'Bug', assignee: 'Ana Díaz' },
+  'VCS-16': { summary: 'Faster Branch Explorer on large repositories', status: 'To Do', category: 'new', type: 'Story', assignee: 'Ana Díaz' },
 };
+
+/** A Jira issue as a search or `bulkfetch` answers it. */
+function jiraIssue(key) {
+  const issue = JIRA_ISSUES[key];
+  return {
+    key,
+    fields: {
+      summary: issue.summary,
+      status: { name: issue.status, statusCategory: { key: issue.category } },
+      issuetype: { name: issue.type },
+      assignee: issue.assignee && { accountId: issue.assignee, key: issue.assignee, displayName: issue.assignee },
+    },
+  };
+}
+
+/** The issues a `#` search's JQL finds: the account's not done, or the titles holding every word (the last a prefix). */
+function jiraSearched(jql) {
+  const words = /summary ~ "([^"]*)"/.exec(jql);
+  const keys = Object.keys(JIRA_ISSUES).filter((key) => {
+    const issue = JIRA_ISSUES[key];
+    if (!words) return issue.assignee === 'Ana Díaz' && issue.category !== 'done';
+    const title = issue.summary.toLowerCase();
+    return words[1].replace(/\*$/, '').split(' ').every((word) => title.split(/\W+/).some((titleWord) => titleWord.startsWith(word)));
+  });
+  return keys.reverse().map(jiraIssue);
+}
 
 const GITHUB_ISSUES = {
   12: { __typename: 'Issue', title: 'Crash when opening a model', state: 'OPEN', stateReason: null, assignee: 'lena' },
@@ -59,26 +88,22 @@ function jira(url, init) {
   if (path === '/rest/api/3/myself') return answer(200, { accountId: '5b10ac8d', displayName: 'Ana Díaz', emailAddress: 'ana@acme.com' });
   const project = /^\/rest\/api\/3\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
+  if (path === '/rest/api/3/search/jql') return answer(200, { issues: jiraSearched(JSON.parse(init.body).jql) });
   if (path === '/rest/api/3/search/approximate-count') return answer(200, { count: JSON.parse(init.body).jql.includes('currentUser') ? 6 : 214 });
   if (path === '/rest/api/3/issue/bulkfetch') {
     const keys = JSON.parse(init.body).issueIdsOrKeys;
-    const issues = keys
-      .filter((key) => JIRA_ISSUES[key])
-      .map((key) => {
-        const issue = JIRA_ISSUES[key];
-        return {
-          key,
-          fields: {
-            summary: issue.summary,
-            status: { name: issue.status, statusCategory: { key: issue.category } },
-            issuetype: { name: issue.type },
-            assignee: issue.assignee && { accountId: issue.assignee, displayName: issue.assignee },
-          },
-        };
-      });
+    const issues = keys.filter((key) => JIRA_ISSUES[key]).map(jiraIssue);
     return answer(200, { issues, issueErrors: [] });
   }
   return answer(404, { errorMessages: ['Not found'] });
+}
+
+/** The issues a `#` search's query finds: the open ones, or the titles holding every quoted word. */
+function githubSearched(q) {
+  const words = [...q.matchAll(/"([^"]+)"/g)].map((match) => match[1].toLowerCase());
+  return Object.entries(GITHUB_ISSUES)
+    .filter(([, issue]) => issue.__typename === 'Issue' && (words.length === 0 ? issue.state === 'OPEN' : words.every((word) => issue.title.toLowerCase().includes(word))))
+    .map(([number, issue]) => ({ ...issue, number: Number(number), url: `https://github.com/acme/game/issues/${number}`, repository: { nameWithOwner: 'acme/game' }, assignees: { nodes: [] } }));
 }
 
 function github(url, init) {
@@ -95,6 +120,7 @@ function github(url, init) {
   if (path === '/user') return answer(200, { login: 'ana-diaz', name: 'Ana Díaz' });
   if (path === '/graphql') {
     const { query, variables } = JSON.parse(init.body);
+    if (query.startsWith('query Search')) return answer(200, { data: { search: { nodes: githubSearched(variables.q) } } });
     if (query.startsWith('query Access')) return answer(200, { data: { repository: { nameWithOwner: `${variables.owner}/${variables.name}`, issues: { totalCount: 42 } }, search: { issueCount: 3 } } });
     // Each issue alias belongs to the repository alias before it, as the batch writes them.
     const data = {};
@@ -133,22 +159,10 @@ function jiraDataCenter(url, init) {
       return answer(400, { errorMessages: [`Can not deserialize value of type boolean from String "${validateQuery}"`], errors: {} });
     }
     const keys = /key in \((.*)\)/.exec(jql);
+    if (jql.includes('ORDER BY')) return answer(200, { startAt: 0, maxResults: 20, total: 0, issues: jiraSearched(jql) });
     if (!keys) return answer(200, { startAt: 0, maxResults: 0, total: jql.includes('currentUser') ? 4 : 128, issues: [] });
     const asked = [...keys[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-    const issues = asked
-      .filter((key) => JIRA_ISSUES[key])
-      .map((key) => {
-        const issue = JIRA_ISSUES[key];
-        return {
-          key,
-          fields: {
-            summary: issue.summary,
-            status: { name: issue.status, statusCategory: { key: issue.category } },
-            issuetype: { name: issue.type },
-            assignee: issue.assignee && { key: issue.assignee, name: issue.assignee, displayName: issue.assignee },
-          },
-        };
-      });
+    const issues = asked.filter((key) => JIRA_ISSUES[key]).map(jiraIssue);
     return answer(200, { startAt: 0, maxResults: asked.length, total: issues.length, issues });
   }
   return answer(404, { errorMessages: ['Not found'] });
