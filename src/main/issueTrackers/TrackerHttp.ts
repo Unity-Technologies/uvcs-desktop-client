@@ -53,8 +53,11 @@ export interface TrackerRequestLog {
 /** The one way to a tracker for one connection (or none: a sign-in's first requests). */
 export interface ConnectionHttp {
   send(request: TrackerRequest): Promise<TrackerResponse>;
-  /** The tracker said, in an answer's body, to leave it alone until then (GitHub's GraphQL `RATE_LIMITED`). */
-  restOrigin(url: string, until: number): void;
+  /**
+   * The tracker said in an answer's body to leave it alone (GitHub's GraphQL `RATE_LIMITED`): its origin rests until
+   * the time the answer's headers give (`restUntil`), which this returns.
+   */
+  restOrigin(url: string, header: HeaderOf): number;
 }
 
 interface TrackerHttpOptions {
@@ -89,7 +92,11 @@ export class TrackerHttp {
     const allowed = new Set(origins.map((origin) => origin.toLowerCase()));
     return {
       send: (request) => this.send(request, allowed, authorization, onRefused),
-      restOrigin: (url, until) => this.cooldown.rest(new URL(url).origin, until),
+      restOrigin: (url, header) => {
+        const until = restUntil(header, this.now());
+        this.cooldown.rest(new URL(url).origin, until);
+        return until;
+      },
     };
   }
 
