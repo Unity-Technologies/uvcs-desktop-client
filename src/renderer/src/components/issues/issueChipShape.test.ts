@@ -14,6 +14,10 @@ describe('issueChipShape', () => {
     expect(issueChipShape({ key: 'VCS-12', bare: false }, 'VCS-12', 'jiraCloud', found, true)).toEqual({ kind: 'chip', label: 'VCS-12', title: 'Jira issue VCS-12', category: 'inProgress' });
   });
 
+  it('shows an issue written as its address by its key', () => {
+    expect(issueChipShape({ key: 'VCS-12', bare: false }, 'https://x.atlassian.net/browse/VCS-12', 'jiraCloud', undefined, true)).toMatchObject({ label: 'VCS-12' });
+  });
+
   it('keeps a key the tracker reports missing a chip, as a changeset’s', () => {
     expect(issueChipShape({ key: 'VCS-99', bare: false }, 'VCS-99', 'jiraCloud', { key: 'VCS-99', kind: 'missing' }, false)).toEqual({ kind: 'chip', label: 'VCS-99', title: 'Jira issue VCS-99' });
   });

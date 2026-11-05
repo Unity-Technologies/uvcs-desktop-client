@@ -13,7 +13,7 @@ export type IssueChipShape =
   | { kind: 'text' }
   | {
       kind: 'chip';
-      /** The key as written: `VCS-12`, `#12`, `Acme/Game#12`. */
+      /** The key as written (`VCS-12`, `#12`, `Acme/Game#12`); an address's, its key. */
       label: string;
       /** In words, for the tooltip and screen readers: "Jira issue VCS-12". */
       title: string;
@@ -31,7 +31,8 @@ export function issueChipShape(reference: IssueReference, source: string, kind: 
   const found = read?.kind === 'found' ? read.issue : undefined;
   return {
     kind: 'chip',
-    label: source,
+    // An issue written as its address shows its key: the address is what copying gives back.
+    label: /^<?https?:\/\//i.test(source) ? reference.key : source,
     title: `${issueNoun(kind, found?.type)} ${reference.key}`,
     ...(found && !compact && { summary: found.title }),
     ...(found && { category: found.statusCategory }),
