@@ -34,7 +34,7 @@ you touch:
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
-| `features/issue-trackers.md`            | Issue trackers (Jira Cloud, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
+| `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 
 ## How a request flows
 
@@ -596,7 +596,7 @@ request and never written into `PRIVACY.md` by the change itself.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
-- **The issue tracker the user connected** (Jira Cloud, GitHub; docs/features/issue-trackers.md "What leaves the
+- **The issue tracker the user connected** (Jira, GitHub; docs/features/issue-trackers.md "What leaves the
   device"), from main only (`TrackerHttp`): signing in, and the issues a comment shown names (a Jira binding's
   project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a
   comment names, never from a place with no tracker connected.
