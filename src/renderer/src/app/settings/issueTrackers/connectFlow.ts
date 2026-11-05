@@ -166,6 +166,8 @@ export function connectFailureWords(failure: SignInFailure, context: { trackerNa
   switch (failure.reason) {
     case 'notAnIssueLink':
       return { words: failure.what ? `That's a link to ${failure.what}, not an issue. Open any issue and copy its address.` : 'Paste the address of an issue.', offersTokenPage: false };
+    case 'hostDeclined':
+      return { words: `Not signed in: ${hostOf(failure.server)} wasn't allowed.`, offersTokenPage: false };
     case 'insecure':
       return { words: "This server doesn't use a secure connection (https), so your token would travel readable.", offersTokenPage: false };
     case 'tokenShape':

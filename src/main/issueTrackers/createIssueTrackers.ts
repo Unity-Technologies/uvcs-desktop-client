@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { safeStorage, session, shell } from 'electron';
+import { BrowserWindow, dialog, safeStorage, session, shell } from 'electron';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
 import { GITHUB_OAUTH_CLIENT_IDS } from '@shared/issueTrackers/signInMethods';
+import { currentCaller } from '../ipc/caller';
 import { IssueTrackers } from './IssueTrackers';
 import { IssueTrackerStore } from './IssueTrackerStore';
 import { realWait } from './signIn/deviceFlow';
@@ -41,6 +42,7 @@ export function createIssueTrackers({ userData, logRequest, changed, development
     wait: realWait,
     // Against the fake trackers, a token page would be a real tracker's: it's named in the console instead.
     openExternal: (url) => (fake ? console.log(`[fake trackers] the token page: ${url}`) : void shell.openExternal(url)),
+    askHostConsent,
     oauthClientIds: development && env.UVCS_GITHUB_OAUTH_CLIENT_ID ? { ...GITHUB_OAUTH_CLIENT_IDS, 'github.com': env.UVCS_GITHUB_OAUTH_CLIENT_ID } : GITHUB_OAUTH_CLIENT_IDS,
   });
 }
@@ -57,4 +59,25 @@ function sessionFetch(): TrackerFetch {
 function fakeFetch(modulePath: string): TrackerFetch {
   const fake = createRequire(__filename)(modulePath) as { fetch: TrackerFetch };
   return fake.fetch;
+}
+
+/**
+ * Main's own question before a credential first goes to a host no tracker is known by (`needsHostConsent`), over the
+ * window that asked: the host shown plainly, and only the user answers it.
+ */
+async function askHostConsent(server: string): Promise<boolean> {
+  const caller = currentCaller();
+  const window = caller ? BrowserWindow.fromWebContents(caller) : null;
+  const host = new URL(server).host;
+  const question = {
+    type: 'question' as const,
+    message: `Sign in to ${host}?`,
+    detail: `Your token will be sent to ${host}. Sign in only if it's your company's GitHub Enterprise Server.`,
+    buttons: ['Sign In', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  };
+  const { response } = window ? await dialog.showMessageBox(window, question) : await dialog.showMessageBox(question);
+  return response === 0;
 }

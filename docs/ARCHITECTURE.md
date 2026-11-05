@@ -577,7 +577,10 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program. The programs the ap
 editors, merge tools, tools: `customEditors`, `customMergeTools`, `tools`) live in the settings the renderer writes, so
 a renderer taken over could start a program of its choosing; that is accepted, since each is the user's own choice
 made in the app's UI. Main still holds what reaches them to what the user asked: a tool runs only on the kinds of
-objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`).
+objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`). An issue
+tracker's sign-in names its server from a link the window sends, so before a credential first goes to a host none of
+the trackers' own nor a connection's, main asks the user in its own dialog, which the window can't answer
+(`needsHostConsent`, docs/features/issue-trackers.md "Host consent").
 
 ## What leaves the device
 

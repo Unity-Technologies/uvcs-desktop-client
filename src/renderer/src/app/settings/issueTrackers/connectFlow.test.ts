@@ -87,6 +87,7 @@ describe('connectFailureWords', () => {
     });
     expect(connectFailureWords({ reason: 'unreachable', server: 'https://acme.atlassian.net' }, { trackerName: 'Jira', server: 'https://acme.atlassian.net' }).words).toBe("Jira couldn't be reached at acme.atlassian.net.");
     expect(connectFailureWords({ reason: 'notGitHubEnterprise', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("This doesn't look like GitHub Enterprise Server.");
+    expect(connectFailureWords({ reason: 'hostDeclined', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("Not signed in: git.acme.com wasn't allowed.");
   });
 });
 

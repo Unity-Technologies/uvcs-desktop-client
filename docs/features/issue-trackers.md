@@ -390,20 +390,26 @@ beside the button.
 
 A masked field paste works in, as people know it:
 
-- **"Create a token"** has main open the tracker's page (`openTokenPage`), filled in where it allows: GitHub's
+- **"Create a token"** opens the tracker's page (`openTokenPage`), filled in where it allows: GitHub's
   `<server>/settings/tokens/new?scopes=repo&description=UVCS%20Desktop`, Atlassian's
-  `https://id.atlassian.com/manage-profile/security/api-tokens`. Main remembers that server for the session.
-- **Back in the window** after that page opened, the step asks main whether the clipboard holds a token shaped as the
-  tracker's (`clipboardHoldsToken`): main answers yes or no, never the token, and the step offers "Use the copied
-  token", which main reads itself (`{ copied: true }`). Both hold only for a server whose token page main opened, so
-  a window can't have the clipboard's token sent to a server of its choosing.
+  `https://id.atlassian.com/manage-profile/security/api-tokens`.
 - **Pasting** a token of a known shape (`submitsOnPaste`) signs in at once; Enter or "Sign in" otherwise. A text of no
   token's shape is never sent ("That doesn't look like a GitHub token").
-- The token goes to main once, on submit, and never back; the field forgets it. Signed in, main clears the clipboard
-  if it still holds that token.
+- The app never reads the clipboard by itself: only a paste the user makes reaches the field. A token pasted and
+  signed in with is cleared from the clipboard (written, never read).
+- The token goes to main once, on submit, and never back; the field forgets it.
 - Jira Cloud asks for the account's email, filled in with the `cm` user when that is an address (`suggestedEmail`).
 
 A GitHub fine-grained token (`github_pat_`) is accepted too, as a connection for its owner.
+
+### Host consent
+
+Any address shaped like an issue on another host (`https://<host>/<owner>/<repo>/issues/1`) reads as GitHub
+Enterprise Server, so a window, untrusted, could name a host of its choosing. Before a credential first goes to a host
+that is none of the trackers' own (github.com, `*.ghe.com`, `*.atlassian.net`, `*.jira.com`) nor a connection's server
+(`needsHostConsent`), main asks the user in its own dialog over the window: "Sign in to git.acme.com?", the host shown
+plainly, Sign In or Cancel (`askHostConsent`). A window can't answer it. The answer holds for the session, and for good
+once the connection is kept; declined, nothing is sent ("Not signed in: git.acme.com wasn't allowed").
 
 ## Economy
 
@@ -444,13 +450,16 @@ The registries' `Record`s fail to compile until 2 and 3 exist.
 - **One connection per server for every kind**: a fine-grained GitHub token covers one owner; a second
   organization's would have replaced the first's.
 - **One connection per repository**: the second repository on the same site would sign in again.
-- **Reading the token only from the clipboard, in main**: it kept the token out of the window entirely, but a hidden
-  ⌘V a paste target took over was unlike any sign-in people know, and no field was there for the keyboard or a
-  password manager. A masked field, with the copied token offered in one click.
-- **A copied token sent wherever a window says**: any address shaped `https://<host>/<owner>/<repo>/issues/1` reads as
-  GitHub Enterprise Server, so a window taken over could have main send the clipboard's token to its own host. Main
-  sends a copied token only to a server whose token page it opened itself, and "Sign in again" takes the server from
-  the store. A token the user types or pastes in the field goes where the link they pasted names, as they chose.
+- **Reading the token only from the clipboard, in main**: it kept the token out of the window, but a hidden ⌘V a paste
+  target took over was unlike any sign-in people know, and no field was there for the keyboard or a password manager.
+  A masked field.
+- **Offering a token found on the clipboard** ("Use the copied token", checked as the window came back): a read the
+  user didn't make can bring up the system's paste-privacy prompt (macOS), and it gave a window taken over nothing it
+  couldn't read itself, while main reading it gave that window a way to send it. Paste into the field, which signs in
+  at once.
+- **Trusting the server a window names**: any address shaped like an issue reads as GitHub Enterprise Server, so a
+  window taken over could have main send a credential to its own host. Main asks the user before the first one goes to
+  a host no tracker is known by ("Host consent").
 - **A generic `fetch` for the renderer**, or the renderer calling trackers itself: the renderer is untrusted and its
   Content-Security-Policy allows no connection out. Typed methods in main only.
 - **`net.fetch` as it is**: it sends the default session's cookies. A session of its own.

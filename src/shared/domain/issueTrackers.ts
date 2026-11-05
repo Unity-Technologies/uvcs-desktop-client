@@ -107,6 +107,8 @@ export interface ProjectAccess {
 export type SignInFailure =
   | { reason: 'notAnIssueLink'; what?: string }
   | { reason: 'insecure' }
+  /** The user didn't allow a sign-in to a host no tracker is known by (`needsHostConsent`). */
+  | { reason: 'hostDeclined'; server: string }
   | { reason: 'tokenShape' }
   | { reason: 'tokenRefused' }
   | { reason: 'emailNeeded' }

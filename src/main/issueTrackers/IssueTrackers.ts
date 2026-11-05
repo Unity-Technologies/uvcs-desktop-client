@@ -1,6 +1,6 @@
 import type { RepositorySignIn, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { DeviceSignIn, IssueRead, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
-import { coveringConnection, ownerOf } from '@shared/issueTrackers/connections';
+import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
 import { deviceFlowHostsOf, GITHUB_OAUTH_SCOPES } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
@@ -29,6 +29,11 @@ export interface IssueTrackersDeps {
   providers?: Readonly<Record<IssueTrackerKind, IssueTrackerProvider>>;
   /** Opens a web page in the browser (`shell.openExternal`): the token pages. */
   openExternal: (url: string) => void;
+  /**
+   * Asks the user, in main's own dialog over the calling window, whether to sign in to `server`: a window can't answer
+   * it. True when allowed.
+   */
+  askHostConsent: (server: string) => Promise<boolean>;
 }
 
 type Failed = { kind: 'failed'; failure: SignInFailure };
@@ -49,6 +54,8 @@ export class IssueTrackers {
   /** Connections whose credential the tracker refused this session: their reads fail at once, unsent. */
   private readonly refused = new Set<string>();
   private readonly flows = new Map<string, DeviceFlow>();
+  /** The hosts the user allowed this session (`needsHostConsent`); once a connection is kept, its server needs none. */
+  private readonly consentedServers = new Set<string>();
 
   constructor(private readonly deps: IssueTrackersDeps) {
     this.providers = deps.providers ?? TRACKER_PROVIDERS;
@@ -241,6 +248,7 @@ export class IssueTrackers {
   }
 
   private async completeSignIn(reading: RecognizedLink, repository: string, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
+    if (!(await this.hostAllowed(reading.server))) return failed({ reason: 'hostDeclined', server: reading.server });
     const provider = this.providers[reading.kind];
     let signedIn;
     try {
@@ -263,6 +271,15 @@ export class IssueTrackers {
     };
     this.keep(connection, credential);
     return this.bindProven(connection, repository, [reading.project], reading.project);
+  }
+
+  /** Whether a credential may go to `server`: a tracker's own host, a connection's, or one the user allowed. */
+  private async hostAllowed(server: string): Promise<boolean> {
+    const key = server.toLowerCase();
+    if (this.consentedServers.has(key) || !needsHostConsent(server, this.deps.store.connections())) return true;
+    const allowed = await this.deps.askHostConsent(server);
+    if (allowed) this.consentedServers.add(key);
+    return allowed;
   }
 
   /** Proves `project` with the connection, then binds the repository to it; nothing is bound when the project can't be read. */

@@ -24,3 +24,16 @@ export function coveringConnection<Connection extends Pick<TrackerConnection, 'k
   const covering = connections.filter((connection) => covers(connection, kind, server, project));
   return covering.find((connection) => connection.scope !== '*') ?? covering[0];
 }
+
+/** The trackers' own hosts: github.com, GitHub's data residency hosts, Jira Cloud's sites. */
+const TRACKER_HOSTS = /^(github\.com|[a-z0-9-]+\.ghe\.com|[a-z0-9-]+\.atlassian\.net|[a-z0-9-]+\.jira\.com)$/i;
+
+/**
+ * Whether main asks the user before a credential first goes to `server` (docs/features/issue-trackers.md, "Host
+ * consent"): any address shaped like an issue on another host reads as GitHub Enterprise Server, so a window could name
+ * one of its choosing. The trackers' own hosts, and a server a connection already signs in to, need no asking.
+ */
+export function needsHostConsent(server: string, connections: readonly Pick<TrackerConnection, 'server'>[]): boolean {
+  if (TRACKER_HOSTS.test(new URL(server).hostname)) return false;
+  return !connections.some((connection) => connection.server.toLowerCase() === server.toLowerCase());
+}
