@@ -194,10 +194,18 @@
   gap: var(--space-1);
 }
 
-/* The prefixes take a row of their own, under the keys: too many to share one with them. */
-.scopes {
-  display: flex;
-  flex-basis: 100%;
+/* The palette's own prefixes end the keys' row; those it shares with the comment editor take the next one. */
+.ownScopes,
+.sharedScopes {
+  display: inline-flex;
   flex-wrap: wrap;
   gap: 6px var(--space-3);
+}
+
+.ownScopes {
+  margin-left: auto;
+}
+
+.sharedScopes {
+  flex-basis: 100%;
 }

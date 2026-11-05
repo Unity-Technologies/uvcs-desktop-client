@@ -61,12 +61,15 @@ describe('SCOPE_PREFIXES', () => {
 });
 
 describe('offeredPrefixes', () => {
-  const prefixes = (shown: Parameters<typeof offeredPrefixes>[0]) => offeredPrefixes(shown).map(({ prefix }) => prefix);
+  const prefixes = (shown: Parameters<typeof offeredPrefixes>[0]) => {
+    const { own, shared } = offeredPrefixes(shown);
+    return { own: own.map(({ prefix }) => prefix), shared: shared.map(({ prefix }) => prefix) };
+  };
 
   it('offers only commands on the home screen, every prefix but files in a repository, and all of them in a workspace', () => {
-    expect(prefixes(null)).toEqual(['>']);
-    expect(prefixes(repositoryPlace('game@local'))).toEqual(['>', 'cs:', 'br:', 'lb:', 'sh:', 'cr:', '@']);
-    expect(prefixes(workspacePlace('/ws'))).toEqual(['>', '/', 'cs:', 'br:', 'lb:', 'sh:', 'cr:', '@']);
+    expect(prefixes(null)).toEqual({ own: ['>'], shared: [] });
+    expect(prefixes(repositoryPlace('game@local'))).toEqual({ own: ['>'], shared: ['cs:', 'br:', 'lb:', 'sh:', 'cr:', '@'] });
+    expect(prefixes(workspacePlace('/ws'))).toEqual({ own: ['>', '/'], shared: ['cs:', 'br:', 'lb:', 'sh:', 'cr:', '@'] });
   });
 });
 

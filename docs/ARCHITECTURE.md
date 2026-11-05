@@ -1048,7 +1048,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
   (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it;
   a changeset's number (`1234`, `cs:1234`) is still found in any search. `#` is no one's: it's kept for issues. The
-  footer names the prefixes that work where the palette is open (`offeredPrefixes`). Labels, code reviews and people
+  footer names the prefixes that work where the palette is open (`offeredPrefixes`), its own at the end of the
+  keys' row and the shared ones on a row of their own. Labels, code reviews and people
   are listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
   suggestions (`peopleIndex`); picking one opens the Changesets view on their changesets (`showPersonChangesets`,
