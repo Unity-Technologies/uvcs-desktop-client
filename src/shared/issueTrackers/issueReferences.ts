@@ -27,7 +27,7 @@ export function issueReferenceReader(binding: RepositoryTrackerBinding, connecti
     connectionId: connection.id,
     kind: connection.kind,
     server: connection.server,
-    referencesIn: (text) => grammar.referencesIn(text, projects),
+    referencesIn: grammar.referencesReader(projects),
     issueAtAddress(address) {
       let url: URL;
       try {

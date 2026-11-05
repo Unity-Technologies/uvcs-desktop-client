@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { githubApiBase, githubGrammar, githubGraphqlUrl, githubKeyParts } from './github';
 import { jiraCloudGrammar } from './jiraCloud';
 
-const keysIn = (text: string, projects: string[]) => jiraCloudGrammar.referencesIn(text, projects).map(({ key, from, to }) => ({ key, from, to }));
-const githubIn = (text: string, projects: string[]) => githubGrammar.referencesIn(text, projects).map(({ key, bare, source }) => ({ key, bare, source }));
+const keysIn = (text: string, projects: string[]) => jiraCloudGrammar.referencesReader(projects)(text).map(({ key, from, to }) => ({ key, from, to }));
+const githubIn = (text: string, projects: string[]) => githubGrammar.referencesReader(projects)(text).map(({ key, bare, source }) => ({ key, bare, source }));
 
 describe('Jira Cloud references', () => {
   it('reads a bound project’s keys, where they start and end', () => {

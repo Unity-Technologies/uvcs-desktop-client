@@ -30,12 +30,14 @@ export const jiraCloudGrammar: TrackerGrammar = {
     return { kind: 'jiraCloud', notAnIssue: jiraPageName(url.pathname) };
   },
 
-  referencesIn(text, projects) {
-    if (projects.length === 0) return [];
+  referencesReader(projects) {
+    if (projects.length === 0) return () => [];
     const keys = new RegExp(`${REFERENCE_START}(?:${projects.map(escapeRegExp).join('|')})-[1-9]\\d*${REFERENCE_END}`, 'gu');
-    const found: FoundIssueReference[] = [];
-    for (const match of text.matchAll(keys)) found.push({ key: match[0], bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
-    return found;
+    return (text) => {
+      const found: FoundIssueReference[] = [];
+      for (const match of text.matchAll(keys)) found.push({ key: match[0], bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
+      return found;
+    };
   },
 
   issueUrl: (server, key) => `${server}/browse/${encodeURIComponent(key)}`,

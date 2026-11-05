@@ -40,8 +40,11 @@ export interface TrackerGrammar {
   name: string;
   /** Null when the link isn't this tracker's. */
   recognize(url: URL): RecognizedLink | NotAnIssueLink | null;
-  /** The issue references `text` holds for these projects (Jira keys, GitHub `#12` and `owner/repo#12`). */
-  referencesIn(text: string, projects: readonly string[]): FoundIssueReference[];
+  /**
+   * What reads the issue references a text holds for these projects (Jira keys, GitHub `#12` and `owner/repo#12`),
+   * built once per binding: a comment list reads thousands of texts with it.
+   */
+  referencesReader(projects: readonly string[]): (text: string) => FoundIssueReference[];
   /** The issue's page, which a chip opens. */
   issueUrl(server: string, key: string): string;
   /** Where a token is made, filled in where the tracker allows it. */

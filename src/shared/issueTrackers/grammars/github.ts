@@ -79,19 +79,10 @@ export const githubGrammar: TrackerGrammar = {
     return { kind: 'github', notAnIssue: REPOSITORY_PATH.test(url.pathname) ? 'a GitHub repository' : 'a GitHub page' };
   },
 
-  referencesIn(text, projects) {
-    const found: FoundIssueReference[] = [];
-    for (const match of text.matchAll(QUALIFIED)) {
-      found.push({ key: githubKey(match[1]!, match[2]!, match[3]!), bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
-    }
+  referencesReader(projects) {
     // `#12` names the bound repository's issue only when there is one: with several, which it means is a guess.
     const only = projects.length === 1 ? projects[0]!.split('/') : null;
-    if (only?.length === 2) {
-      for (const match of text.matchAll(BARE)) {
-        found.push({ key: githubKey(only[0]!, only[1]!, match[1]!), bare: true, source: match[0], from: match.index, to: match.index + match[0].length });
-      }
-    }
-    return found.sort((a, b) => a.from - b.from);
+    return (text) => referencesInText(text, only?.length === 2 ? { owner: only[0]!, name: only[1]! } : null);
   },
 
   issueUrl(server, key) {
@@ -107,3 +98,17 @@ export const githubGrammar: TrackerGrammar = {
     return isPlausibleToken(token) ? 'plausible' : 'none';
   },
 };
+
+/** `owner/repo#12` of any repository, and `#12` of the one bound (`only`), in the text's order. */
+function referencesInText(text: string, only: { owner: string; name: string } | null): FoundIssueReference[] {
+  const found: FoundIssueReference[] = [];
+  for (const match of text.matchAll(QUALIFIED)) {
+    found.push({ key: githubKey(match[1]!, match[2]!, match[3]!), bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
+  }
+  if (only) {
+    for (const match of text.matchAll(BARE)) {
+      found.push({ key: githubKey(only.owner, only.name, match[1]!), bare: true, source: match[0], from: match.index, to: match.index + match[0].length });
+    }
+  }
+  return found.sort((a, b) => a.from - b.from);
+}
