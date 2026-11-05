@@ -24,7 +24,7 @@ interface TrackerCardProps {
   /** Just connected: the proof of it, shown a moment as the card's success before it settles. */
   justConnected: ProjectAccess | 'noProof' | null;
   onSettled: () => void;
-  /** "Use another tracker…": back to Connect. */
+  /** "Change tracker…": back to Connect, to replace it (a repository has one tracker). */
   onChange: () => void;
 }
 
@@ -40,7 +40,7 @@ export function TrackerCard({ repository, connected, justConnected, onSettled, o
   const header = trackerHeader(connection);
   const account = accountLines(connection.account);
   const entries = (): MenuEntry[] => [
-    { id: 'useAnother', label: 'Use another tracker…', run: onChange },
+    { id: 'changeTracker', label: 'Change tracker…', run: onChange },
     SEPARATOR,
     {
       id: 'disconnect',

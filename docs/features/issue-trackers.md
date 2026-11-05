@@ -414,9 +414,9 @@ In a window with no repository, Connect signs in alone (`connectWords`: "Sign in
 proves the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in
 one click. With no sign-in yet that's the whole pane; with some, their card, whose header's "Add a sign-in" opens it.
 
-**Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its
-name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Use another tracker…" and
-"Disconnect…", which asks first (`disconnectQuestion`). Then:
+**Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its name, kind and host, how it
+stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Change tracker…" (a repository has one tracker, so it replaces
+it; "Use another tracker" read as adding one) and "Disconnect…", which asks first (`disconnectQuestion`). Then:
 
 - **The moment of success**, right after connecting: a green callout, "Connected to Jira", and the proof, checked,
   its values bold ("Signed in as **Daniel Peñalba**", "Project **VCS** · 214 open issues, 6 assigned to you",
