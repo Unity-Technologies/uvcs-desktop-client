@@ -54,9 +54,20 @@ window.on('console', (message) => message.type() === 'error' && errors.push(`con
 await window.setViewportSize({ width: 1400, height: 880 });
 
 const main = window.getByRole('main');
+const browserWindow = await app.browserWindow(window);
 let shotNumber = 0;
+/**
+ * Saves the page's frame as Electron holds it (`webContents.capturePage`), never waiting for the OS to show one:
+ * Playwright's `page.screenshot` waits for the window to be drawn on screen, which one the OS isn't drawing
+ * (minimized, hidden, on another desktop, the display asleep) never is, and its timeout then failed whichever step it
+ * followed, though every step passes without it. The page still renders meanwhile: the two animation frames waited
+ * for first put what the step left into the frame captured, which would otherwise be the one before.
+ */
 async function screenshot(name) {
-  await window.screenshot({ path: join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`) });
+  await window.evaluate(() => new Promise((rendered) => requestAnimationFrame(() => requestAnimationFrame(() => rendered()))));
+  const viewport = window.viewportSize();
+  const png = await browserWindow.evaluate(async (shown, area) => (await shown.webContents.capturePage(area)).toPNG().toString('base64'), { x: 0, y: 0, ...viewport });
+  writeFileSync(join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`), Buffer.from(png, 'base64'));
 }
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
