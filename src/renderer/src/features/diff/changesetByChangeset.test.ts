@@ -103,11 +103,16 @@ describe('changesetFilterPlaceholder', () => {
 
 describe('branchStartOfChangesets', () => {
   it("is the oldest changeset and its parent, the list being the whole branch, newest first", () => {
-    expect(branchStartOfChangesets(branch)).toEqual({ firstChangeset: 280530, base: 280529 });
+    expect(branchStartOfChangesets('/main/task', branch)).toEqual({ firstChangeset: 280530, base: 280529 });
   });
 
   it("isn't known while the changesets are read, nor for a branch with none", () => {
-    expect(branchStartOfChangesets(undefined)).toBeNull();
-    expect(branchStartOfChangesets([])).toBeNull();
+    expect(branchStartOfChangesets('/main/task', undefined)).toBeNull();
+    expect(branchStartOfChangesets('/main/task', [])).toBeNull();
+  });
+
+  // The list keeps the previous branch's changesets while the next branch's are read.
+  it("isn't known from another branch's changesets", () => {
+    expect(branchStartOfChangesets('/main/other', branch)).toBeNull();
   });
 });
