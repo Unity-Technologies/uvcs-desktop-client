@@ -333,6 +333,34 @@ describe('IssueTrackers', () => {
     expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
   });
 
+  it('keeps an ended device flow’s outcome until its window asks for it', async () => {
+    const { engine } = trackers(
+      {
+        ...SIGNED_IN,
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } },
+      },
+      { clientIds: { 'github.com': 'Iv1.app' } },
+    );
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(engine.setup().connections).toHaveLength(1);
+    expect((await engine.finishDeviceSignIn('id1')).kind).toBe('signedIn');
+  });
+
+  it('cancels the device flows of a window that closed', async () => {
+    const { engine, tracker } = trackers(
+      {
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+      },
+      { clientIds: { 'github.com': 'Iv1.app' }, wait: waitUntilCanceled },
+    );
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK }, 7);
+    engine.windowClosed(7);
+    expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'canceled' } });
+    expect(tracker.lines()).toEqual(['POST https://github.com/login/device/code']);
+  });
+
   it('offers no device flow without a registered app', async () => {
     const { engine, tracker } = trackers();
     expect(await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK })).toMatchObject({ failure: { reason: 'unexpected' } });
