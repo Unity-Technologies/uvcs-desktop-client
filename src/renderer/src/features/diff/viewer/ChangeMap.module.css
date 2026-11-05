@@ -15,25 +15,33 @@
   background: var(--bg-surface);
 }
 
-/* A block per change (or band of changes), all in one color: the app's "changed" blue (the C of the file lists),
-   tinted as Pierre tints changed rows (the color mixed into the background, 12% light, 20% dark), and edged in a
-   stronger tint of the same blue, which keeps a pale block visible on the track and apart from the rows beside it. The map says
-   where the changes are; the rows themselves say what they are. */
+/* A block per change (or band of changes) in the color of the changed words inside a changed row: Pierre's
+   translucent word color over the row's tint (`pierreChangeColors`), a little darker than the rows beside it. Removed
+   is red, added green; a block that does both is split down the middle, removed on the left as in a Split diff. */
 .mark {
+  --map-deleted-mark: linear-gradient(var(--map-deleted-words), var(--map-deleted-words)), var(--map-deleted);
+  --map-added-mark: linear-gradient(var(--map-added-words), var(--map-added-words)), var(--map-added);
+
   position: absolute;
   right: 3px;
   left: 3px;
-  box-sizing: border-box;
-  border: 1px solid
-    light-dark(
-      color-mix(in lab, var(--bg-surface) 60%, var(--change-changed)),
-      color-mix(in lab, var(--bg-surface) 50%, var(--change-changed))
-    );
   border-radius: 2px;
-  background: light-dark(
-    color-mix(in lab, var(--bg-surface) 88%, var(--change-changed)),
-    color-mix(in lab, var(--bg-surface) 80%, var(--change-changed))
-  );
+  /* A press on it goes to that change. */
+  cursor: pointer;
+}
+
+.mark[data-kind='deleted'] {
+  background: var(--map-deleted-mark);
+}
+
+.mark[data-kind='added'] {
+  background: var(--map-added-mark);
+}
+
+.mark[data-kind='both'] {
+  background:
+    linear-gradient(to right, var(--map-deleted-words) 50%, var(--map-added-words) 50%),
+    linear-gradient(to right, var(--map-deleted) 50%, var(--map-added) 50%);
 }
 
 /* Over the marks, translucent so they show through it, as the app's thumbs look (global.css). */

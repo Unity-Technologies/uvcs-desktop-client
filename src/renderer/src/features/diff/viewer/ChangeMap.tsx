@@ -82,7 +82,13 @@ export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
   );
 }
 
-/** The changed rows' own tints, for the marks (`ChangeMap.module.css`). */
+/** The changed rows' tints and their changed words' color, for the marks (`ChangeMap.module.css`). */
 function colorProperties({ colors }: ChangeMapView): CSSProperties {
-  return { '--map-deleted': colors.deleted, '--map-added': colors.added, colorScheme: colors.colorScheme } as CSSProperties;
+  return {
+    '--map-deleted': colors.deleted,
+    '--map-added': colors.added,
+    '--map-deleted-words': colors.deletedWords,
+    '--map-added-words': colors.addedWords,
+    colorScheme: colors.colorScheme,
+  } as CSSProperties;
 }
