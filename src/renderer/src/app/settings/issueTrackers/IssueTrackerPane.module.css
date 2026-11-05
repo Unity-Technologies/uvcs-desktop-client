@@ -445,6 +445,14 @@
   white-space: nowrap;
 }
 
+/* No sign-in yet: what to do, in the card's body. */
+.noSignIns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1) 0;
+}
+
 /* The tracker the branch comments link to, offered above the cards. */
 .suggested {
   display: flex;

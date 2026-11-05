@@ -6,6 +6,7 @@ import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { pluralize } from '../../../lib/text';
+import { choiceOf } from './trackerChoices';
 
 /** A tracker's kind in words, its server's kind told apart: "Jira Cloud", "GitHub", "GitHub Enterprise Server". */
 export function trackerKindName(kind: IssueTrackerKind, server: string): string {
@@ -22,9 +23,9 @@ export function otherTokenPageOffered(kind: IssueTrackerKind): boolean {
   return kind === 'jiraDataCenter';
 }
 
-/** Jira, Cloud or Data Center: its projects named by key ("Project VCS"). */
-function isJira(kind: IssueTrackerKind): boolean {
-  return kind !== 'github';
+/** Whether a connection's credential needs signing in again: refused by the tracker, or gone from this computer. */
+export function needsSignIn(connection: Pick<TrackerConnection, 'credential'>): boolean {
+  return connection.credential === 'refused' || connection.credential === 'missing';
 }
 
 /** A server by its host, as people say it: `acme.atlassian.net`. */
@@ -50,7 +51,7 @@ export function linkReadBack(text: string): LinkReadBack {
   if (!text.trim()) return { kind: 'none' };
   const reading = recognizeTrackerLink(text);
   if (isRecognizedLink(reading)) {
-    const parts: LinkParts = { kindName: trackerKindName(reading.kind, reading.server), host: hostOf(reading.server), ...(isJira(reading.kind) && { projectNoun: 'project' }), project: reading.project };
+    const parts: LinkParts = { kindName: trackerKindName(reading.kind, reading.server), host: hostOf(reading.server), ...(choiceOf(reading.kind) === 'jira' && { projectNoun: 'project' }), project: reading.project };
     const project = parts.projectNoun ? `${parts.projectNoun} ${parts.project}` : parts.project;
     return { kind: 'read', words: `${parts.kindName} · ${parts.host} · ${project}`, parts, link: reading };
   }
@@ -77,7 +78,7 @@ export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup, { 
     kind: 'signIn',
     methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts),
     trackerName: TRACKER_GRAMMARS[link.kind].name,
-    ...(connection && signedIn && isJira(connection.kind) && { replacesWords: `Signing in here replaces ${connection.account.name}'s sign-in, for every repository that uses it.` }),
+    ...(connection && signedIn && choiceOf(connection.kind) === 'jira' && { replacesWords: `Signing in here replaces ${connection.account.name}'s sign-in, for every repository that uses it.` }),
   };
 }
 
@@ -201,6 +202,8 @@ export interface SignInRow {
   title: string;
   account: string;
   host: string;
+  /** The card's second line: the server, and whether the window's repository uses it. */
+  detail: string;
   status: { tone: 'positive' | 'caution'; label: string };
   /** It needs signing in again: the one status a quiet list shows. */
   needsAttention: boolean;
@@ -214,7 +217,7 @@ export interface SignInRow {
 export function signInRows(setup: IssueTrackerSetup | undefined, repository?: string): SignInRow[] {
   const here = setup && repository ? bindingOf(setup.bindings, repository)?.connectionId : undefined;
   return (setup?.connections ?? []).map((connection) => {
-    const needsSignIn = connection.credential === 'refused' || connection.credential === 'missing';
+    const signInNeeded = needsSignIn(connection);
     const used = setup?.bindings.filter((binding) => binding.connectionId === connection.id).length ?? 0;
     const name = TRACKER_GRAMMARS[connection.kind].name;
     return {
@@ -223,8 +226,9 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: st
       title: connectionTitle(connection),
       account: connection.account.name,
       host: hostOf(connection.server),
-      status: needsSignIn ? { tone: 'caution', label: 'Needs sign-in' } : { tone: 'positive', label: 'Signed in' },
-      needsAttention: needsSignIn,
+      detail: connection.id === here ? `${hostOf(connection.server)} · This repository` : hostOf(connection.server),
+      status: signInNeeded ? { tone: 'caution', label: 'Needs sign-in' } : { tone: 'positive', label: 'Signed in' },
+      needsAttention: signInNeeded,
       usedHere: connection.id === here,
       signOut: `Sign out of ${hostOf(connection.server)}`,
       signOutQuestion: {

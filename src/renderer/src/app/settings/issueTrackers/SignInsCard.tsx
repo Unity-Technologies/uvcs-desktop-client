@@ -4,7 +4,7 @@ import { Button } from '../../../ui/Button';
 import { confirm } from '../../../ui/dialog/confirm';
 import { signInRows, type SignInRow } from './connectFlow';
 import { StatusPill } from './StatusPill';
-import type { TrackerChoice } from './trackerChoices';
+import { NO_SIGN_INS, type TrackerChoice } from './trackerChoices';
 import { AddSignInMenu } from './AddSignInMenu';
 import { SignInIdentity } from './SignInIdentity';
 import styles from './IssueTrackerPane.module.css';
@@ -48,8 +48,8 @@ export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?
           tiles
         ) : (
           <div className={styles.noSignIns}>
-            <p className={styles.nextTitle}>No sign-ins yet</p>
-            <p className={styles.note}>Add one with your Jira or GitHub account. Any repository then connects to it in one click.</p>
+            <p className={styles.nextTitle}>{NO_SIGN_INS.title}</p>
+            <p className={styles.note}>{NO_SIGN_INS.onHome}</p>
           </div>
         )}
       </div>
@@ -70,7 +70,7 @@ function SignInTile({ row }: { row: SignInRow }) {
   };
   return (
     <li className={styles.signInTile} aria-label={`${row.account}, ${row.title}`}>
-      <SignInIdentity row={row} detail={row.usedHere ? `${row.host} · This repository` : row.host} />
+      <SignInIdentity row={row} />
       {row.needsAttention && <StatusPill status={row.status} />}
       <Button className={styles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={signOut}>
         Sign out

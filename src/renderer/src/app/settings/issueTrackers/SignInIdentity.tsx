@@ -3,8 +3,8 @@ import type { SignInRow } from './connectFlow';
 import { TrackerIcon } from './TrackerIcon';
 import styles from './IssueTrackerPane.module.css';
 
-/** Who a sign-in is, as its card shows it: the avatar with the tracker's logo on its corner, the name, the server. */
-export function SignInIdentity({ row, detail }: { row: SignInRow; detail?: string }) {
+/** Who a sign-in is, as its card shows it: the avatar with the tracker's logo on its corner, the name, its second line (`detail`). */
+export function SignInIdentity({ row }: { row: SignInRow }) {
   return (
     <>
       <span className={styles.tileAvatar}>
@@ -15,7 +15,7 @@ export function SignInIdentity({ row, detail }: { row: SignInRow; detail?: strin
       </span>
       <span className={styles.tileText}>
         <span className={styles.tileName}>{row.account}</span>
-        <span className={styles.tileHost}>{detail ?? row.host}</span>
+        <span className={styles.tileHost}>{row.detail}</span>
       </span>
     </>
   );

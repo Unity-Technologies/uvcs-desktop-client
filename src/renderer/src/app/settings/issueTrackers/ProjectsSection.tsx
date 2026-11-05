@@ -9,7 +9,7 @@ import { TextField } from '../../../ui/TextField';
 import { addProjectReady, connectFailureWords, linkReadBack } from './connectFlow';
 import { choiceOf, trackerChoiceCard } from './trackerChoices';
 import { LinkReadBackLine } from './LinkReadBackLine';
-import { projectNoun, projectRows, projectsExplained } from './trackerCardContent';
+import { projectRows, projectsExplained, projectsSectionWords } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
 interface ProjectsSectionProps {
@@ -25,11 +25,11 @@ interface ProjectsSectionProps {
  * of its issues.
  */
 export function ProjectsSection({ repository, kind, projects, answer }: ProjectsSectionProps) {
-  const noun = projectNoun(kind);
+  const words = projectsSectionWords(kind);
   const rows = projectRows(projects, answer);
   return (
     <div className={styles.section}>
-      <h3 className={styles.sectionTitle}>{noun === 'project' ? 'Projects' : 'Repositories'}</h3>
+      <h3 className={styles.sectionTitle}>{words.title}</h3>
       <p className={styles.intro}>{projectsExplained(kind, projects)}</p>
       <ul className={styles.list}>
         {rows.map((row) => (
@@ -43,7 +43,7 @@ export function ProjectsSection({ repository, kind, projects, answer }: Projects
           </li>
         ))}
       </ul>
-      <AddProject repository={repository} kind={kind} noun={noun} />
+      <AddProject repository={repository} kind={kind} words={words} />
     </div>
   );
 }
@@ -52,7 +52,7 @@ export function ProjectsSection({ repository, kind, projects, answer }: Projects
  * "Add a project": a quiet button that opens a row of its own, a full-width field for a link to an issue of the
  * other project, read back as the user pastes, and Add or Cancel.
  */
-function AddProject({ repository, kind, noun }: { repository: string; kind: IssueTrackerKind; noun: string }) {
+function AddProject({ repository, kind, words }: { repository: string; kind: IssueTrackerKind; words: ReturnType<typeof projectsSectionWords> }) {
   const [adding, setAdding] = useState(false);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
@@ -67,7 +67,7 @@ function AddProject({ repository, kind, noun }: { repository: string; kind: Issu
     return (
       <div className={styles.row}>
         <Button size="small" variant="ghost" icon={<Plus size={14} />} onClick={() => setAdding(true)}>
-          Add a {noun}
+          {words.add}
         </Button>
       </div>
     );
@@ -93,9 +93,9 @@ function AddProject({ repository, kind, noun }: { repository: string; kind: Issu
     <div className={styles.next}>
       <TextField
         className={styles.field}
-        label={`Paste a link to any issue in the other ${noun}`}
+        label={words.fieldLabel}
         placeholder={trackerChoiceCard(choiceOf(kind)).placeholder}
-        hint={`The app reads the ${noun} from the link, and checks your sign-in can see it.`}
+        hint={words.fieldHint}
         value={link}
         onChange={(event) => {
           setLink(event.target.value);

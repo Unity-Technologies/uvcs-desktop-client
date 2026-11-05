@@ -5,7 +5,7 @@ import { AddSignInMenu } from './AddSignInMenu';
 import { linkReadBack, usableSignIns } from './connectFlow';
 import type { ConnectStart } from './ConnectTracker';
 import { SignInIdentity } from './SignInIdentity';
-import { choiceOf, REPOSITORY_START_WORDS } from './trackerChoices';
+import { choiceOf, NO_SIGN_INS, REPOSITORY_START_WORDS } from './trackerChoices';
 import { TrackerLogo } from './TrackerLogo';
 import { useSuggestedLink } from './useSuggestedLink';
 import styles from './IssueTrackerPane.module.css';
@@ -62,8 +62,8 @@ export function RepositoryStart({ onStart, onCancel }: { onStart: (start: Connec
           </>
         ) : (
           <div className={styles.noSignIns}>
-            <p className={styles.nextTitle}>{words.noneTitle}</p>
-            <p className={styles.note}>{words.none}</p>
+            <p className={styles.nextTitle}>{NO_SIGN_INS.title}</p>
+            <p className={styles.note}>{NO_SIGN_INS.inRepository}</p>
           </div>
         )}
       </div>

@@ -75,11 +75,16 @@ export function connectWords(card: TrackerChoiceCard, forRepository: boolean): {
   return { title: forRepository ? `Connect ${card.name}` : `Sign in to ${card.name}` };
 }
 
-/** A repository's card while it has no tracker: what connecting does, its sign-ins to use, or none yet. */
+/** "No sign-ins yet", where sign-ins are listed: on Home, and on a repository's card while it has no tracker. */
+export const NO_SIGN_INS = {
+  title: 'No sign-ins yet',
+  onHome: 'Add one with your Jira or GitHub account. Any repository then connects to it in one click.',
+  inRepository: "Add one with your Jira or GitHub account, then paste a link to any of this repository's issues.",
+};
+
+/** A repository's card while it has no tracker: what connecting does, and its sign-ins to use. */
 export const REPOSITORY_START_WORDS = {
   title: 'Connect an issue tracker',
   intro: "Issue keys and links in this repository's comments show each issue's title and status.",
   signIns: 'Use one of your sign-ins',
-  noneTitle: 'No sign-ins yet',
-  none: "Add one with your Jira or GitHub account, then paste a link to any of this repository's issues.",
 };

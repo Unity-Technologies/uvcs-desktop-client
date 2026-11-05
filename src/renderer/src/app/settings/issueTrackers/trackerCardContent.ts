@@ -1,6 +1,6 @@
 import type { BoundProjectsAnswer, IssueTrackerKind, ProjectAccess, TrackerConnection } from '@shared/domain/issueTrackers';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
-import { hostOf, trackerKindName } from './connectFlow';
+import { hostOf, needsSignIn, trackerKindName } from './connectFlow';
 
 /** How a connection stands, as its status pill says it: fine, needing the user, or failing. */
 export type StatusTone = 'positive' | 'caution' | 'danger';
@@ -8,11 +8,6 @@ export type StatusTone = 'positive' | 'caution' | 'danger';
 export interface TrackerStatus {
   tone: StatusTone;
   label: string;
-}
-
-/** Whether a connection's credential needs signing in again: refused by the tracker, or gone from this computer. */
-export function needsSignIn(connection: Pick<TrackerConnection, 'credential'>): boolean {
-  return connection.credential === 'refused' || connection.credential === 'missing';
 }
 
 /**
@@ -78,6 +73,17 @@ export function projectsExplained(kind: IssueTrackerKind, projects: readonly str
   if (kind !== 'github') return `Keys like ${first}-123 in this repository's comments show as chips with the issue's title and status.`;
   const references = projects.length === 1 ? '#123 and links to its issues' : `${first}#123 and links to their issues`;
   return `${references} in this repository's comments show as chips with the issue's title and status.`;
+}
+
+/** The Projects section's words, a Jira project's or a GitHub repository's: its title, Add, and the field to add one. */
+export function projectsSectionWords(kind: IssueTrackerKind): { title: string; add: string; fieldLabel: string; fieldHint: string } {
+  const noun = projectNoun(kind);
+  return {
+    title: noun === 'project' ? 'Projects' : 'Repositories',
+    add: `Add a ${noun}`,
+    fieldLabel: `Paste a link to any issue in the other ${noun}`,
+    fieldHint: `The app reads the ${noun} from the link, and checks your sign-in can see it.`,
+  };
 }
 
 /** The project noun a tracker's links name: a Jira project, a GitHub repository. */
