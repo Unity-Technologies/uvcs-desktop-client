@@ -107,9 +107,10 @@ export class IssueTrackers {
   async retrySignIn(connectionId: string): Promise<SignInOutcome> {
     const connection = this.deps.store.connection(connectionId);
     if (!connection) return failed({ reason: 'unexpected', message: 'This sign-in is gone' });
-    this.refused.delete(connectionId);
+    // Tried past the refusal, which only a success lifts: out of reach or rate limited, it stays refused.
     try {
-      await this.providers[connection.kind].whoAmI(this.connectionHttp(connection), connection);
+      await this.providers[connection.kind].whoAmI(this.connectionHttp(connection, { pastRefusal: true }), connection);
+      this.refused.delete(connectionId);
       this.announce();
       return { kind: 'signedIn', connection: this.withCredential(connection) };
     } catch (error) {
@@ -311,8 +312,8 @@ export class IssueTrackers {
   }
 
   /** The connection's HTTP, its credential added; a missing or refused credential fails at once, unsent. */
-  private connectionHttp(connection: StoredConnection): ConnectionHttp {
-    const credential = this.refused.has(connection.id) ? null : this.deps.secrets.read(connection.id);
+  private connectionHttp(connection: StoredConnection, { pastRefusal = false } = {}): ConnectionHttp {
+    const credential = this.refused.has(connection.id) && !pastRefusal ? null : this.deps.secrets.read(connection.id);
     if (!credential) throw new TrackerError('signInRefused', `${new URL(connection.server).host} needs signing in again`);
     const provider = this.providers[connection.kind];
     return this.deps.http.bound(provider.origins(connection.server), provider.authorization(credential), () => this.credentialRefused(connection.id));
