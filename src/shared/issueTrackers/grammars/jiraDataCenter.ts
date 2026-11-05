@@ -8,6 +8,18 @@ import { browsedIssue, jiraIssueUrl, jiraReferencesReader } from './jiraKeys';
  */
 const PERSONAL_ACCESS_TOKEN = /^[A-Za-z0-9+/=_-]{32,64}$/;
 
+/** The two pages a Jira Data Center may make tokens on (`TokenPages` picks): its app's, or Jira's own. */
+export type DataCenterTokenPage = 'apiTokenApp' | 'jira';
+
+/**
+ * Where each token page is. Many servers turn Jira's own personal access tokens off and make them with an app,
+ * resolution's API Token Authentication, sent as Bearer as well.
+ */
+export const JIRA_DATA_CENTER_TOKEN_PAGES: Readonly<Record<DataCenterTokenPage, (server: string) => string>> = {
+  apiTokenApp: (server) => `${server}/plugins/servlet/de.resolution.apitokenauth/admin`,
+  jira: (server) => `${server}/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`,
+};
+
 /**
  * Jira Data Center, self-hosted: an issue's page is `<server>/browse/KEY-1` on any host that isn't Jira Cloud's, the
  * server keeping its context path (`https://tools.acme.com/jira`). Its other pages look like any web page, so only an
@@ -30,7 +42,8 @@ export const jiraDataCenterGrammar: TrackerGrammar = {
 
   issueUrl: jiraIssueUrl,
 
-  tokenPageUrl: (server) => `${server}/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`,
+  // Jira's own page; main may open the API Token Authentication app's instead (`TokenPages`).
+  tokenPageUrl: JIRA_DATA_CENTER_TOKEN_PAGES.jira,
 
   tokenShape: (token) => (PERSONAL_ACCESS_TOKEN.test(token) ? 'plausible' : 'none'),
 };

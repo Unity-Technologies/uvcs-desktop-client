@@ -13,6 +13,9 @@ export interface RepositorySignIn {
 /** Whose token page: a link's tracker, or a connection's (signing in again). */
 export type TokenPageTarget = { link: string } | { connectionId: string };
 
+/** The page a tracker usually makes tokens on, or its other one (Jira Data Center has two: `TokenPages`). */
+export type TokenPageChoice = 'usual' | 'other';
+
 /**
  * Issue trackers (docs/features/issue-trackers.md). The trackers are reached from main only; no credential ever comes
  * back to a window, and a token goes to main once, on sign-in.
@@ -27,8 +30,8 @@ export interface IssueTrackersApi {
   signInAgain(request: { connectionId: string; email?: string; token: string }): Promise<SignInOutcome>;
   /** Tries a connection's kept credential once more (`whoAmI`), before asking for a new one. */
   retrySignIn(connectionId: string): Promise<SignInOutcome>;
-  /** Opens the tracker's token page in the browser, filled in where the tracker allows. */
-  openTokenPage(target: TokenPageTarget): Promise<void>;
+  /** Opens the tracker's token page in the browser, filled in where the tracker allows; or its other one. */
+  openTokenPage(target: TokenPageTarget, choice?: TokenPageChoice): Promise<void>;
 
   /**
    * Starts GitHub's device flow: the code the user enters on the page it names. For a repository by a link, or for a

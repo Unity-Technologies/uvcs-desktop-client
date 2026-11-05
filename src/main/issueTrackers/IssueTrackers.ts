@@ -1,4 +1,4 @@
-import type { RepositorySignIn, TokenPageTarget } from '@shared/api/issueTrackers';
+import type { RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { DeviceSignIn, IssueRead, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
@@ -13,6 +13,7 @@ import { signInFailureOf } from './signIn/signInFailures';
 import type { ConnectionHttp, TrackerHttp } from './TrackerHttp';
 import { TrackerError } from './TrackerError';
 import type { TrackerCredential, TrackerSecrets } from './TrackerSecrets';
+import { TokenPages } from './tokenPages';
 
 export interface IssueTrackersDeps {
   store: IssueTrackerStore;
@@ -61,8 +62,11 @@ export class IssueTrackers {
   /** The question on screen for a host, which every sign-in to it meanwhile waits for. */
   private readonly consentAsked = new Map<string, Promise<boolean>>();
 
+  private readonly tokenPages: TokenPages;
+
   constructor(private readonly deps: IssueTrackersDeps) {
     this.providers = deps.providers ?? TRACKER_PROVIDERS;
+    this.tokenPages = new TokenPages(deps.http);
   }
 
   setup(): IssueTrackerSetup {
@@ -123,9 +127,9 @@ export class IssueTrackers {
     }
   }
 
-  openTokenPage(target: TokenPageTarget): void {
+  async openTokenPage(target: TokenPageTarget, choice: TokenPageChoice = 'usual'): Promise<void> {
     const tracker = this.trackerOf(target);
-    if (tracker) this.deps.openExternal(TRACKER_GRAMMARS[tracker.kind].tokenPageUrl(tracker.server));
+    if (tracker) this.deps.openExternal(await this.tokenPages.urlOf(tracker, choice));
   }
 
   /** A first sign-in for a repository, by a link; or a connection's again, by its id, its bindings kept. */

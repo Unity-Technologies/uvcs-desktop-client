@@ -12,7 +12,7 @@ export function createIssueTrackersService({ issueTrackers }: ServiceContext): I
     signInWithToken: (request) => issueTrackers.signInWithToken(request),
     signInAgain: (request) => issueTrackers.signInAgain(request),
     retrySignIn: (connectionId) => issueTrackers.retrySignIn(connectionId),
-    openTokenPage: async (target) => issueTrackers.openTokenPage(target),
+    openTokenPage: async (target, choice) => issueTrackers.openTokenPage(target, choice),
     startDeviceSignIn: async (request) => {
       const caller = currentCaller();
       const started = await issueTrackers.startDeviceSignIn(request, caller?.id);
