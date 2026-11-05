@@ -6,7 +6,8 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { TextField } from '../../../ui/TextField';
-import { addProjectReady, connectFailureWords, LINK_PLACEHOLDER, linkReadBack } from './connectFlow';
+import { addProjectReady, connectFailureWords, linkReadBack } from './connectFlow';
+import { choiceOf, trackerChoiceCard } from './trackerChoices';
 import { LinkReadBackLine } from './ProofLines';
 import { projectNoun, projectRows, projectsExplained } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
@@ -93,7 +94,7 @@ function AddProject({ repository, kind, noun }: { repository: string; kind: Issu
       <TextField
         className={styles.field}
         label={`Paste a link to any issue in the other ${noun}`}
-        placeholder={LINK_PLACEHOLDER}
+        placeholder={trackerChoiceCard(choiceOf(kind)).placeholder}
         hint={`The app reads the ${noun} from the link, and checks your sign-in can see it.`}
         value={link}
         onChange={(event) => {

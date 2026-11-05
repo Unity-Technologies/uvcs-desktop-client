@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
@@ -10,12 +11,13 @@ import { useIssueTrackerSetup } from '../../../components/issues/useIssueTracker
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { useSession } from '../../workspace/sessionStore';
-import { ChevronLeft } from 'lucide-react';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, hostOf, signInMethodShown, LINK_EXAMPLES, LINK_PLACEHOLDER, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep } from './connectFlow';
+import { connectFailureWords, hostOf, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep, type SuggestedLink } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './ProofLines';
-import { TrackerIcon } from './TrackerIcon';
+import { choiceAfterLink, choiceKeyMove, choiceOf, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
+import type { ConnectStage } from './trackerCardContent';
+import { TrackerLogo } from './TrackerLogo';
 import { DeviceSignIn } from './DeviceSignIn';
 import { TokenSignIn } from './TokenSignIn';
 import styles from './IssueTrackerPane.module.css';
@@ -30,71 +32,126 @@ interface ConnectTrackerProps {
 }
 
 /**
- * Connecting the repository's tracker (docs/features/issue-trackers.md, "Connecting"), one card: paste a link, read
- * back in words; sign in, or use a sign-in already there; the proof follows on the connected card. Each step shows
- * once the one before is done, and the header says where the user is (`ConnectSteps`); changing a tracker has a Back.
+ * Connecting the repository's tracker (docs/features/issue-trackers.md, "Connecting"), one card in three steps
+ * (`ConnectSteps`): pick the tracker from its logo (`TRACKER_CHOICES`); paste a link to any of its issues, shown only
+ * its own link shapes and read back in words; sign in, or use a sign-in already there. Back goes one step back, or to
+ * the tracker connected. A link to another tracker's issue moves to that tracker (`choiceAfterLink`).
  */
 export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTrackerProps) {
+  const [choice, setChoice] = useState<TrackerChoice | null>(null);
   const [link, setLink] = useState('');
+  const [switched, setSwitched] = useState(false);
   const read = linkReadBack(link);
   const suggestion = useSuggestedLink();
   const setup = useIssueTrackerSetup();
   const step = read.kind === 'read' && setup ? signInStepFor(read.link, setup) : null;
+  const stage: ConnectStage = !choice ? 'tracker' : read.kind === 'read' ? 'signIn' : 'link';
+  const card = choice ? trackerChoiceCard(choice) : null;
+
+  const choose = (chosen: TrackerChoice | null, text = ''): void => {
+    setChoice(chosen);
+    setLink(text);
+    setSwitched(false);
+  };
+  const typed = (text: string): void => {
+    const next = choiceAfterLink(choice ?? 'jira', text);
+    setLink(text);
+    setChoice(next.choice);
+    setSwitched(next.switched || (switched && text.trim() !== ''));
+  };
+  const back = choice ? () => choose(null) : onCancel;
 
   return (
     <section className={styles.card} aria-label="Connect an issue tracker">
       <header className={styles.cardHeader}>
-        {onCancel && (
-          <Button size="small" variant="ghost" icon={<ChevronLeft size={14} />} onClick={onCancel}>
-            Back
-          </Button>
-        )}
+        {back && <Button size="small" variant="ghost" className={styles.back} icon={<ChevronLeft size={15} />} aria-label="Back" onClick={back} />}
+        {card && <TrackerLogo choice={card.choice} />}
         <div className={styles.cardHeaderText}>
-          <h2 className={styles.cardTitle}>Connect an issue tracker</h2>
-          <ConnectSteps linkRead={read.kind === 'read'} />
+          <h2 className={styles.cardTitle}>{card ? `Connect ${card.name}` : 'Connect an issue tracker'}</h2>
+          <ConnectSteps stage={stage} {...(card && { trackerName: card.name })} />
         </div>
       </header>
-      <div className={styles.section}>
-        {read.kind === 'none' && !onCancel && (
-          <div className={styles.empty}>
-            <TrackerIcon kind={null} size={20} />
-            <p className={styles.sectionTitle}>See your issues where comments name them</p>
-            <p className={styles.intro}>Paste a link to any issue in Jira or GitHub. The app works out the rest.</p>
-          </div>
-        )}
-        {(read.kind !== 'none' || onCancel) && <p className={styles.intro}>Paste a link to any issue in your tracker. The app works out the rest.</p>}
-        <TextField className={styles.field} aria-label="A link to an issue" placeholder={LINK_PLACEHOLDER} value={link} onChange={(event) => setLink(event.target.value)} autoFocus />
-        {read.kind === 'read' && <LinkReadBackLine parts={read.parts} words={read.words} />}
-        {read.kind === 'problem' && <p className={styles.problem}>{read.words}</p>}
-        {read.kind === 'none' && suggestion && (
-          <div className={styles.callout} data-tone="neutral">
-            <p className={styles.nextTitle}>Your branch comments link to {suggestion.trackerName}</p>
-            <div className={styles.row}>
-              <span className={styles.intro}>{suggestion.words}</span>
-              <Button size="small" onClick={() => setLink(suggestion.link)}>
-                Use this
-              </Button>
-            </div>
-            <p className={styles.note}>{suggestion.seen}</p>
-          </div>
-        )}
-        {read.kind === 'none' && !suggestion && (
-          <dl className={styles.examples}>
-            {LINK_EXAMPLES.map((example) => (
-              <div key={example.tracker} className={styles.example}>
-                <dt>{example.tracker}</dt>
-                <dd>{example.shape}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </div>
-      {read.kind === 'read' && step && (
+      {!card && <TrackerPicker suggestion={suggestion} onChoose={choose} />}
+      {card && (
         <div className={styles.section}>
+          <TextField className={styles.field} label={card.linkLabel} aria-label="A link to an issue" placeholder={card.placeholder} value={link} onChange={(event) => typed(event.target.value)} autoFocus />
+          {read.kind === 'none' && (
+            <ul className={styles.examples} aria-label="Link shapes">
+              {card.examples.map((example) => (
+                <li key={example.label}>
+                  <span className={styles.exampleLabel}>{example.label}</span>
+                  <span className={styles.exampleShape}>{example.shape}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {read.kind === 'read' && <LinkReadBackLine parts={read.parts} words={read.words} />}
+          {read.kind === 'read' && switched && <p className={styles.note}>{switchedWords(card.choice)}</p>}
+          {read.kind === 'problem' && <p className={styles.problem}>{read.words}</p>}
+        </div>
+      )}
+      {read.kind === 'read' && step && (
+        <div className={`${styles.section} ${styles.arrives}`}>
           <SignInFor key={link} link={read.link} linkText={link} step={step} repository={repository} onConnected={onConnected} />
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The first step: a card per tracker, its logo, name and servers, to click or reach with the arrows; above them, the
+ * tracker the branch comments link to, in one click with its link filled in.
+ */
+function TrackerPicker({ suggestion, onChoose }: { suggestion: SuggestedLink | null; onChoose: (choice: TrackerChoice, link?: string) => void }) {
+  const cards = useRef<(HTMLButtonElement | null)[]>([]);
+  const arrows = (event: KeyboardEvent<HTMLDivElement>): void => {
+    const at = cards.current.findIndex((card) => card === document.activeElement);
+    const next = choiceKeyMove(at, event.key, TRACKER_CHOICES.length);
+    if (at < 0 || next === null) return;
+    event.preventDefault();
+    cards.current[next]?.focus();
+  };
+  const suggested = suggestion && linkReadBack(suggestion.link);
+  return (
+    <div className={styles.section}>
+      <p className={styles.intro}>Issue keys and links in this repository's comments show each issue's title and status.</p>
+      {suggestion && suggested?.kind === 'read' && (
+        <div className={styles.suggested}>
+          <TrackerLogo choice={choiceOf(suggested.link.kind)} size={24} />
+          <div className={styles.cardHeaderText}>
+            <span className={styles.nextTitle}>Your branch comments link to {suggestion.trackerName}</span>
+            <span className={styles.personDetail}>
+              {suggestion.words} · {suggestion.seen}
+            </span>
+          </div>
+          <Button size="small" variant="primary" onClick={() => onChoose(choiceOf(suggested.link.kind), suggestion.link)}>
+            Use it
+          </Button>
+        </div>
+      )}
+      <div className={styles.choices} role="group" aria-label="Trackers" onKeyDown={arrows}>
+        {TRACKER_CHOICES.map((card, index) => (
+          <button
+            key={card.choice}
+            ref={(element) => {
+              cards.current[index] = element;
+            }}
+            type="button"
+            className={styles.choiceCard}
+            onClick={() => onChoose(card.choice)}
+            autoFocus={index === 0 && !suggestion}
+          >
+            <TrackerLogo choice={card.choice} size={36} />
+            <span className={styles.choiceText}>
+              <span className={styles.choiceName}>{card.name}</span>
+              <span className={styles.choiceServers}>{card.servers}</span>
+            </span>
+            <ChevronRight className={styles.choiceChevron} size={16} aria-hidden />
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

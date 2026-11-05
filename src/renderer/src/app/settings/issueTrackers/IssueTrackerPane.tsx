@@ -64,7 +64,7 @@ function SignIns() {
           <ul className={styles.list}>
             {rows.map((row) => (
               <li key={row.id} className={styles.listRow}>
-                <TrackerIcon kind={row.kind} size={14} />
+                <TrackerIcon kind={row.kind} size={22} />
                 <div className={styles.personText}>
                   <span className={styles.personName}>{row.title}</span>
                   <span className={styles.personDetail}>{row.account}</span>

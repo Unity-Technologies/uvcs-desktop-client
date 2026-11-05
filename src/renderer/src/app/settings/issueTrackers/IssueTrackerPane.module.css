@@ -398,30 +398,136 @@
   color: var(--positive-text);
 }
 
+/* A tracker's link shapes under its field: which server, and what its link looks like. */
 .examples {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   margin: 0;
+  padding: 0;
+  font-size: var(--text-xs);
+  list-style: none;
+}
+
+.examples > li {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.exampleLabel {
+  flex: none;
+  width: 72px;
   color: var(--text-tertiary);
-  font-size: var(--text-sm);
 }
 
-.example {
-  display: contents;
-}
-
-.examples dt {
-  color: var(--text-secondary);
-}
-
-.examples dd {
-  margin: 0;
+.exampleShape {
   overflow: hidden;
+  color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 0.95em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The picker: a card per tracker, its logo, name and servers, lifting under the pointer. */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--space-2);
+}
+
+.choiceCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.choiceCard:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.choiceCard:active {
+  transform: none;
+}
+
+.choiceCard:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.choiceText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.choiceName {
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.choiceServers {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choiceChevron {
+  flex: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.choiceCard:hover > .choiceChevron {
+  color: var(--accent-text);
+  transform: translateX(2px);
+}
+
+/* The tracker the branch comments link to, offered above the cards. */
+.suggested {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--space-3);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-lg);
+  background: var(--accent-wash);
+}
+
+/* Back, at the header's start: an arrow alone, the steps beside it saying where it leads. */
+.back {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choiceCard,
+  .choiceChevron {
+    transition: none;
+  }
+
+  .choiceCard:hover {
+    transform: none;
+  }
 }
 
 .problem {
