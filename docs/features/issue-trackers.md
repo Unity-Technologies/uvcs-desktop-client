@@ -132,7 +132,7 @@ Every edge with the outside is passed in, never imported where it's used:
   recorded from each tracker, in turn when given several, records what it was asked, and fails the test on any
   request it wasn't told about. No test touches the network.
 - `SecretCipher` (`canKeep`, `encrypt`, `decrypt`), over `safeStorage` (`safeStorageCipher`), into `TrackerSecrets`.
-- `TokenClipboard` (`read`, `clear`), over the clipboard, and `newId`, `now` and `wait` (the device flow's pause), into
+- `newId`, `now`, `wait` (the device flow's pause), `openExternal` and `askHostConsent` (main's dialog), into
   `IssueTrackers`.
 - The files' paths, as `SettingsStore` takes its own.
 
