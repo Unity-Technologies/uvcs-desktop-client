@@ -5,6 +5,8 @@
 // one holding `bad`; GitHub's device flow approves at the fourth poll, about twelve seconds in. Unknown requests answer 404.
 // A Jira token holding `expiring` shows signing in again: it signs in and proves its project, then its issues answer
 // 401; trying it again finds Jira out of reach once, then refuses it, so a new token is asked for.
+// A Jira Data Center is at https://jira.acme-corp.com (REST API v2, a personal access token as Bearer): any token
+// signs in but one holding `login`, which it sends to its single sign-on page (a 302), as an SSO server does.
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -110,8 +112,42 @@ function github(url, init) {
   return answer(404, { message: 'Not Found' });
 }
 
+const DATA_CENTER = 'https://jira.acme-corp.com';
+
+function jiraDataCenter(url, init) {
+  const token = tokenOf(init.headers);
+  if (token.includes('login')) return answer(302, undefined, { location: `${DATA_CENTER}/plugins/servlet/samlsso?redirectTo=${encodeURIComponent(url.pathname)}` });
+  const path = url.pathname;
+  if (path === '/rest/api/2/myself') return answer(200, { key: 'JIRAUSER10100', name: 'ana.diaz', displayName: 'Ana Díaz', emailAddress: 'ana@acme-corp.com' });
+  const project = /^\/rest\/api\/2\/project\/([A-Z0-9_]+)$/.exec(path);
+  if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
+  if (path === '/rest/api/2/search') {
+    const { jql } = JSON.parse(init.body);
+    const keys = /key in \((.*)\)/.exec(jql);
+    if (!keys) return answer(200, { startAt: 0, maxResults: 0, total: jql.includes('currentUser') ? 4 : 128, issues: [] });
+    const asked = [...keys[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+    const issues = asked
+      .filter((key) => JIRA_ISSUES[key])
+      .map((key) => {
+        const issue = JIRA_ISSUES[key];
+        return {
+          key,
+          fields: {
+            summary: issue.summary,
+            status: { name: issue.status, statusCategory: { key: issue.category } },
+            issuetype: { name: issue.type },
+            assignee: issue.assignee && { key: issue.assignee, name: issue.assignee, displayName: issue.assignee },
+          },
+        };
+      });
+    return answer(200, { startAt: 0, maxResults: asked.length, total: issues.length, issues });
+  }
+  return answer(404, { errorMessages: ['Not found'] });
+}
+
 exports.fetch = async (address, init) => {
   const url = new URL(address);
+  if (url.origin === DATA_CENTER) return jiraDataCenter(url, init);
   if (url.origin === JIRA || url.host === 'api.atlassian.com') return jira(url, init);
   if (url.host === 'github.com' || url.host === 'api.github.com') return github(url, init);
   return answer(404, undefined);
