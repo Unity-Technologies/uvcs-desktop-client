@@ -119,6 +119,11 @@
   --project-teal: #12a594;
   --project-indigo: #3e63dd;
   --project-violet: #6e56cf;
+
+  /* Issue trackers' own marks (`TrackerLogo`), as their brands draw them in both themes: Jira's white mark on its
+     blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
+  --brand-jira-tile: #1868db;
+  --brand-jira-mark: #ffffff;
 }
 
 :root,
