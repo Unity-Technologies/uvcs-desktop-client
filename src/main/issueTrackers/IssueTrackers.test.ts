@@ -29,7 +29,7 @@ const SIGNED_IN: TrackerAnswers = {
 /** A wait that never ends by itself, only when canceled: the poll it holds back is never sent. */
 const waitUntilCanceled: Wait = (_ms, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('canceled'))));
 
-function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, consentAsync = undefined as ((server: string) => Promise<boolean>) | undefined, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
+function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, consentWith = undefined as ((server: string, kind: string) => boolean) | undefined, consentAsync = undefined as ((server: string) => Promise<boolean>) | undefined, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'trackers-'));
   const tracker = fakeTrackerHttp(answers);
   const announced: IssueTrackerSetup[] = [];
@@ -45,7 +45,7 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
     wait,
     oauthClientIds: clientIds,
     openExternal: (url) => opened.push(url),
-    askHostConsent: consentAsync ?? (async (server) => consent(server)),
+    askHostConsent: consentAsync ?? (async (server, kind) => (consentWith ? consentWith(server, kind) : consent(server))),
   });
   return { engine, tracker, announced, opened };
 }
@@ -127,6 +127,15 @@ describe('IssueTrackers', () => {
     await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
     await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
     expect(asked).toEqual(['https://evil.example', 'https://evil.example']);
+  });
+
+  it('asks before the first sign-in to a Jira Data Center server, naming it as Jira', async () => {
+    const asked: string[] = [];
+    const { engine, tracker } = trackers({}, { consentWith: (server, kind) => (asked.push(`${kind} ${server}`), false) });
+    const outcome = await engine.signInWithToken({ repository: REPOSITORY, link: 'https://jira.acme.com/browse/VCS-1', token: 'fake-data-center-token-for-tests-0123456789' });
+    expect(outcome).toEqual({ kind: 'failed', failure: { reason: 'hostDeclined', server: 'https://jira.acme.com' } });
+    expect(asked).toEqual(['jiraDataCenter https://jira.acme.com']);
+    expect(tracker.requests).toEqual([]);
   });
 
   it('asks nothing for github.com or Jira Cloud', async () => {
