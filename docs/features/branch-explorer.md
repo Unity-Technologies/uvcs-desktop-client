@@ -150,7 +150,10 @@ place of the accent (`selectionHighlights`, `selectionInks`), as the official cl
 A right-click on something selected keeps the selection (`selectedOnContextClick`), and its menu is the lists' menu
 for all of it (`graphMenu`'s `selectionMenu`): two changesets get their diff, more get none; branches get Hide and
 Delete for all; labels get Delete for all and the diff of two. A right-click elsewhere selects that first and gets
-its own menu. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
+its own menu. The keys that act on one object (Enter, Shift+Enter, M) act on the lead and leave it alone selected,
+so the graph shows which (`onLead` in `graphKeyboard.ts`); the menu key (Shift+F10) opens the whole selection's menu.
+Several selected keep only what the graph still shows once it is laid out again (`selectionsLaidOut`), so a branch
+just hidden or deleted leaves the selection. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
 object's details.
 
 ## Pending changes

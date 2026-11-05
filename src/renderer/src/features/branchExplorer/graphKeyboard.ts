@@ -17,7 +17,9 @@ const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', Ar
 /** What the keys read and move. */
 export interface GraphKeyboard {
   layout: GraphLayout | null;
+  /** The lead of the selection (`leadOf`): what the keys move from and act on. */
   selection: GraphSelection | null;
+  /** Selects one alone, or nothing. */
   select: (selection: GraphSelection | null) => void;
   homeChangeset: number | null;
   repository: string;
@@ -75,6 +77,12 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
   };
   // A page keeps a column of the last screen in sight.
   const page = (step: 1 | -1): void => move({ kind: 'page', step, columns: Math.max(1, (canvas.current?.columnsOnScreen() ?? 1) - 1) });
+  // Enter and M act on one object: with several selected, the lead alone stays selected, so the graph shows which.
+  // The menu key needs no such step: the lead's menu is the whole selection's (`graphMenu`).
+  const onLead = (action: () => void) => (): void => {
+    if (selection) select(selection);
+    action();
+  };
   const openContextMenu = (): void => {
     const label = selectedLabel(layout, selection, repository);
     if (label) canvas.current?.openContextMenu({ kind: 'label', label, more: [] });
@@ -93,19 +101,19 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
     ['graphMergeSource', () => move({ kind: 'mergeSource' })],
     ['graphMergeDestination', () => move({ kind: 'mergeDestination' })],
     ['graphBranchBase', () => move({ kind: 'branchBase' })],
-    ['graphOpen', () => openSelection(layout, selection, repository)],
+    ['graphOpen', onLead(() => openSelection(layout, selection, repository))],
     [
       'graphOpenBranch',
-      () => {
+      onLead(() => {
         if (lane) graphActions.diffBranch(lane.branch);
-      },
+      }),
     ],
     [
       'graphMerge',
-      () => {
+      onLead(() => {
         const source = keyboardMergeSource(selection, keyboard.inWorkspace);
         if (source !== null) graphActions.merge('merge', source);
-      },
+      }),
     ],
     ['graphDetails', keyboard.toggleDetails],
     ['graphContextMenu', openContextMenu],
