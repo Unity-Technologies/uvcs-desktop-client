@@ -55,6 +55,10 @@ describe('recognizeTrackerLink', () => {
     expect(recognizeTrackerLink('https://example.com/about')).toEqual({ unknownTracker: true });
   });
 
+  it('reads a malformed Jira address as no issue, never failing', () => {
+    expect(recognizeTrackerLink('https://acme.atlassian.net/browse/%E0')).toEqual({ kind: 'jiraCloud', notAnIssue: 'a Jira page' });
+  });
+
   it('reads no link in words', () => {
     expect(recognizeTrackerLink('')).toEqual({ notALink: true });
     expect(recognizeTrackerLink('VCS-12 is broken')).toEqual({ notALink: true });

@@ -52,6 +52,13 @@ describe('a comment’s issues', () => {
     }
   });
 
+  it('shows a malformed address of the tracker as the address it is', () => {
+    expect(paragraph('see https://x.atlassian.net/browse/%E0')).toEqual([
+      { kind: 'text', text: 'see ' },
+      { kind: 'link', url: 'https://x.atlassian.net/browse/%E0', children: [{ kind: 'text', text: 'https://x.atlassian.net/browse/%E0' }] },
+    ]);
+  });
+
   it('reads GitHub’s `#12` and `owner/repo#12`, keeping the source as written', () => {
     expect(paragraph('Fixes #12 and Acme/Tools#3', github)).toEqual([
       { kind: 'text', text: 'Fixes ' },
