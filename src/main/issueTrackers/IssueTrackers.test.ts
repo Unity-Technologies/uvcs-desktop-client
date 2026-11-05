@@ -29,7 +29,7 @@ const SIGNED_IN: TrackerAnswers = {
 /** A wait that never ends by itself, only when canceled: the poll it holds back is never sent. */
 const waitUntilCanceled: Wait = (_ms, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('canceled'))));
 
-function trackers(answers: TrackerAnswers = {}, { cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
+function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'trackers-'));
   const tracker = fakeTrackerHttp(answers);
   const announced: IssueTrackerSetup[] = [];
@@ -45,6 +45,7 @@ function trackers(answers: TrackerAnswers = {}, { cipher = plainCipher, clientId
     wait,
     oauthClientIds: clientIds,
     openExternal: (url) => opened.push(url),
+    askHostConsent: async (server) => consent(server),
   });
   return { engine, tracker, announced, opened };
 }
@@ -79,6 +80,34 @@ describe('IssueTrackers', () => {
     });
     expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'http://git.acme.com/a/b/issues/1', token: TOKEN })).toEqual({ kind: 'failed', failure: { reason: 'insecure' } });
     expect(tracker.requests).toEqual([]);
+  });
+
+  it('asks before sending a credential to a host no tracker is known by, and sends nothing when declined', async () => {
+    const asked: string[] = [];
+    const { engine, tracker } = trackers({}, { consent: (server) => (asked.push(server), false) });
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: 'https://evil.example/a/b/issues/1', token: TOKEN })).toEqual({ kind: 'failed', failure: { reason: 'hostDeclined', server: 'https://evil.example' } });
+    expect(asked).toEqual(['https://evil.example']);
+    expect(tracker.requests).toEqual([]);
+  });
+
+  it('signs in to a host the user allowed, asking once for the session', async () => {
+    const asked: string[] = [];
+    const ENTERPRISE: TrackerAnswers = {
+      'GET https://git.acme.com/api/v3/user': { json: { login: 'ana' } },
+      'POST https://git.acme.com/api/graphql': { json: { data: { repository: { nameWithOwner: 'tools/build', issues: { totalCount: 1 } }, search: { issueCount: 0 } } } },
+    };
+    const { engine } = trackers(ENTERPRISE, { consent: (server) => (asked.push(server), true) });
+    const link = 'https://git.acme.com/tools/build/issues/9';
+    expect((await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN })).kind).toBe('signedIn');
+    expect((await engine.signInWithToken({ repository: 'other@acme@unity', link, token: TOKEN })).kind).toBe('signedIn');
+    expect(asked).toEqual(['https://git.acme.com']);
+  });
+
+  it('asks nothing for github.com or Jira Cloud', async () => {
+    const asked: string[] = [];
+    const { engine } = trackers(SIGNED_IN, { consent: (server) => (asked.push(server), false) });
+    expect((await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN })).kind).toBe('signedIn');
+    expect(asked).toEqual([]);
   });
 
   it('says a refused token is refused', async () => {
