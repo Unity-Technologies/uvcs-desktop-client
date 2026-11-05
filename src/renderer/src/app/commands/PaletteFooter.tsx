@@ -23,7 +23,7 @@ export function PaletteFooter({ place }: { place: Place | null }) {
       <span className={styles.scopes}>
         {offeredPrefixes(place).map(({ prefix, hint }) => (
           <span key={prefix} className={styles.hint}>
-            <Kbd keys={prefix} /> {hint}
+            <Kbd keys={prefix} typed /> {hint}
           </span>
         ))}
       </span>
