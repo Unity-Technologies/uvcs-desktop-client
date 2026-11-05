@@ -56,3 +56,20 @@ export function branchMoves(layout: GraphLayout, lane: Lane, pins: BranchPins): 
     resetAll: pins.length > 0,
   };
 }
+
+/**
+ * The positions once several lanes make one move, each as it would alone (`movedBranch`); a lane the move has no room
+ * for (`branchMoves`) stays where it is. The lowest is moved first, so the top one is placed first (`placeLanes`) and
+ * the lanes keep their order, at the top and at the bottom alike. The same pins when none moves.
+ */
+export function movedBranches(pins: BranchPins, layout: GraphLayout, lanes: readonly Lane[], move: BranchMove): BranchPins {
+  const moving = lanes.filter((lane) => branchMoves(layout, lane, pins)[move]).sort((above, below) => below.row - above.row);
+  return moving.reduce((next, lane) => movedBranch(next, lane, move, layout.rowCount), pins);
+}
+
+/** The moves offered for several branches: each one any of them can make, and their reset once any of them moved. */
+export function branchesMoves(layout: GraphLayout, lanes: readonly Lane[], pins: BranchPins): BranchMoves {
+  const each = lanes.map((lane) => branchMoves(layout, lane, pins));
+  const any = (key: keyof BranchMoves): boolean => each.some((moves) => moves[key]);
+  return { up: any('up'), down: any('down'), top: any('top'), bottom: any('bottom'), reset: any('reset'), resetAll: pins.length > 0 };
+}

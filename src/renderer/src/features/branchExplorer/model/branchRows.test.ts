@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { branch, changeset } from './graphFixtures';
-import { branchMoves, movedBranch, pinsOf, withoutPin, withPins, type BranchPins } from './branchRows';
+import { branchesMoves, branchMoves, movedBranch, movedBranches, pinsOf, withoutPin, withPins, type BranchPins } from './branchRows';
 import { layoutGraph } from './layoutGraph';
 
 /**
@@ -84,6 +84,53 @@ describe('branchMoves', () => {
     const { layout, lane } = lanesOf(pins);
     expect(branchMoves(layout, lane('/main/b'), pins)).toMatchObject({ reset: true, resetAll: true });
     expect(branchMoves(layout, lane('/main/a'), pins)).toMatchObject({ reset: false, resetAll: true });
+  });
+});
+
+describe('movedBranches', () => {
+  const rowsOf = (pins: BranchPins) => {
+    const { layout } = lanesOf(pins);
+    return (name: string) => layout.lanesByBranch.get(name)!.row;
+  };
+
+  it('moves several branches to the top in the order they were in', () => {
+    const { layout, lane } = lanesOf();
+    const row = rowsOf(movedBranches([], layout, [lane('/main/c'), lane('/main/a')], 'top'));
+    expect([row('/main/a'), row('/main/c')]).toEqual([0, 1]);
+  });
+
+  it('moves several branches below every other in the order they were in, whichever was picked first', () => {
+    const start: BranchPins = [{ branch: 4, row: 0 }];
+    const { layout, lane } = lanesOf(start);
+    for (const picked of [[lane('/main/c'), lane('/main/a')], [lane('/main/a'), lane('/main/c')]]) {
+      const row = rowsOf(movedBranches(start, layout, picked, 'bottom'));
+      expect([row('/main/b'), row('/main/c'), row('/main/a')]).toEqual([1, 2, 3]);
+    }
+  });
+
+  it('leaves the branches a move has no room for where they are', () => {
+    const { layout, lane } = lanesOf();
+    expect(movedBranches([], layout, [lane('/main'), lane('/main/a')], 'up')).toEqual([{ branch: 2, row: 0 }]);
+  });
+
+  it('keeps the same positions when no branch can move', () => {
+    const pins: BranchPins = [{ branch: 3, row: 1 }];
+    const { layout, lane } = lanesOf(pins);
+    expect(movedBranches(pins, layout, [lane('/main')], 'top')).toBe(pins);
+  });
+});
+
+describe('branchesMoves', () => {
+  it('offers each move one of the branches can make', () => {
+    const { layout, lane } = lanesOf();
+    expect(branchesMoves(layout, [lane('/main'), lane('/main/c')], [])).toEqual({ up: true, down: true, top: true, bottom: true, reset: false, resetAll: false });
+  });
+
+  it('offers a reset once one of the branches moved', () => {
+    const pins = [{ branch: 4, row: 2 }];
+    const { layout, lane } = lanesOf(pins);
+    expect(branchesMoves(layout, [lane('/main/a'), lane('/main/c')], pins)).toMatchObject({ reset: true, resetAll: true });
+    expect(branchesMoves(layout, [lane('/main/a'), lane('/main')], pins)).toMatchObject({ reset: false, resetAll: true });
   });
 });
 
