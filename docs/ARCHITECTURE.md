@@ -1475,7 +1475,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the command and its subcommand
   (`lock list`, `find branch`) in one color, option names in another (each kept whole on its line), `--format`'s
   `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line
-  is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red. Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
+  Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
