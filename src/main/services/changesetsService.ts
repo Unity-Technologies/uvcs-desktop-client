@@ -3,8 +3,8 @@ import type { OneObjectRead } from '@shared/api/oneObjectRead';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Place } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
-import { findArgs, findQueryArgs } from '../cm/findQuery';
-import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { equalsCondition, findArgs, findQueryArgs } from '../cm/findQuery';
+import { FOUND_BRANCH_STARTS, FOUND_CHANGESETS } from '../cm/foundObjects';
 import { layoutReader } from '../cm/formatRecords';
 import { readOneObject } from './oneObjectRead';
 import type { ServiceContext } from './ServiceContext';
@@ -39,6 +39,15 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
     },
 
     find: (place, changesetId, read = {}) => findById(place, changesetId, undefined, read),
+
+    // The parent of the branch's first changeset, as `cm diff br:<branch>` and `xlinkBeforePoint` take it: one quick
+    // `cm find` that reads one record, whatever the branch's size.
+    async branchStart(place, branch) {
+      const at = cmPlace(place);
+      const query = `where ${IGNORE_HIDDEN} and ${equalsCondition('branch', branch)} order by changesetid asc limit 1`;
+      const [start] = await cm.queryRecords(findQueryArgs(FOUND_BRANCH_STARTS, query, at.repository), layoutReader(FOUND_BRANCH_STARTS), at.options);
+      return start ?? null;
+    },
 
     async editComment(place, changesetId, comment) {
       const at = cmPlace(place);

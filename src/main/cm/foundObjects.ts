@@ -3,7 +3,7 @@
 // the same fields through the same formatter; what XML parsing did besides, records do too: CRLF becomes LF
 // (`RecordReader`), and each layout trims the free text it shows. Dates come in `FIND_DATE_FORMAT` (`findCommand`).
 
-import type { Branch } from '@shared/domain/branch';
+import type { Branch, BranchStart } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
@@ -35,6 +35,13 @@ export const FOUND_BRANCHES = foundObjects(
     guid: value('guid'),
     repository: repositorySpec(value('repname'), value('repserver')),
   }),
+);
+
+/** A branch's first changeset and its parent, the changeset the branch starts from (`ChangesetsApi.branchStart`). */
+export const FOUND_BRANCH_STARTS = foundObjects(
+  'changeset',
+  ['changesetid', 'parent'],
+  (value): BranchStart => ({ firstChangeset: integerValue(value('changesetid')), base: integerValue(value('parent')) }),
 );
 
 export const FOUND_CHANGESETS = foundObjects(
