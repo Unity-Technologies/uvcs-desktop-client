@@ -2,7 +2,7 @@ import type { CommandLogEntry } from '@shared/events';
 import { withControlPictures } from '../../lib/controlPictures';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { NumberedLog } from './commandLogNumbering';
-import { commandEnding } from './commandEnding';
+import { entryEnding } from './commandEnding';
 import type { Place } from '@shared/domain/place';
 import { ranInPlace, type CommandLogScope } from './commandLogScope';
 
@@ -26,10 +26,10 @@ export function isFiltering(filter: CommandLogFilter): boolean {
 
 /**
  * The texts a row shows, as it shows them: the command line, where it ran when shown, and a failure's ending
- * (`commandEnding`) and output.
+ * (`entryEnding`) and output.
  */
 export function commandLogFilterTexts(entry: CommandLogEntry, cwd?: string): string[] {
-  const ending = entry.exitCode === 0 ? [] : [commandEnding(entry.exitCode)];
+  const ending = entry.exitCode === 0 ? [] : [entryEnding(entry)];
   return [withControlPictures(entry.commandLine), ...(cwd ? [cwd] : []), ...ending, withControlPictures(entry.output)];
 }
 
