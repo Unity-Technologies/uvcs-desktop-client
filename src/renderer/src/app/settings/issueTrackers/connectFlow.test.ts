@@ -47,7 +47,7 @@ describe('connectedTrackerOf', () => {
   });
 
   it('asks to sign in again when the credential stopped working, and says a session-only one lasts until quitting', () => {
-    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.' });
+    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.', account: 'Needs signing in again' });
     expect(connectedTrackerOf(setup([{ ...jira, credential: 'missing' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'This computer no longer has the Jira sign-in.' });
     expect(connectedTrackerOf(setup([{ ...jira, credential: 'session' }]), 'game@acme@unity')).toMatchObject({ sessionOnly: 'Kept until you quit: this computer has no keyring.' });
   });
