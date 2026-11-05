@@ -26,6 +26,7 @@ export function createIssueTrackersService({ issueTrackers }: ServiceContext): I
     disconnect: async (repository) => issueTrackers.disconnect(repository),
     signOut: async (connectionId) => issueTrackers.signOut(connectionId),
     readIssues: (connectionId, keys) => issueTrackers.readIssues(connectionId, keys),
+    searchIssues: (repository, search) => issueTrackers.searchIssues(repository, search, currentCaller()?.id),
   };
 }
 

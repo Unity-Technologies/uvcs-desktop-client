@@ -108,6 +108,15 @@ describe('TrackerHttp', () => {
     ]);
   });
 
+  it('sends nothing for a request already canceled, and fails it as canceled, not as out of reach', async () => {
+    const tracker = fakeTrackerHttp();
+    const controller = new AbortController();
+    controller.abort();
+    const error = await failureOf(tracker.http.bound(ORIGINS, 'Basic abc').send({ method: 'GET', url: MYSELF, signal: controller.signal }));
+    expect(error).toMatchObject({ reason: 'unexpected', message: 'acme.atlassian.net/rest/api/3/myself was canceled' });
+    expect(tracker.requests).toEqual([]);
+  });
+
   it('sends a form as one', async () => {
     const url = 'https://github.com/login/device/code';
     const tracker = fakeTrackerHttp({ [`POST ${url}`]: { json: {} } });

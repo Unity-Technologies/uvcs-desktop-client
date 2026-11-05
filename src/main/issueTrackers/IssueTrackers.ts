@@ -1,5 +1,5 @@
 import type { RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
-import type { DeviceSignIn, IssueRead, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
 import { deviceFlowHostsOf, GITHUB_OAUTH_SCOPES } from '@shared/issueTrackers/signInMethods';
@@ -13,6 +13,7 @@ import { signInFailureOf } from './signIn/signInFailures';
 import type { ConnectionHttp, TrackerHttp } from './TrackerHttp';
 import { TrackerError } from './TrackerError';
 import type { TrackerCredential, TrackerSecrets } from './TrackerSecrets';
+import { SupersededSearches } from './supersededSearches';
 import { TokenPages } from './tokenPages';
 
 export interface IssueTrackersDeps {
@@ -63,6 +64,7 @@ export class IssueTrackers {
   private readonly consentAsked = new Map<string, Promise<boolean>>();
 
   private readonly tokenPages: TokenPages;
+  private readonly searches = new SupersededSearches();
 
   constructor(private readonly deps: IssueTrackersDeps) {
     this.providers = deps.providers ?? TRACKER_PROVIDERS;
@@ -243,6 +245,31 @@ export class IssueTrackers {
       }
     }
     return reads;
+  }
+
+  /**
+   * A `#` search of the repository's bound projects, in one request (docs/features/issue-trackers.md, "Suggesting
+   * issues"). A newer search by the same window for the same repository aborts this one, which answers `superseded`.
+   */
+  async searchIssues(repository: string, search: IssueSearch, ownerId?: number): Promise<IssueSearchAnswer> {
+    const binding = this.deps.store.bindings().find((kept) => sameRepository(kept.repository, repository));
+    const connection = binding && this.deps.store.connection(binding.connectionId);
+    if (!binding || !connection) return { kind: 'failed', reason: 'unexpected' };
+    const owner = `${ownerId ?? 'main'}:${repository}`;
+    const signal = this.searches.start(owner);
+    try {
+      const http = this.connectionHttp(connection);
+      const searching: ConnectionHttp = { ...http, send: (request) => http.send({ ...request, signal }) };
+      const issues = await this.providers[connection.kind].searchIssues(searching, connection, binding.projects, search);
+      return signal.aborted ? { kind: 'superseded' } : { kind: 'found', connectionId: connection.id, issues };
+    } catch (error) {
+      if (signal.aborted) return { kind: 'superseded' };
+      const reason = error instanceof TrackerError ? error.reason : 'unexpected';
+      const retryAt = error instanceof TrackerError ? error.until : undefined;
+      return { kind: 'failed', reason, ...(retryAt !== undefined && { retryAt }) };
+    } finally {
+      this.searches.finish(owner, signal);
+    }
   }
 
   /** The tracker a token page is for: a link's, read here, or a kept connection's. */

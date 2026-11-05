@@ -28,6 +28,8 @@ export interface TrackerRequest {
   json?: unknown;
   /** Sent as a form (OAuth's endpoints). */
   form?: Record<string, string>;
+  /** Stops the request where it is: a search a newer one replaced (`SupersededSearches`). */
+  signal?: AbortSignal;
 }
 
 export interface TrackerResponse {
@@ -112,6 +114,7 @@ export class TrackerHttp {
     const resting = this.cooldown.restingUntil(url.origin);
     if (resting !== null) throw new TrackerError('rateLimited', `${url.host} asked to wait`, resting);
 
+    if (request.signal?.aborted) throw new TrackerError('unexpected', `${where} was canceled`);
     const startedAt = this.now();
     const log = (httpStatus: number | undefined, failure?: string): void =>
       this.options.log?.({ method: request.method, host: url.host, path: url.pathname, startedAt, durationMs: this.now() - startedAt, ...(httpStatus !== undefined && { httpStatus }), ...(failure && { failure }) });
@@ -124,12 +127,12 @@ export class TrackerHttp {
         ...(bodyOf(request) !== undefined && { body: bodyOf(request) }),
         redirect: 'manual',
         credentials: 'omit',
-        signal: AbortSignal.timeout(this.options.timeoutMs ?? TRACKER_REQUEST_TIMEOUT_MS),
+        signal: signalOf(request, this.options.timeoutMs ?? TRACKER_REQUEST_TIMEOUT_MS),
       });
     } catch {
-      const failure = `${url.host} couldn't be reached`;
+      const failure = request.signal?.aborted ? `${where} was canceled` : `${url.host} couldn't be reached`;
       log(undefined, failure);
-      throw new TrackerError('unreachable', failure);
+      throw new TrackerError(request.signal?.aborted ? 'unexpected' : 'unreachable', failure);
     }
 
     const header: HeaderOf = (name) => response.headers.get(name);
@@ -155,6 +158,12 @@ export class TrackerHttp {
     if (isRateLimited(status, header)) return new TrackerError('rateLimited', `${url.host} asked to wait`, restUntil(header, this.now()));
     return null;
   }
+}
+
+/** The request's own signal, if any, with the timeout's. */
+function signalOf(request: TrackerRequest, timeoutMs: number): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return request.signal ? AbortSignal.any([timeout, request.signal]) : timeout;
 }
 
 function headersOf(request: TrackerRequest, authorization: string | null): Record<string, string> {

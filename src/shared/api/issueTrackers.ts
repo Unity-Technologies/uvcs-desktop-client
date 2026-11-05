@@ -1,4 +1,4 @@
-import type { DeviceSignIn, IssueRead, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
+import type { DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
 
 /** A sign-in for a repository, from a link to one of its tracker's issues: main reads the link itself. */
 export interface RepositorySignIn {
@@ -53,4 +53,9 @@ export interface IssueTrackersApi {
 
   /** The issues named, read in as few requests as the tracker allows (one per 100 keys). */
   readIssues(connectionId: string, keys: string[]): Promise<IssueRead[]>;
+  /**
+   * The repository's issues a `#` search finds, of its connection (`IssueSearch`), in one request. A window's newer
+   * search for the repository replaces its running one, which answers `superseded`.
+   */
+  searchIssues(repository: string, search: IssueSearch): Promise<IssueSearchAnswer>;
 }

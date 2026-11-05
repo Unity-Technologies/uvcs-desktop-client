@@ -198,6 +198,36 @@ describe('IssueTrackers', () => {
     expect(tracker.lines().slice(2)).toEqual([GRAPHQL]);
   });
 
+  it('searches a repository’s bound projects in one request, of its connection', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    tracker.answer({ [GRAPHQL]: { json: { data: { search: { nodes: [{ __typename: 'Issue', number: 12, title: 'Crash', url: LINK, state: 'OPEN', assignees: { nodes: [] }, repository: { nameWithOwner: 'acme/game' } }] } } } } });
+    expect(await engine.searchIssues(REPOSITORY, { words: 'crash' }, 1)).toEqual({ kind: 'found', connectionId: 'id1', issues: [expect.objectContaining({ key: 'acme/game#12', title: 'Crash' })] });
+    expect(tracker.lines().slice(2)).toEqual([GRAPHQL]);
+  });
+
+  it('answers a search replaced by a newer one from the same window as superseded, the newer one as found', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    tracker.answer({ [GRAPHQL]: { json: { data: { search: { nodes: [] } } } } });
+    const first = engine.searchIssues(REPOSITORY, { words: 'cra' }, 1);
+    const elsewhere = engine.searchIssues(REPOSITORY, { words: 'cra' }, 2);
+    const second = engine.searchIssues(REPOSITORY, { words: 'crash' }, 1);
+    expect(await first).toEqual({ kind: 'superseded' });
+    expect(await elsewhere).toMatchObject({ kind: 'found' });
+    expect(await second).toMatchObject({ kind: 'found' });
+  });
+
+  it('answers a search of a connection that needs signing in again as refused, sending nothing', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
+    tracker.answer({ [GRAPHQL]: { status: 401 } });
+    await engine.readIssues('id1', ['acme/game#12']);
+    const sent = tracker.requests.length;
+    expect(await engine.searchIssues(REPOSITORY, {}, 1)).toEqual({ kind: 'failed', reason: 'signInRefused' });
+    expect(tracker.requests).toHaveLength(sent);
+  });
+
   it('marks a credential refused at the first 401 and sends nothing more until signed in again', async () => {
     const { engine, tracker, announced } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
