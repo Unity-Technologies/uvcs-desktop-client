@@ -198,7 +198,7 @@ describe('signInAgainView', () => {
 describe('signInRows', () => {
   it('lists each sign-in with its tracker, account and how it stands', () => {
     expect(signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]))).toEqual([
-      { id: 'j', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Signed in as Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'j', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, signOut: 'Sign out of acme.atlassian.net' },
       { id: 'r', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs signing in' }, signOut: 'Sign out of acme.atlassian.net' },
     ]);
     expect(accountWords({ ...jira, credential: 'missing' })).toBe('Needs signing in again');

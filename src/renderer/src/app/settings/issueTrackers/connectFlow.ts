@@ -198,7 +198,8 @@ export function signInRows(setup: IssueTrackerSetup | undefined): { id: string; 
       id: connection.id,
       kind: connection.kind,
       title: connectionTitle(connection),
-      account: needsSignIn ? connection.account.name : accountWords(connection),
+      // The account alone: the pill beside it says whether it's signed in.
+      account: connection.account.name,
       status: needsSignIn ? { tone: 'caution', label: 'Needs signing in' } : { tone: 'positive', label: 'Signed in' },
       signOut: `Sign out of ${hostOf(connection.server)}`,
     };
