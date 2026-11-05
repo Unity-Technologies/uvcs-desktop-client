@@ -404,12 +404,12 @@ click. Under a repository's connected tracker they're a quiet section with a sma
 
 **A repository with no tracker** (`RepositoryStart`; which of the repository's cards shows: `repositoryTrackerView`)
 reads as Home does: "Connect an issue tracker", what it does, the sign-ins that work (`usableSignIns`), each with Use
-and a ⋯ menu whose Sign out… asks first, as Home's does (`SignInMenu`, `signInMenuEntries`, `askToSignOut`), or "No sign-ins
-yet", and "Add a sign-in" in the header, signing in and connecting at once. When the branch comments the window already
-read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over the cached branch lists, no command), "Your
-branch comments link to Jira" above them, with "Use it", which fills the link. Never filled in silently. "Change
-tracker…" on a connected tracker opens it with Back. A big picker of tracker cards before any of this was tried and
-dropped: with sign-ins already kept, it hid that connecting was one click away.
+and a ⋯ menu whose Sign out… asks first, as Home's does (`SignInMenu`, `signInMenuEntries`, `askToSignOut`), or "No
+sign-ins yet", and "Add a sign-in" in the header, signing in and connecting at once. When the branch comments the window
+already read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over the cached branch lists, no
+command), "Your branch comments link to Jira" above them, with "Use it", which fills the link. Never filled in silently.
+"Change tracker…" on a connected tracker opens it with Back. A big picker of tracker cards before any of this was tried
+and dropped: with sign-ins already kept, it hid that connecting was one click away.
 
 **Connect** (`ConnectTracker`), from what was picked (`ConnectStart`: the tracker, the sign-in to use, or a suggested
 link), its header the title and its steps (`ConnectSteps`, `connectSteps`, `connectStage`): the tracker, done, then
