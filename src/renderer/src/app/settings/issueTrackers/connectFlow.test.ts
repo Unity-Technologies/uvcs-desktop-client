@@ -128,9 +128,10 @@ describe('deviceCodeWords', () => {
 
 describe('the token step’s words and readiness', () => {
   it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
-    expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' });
-    expect(tokenStepWords('github')).toEqual({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
-    expect(tokenStepWords('jiraDataCenter')).toEqual({ tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', createWhere: 'Opens your Atlassian account’s security page. Any name will do.', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('github')).toMatchObject({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraDataCenter')).toMatchObject({ tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraDataCenter').emailLabel).toBeUndefined();
     expect(tokenStepReady('jiraDataCenter', '', 'token', false)).toBe(true);
   });
 

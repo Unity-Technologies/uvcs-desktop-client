@@ -7,15 +7,6 @@ import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { pluralize } from '../../../lib/text';
 
-/** The shapes of an issue's link per tracker, under the empty field: what to paste, seen at once. */
-export const LINK_EXAMPLES: readonly { tracker: string; shape: string }[] = [
-  { tracker: 'Jira', shape: 'your-company.atlassian.net/browse/PROJ-123' },
-  { tracker: 'Jira Data Center', shape: 'jira.your-company.com/browse/PROJ-123' },
-  { tracker: 'GitHub', shape: 'github.com/owner/repo/issues/123' },
-];
-
-export const LINK_PLACEHOLDER = 'https://your-company.atlassian.net/browse/PROJ-123';
-
 /** A tracker's kind in words, its server's kind told apart: "Jira Cloud", "GitHub", "GitHub Enterprise Server". */
 export function trackerKindName(kind: IssueTrackerKind, server: string): string {
   if (kind === 'jiraCloud') return 'Jira Cloud';
@@ -85,23 +76,30 @@ export function suggestedEmail(cmUser: string | undefined, kept: string | undefi
   return cmUser && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cmUser.trim()) ? cmUser.trim() : '';
 }
 
-/** The token step's words per tracker: the field's label, the email's for Jira Cloud, and what the token is for. */
+/**
+ * The token step's words per tracker: the field's label, the email's for Jira Cloud, where "Create a token" leads, and
+ * what the token is for.
+ */
 export interface TokenStepWords {
   tokenLabel: string;
   /** Jira Cloud's token goes with the account's email. */
   emailLabel?: string;
+  /** Under "Create a token": the page it opens. */
+  createWhere: string;
   hint: string;
 }
+
+const ONLY_READS = 'The app only reads issues with it.';
 
 export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
   switch (kind) {
     case 'jiraCloud':
-      return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' };
+      return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', createWhere: 'Opens your Atlassian account’s security page. Any name will do.', hint: ONLY_READS };
     case 'jiraDataCenter':
       // Jira's own personal access token, or one an app such as API Token Authentication makes: "Jira token" names both.
-      return { tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' };
+      return { tokenLabel: 'Jira token', createWhere: 'Opens the page your Jira makes tokens on.', hint: ONLY_READS };
     case 'github':
-      return { tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' };
+      return { tokenLabel: 'GitHub token', createWhere: 'Opens GitHub with what the token needs already filled in.', hint: ONLY_READS };
   }
 }
 
