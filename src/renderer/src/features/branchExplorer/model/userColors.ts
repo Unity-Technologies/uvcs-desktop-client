@@ -2,6 +2,7 @@ import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { displayName, userFilterTexts } from '../../../lib/userName';
 import { BRANCH_HUES } from './branchHue';
+import { isOnIn, type OffByRepository } from './offByRepository';
 import type { RuleColors } from './ruleColors';
 
 /** The hue a person's changesets take. */
@@ -12,26 +13,22 @@ export interface UserColor {
 }
 
 /**
- * The changeset colors by user, the same in every repository: people keep their color wherever they work. Off keeps
- * the list and colors nothing.
+ * The changeset colors by user, the same in every repository: people keep their color wherever they work. Whether they
+ * apply is each repository's own (`appliedUserColorsOf`).
  */
 export interface UserColors {
-  on: boolean;
   users: readonly UserColor[];
 }
 
-export const DEFAULT_USER_COLORS: UserColors = { on: true, users: [] };
+export const DEFAULT_USER_COLORS: UserColors = { users: [] };
 
-/**
- * `users` added at the end, each with the first hue no one has yet (once every hue is taken, they repeat in order). The
- * first ones turn the colors on: with no one colored the tab shows no switch, so nothing says they'd be off.
- */
+/** `users` added at the end, each with the first hue no one has yet (once every hue is taken, they repeat in order). */
 export function withUsersAdded(colors: UserColors, users: readonly string[]): UserColors {
   const added = [...colors.users];
   for (const user of users) {
     if (!added.some((color) => color.user === user)) added.push({ user, hue: nextHue(added) });
   }
-  return { on: colors.on || colors.users.length === 0, users: added };
+  return { users: added };
 }
 
 function nextHue(taken: readonly UserColor[]): number {
@@ -56,11 +53,26 @@ export function withUserToggled(colors: UserColors, user: string): UserColors {
   return isColored(colors, user) ? withUserRemoved(colors, user) : withUsersAdded(colors, [user]);
 }
 
+/**
+ * Whether adding people turns the colors on: the first ones do, since the empty tab shows no switch to say they're off.
+ */
+export function addingTurnsColorsOn(colors: UserColors, on: boolean): boolean {
+  return !on && colors.users.length === 0;
+}
+
+/**
+ * The colors the graph applies in `repository`: none while they're turned off there, keeping them. The same object
+ * while off, so a store selector answering it doesn't render forever.
+ */
+export function appliedUserColorsOf(colors: UserColors, off: OffByRepository, repository: string | undefined): UserColors {
+  return isOnIn(off, repository) ? colors : DEFAULT_USER_COLORS;
+}
+
 /** What the "Changeset colors" tab shows: an invitation while no one has a color, else the list, dimmed while off. */
 export type ChangesetColorsTabBody = { state: 'empty' } | { state: 'list'; dimmed: boolean };
 
-export function changesetColorsTabBody(colors: UserColors): ChangesetColorsTabBody {
-  return colors.users.length === 0 ? { state: 'empty' } : { state: 'list', dimmed: !colors.on };
+export function changesetColorsTabBody(colors: UserColors, on: boolean): ChangesetColorsTabBody {
+  return colors.users.length === 0 ? { state: 'empty' } : { state: 'list', dimmed: !on };
 }
 
 /** The people "Add people" lists: those it offers (`usersToAdd`) whose name or user matches every word searched. */
@@ -88,10 +100,10 @@ export function usersToAdd(authors: readonly string[], colors: UserColors): stri
   return authors.filter((author) => !colored.has(author)).sort((a, b) => displayName(a).localeCompare(displayName(b)));
 }
 
-/** The hue of each changeset in `data` whose owner has a color; none while the colors are off. */
+/** The hue of each changeset in `data` whose owner has a color. */
 export function changesetUserHues(data: BranchExplorerData, colors: UserColors): ReadonlyMap<number, number> {
   const hues = new Map<number, number>();
-  if (!colors.on || colors.users.length === 0) return hues;
+  if (colors.users.length === 0) return hues;
   const hueOf = new Map(colors.users.map((color) => [color.user, color.hue]));
   for (const changeset of data.changesets) {
     const hue = hueOf.get(changeset.owner);

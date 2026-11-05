@@ -3,7 +3,9 @@ import { BRANCH_HUES } from './branchHue';
 import { changeset, sampleHistory } from './graphFixtures';
 import { NO_RULE_COLORS, type RuleColors } from './ruleColors';
 import {
+  addingTurnsColorsOn,
   addPeopleEmpty,
+  appliedUserColorsOf,
   changesetColorsTabBody,
   changesetUserHues,
   DEFAULT_USER_COLORS,
@@ -22,7 +24,7 @@ import {
 const [first, second, third] = BRANCH_HUES;
 
 function colorsOf(...users: [string, number][]): UserColors {
-  return { on: true, users: users.map(([user, hue]) => ({ user, hue })) };
+  return { users: users.map(([user, hue]) => ({ user, hue })) };
 }
 
 describe('withUsersAdded', () => {
@@ -44,13 +46,29 @@ describe('withUsersAdded', () => {
   it('skips who already has a color, keeping it', () => {
     expect(withUsersAdded(colorsOf(['ana', third!]), ['ana']).users).toEqual([{ user: 'ana', hue: third }]);
   });
+});
 
-  it('keeps the colors off when they were', () => {
-    expect(withUsersAdded({ on: false, users: [{ user: 'ana', hue: first! }] }, ['bo']).on).toBe(false);
+describe('addingTurnsColorsOn', () => {
+  it('turns the colors on with the first person, since no switch showed they were off', () => {
+    expect(addingTurnsColorsOn(DEFAULT_USER_COLORS, false)).toBe(true);
   });
 
-  it('turns the colors on with the first person, since no switch showed they were off', () => {
-    expect(withUsersAdded({ on: false, users: [] }, ['ana']).on).toBe(true);
+  it('keeps them off once someone has a color, and leaves them on', () => {
+    expect(addingTurnsColorsOn(colorsOf(['ana', first!]), false)).toBe(false);
+    expect(addingTurnsColorsOn(DEFAULT_USER_COLORS, true)).toBe(false);
+  });
+});
+
+describe('appliedUserColorsOf', () => {
+  const colors = colorsOf(['ana', first!]);
+
+  it('applies the colors in a repository where they are on', () => {
+    expect(appliedUserColorsOf(colors, { tools: true }, 'game')).toBe(colors);
+  });
+
+  it('applies none where they are off, the same object every time', () => {
+    expect(appliedUserColorsOf(colors, { game: true }, 'game')).toBe(appliedUserColorsOf(colorsOf(['bo', 1]), { game: true }, 'game'));
+    expect(appliedUserColorsOf(colors, { game: true }, 'game').users).toEqual([]);
   });
 });
 
@@ -92,13 +110,13 @@ describe('withUserToggled', () => {
 
 describe('changesetColorsTabBody', () => {
   it('invites to add people while no one has a color, on or off', () => {
-    expect(changesetColorsTabBody(DEFAULT_USER_COLORS)).toEqual({ state: 'empty' });
-    expect(changesetColorsTabBody({ on: false, users: [] })).toEqual({ state: 'empty' });
+    expect(changesetColorsTabBody(DEFAULT_USER_COLORS, true)).toEqual({ state: 'empty' });
+    expect(changesetColorsTabBody(DEFAULT_USER_COLORS, false)).toEqual({ state: 'empty' });
   });
 
   it('lists the people, dimmed while the colors are off', () => {
-    expect(changesetColorsTabBody(colorsOf(['ana', 1]))).toEqual({ state: 'list', dimmed: false });
-    expect(changesetColorsTabBody({ ...colorsOf(['ana', 1]), on: false })).toEqual({ state: 'list', dimmed: true });
+    expect(changesetColorsTabBody(colorsOf(['ana', 1]), true)).toEqual({ state: 'list', dimmed: false });
+    expect(changesetColorsTabBody(colorsOf(['ana', 1]), false)).toEqual({ state: 'list', dimmed: true });
   });
 });
 
@@ -136,8 +154,7 @@ describe('changesetUserHues', () => {
     ]);
   });
 
-  it('colors nothing while the colors are off, or for people without one', () => {
-    expect(changesetUserHues(history, { ...colorsOf(['jane@example.com', 10]), on: false }).size).toBe(0);
+  it('colors nothing for people without one', () => {
     expect(changesetUserHues(history, colorsOf(['someone@example.com', 10])).size).toBe(0);
   });
 });
