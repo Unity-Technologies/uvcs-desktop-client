@@ -2,7 +2,7 @@
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>.
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -23,7 +23,8 @@ const VIEWPORT = { width: 1400, height: 880 };
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
 // One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own.
-const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${createHash('sha1').update(projectFolder).digest('hex').slice(0, 8)}`);
+const checkoutHash = createHash('sha1').update(projectFolder).digest('hex').slice(0, 8);
+const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
 rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
@@ -62,13 +63,7 @@ await window.setViewportSize(VIEWPORT);
 
 const main = window.getByRole('main');
 let shotNumber = 0;
-/**
- * Saves the page's frame as Electron holds it (`webContents.capturePage`), never waiting for the OS to show one:
- * Playwright's `page.screenshot` waits for the window to be drawn on screen, which one the OS isn't drawing
- * (minimized, hidden, on another desktop, the display asleep) never is, and its timeout then failed whichever step it
- * followed, though every step passes without it. The page still renders meanwhile: the two animation frames waited
- * for first put what the step left into the frame captured, which would otherwise be the one before.
- */
+/** Saves what the page shows, without needing the window drawn on screen (scripts/e2e/README.md). */
 async function screenshot(name) {
   await withTimeout(capture(name), TIMEOUT_MS, `screenshot ${name}`);
 }
