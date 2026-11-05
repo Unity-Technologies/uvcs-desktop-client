@@ -12,10 +12,11 @@ import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { useSession } from '../../workspace/sessionStore';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, hostOf, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep, type SuggestedLink } from './connectFlow';
+import { connectFailureWords, connectsWithSignIn, hostOf, pickedSignInShown, signInMethodShown, linkReadBack, signInStepFor, suggestedTrackerLink, usableSignIns, type SignInRow, type SignInStep, type SuggestedLink } from './connectFlow';
 import { ConnectSteps } from './ConnectSteps';
 import { LinkReadBackLine } from './LinkReadBackLine';
-import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
+import { SignInIdentity } from './SignInIdentity';
+import { choiceAfterLink, choiceKeyMove, choiceOf, connectWords, PICKER_WORDS, switchedWords, TRACKER_CHOICES, trackerChoiceCard, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 import { TrackerLogo } from './TrackerLogo';
 import { DeviceSignIn } from './DeviceSignIn';
@@ -43,6 +44,8 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
   const [link, setLink] = useState('');
   const [switched, setSwitched] = useState(false);
   const [differentAccount, setDifferentAccount] = useState(false);
+  // The sign-in picked in the first step ("Use a sign-in you already have"), carried to the link step.
+  const [picked, setPicked] = useState<SignInRow | null>(null);
   const read = linkReadBack(link);
   const suggestion = useSuggestedLink();
   const setup = useIssueTrackerSetup();
@@ -51,8 +54,9 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
   const card = choice ? trackerChoiceCard(choice) : null;
   const words = connectWords(card, repository !== undefined);
 
-  const choose = (chosen: TrackerChoice | null, text = ''): void => {
+  const choose = (chosen: TrackerChoice | null, text = '', signIn: SignInRow | null = null): void => {
     setChoice(chosen);
+    setPicked(signIn);
     setLink(text);
     setSwitched(false);
     setDifferentAccount(false);
@@ -73,12 +77,25 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
         {card && <TrackerLogo choice={card.choice} />}
         <div className={styles.cardHeaderText}>
           <h2 className={styles.cardTitle}>{words.title}</h2>
-          <ConnectSteps stage={stage} {...(card && { trackerName: card.name })} />
+          <ConnectSteps stage={stage} {...(card && { trackerName: card.name })} signedIn={connectsWithSignIn(picked?.id ?? null, read.kind === 'read', step)} />
         </div>
       </header>
-      {!card && <TrackerPicker intro={words.intro} suggestion={repository ? suggestion : null} onChoose={choose} />}
+      {!card && (
+        <TrackerPicker
+          intro={words.intro}
+          suggestion={repository ? suggestion : null}
+          signIns={repository ? usableSignIns(setup) : []}
+          onChoose={choose}
+          onPickSignIn={(signIn) => choose(choiceOf(signIn.kind), '', signIn)}
+        />
+      )}
       {card && (
         <div className={styles.section}>
+          {picked && pickedSignInShown(picked.id, read.kind === 'read', step) && (
+            <CheckedLine>
+              With <strong>{picked.account}</strong>'s sign-in at {picked.host}
+            </CheckedLine>
+          )}
           <TextField className={styles.field} label={card.linkLabel} aria-label="A link to an issue" placeholder={card.placeholder} value={link} onChange={(event) => typed(event.target.value)} autoFocus />
           {read.kind === 'none' && (
             <ul className={styles.examples} aria-label="Link shapes">
@@ -97,7 +114,16 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
       )}
       {read.kind === 'read' && step && (
         <div className={`${styles.section} ${styles.arrives}`}>
-          <SignInFor key={`${link} ${differentAccount}`} link={read.link} linkText={link} step={step} repository={repository} onConnected={onConnected} onDifferentAccount={() => setDifferentAccount(true)} />
+          <SignInFor
+            key={`${link} ${differentAccount}`}
+            link={read.link}
+            linkText={link}
+            step={step}
+            repository={repository}
+            picked={picked !== null && pickedSignInShown(picked.id, true, step)}
+            onConnected={onConnected}
+            onDifferentAccount={() => setDifferentAccount(true)}
+          />
         </div>
       )}
     </section>
@@ -106,9 +132,19 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
 
 /**
  * The first step: a card per tracker, its logo, name and servers, to click or reach with the arrows; above them, the
- * tracker the branch comments link to, in one click with its link filled in.
+ * tracker the branch comments link to, in one click with its link filled in. Where the computer already keeps
+ * sign-ins, they come first ("Use a sign-in you already have"), and the trackers, smaller, after them.
  */
-function TrackerPicker({ intro, suggestion, onChoose }: { intro: string; suggestion: SuggestedLink | null; onChoose: (choice: TrackerChoice, link?: string) => void }) {
+interface TrackerPickerProps {
+  intro: string;
+  suggestion: SuggestedLink | null;
+  /** The sign-ins this computer keeps that work, offered first (`usableSignIns`); none in a window with no repository. */
+  signIns: readonly SignInRow[];
+  onChoose: (choice: TrackerChoice, link?: string) => void;
+  onPickSignIn: (signIn: SignInRow) => void;
+}
+
+function TrackerPicker({ intro, suggestion, signIns, onChoose, onPickSignIn }: TrackerPickerProps) {
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
   const arrows = (event: KeyboardEvent<HTMLDivElement>): void => {
     const at = cards.current.findIndex((card) => card === document.activeElement);
@@ -135,7 +171,23 @@ function TrackerPicker({ intro, suggestion, onChoose }: { intro: string; suggest
           </Button>
         </div>
       )}
-      <div className={styles.choices} role="group" aria-label="Trackers" onKeyDown={arrows}>
+      {signIns.length > 0 && (
+        <>
+          <h3 className={styles.pickerTitle}>{PICKER_WORDS.signIns}</h3>
+          <ul className={styles.tiles}>
+            {signIns.map((signIn) => (
+              <li key={signIn.id}>
+                <button type="button" className={`${styles.signInTile} ${styles.signInPick}`} onClick={() => onPickSignIn(signIn)} aria-label={`${signIn.account}, ${signIn.title}`}>
+                  <SignInIdentity row={signIn} />
+                  <ChevronRight className={styles.pickChevron} size={15} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <h3 className={styles.pickerTitle}>{PICKER_WORDS.others}</h3>
+        </>
+      )}
+      <div className={styles.choices} data-compact={signIns.length > 0 || undefined} role="group" aria-label="Trackers" onKeyDown={arrows}>
         {TRACKER_CHOICES.map((card, index) => (
           <button
             key={card.choice}
@@ -145,9 +197,9 @@ function TrackerPicker({ intro, suggestion, onChoose }: { intro: string; suggest
             type="button"
             className={styles.choiceCard}
             onClick={() => onChoose(card.choice)}
-            autoFocus={index === 0 && !suggestion}
+            autoFocus={index === 0 && !suggestion && signIns.length === 0}
           >
-            <TrackerLogo choice={card.choice} size={44} />
+            <TrackerLogo choice={card.choice} size={signIns.length > 0 ? 28 : 44} />
             <span className={styles.choiceText}>
               <span className={styles.choiceName}>{card.name}</span>
               <span className={styles.choiceServers}>{card.servers}</span>
@@ -165,13 +217,15 @@ interface SignInForProps {
   linkText: string;
   step: SignInStep;
   repository: string | undefined;
+  /** The sign-in covering the link was picked in the first step, and the link step already says so. */
+  picked: boolean;
   onConnected: (outcome: SignedIn) => void;
   /** "Use a different account" over the sign-in already there. */
   onDifferentAccount: () => void;
 }
 
 /** The sign-in step for a link read back: a sign-in already there in one click, else the tracker's best method. */
-function SignInFor({ link, linkText, step, repository, onConnected, onDifferentAccount }: SignInForProps) {
+function SignInFor({ link, linkText, step, repository, picked, onConnected, onDifferentAccount }: SignInForProps) {
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [tokenChosen, setTokenChosen] = useState(false);
   const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
@@ -181,7 +235,7 @@ function SignInFor({ link, linkText, step, repository, onConnected, onDifferentA
   };
 
   if (step.kind === 'useConnection') {
-    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
+    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} picked={picked} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
     return (
       <div className={styles.next}>
         <p className={styles.nextTitle}>You're already signed in</p>
@@ -213,29 +267,43 @@ function SignInFor({ link, linkText, step, repository, onConnected, onDifferentA
   );
 }
 
-/** Using a sign-in already there for the repository: one click, proven with the link's project. */
-function UseConnection({ link, linkText, step, repository, onConnected, onDifferentAccount }: { link: RecognizedLink; linkText: string; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; onConnected: (outcome: SignedIn) => void; onDifferentAccount: () => void }) {
+/**
+ * Connecting the repository with a sign-in already there: one click, proven with the link's project. Once the sign-in
+ * was picked in the first step, the link step already says whose it is, so this is Connect alone.
+ */
+function UseConnection(props: {
+  link: RecognizedLink;
+  linkText: string;
+  step: Extract<SignInStep, { kind: 'useConnection' }>;
+  repository: string;
+  picked: boolean;
+  onConnected: (outcome: SignedIn) => void;
+  onDifferentAccount: () => void;
+}) {
+  const { link, linkText, step, repository, picked, onConnected, onDifferentAccount } = props;
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [busy, setBusy] = useState(false);
-  const finish = (outcome: SignInOutcome): void => {
+  const name = TRACKER_GRAMMARS[step.connection.kind].name;
+  const connect = async (): Promise<void> => {
+    setBusy(true);
+    const outcome = await api.issueTrackers.useConnection({ repository, link: linkText, connectionId: step.connection.id });
+    setBusy(false);
     if (outcome.kind === 'signedIn') onConnected(outcome);
     else setFailure(outcome.failure);
   };
-  const name = TRACKER_GRAMMARS[step.connection.kind].name;
-  const use = async (): Promise<void> => {
-    setBusy(true);
-    finish(await api.issueTrackers.useConnection({ repository, link: linkText, connectionId: step.connection.id }));
-    setBusy(false);
-  };
   return (
     <div className={styles.next}>
-      <p className={styles.nextTitle}>Next: use your {name} sign-in</p>
-      <CheckedLine>
-        Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
-      </CheckedLine>
+      {!picked && (
+        <>
+          <p className={styles.nextTitle}>Next: connect with your {name} sign-in</p>
+          <CheckedLine>
+            Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
+          </CheckedLine>
+        </>
+      )}
       <div className={styles.row}>
-        <Button size="small" variant="primary" loading={busy} onClick={() => void use()}>
-          Use it
+        <Button size="small" variant="primary" loading={busy} onClick={() => void connect()}>
+          Connect
         </Button>
         <DifferentAccountLink onClick={onDifferentAccount} />
       </div>

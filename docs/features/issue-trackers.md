@@ -396,14 +396,18 @@ brand colors as `--brand-*` tokens). What each card shows is decided in pure mod
    with the arrow keys too (`choiceKeyMove`). A tracker shows here only once it works: no "coming soon". When the
    branch comments the window already read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over
    the cached branch lists, no command), "Your branch comments link to Jira" above the cards, with "Use it", which
-   picks the tracker and fills the link. Never filled in silently.
+   picks the tracker and fills the link. Never filled in silently. In a repository's window, where the computer already keeps sign-ins
+   that work (`usableSignIns`), they come first, "Use a sign-in you already have", each its card (who, its tracker's
+   logo, the server), and the trackers after them, smaller ("Or sign in to another tracker", `PICKER_WORDS`), so a
+   sign-in made on Home is plainly the way in. Picking one goes to the link step saying whose sign-in it is
+   (`pickedSignInShown`), and the last step is "Connect" (`connectsWithSignIn`): one button, no token.
 2. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it
    (`TrackerChoiceCard.examples`). Pasted, it's read back with nothing sent, checked: the tracker's kind as a badge,
    then the host and the project bold (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't
    an issue says what it is and what to paste instead. A link to another tracker's issue is taken, never refused:
    the step moves to that tracker and says so (`choiceAfterLink`, `switchedWords`).
-3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and "Use
-   it", with "Use a different account" beside it (another account's project, a token that can't read this one, a
+3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: connect with your Jira sign-in"
+   and "Connect", with "Use a different account" beside it (another account's project, a token that can't read this one, a
    shared computer): the ways to sign in, saying the new account replaces the kept one for every repository that uses
    it (one sign-in per server: `replaces`). Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
    `tokenStepWords`): "Get a token from Jira", one line on what to do there and that the app only reads with it, and

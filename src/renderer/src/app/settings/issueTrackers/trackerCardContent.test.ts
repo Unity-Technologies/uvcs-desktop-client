@@ -84,6 +84,8 @@ describe('connectSteps and tokenStepLead', () => {
       ['Sign in', 'next'],
     ]);
     expect(connectSteps('signIn', 'GitHub').map((step) => step.state)).toEqual(['done', 'done', 'current']);
+    // With a sign-in already there, the last step only connects.
+    expect(connectSteps('signIn', 'Jira', { signedIn: true }).map((step) => step.label)).toEqual(['Jira', 'Link', 'Connect']);
   });
 
   it('leads with Create a token until a token is pasted, then with Sign in', () => {

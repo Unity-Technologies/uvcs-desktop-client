@@ -90,3 +90,6 @@ export function connectWords(card: TrackerChoiceCard | null, forRepository: bool
   }
   return { title: card ? `Sign in to ${card.name}` : 'Sign in to an issue tracker', intro: 'Sign in once, and any repository connects to it in one click.' };
 }
+
+/** The first step's two groups, where the computer already keeps sign-ins: those first, then the trackers. */
+export const PICKER_WORDS = { signIns: 'Use a sign-in you already have', others: 'Or sign in to another tracker' };

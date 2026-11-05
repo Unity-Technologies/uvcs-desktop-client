@@ -238,6 +238,29 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: st
   });
 }
 
+/**
+ * The sign-ins Connect offers first for a repository ("Use a sign-in you already have"): those that work. One needing
+ * signing in again goes through its tracker's card like any other.
+ */
+export function usableSignIns(setup: IssueTrackerSetup | undefined): SignInRow[] {
+  return signInRows(setup).filter((row) => !row.needsAttention);
+}
+
+/**
+ * Whether the link step still says which sign-in was picked ("With Daniel Peñalba's sign-in at jira.unity3d.com"):
+ * until a link is read, and after while that sign-in covers it; a link to another server goes its own way.
+ */
+export function pickedSignInShown(pickedId: string | null, linkRead: boolean, step: SignInStep | null): boolean {
+  if (pickedId === null) return false;
+  if (!linkRead) return true;
+  return step?.kind === 'useConnection' && step.connection.id === pickedId;
+}
+
+/** Whether connecting goes through a sign-in already there: one picked first, or one covering the link pasted. */
+export function connectsWithSignIn(pickedId: string | null, linkRead: boolean, step: SignInStep | null): boolean {
+  return step?.kind === 'useConnection' || (pickedId !== null && !linkRead);
+}
+
 export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: string | undefined): ConnectedTracker | null {
   if (!setup || !repository) return null;
   const binding = bindingOf(setup.bindings, repository);

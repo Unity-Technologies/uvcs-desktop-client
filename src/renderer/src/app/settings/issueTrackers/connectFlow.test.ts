@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, connectsWithSignIn, pickedSignInShown, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -214,5 +214,27 @@ describe('otherTokenPageOffered', () => {
     expect(otherTokenPageOffered('jiraDataCenter')).toBe(true);
     expect(otherTokenPageOffered('jiraCloud')).toBe(false);
     expect(otherTokenPageOffered('github')).toBe(false);
+  });
+});
+
+describe('the sign-ins Connect offers first', () => {
+  it('offers the sign-ins that work, never one that needs signing in again', () => {
+    expect(usableSignIns(setup([jira, { ...jira, id: 'r', credential: 'refused' }])).map((row) => row.id)).toEqual(['j']);
+    expect(usableSignIns(undefined)).toEqual([]);
+  });
+
+  it('says which sign-in was picked until a link to another server is pasted', () => {
+    const covered = { kind: 'useConnection' as const, connection: jira, words: '' };
+    expect(pickedSignInShown('j', false, null)).toBe(true);
+    expect(pickedSignInShown('j', true, covered)).toBe(true);
+    expect(pickedSignInShown('j', true, { kind: 'signIn', methods: ['token'], trackerName: 'GitHub' })).toBe(false);
+    expect(pickedSignInShown(null, false, null)).toBe(false);
+  });
+
+  it('connects through a sign-in already there when one was picked, or one covers the link', () => {
+    expect(connectsWithSignIn('j', false, null)).toBe(true);
+    expect(connectsWithSignIn(null, true, { kind: 'useConnection', connection: jira, words: '' })).toBe(true);
+    expect(connectsWithSignIn('j', true, { kind: 'signIn', methods: ['token'], trackerName: 'GitHub' })).toBe(false);
+    expect(connectsWithSignIn(null, false, null)).toBe(false);
   });
 });

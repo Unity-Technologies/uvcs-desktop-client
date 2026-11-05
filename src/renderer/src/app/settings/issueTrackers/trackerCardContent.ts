@@ -90,11 +90,14 @@ export type ConnectStepState = 'done' | 'current' | 'next';
 
 export type ConnectStage = 'tracker' | 'link' | 'signIn';
 
-/** The first step names the tracker once one is chosen ("Jira ✓ · Link · Sign in"). */
-export function connectSteps(stage: ConnectStage, trackerName?: string): { label: string; state: ConnectStepState }[] {
+/**
+ * The first step names the tracker once one is chosen ("Jira ✓ · Link · Sign in"); with a sign-in already there
+ * (`signedIn`), the last one only connects ("Connect").
+ */
+export function connectSteps(stage: ConnectStage, trackerName?: string, { signedIn = false } = {}): { label: string; state: ConnectStepState }[] {
   const order: ConnectStage[] = ['tracker', 'link', 'signIn'];
   const at = order.indexOf(stage);
-  const labels: Record<ConnectStage, string> = { tracker: (stage !== 'tracker' && trackerName) || 'Tracker', link: 'Link', signIn: 'Sign in' };
+  const labels: Record<ConnectStage, string> = { tracker: (stage !== 'tracker' && trackerName) || 'Tracker', link: 'Link', signIn: signedIn ? 'Connect' : 'Sign in' };
   return order.map((step, index) => ({ label: labels[step], state: index < at ? 'done' : index === at ? 'current' : 'next' }));
 }
 

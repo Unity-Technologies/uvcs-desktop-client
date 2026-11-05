@@ -1,12 +1,11 @@
 import { Plus } from 'lucide-react';
 import { api } from '../../../api/client';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
-import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
 import { confirm } from '../../../ui/dialog/confirm';
 import { signInRows, type SignInRow } from './connectFlow';
 import { StatusPill } from './StatusPill';
-import { TrackerIcon } from './TrackerIcon';
+import { SignInIdentity } from './SignInIdentity';
 import styles from './IssueTrackerPane.module.css';
 
 /**
@@ -62,19 +61,7 @@ function SignInTile({ row }: { row: SignInRow }) {
   };
   return (
     <li className={styles.signInTile} aria-label={`${row.account}, ${row.title}`}>
-      <span className={styles.tileAvatar}>
-        <Avatar user={row.account} size={26} tip={null} />
-        <span className={styles.tileBadge}>
-          <TrackerIcon kind={row.kind} size={13} />
-        </span>
-      </span>
-      <span className={styles.tileText}>
-        <span className={styles.tileName}>{row.account}</span>
-        <span className={styles.tileHost}>
-          {row.host}
-          {row.usedHere && ' · This repository'}
-        </span>
-      </span>
+      <SignInIdentity row={row} detail={row.usedHere ? `${row.host} · This repository` : row.host} />
       {row.needsAttention && <StatusPill status={row.status} />}
       <Button className={styles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={signOut}>
         Sign out
