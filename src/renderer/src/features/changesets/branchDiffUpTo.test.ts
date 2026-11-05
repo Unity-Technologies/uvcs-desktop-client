@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baseOfStart, branchDiffBase } from './branchDiffUpTo';
+import { branchDiffBase, readStartOutcome } from './branchDiffUpTo';
 
 // /main/task starts from changeset 8 on /main and holds 9 to 13, 13 merging /main into it.
 const TASK_START = { firstChangeset: 9, base: 8 };
@@ -19,10 +19,15 @@ describe('the branch diff up to a changeset', () => {
     expect(branchDiffBase(onTask(9), TASK_START)).toEqual({ kind: 'none' });
   });
 
-  it("isn't offered on a top-level branch, which starts from no other", () => {
+  it("isn't offered on /main, the root branch, which starts from no other", () => {
     expect(branchDiffBase({ id: 6, branch: '/main' }, { firstChangeset: 0, base: -1 })).toEqual({ kind: 'none' });
     expect(branchDiffBase({ id: 6, branch: '/main' }, null)).toEqual({ kind: 'none' });
-    expect(branchDiffBase({ id: 30, branch: '/release' }, null)).toEqual({ kind: 'none' });
+  });
+
+  // The app creates top-level branches from a changeset or a label ("Top-level branch" in New branch).
+  it('diffs a top-level branch made from a changeset from its base, as any other', () => {
+    expect(branchDiffBase({ id: 30, branch: '/release' }, { firstChangeset: 21, base: 20 })).toEqual({ kind: 'from', base: 20 });
+    expect(branchDiffBase({ id: 30, branch: '/release' }, null)).toEqual({ kind: 'unknown' });
   });
 
   it("is offered on a branch whose start isn't known, nested and non-ASCII names too, to be read when chosen", () => {
@@ -35,10 +40,14 @@ describe('the branch diff up to a changeset', () => {
   });
 });
 
-describe('the base read when the entry is chosen', () => {
-  it('is the parent of the first changeset, none for a branch with no changesets or starting nowhere', () => {
-    expect(baseOfStart(TASK_START)).toBe(8);
-    expect(baseOfStart({ firstChangeset: 0, base: -1 })).toBeNull();
-    expect(baseOfStart(null)).toBeNull();
+describe('the start read when the entry is chosen', () => {
+  it('opens from the parent of the first changeset', () => {
+    expect(readStartOutcome(TASK_START)).toEqual({ kind: 'from', base: 8 });
+    expect(readStartOutcome({ firstChangeset: 0, base: 0 })).toEqual({ kind: 'from', base: 0 });
+  });
+
+  it('tells a root branch, which starts from no other, from a branch with no changesets', () => {
+    expect(readStartOutcome({ firstChangeset: 0, base: -1 })).toEqual({ kind: 'root' });
+    expect(readStartOutcome(null)).toEqual({ kind: 'empty' });
   });
 });

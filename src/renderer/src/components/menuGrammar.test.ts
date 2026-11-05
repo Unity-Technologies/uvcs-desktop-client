@@ -451,8 +451,9 @@ describe('the branch diff up to a changeset', () => {
     expect(offered(graphChangesetMenu(3))).not.toContain('Open branch diff up to this changeset');
   });
 
-  it("isn't on /main in a list, which can tell a top-level branch by its name", () => {
+  it("isn't on /main in a list, the root branch, told by its name; a top-level branch made from a changeset has it", () => {
     expect(offered(changesetMenu({ place: workspacePlace(ws) }, [{ ...changeset, branch: '/main' }]))).not.toContain('Open branch diff up to this changeset');
+    expect(offered(changesetMenu({ place: workspacePlace(ws) }, [{ ...changeset, branch: '/release' }]))).toContain('Open branch diff up to this changeset');
   });
 });
 

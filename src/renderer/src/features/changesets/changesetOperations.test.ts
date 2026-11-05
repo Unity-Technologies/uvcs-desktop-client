@@ -191,7 +191,7 @@ describe("the branch diff up to a changeset", () => {
     expect(whereTheWindowIs().pages).toEqual([{ ...page, title: 'Branch task up to changeset 9', target: { kind: 'range', fromSpec: 'cs:8', toSpec: 'cs:9' } }]);
   });
 
-  it('says so and opens nothing when the read fails or finds no start', async () => {
+  it('says so and opens nothing when the read fails or the branch has no changesets', async () => {
     fakeApi.answer('changesets.branchStart', () => {
       throw new Error('offline');
     });
@@ -202,7 +202,16 @@ describe("the branch diff up to a changeset", () => {
     expect(whereTheWindowIs().pages).toEqual([]);
     expect(shownToasts()).toEqual([
       { kind: 'error', title: "Couldn't find where task starts", detail: 'offline' },
-      { kind: 'error', title: "Couldn't find where task starts" },
+      { kind: 'error', title: "Couldn't find where task starts", detail: 'It has no changesets.' },
     ]);
+  });
+
+  it('tells, not as a failure, that a root branch starts from no other', async () => {
+    fakeApi.answer('changesets.branchStart', () => ({ firstChangeset: 0, base: -1 }));
+
+    await openBranchDiffUpTo(inWs, { id: 4, branch: '/origins' }, { kind: 'unknown' });
+
+    expect(whereTheWindowIs().pages).toEqual([]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'origins starts from no other branch' }]);
   });
 });
