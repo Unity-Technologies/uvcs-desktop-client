@@ -98,6 +98,20 @@ export type IssueRead =
   | { key: string; kind: 'noAccess' }
   | { key: string; kind: 'unreadable'; reason: TrackerErrorReason; retryAt?: number };
 
+/**
+ * A search of a repository's issues, as `#` asks it: with words, the issues whose title holds them; without, the
+ * account's issues not done. Either way of the bound projects, most recently updated first.
+ */
+export interface IssueSearch {
+  words?: string;
+}
+
+/** What a search found, of the repository's connection; or why it couldn't; or none, a newer search having replaced it. */
+export type IssueSearchAnswer =
+  | { kind: 'found'; connectionId: string; issues: Issue[] }
+  | { kind: 'failed'; reason: TrackerErrorReason; retryAt?: number }
+  | { kind: 'superseded' };
+
 /** Proof that a project can be read: its name and its counts. */
 export interface ProjectAccess {
   project: string;
