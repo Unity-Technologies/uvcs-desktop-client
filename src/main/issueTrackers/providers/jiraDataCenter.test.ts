@@ -148,4 +148,12 @@ describe('the Jira Data Center provider', () => {
     const { http } = connected({ [`GET ${SERVER}/rest/api/2/myself`]: { status: 401 } });
     await expect(jiraDataCenterProvider.signIn(http, SERVER)).rejects.toMatchObject({ reason: 'signInRefused' });
   });
+
+  it('searches the bound projects with one GET, the account’s open issues with no words', async () => {
+    const asked = searchUrl({ jql: 'project in ("VCS") AND assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC', fields: 'summary,status,issuetype,assignee', maxResults: '20', validateQuery: 'false' });
+    const { tracker, http } = connected({ [`GET ${asked}`]: { json: SEARCH }, [`POST ${SERVER}/rest/api/2/search`]: READ_ONLY_POST });
+    const issues = await jiraDataCenterProvider.searchIssues(http, { server: SERVER }, ['VCS'], {});
+    expect(issues.map((issue) => issue.key)).toEqual(['VCS-12', 'VCS-13']);
+    expect(tracker.lines()).toEqual([`GET ${asked}`]);
+  });
 });

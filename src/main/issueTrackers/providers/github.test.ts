@@ -86,4 +86,18 @@ describe('the GitHub provider', () => {
       ['Closed', 'canceled'],
     ]);
   });
+
+  it('searches the bound repositories with GraphQL’s search, the words as a variable, each issue keyed by its repository', async () => {
+    const found = { ...ISSUE, repository: { nameWithOwner: 'Acme/Game' } };
+    const other = { ...ISSUE, number: 3, url: 'https://github.com/acme/tools/issues/3', repository: { nameWithOwner: 'acme/tools' } };
+    const { tracker, http } = connected({ [`POST ${GRAPHQL}`]: { json: { data: { search: { nodes: [found, other, {}] } } } } });
+    const issues = await githubProvider.searchIssues(http, { server: GITHUB }, ['acme/game', 'acme/tools'], { words: 'crash' });
+    expect(issues.map((issue) => [issue.key, issue.title, issue.statusCategory])).toEqual([
+      ['acme/game#12', 'Crash on start', 'todo'],
+      ['acme/tools#3', 'Crash on start', 'todo'],
+    ]);
+    const sent = tracker.requests[0]!.json as { query: string; variables: Record<string, string> };
+    expect(sent.variables).toEqual({ q: 'repo:acme/game repo:acme/tools is:issue sort:updated-desc in:title "crash"' });
+    expect(sent.query).not.toContain('crash');
+  });
 });

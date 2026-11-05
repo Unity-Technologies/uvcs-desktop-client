@@ -1,8 +1,9 @@
 import type { IssueRead } from '@shared/domain/issueTrackers';
 import type { ConnectionHttp } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
-import { isRecord, numberOf, okJson, stringOf, type IssueTrackerProvider } from './IssueTrackerProvider';
-import { JIRA_ISSUE_FIELDS, jiraAccount, jiraIssueReads, jqlString } from './jiraIssues';
+import { isRecord, ISSUE_SEARCH_LIMIT, numberOf, okJson, stringOf, type IssueTrackerProvider } from './IssueTrackerProvider';
+import { JIRA_ISSUE_FIELDS, jiraAccount, jiraFoundIssues, jiraIssueReads, jqlString } from './jiraIssues';
+import { jiraSearchJql } from './issueSearchQueries';
 
 /**
  * The longest search address sent: proxies and servers refuse a request line past about 8 KB, and a server's own
@@ -36,6 +37,11 @@ export const jiraDataCenterProvider: IssueTrackerProvider = {
     const open = `project = ${jqlString(project)} AND statusCategory != Done`;
     const [openIssues, assignedToYou] = await Promise.all([countOf(http, connection.server, open), countOf(http, connection.server, `${open} AND assignee = currentUser()`)]);
     return { project, name: stringOf(found.name) ?? project, ...(openIssues !== undefined && { openIssues }), ...(assignedToYou !== undefined && { assignedToYou }) };
+  },
+
+  async searchIssues(http, connection, projects, search) {
+    const url = searchUrl(connection.server, { jql: jiraSearchJql(projects, search), fields: JIRA_ISSUE_FIELDS.join(','), maxResults: String(ISSUE_SEARCH_LIMIT), validateQuery: 'false' });
+    return jiraFoundIssues(okJson(await http.send({ method: 'GET', url }), 'Jira'), connection.server);
   },
 
   async readIssues(http, connection, keys) {

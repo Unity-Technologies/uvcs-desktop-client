@@ -1,4 +1,4 @@
-import type { IssueRead, IssueTrackerKind, ProjectAccess, TrackerAccount } from '@shared/domain/issueTrackers';
+import type { Issue, IssueRead, IssueSearch, IssueTrackerKind, ProjectAccess, TrackerAccount } from '@shared/domain/issueTrackers';
 import type { ConnectionHttp, TrackerResponse } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
 import type { TrackerCredential } from '../TrackerSecrets';
@@ -34,7 +34,12 @@ export interface IssueTrackerProvider {
   projectAccess(http: ConnectionHttp, connection: ProviderConnection, project: string): Promise<ProjectAccess>;
   /** The issues named, one request for all of them (at most `MAX_KEYS_PER_READ`). */
   readIssues(http: ConnectionHttp, connection: ProviderConnection, keys: readonly string[]): Promise<IssueRead[]>;
+  /** The bound projects' issues a `#` search finds (`IssueSearch`), at most `ISSUE_SEARCH_LIMIT`, in one request. */
+  searchIssues(http: ConnectionHttp, connection: ProviderConnection, projects: readonly string[], search: IssueSearch): Promise<Issue[]>;
 }
+
+/** The most issues a search answers: more than a suggestion list shows, so typing narrows them without asking again. */
+export const ISSUE_SEARCH_LIMIT = 20;
 
 /** The most keys one request reads: Jira's `bulkfetch` takes 100, and GitHub's GraphQL as many aliases at ease. */
 export const MAX_KEYS_PER_READ = 100;

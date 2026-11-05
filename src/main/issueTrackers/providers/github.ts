@@ -3,7 +3,8 @@ import { githubApiBase, githubGraphqlUrl, isGitHubCloud } from '@shared/issueTra
 import type { ConnectionHttp } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
 import { isRecord, MAX_KEYS_PER_READ, NotThisTrackerError, numberOf, okJson, stringOf, type IssueTrackerProvider } from './IssueTrackerProvider';
-import { githubIssueReads, githubIssuesQuery, graphqlErrors, isGraphqlRateLimited } from './githubIssues';
+import { GITHUB_SEARCH, githubFoundIssues, githubIssueReads, githubIssuesQuery, graphqlErrors, isGraphqlRateLimited } from './githubIssues';
+import { githubSearchQuery } from './issueSearchQueries';
 
 export const githubProvider: IssueTrackerProvider = {
   kind: 'github',
@@ -44,6 +45,12 @@ export const githubProvider: IssueTrackerProvider = {
     const batch = githubIssuesQuery(keys.slice(0, MAX_KEYS_PER_READ));
     const body = await graphql(http, connection.server, batch.query, batch.variables);
     return githubIssueReads(body, batch, connection.server);
+  },
+
+  /** GraphQL's `search`, the query as a variable (`githubSearchQuery`): it counts against GitHub's search limit. */
+  async searchIssues(http, connection, projects, search) {
+    const body = await graphql(http, connection.server, GITHUB_SEARCH, { q: githubSearchQuery(projects, search) });
+    return githubFoundIssues(body, connection.server);
   },
 };
 

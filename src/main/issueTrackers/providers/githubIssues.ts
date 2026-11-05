@@ -1,6 +1,6 @@
 import type { Issue, IssueRead, IssueStatusCategory, TrackerAccount } from '@shared/domain/issueTrackers';
 import { githubKey, githubKeyParts } from '@shared/issueTrackers/grammars/github';
-import { isRecord, numberOf, stringOf } from './IssueTrackerProvider';
+import { isRecord, ISSUE_SEARCH_LIMIT, numberOf, stringOf } from './IssueTrackerProvider';
 
 const ISSUE_FIELDS = 'number title url state stateReason assignees(first: 1) { nodes { login name } }';
 const PULL_REQUEST_FIELDS = 'number title url state isDraft merged assignees(first: 1) { nodes { login name } }';
@@ -50,6 +50,25 @@ export function githubIssuesQuery(keys: readonly string[]): GithubIssuesQuery {
     `fragment PullRequestFields on PullRequest { ${PULL_REQUEST_FIELDS} }`,
   ].join('\n');
   return { query, variables, keysByPath, keys: keys.filter((key) => githubKeyParts(key) !== null) };
+}
+
+/**
+ * A search of issues (`githubSearchQuery`, as `$q`), each with its repository, so its key is known. The limit is the
+ * app's own number, written in; the user's words only ever go in the variable.
+ */
+export const GITHUB_SEARCH = `query Search($q: String!) { search(type: ISSUE, query: $q, first: ${ISSUE_SEARCH_LIMIT}) { nodes { __typename ... on Issue { ${ISSUE_FIELDS} repository { nameWithOwner } } } } }`;
+
+/** The issues a search found, in its order, each keyed `owner/repo#12` by its repository. */
+export function githubFoundIssues(body: Record<string, unknown>, server: string): Issue[] {
+  const search = isRecord(body.data) && isRecord(body.data.search) ? body.data.search : {};
+  const nodes = Array.isArray(search.nodes) ? search.nodes : [];
+  return nodes.flatMap((node) => {
+    if (!isRecord(node) || !isRecord(node.repository)) return [];
+    const [owner, name] = (stringOf(node.repository.nameWithOwner) ?? '').split('/');
+    const number = numberOf(node.number);
+    if (!owner || !name || number === undefined) return [];
+    return githubIssue(node, githubKey(owner, name, number), server) ?? [];
+  });
 }
 
 interface GraphqlError {

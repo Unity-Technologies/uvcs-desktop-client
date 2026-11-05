@@ -1,8 +1,9 @@
 import type { ProjectAccess } from '@shared/domain/issueTrackers';
 import type { ConnectionHttp } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
-import { isRecord, numberOf, okJson, stringOf, type IssueTrackerProvider, type ProviderConnection } from './IssueTrackerProvider';
-import { JIRA_ISSUE_FIELDS, jiraAccount, jiraIssueReads, jqlString } from './jiraIssues';
+import { isRecord, ISSUE_SEARCH_LIMIT, numberOf, okJson, stringOf, type IssueTrackerProvider, type ProviderConnection } from './IssueTrackerProvider';
+import { JIRA_ISSUE_FIELDS, jiraAccount, jiraFoundIssues, jiraIssueReads, jqlString } from './jiraIssues';
+import { jiraSearchJql } from './issueSearchQueries';
 
 /** Atlassian's gateway: a scoped API token works only through it (`/ex/jira/<cloudId>`), never at the site. */
 const ATLASSIAN_GATEWAY = 'https://api.atlassian.com';
@@ -47,6 +48,12 @@ export const jiraCloudProvider: IssueTrackerProvider = {
   async readIssues(http, connection, keys) {
     const response = await http.send({ method: 'POST', url: `${apiOf(connection)}/rest/api/3/issue/bulkfetch`, json: { issueIdsOrKeys: keys, fields: JIRA_ISSUE_FIELDS } });
     return jiraIssueReads(okJson(response, 'Jira'), keys, connection.server);
+  },
+
+  async searchIssues(http, connection, projects, search) {
+    const jql = jiraSearchJql(projects, search);
+    const response = await http.send({ method: 'POST', url: `${apiOf(connection)}/rest/api/3/search/jql`, json: { jql, fields: JIRA_ISSUE_FIELDS, maxResults: ISSUE_SEARCH_LIMIT } });
+    return jiraFoundIssues(okJson(response, 'Jira'), connection.server);
   },
 };
 

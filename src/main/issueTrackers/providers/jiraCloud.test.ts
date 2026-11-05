@@ -111,4 +111,21 @@ describe('the Jira Cloud provider', () => {
     const [read] = await jiraCloudProvider.readIssues(http, { server: SITE, apiBase: GATEWAY }, ['VCS-12']);
     expect(read).toMatchObject({ issue: { url: `${SITE}/browse/VCS-12` } });
   });
+
+  it('searches the bound projects with one JQL search, most recently updated first', async () => {
+    // `POST /rest/api/3/search/jql`, as Jira Cloud answers it: no `total`, a `nextPageToken` when there's more.
+    const { tracker, http } = connected({ [`POST ${SITE}/rest/api/3/search/jql`]: { json: { issues: BULKFETCH.issues, nextPageToken: 'Ch0jU3RyaW5nJlZrTlQ' } } });
+    const issues = await jiraCloudProvider.searchIssues(http, { server: SITE }, ['VCS'], { words: 'keep' });
+    expect(issues.map((issue) => [issue.key, issue.title, issue.statusCategory])).toEqual([
+      ['VCS-12', 'Keep the selection when the layout changes', 'inProgress'],
+      ['VCS-13', 'Won’t fix this', 'done'],
+    ]);
+    expect(tracker.requests[0]!.json).toEqual({ jql: 'project in ("VCS") AND summary ~ "keep*" ORDER BY updated DESC', fields: ['summary', 'status', 'issuetype', 'assignee'], maxResults: 20 });
+  });
+
+  it('finds nothing as an empty list, and a refused search as no access', async () => {
+    const { http } = connected({ [`POST ${SITE}/rest/api/3/search/jql`]: [{ json: { issues: [] } }, { status: 403, json: { errorMessages: ['Forbidden'] } }] });
+    expect(await jiraCloudProvider.searchIssues(http, { server: SITE }, ['VCS'], {})).toEqual([]);
+    await expect(jiraCloudProvider.searchIssues(http, { server: SITE }, ['VCS'], {})).rejects.toMatchObject({ reason: 'noAccess' });
+  });
 });

@@ -52,6 +52,12 @@ export function jiraIssue(raw: unknown, site: string): Issue | null {
   };
 }
 
+/** The issues a search answered (`issues`), in its order. */
+export function jiraFoundIssues(body: Record<string, unknown>, site: string): Issue[] {
+  const issues = Array.isArray(body.issues) ? body.issues : [];
+  return issues.flatMap((raw) => jiraIssue(raw, site) ?? []);
+}
+
 /**
  * What `POST /rest/api/3/issue/bulkfetch` answered for each key asked, in their order. A key it left out is missing (no
  * such issue, or one the account can't see: Jira doesn't tell them apart); with `issueErrors`, which name issues by id
