@@ -56,6 +56,14 @@ describe('issueCard', () => {
     expect(issueCard(reference, jira, { key: 'VCS-12', kind: 'unreadable', reason: 'rateLimited' }).meta).toEqual(['Jira asked to wait: it shows again in a while']);
     expect(issueCard(reference, jira, { key: 'VCS-12', kind: 'unreadable', reason: 'unreachable' }).meta).toEqual(["Jira couldn't be reached"]);
   });
+
+  it('says a token the tracker refuses every read to can read no issues', () => {
+    const dataCenter = { kind: 'jiraDataCenter' as const, credential: 'kept' as const };
+    const refused = { key: 'VCS-12', kind: 'unreadable' as const, reason: 'noAccess' as const };
+    expect(issueCard(reference, dataCenter, refused).meta).toEqual(["Your Jira token can't read issues"]);
+    expect(issueCard(reference, jira, refused).meta).toEqual(["Your Jira token can't read issues"]);
+    expect(issueCard({ key: 'acme/game#12', bare: false }, { kind: 'github', credential: 'kept' }, { ...refused, key: 'acme/game#12' }).meta).toEqual(["Your GitHub sign-in can't read issues"]);
+  });
 });
 
 describe('issueStaleTime', () => {

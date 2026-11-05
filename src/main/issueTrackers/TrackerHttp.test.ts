@@ -94,6 +94,20 @@ describe('TrackerHttp', () => {
     expect(tracker.logged).toEqual([{ method: 'GET', host: 'acme.atlassian.net', path: '/rest/api/3/search', startedAt: 0, durationMs: 0, httpStatus: 200 }]);
   });
 
+  it("logs a failed answer's own words, Jira's error messages or GitHub's message, never the query", async () => {
+    const url = 'https://jira.acme.com/rest/api/2/search?jql=key+in+%28%22VCS-1%22%29';
+    const tracker = fakeTrackerHttp({
+      [`GET ${url}`]: { status: 400, json: { errorMessages: ["An issue with key 'VCS-1' does not exist for field 'key'."], errors: { jql: 'Bad query' } } },
+      [`GET https://api.github.com/repos/acme/game`]: { status: 403, json: { message: 'Resource not accessible by integration' } },
+    });
+    await tracker.http.bound(['https://jira.acme.com'], 'Bearer t').send({ method: 'GET', url });
+    await tracker.http.bound(['https://api.github.com'], 'Bearer t').send({ method: 'GET', url: 'https://api.github.com/repos/acme/game' });
+    expect(tracker.logged.map((entry) => [entry.httpStatus, entry.failure])).toEqual([
+      [400, "400 from jira.acme.com/rest/api/2/search: An issue with key 'VCS-1' does not exist for field 'key'. Bad query"],
+      [403, '403 from api.github.com/repos/acme/game: Resource not accessible by integration'],
+    ]);
+  });
+
   it('sends a form as one', async () => {
     const url = 'https://github.com/login/device/code';
     const tracker = fakeTrackerHttp({ [`POST ${url}`]: { json: {} } });
