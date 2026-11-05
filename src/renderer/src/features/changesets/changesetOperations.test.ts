@@ -28,7 +28,17 @@ import { workspacePlace } from '@shared/domain/place';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { deleteChangeset, diffWithAnotherChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset, saveChangesetComment } from './changesetOperations';
+import {
+  deleteChangeset,
+  diffWithAnotherChangeset,
+  editChangesetComment,
+  mergeChangesetTo,
+  moveChangesetToBranch,
+  openBranchDiffUpTo,
+  readChangesetGuid,
+  revertWorkspaceToChangeset,
+  saveChangesetComment,
+} from './changesetOperations';
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -146,5 +156,53 @@ describe('comparing with another changeset', () => {
     await diffWithAnotherChangeset({ id: 42 });
 
     expect(whereTheWindowIs().pages).toEqual([]);
+  });
+});
+
+// /main/task starts from changeset 8 on /main and holds 9 to 13, 13 merging /main into it.
+describe("the branch diff up to a changeset", () => {
+  const twelve = { id: 12, branch: '/main/task' };
+  const page = {
+    kind: 'diff',
+    title: 'Branch task up to changeset 12',
+    target: { kind: 'range', fromSpec: 'cs:8', toSpec: 'cs:12' },
+  };
+
+  it("opens from the branch's base to the changeset, with no command when the menu knew the base", async () => {
+    await openBranchDiffUpTo(inWs, twelve, { kind: 'from', base: 8 });
+
+    expect(whereTheWindowIs().pages).toEqual([page]);
+  });
+
+  it("reads where the branch starts first when the menu didn't know it, with one call", async () => {
+    fakeApi.answer('changesets.branchStart', () => ({ firstChangeset: 9, base: 8 }));
+
+    await openBranchDiffUpTo(inWs, twelve, { kind: 'unknown' });
+
+    expect(fakeApi.argsOf('changesets.branchStart')).toEqual([[inWs, '/main/task']]);
+    expect(whereTheWindowIs().pages).toEqual([page]);
+  });
+
+  it("opens the first changeset's own changes when a list offered it there, as it couldn't tell", async () => {
+    fakeApi.answer('changesets.branchStart', () => ({ firstChangeset: 9, base: 8 }));
+
+    await openBranchDiffUpTo(inWs, { id: 9, branch: '/main/task' }, { kind: 'unknown' });
+
+    expect(whereTheWindowIs().pages).toEqual([{ ...page, title: 'Branch task up to changeset 9', target: { kind: 'range', fromSpec: 'cs:8', toSpec: 'cs:9' } }]);
+  });
+
+  it('says so and opens nothing when the read fails or finds no start', async () => {
+    fakeApi.answer('changesets.branchStart', () => {
+      throw new Error('offline');
+    });
+    await openBranchDiffUpTo(inWs, twelve, { kind: 'unknown' });
+    fakeApi.answer('changesets.branchStart', () => null);
+    await openBranchDiffUpTo(inWs, twelve, { kind: 'unknown' });
+
+    expect(whereTheWindowIs().pages).toEqual([]);
+    expect(shownToasts()).toEqual([
+      { kind: 'error', title: "Couldn't find where task starts", detail: 'offline' },
+      { kind: 'error', title: "Couldn't find where task starts" },
+    ]);
   });
 });
