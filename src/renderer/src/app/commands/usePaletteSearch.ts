@@ -56,9 +56,10 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
   const branchWords = useMemo(() => createWordFilterIndex(everyBranch?.map((branch) => [branch.name, branch.comment]) ?? []), [everyBranch]);
   const labelWords = useMemo(() => createWordFilterIndex(labels.data?.map((label) => [label.name, label.comment]) ?? []), [labels.data]);
-  // The palette opens on the home screen too, with no place: who the user is comes from its own place, not the window's.
-  const me = useServerAccount(enabled ? serverOfPlace(place, workspace.data) : undefined)?.user;
   const asksForPeople = scope === 'people';
+  // Only people need who the user is. The palette opens on the home screen too, with no place: it comes from the
+  // palette's own place, not the window's.
+  const me = useServerAccount(enabled && asksForPeople ? serverOfPlace(place, workspace.data) : undefined)?.user;
   // Indexed only once asked for: one walk of every list's owners.
   const people = useMemo(() => {
     if (!enabled || !asksForPeople) return undefined;
