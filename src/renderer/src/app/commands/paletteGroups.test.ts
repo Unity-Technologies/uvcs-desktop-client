@@ -27,7 +27,7 @@ import {
   type PaletteGroupsInput,
   type ServerMatches,
 } from './paletteGroups';
-import type { PaletteScope } from './paletteScope';
+import { parseScope, type PaletteScope } from './paletteScope';
 import { palettePeople } from './personResults';
 import { indexPeople } from '../../lib/peopleIndex';
 import { rankGroups, type SearchGroup } from './searchResults';
@@ -60,6 +60,8 @@ const labels = (...items: Label[]) => described(items);
 const files = (...paths: string[]) => indexed(paths.map((path) => ({ path, isDirectory: false })), (entry) => entry.path);
 
 interface Search {
+  /** What is typed in the palette, prefix and all: read as the palette reads it (`parseScope`), for the scope and the term. */
+  typed?: string;
   term?: string;
   scope?: PaletteScope;
   currentBranch?: string;
@@ -71,7 +73,13 @@ interface Search {
 }
 
 /** The palette's groups for what is typed; the server answered for the same term unless told otherwise. */
-function groupsFor({ term = '', scope = 'all', currentBranch, me, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
+function groupsFor({ typed, ...search }: Search): SearchGroup[] {
+  if (typed === undefined) return groupsForTerm(search);
+  const { scope, text } = parseScope(typed);
+  return groupsForTerm({ ...search, scope, term: text });
+}
+
+function groupsForTerm({ term = '', scope = 'all', currentBranch, me, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
   const context: ResultContext = { place, term, currentBranch, me, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
   const input: PaletteGroupsInput = {
     scope,
@@ -172,10 +180,35 @@ describe('paletteGroups with a search', () => {
     ]);
   });
 
-  it('matches changesets and shelves by their spec too', () => {
-    const groups = groupsFor({ term: 'sh:4', lists: { shelves: [shelve(3, 'Three'), shelve(4, 'Four')] } });
+  it('opens the shelve `sh:` names by its number first, as a full match, before the others holding the number', () => {
+    const shelves = [shelve(40, 'Forty'), shelve(14, 'Fourteen'), shelve(7, '4K textures'), shelve(4, 'Four')];
+    const results = groupsFor({ typed: 'sh:4', lists: { shelves } }).find((group) => group.section === 'shelves')!.results;
 
-    expect(labelsIn(groups, 'shelves')).toEqual(['Four']);
+    expect(results.map((result) => [result.label, result.quality])).toEqual([
+      ['Four', 1],
+      ['Forty', expect.any(Number)],
+      ['Fourteen', expect.any(Number)],
+      ['4K textures', expect.any(Number)],
+    ]);
+    expect(results.slice(1).every((result) => result.quality! < 1)).toBe(true);
+  });
+
+  it('opens the code review `cr:` names by its number first, though its title holds no such number', () => {
+    const reviews = [review(3110, 'Review 311 fixes'), review(311, 'Login screen')];
+    const results = groupsFor({ typed: 'cr:311', lists: { codeReviews: reviews } }).find((group) => group.section === 'codeReviews')!.results;
+
+    expect(results.map((result) => [result.label, result.quality])).toEqual([
+      ['Login screen', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+  });
+
+  it('reads a number as an id only after its own prefix: alone, it is searched for as text', () => {
+    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4K textures')], codeReviews: [review(311, 'Login screen')] };
+
+    expect(labelsIn(groupsFor({ typed: 'sh:4', lists }), 'codeReviews')).toEqual([]);
+    expect(labelsIn(groupsFor({ typed: '311', lists }), 'codeReviews')).toEqual([]);
+    expect(labelsIn(groupsFor({ typed: 'cr:4', lists }), 'codeReviews')).toEqual([]);
   });
 });
 
@@ -335,8 +368,8 @@ describe('paletteGroups for a changeset number', () => {
   it('opens a recent changeset typed by number (123 or cs:123) with its comment, first and as a full match', () => {
     const lists = { changesets: [changeset(1234, 'Recent work'), changeset(12345, 'Mentions 1234')] };
 
-    for (const term of ['1234', 'cs:1234', 'CS:1234']) {
-      const results = groupsFor({ term, lists }).find((group) => group.section === 'changesets')!.results;
+    for (const typed of ['1234', 'cs:1234', 'CS:1234']) {
+      const results = groupsFor({ typed, lists }).find((group) => group.section === 'changesets')!.results;
       expect(results.map((result) => [result.label, result.quality])).toEqual([
         ['Recent work', 1],
         ['Mentions 1234', expect.any(Number)],
