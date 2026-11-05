@@ -191,7 +191,7 @@ describe("the branch diff up to a changeset", () => {
     expect(whereTheWindowIs().pages).toEqual([{ ...page, title: 'Branch task up to changeset 9', target: { kind: 'range', fromSpec: 'cs:8', toSpec: 'cs:9' } }]);
   });
 
-  it('says so and opens nothing when the read fails or the branch has no changesets', async () => {
+  it('says so and opens nothing when the read fails or finds no changeset on the branch', async () => {
     fakeApi.answer('changesets.branchStart', () => {
       throw new Error('offline');
     });
@@ -202,7 +202,7 @@ describe("the branch diff up to a changeset", () => {
     expect(whereTheWindowIs().pages).toEqual([]);
     expect(shownToasts()).toEqual([
       { kind: 'error', title: "Couldn't find where task starts", detail: 'offline' },
-      { kind: 'error', title: "Couldn't find where task starts", detail: 'It has no changesets.' },
+      { kind: 'error', title: "Couldn't find where task starts" },
     ]);
   });
 
