@@ -44,6 +44,14 @@ describe('liveMarksOf', () => {
       expect(marksOf('# Ti‸tle')).toEqual([]);
     });
 
+    it('draws a `#` with nothing after it as plain text: a heading only once a space follows', () => {
+      // Typing `#` for an issue, or before its heading's space: the line keeps its size until it's a heading.
+      expect(marksOf('#‸')).toEqual(['line 0 plain']);
+      expect(marksOf('Notes\n##‸')).toEqual(['line 6 plain']);
+      expect(marksOf('# ‸')).toEqual([]);
+      expect(marksOf('# Title\n‸')).toEqual(['hidden # ']);
+    });
+
     it('keeps an underlined heading’s underline', () => {
       expect(marksOf('Title\n===\n\n‸')).toEqual([]);
     });
