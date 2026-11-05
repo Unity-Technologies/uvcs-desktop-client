@@ -25,6 +25,24 @@ describe('recognizeTrackerLink', () => {
     expect(recognizeTrackerLink('https://acme.atlassian.net/jira/software/projects/VCS')).toEqual({ kind: 'jiraCloud', notAnIssue: 'a Jira project' });
   });
 
+  it('reads any other host’s /browse/KEY-N as Jira Data Center, its context path part of the server', () => {
+    expect(recognizeTrackerLink('https://jira.unity3d.com/browse/VCS-1009081')).toEqual({
+      kind: 'jiraDataCenter',
+      server: 'https://jira.unity3d.com',
+      project: 'VCS',
+      key: 'VCS-1009081',
+      shows: 'issuePage',
+    });
+    expect(recognizeTrackerLink('https://tools.acme.com/jira/browse/OPS-7')).toMatchObject({ kind: 'jiraDataCenter', server: 'https://tools.acme.com/jira', key: 'OPS-7' });
+    expect(recognizeTrackerLink('http://jira.acme.local:8080/browse/OPS-7')).toMatchObject({ kind: 'jiraDataCenter', server: 'http://jira.acme.local:8080' });
+  });
+
+  it('never takes a Data Center issue for a GitHub Enterprise Server one, nor a malformed key for an issue', () => {
+    expect(recognizeTrackerLink('https://git.acme.com/browse/issues/1')).toEqual({ unknownTracker: true });
+    expect(recognizeTrackerLink('https://jira.acme.com/browse/%E0')).toEqual({ unknownTracker: true });
+    expect(recognizeTrackerLink('https://git.acme.com/acme/browse/issues/3')).toMatchObject({ kind: 'github' });
+  });
+
   it('reads a GitHub issue and pull request, owner and repository in lower case', () => {
     expect(recognizeTrackerLink('https://github.com/Acme/Game/issues/12')).toEqual({
       kind: 'github',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { githubApiBase, githubGrammar, githubGraphqlUrl, githubKeyParts } from './github';
 import { jiraCloudGrammar } from './jiraCloud';
+import { jiraDataCenterGrammar } from './jiraDataCenter';
 
 const keysIn = (text: string, projects: string[]) => jiraCloudGrammar.referencesReader(projects)(text).map(({ key, from, to }) => ({ key, from, to }));
 const githubIn = (text: string, projects: string[]) => githubGrammar.referencesReader(projects)(text).map(({ key, bare, source }) => ({ key, bare, source }));
@@ -33,6 +34,25 @@ describe('Jira Cloud references', () => {
     expect(jiraCloudGrammar.tokenShape(`ATATT3xFfGF0${'a'.repeat(180)}`)).toBe('known');
     expect(jiraCloudGrammar.tokenShape('abcdefghijklmnopqrstuvwx')).toBe('plausible');
     expect(jiraCloudGrammar.tokenShape('not a token')).toBe('none');
+  });
+});
+
+describe('Jira Data Center', () => {
+  it('reads a bound project’s keys as Jira Cloud does', () => {
+    expect(jiraDataCenterGrammar.referencesReader(['VCS'])('Fixes VCS-12, not UTF-8').map(({ key }) => key)).toEqual(['VCS-12']);
+  });
+
+  it('opens issues and the personal access tokens page under the server, its context path kept', () => {
+    expect(jiraDataCenterGrammar.issueUrl('https://tools.acme.com/jira', 'OPS-7')).toBe('https://tools.acme.com/jira/browse/OPS-7');
+    expect(jiraDataCenterGrammar.tokenPageUrl('https://jira.unity3d.com')).toBe(
+      'https://jira.unity3d.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens',
+    );
+  });
+
+  it('takes a 44-character base64 token as plausible, never as a known shape that signs in on paste', () => {
+    expect(jiraDataCenterGrammar.tokenShape('fake-data-center-token-for-tests-0123456789')).toBe('plausible');
+    expect(jiraDataCenterGrammar.tokenShape('short')).toBe('none');
+    expect(jiraDataCenterGrammar.tokenShape('has spaces in it, not a token at all')).toBe('none');
   });
 });
 
