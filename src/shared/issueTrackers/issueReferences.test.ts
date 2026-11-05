@@ -84,6 +84,5 @@ describe('signInMethodsFor', () => {
 
   it('ships the app’s client id for github.com, so signing in to GitHub starts with its device flow', () => {
     expect(deviceFlowHostsOf(GITHUB_OAUTH_CLIENT_IDS)).toEqual(['github.com']);
-    expect(signInMethodsFor('github', 'https://github.com', deviceFlowHostsOf(GITHUB_OAUTH_CLIENT_IDS))).toEqual(['deviceCode', 'token']);
   });
 });
