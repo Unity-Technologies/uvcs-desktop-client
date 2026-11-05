@@ -200,7 +200,7 @@ export interface FoundReference {
  */
 export function referencesIn(state: EditorState, from: number, to: number, options: LiveMarksOptions): FoundReference[] {
   const excluded = excludedRanges(state, from, to, options);
-  const found: FoundReference[] = [];
+  const found: FoundReference[] = issueAddressesIn(state, from, to);
   for (let line = state.doc.lineAt(from); ; line = state.doc.line(line.number + 1)) {
     for (const reference of findReferences(line.text, state.facet(issueReferences) ?? undefined)) {
       const at = { from: line.from + reference.from, to: line.from + reference.to };
@@ -210,6 +210,31 @@ export function referencesIn(state: EditorState, from: number, to: number, optio
     }
     if (line.to >= to || line.number === state.doc.lines) break;
   }
+  return found.sort((a, b) => a.from - b.from);
+}
+
+/**
+ * The issue addresses in `[from, to]`: a bare address, or one between `<` and `>`, that is a bound project's issue's
+ * own page (`issueAtAddress`), as the shown comment reads them (`issueAddressOf` in lib/markdown). A link with its own
+ * text stays a link. The one reference read inside an address, so `excludedRanges` still keeps all others out.
+ */
+function issueAddressesIn(state: EditorState, from: number, to: number): FoundReference[] {
+  const issues = state.facet(issueReferences);
+  if (!issues) return [];
+  const found: FoundReference[] = [];
+  syntaxTree(state).iterate({
+    from,
+    to,
+    enter: (node) => {
+      if (node.name !== 'URL' && node.name !== 'Autolink') return;
+      // A link's address (`[text](…)`) isn't written as itself; the link's text is what shows.
+      if (node.name === 'URL' && ['Link', 'Image'].includes(node.node.parent?.name ?? '')) return false;
+      const source = state.sliceDoc(node.from, node.to);
+      const key = issues.issueAtAddress(node.name === 'Autolink' ? source.slice(1, -1) : source);
+      if (key && node.from >= from && node.to <= to) found.push({ from: node.from, to: node.to, reference: { kind: 'issue', key, bare: false }, source });
+      return false;
+    },
+  });
   return found;
 }
 

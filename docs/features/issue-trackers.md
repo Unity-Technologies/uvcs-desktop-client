@@ -285,7 +285,9 @@ second URL parser: `writtenRanges` takes the binding's reader, and a link node w
 `<https://…>`) and which `issueAtAddress` reads as an issue's own page becomes that issue's reference, at the node's
 own offsets (`issueAddressOf`). A link with its own text (`[the bug](…)`), an address that only holds a key in its
 query (`?selectedIssue=VCS-12`, `issueInView`), and another server's page stay as they were (`markdownIssues.test.ts`).
-The chip shows its key; copying gives back the address.
+The chip shows its key; copying gives back the address. The comment editor reads them the same way, from its own syntax tree's
+`URL` and `Autolink` nodes (`issueAddressesIn` in `liveMarks`): a pasted address of a bound project's issue draws as
+its chip while the caret is away, and stays the address as written.
 
 ### Ambiguous links
 
