@@ -117,7 +117,7 @@ describe('Where a changed xlink points', () => {
 
     expect(sides).toEqual({ before: unityGUI(17309), after: unityGUI(17361) });
     expect(commands.map((command) => [command.via, command.args.slice(0, 3)])).toEqual([
-      ['query', ['find', 'changeset', "where branch = '/main/task1' order by changesetid asc limit 1"]],
+      ['query', ['find', 'changeset', "where ignorehidden = 'true' and branch = '/main/task1' order by changesetid asc limit 1"]],
       ['query', ['ls', '/plugins', '--tree=br:/main/task1']],
       ['query', ['ls', '/plugins', '--tree=cs:279866']],
     ]);
