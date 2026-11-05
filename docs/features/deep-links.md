@@ -157,7 +157,10 @@ badges.
 - **Copy link** in every page's header (`CopyLinkButton`: a diff, a review, a history, Browse repository; a page
   window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
   diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed
-  changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`).
+  changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`). A branch's
+  diff up to a changeset (diff.md "Up to a changeset") is a range, so it copies the range's link (`…/changesets/8..12`),
+  which opens the same diff titled as a range ("Changesets 8 → 12"): the link names what is compared, and a shape of its
+  own would grow the grammar for a title.
 - **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side), an
   unchanged file of the Files view, and a file of a repository's Files:
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"

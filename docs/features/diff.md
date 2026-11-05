@@ -59,6 +59,26 @@ keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no 
 under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
 (`useOfferSelectedObjectLink`).
 
+### Up to a changeset
+
+A changeset's menu offers "Open branch diff up to this changeset" (`branchDiffUpTo`, after "Open diff in new window"):
+the branch's work from where it starts up to that changeset, so a branch that later merged its parent in (a "rebase")
+can be read as it was before. It is a range diff (`branchDiffUpToPage`: `cm diff cs:<base> cs:<changeset>`, cached as
+immutable), titled as the branch's ("Branch task up to changeset 12"). The base is where the branch starts
+(`BranchStart`): the parent of its first changeset, as `cm diff br:<branch>` and `xlinkBeforePoint` take it; a merge
+from the parent doesn't move it. What decides is `branchDiffBase`:
+
+- **Hidden** on a top-level branch (`/main`), which starts from no other, told by its name; and on the branch's first
+  changeset where the view knows it, as there it would be "Open diff".
+- **Known with no command** where the view already read the branch's start (`ChangesetMenuContext.branchStartOf`): the
+  Branch Explorer from its history (`branchStartInGraph`; not when the date range left out what precedes the branch's
+  first changeset shown), a branch diff's "Changeset by changeset" from the whole branch it lists
+  (`branchStartOfChangesets`).
+- **Read when chosen** everywhere else (Changesets, Incoming, the top bar, the palette): one quick `cm find changeset
+  "where ignorehidden = 'true' and branch = '<branch>' order by changesetid asc limit 1" --format={changesetid}{parent}`
+  (`ChangesetsApi.branchStart`), never while the menu is built. Those lists can't tell a branch's first changeset, so
+  they offer it there too; chosen there it opens that changeset's own changes, under the branch's title.
+
 ## Comparing two branches, changesets or labels
 
 Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare
