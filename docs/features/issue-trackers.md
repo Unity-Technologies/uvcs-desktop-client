@@ -269,7 +269,7 @@ stays that kind.
 
 | Tracker | Written | Read as |
 | --- | --- | --- |
-| Jira | `VCS-1009139` | an issue of a bound project. `ABC-123`, `UTF-8`, `ISO-8859` are no project's, so nothing |
+| Jira | `VCS-1009139`, `#VCS-1009139` | an issue of a bound project, a `#` before its key part of the reference (its chip covers it; `jiraReferencesReader`). `ABC-123`, `UTF-8`, `ISO-8859` are no project's, so nothing |
 | GitHub | `#123` | an issue of the bound repository, only when the binding has exactly one |
 | GitHub | `owner/repo#123` | that repository's issue, on the same server; a name with a dot isn't read (`docs/a.md#12` is a file's heading), its issue's address is |
 | Either | an issue's own page, as a link showing its own address | that issue: of a bound project on Jira, of any repository of the server on GitHub |
@@ -362,8 +362,8 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
     (`ISSUE_WORDS_MIN_LENGTH`), cached per words (`issueSearchQuery`). The issue a key names comes first, then the
     local matches, then the search's, each once, the best `SUGGESTION_LIMIT`.
   - Each row: the status's dot, the reference as it will be written, the title.
-- **A pick** writes the reference as the place's comments read it back (`referenceText`): a Jira key, `#12` for the
-  one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes with it (`picked` seeds
+- **A pick** writes the reference as the place's comments read it back (`referenceText`), its `#` kept as `@` and
+  `cs:` are: `#VCS-12` on Jira, `#12` for the one GitHub repository bound, `owner/repo#12` otherwise. The issue read comes with it (`picked` seeds
   `issueKeys.issue`), so its chip shows its title and status at once.
 - **When it can't**, one quiet row, never picked (Enter stays a line end, typing goes on as text): "Reading issues…",
   "No open issues assigned to you", "No issues match “x”", "No issue VCS-99", "Couldn't search Jira", and for a

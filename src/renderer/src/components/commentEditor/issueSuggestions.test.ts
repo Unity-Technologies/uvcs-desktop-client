@@ -45,14 +45,14 @@ describe('issueSuggestionReads', () => {
 describe('issueSuggestionRows', () => {
   it('opens on the account’s open issues, in the tracker’s order, each with its title and status', () => {
     const rows = issueSuggestionRows(state());
-    expect(labels(rows)).toEqual(['VCS-12', 'VCS-7', 'VCS-120']);
-    expect(rows[0]).toEqual({ kind: 'pick', suggestion: expect.objectContaining({ key: 'issue:VCS-12', kind: 'issue', detail: 'Keep the selection when the layout changes', category: 'inProgress', insert: 'VCS-12' }) });
+    expect(labels(rows)).toEqual(['#VCS-12', '#VCS-7', '#VCS-120']);
+    expect(rows[0]).toEqual({ kind: 'pick', suggestion: expect.objectContaining({ key: 'issue:VCS-12', kind: 'issue', detail: 'Keep the selection when the layout changes', category: 'inProgress', insert: '#VCS-12' }) });
   });
 
   it('narrows by key, number or title words as the user types', () => {
-    expect(labels(issueSuggestionRows(state({ typed: 'VCS-12' })))).toEqual(['VCS-12', 'VCS-120']);
-    expect(labels(issueSuggestionRows(state({ typed: '7' })))).toEqual(['VCS-7']);
-    expect(labels(issueSuggestionRows(state({ typed: 'crash' })))).toEqual(['VCS-7']);
+    expect(labels(issueSuggestionRows(state({ typed: 'VCS-12' })))).toEqual(['#VCS-12', '#VCS-120']);
+    expect(labels(issueSuggestionRows(state({ typed: '7' })))).toEqual(['#VCS-7']);
+    expect(labels(issueSuggestionRows(state({ typed: 'crash' })))).toEqual(['#VCS-7']);
   });
 
   it('writes GitHub’s issue as `#12` for the one repository bound', () => {
@@ -63,14 +63,14 @@ describe('issueSuggestionRows', () => {
 
   it('puts the issue a key names first, then the matches, then what the title search found, each once', () => {
     const keyed = { key: 'VCS-99', read: { key: 'VCS-99', kind: 'found' as const, issue: issue('VCS-99', 'Old crash') } };
-    expect(labels(issueSuggestionRows(state({ typed: 'VCS-99', keyed })))).toEqual(['VCS-99']);
+    expect(labels(issueSuggestionRows(state({ typed: 'VCS-99', keyed })))).toEqual(['#VCS-99']);
     const words = { answer: found([issue('VCS-7', 'Crash on start'), issue('VCS-300', 'Crash in the diff')]), pending: false };
-    expect(labels(issueSuggestionRows(state({ typed: 'crash', words })))).toEqual(['VCS-7', 'VCS-300']);
+    expect(labels(issueSuggestionRows(state({ typed: 'crash', words })))).toEqual(['#VCS-7', '#VCS-300']);
   });
 
   it('says it’s reading while nothing can be picked yet, and keeps what it has while a search runs', () => {
     expect(issueSuggestionRows(state({ mine: { answer: undefined, pending: true } }))).toEqual([{ kind: 'note', text: 'Reading issues…', pending: true }]);
-    expect(labels(issueSuggestionRows(state({ typed: 'crash', words: { answer: undefined, pending: true } })))).toEqual(['VCS-7']);
+    expect(labels(issueSuggestionRows(state({ typed: 'crash', words: { answer: undefined, pending: true } })))).toEqual(['#VCS-7']);
     expect(labels(issueSuggestionRows(state({ typed: 'diff', words: { answer: { kind: 'superseded' }, pending: false } })))).toEqual(['(Reading issues…)']);
     expect(labels(issueSuggestionRows(state({ typed: 'VCS-99', keyed: { key: 'VCS-99', read: undefined } })))).toEqual(['(Reading issues…)']);
   });
@@ -84,7 +84,7 @@ describe('issueSuggestionRows', () => {
   it('says once, quietly, that the search failed, keeping what it could show', () => {
     const failed = { answer: { kind: 'failed' as const, reason: 'unreachable' as const }, pending: false };
     expect(labels(issueSuggestionRows(state({ mine: failed })))).toEqual(["(Couldn't search Jira)"]);
-    expect(labels(issueSuggestionRows(state({ typed: 'crash', words: failed })))).toEqual(['VCS-7', "(Couldn't search Jira)"]);
+    expect(labels(issueSuggestionRows(state({ typed: 'crash', words: failed })))).toEqual(['#VCS-7', "(Couldn't search Jira)"]);
   });
 
   it('sends a sign-in that needs renewing to Settings, with nothing else', () => {

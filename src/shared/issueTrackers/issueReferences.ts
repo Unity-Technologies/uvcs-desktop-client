@@ -21,7 +21,7 @@ export interface IssueReferenceReader {
   issueUrl(key: string): string;
   /** The bound projects: Jira keys, GitHub's `owner/repo` in lower case. */
   projects: readonly string[];
-  /** How a picked issue is written so this reader reads it back: a Jira key, `#12` for the one repository bound. */
+  /** How a picked issue is written so this reader reads it back: `#VCS-12`, `#12` for the one repository bound. */
   referenceText(key: string): string;
   /**
    * The issue a text typed after `#` names, read by key rather than searched: a bound project's key (`vcs-12` too), or
@@ -55,7 +55,8 @@ export function issueReferenceReader(binding: RepositoryTrackerBinding, connecti
     issueUrl: (key) => grammar.issueUrl(connection.server, key),
     projects,
     referenceText(key) {
-      if (connection.kind !== 'github') return key;
+      // Its `#` kept, as typed (`@` and `cs:` stay too); Jira's reader reads `#VCS-12` as the key (`jiraReferencesReader`).
+      if (connection.kind !== 'github') return `#${key}`;
       const parts = githubKeyParts(key);
       // `#12` reads as the one repository bound's (`githubGrammar.referencesReader`), any other as `owner/repo#12`.
       return parts && projects.length === 1 && `${parts.owner}/${parts.name}` === projects[0] ? `#${parts.number}` : key;

@@ -20,13 +20,17 @@ export function browsedIssue(path: string): { contextPath: string; key: RegExpEx
   return browse && key ? { contextPath: browse[1]!, key } : null;
 }
 
-/** What reads the bound projects' keys in a text, its pattern built once (`TrackerGrammar.referencesReader`). */
+/**
+ * What reads the bound projects' keys in a text, its pattern built once (`TrackerGrammar.referencesReader`). A `#`
+ * right before a key is part of it (`#VCS-12`, as a picked issue writes it: its trigger kept, as `@` and `cs:` are),
+ * so its chip covers it; the key is read without it.
+ */
 export function jiraReferencesReader(projects: readonly string[]): (text: string) => FoundIssueReference[] {
   if (projects.length === 0) return () => [];
-  const keys = new RegExp(`${REFERENCE_START}(?:${projects.map(escapeRegExp).join('|')})-[1-9]\\d*${REFERENCE_END}`, 'gu');
+  const keys = new RegExp(`${REFERENCE_START}#?((?:${projects.map(escapeRegExp).join('|')})-[1-9]\\d*)${REFERENCE_END}`, 'gu');
   return (text) => {
     const found: FoundIssueReference[] = [];
-    for (const match of text.matchAll(keys)) found.push({ key: match[0], bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
+    for (const match of text.matchAll(keys)) found.push({ key: match[1]!, bare: false, source: match[0], from: match.index, to: match.index + match[0].length });
     return found;
   };
 }
