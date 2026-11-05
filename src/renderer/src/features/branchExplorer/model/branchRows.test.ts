@@ -110,7 +110,22 @@ describe('movedBranches', () => {
 
   it('leaves the branches a move has no room for where they are', () => {
     const { layout, lane } = lanesOf();
-    expect(movedBranches([], layout, [lane('/main'), lane('/main/a')], 'up')).toEqual([{ branch: 2, row: 0 }]);
+    const row = rowsOf(movedBranches([], layout, [lane('/main'), lane('/main/c')], 'up'));
+    expect([row('/main'), row('/main/c')]).toEqual([0, 1]);
+  });
+
+  it('never moves a branch up or down past another selected that has no room to move', () => {
+    const { layout, lane } = lanesOf();
+    expect(movedBranches([], layout, [lane('/main'), lane('/main/a')], 'up')).toEqual([]);
+    expect(movedBranches([], layout, [lane('/main/c'), lane('/main/b')], 'down')).toEqual([]);
+  });
+
+  it('keeps the order at the top and at the bottom when one of the branches is already there', () => {
+    const { layout, lane } = lanesOf();
+    const top = rowsOf(movedBranches([], layout, [lane('/main/c'), lane('/main')], 'top'));
+    expect([top('/main'), top('/main/c')]).toEqual([0, 1]);
+    const bottom = rowsOf(movedBranches([], layout, [lane('/main/c'), lane('/main/b')], 'bottom'));
+    expect([bottom('/main/b'), bottom('/main/c')]).toEqual([2, 3]);
   });
 
   it('keeps the same positions when no branch can move', () => {
