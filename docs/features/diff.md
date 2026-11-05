@@ -421,9 +421,10 @@ block, in the color the diff marks changed words with inside a changed row: Pier
 row's tint, read from its host (`pierreChangeColors`: `--diffs-bg-deletion-emphasis` over `--diffs-bg-deletion`, and
 the added ones, which follow the syntax theme). So the map is the diff's own colors in any theme, a step darker than
 the changed rows beside it, which it would otherwise run into. A change that removes and adds (`changeKindOf`: `both`)
-is split down the middle, the removed color on the left as in a Split diff. Changes close together fuse into one band ("Changes 4–24 of 25" in its tooltip): with at most `FUSE_LINES`
-(3) unchanged lines between them, however far apart the diff draws them, or blocks less than `FUSE_GAP` (4 px) apart;
-the clear gaps left are what make the groups readable, and the blocks drawn are bounded by the track, not the file.
+is split down the middle, the removed color on the left as in a Split diff. Changes close together fuse into one band
+("Changes 4–24 of 25" in its tooltip): with at most `FUSE_LINES` (3) unchanged lines between them, however far apart
+the diff draws them, or blocks less than `FUSE_GAP` (4 px) apart; the clear gaps left are what make the groups
+readable, and the blocks drawn are bounded by the track, not the file.
 The marks are the regions the arrows step through (`useChangeNavigation`'s `regions`, so they follow what's typed),
 placed where Pierre lays them out (`pierreLineBox`: collapsed unchanged lines and wrapped lines counted) or, until
 Pierre can tell, at the line's share of its side.
@@ -431,31 +432,31 @@ Pierre can tell, at the line's share of its side.
 It shows only for a diff that scrolls, with changes, of two versions (`showsChangeMap`): not for a version shown alone
 (an added or deleted file), a file typed into whole, nor where the arrows don't step (the merge page); then the
 browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
-(`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top
-as it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls
-the diff, and no code goes under it. It looks like the app's other scrollbars, so a diff and a file shown alone have
-the same bar: as wide (`--diff-scrollbar-size` is `--scrollbar-size`, 10 px), no divider, the thumb a 4 px pill 3 px
-in from each side, and the marks as wide as the thumb. Under the pointer, and while the thumb is dragged, it grows to
-16 px (`--diff-scrollbar-size-hovered`), to the left over the code's edge without moving the code, as macOS's
-scrollbars grow: the marks take the room, the thumb only reaches 6 px. A mark shows the hand pointer, as a press on it
-goes there. The thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks, translucent in the
-app's hovered thumb color (`--diff-scrollbar-thumb`, close to the app's resting thumb over an empty track; stronger
-on hover), and dragged with the pointer captured; a press anywhere across the track's width on the thumb's rows takes
-it (`pressesThumb`), so the slim pill is as easy to grab as the track is wide. It moves on the scroll event itself
-(`useScrollTop`), with the content, not a frame behind. `useChangeMap` places the marks again
-(`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines above the last
-change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a resize or as Pierre
-renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are read anew each time,
-so a theme switch recolors the map.
+(`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top as
+it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls the
+diff, and at rest no code goes under it. It looks like the app's other scrollbars, so a diff and a file shown alone have
+the same bar: as wide (`--diff-scrollbar-size` is `--scrollbar-size`, 10 px), no divider, the thumb a 4 px pill 3 px in
+from each side, and the marks as wide as the thumb. Under the pointer, and while the thumb is dragged, it grows to 16 px
+(`--diff-scrollbar-size-hovered`), to the left over the code's edge without moving the code, as macOS's scrollbars grow:
+the marks take the room, the thumb only reaches 6 px. A mark shows the hand pointer, as a press on it goes there. The
+thumb (`diffScrollbar`: `thumbOf`, `scrollTopAfterDrag`) is drawn over the marks, translucent in the app's hovered thumb
+color (`--diff-scrollbar-thumb`, close to the app's resting thumb over an empty track; the resting `--border-default` is
+too faint over the marks in the dark theme; stronger on hover), and dragged with the pointer captured; a press anywhere
+across the track's width on the thumb's rows takes it (`pressesThumb`), so the slim pill is as easy to grab as the track
+is wide. It moves on the scroll event itself (`useScrollTop`), with the content, not a frame behind. `useChangeMap`
+places the marks again (`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines
+above the last change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
+resize or as Pierre renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are
+read anew each time, so a theme switch recolors the map.
 
-A press anywhere in the track off the thumb's rows, on a block or between blocks, scrolls smoothly so that point is in the
-middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
-that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view
-short of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a
-smooth scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye
-can predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is
-no press in the diff: the caret typing in it stays, and no lines are picked. It's for the pointer only
-(`aria-hidden`). Always on, with no setting.
+A press anywhere in the track off the thumb's rows, on a block or between blocks, scrolls smoothly so that point is in
+the middle of the view (`scrollTopForTrackPoint`; at once under reduced motion), and dragging on from there scrolls from
+that point (`scrollTopAfterDrag`), as macOS's scrollbars do. Farther than a view, it jumps to a quarter of a view short
+of the point and glides the rest (`smoothScrollPlan`, `GLIDE_SHARE`), settling in about a quarter of a second: a smooth
+scroll the whole way across an expanded file took 3 s, Pierre rendering every line it passed. One rule the eye can
+predict: stepping from change to change is the arrows' (⌥↓ ⌥↑, F7 ⇧F7). A press on the track takes no focus and is no
+press in the diff: the caret typing in it stays, and no lines are picked. It's for the pointer only (`aria-hidden`).
+Always on, with no setting.
 
 Designs tried on screen and dropped, not to be proposed again:
 
