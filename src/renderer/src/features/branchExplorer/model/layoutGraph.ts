@@ -1,6 +1,7 @@
 import type { BranchExplorerData, GraphBranch, GraphChangeset, GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { groupBy } from '../../../lib/groupBy';
+import { NO_PINS, type BranchPins } from './branchRows';
 import { placeLanes, type UnplacedLane } from './placeLanes';
 import { collapseLinearRuns, structuralChangesets, type ShownChangeset } from './structureOnly';
 
@@ -63,9 +64,15 @@ export interface StructureOnly {
 
 /**
  * Lays out history as lanes: changesets ordered left to right by id (parents always come first),
- * one lane per branch, child branches below their parents, packed into shared rows when they don't overlap.
+ * one lane per branch, child branches below their parents, packed into shared rows when they don't overlap, except the
+ * branches the user moved (`pins`), on the rows they were moved to.
  */
-export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureOnly, pending: PendingChangeset | null = null): GraphLayout {
+export function layoutGraph(
+  data: BranchExplorerData,
+  structureOnly?: StructureOnly,
+  pending: PendingChangeset | null = null,
+  pins: BranchPins = NO_PINS,
+): GraphLayout {
   const sorted = [...data.changesets].sort((a, b) => a.id - b.id);
   const shown = structureOnly
     ? collapseLinearRuns(sorted, new Set([...structuralChangesets(data), ...structureOnly.keep]))
@@ -81,7 +88,7 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
     pendingLane.endColumn = shown.length;
     pendingLane.firstOwnColumn ??= shown.length;
   }
-  const lanes = placeLanes(unplaced);
+  const lanes = placeLanes(unplaced, pins);
   const lanesByBranch = new Map(lanes.map((lane) => [lane.branch.name, lane]));
 
   const nodesByColumn = shown.map(({ changeset, collapsed }, column): NodeLayout => ({
@@ -126,12 +133,12 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
  */
 export function layoutKeeping(
   data: BranchExplorerData,
-  base: { keep: ReadonlySet<number>; pending: PendingChangeset | null; layout: GraphLayout },
+  base: { keep: ReadonlySet<number>; pending: PendingChangeset | null; pins: BranchPins; layout: GraphLayout },
   id: number | null,
 ): GraphLayout {
   const node = id === null ? undefined : base.layout.nodes.get(id);
   if (!node || node.collapsed === null) return base.layout;
-  return layoutGraph(data, { keep: new Set([...base.keep, id!]) }, base.pending);
+  return layoutGraph(data, { keep: new Set([...base.keep, id!]) }, base.pending, base.pins);
 }
 
 function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], columnOf: Map<number, number>): UnplacedLane[] {
@@ -161,4 +168,3 @@ function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], colum
     ];
   });
 }
-

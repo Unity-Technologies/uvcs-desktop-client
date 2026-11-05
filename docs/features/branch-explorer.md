@@ -92,6 +92,24 @@ changesets); with nothing to hold on to, and for "Go to the workspace" when the 
 end (`newestEnd`). A running glide (a reveal) is left alone. While the newest changesets are off screen to the
 right, a small solid button on the right edge glides back to them.
 
+## Moving branches
+
+The user can move a branch to another row: a branch's menu has Position (`branchPositionEntries`), with Move up, Move
+down, Move to the top and Move to the bottom, and the keys `graphMoveBranch*` (⌘↑ and ⌘↓, with ⇧ to the top and bottom;
+Ctrl off Mac) move the selected branch, or the branch of the selected changeset. A move is a pin (`BranchPin`: the
+branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository, by
+its spec (`pinsByRepository` in `useBranchExplorerPreferences`), because a branch id means nothing in another one.
+`placeLanes` places pinned lanes first, the one moved last first, each on the first free row from the one it asks for.
+Their children follow below them, but a child moved itself may sit above its parent. Rows nothing ends up on close,
+and pins of branches not drawn are ignored; pins are never pruned, since a branch deleted later is just not drawn. A
+pin's row counts the branches drawn when it was made: under another filter it lands on the first free row from that
+number, so a move to the bottom stays at the bottom.
+`branchMoves` decides which moves are offered: none up from the top row, none down for a branch alone on the last
+row. Reset position (`withoutPin`) puts one branch back where the layout places it. Reset all positions… asks first
+(`resetAllPositions`), then clears the repository's pins. The reset has no key: ⌘⇧C, the one the official client
+uses, copies a link here. The view keeps the selection where it was on screen as the layout changes ("Keeping the
+place"), so the moved branch stays in sight.
+
 ## Timeline
 
 An overview strip over the graph (`timeline/GraphTimeline`), `TIMELINE_HEIGHT` (68 px) tall above the date ruler, as

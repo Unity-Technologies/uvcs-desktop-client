@@ -10,6 +10,7 @@ import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPrefe
 import type { BranchChoice } from './model/branchChoice';
 import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
+import { pinsOf, withPins, type BranchPins, type PinsByRepository } from './model/branchRows';
 import { isOnIn, withOnIn, type OffByRepository } from './model/offByRepository';
 import { appliedRulesOf, rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
 import { appliedUserColorsOf, DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
@@ -43,16 +44,22 @@ export interface BranchExplorerPreferences extends GraphViewOptions {
   userColors: UserColors;
   /** The repositories whose changeset colors are turned off (`withOnIn`). */
   userColorsOff: OffByRepository;
+  /**
+   * The branches the user moved to other rows (`BranchPin`) in each repository, by its spec: a pin names a branch by
+   * its id, which only means something in its own repository.
+   */
+  pinsByRepository: PinsByRepository;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
   set: (changes: Partial<Omit<BranchExplorerPreferences, BranchExplorerActions>>) => void;
   setRules: (repository: string, rules: ExplorerRule[]) => void;
   setRulesOn: (repository: string, on: boolean) => void;
   setUserColorsOn: (repository: string, on: boolean) => void;
+  setPins: (repository: string, pins: BranchPins) => void;
 }
 
 /** The store's actions, which aren't remembered. */
-export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn' | 'setUserColorsOn';
+export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn' | 'setUserColorsOn' | 'setPins';
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
@@ -70,16 +77,18 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       rulesOff: {},
       userColors: DEFAULT_USER_COLORS,
       userColorsOff: {},
+      pinsByRepository: {},
       revealRequest: null,
       set,
       setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
       setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withOnIn(rulesOff, repository, on) })),
       setUserColorsOn: (repository, on) => set(({ userColorsOff }) => ({ userColorsOff: withOnIn(userColorsOff, repository, on) })),
+      setPins: (repository, pins) => set(({ pinsByRepository }) => ({ pinsByRepository: withPins(pinsByRepository, repository, pins) })),
     }),
     {
       name: 'branch-explorer-preferences',
       version: 2,
-      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, setUserColorsOn: _setUserColorsOn, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
+      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, setUserColorsOn: _setUserColorsOn, setPins: _setPins, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
@@ -119,6 +128,11 @@ export function useUserColorsOn(repository: string | undefined): boolean {
 /** The changeset colors the graph applies in `repository`: none while they're turned off there. */
 export function useAppliedUserColors(repository: string | undefined): UserColors {
   return useBranchExplorerPreferences((state) => appliedUserColorsOf(state.userColors, state.userColorsOff, repository));
+}
+
+/** The branches moved in `repository` (none while it isn't known yet), the same array until they change. */
+export function useBranchPins(repository: string | undefined): BranchPins {
+  return useBranchExplorerPreferences((state) => pinsOf(state.pinsByRepository, repository));
 }
 
 /** The display options alone, the same object until one of them changes. */

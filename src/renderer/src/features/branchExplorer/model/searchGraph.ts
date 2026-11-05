@@ -38,17 +38,18 @@ export function searchGraph(layout: GraphLayout, rawQuery: string, previous?: Gr
   const matches = nameMatcher(words);
   const matchesChangeset = changesetMatcher(words);
 
-  // Left to right; within a column the branch header first, then the labels above the changeset, then the changeset.
+  // Left to right; within a column the branch headers first, then the labels above the changeset, then the changeset,
+  // each top to bottom (a moved branch may sit above one laid out before it).
   // Changesets are found in column order: the branches and labels found are sorted, then merged in.
-  const named: { hit: SearchHit; column: number; order: number }[] = [];
+  const named: { hit: SearchHit; column: number; order: number; row: number }[] = [];
   for (const lane of layout.lanes) {
-    if (matches(lane.branch.name)) named.push({ hit: { kind: 'branch', name: lane.branch.name }, column: lane.firstOwnColumn ?? lane.startColumn, order: 0 });
+    if (matches(lane.branch.name)) named.push({ hit: { kind: 'branch', name: lane.branch.name }, column: lane.firstOwnColumn ?? lane.startColumn, order: 0, row: lane.row });
   }
   for (const [changeset, labels] of layout.labelsByChangeset) {
-    const column = layout.nodes.get(changeset)!.column;
-    for (const label of labels) if (matches(label.name)) named.push({ hit: { kind: 'label', name: label.name, changeset }, column, order: 1 });
+    const { column, row } = layout.nodes.get(changeset)!;
+    for (const label of labels) if (matches(label.name)) named.push({ hit: { kind: 'label', name: label.name, changeset }, column, order: 1, row });
   }
-  named.sort((a, b) => a.column - b.column || a.order - b.order);
+  named.sort((a, b) => a.column - b.column || a.order - b.order || a.row - b.row);
 
   // A number finds its changeset whatever the text says, so it never narrows.
   const candidates =

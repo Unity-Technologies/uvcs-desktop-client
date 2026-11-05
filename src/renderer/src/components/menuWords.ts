@@ -6,6 +6,7 @@ import {
   ArrowLeftToLine,
   ArrowRightLeft,
   ArrowRightToLine,
+  ArrowUpDown,
   ArrowUpFromLine,
   Binary,
   Cherry,
@@ -254,6 +255,8 @@ export const MENU_WORDS = {
   editComment: word('edit', MessageSquareText, 'Edit comment…'),
   describe: word('edit', Text, 'Edit description…'),
   move: word('edit', MoveRight, 'Move to another branch…'),
+  // Where a branch is drawn in the Branch Explorer: moved up or down, or back where the layout puts it.
+  position: word('edit', ArrowUpDown, 'Position'),
   changelist: word('edit', FolderInput, 'Move to changelist'),
   filterRules: word('edit', EyeOff, 'Ignore, cloak or hide'),
   revisionType: word('edit', Binary, 'Revision type'),
