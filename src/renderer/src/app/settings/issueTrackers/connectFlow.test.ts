@@ -122,8 +122,9 @@ describe('deviceCodeWords', () => {
 
 describe('the token step’s words and readiness', () => {
   it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
-    expect(tokenStepWords('jiraCloud')).toMatchObject({ getTitle: 'Get a token from Atlassian', createButton: 'Open Atlassian', tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'The app only reads issues with it.' });
-    expect(tokenStepWords('github')).toMatchObject({ getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraCloud')).toMatchObject({ getTitle: 'Get a token from Atlassian', createButton: 'Open Atlassian', tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', createWhere: 'Create an API token with any name and copy it. The app only reads issues with it.' });
+    expect(tokenStepWords('github')).toMatchObject({ getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', tokenLabel: 'GitHub token' });
+    expect(tokenStepWords('github').createWhere).toContain('The app only reads issues with it.');
     expect(tokenStepWords('jiraDataCenter')).toMatchObject({ getTitle: 'Get a token from Jira', createButton: 'Open Jira', tokenLabel: 'Jira token' });
     expect(tokenStepWords('jiraDataCenter').emailLabel).toBeUndefined();
     expect(tokenStepReady('jiraDataCenter', '', 'token', false)).toBe(true);
@@ -185,9 +186,9 @@ describe('signInAgainView', () => {
 describe('signInRows', () => {
   it('lists each sign-in with its tracker, account and how it stands, marking the one this repository uses', () => {
     const rows = signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]), 'game@acme@unity');
-    expect(rows.map(({ id, title, account, status, usedHere, signOut }) => ({ id, title, account, status, usedHere, signOut }))).toEqual([
-      { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, usedHere: true, signOut: 'Sign out of acme.atlassian.net' },
-      { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs sign-in' }, usedHere: false, signOut: 'Sign out of acme.atlassian.net' },
+    expect(rows.map(({ id, title, account, status, needsAttention, usedHere, signOut }) => ({ id, title, account, status, needsAttention, usedHere, signOut }))).toEqual([
+      { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, needsAttention: false, usedHere: true, signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs sign-in' }, needsAttention: true, usedHere: false, signOut: 'Sign out of acme.atlassian.net' },
     ]);
     expect(signInRows(setup([jira])).map((row) => row.usedHere)).toEqual([false]);
     expect(signInRows(undefined)).toEqual([]);

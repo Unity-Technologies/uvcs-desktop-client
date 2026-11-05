@@ -131,7 +131,6 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
               Sign in
             </Button>
           </div>
-          <p className={styles.note}>{words.hint}</p>
           {failed && (
             <div ref={problem} className={styles.row} role="alert">
               <p className={styles.problem}>{failed.words}</p>

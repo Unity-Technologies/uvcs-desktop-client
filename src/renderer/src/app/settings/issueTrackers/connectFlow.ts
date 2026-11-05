@@ -85,12 +85,11 @@ export interface TokenStepWords {
   getTitle: string;
   /** The button that opens the token page: "Open Atlassian". */
   createButton: string;
-  /** Under it: the page it opens. */
+  /** Under it: what to do on the page, and that the app only reads with the token. */
   createWhere: string;
   tokenLabel: string;
   /** Jira Cloud's token goes with the account's email. */
   emailLabel?: string;
-  hint: string;
 }
 
 const ONLY_READS = 'The app only reads issues with it.';
@@ -101,16 +100,15 @@ export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
       return {
         getTitle: 'Get a token from Atlassian',
         createButton: 'Open Atlassian',
-        createWhere: 'Create an API token there, with any name, and copy it.',
+        createWhere: `Create an API token with any name and copy it. ${ONLY_READS}`,
         tokenLabel: 'Jira API token',
         emailLabel: 'Your Atlassian account email',
-        hint: ONLY_READS,
       };
     case 'jiraDataCenter':
       // Jira's own personal access token, or one an app such as API Token Authentication makes: "Jira token" names both.
-      return { getTitle: 'Get a token from Jira', createButton: 'Open Jira', createWhere: 'Create a token there, with any name, and copy it.', tokenLabel: 'Jira token', hint: ONLY_READS };
+      return { getTitle: 'Get a token from Jira', createButton: 'Open Jira', createWhere: `Create a token with any name and copy it. ${ONLY_READS}`, tokenLabel: 'Jira token' };
     case 'github':
-      return { getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', createWhere: 'What it needs is filled in: generate it and copy it.', tokenLabel: 'GitHub token', hint: ONLY_READS };
+      return { getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', createWhere: `What it needs is filled in: generate it and copy it. ${ONLY_READS}`, tokenLabel: 'GitHub token' };
   }
 }
 
@@ -188,6 +186,8 @@ export interface SignInRow {
   title: string;
   account: string;
   status: { tone: 'positive' | 'caution'; label: string };
+  /** It needs signing in again: the one status a quiet list shows. */
+  needsAttention: boolean;
   /** The window's repository uses it. */
   usedHere: boolean;
   signOut: string;
@@ -208,6 +208,7 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: st
       // The account alone: the pill beside it says whether it's signed in.
       account: connection.account.name,
       status: needsSignIn ? { tone: 'caution', label: 'Needs sign-in' } : { tone: 'positive', label: 'Signed in' },
+      needsAttention: needsSignIn,
       usedHere: connection.id === here,
       signOut: `Sign out of ${hostOf(connection.server)}`,
       signOutQuestion: {
