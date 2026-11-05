@@ -6,7 +6,7 @@ import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { pluralize } from '../../../lib/text';
-import { choiceOf } from './trackerChoices';
+import { choiceOf, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 
 /** A tracker's kind in words, its server's kind told apart: "Jira Cloud", "GitHub", "GitHub Enterprise Server". */
@@ -347,6 +347,8 @@ export interface SuggestedLink {
   link: string;
   words: string;
   trackerName: string;
+  /** Its tracker, to start Connect with. */
+  choice: TrackerChoice;
   /** "Seen in 37 branch comments". */
   seen: string;
 }
@@ -379,6 +381,7 @@ export function suggestedTrackerLink(comments: readonly string[]): SuggestedLink
     link: best.link,
     words: read.kind === 'read' ? read.words : best.link,
     trackerName: TRACKER_GRAMMARS[best.reading.kind].name,
+    choice: choiceOf(best.reading.kind),
     seen: `Seen in ${pluralize(best.count, 'branch comment')}`,
   };
 }

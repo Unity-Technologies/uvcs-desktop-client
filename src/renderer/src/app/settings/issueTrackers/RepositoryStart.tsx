@@ -2,7 +2,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { AddSignInMenu } from './AddSignInMenu';
-import { linkReadBack, usableSignIns } from './connectFlow';
+import { usableSignIns } from './connectFlow';
 import type { ConnectStart } from './ConnectTracker';
 import { SignInIdentity } from './SignInIdentity';
 import { choiceOf, NO_SIGN_INS, REPOSITORY_START_WORDS } from './trackerChoices';
@@ -19,7 +19,6 @@ import styles from './IssueTrackerPane.module.css';
 export function RepositoryStart({ onStart, onCancel }: { onStart: (start: ConnectStart) => void; onCancel?: () => void }) {
   const signIns = usableSignIns(useIssueTrackerSetup());
   const suggestion = useSuggestedLink();
-  const suggested = suggestion && linkReadBack(suggestion.link);
   const words = REPOSITORY_START_WORDS;
   return (
     <section className={styles.card} aria-label="Connect an issue tracker">
@@ -32,16 +31,16 @@ export function RepositoryStart({ onStart, onCancel }: { onStart: (start: Connec
       </header>
       <div className={styles.section}>
         <p className={styles.intro}>{words.intro}</p>
-        {suggestion && suggested?.kind === 'read' && (
+        {suggestion && (
           <div className={styles.suggested}>
-            <TrackerLogo choice={choiceOf(suggested.link.kind)} size={24} />
+            <TrackerLogo choice={suggestion.choice} size={24} />
             <div className={styles.cardHeaderText}>
               <span className={styles.nextTitle}>Your branch comments link to {suggestion.trackerName}</span>
               <span className={styles.personDetail}>
                 {suggestion.words} · {suggestion.seen}
               </span>
             </div>
-            <Button size="small" variant="primary" onClick={() => onStart({ choice: choiceOf(suggested.link.kind), link: suggestion.link })}>
+            <Button size="small" variant="primary" onClick={() => onStart({ choice: suggestion.choice, link: suggestion.link })}>
               Use it
             </Button>
           </div>
