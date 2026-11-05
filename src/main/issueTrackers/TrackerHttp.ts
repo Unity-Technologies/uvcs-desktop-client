@@ -141,7 +141,7 @@ export class TrackerHttp {
       throw failure;
     }
     const body = parseJson(await response.text().catch(() => ''));
-    log(response.status, response.status >= 400 ? `${response.status} from ${where}` : undefined);
+    log(response.status, response.status >= 400 ? failedAnswerWords(response.status, where, body) : undefined);
     return { status: response.status, header, body };
   }
 
@@ -168,6 +168,29 @@ function headersOf(request: TrackerRequest, authorization: string | null): Recor
 function bodyOf(request: TrackerRequest): string | undefined {
   if (request.json !== undefined) return JSON.stringify(request.json);
   return request.form ? new URLSearchParams(request.form).toString() : undefined;
+}
+
+/** The most of a tracker's own error words the log keeps. */
+const MAX_ANSWER_WORDS = 300;
+
+/**
+ * A failed answer for the command log: its status and the tracker's own words, Jira's `errorMessages` and `errors`,
+ * GitHub's `message`, so a request the app got wrong (a 400) says why. Never shown to the user as they are.
+ */
+function failedAnswerWords(status: number, where: string, body: unknown): string {
+  const words = answerWords(body).join(' ').slice(0, MAX_ANSWER_WORDS);
+  return words ? `${status} from ${where}: ${words}` : `${status} from ${where}`;
+}
+
+function answerWords(body: unknown): string[] {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return [];
+  const { errorMessages, errors, message } = body as Record<string, unknown>;
+  const texts = (values: unknown[]) => values.filter((value): value is string => typeof value === 'string');
+  return [
+    ...(Array.isArray(errorMessages) ? texts(errorMessages) : []),
+    ...(typeof errors === 'object' && errors !== null && !Array.isArray(errors) ? texts(Object.values(errors)) : []),
+    ...(typeof message === 'string' ? [message] : []),
+  ];
 }
 
 function parseJson(text: string): unknown {
