@@ -198,6 +198,7 @@ describe('signInAgainView', () => {
 describe('signInRows', () => {
   it('lists each sign-in with its tracker, account and how it stands, marking the one this repository uses', () => {
     const rows = signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]), 'game@acme@unity');
+    expect(rows.map((row) => row.detail)).toEqual(['acme.atlassian.net · This repository', 'acme.atlassian.net']);
     expect(rows.map(({ id, title, account, host, status, needsAttention, usedHere, signOut }) => ({ id, title, account, host, status, needsAttention, usedHere, signOut }))).toEqual([
       { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', host: 'acme.atlassian.net', status: { tone: 'positive', label: 'Signed in' }, needsAttention: false, usedHere: true, signOut: 'Sign out of acme.atlassian.net' },
       { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', host: 'acme.atlassian.net', status: { tone: 'caution', label: 'Needs sign-in' }, needsAttention: true, usedHere: false, signOut: 'Sign out of acme.atlassian.net' },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
+import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, projectsSectionWords, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.acme.com', account: { id: 'JIRAUSER10100', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'ana-diaz', name: 'Ana Díaz' } };
@@ -50,6 +50,18 @@ describe('projectRows', () => {
   it('leaves out a name that only repeats the key, and counts the tracker didn’t give', () => {
     const answer = { kind: 'read' as const, projects: [{ project: 'acme/game', access: { project: 'acme/game', name: 'Acme/Game', openIssues: 42 } }] };
     expect(projectRows(['acme/game'], answer)).toEqual([{ project: 'acme/game', label: 'acme/game', counts: '42 open' }]);
+  });
+});
+
+describe('projectsSectionWords', () => {
+  it('names Jira projects and GitHub repositories, in the title, the add button and the field', () => {
+    expect(projectsSectionWords('jiraDataCenter')).toEqual({
+      title: 'Projects',
+      add: 'Add a project',
+      fieldLabel: 'Paste a link to any issue in the other project',
+      fieldHint: 'The app reads the project from the link, and checks your sign-in can see it.',
+    });
+    expect(projectsSectionWords('github')).toMatchObject({ title: 'Repositories', add: 'Add a repository' });
   });
 });
 
