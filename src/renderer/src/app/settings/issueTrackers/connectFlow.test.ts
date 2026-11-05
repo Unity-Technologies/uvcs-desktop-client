@@ -128,9 +128,9 @@ describe('deviceCodeWords', () => {
 
 describe('the token step’s words and readiness', () => {
   it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
-    expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', createWhere: 'Opens your Atlassian account’s security page. Any name will do.', hint: 'The app only reads issues with it.' });
-    expect(tokenStepWords('github')).toMatchObject({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
-    expect(tokenStepWords('jiraDataCenter')).toMatchObject({ tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraCloud')).toMatchObject({ getTitle: 'Get a token from Atlassian', createButton: 'Open Atlassian', tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('github')).toMatchObject({ getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraDataCenter')).toMatchObject({ getTitle: 'Get a token from Jira', createButton: 'Open Jira', tokenLabel: 'Jira token' });
     expect(tokenStepWords('jiraDataCenter').emailLabel).toBeUndefined();
     expect(tokenStepReady('jiraDataCenter', '', 'token', false)).toBe(true);
   });
@@ -189,12 +189,24 @@ describe('signInAgainView', () => {
 });
 
 describe('signInRows', () => {
-  it('lists each sign-in with its tracker, account and how it stands', () => {
-    expect(signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]))).toEqual([
-      { id: 'j', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, signOut: 'Sign out of acme.atlassian.net' },
-      { id: 'r', kind: 'jiraCloud', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs signing in' }, signOut: 'Sign out of acme.atlassian.net' },
+  it('lists each sign-in with its tracker, account and how it stands, marking the one this repository uses', () => {
+    const rows = signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]), 'game@acme@unity');
+    expect(rows.map(({ id, title, account, status, usedHere, signOut }) => ({ id, title, account, status, usedHere, signOut }))).toEqual([
+      { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'positive', label: 'Signed in' }, usedHere: true, signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', status: { tone: 'caution', label: 'Needs sign-in' }, usedHere: false, signOut: 'Sign out of acme.atlassian.net' },
     ]);
+    expect(signInRows(setup([jira])).map((row) => row.usedHere)).toEqual([false]);
     expect(signInRows(undefined)).toEqual([]);
+  });
+
+  it('asks before signing out, saying which repositories lose their tracker', () => {
+    const [used, unused] = signInRows(setup([jira, { ...jira, id: 'r' }]));
+    expect(used!.signOutQuestion).toEqual({
+      title: 'Sign out of Jira at acme.atlassian.net?',
+      message: 'This computer forgets the Jira sign-in, and 1 repository using it goes back to showing issues as plain text.',
+      confirmLabel: 'Sign out',
+    });
+    expect(unused!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in.');
   });
 });
 

@@ -77,15 +77,19 @@ export function suggestedEmail(cmUser: string | undefined, kept: string | undefi
 }
 
 /**
- * The token step's words per tracker: the field's label, the email's for Jira Cloud, where "Create a token" leads, and
- * what the token is for.
+ * The token step's words per tracker, as its two numbered steps say them: where to get a token (the button that opens
+ * the page, and what it opens), then the field to paste it in, with the email Jira Cloud's token goes with.
  */
 export interface TokenStepWords {
+  /** Step one's title: "Get a token from Atlassian". */
+  getTitle: string;
+  /** The button that opens the token page: "Open Atlassian". */
+  createButton: string;
+  /** Under it: the page it opens. */
+  createWhere: string;
   tokenLabel: string;
   /** Jira Cloud's token goes with the account's email. */
   emailLabel?: string;
-  /** Under "Create a token": the page it opens. */
-  createWhere: string;
   hint: string;
 }
 
@@ -94,14 +98,24 @@ const ONLY_READS = 'The app only reads issues with it.';
 export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
   switch (kind) {
     case 'jiraCloud':
-      return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', createWhere: 'Opens your Atlassian account’s security page. Any name will do.', hint: ONLY_READS };
+      return {
+        getTitle: 'Get a token from Atlassian',
+        createButton: 'Open Atlassian',
+        createWhere: 'Create an API token there, with any name, and copy it.',
+        tokenLabel: 'Jira API token',
+        emailLabel: 'Your Atlassian account email',
+        hint: ONLY_READS,
+      };
     case 'jiraDataCenter':
       // Jira's own personal access token, or one an app such as API Token Authentication makes: "Jira token" names both.
-      return { tokenLabel: 'Jira token', createWhere: 'Opens the page your Jira makes tokens on.', hint: ONLY_READS };
+      return { getTitle: 'Get a token from Jira', createButton: 'Open Jira', createWhere: 'Create a token there, with any name, and copy it.', tokenLabel: 'Jira token', hint: ONLY_READS };
     case 'github':
-      return { tokenLabel: 'GitHub token', createWhere: 'Opens GitHub with what the token needs already filled in.', hint: ONLY_READS };
+      return { getTitle: 'Get a token from GitHub', createButton: 'Open GitHub', createWhere: 'What it needs is filled in: generate it and copy it.', tokenLabel: 'GitHub token', hint: ONLY_READS };
   }
 }
+
+/** Jira Data Center's second token page (`otherTokenPageOffered`), offered quietly under the first. */
+export const OTHER_TOKEN_PAGE_WORDS = { lead: 'No tokens on that page?', link: 'Try the other token page' };
 
 /** Whether the token step can sign in with `token`: one given, not while signing in, and Jira Cloud's email given. */
 export function tokenStepReady(kind: IssueTrackerKind, email: string, token: string, busy: boolean): boolean {
@@ -172,18 +186,43 @@ export function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'se
   return `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`;
 }
 
-/** The sign-ins this computer keeps, as a window with no repository lists them: each with how it stands. */
-export function signInRows(setup: IssueTrackerSetup | undefined): { id: string; kind: IssueTrackerKind; title: string; account: string; status: { tone: 'positive' | 'caution'; label: string }; signOut: string }[] {
+/** A sign-in this computer keeps, as Settings lists them in every window: how it stands, and signing out of it. */
+export interface SignInRow {
+  id: string;
+  kind: IssueTrackerKind;
+  title: string;
+  account: string;
+  status: { tone: 'positive' | 'caution'; label: string };
+  /** The window's repository uses it. */
+  usedHere: boolean;
+  signOut: string;
+  /** What Sign out asks first: the repositories that use the sign-in lose their tracker. */
+  signOutQuestion: { title: string; message: string; confirmLabel: string };
+}
+
+export function signInRows(setup: IssueTrackerSetup | undefined, repository?: string): SignInRow[] {
+  const here = setup && repository ? bindingOf(setup.bindings, repository)?.connectionId : undefined;
   return (setup?.connections ?? []).map((connection) => {
     const needsSignIn = connection.credential === 'refused' || connection.credential === 'missing';
+    const used = setup?.bindings.filter((binding) => binding.connectionId === connection.id).length ?? 0;
+    const name = TRACKER_GRAMMARS[connection.kind].name;
     return {
       id: connection.id,
       kind: connection.kind,
       title: connectionTitle(connection),
       // The account alone: the pill beside it says whether it's signed in.
       account: connection.account.name,
-      status: needsSignIn ? { tone: 'caution', label: 'Needs signing in' } : { tone: 'positive', label: 'Signed in' },
+      status: needsSignIn ? { tone: 'caution', label: 'Needs sign-in' } : { tone: 'positive', label: 'Signed in' },
+      usedHere: connection.id === here,
       signOut: `Sign out of ${hostOf(connection.server)}`,
+      signOutQuestion: {
+        title: `Sign out of ${connectionTitle(connection)}?`,
+        message:
+          used === 0
+            ? `This computer forgets the ${name} sign-in.`
+            : `This computer forgets the ${name} sign-in, and ${pluralize(used, 'repository', 'repositories')} using it go${used === 1 ? 'es' : ''} back to showing issues as plain text.`,
+        confirmLabel: 'Sign out',
+      },
     };
   });
 }

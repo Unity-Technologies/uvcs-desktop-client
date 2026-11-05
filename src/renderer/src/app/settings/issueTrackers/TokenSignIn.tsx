@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react';
+import { Check, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import type { TokenPageTarget } from '@shared/api/issueTrackers';
 import type { IssueTrackerKind, SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
@@ -6,8 +6,8 @@ import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
-import { usePlaceUser } from '../../account/accounts';
-import { clearsClipboardAfter, connectFailureWords, otherTokenPageOffered, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
+import { useWindowUser } from '../../account/accounts';
+import { clearsClipboardAfter, connectFailureWords, OTHER_TOKEN_PAGE_WORDS, otherTokenPageOffered, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
 import { tokenStepLead } from './trackerCardContent';
 import styles from './IssueTrackerPane.module.css';
 
@@ -36,7 +36,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const words = tokenStepWords(kind);
   const trackerName = TRACKER_GRAMMARS[kind].name;
   // Filled in until the user types one: the `cm` user may be read after the step shows.
-  const cmUser = usePlaceUser();
+  const cmUser = useWindowUser();
   const [typedEmail, setEmail] = useState<string | null>(null);
   const email = typedEmail ?? suggestedEmail(cmUser, keptEmail);
   const [token, setToken] = useState('');
@@ -79,44 +79,65 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const lead = tokenStepLead(token);
 
   return (
-    <div className={styles.next}>
-      <div className={styles.row}>
-        <Button size="small" variant={lead === 'createToken' ? 'primary' : 'secondary'} icon={<ExternalLink size={13} />} onClick={openTokenPage}>
-          Create a token
-        </Button>
-        {otherTokenPageOffered(kind) && (
-          <Button size="small" variant="ghost" onClick={openOtherTokenPage} title={`Opens the other page ${trackerName} makes tokens on`}>
-            Other token page
-          </Button>
-        )}
-      </div>
-      {words.emailLabel && <TextField label={words.emailLabel} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
-      <TextField
-        label={words.tokenLabel}
-        type="password"
-        autoComplete="off"
-        placeholder="Paste the token"
-        value={token}
-        onChange={(event) => setToken(event.target.value)}
-        onPaste={pasted}
-        onKeyDown={enterSignsIn}
-        hint={words.hint}
-      />
-      <div className={styles.row}>
-        <Button size="small" variant={lead === 'signIn' ? 'primary' : 'secondary'} disabled={!tokenStepReady(kind, email, token, busy)} loading={busy} onClick={() => void submit(token)}>
-          Sign in
-        </Button>
-      </div>
-      {failed && (
-        <div ref={problem} className={styles.row} role="alert">
-          <p className={styles.problem}>{failed.words}</p>
-          {failed.offersTokenPage && (
-            <Button size="small" variant="ghost" onClick={openTokenPage}>
-              Create a new token
+    <ol className={styles.guide}>
+      <li className={styles.guideStep} data-done={lead === 'signIn' || undefined}>
+        <span className={styles.guideNumber} aria-hidden>
+          {lead === 'signIn' ? <Check size={12} strokeWidth={3} /> : 1}
+        </span>
+        <div className={styles.guideBody}>
+          <p className={styles.nextTitle}>{words.getTitle}</p>
+          <p className={styles.note}>{words.createWhere}</p>
+          <div className={styles.row}>
+            <Button size="small" variant={lead === 'createToken' ? 'primary' : 'secondary'} icon={<ExternalLink size={13} />} onClick={openTokenPage}>
+              {words.createButton}
             </Button>
+          </div>
+          {otherTokenPageOffered(kind) && (
+            <p className={styles.note}>
+              {OTHER_TOKEN_PAGE_WORDS.lead}{' '}
+              <button type="button" className={styles.textLink} onClick={openOtherTokenPage} title={`Opens the other page ${trackerName} makes tokens on`}>
+                {OTHER_TOKEN_PAGE_WORDS.link}
+              </button>
+            </p>
           )}
         </div>
-      )}
-    </div>
+      </li>
+      <li className={styles.guideStep}>
+        <span className={styles.guideNumber} aria-hidden>
+          2
+        </span>
+        <div className={styles.guideBody}>
+          <p className={styles.nextTitle}>Paste it here</p>
+          {words.emailLabel && <TextField label={words.emailLabel} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />}
+          <div className={styles.pasteRow}>
+            <TextField
+              className={styles.field}
+              aria-label={words.tokenLabel}
+              type="password"
+              autoComplete="off"
+              placeholder={`Paste the ${words.tokenLabel}`}
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+              onPaste={pasted}
+              onKeyDown={enterSignsIn}
+            />
+            <Button size="medium" variant={lead === 'signIn' ? 'primary' : 'secondary'} disabled={!tokenStepReady(kind, email, token, busy)} loading={busy} onClick={() => void submit(token)}>
+              Sign in
+            </Button>
+          </div>
+          <p className={styles.note}>{words.hint}</p>
+          {failed && (
+            <div ref={problem} className={styles.row} role="alert">
+              <p className={styles.problem}>{failed.words}</p>
+              {failed.offersTokenPage && (
+                <Button size="small" variant="ghost" onClick={openTokenPage}>
+                  Create a new token
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </li>
+    </ol>
   );
 }
