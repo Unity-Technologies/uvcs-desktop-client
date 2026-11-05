@@ -1,5 +1,7 @@
 import type { IssueTrackerKind, RepositoryTrackerBinding, TrackerConnection } from '../domain/issueTrackers';
 import { sameServer } from '../links/linkSegments';
+import { githubKeyParts } from './grammars/github';
+import { JIRA_KEY } from './grammars/jiraKeys';
 import { TRACKER_GRAMMARS } from './trackerGrammars';
 import type { FoundIssueReference } from './trackerGrammar';
 
@@ -17,6 +19,15 @@ export interface IssueReferenceReader {
   issueAtAddress(address: string): string | null;
   /** The issue's page in the browser. */
   issueUrl(key: string): string;
+  /** The bound projects: Jira keys, GitHub's `owner/repo` in lower case. */
+  projects: readonly string[];
+  /** How a picked issue is written so this reader reads it back: a Jira key, `#12` for the one repository bound. */
+  referenceText(key: string): string;
+  /**
+   * The issue a text typed after `#` names, read by key rather than searched: a bound project's key (`vcs-12` too), or
+   * a number when one project is bound; else null.
+   */
+  keyTyped(typed: string): string | null;
 }
 
 export function issueReferenceReader(binding: RepositoryTrackerBinding, connection: TrackerConnection): IssueReferenceReader {
@@ -42,6 +53,20 @@ export function issueReferenceReader(binding: RepositoryTrackerBinding, connecti
       return connection.kind !== 'github' && !projects.includes(reading.project) ? null : reading.key;
     },
     issueUrl: (key) => grammar.issueUrl(connection.server, key),
+    projects,
+    referenceText(key) {
+      if (connection.kind !== 'github') return key;
+      const parts = githubKeyParts(key);
+      // `#12` reads as the one repository bound's (`githubGrammar.referencesReader`), any other as `owner/repo#12`.
+      return parts && projects.length === 1 && `${parts.owner}/${parts.name}` === projects[0] ? `#${parts.number}` : key;
+    },
+    keyTyped(typed) {
+      const number = /^[1-9]\d*$/.test(typed) ? typed : null;
+      if (connection.kind === 'github') return number && projects.length === 1 ? `${projects[0]}#${number}` : null;
+      if (number) return projects.length === 1 ? `${projects[0]}-${number}` : null;
+      const key = JIRA_KEY.exec(typed.toUpperCase());
+      return key && projects.includes(key[1]!) ? key[0] : null;
+    },
   };
 }
 

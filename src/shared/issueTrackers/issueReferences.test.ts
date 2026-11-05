@@ -22,6 +22,39 @@ describe('issueReferenceReader', () => {
     expect(reader.issueAtAddress('https://github.com/acme/tools/issues/3')).toBe('acme/tools#3');
     expect(reader.referencesIn('#4').map(({ key }) => key)).toEqual(['acme/game#4']);
   });
+
+  it('writes a picked issue as the grammar reads it back: a Jira key, `#12` for the one repository bound', () => {
+    const jiraReader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS', 'OPS'] }, jira);
+    expect(jiraReader.referenceText('VCS-12')).toBe('VCS-12');
+    const one = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['Acme/Game'] }, github);
+    expect(one.referenceText('acme/game#12')).toBe('#12');
+    expect(one.referenceText('acme/tools#3')).toBe('acme/tools#3');
+    const two = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['acme/game', 'acme/tools'] }, github);
+    expect(two.referenceText('acme/game#12')).toBe('acme/game#12');
+    // Each reads back as the issue picked.
+    expect(jiraReader.referencesIn(jiraReader.referenceText('VCS-12')).map((found) => found.key)).toEqual(['VCS-12']);
+    expect(one.referencesIn(one.referenceText('acme/game#12')).map((found) => found.key)).toEqual(['acme/game#12']);
+    expect(two.referencesIn(two.referenceText('acme/tools#3')).map((found) => found.key)).toEqual(['acme/tools#3']);
+  });
+
+  it('reads the key a text typed after `#` names: a key of a bound project, or a number when one project is bound', () => {
+    const jiraReader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira);
+    expect(jiraReader.keyTyped('VCS-12')).toBe('VCS-12');
+    expect(jiraReader.keyTyped('vcs-12')).toBe('VCS-12');
+    expect(jiraReader.keyTyped('12')).toBe('VCS-12');
+    expect(jiraReader.keyTyped('OPS-12')).toBeNull();
+    expect(jiraReader.keyTyped('VCS-')).toBeNull();
+    expect(jiraReader.keyTyped('VCS-012')).toBeNull();
+    expect(jiraReader.keyTyped('selection')).toBeNull();
+    const twoProjects = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS', 'OPS'] }, jira);
+    expect(twoProjects.keyTyped('12')).toBeNull();
+    expect(twoProjects.keyTyped('OPS-7')).toBe('OPS-7');
+    const one = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['Acme/Game'] }, github);
+    expect(one.keyTyped('12')).toBe('acme/game#12');
+    expect(one.keyTyped('0')).toBeNull();
+    const two = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['acme/game', 'acme/tools'] }, github);
+    expect(two.keyTyped('12')).toBeNull();
+  });
 });
 
 describe('bindingOf', () => {
