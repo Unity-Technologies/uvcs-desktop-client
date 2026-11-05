@@ -16,7 +16,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useAppliedUserColors, useBranchExplorerPreferences, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -59,9 +59,10 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, userColors } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people } = preferences;
   const viewOptions = useGraphViewOptions();
   const rules = useAppliedExplorerRules(placeRepository);
+  const userColors = useAppliedUserColors(placeRepository);
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 

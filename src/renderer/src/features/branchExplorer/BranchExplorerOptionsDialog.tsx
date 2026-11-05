@@ -6,7 +6,14 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SettingsGroup } from '../../app/settings/SettingsGroup';
 import { usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { useAppliedExplorerRules, useBranchExplorerPreferences, useExplorerRules, useExplorerRulesOn, useGraphViewOptions } from './branchExplorerStore';
+import {
+  useAppliedExplorerRules,
+  useBranchExplorerPreferences,
+  useExplorerRules,
+  useExplorerRulesOn,
+  useGraphViewOptions,
+  useUserColorsOn,
+} from './branchExplorerStore';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, GRAPH_VIEW_OPTION_GROUPS, hidesAnything } from './canvas/graphViewOptions';
 import { ChangesetColorsTab } from './ChangesetColorsTab';
 import { ExplorerRulesTab } from './ExplorerRulesTab';
@@ -98,11 +105,26 @@ function RepositoryRules() {
   );
 }
 
-/** The colors of people's changesets, the same in every repository; people to add come from the history on screen. */
+/**
+ * The colors of people's changesets, the same in every repository, turned on and off in each; people to add come from
+ * the history on screen.
+ */
 function ChangesetColors() {
+  const repository = usePlaceRepository();
   const { data } = useBranchExplorerData();
   const colors = useBranchExplorerPreferences((preferences) => preferences.userColors);
+  const on = useUserColorsOn(repository);
   const set = useBranchExplorerPreferences((preferences) => preferences.set);
+  const setUserColorsOn = useBranchExplorerPreferences((preferences) => preferences.setUserColorsOn);
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => historyAuthors(data)) : []), [data]);
-  return <ChangesetColorsTab colors={colors} authors={authors} onChange={(userColors) => set({ userColors })} />;
+  if (!repository) return null;
+  return (
+    <ChangesetColorsTab
+      colors={colors}
+      on={on}
+      authors={authors}
+      onChange={(userColors) => set({ userColors })}
+      onTurn={(turnedOn) => setUserColorsOn(repository, turnedOn)}
+    />
+  );
 }

@@ -12,6 +12,7 @@ import { Popover } from '../../ui/Popover';
 import { HueDot } from './HueDot';
 import { HuePicker } from './HuePicker';
 import {
+  addingTurnsColorsOn,
   addPeopleEmpty,
   changesetColorsTabBody,
   isColored,
@@ -27,20 +28,31 @@ import styles from './ChangesetColorsTab.module.css';
 
 interface ChangesetColorsTabProps {
   colors: UserColors;
+  /** Whether the colors apply in the window's repository. Off keeps them and colors nothing there. */
+  on: boolean;
   /** Everyone who made a changeset in the history the graph shows. */
   authors: readonly string[];
   onChange: (colors: UserColors) => void;
+  onTurn: (on: boolean) => void;
 }
 
 /** The display options' "Changeset colors" tab: a color for each person's changesets, under the format rules' colors. */
-export function ChangesetColorsTab({ colors, authors, onChange }: ChangesetColorsTabProps) {
+export function ChangesetColorsTab({ colors, on, authors, onChange, onTurn }: ChangesetColorsTabProps) {
   // The colors as the list of people opened, kept here: adding the first person swaps the empty state for the list, and
   // the list of people stays open across it.
   const [addingFrom, setAddingFrom] = useState<UserColors | null>(null);
   const addButton = (
-    <AddPeople colors={colors} authors={authors} onChange={onChange} addingFrom={addingFrom} onAddingFrom={setAddingFrom} />
+    <AddPeople
+      colors={colors}
+      on={on}
+      authors={authors}
+      onChange={onChange}
+      onTurn={onTurn}
+      addingFrom={addingFrom}
+      onAddingFrom={setAddingFrom}
+    />
   );
-  const body = changesetColorsTabBody(colors);
+  const body = changesetColorsTabBody(colors, on);
   if (body.state === 'empty') {
     return (
       <EmptyState
@@ -54,7 +66,7 @@ export function ChangesetColorsTab({ colors, authors, onChange }: ChangesetColor
   return (
     <div className={styles.tab}>
       <div className={styles.toolbar}>
-        <Checkbox label="Color changesets by who made them" checked={colors.on} onChange={(on) => onChange({ ...colors, on })} />
+        <Checkbox label="Color changesets by who made them" checked={on} onChange={onTurn} />
         {addButton}
       </div>
       <ul className={styles.list} data-off={body.dimmed || undefined}>
@@ -100,11 +112,11 @@ interface AddPeopleProps extends ChangesetColorsTabProps {
   onAddingFrom: (colors: UserColors | null) => void;
 }
 
-function AddPeople({ colors, authors, onChange, addingFrom, onAddingFrom }: AddPeopleProps) {
+function AddPeople({ addingFrom, onAddingFrom, ...tab }: AddPeopleProps) {
   return (
     <Popover
       open={addingFrom !== null}
-      onOpenChange={(open) => onAddingFrom(open ? colors : null)}
+      onOpenChange={(open) => onAddingFrom(open ? tab.colors : null)}
       align="end"
       trigger={
         <Button size="small" icon={<Plus size={14} />}>
@@ -112,13 +124,13 @@ function AddPeople({ colors, authors, onChange, addingFrom, onAddingFrom }: AddP
         </Button>
       }
     >
-      <AddPeopleList colors={colors} authors={authors} onChange={onChange} colorsOnOpen={addingFrom ?? colors} />
+      <AddPeopleList {...tab} colorsOnOpen={addingFrom ?? tab.colors} />
     </Popover>
   );
 }
 
 /** The people in the history without a color as the list opened (rows don't leave while picking); checked ones have one. */
-function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetColorsTabProps & { colorsOnOpen: UserColors }) {
+function AddPeopleList({ colors, on, authors, onChange, onTurn, colorsOnOpen }: ChangesetColorsTabProps & { colorsOnOpen: UserColors }) {
   const [search, setSearch] = useState('');
   const offered = useMemo(() => usersToAdd(authors, colorsOnOpen), [authors, colorsOnOpen]);
   const rows = useMemo(() => peopleMatching(offered, search), [offered, search]);
@@ -131,7 +143,10 @@ function AddPeopleList({ colors, authors, onChange, colorsOnOpen }: ChangesetCol
       placeholder="Find people"
       label="People"
       isChecked={(user) => isColored(colors, user)}
-      onToggle={(user) => onChange(withUserToggled(colors, user))}
+      onToggle={(user) => {
+        onChange(withUserToggled(colors, user));
+        if (addingTurnsColorsOn(colors, on)) onTurn(true);
+      }}
       renderRow={(user) => (
         <>
           <Avatar user={user} size={18} tip={null} />
