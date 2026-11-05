@@ -208,7 +208,29 @@ describe('paletteGroups with a search', () => {
 
     expect(labelsIn(groupsFor({ typed: 'sh:4', lists }), 'codeReviews')).toEqual([]);
     expect(labelsIn(groupsFor({ typed: '311', lists }), 'codeReviews')).toEqual([]);
-    expect(labelsIn(groupsFor({ typed: 'cr:4', lists }), 'codeReviews')).toEqual([]);
+    expect(labelsIn(groupsFor({ typed: 'cr:4', lists }), 'codeReviews')).toEqual(['Code review 4']);
+  });
+
+  it('opens a shelve or code review by its number when the lists read hold none by it, older than they reach', () => {
+    const shelves = groupsFor({ typed: 'sh:4', lists: { shelves: [shelve(40, 'Forty'), shelve(14, 'Fourteen')] } }).find((group) => group.section === 'shelves')!.results;
+    const reviews = groupsFor({ typed: 'cr:311', lists: { codeReviews: [review(3110, 'Review 311 fixes')] } }).find((group) => group.section === 'codeReviews')!.results;
+
+    expect(shelves.map((result) => [result.label, result.quality])).toEqual([
+      ['Shelve 4', 1],
+      ['Forty', expect.any(Number)],
+      ['Fourteen', expect.any(Number)],
+    ]);
+    expect(reviews.map((result) => [result.label, result.quality])).toEqual([
+      ['Code review 311', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+  });
+
+  it('reads the number as `cm` reads a spec, leading zeros and all, and only a number alone', () => {
+    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4 textures')] };
+
+    expect(labelsIn(groupsFor({ typed: 'sh:004', lists }), 'shelves')[0]).toBe('Four');
+    expect(labelsIn(groupsFor({ typed: 'sh:4 textures', lists }), 'shelves')).toEqual(['4 textures']);
   });
 });
 
