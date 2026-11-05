@@ -130,7 +130,7 @@ function OpenPalette({ close }: { close: () => void }) {
           <Cmdk.Input
             ref={inputRef}
             className={styles.input}
-            placeholder="Search files, branches, labels, changesets, commands…"
+            placeholder="Search everything"
             value={query}
             onValueChange={(value) => {
               setQuery(value);
