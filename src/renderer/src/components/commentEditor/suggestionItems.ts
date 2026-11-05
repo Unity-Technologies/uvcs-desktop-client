@@ -1,6 +1,6 @@
 import { gemoji, type Gemoji } from 'gemoji';
 import type { Branch } from '@shared/domain/branch';
-import type { IssueStatusCategory } from '@shared/domain/issueTrackers';
+import type { Issue, IssueStatusCategory } from '@shared/domain/issueTrackers';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Label } from '@shared/domain/label';
@@ -43,6 +43,8 @@ export interface Suggestion {
   glyph?: string;
   /** An issue's status, as its chip's dot shows it. */
   category?: IssueStatusCategory;
+  /** The issue itself, which a pick hands its chip so it shows at once, read. */
+  issue?: Issue;
   /** What a pick writes in the comment, a space after it. */
   insert: string;
 }
