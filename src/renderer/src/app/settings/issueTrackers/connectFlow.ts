@@ -1,4 +1,4 @@
-import type { IssueTrackerKind, IssueTrackerSetup, ProjectAccess, SignInFailure, SignInMethodKind, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { IssueTrackerKind, IssueTrackerSetup, ProjectAccess, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
@@ -78,6 +78,15 @@ export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
 /** Whether the token step can sign in with `token`: one given, not while signing in, and Jira Cloud's email given. */
 export function tokenStepReady(kind: IssueTrackerKind, email: string, token: string, busy: boolean): boolean {
   return !busy && token.trim() !== '' && (tokenStepWords(kind).emailLabel === undefined || email.trim() !== '');
+}
+
+/**
+ * Whether the clipboard is emptied after a sign-in: only when the token was pasted and signed in. Emptied whatever it
+ * holds by then, knowingly: checking that it still holds the token would mean reading it, which the app never does
+ * (a read can bring up the system's paste prompt), and a moment after the paste it holds the token.
+ */
+export function clearsClipboardAfter(pasted: boolean, outcome: Pick<SignInOutcome, 'kind'>): boolean {
+  return pasted && outcome.kind === 'signedIn';
 }
 
 /** Which way to sign in shows: the server's best, unless the user chose a token instead ("Use a token instead"). */

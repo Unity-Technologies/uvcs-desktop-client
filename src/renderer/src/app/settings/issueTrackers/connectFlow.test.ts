@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountWords, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { accountWords, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -160,6 +160,14 @@ describe('signInAgainStep', () => {
       words: "Jira couldn't be reached at acme.atlassian.net.",
     });
     expect(signInAgainStep({ kind: 'github', server: 'https://github.com' }, { reason: 'rateLimited' }, [])).toMatchObject({ kind: 'problem' });
+  });
+});
+
+describe('clearsClipboardAfter', () => {
+  it('empties the clipboard only after signing in with a pasted token', () => {
+    expect(clearsClipboardAfter(true, { kind: 'signedIn' })).toBe(true);
+    expect(clearsClipboardAfter(true, { kind: 'failed' })).toBe(false);
+    expect(clearsClipboardAfter(false, { kind: 'signedIn' })).toBe(false);
   });
 });
 

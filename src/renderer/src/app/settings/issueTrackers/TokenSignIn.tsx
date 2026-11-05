@@ -7,7 +7,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { usePlaceUser } from '../../account/accounts';
-import { connectFailureWords, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
+import { clearsClipboardAfter, connectFailureWords, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 
 interface TokenSignInProps {
@@ -46,9 +46,8 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
     const outcome = await signIn(typed, words.emailLabel ? email.trim() : undefined);
     setToken('');
     setBusy(false);
-    // The token the user pasted is on the clipboard: it's not left there to be pasted somewhere by mistake. Written,
-    // never read, so no system asks to allow it.
-    if (pasted && outcome.kind === 'signedIn') void navigator.clipboard.writeText('').catch(() => undefined);
+    // The token the user pasted isn't left on the clipboard to be pasted somewhere by mistake (`clearsClipboardAfter`).
+    if (clearsClipboardAfter(pasted, outcome)) void navigator.clipboard.writeText('').catch(() => undefined);
     onOutcome(outcome);
   };
   const openTokenPage = (): void => {
