@@ -68,7 +68,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
     place,
     loadedChangeset: workspace?.loadedChangeset,
     loadedBranch: branchWorkedOn(workspace?.selector),
-    branchStartOf: () => start,
+    branchStartOf: (name: string) => (name === branch ? start : null),
   };
 
   useEffect(() => {
