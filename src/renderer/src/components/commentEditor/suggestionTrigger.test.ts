@@ -29,6 +29,9 @@ describe('suggestionQueryAt', () => {
     expect(issueAt('Fixes #‸')).toEqual({ kind: 'issue', from: 6, to: 7, text: '' });
     expect(issueAt('Fixes #VCS-12‸')).toMatchObject({ kind: 'issue', text: 'VCS-12' });
     expect(issueAt('Fixes #selecci‸')).toMatchObject({ kind: 'issue', text: 'selecci' });
+    // A title's own marks are searched too: "[Desktop] - Jira connection issue".
+    expect(issueAt('Fixes #[Desk‸')).toMatchObject({ kind: 'issue', text: '[Desk' });
+    expect(issueAt('Fixes #(crash)‸')).toMatchObject({ kind: 'issue', text: '(crash)' });
     expect(queryAt('Fixes #‸')).toBeNull();
     expect(queryAt('Fixes #12‸')).toBeNull();
   });
