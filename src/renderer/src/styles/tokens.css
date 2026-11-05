@@ -221,6 +221,10 @@
   /* Under a small badge drawn over a canvas (the Timeline's home): 0 1px 3px. */
   --badge-shadow: rgba(0, 0, 0, 0.18);
   --search-highlight: #d4a72c;
+  /* The Branch Explorer draws several things selected in this magenta instead of the accent, so a selection of many
+     never reads as one: rings and outlines at 3:1 on every surface, with a soft halo. */
+  --selection-multiple: #bf3989;
+  --selection-multiple-soft: rgba(191, 57, 137, 0.12);
   /* Avatars of people, workspaces and repositories: a white initial on one of these solid fills (`AVATAR_COLORS`, one per
      `STABLE_HUES` hue, in their order), each tuned on its own so all weigh the same (white at about 4.8:1) and a notch short of full saturation, so they
      read solid without shouting. */
@@ -340,6 +344,8 @@
   --label-mark: #d29922;
   --badge-shadow: rgba(0, 0, 0, 0.4);
   --search-highlight: #e3b341;
+  --selection-multiple: #db61a2;
+  --selection-multiple-soft: rgba(219, 97, 162, 0.18);
   /* A touch lighter and softer, as far as white at 4.5:1 allows (about 4.7:1), so they stand off the dark rows without glowing. */
   --avatar-blue: #3976b9;
   --avatar-cyan: #267e8e;
