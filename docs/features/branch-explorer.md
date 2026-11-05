@@ -138,6 +138,21 @@ What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it
 searches, `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
 (`countCalls`).
 
+## Selection
+
+A click selects what it lands on, alone; Ctrl+click (⌘ on macOS, `isModPressed`) adds it to the selection or takes it
+out (`selectedOnClick` in `graphSelection.ts`). A selection holds one kind only, changesets, labels or branches
+(`groupOf`): Ctrl+clicking another kind starts a new one, and a merge link or the pending changes always select
+alone. The last one picked leads (`leadOf`): the keyboard moves from it and collapses the selection to it, and the
+graph keeps it on screen as it is laid out again. Several selected are drawn in `--selection-multiple`, a magenta, in
+place of the accent (`selectionHighlights`, `selectionInks`), as the official client does.
+
+A right-click on something selected keeps the selection (`selectedOnContextClick`), and its menu is the lists' menu
+for all of it (`graphMenu`'s `selectionMenu`): two changesets get their diff, more get none; branches get Hide and
+Delete for all; labels get Delete for all and the diff of two. A right-click elsewhere selects that first and gets
+its own menu. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
+object's details.
+
 ## Pending changes
 
 While the workspace has changes under version control (private files alone
