@@ -58,6 +58,8 @@ export class IssueTrackers {
   private readonly flows = new Map<string, DeviceFlow>();
   /** The hosts the user allowed this session (`needsHostConsent`); once a connection is kept, its server needs none. */
   private readonly consentedServers = new Set<string>();
+  /** The question on screen for a host, which every sign-in to it meanwhile waits for. */
+  private readonly consentAsked = new Map<string, Promise<boolean>>();
 
   constructor(private readonly deps: IssueTrackersDeps) {
     this.providers = deps.providers ?? TRACKER_PROVIDERS;
@@ -287,13 +289,29 @@ export class IssueTrackers {
     return this.bindProven(connection, repository, [reading.project], reading.project);
   }
 
-  /** Whether a credential may go to `server`: a tracker's own host, a connection's, or one the user allowed. */
+  /**
+   * Whether a credential may go to `server`: a tracker's own host, a connection's, or one the user allowed. One question
+   * per host at a time: sign-ins on their way wait for its answer. A decline isn't remembered: the next sign-in is the
+   * user's own paste again, and asks again.
+   */
   private async hostAllowed(server: string): Promise<boolean> {
     const key = server.toLowerCase();
     if (this.consentedServers.has(key) || !needsHostConsent(server, this.deps.store.connections())) return true;
-    const allowed = await this.deps.askHostConsent(server);
-    if (allowed) this.consentedServers.add(key);
-    return allowed;
+    const pending = this.consentAsked.get(key) ?? this.askConsent(key, server);
+    return pending;
+  }
+
+  private askConsent(key: string, server: string): Promise<boolean> {
+    const asked = this.deps
+      .askHostConsent(server)
+      .catch(() => false)
+      .then((allowed) => {
+        if (allowed) this.consentedServers.add(key);
+        return allowed;
+      })
+      .finally(() => this.consentAsked.delete(key));
+    this.consentAsked.set(key, asked);
+    return asked;
   }
 
   /** Proves `project` with the connection, then binds the repository to it; nothing is bound when the project can't be read. */
