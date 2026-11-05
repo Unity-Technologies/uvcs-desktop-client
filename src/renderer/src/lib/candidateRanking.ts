@@ -1,10 +1,11 @@
-import { filterHaystack, holdsEveryWord, queryWords } from '../../lib/matchesAllWords';
+import { filterHaystack, holdsEveryWord, queryWords } from './matchesAllWords';
 
 /**
- * How a suggestion list finds the best few of a list of thousands (20k branches) at each key typed: each list is read
- * into an index once (`indexCandidates`), lower-cased, and each query walks the index alone, never the objects. What
- * matches is what the item's list keeps for the same words (`matchesWordFilter` over the texts its row shows), so a
- * word finds the same objects after a trigger as in the view's filter; the names only order them.
+ * How a comment's suggestion list, and the palette's people, find the best few of a list of thousands (20k branches)
+ * at each key typed: each list is read into an index once (`indexCandidates`), lower-cased, and each query walks the
+ * index alone, never the objects. What matches is what the item's list keeps for the same words (`matchesWordFilter`
+ * over the texts its row shows), so a word finds the same objects after a trigger as in the view's filter; the names
+ * only order them.
  */
 export interface CandidateIndex<T> {
   readonly candidates: readonly Candidate<T>[];

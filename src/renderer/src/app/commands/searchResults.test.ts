@@ -27,7 +27,7 @@ describe('shownSections', () => {
 
   it('keeps only the sections the scope takes', () => {
     expect(ids(shownSections(groups, '', 'commands')).map(([heading]) => heading)).toEqual(['Commands']);
-    expect(ids(shownSections(groups, '', 'refs')).map(([heading]) => heading)).toEqual(['Branches']);
+    expect(ids(shownSections(groups, '', 'branches')).map(([heading]) => heading)).toEqual(['Branches']);
   });
 });
 
@@ -91,5 +91,7 @@ describe('moreLabel', () => {
     expect(moreLabel({ heading: 'Pending changes', more: 1 })).toBe('1 more pending change');
     expect(moreLabel({ heading: 'Shelves', more: 1 })).toBe('1 more shelve');
     expect(moreLabel({ heading: 'Code reviews', more: 29 })).toBe('29 more code reviews');
+    expect(moreLabel({ heading: 'People', more: 1 })).toBe('1 more person');
+    expect(moreLabel({ heading: 'People', more: 4 })).toBe('4 more people');
   });
 });

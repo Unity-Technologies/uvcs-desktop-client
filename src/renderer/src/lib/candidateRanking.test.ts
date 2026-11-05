@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countedReads, readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { indexCandidates, rankCandidates } from './suggestionRanking';
+import { indexCandidates, rankCandidates } from './candidateRanking';
 
 interface Named {
   name: string;

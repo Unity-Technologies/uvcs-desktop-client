@@ -65,7 +65,7 @@ export function collapseGroups(groups: SearchGroup[], expanded: ReadonlySet<Sect
 /** The row that expands a collapsed section, in the heading's words: "1 more branch", "3 more pending changes". */
 export function moreLabel({ heading, more }: Pick<ShownGroup, 'heading' | 'more'>): string {
   const plural = heading.toLowerCase();
-  const singular = plural.endsWith('ches') ? plural.slice(0, -2) : plural.slice(0, -1);
+  const singular = plural === 'people' ? 'person' : plural.endsWith('ches') ? plural.slice(0, -2) : plural.slice(0, -1);
   return pluralize(more, `more ${singular}`, `more ${plural}`);
 }
 

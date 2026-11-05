@@ -12,7 +12,7 @@ import { reviewFilterTexts } from '../../features/codeReviews/codeReviewFilters'
 import { labelFilterTexts } from '../../features/labels/labelFilters';
 import { shelveFilterTexts } from '../../features/shelves/shelveFilterTexts';
 import { branchIndex, branchQueryText, changesetIndex, changesetSuggestion, codeReviewIndex, labelIndex, personIndex, shelveIndex } from './suggestionItems';
-import { rankCandidates } from './suggestionRanking';
+import { rankCandidates } from '../../lib/candidateRanking';
 
 /** Queries a user types in a list's filter and after a trigger alike: case, several words, punctuation, accents. */
 const QUERIES = ['Accelerator', 'ACCEL', 'merged accelerator', 'accelerator-v2:', 'v2 delete', 'task-2210', 'ana', 'Díaz', 'diaz', 'cache Ana', '4207'];

@@ -22,7 +22,13 @@ export interface SuggestionQuery {
  * emphasis mark, never inside a word, a path or an address (`ana@acme.com`, `/a/cs:1`, `10:30`, `Note:`), then the
  * word typed so far.
  */
-const TYPED = /(?<![\p{L}\p{N}/@:.#\\-])(cs:|br:|lb:|sh:|cr:|@|:)(\S*)$/u;
+const TYPED = new RegExp(`(?<![\\p{L}\\p{N}/@:.#\\\\-])(${triggerAlternatives()})(\\S*)$`, 'u');
+
+/** The triggers as a pattern's alternatives, longest first, so `cs:` is taken whole before the emoji's `:` could be. */
+function triggerAlternatives(): string {
+  const triggers = Object.keys(SUGGESTION_TRIGGERS).sort((a, b) => b.length - a.length);
+  return triggers.map((trigger) => trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+}
 
 /** An emoji's name as typed: GitHub's list opens after two letters, so a colon in a sentence opens nothing. */
 const EMOJI_NAME = /^[a-z0-9_+-]{2,}$/;

@@ -79,6 +79,13 @@ const started = Date.now();
 try {
   const workspaceOnHome = window.getByRole('region', { name: 'All workspaces' }).getByRole('button', { name: /^demo / });
   await step('Home', () => workspaceOnHome.waitFor());
+  await step('The palette on the home screen', async () => {
+    // No place is shown: it searches commands only, and nothing in it may ask for the window's place.
+    await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
+    await window.keyboard.press('Escape');
+    await window.getByRole('dialog').waitFor({ state: 'detached' });
+  });
   await step("A Unity organization's projects", async () => {
     const sidebar = window.getByRole('navigation');
     await sidebar.getByRole('button', { name: /^studio/ }).click();
@@ -206,6 +213,13 @@ try {
   await step('Command palette', async () => {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
+  });
+  await step('A prefix in the palette', async () => {
+    // `@` narrows it to people: the owners of what it read, with no command of its own.
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('@');
+    await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
+    await palette.getByRole('combobox').fill('');
   });
   await step('A link pasted in the palette', async () => {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
