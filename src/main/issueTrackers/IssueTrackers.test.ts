@@ -179,6 +179,17 @@ describe('IssueTrackers', () => {
     expect(announced.at(-1)!.connections[0]!.credential).toBe('kept');
   });
 
+  it('keeps a credential refused when trying it again finds the tracker out of reach', async () => {
+    const { engine, tracker, announced } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    tracker.answer({ [GRAPHQL]: { status: 401 }, 'GET https://api.github.com/user': { unreachable: true } });
+    await engine.readIssues('id1', ['acme/game#12']);
+    const told = announced.length;
+    expect(await engine.retrySignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'unreachable', server: 'https://github.com' } });
+    expect(engine.setup().connections[0]!.credential).toBe('refused');
+    expect(announced.slice(told).map((setup) => setup.connections[0]!.credential)).not.toContain('kept');
+  });
+
   it('keeps a credential refused when trying it again is refused too', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
