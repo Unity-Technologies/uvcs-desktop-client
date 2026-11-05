@@ -34,6 +34,7 @@ function trackers(answers: TrackerAnswers = {}, { clipboardText = '', cipher = p
   const tracker = fakeTrackerHttp(answers);
   const clipboard = { text: clipboardText };
   const announced: IssueTrackerSetup[] = [];
+  const opened: string[] = [];
   let ids = 0;
   const engine = new IssueTrackers({
     store: new IssueTrackerStore(join(folder, 'issue-trackers.json')),
@@ -45,8 +46,9 @@ function trackers(answers: TrackerAnswers = {}, { clipboardText = '', cipher = p
     now: () => 0,
     wait,
     oauthClientIds: clientIds,
+    openExternal: (url) => opened.push(url),
   });
-  return { engine, tracker, clipboard, announced };
+  return { engine, tracker, clipboard, announced, opened };
 }
 
 describe('IssueTrackers', () => {
@@ -63,12 +65,28 @@ describe('IssueTrackers', () => {
     expect(JSON.stringify(announced)).not.toContain(TOKEN);
   });
 
-  it('signs in with the token copied, read by main, and clears the clipboard after', async () => {
-    const { engine, clipboard } = trackers(SIGNED_IN, { clipboardText: TOKEN });
-    expect(await engine.clipboardHoldsToken('github')).toBe(true);
-    expect(await engine.clipboardHoldsToken('jiraCloud')).toBe(false);
+  it('opens the token page itself, then signs in with the token copied there, read by main, and clears the clipboard', async () => {
+    const { engine, clipboard, opened } = trackers(SIGNED_IN, { clipboardText: TOKEN });
+    engine.openTokenPage({ link: LINK });
+    expect(opened).toEqual(['https://github.com/settings/tokens/new?scopes=repo&description=UVCS%20Desktop']);
+    expect(await engine.clipboardHoldsToken({ link: LINK })).toBe(true);
     expect((await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { copied: true } })).kind).toBe('signedIn');
     expect(clipboard.text).toBe('');
+  });
+
+  it('never sends the copied token to a server whose token page main didn’t open', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN, { clipboardText: TOKEN });
+    engine.openTokenPage({ link: LINK });
+    const elsewhere = 'https://evil.example.com/acme/game/issues/1';
+    expect(await engine.clipboardHoldsToken({ link: elsewhere })).toBe(false);
+    expect(await engine.signInWithToken({ repository: REPOSITORY, link: elsewhere, source: { copied: true } })).toEqual({ kind: 'failed', failure: { reason: 'tokenShape' } });
+    expect(tracker.requests).toEqual([]);
+  });
+
+  it('says a token is copied only for one of the tracker’s known shapes', async () => {
+    const { engine } = trackers({}, { clipboardText: 'abcdefghijklmnopqrstuvwx' });
+    engine.openTokenPage({ link: 'https://acme.atlassian.net/browse/VCS-1' });
+    expect(await engine.clipboardHoldsToken({ link: 'https://acme.atlassian.net/browse/VCS-1' })).toBe(false);
   });
 
   it('leaves a clipboard alone that holds something else', async () => {
