@@ -175,7 +175,9 @@ class MarkdownReader {
     const mayHoldIssueAddress = options.comment === true && options.issues !== undefined && /https?:\/\//i.test(text);
     if (found.length > 0 || mayHoldIssueAddress) {
       const { ranges, issueAddresses } = writtenRanges(readTree(text), text, options.comment ? options.issues : undefined);
-      const outsideWritten = found.filter((reference) => !ranges.some(([from, to]) => reference.from < to && reference.to > from));
+      // An issue's address is one reference whole: nothing inside it (`?by=@ana`) reads as another.
+      const taken = [...ranges, ...issueAddresses.map(({ from, to }): [number, number] => [from, to])];
+      const outsideWritten = found.filter((reference) => !taken.some(([from, to]) => reference.from < to && reference.to > from));
       this.references = issueAddresses.length === 0 ? outsideWritten : [...outsideWritten, ...issueAddresses].sort((a, b) => a.from - b.from);
     }
     this.tree = readTree(withPlaceholders(text, this.references));
