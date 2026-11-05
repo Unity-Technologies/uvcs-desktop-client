@@ -167,6 +167,59 @@ describe('IssueTrackers', () => {
     expect(engine.setup().connections[0]!.credential).toBe('kept');
   });
 
+  it('tries a refused credential again with one whoAmI, and announces it works again', async () => {
+    const { engine, tracker, announced } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    tracker.answer({ [GRAPHQL]: { status: 401 } });
+    await engine.readIssues('id1', ['acme/game#12']);
+    expect(engine.setup().connections[0]!.credential).toBe('refused');
+    const sent = tracker.requests.length;
+    expect((await engine.retrySignIn('id1')).kind).toBe('signedIn');
+    expect(tracker.lines().slice(sent)).toEqual(['GET https://api.github.com/user']);
+    expect(announced.at(-1)!.connections[0]!.credential).toBe('kept');
+  });
+
+  it('keeps a credential refused when trying it again is refused too', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    tracker.answer({ 'GET https://api.github.com/user': { status: 401 } });
+    expect(await engine.retrySignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
+    expect(engine.setup().connections[0]!.credential).toBe('refused');
+  });
+
+  it('sends nothing trying again a credential the keychain won’t give back', async () => {
+    const refusing: SecretCipher = {
+      ...plainCipher,
+      decrypt: () => {
+        throw new Error('refused');
+      },
+    };
+    const { engine, tracker } = trackers(SIGNED_IN, { cipher: refusing });
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    const sent = tracker.requests.length;
+    expect(await engine.retrySignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'tokenRefused' } });
+    expect(tracker.requests).toHaveLength(sent);
+  });
+
+  it('moves a binding with its repository’s rename, and tells every window', async () => {
+    const { engine, announced } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
+    engine.repositoryRenamed(REPOSITORY, 'racer@acme@unity');
+    expect(announced.at(-1)!.bindings.map((binding) => binding.repository)).toEqual(['racer@acme@unity']);
+  });
+
+  it('binds nothing with a connection that doesn’t cover the link', async () => {
+    const { engine, tracker } = trackers(SIGNED_IN);
+    await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: FINE_GRAINED } });
+    const sent = tracker.requests.length;
+    expect(await engine.useConnection({ repository: 'tools@acme@unity', link: 'https://github.com/other/tools/issues/1', connectionId: 'id1' })).toEqual({
+      kind: 'failed',
+      failure: { reason: 'projectUnreadable', project: 'other/tools' },
+    });
+    expect(tracker.requests).toHaveLength(sent);
+    expect(engine.setup().bindings.map((binding) => binding.repository)).toEqual([REPOSITORY]);
+  });
+
   it('signs in again with a new token, keeping the bindings', async () => {
     const { engine } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, source: { token: TOKEN } });
