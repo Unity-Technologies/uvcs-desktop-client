@@ -20,6 +20,8 @@ import { ReviewStore } from './review/ReviewStore';
 import { RevisionCat } from './files/RevisionCat';
 import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
+import { createIssueTrackers } from './issueTrackers/createIssueTrackers';
+import { trackerLogEntry } from './issueTrackers/trackerLogEntry';
 import { createServices } from './services/createServices';
 import { RepositoryPathSearch } from './files/RepositoryPathSearch';
 import { RepositoryTrees } from './unity/RepositoryTrees';
@@ -120,6 +122,13 @@ cm.onCommandLogged((entry) => commandLog.logged(entry));
 if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
 if (!app.isPackaged) warnOnOrganizationIds(cm);
 ignoreOwnCommandWrites(cm, watchers, headers);
+const issueTrackers = createIssueTrackers({
+  userData,
+  logRequest: (request) => cm.logEntry(trackerLogEntry(request)),
+  changed: (setup) => sendEvent('issueTrackersChanged', setup),
+  development: !app.isPackaged,
+  env: process.env,
+});
 const api = createServices({
   cm,
   operations,
@@ -137,6 +146,7 @@ const api = createServices({
   repositoryTrees,
   repositoryPaths,
   branchNames,
+  issueTrackers,
 });
 const early = new EarlyCalls(apiMethods(api));
 

@@ -25,6 +25,7 @@ import { createContentService } from './contentService';
 import { createDiffService } from './diffService';
 import { createExplorerService } from './explorerService';
 import { createHistoryService } from './historyService';
+import { createIssueTrackersService } from './issueTrackersService';
 import { createLabelsService } from './labelsService';
 import { createLeftChangesService } from './leftChangesService';
 import { createLocksService } from './locksService';
@@ -67,6 +68,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     diff: createDiffService(context),
     explorer: createExplorerService(context),
     history: createHistoryService(context, apps),
+    issueTrackers: createIssueTrackersService(context),
     labels: createLabelsService(context),
     leftChanges: createLeftChangesService(context, switching),
     locks: createLocksService(context),
@@ -74,7 +76,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     mergeTools: createMergeToolsService(context, apps),
     pendingChanges: createPendingChangesService(context, switching),
     permissions: createPermissionsService(context),
-    repositories: createRepositoriesService(context, profiles),
+    repositories: createRepositoriesService(context, profiles, (from, to) => context.issueTrackers.repositoryRenamed(from, to)),
     review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context, switching),

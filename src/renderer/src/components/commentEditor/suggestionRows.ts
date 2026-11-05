@@ -31,6 +31,7 @@ const NOUNS: Record<SuggestionKind, string> = {
   codeReview: 'code reviews',
   person: 'people',
   emoji: 'emoji',
+  issue: 'issues',
 };
 
 /**

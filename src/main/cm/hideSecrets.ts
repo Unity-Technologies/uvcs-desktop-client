@@ -4,6 +4,12 @@ import { withoutUrlUserInfo } from '@shared/urlUserInfo';
 /** What a hidden secret shows as in the command log, errors and console warnings. */
 const HIDDEN_SECRET = '•••';
 
+/**
+ * The tokens issue trackers issue, by their prefixes (GitHub's `ghp_`, `gho_`, `github_pat_`; Atlassian's `ATATT`): a
+ * second line of defense, as no tracker's credential is ever logged (docs/features/issue-trackers.md, "Secrets").
+ */
+const TRACKER_TOKENS = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|ATATT[A-Za-z0-9_\-=]{20,})/g;
+
 /** Options whose value is a secret (`cm sync ... git --pwd=`). Add any new one the app passes. */
 const SECRET_OPTIONS = ['--pwd='];
 
@@ -20,7 +26,7 @@ export function commandLineForLog(args: readonly string[]): string {
  * (`https://•••@github.com/…`), as a Git URL pasted with a token carries it as the user alone or after one.
  */
 export function outputForLog(output: string): string {
-  return withoutUrlUserInfo(output, `${HIDDEN_SECRET}@`);
+  return withoutUrlUserInfo(output, `${HIDDEN_SECRET}@`).replace(TRACKER_TOKENS, HIDDEN_SECRET);
 }
 
 /**

@@ -1,4 +1,8 @@
 import { EditorState } from '@codemirror/state';
+import { useIssueReferences } from '../issues/useIssueTrackers';
+import { useIssueReads } from '../issues/useIssueReads';
+import { editorIssueKeys } from './editorIssueKeys';
+import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -55,6 +59,12 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   const changed = useRef(onChange);
   changed.current = onChange;
   const codeTheme = pierreThemeName(useResolvedTheme());
+  const issues = useIssueReferences();
+  // The issues the text names read at once, as a comment shown in full reads them, so a pasted one's chip shows its title.
+  // Kept by its text and the tracker the editor reads with, which reaches it a moment after `issues` (a reconfigure).
+  const doc = state?.doc;
+  const reader = state?.facet(issueReferences);
+  useIssueReads(useMemo(() => (state ? editorIssueKeys(state) : []), [doc, reader]));
 
   // Built in the effect and destroyed in its cleanup, so StrictMode's second mount gets an editor of its own.
   useEffect(() => {
@@ -105,6 +115,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
+  useEffect(() => view?.dispatch({ effects: issueReferencesCompartment.reconfigure(withIssueReferences(issues)) }), [view, issues]);
 
   const handle = useMemo(
     () => ({
@@ -291,11 +302,11 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!query) setDismissedAt(null);
   }, [query === null]);
 
-  const { rows, reading, searchAll } = useSuggestionRows(open);
+  const { rows, searchAll, picked } = useSuggestionRows(open);
   // The cue at the word typed, apart from the list: the field shows it understood the trigger whatever the list does.
-  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null, reading });
-  const cueRange = query && cue ? { from: query.from, to: query.to, state: cue } : null;
-  const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}:${cueRange.state}` : '';
+  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null });
+  const cueRange = query && cue ? { from: query.from, to: query.to } : null;
+  const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}` : '';
   useEffect(() => {
     view?.dispatch({ effects: setSuggestionCue.of(cueRange) });
   }, [view, cueKey]);
@@ -319,7 +330,10 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     const row = rows[index];
     if (!view || !open || !row) return;
     if (row.kind === 'searchAll') searchAll(row.text);
-    else if (row.kind === 'pick') view.dispatch(pickSuggestion(view.state, open, row.suggestion.insert));
+    else if (row.kind === 'pick') {
+      picked(row.suggestion);
+      view.dispatch(pickSuggestion(view.state, open, row.suggestion.insert));
+    }
   };
 
   // The list's keys come before the editor's and the dialog's (Esc would close it): taken on the way down.

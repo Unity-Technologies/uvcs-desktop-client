@@ -6,6 +6,8 @@ import { typingAt } from './typingAt';
 import { justPicked } from './justPicked';
 import { liveMarksOf } from './liveMarks';
 import { isDismissed, pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
+import { withIssueReferences } from './issueReferencesFacet';
+import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
 
@@ -18,6 +20,32 @@ describe('suggestionQueryAt', () => {
     expect(queryAt('cr:3‸')).toMatchObject({ kind: 'codeReview', text: '3' });
     expect(queryAt('Thanks @‸')).toMatchObject({ kind: 'person', from: 7, text: '' });
     expect(queryAt('Thanks @ana@acme.c‸')).toMatchObject({ kind: 'person', text: 'ana@acme.c' });
+  });
+
+  it('opens the issue list after `#` only where the place has a tracker', () => {
+    const jira = { id: 'c1', kind: 'jiraCloud' as const, server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token' as const, access: 'read' as const, credential: 'kept' as const };
+    const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+    const issueAt = (text: string) => suggestionQueryAt(editorState(text, tracked));
+    expect(issueAt('Fixes #‸')).toEqual({ kind: 'issue', from: 6, to: 7, text: '' });
+    expect(issueAt('Fixes #VCS-12‸')).toMatchObject({ kind: 'issue', text: 'VCS-12' });
+    expect(issueAt('Fixes #selecci‸')).toMatchObject({ kind: 'issue', text: 'selecci' });
+    // A title's own marks are searched too: "[Desktop] - Jira connection issue".
+    expect(issueAt('Fixes #[Desk‸')).toMatchObject({ kind: 'issue', text: '[Desk' });
+    expect(issueAt('Fixes #(crash)‸')).toMatchObject({ kind: 'issue', text: '(crash)' });
+    expect(queryAt('Fixes #‸')).toBeNull();
+    expect(queryAt('Fixes #12‸')).toBeNull();
+  });
+
+  it('opens nothing for a heading, a second `#`, or a `#` inside a word', () => {
+    const jira = { id: 'c1', kind: 'jiraCloud' as const, server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token' as const, access: 'read' as const, credential: 'kept' as const };
+    const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+    const issueAt = (text: string) => suggestionQueryAt(editorState(text, tracked));
+    expect(issueAt('# ‸')).toBeNull();
+    expect(issueAt('# Title‸')).toBeNull();
+    expect(issueAt('##‸')).toBeNull();
+    expect(issueAt('## Notes‸')).toBeNull();
+    expect(issueAt('C#‸')).toBeNull();
+    expect(issueAt('acme/game#1‸')).toBeNull();
   });
 
   it('opens the emoji list after two letters, so a colon in a sentence opens nothing', () => {

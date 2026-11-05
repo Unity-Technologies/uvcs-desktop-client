@@ -2,6 +2,7 @@ import type { Nodes, Parent, PhrasingContent, RootContent, Root } from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
+import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 import { findReferences, type CommentReference, type FoundReference } from './comments/commentReferences';
 
 /**
@@ -56,6 +57,11 @@ export interface MarkdownOptions {
    * paragraph's lines, as CommonMark does.
    */
   comment?: boolean;
+  /**
+   * The place's issue tracker, in a comment: its keys read as references, and a bare address of one of its issues
+   * (docs/features/issue-trackers.md, "How a reference is recognized"). None reads no issue.
+   */
+  issues?: IssueReferenceReader;
 }
 
 /**
@@ -165,10 +171,14 @@ class MarkdownReader {
     private readonly options: MarkdownOptions,
   ) {
     const text = source.replace(/\r\n?/g, '\n');
-    const found = options.comment ? findReferences(text) : [];
-    if (found.length > 0) {
-      const written = writtenRanges(readTree(text), text);
-      this.references = found.filter((reference) => !written.some(([from, to]) => reference.from < to && reference.to > from));
+    const found = options.comment ? findReferences(text, options.issues) : [];
+    const mayHoldIssueAddress = options.comment === true && options.issues !== undefined && /https?:\/\//i.test(text);
+    if (found.length > 0 || mayHoldIssueAddress) {
+      const { ranges, issueAddresses } = writtenRanges(readTree(text), text, options.comment ? options.issues : undefined);
+      // An issue's address is one reference whole: nothing inside it (`?by=@ana`) reads as another.
+      const taken = [...ranges, ...issueAddresses.map(({ from, to }): [number, number] => [from, to])];
+      const outsideWritten = found.filter((reference) => !taken.some(([from, to]) => reference.from < to && reference.to > from));
+      this.references = issueAddresses.length === 0 ? outsideWritten : [...outsideWritten, ...issueAddresses].sort((a, b) => a.from - b.from);
     }
     this.tree = readTree(withPlaceholders(text, this.references));
     for (const node of this.tree.children) if (node.type === 'definition') this.definitions.set(node.identifier, node.url);
@@ -331,20 +341,38 @@ function withPlaceholders(text: string, references: readonly FoundReference[]): 
  * Where a comment shows what was written as it is, so no reference is read there: code, raw HTML, an image, and a
  * link, a bare web address included (`https://ci/job?BRANCH=br:/main` stays one address). A bare email address
  * isn't one of them: a reference may hold what reads as one (`cs:12@game@build.acme.com`).
+ *
+ * The one reference a link is: an issue's own page on the place's tracker, written as its bare address (or `<…>`),
+ * the link node itself, at its own offsets (`issueAddressOf`). A link with text of its own stays a link.
  */
-function writtenRanges(tree: Root, text: string): Array<[number, number]> {
+function writtenRanges(tree: Root, text: string, issues: IssueReferenceReader | undefined): { ranges: Array<[number, number]>; issueAddresses: FoundReference[] } {
   const ranges: Array<[number, number]> = [];
+  const issueAddresses: FoundReference[] = [];
   const visit = (node: Nodes): void => {
     const from = node.position?.start.offset;
     const to = node.position?.end.offset;
-    if (from !== undefined && to !== undefined && isWrittenAsIs(node, text.slice(from, to))) {
-      ranges.push([from, to]);
-      return;
+    if (from !== undefined && to !== undefined) {
+      const written = text.slice(from, to);
+      const address = issues && issueAddressOf(node, written, issues);
+      if (address) {
+        issueAddresses.push({ reference: { kind: 'issue', key: address, bare: false }, source: written, from, to });
+        return;
+      }
+      if (isWrittenAsIs(node, written)) {
+        ranges.push([from, to]);
+        return;
+      }
     }
     if ('children' in node) for (const child of (node as Parent).children) visit(child as Nodes);
   };
   visit(tree);
-  return ranges;
+  return { ranges, issueAddresses };
+}
+
+/** The issue a link names, when it shows its own address (bare, or `<…>`) and that is an issue's page of the tracker. */
+function issueAddressOf(node: Nodes, written: string, issues: IssueReferenceReader): string | null {
+  if (node.type !== 'link' || (written !== node.url && written !== `<${node.url}>`)) return null;
+  return issues.issueAtAddress(node.url);
 }
 
 function isWrittenAsIs(node: Nodes, written: string): boolean {

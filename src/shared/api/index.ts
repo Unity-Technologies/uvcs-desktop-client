@@ -10,6 +10,7 @@ import type { ContentApi } from './content';
 import type { DiffApi } from './diff';
 import type { ExplorerApi } from './explorer';
 import type { HistoryApi } from './history';
+import type { IssueTrackersApi } from './issueTrackers';
 import type { LabelsApi } from './labels';
 import type { LeftChangesApi } from './leftChanges';
 import type { LocksApi } from './locks';
@@ -47,6 +48,7 @@ export interface UvcsApi {
   diff: DiffApi;
   explorer: ExplorerApi;
   history: HistoryApi;
+  issueTrackers: IssueTrackersApi;
   labels: LabelsApi;
   leftChanges: LeftChangesApi;
   locks: LocksApi;

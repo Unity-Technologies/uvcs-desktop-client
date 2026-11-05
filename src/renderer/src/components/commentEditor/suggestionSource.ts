@@ -84,10 +84,10 @@ export function suggestionReads(state: { kind: SuggestionKind | undefined; typed
 }
 
 /**
- * The cue on the word typed after a trigger, apart from the list: so the field shows it understood `br:` whatever the
- * list does. `reading` pulses while the kind's list is read; nothing once the list is closed (Esc) or the word picked.
+ * Whether the word typed after a trigger shows its cue, apart from the list: so the field shows it understood `br:`
+ * whatever the list does; nothing once the list is closed (Esc) or the word picked. It looks the same while the list
+ * is read (the list's spinner says so): a pulse there restarted on every key typed, and the word flickered.
  */
-export function suggestionCue(state: { recognized: boolean; dismissed: boolean; reading: boolean }): 'reading' | 'ready' | null {
-  if (!state.recognized || state.dismissed) return null;
-  return state.reading ? 'reading' : 'ready';
+export function suggestionCue(state: { recognized: boolean; dismissed: boolean }): boolean {
+  return state.recognized && !state.dismissed;
 }

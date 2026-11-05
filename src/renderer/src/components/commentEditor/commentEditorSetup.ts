@@ -15,6 +15,7 @@ import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
 import { tablesIn } from './tableModel';
 import { verticalMoveInto } from './verticalMove';
+import { issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
 import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
@@ -91,6 +92,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     codeColors,
     widgetPortals.of(options.portals),
     compactChips.of(options.singleLine),
+    issueReferencesCompartment.of(withIssueReferences(undefined)),
     editable.of(editableWhen(enabled)),
     theme.of(themed(codeThemeName)),
     EditorView.lineWrapping,

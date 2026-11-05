@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { editorState } from './commentEditorTesting';
 import { liveMarksOf, type LiveMark } from './liveMarks';
+import { withIssueReferences } from './issueReferencesFacet';
+import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import type { TrackerConnection } from '@shared/domain/issueTrackers';
 
 const FOCUSED = { revealsSelection: true };
 
@@ -42,6 +45,14 @@ describe('liveMarksOf', () => {
     it('hides strikethrough, inline code and a heading’s marks the same way', () => {
       expect(marksOf('# Title\n~~old~~ `code`\n‸')).toEqual(['hidden # ', 'hidden ~~', 'hidden ~~', 'hidden `', 'hidden `']);
       expect(marksOf('# Ti‸tle')).toEqual([]);
+    });
+
+    it('draws a `#` with nothing after it as plain text: a heading only once a space follows', () => {
+      // Typing `#` for an issue, or before its heading's space: the line keeps its size until it's a heading.
+      expect(marksOf('#‸')).toEqual(['line 0 plain']);
+      expect(marksOf('Notes\n##‸')).toEqual(['line 6 plain']);
+      expect(marksOf('# ‸')).toEqual([]);
+      expect(marksOf('# Title\n‸')).toEqual(['hidden # ']);
     });
 
     it('keeps an underlined heading’s underline', () => {
@@ -98,6 +109,23 @@ describe('liveMarksOf', () => {
   });
 
   describe('references', () => {
+    it('draws a bare address of a bound project’s issue as its chip, as the shown comment does', () => {
+      const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.acme.com', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
+      const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+      const marksIn = (written: string) => {
+        const state = editorState(written, tracked);
+        return liveMarksOf(state, FOCUSED).map((mark) => shown(mark, state.doc.toString()));
+      };
+      expect(marksIn('See https://jira.acme.com/browse/VCS-12\n‸')).toEqual(['reference https://jira.acme.com/browse/VCS-12']);
+      expect(marksIn('See <https://jira.acme.com/browse/VCS-12>\n‸')).toEqual(['reference <https://jira.acme.com/browse/VCS-12>']);
+      // Another project, another server, or a link with its own text stays a link.
+      expect(marksIn('See https://jira.acme.com/browse/OPS-1\n‸')).toEqual([]);
+      expect(marksIn('See https://jira.other.com/browse/VCS-12\n‸')).toEqual([]);
+      expect(marksIn('See [the bug](https://jira.acme.com/browse/VCS-12)\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
+      // A table drawn whole (the caret elsewhere) draws its own cells: no chip of its own inside it.
+      expect(marksIn('| Issue |\n| --- |\n| https://jira.acme.com/browse/VCS-12 |\n\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
+    });
+
     it('draws every reference as its chip', () => {
       expect(marksOf('Fixes cs:12 on br:/main/task for @ana :tada: ‸')).toEqual(['reference cs:12', 'reference br:/main/task', 'reference @ana', 'reference :tada:']);
     });

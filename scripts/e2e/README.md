@@ -36,6 +36,10 @@ private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFold
 first run: the first people shown (Changesets' owners) bring up the question about profile pictures, which the run
 answers "Not now" and, once the app quits, checks was saved (`gravatarChoiceAsked`), so nothing is ever sent.
 
+Settings › Issue tracker shows its empty state: no tracker is connected, and none is reached. `fakeTrackers.cjs` is a
+fake Jira Cloud and GitHub for looking at the trackers' flows in a development build (`UVCS_FAKE_TRACKERS`,
+docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn't load it.
+
 ## The fake `cm` (`fakeCm/`)
 
 - `cm.cjs` runs a command as a process (`cm find …`) or as `cm shell` (commands on stdin, each answer ending with

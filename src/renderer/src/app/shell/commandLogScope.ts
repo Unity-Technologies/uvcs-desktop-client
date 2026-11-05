@@ -22,6 +22,8 @@ export function commandLogScopes(place: Place): { value: CommandLogScope; label:
  * as each of its commands names it; a window's log only gets its own commands, so another repository's aren't there.
  */
 export function ranInPlace(entry: CommandLogEntry, place: Place): boolean {
+  // A window's log gets only the requests its own calls made: an issue tracker's are its place's.
+  if (entry.source === 'tracker') return true;
   if (place.kind === 'repository') return entry.outsideWorkspaces === true;
   const root = place.workspacePath.replace(/[\\/]+$/, '');
   if (entry.cwd === root) return true;

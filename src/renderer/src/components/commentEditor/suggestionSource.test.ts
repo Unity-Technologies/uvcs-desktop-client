@@ -25,11 +25,11 @@ describe('listedFrom', () => {
 });
 
 describe('suggestionCue', () => {
-  it('marks the word typed once its trigger is read, pulsing while its list is read, and nothing once closed', () => {
-    expect(suggestionCue({ recognized: true, dismissed: false, reading: true })).toBe('reading');
-    expect(suggestionCue({ recognized: true, dismissed: false, reading: false })).toBe('ready');
-    expect(suggestionCue({ recognized: true, dismissed: true, reading: true })).toBeNull();
-    expect(suggestionCue({ recognized: false, dismissed: false, reading: false })).toBeNull();
+  it('marks the word typed once its trigger is read, the same while its list is read, and nothing once closed', () => {
+    // The list's spinner says it's reading: the word itself never changes as keys are typed, so it never flickers.
+    expect(suggestionCue({ recognized: true, dismissed: false })).toBe(true);
+    expect(suggestionCue({ recognized: true, dismissed: true })).toBe(false);
+    expect(suggestionCue({ recognized: false, dismissed: false })).toBe(false);
   });
 });
 

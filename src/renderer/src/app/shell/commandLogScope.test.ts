@@ -32,6 +32,12 @@ describe('ranInPlace', () => {
     expect(ranInPlace(entryIn('/Users/me'), repositoryPlace('game@local'))).toBe(false);
     expect(ranInPlace(entryIn('/app/outside-workspaces', true), workspacePlace('/work/game'))).toBe(false);
   });
+
+  it('matches an issue tracker’s requests, which a window’s log gets only from its own calls', () => {
+    const request: CommandLogEntry = { ...entryIn(''), commandLine: 'GET api.github.com/user', source: 'tracker', httpStatus: 200 };
+    expect(ranInPlace(request, workspacePlace('/work/game'))).toBe(true);
+    expect(ranInPlace(request, repositoryPlace('game@local'))).toBe(true);
+  });
 });
 
 describe('commandLogScopes', () => {

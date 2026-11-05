@@ -3,6 +3,8 @@ import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
+import { IssueChip } from '../issues/IssueChip';
+import { usePlaceTracker } from '../issues/useIssueTrackers';
 import { cachedRecordOf, summaryOf } from './cachedSummary';
 import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
@@ -44,6 +46,8 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
           </span>
         </ChipHoverCard>
       );
+    case 'issue':
+      return <PlaceIssueChip reference={chip} source={source} compact={compact} interactive={interactive} />;
     case 'object':
       return (
         <ObjectChip
@@ -62,6 +66,12 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
       );
   }
 });
+
+/** An issue of the place's tracker; with none bound (signed out meanwhile), the text it was written as. */
+function PlaceIssueChip({ reference, source, compact, interactive }: { reference: { key: string; bare: boolean }; source: string; compact: boolean; interactive: boolean }) {
+  const tracker = usePlaceTracker();
+  return tracker ? <IssueChip reference={reference} source={source} tracker={tracker} compact={compact} interactive={interactive} /> : <>{source}</>;
+}
 
 type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 

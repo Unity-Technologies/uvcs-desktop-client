@@ -119,6 +119,11 @@
   --project-teal: #12a594;
   --project-indigo: #3e63dd;
   --project-violet: #6e56cf;
+
+  /* Issue trackers' own marks (`TrackerLogo`), as their brands draw them in both themes: Jira's white mark on its
+     blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
+  --brand-jira-tile: #1868db;
+  --brand-jira-mark: #ffffff;
 }
 
 :root,
@@ -149,6 +154,25 @@
   --status-moved: #0e7c86;
   --status-private: #6e7781;
   --status-conflict: #cf222e;
+
+  /* An issue's status category, the same four for every tracker (`IssueStatusCategory`): a dot beside its key. Each
+     theme's own colors, through the tokens they name. */
+  --issue-todo: var(--status-private);
+  --issue-in-progress: var(--focus-color);
+  --issue-done: var(--status-added);
+  --issue-canceled: var(--status-private);
+
+  /* How a connection stands (a status pill, a proof's check, a callout): fine, needs the user, or failing. Text tokens
+     read at 4.5:1; each `-soft` is the tint behind them, each `-border` its hairline. */
+  --positive-text: #1a7f37;
+  --positive-soft: rgba(26, 127, 55, 0.09);
+  --positive-border: rgba(26, 127, 55, 0.28);
+  --caution-text: #9a6700;
+  --caution-soft: rgba(154, 103, 0, 0.09);
+  --caution-border: rgba(154, 103, 0, 0.3);
+  --danger-text: #cf222e;
+  --danger-soft: rgba(207, 34, 46, 0.07);
+  --danger-border: rgba(207, 34, 46, 0.28);
 
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
@@ -279,6 +303,16 @@
   --status-moved: #39c5cf;
   --status-private: #8b949e;
   --status-conflict: #f85149;
+
+  --positive-text: #3fb950;
+  --positive-soft: rgba(63, 185, 80, 0.12);
+  --positive-border: rgba(63, 185, 80, 0.32);
+  --caution-text: #d29922;
+  --caution-soft: rgba(210, 153, 34, 0.12);
+  --caution-border: rgba(210, 153, 34, 0.34);
+  --danger-text: #f85149;
+  --danger-soft: rgba(248, 81, 73, 0.1);
+  --danger-border: rgba(248, 81, 73, 0.32);
 
   --change-added: #3fb950;
   --change-changed: #58a6ff;

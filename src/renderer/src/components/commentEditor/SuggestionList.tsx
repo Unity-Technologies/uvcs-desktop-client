@@ -6,6 +6,7 @@ import { Avatar } from '../../ui/Avatar';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
 import { CHIP_ICONS } from '../comments/chipIcons';
+import { IssueStatusIcon } from '../issues/IssueStatusIcon';
 import { suggestionListPosition, type Box } from './popupPosition';
 import type { Suggestion } from './suggestionItems';
 import type { SuggestionRow } from './suggestionRows';
@@ -106,6 +107,7 @@ function SuggestionRowContent({ suggestion }: { suggestion: Suggestion }) {
 function SuggestionIcon({ suggestion }: { suggestion: Suggestion }) {
   if (suggestion.glyph) return <span className={styles.emoji}>{suggestion.glyph}</span>;
   if (suggestion.person) return <Avatar user={suggestion.person} size={18} tip={null} />;
+  if (suggestion.kind === 'issue') return <IssueStatusIcon category={suggestion.category ?? 'todo'} size={14} />;
   if (suggestion.kind === 'emoji' || suggestion.kind === 'person') return null;
   const Icon = CHIP_ICONS[suggestion.kind];
   return <Icon className={styles.icon} size={14} strokeWidth={2.25} aria-hidden />;

@@ -34,6 +34,7 @@ you touch:
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
+| `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 
 ## How a request flows
 
@@ -563,6 +564,12 @@ carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on it
 the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
 and toasts name a Git remote by the same rule, its user info dropped (`gitRemoteLabel`).
 
+An issue tracker's credential (docs/features/issue-trackers.md "Secrets") is kept by main alone, encrypted with the
+system's keychain (`safeStorage`, `TrackerSecrets`), or for the session only where there is none; it never goes back
+to a window, and a token goes to main once, as it's signed in with. Every tracker request goes through `TrackerHttp`,
+which sends a credential only to its connection's own origins, over `https:`, follows no redirect and sends no cookie.
+The trackers' token shapes are hidden in any text logged (`TRACKER_TOKENS`).
+
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
@@ -570,7 +577,10 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program. The programs the ap
 editors, merge tools, tools: `customEditors`, `customMergeTools`, `tools`) live in the settings the renderer writes, so
 a renderer taken over could start a program of its choosing; that is accepted, since each is the user's own choice
 made in the app's UI. Main still holds what reaches them to what the user asked: a tool runs only on the kinds of
-objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`).
+objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`). An issue
+tracker's sign-in names its server from a link the window sends, so before a credential first goes to a host none of
+the trackers' own nor a connection's, main asks the user in its own dialog, which the window can't answer
+(`needsHostConsent`, docs/features/issue-trackers.md "Host consent").
 
 ## What leaves the device
 
@@ -586,6 +596,10 @@ request and never written into `PRIVACY.md` by the change itself.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
+- **The issue tracker the user connected** (Jira, GitHub; docs/features/issue-trackers.md "What leaves the
+  device"), from main only (`TrackerHttp`): signing in, and the issues a comment shown names (a Jira binding's
+  project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a
+  comment names, never from a place with no tracker connected.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
@@ -983,7 +997,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
   canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
-  development build too (scripts/e2e/README.md).
+  development build too (scripts/e2e/README.md). An effect returns a clean-up or nothing: an arrow that returns what
+  a DOM call gives can hand React a promise (`scrollIntoView` returns one in the Chromium the app runs), which crashes
+  the window as the effect runs again (`effectsReturnCleanUps.test.ts`).
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
@@ -1054,12 +1070,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `cm`'s own specs `cs:` `br:` `lb:` `sh:`, `cr:` for a code review, and `@` for a person. In the command palette each
   narrows the search to its section (`SCOPE_PREFIXES`, `parseScope`), beside the palette's own `>` commands and `/`
   files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
-  editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
+  editor's own `:` emoji and `#` issues. A surface adds prefixes of its own, never another meaning for a shared one
   (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it; a
   changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names that
   shelve or review, first and as a full match (`namedFirst`): with its row when the lists read hold it, else by its
   number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked. `#` is
-  no one's: it's kept for issues. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
   its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
@@ -1456,11 +1472,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
-  output. Each command line is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the
-  command and its subcommand (`lock list`, `find branch`) in one color, option names in another (each kept whole on its
-  line), `--format`'s `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and
-  numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name
-  turns red. Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  output. An issue tracker's requests show among the commands (`source: 'tracker'`: method, host and path, a failure
+  as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line
+  is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the command and its subcommand
+  (`lock list`, `find branch`) in one color, option names in another (each kept whole on its line), `--format`'s
+  `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line
+  is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
+  Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components

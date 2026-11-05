@@ -1,4 +1,5 @@
 import type { EditorState } from '@codemirror/state';
+import { issueReferences } from './issueReferencesFacet';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
@@ -32,8 +33,12 @@ export type LiveMark =
   | { kind: 'selected'; from: number; to: number }
   /** A code block's fences and language, dimmed so the code stands out. */
   | { kind: 'fence'; from: number; to: number }
-  /** A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). */
-  | { kind: 'line'; at: number; block: 'quote' | 'code' | 'codeFirst' | 'codeLast' };
+  /**
+   * A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). Or a line
+   * that is only `#`s (`plain`): Markdown reads it as an empty heading, but it's an issue's `#` being typed, or a
+   * heading before its space, so it keeps the text's size until a space follows.
+   */
+  | { kind: 'line'; at: number; block: 'quote' | 'code' | 'codeFirst' | 'codeLast' | 'plain' };
 
 export interface LiveMarksOptions {
   /**
@@ -97,6 +102,10 @@ function markNode(state: EditorState, node: SyntaxNodeRef, reveals: (from: numbe
       if (parent?.parent?.name === 'BulletList') markBullet(node, reveals, marks);
       return;
     case 'HeaderMark':
+      if (parent?.name.startsWith('ATXHeading') && /^#+$/.test(state.sliceDoc(parent.from, parent.to))) {
+        marks.push({ kind: 'line', at: state.doc.lineAt(node.from).from, block: 'plain' });
+        return;
+      }
       // An underlined heading's `===` stays: only `#`s are a heading's mark before its text.
       if (parent?.name.startsWith('ATXHeading') && !reveals(parent.from, parent.to)) marks.push({ kind: 'hidden', from: node.from, to: withSpaceAfter(state, node.to) });
       return;
@@ -191,9 +200,9 @@ export interface FoundReference {
  */
 export function referencesIn(state: EditorState, from: number, to: number, options: LiveMarksOptions): FoundReference[] {
   const excluded = excludedRanges(state, from, to, options);
-  const found: FoundReference[] = [];
+  const found: FoundReference[] = issueAddressesIn(state, from, to).filter((address) => !insideAnotherExclusion(address, excluded));
   for (let line = state.doc.lineAt(from); ; line = state.doc.line(line.number + 1)) {
-    for (const reference of findReferences(line.text)) {
+    for (const reference of findReferences(line.text, state.facet(issueReferences) ?? undefined)) {
       const at = { from: line.from + reference.from, to: line.from + reference.to };
       if (at.from >= from && at.to <= to && !excluded.some(([start, end]) => at.from < end && at.to > start)) {
         found.push({ ...at, reference: reference.reference, source: reference.source });
@@ -201,6 +210,39 @@ export function referencesIn(state: EditorState, from: number, to: number, optio
     }
     if (line.to >= to || line.number === state.doc.lines) break;
   }
+  return found.sort((a, b) => a.from - b.from);
+}
+
+/**
+ * Whether an issue address sits inside a range that holds references out (code, a table drawn whole), other than its
+ * own: the address is itself one of the excluded ranges (`URL`, `Autolink`), which never holds it out.
+ */
+function insideAnotherExclusion(address: { from: number; to: number }, excluded: readonly [number, number][]): boolean {
+  return excluded.some(([start, end]) => start <= address.from && address.to <= end && (start !== address.from || end !== address.to));
+}
+
+/**
+ * The issue addresses in `[from, to]`: a bare address, or one between `<` and `>`, that is a bound project's issue's
+ * own page (`issueAtAddress`), as the shown comment reads them (`issueAddressOf` in lib/markdown). A link with its own
+ * text stays a link. The one reference read inside an address, so `excludedRanges` still keeps all others out.
+ */
+function issueAddressesIn(state: EditorState, from: number, to: number): FoundReference[] {
+  const issues = state.facet(issueReferences);
+  if (!issues) return [];
+  const found: FoundReference[] = [];
+  syntaxTree(state).iterate({
+    from,
+    to,
+    enter: (node) => {
+      if (node.name !== 'URL' && node.name !== 'Autolink') return;
+      // A link's address (`[text](…)`) isn't written as itself; the link's text is what shows.
+      if (node.name === 'URL' && ['Link', 'Image'].includes(node.node.parent?.name ?? '')) return false;
+      const source = state.sliceDoc(node.from, node.to);
+      const key = issues.issueAtAddress(node.name === 'Autolink' ? source.slice(1, -1) : source);
+      if (key && node.from >= from && node.to <= to) found.push({ from: node.from, to: node.to, reference: { kind: 'issue', key, bare: false }, source });
+      return false;
+    },
+  });
   return found;
 }
 

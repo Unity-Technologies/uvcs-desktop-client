@@ -1,4 +1,5 @@
 import { nameToEmoji } from 'gemoji';
+import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 import type { RepositoryLink } from '@shared/links/link';
 import { isAppLink, parseLink } from '@shared/links/parseLink';
 
@@ -26,7 +27,12 @@ export type CommentReference =
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; name: string; glyph: string }
   /** A `uvcs://` link (or the official client's `plastic://` one) to a repository's object or page (docs/features/deep-links.md). */
-  | { kind: 'link'; link: RepositoryLink };
+  | { kind: 'link'; link: RepositoryLink }
+  /**
+   * An issue of the place's tracker (docs/features/issue-trackers.md): its canonical key; `bare` for GitHub's `#12`,
+   * which shows as a chip only once read as found.
+   */
+  | { kind: 'issue'; key: string; bare: boolean };
 
 export interface FoundReference {
   reference: CommentReference;
@@ -64,14 +70,22 @@ export function mayHoldReference(text: string): boolean {
   return ANY_CANDIDATE.test(text);
 }
 
-/** Every reference in a text, in order. Code and links are the caller's to leave out (`parseMarkdown`). */
-export function findReferences(text: string): FoundReference[] {
+/**
+ * Every reference in a text, in order. Code and links are the caller's to leave out (`parseMarkdown`). With the
+ * place's tracker (`issues`), its issue keys too, where no other reference already reads the text (`br:/main/VCS-12`).
+ */
+export function findReferences(text: string, issues?: IssueReferenceReader): FoundReference[] {
   const found: FoundReference[] = [];
   for (const match of text.matchAll(CANDIDATE)) {
     const read = readCandidate(match[0]);
     if (read) found.push({ reference: read.reference, source: read.source, from: match.index, to: match.index + read.source.length });
   }
-  return found;
+  if (!issues) return found;
+  const keys = issues
+    .referencesIn(text)
+    .filter((issue) => !found.some((other) => issue.from < other.to && issue.to > other.from))
+    .map(({ key, bare, source, from, to }): FoundReference => ({ reference: { kind: 'issue', key, bare }, source, from, to }));
+  return keys.length === 0 ? found : [...found, ...keys].sort((a, b) => a.from - b.from);
 }
 
 function readCandidate(candidate: string): { reference: CommentReference; source: string } | null {

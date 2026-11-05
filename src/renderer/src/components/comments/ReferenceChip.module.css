@@ -46,6 +46,29 @@
   max-width: min(28ch, 100%);
 }
 
+/* An issue's mark (`IssueStatusIcon`): quiet until read, then its status's color, as its words are in the card. */
+.issueIcon {
+  flex: none;
+  align-self: center;
+  color: var(--text-tertiary);
+}
+
+.issueIcon[data-category='todo'] {
+  color: var(--issue-todo);
+}
+
+.issueIcon[data-category='inProgress'] {
+  color: var(--issue-in-progress);
+}
+
+.issueIcon[data-category='done'] {
+  color: var(--issue-done);
+}
+
+.issueIcon[data-category='canceled'] {
+  color: var(--issue-canceled);
+}
+
 .repository {
   flex: none;
   color: var(--text-secondary);

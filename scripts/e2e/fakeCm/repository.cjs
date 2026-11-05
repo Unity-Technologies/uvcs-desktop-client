@@ -34,7 +34,7 @@ const visible = { hidden: 'false' };
 
 const BRANCHES = [
   { id: 3, name: '/main', parent: '', changeset: 4, date: daysAgo(30), comment: 'The main branch', guid: 'aaaaaaaa-0000-0000-0000-000000000003', ...visible, ...common },
-  { id: 20, name: '/main/task-001', parent: '/main', changeset: 7, date: daysAgo(10), comment: 'Player movement', guid: 'aaaaaaaa-0000-0000-0000-000000000020', ...visible, ...common },
+  { id: 20, name: '/main/task-001', parent: '/main', changeset: 7, date: daysAgo(10), comment: 'Player movement: https://acme.atlassian.net/browse/VCS-12', guid: 'aaaaaaaa-0000-0000-0000-000000000020', ...visible, ...common },
   { id: 30, name: '/main/task-002', parent: '/main', changeset: 6, date: daysAgo(9), comment: 'Scene lighting', guid: 'aaaaaaaa-0000-0000-0000-000000000030', ...visible, ...common },
 ];
 
@@ -49,7 +49,7 @@ const CHANGESETS = [
   changeset(2, '/main', 1, 25, 'Add the player'),
   changeset(3, '/main', 2, 20, 'Tune the camera'),
   changeset(4, '/main', 3, 15, 'Release notes'),
-  changeset(5, '/main/task-001', 4, 10, 'Player jumps'),
+  changeset(5, '/main/task-001', 4, 10, 'VCS-12 Player jumps\n\nAlso fixes VCS-13 and VCS-99, as https://acme.atlassian.net/browse/VCS-14 asked.'),
   changeset(6, '/main/task-002', 4, 9, 'Warmer lights'),
   // Incoming: checked in on the workspace's branch after the changeset it loaded.
   changeset(7, '/main/task-001', 5, 8, 'Player runs', 'teammate@example.com'),

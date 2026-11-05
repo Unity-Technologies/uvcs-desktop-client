@@ -1,6 +1,7 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
+import { issueReferences } from './issueReferencesFacet';
 import { suggestionPicked } from './justPicked';
 import { ownStep } from './ownStep';
 import { SUGGESTION_TRIGGERS, type SuggestionKind } from './suggestionTriggers';
@@ -33,6 +34,13 @@ function triggerAlternatives(): string {
 /** An emoji's name as typed: GitHub's list opens after two letters, so a colon in a sentence opens nothing. */
 const EMOJI_NAME = /^[a-z0-9_+-]{2,}$/;
 
+/**
+ * What may follow `#` for an issue: a key, a number or a word of its title, with the title's own marks
+ * (`[Desktop]`, `(crash)`), which the search drops. Never another `#` (`##` is a heading's start); a space after `#`
+ * (`# Title`) ends the word before it starts, so a heading opens nothing.
+ */
+const ISSUE_TEXT = /^(?!#)\S*$/u;
+
 /** What a person's name may hold as typed, as `cm` names owners (`DOMAIN\name`, an email address). */
 const PERSON_NAME = /^[\p{L}\p{N}_.+\\@-]*$/u;
 
@@ -47,6 +55,8 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   const kind = SUGGESTION_TRIGGERS[trigger]!;
   if (kind === 'emoji' && !EMOJI_NAME.test(text)) return null;
   if (kind === 'person' && !PERSON_NAME.test(text)) return null;
+  // `#` is plain text where the place has no tracker: no list, no hint.
+  if (kind === 'issue' && (!ISSUE_TEXT.test(text) || !state.facet(issueReferences))) return null;
   const from = line.from + match.index;
   if (isInCode(state, from + 1) || isInAddress(state, from + 1)) return null;
   // A sentence's punctuation after the word stays: it's no part of a name (`TRAILING_PUNCTUATION`).

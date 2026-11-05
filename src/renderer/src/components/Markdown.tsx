@@ -7,6 +7,8 @@ import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
 import { ResolvedReferences } from './comments/ResolvedReferences';
+import { ResolvedIssues } from './issues/ResolvedIssues';
+import { useIssueReferences } from './issues/useIssueTrackers';
 import { InlinePicture } from './InlinePicture';
 import type { MarkdownImages } from './inlinePictureView';
 import styles from './Markdown.module.css';
@@ -19,12 +21,27 @@ interface MarkdownProps {
 
 /** Markdown text (a comment, release notes, an attribute's value) rendered as elements; web links open in the browser. */
 export function Markdown({ text, comment = false }: MarkdownProps) {
-  const blocks = useMemo(() => parseMarkdown(text, { comment }), [text, comment]);
+  return comment ? <CommentMarkdown text={text} /> : <TextMarkdown text={text} />;
+}
+
+function TextMarkdown({ text }: { text: string }) {
+  const blocks = useMemo(() => parseMarkdown(text), [text]);
+  return <MarkdownBlocks blocks={blocks} />;
+}
+
+/**
+ * A comment: its references as chips, the place's issues among them (`useIssueReferences`), only in a place's window,
+ * as release notes show outside one.
+ */
+function CommentMarkdown({ text }: { text: string }) {
+  const issues = useIssueReferences();
+  const blocks = useMemo(() => parseMarkdown(text, { comment: true, ...(issues && { issues }) }), [text, issues]);
   return (
     <>
-      {/* A comment shown in full reads its other repositories' objects; a row's chips wait for their cards. */}
-      {comment && <ResolvedReferences blocks={blocks} />}
-      <MarkdownBlocks blocks={blocks} source={comment ? text : undefined} />
+      {/* A comment shown in full reads its other repositories' objects and its issues; a row's chips wait for their cards. */}
+      <ResolvedReferences blocks={blocks} />
+      {issues && <ResolvedIssues blocks={blocks} />}
+      <MarkdownBlocks blocks={blocks} source={text} />
     </>
   );
 }

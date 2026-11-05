@@ -10,7 +10,11 @@ import type { ProfilesContext, ServiceContext } from './ServiceContext';
 /** Remote servers can be slow or ask for credentials; don't let one hang the home screen. */
 const LIST_TIMEOUT_MS = 20_000;
 
-export function createRepositoriesService({ cm }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
+/**
+ * `renamed` hears a repository renamed here, by its spec before and after (`game@acme@unity`, `racer@acme@unity`): its
+ * issue tracker follows it (`IssueTrackers.repositoryRenamed`).
+ */
+export function createRepositoriesService({ cm }: ServiceContext, { profiles }: ProfilesContext, renamed: (from: string, to: string) => void = () => undefined): RepositoriesApi {
   async function servers() {
     return serverProfiles(await profiles.read());
   }
@@ -39,6 +43,8 @@ export function createRepositoriesService({ cm }: ServiceContext, { profiles }: 
 
   async function rename(repositorySpec: string, newName: string): Promise<void> {
     await cm.query(['repository', 'rename', repositorySpec, newName]);
+    const at = repositorySpec.indexOf('@');
+    if (at > 0) renamed(repositorySpec, `${newName}${repositorySpec.slice(at)}`);
   }
 
   async function remove(repositorySpec: string): Promise<void> {

@@ -35,10 +35,11 @@ before.
   | `uvcs://…`, or the official client's `plastic://…` (`isAppLink`) | what the link opens (docs/features/deep-links.md), its text kept as written |
   | `@ana`, `@ACME\tom`, `@ana@acme.com`, `@josé` | a person, as `cm` names owners, in any script |
   | `:tada:` | an emoji, by GitHub's names (`gemoji`) |
+  | `VCS-12`, `#12`, `acme/game#12`, an issue's bare address | an issue of the repository's tracker, only where one is connected (docs/features/issue-trackers.md) |
 
   The prefixes are `cm`'s own, read as `cm` reads them: lower case only (`CS:12` isn't one), the body up to the
   first `@`, then the repository with `rep:` and `repserver:` dropped. `cm` has no spec for a code
-  review, so `cr:` is the app's, chosen to read like the others (`#311` was rejected: `#` is kept for issues). The
+  review, so `cr:` is the app's, chosen to read like the others (`#311` was rejected: `#` is issues'). The
   palette reads the same prefixes (`KIND_PREFIXES`, ARCHITECTURE.md "Prefixes"). `cm` has no end-of-token rule either (it takes one argument), so a comment's sentence punctuation and
   emphasis marks (`see cs:12.`, `(br:/main)`, `**cs:12**`) are left out of the reference (`TRAILING_PUNCTUATION`). A
   reference starts only after a space, a line's start, a bracket or an emphasis mark: `ana@acme.com`, `/a/cs:1`,
@@ -285,7 +286,7 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   buttons disabled while the caret is in the summary, whose formats are its keys; in code only the code block is
   enabled. The text then takes the box's whole width, a code block the same inset on both sides. The hints are the
   window's key hints, each key a cap as the palette and the shortcuts sheet draw them (`Kbd`): `cs:` `br:` `lb:`
-  `sh:` `cr:` reference, `@` mention, `:` emoji, read from the triggers the suggestions take
+  `sh:` `cr:` reference, `@` mention, `:` emoji, and `#` issue where the place has a tracker, read from the triggers the suggestions take
   (`focusModeHints`, `SUGGESTION_TRIGGERS`). ⇧⌘U is the link button's tooltip, as every format's key is. The hints
   keep one line: where it's too narrow the last ones go (`KeyHints`' `oneLine`, `hintsThatFit`), never wrapping. A table and a keycap have no button: no single construct of the
   Markdown reader holds a key's `<kbd>` tags to toggle, and an empty table is more text to fill in than to type.
@@ -327,8 +328,9 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
   field, made again with each place, so nothing carries over between places or fields), until another word is typed.
   Nothing it depends on is module-level; the lists it reads are the place's queries, keyed by the place.
 
-Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, after a space, a line's
-start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
+Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, or `#` where the place
+has an issue tracker (docs/features/issue-trackers.md "Suggesting issues"), after a space, a line's start, a bracket
+or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
 (`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
 (`suggestionKeyAction`); with nothing to pick, the arrows move the caret. Enter picks the highlighted suggestion,
@@ -346,8 +348,9 @@ when it joins several (the rainbow flag, a white flag and a rainbow joined). A `
 The list opens on the trigger's key, always with a row: a pick, or "Reading branches…" with a spinner (`Spinner`,
 still with reduced motion), or "Couldn't read branches" when the read failed (never "No branches", which would read
 as a repository with none; typing the trigger again reads again). The word typed is underlined in the chips' accent
-from its trigger on (`suggestionCue`, `suggestionCueField`), pulsing gently while its list is read, so the field
-shows it understood `br:` whatever the list does. The list opens under the line or over it, always inside the
+from its trigger on (`suggestionCue`, `suggestionCueField`), so the field shows it understood `br:` whatever the list
+does. It looks the same while its list is read: the list's spinner says so. A pulse on the word was tried and dropped:
+it restarted on every key typed, and the word flickered. The list opens under the line or over it, always inside the
 window, and is placed again as its rows change size (`suggestionListPosition`, a `ResizeObserver`).
 
 The data is sized for a repository of 20,000 branches and 280,000 changesets (`useSuggestionRows`, `listedFrom`).
