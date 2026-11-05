@@ -16,6 +16,8 @@ describe('issueChipShape', () => {
 
   it('shows an issue written as its address by its key', () => {
     expect(issueChipShape({ key: 'VCS-12', bare: false }, 'https://x.atlassian.net/browse/VCS-12', 'jiraCloud', undefined, true)).toMatchObject({ label: 'VCS-12' });
+    // Its `#` is how it was typed, as `@` and `cs:` are: the chip shows the issue, as theirs show the object.
+    expect(issueChipShape({ key: 'VCS-12', bare: false }, '#VCS-12', 'jiraDataCenter', undefined, true)).toMatchObject({ label: 'VCS-12' });
   });
 
   it('keeps a key the tracker reports missing a chip, as a changeset’s', () => {
