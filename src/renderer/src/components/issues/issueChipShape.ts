@@ -67,14 +67,17 @@ export function issueCard(reference: IssueReference, connection: Pick<TrackerCon
     case 'noAccess':
       return { title, meta: [`Your ${tracker} sign-in can't see it`] };
     case 'unreadable':
-      return { title, meta: [unreadableWords(tracker, read.reason)] };
+      return { title, meta: [unreadableWords(tracker, connection.kind, read.reason)] };
     case undefined:
       return { title, meta: [] };
   }
 }
 
-function unreadableWords(tracker: string, reason: Extract<IssueRead, { kind: 'unreadable' }>['reason']): string {
+function unreadableWords(tracker: string, kind: IssueTrackerKind, reason: Extract<IssueRead, { kind: 'unreadable' }>['reason']): string {
   switch (reason) {
+    case 'noAccess':
+      // The tracker refused the read itself (a 403), not one issue: the credential can't read issues at all.
+      return `Your ${tracker} ${kind === 'github' ? 'sign-in' : 'token'} can't read issues`;
     case 'signInRefused':
       return `Sign in to ${tracker} again to see it`;
     case 'rateLimited':
