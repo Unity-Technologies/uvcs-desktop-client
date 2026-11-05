@@ -420,8 +420,9 @@ or Connect with a sign-in already there (`connectsWithSignIn`). Back returns to 
    so (`choiceAfterLink`, `switchedWords`).
 2. **Sign in** (`signInStepFor`): when a connection already covers the link, "Connect" (with "Next: connect with your
    Jira sign-in" when it wasn't picked), and "Use a different account" beside it (another account's project, a token
-   that can't read this one, a shared computer): the ways to sign in, saying the new account replaces the kept one for
-   every repository that uses it (one sign-in per server: `replaces`). Otherwise the tracker's best sign-in method
+   that can't read this one, a shared computer): the ways to sign in. On Jira it says the new account replaces the
+   kept one for every repository that uses it (one sign-in per server: `replacesWords`); on GitHub a token's reach
+   decides (a fine-grained token is a sign-in of its own), so it promises nothing. Otherwise the tracker's best sign-in method
    ("Sign-in"). A token is two numbered steps (`TokenSignIn`, `tokenStepWords`): "Get a token from Jira", one line on
    what to do there and that the app only reads with it, and one button opening its page (and, for Data Center, the
    other page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`); then "Paste it here", the field with Sign in beside it. One

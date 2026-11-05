@@ -61,10 +61,11 @@ export function linkReadBack(text: string): LinkReadBack {
 
 /**
  * What signing in to a pasted link's tracker takes: a connection already signed in, or the ways to sign in. With
- * `differentAccount` (the user chose "Use a different account" over the one there), the ways to sign in, naming the
- * account the new one replaces: one sign-in per server, for every repository that uses it.
+ * `differentAccount` (the user chose "Use a different account" over the one there), the ways to sign in, and on Jira
+ * that the new account replaces the kept one (`replacesWords`): one sign-in per server, for every repository that uses
+ * it. GitHub promises nothing: a token's reach decides (a fine-grained one is a sign-in of its own).
  */
-export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string; replaces?: string };
+export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string; replacesWords?: string };
 
 export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup, { differentAccount = false } = {}): SignInStep {
   const connection = coveringConnection(setup.connections, link.kind, link.server, link.project);
@@ -76,7 +77,7 @@ export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup, { 
     kind: 'signIn',
     methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts),
     trackerName: TRACKER_GRAMMARS[link.kind].name,
-    ...(connection && signedIn && { replaces: connection.account.name }),
+    ...(connection && signedIn && isJira(connection.kind) && { replacesWords: `Signing in here replaces ${connection.account.name}'s sign-in, for every repository that uses it.` }),
   };
 }
 

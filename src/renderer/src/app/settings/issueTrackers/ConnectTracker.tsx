@@ -148,7 +148,7 @@ function SignInFor({ link, linkText, step, repository, picked, onConnected, onDi
   }
   return (
     <div className={styles.next}>
-      {step.replaces && <p className={styles.note}>Signing in here replaces {step.replaces}'s sign-in, for every repository that uses it.</p>}
+      {step.replacesWords && <p className={styles.note}>{step.replacesWords}</p>}
       {method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
       {method === 'deviceCode' ? (
         <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
