@@ -3,6 +3,8 @@
 // `TrackerHttp` ask this `fetch` instead of the network (`createIssueTrackers`; a packaged app ignores it). Its answers
 // are shaped as each tracker's (the providers' tests hold recorded ones). Any token of a tracker's shape signs in, but
 // one holding `bad`; GitHub's device flow approves at the fourth poll, about twelve seconds in. Unknown requests answer 404.
+// A Jira token holding `expiring` shows signing in again: it signs in and proves its project, then its issues answer
+// 401; trying it again finds Jira out of reach once, then refuses it, so a new token is asked for.
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -32,10 +34,24 @@ function tokenOf(headers) {
   return authorization.replace(/^Bearer /, '');
 }
 
+const myselfAsked = new Map();
+
+function expiring(token, path) {
+  if (path === '/rest/api/3/issue/bulkfetch') return answer(401, { errorMessages: ['Client must be authenticated'] });
+  if (path !== '/rest/api/3/myself') return null;
+  const asked = (myselfAsked.get(token) ?? 0) + 1;
+  myselfAsked.set(token, asked);
+  if (asked === 2) throw new Error('Jira is out of reach');
+  return asked > 2 ? answer(401, { errorMessages: ['Client must be authenticated'] }) : null;
+}
+
 function jira(url, init) {
   if (url.pathname === '/_edge/tenant_info') return answer(200, { cloudId: 'fake-cloud' });
-  if (tokenOf(init.headers).includes('bad')) return answer(401, { errorMessages: ['Client must be authenticated'] });
+  const token = tokenOf(init.headers);
+  if (token.includes('bad')) return answer(401, { errorMessages: ['Client must be authenticated'] });
   const path = url.pathname.replace(/^\/ex\/jira\/fake-cloud/, '');
+  const expired = token.includes('expiring') ? expiring(token, path) : null;
+  if (expired) return expired;
   if (path === '/rest/api/3/myself') return answer(200, { accountId: '5b10ac8d', displayName: 'Ana Díaz', emailAddress: 'ana@acme.com' });
   const project = /^\/rest\/api\/3\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
