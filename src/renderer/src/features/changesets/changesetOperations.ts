@@ -61,7 +61,7 @@ async function readBranchBase(place: Place, branch: string): Promise<number | un
   const outcome = readStartOutcome(start);
   if (outcome.kind === 'from') return outcome.base;
   if (outcome.kind === 'root') toast.info(`${branchLabel(branch)} starts from no other branch`);
-  else toast.error(failure, 'It has no changesets.');
+  else toast.error(failure);
   return undefined;
 }
 
