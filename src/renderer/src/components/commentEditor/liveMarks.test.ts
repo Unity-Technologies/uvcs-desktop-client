@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { editorState } from './commentEditorTesting';
 import { liveMarksOf, type LiveMark } from './liveMarks';
+import { withIssueReferences } from './issueReferencesFacet';
+import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import type { TrackerConnection } from '@shared/domain/issueTrackers';
 
 const FOCUSED = { revealsSelection: true };
 
@@ -106,6 +109,21 @@ describe('liveMarksOf', () => {
   });
 
   describe('references', () => {
+    it('draws a bare address of a bound project’s issue as its chip, as the shown comment does', () => {
+      const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.acme.com', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
+      const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+      const marksIn = (written: string) => {
+        const state = editorState(written, tracked);
+        return liveMarksOf(state, FOCUSED).map((mark) => shown(mark, state.doc.toString()));
+      };
+      expect(marksIn('See https://jira.acme.com/browse/VCS-12\n‸')).toEqual(['reference https://jira.acme.com/browse/VCS-12']);
+      expect(marksIn('See <https://jira.acme.com/browse/VCS-12>\n‸')).toEqual(['reference <https://jira.acme.com/browse/VCS-12>']);
+      // Another project, another server, or a link with its own text stays a link.
+      expect(marksIn('See https://jira.acme.com/browse/OPS-1\n‸')).toEqual([]);
+      expect(marksIn('See https://jira.other.com/browse/VCS-12\n‸')).toEqual([]);
+      expect(marksIn('See [the bug](https://jira.acme.com/browse/VCS-12)\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
+    });
+
     it('draws every reference as its chip', () => {
       expect(marksOf('Fixes cs:12 on br:/main/task for @ana :tada: ‸')).toEqual(['reference cs:12', 'reference br:/main/task', 'reference @ana', 'reference :tada:']);
     });
