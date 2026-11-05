@@ -142,8 +142,8 @@ Every edge with the outside is passed in, never imported where it's used:
 - The files' paths, as `SettingsStore` takes its own.
 
 A development build reads two variables (`createIssueTrackers`; a packaged app reads neither):
-`UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for GitHub's device flow, and `UVCS_FAKE_TRACKERS`,
-a module whose `fetch` answers as the trackers do (`scripts/e2e/fakeTrackers.cjs`), to see every flow with no account
+`UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for GitHub's device flow in place of the app's
+(`GITHUB_OAUTH_CLIENT_IDS`), and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do (`scripts/e2e/fakeTrackers.cjs`), to see every flow with no account
 and no network.
 
 The Connect flow's decisions (which step shows, its words, which failure gets which message, what the suggestion
@@ -493,8 +493,9 @@ so none ships. "Use a token instead" is a quiet link beside the button.
 
 The app's OAuth App on github.com (its client id in `GITHUB_OAUTH_CLIENT_IDS`) has Device Flow on and "Expire user
 access tokens" off: the app keeps the access token alone, no refresh token, so a token that expired would ask the user
-to sign in again every eight hours. The token lasts until the user signs out or revokes the app on GitHub. Turning
-expiry on first needs the refresh: keeping the `refresh_token` as a secret and trading it for a new access token.
+to sign in again every eight hours. The token lasts until the user signs out, revokes the app on GitHub, or leaves it
+unused for a year (GitHub then revokes it): each asks the user to sign in again. Turning expiry on first needs the
+refresh: keeping the `refresh_token` as a secret and trading it for a new access token.
 
 A flow lives as long as the window that started it waits for it:
 
