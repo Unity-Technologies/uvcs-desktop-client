@@ -25,6 +25,11 @@ export function trackerStatus(connection: Pick<TrackerConnection, 'credential' |
   return { tone: 'positive', label: 'Connected' };
 }
 
+/** What the card says when the tracker can't be reached: where, and what that means for the comments. */
+export function unreachableWords(connection: Pick<TrackerConnection, 'kind' | 'server'>): { title: string; detail: string } {
+  return { title: `Can't reach ${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`, detail: 'Issues show as plain links until it answers.' };
+}
+
 /** The card's header: the tracker by name, its server's kind and host. */
 export function trackerHeader(connection: Pick<TrackerConnection, 'kind' | 'server'>): { name: string; kindName: string; host: string } {
   return { name: TRACKER_GRAMMARS[connection.kind].name, kindName: trackerKindName(connection.kind, connection.server), host: hostOf(connection.server) };

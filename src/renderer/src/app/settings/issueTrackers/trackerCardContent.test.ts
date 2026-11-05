@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, proofLines, tokenStepLead, trackerHeader, trackerStatus } from './trackerCardContent';
+import { accountLines, connectSteps, disconnectQuestion, projectRows, projectsExplained, proofLines, tokenStepLead, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.unity3d.com', account: { id: 'JIRAUSER10100', name: 'Daniel Peñalba', email: 'daniel@unity3d.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*', account: { id: 'danipen', name: 'Daniel Peñalba' } };
@@ -17,8 +17,9 @@ describe('trackerStatus', () => {
     expect(trackerStatus(jira, { kind: 'failed', reason: 'signInRefused' })).toMatchObject({ tone: 'caution' });
   });
 
-  it('says the tracker can’t be reached when no project answered', () => {
+  it('says the tracker can’t be reached when no project answered, where, and what that means', () => {
     expect(trackerStatus(jira, { kind: 'failed', reason: 'unreachable' })).toEqual({ tone: 'danger', label: "Can't reach Jira" });
+    expect(unreachableWords(jira)).toEqual({ title: "Can't reach Jira at jira.unity3d.com", detail: 'Issues show as plain links until it answers.' });
   });
 });
 

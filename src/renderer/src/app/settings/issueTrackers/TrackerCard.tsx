@@ -12,7 +12,8 @@ import { ProjectsSection } from './ProjectsSection';
 import { ProofLines } from './ProofLines';
 import { SignInAgain } from './SignInAgain';
 import { StatusPill } from './StatusPill';
-import { accountLines, disconnectQuestion, needsSignIn, proofLines, SUCCESS_SHOWN_MS, trackerHeader, trackerStatus } from './trackerCardContent';
+import { accountLines, disconnectQuestion, needsSignIn, proofLines, SUCCESS_SHOWN_MS, trackerHeader, trackerStatus, unreachableWords } from './trackerCardContent';
+import { Button } from '../../../ui/Button';
 import { TrackerIcon } from './TrackerIcon';
 import { useBoundProjects } from './useBoundProjects';
 import styles from './IssueTrackerPane.module.css';
@@ -73,6 +74,19 @@ export function TrackerCard({ repository, connected, justConnected, onSettled, o
         <div className={styles.section}>
           <div className={styles.callout} data-tone="caution">
             <SignInAgain connection={connection} why={connected.signInAgain} />
+          </div>
+        </div>
+      )}
+      {status.tone === 'danger' && (
+        <div className={styles.section}>
+          <div className={styles.callout} data-tone="danger" role="alert">
+            <p className={styles.calloutTitle}>{unreachableWords(connection).title}</p>
+            <p className={styles.intro}>{unreachableWords(connection).detail}</p>
+            <div className={styles.row}>
+              <Button size="small" loading={projects.isFetching} onClick={() => void projects.refetch()}>
+                Try again
+              </Button>
+            </div>
           </div>
         </div>
       )}
