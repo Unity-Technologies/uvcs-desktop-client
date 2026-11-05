@@ -265,6 +265,7 @@ export function BranchExplorerView() {
     handleGraphKey(event, {
       layout,
       selection,
+      selections: selectionsRef.current,
       select: setSelection,
       homeChangeset,
       repository,

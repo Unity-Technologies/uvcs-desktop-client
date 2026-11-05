@@ -4,6 +4,7 @@ import { workspacePlace } from '@shared/domain/place';
 import type { MenuEntry } from '../../lib/actions';
 import { graphMenu } from './graphMenu';
 import type { GraphSelections } from './graphSelection';
+import type { BranchPins } from './model/branchRows';
 import { sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -47,6 +48,22 @@ describe('graphMenu for several selected', () => {
     const labels = labelsOf(graphMenu({ kind: 'branch', lane: laneA }, contextWith([{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }])));
     expect(labels).toEqual(expect.arrayContaining(['Hide 2 branches', 'Delete 2 branches…']));
     expect(labels).not.toContain('Switch to this branch');
+  });
+
+  it('moves every branch selected together from Position', () => {
+    // The sample's branches share one id, and pins are kept by id: these get their own.
+    const numbered = layoutGraph({ ...history, branches: history.branches.map((each, index) => ({ ...each, id: index + 1 })) });
+    const lane = (name: string) => numbered.lanesByBranch.get(name)!;
+    const saved: BranchPins[] = [];
+    const context = {
+      ...contextWith([{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }]),
+      layout: numbered,
+      positions: { pins: [], setPins: (pins: BranchPins) => saved.push(pins) },
+    };
+    const position = graphMenu({ kind: 'branch', lane: lane('/main/a') }, context).find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'position');
+    const toTop = (position as { entries: MenuEntry[] }).entries.find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'position.top');
+    (toTop as { run: () => void }).run();
+    expect(saved.map((pins) => pins.map(({ branch }) => branch).sort())).toEqual([[lane('/main/a').branch.id, lane('/main/b').branch.id].sort()]);
   });
 
   it('is the menu of the one right-clicked when it isn’t in the selection', () => {

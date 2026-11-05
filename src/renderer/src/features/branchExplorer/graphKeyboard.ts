@@ -3,11 +3,11 @@ import { spec } from '@shared/domain/specs';
 import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { isTextEntry } from '../../lib/textEntry';
-import { BRANCH_MOVES, moveBranch, type BranchPositions } from './branchPosition';
+import { BRANCH_MOVES, moveBranches, type BranchPositions } from './branchPosition';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import { ZOOM_STEP } from './canvas/zoom';
 import { graphActions, openSelection } from './graphActions';
-import type { GraphSelection } from './graphSelection';
+import type { GraphSelection, GraphSelections } from './graphSelection';
 import { selectedLabel } from './model/graphLabels';
 import { movedSelection, selectedBranchOf, type GraphMove } from './model/keyboardMoves';
 import type { GraphLayout, Lane } from './model/layoutGraph';
@@ -20,6 +20,8 @@ export interface GraphKeyboard {
   layout: GraphLayout | null;
   /** The lead of the selection (`leadOf`): what the keys move from and act on. */
   selection: GraphSelection | null;
+  /** Everything selected, the lead last: ⌘↑ and ⌘↓ move all of it (`keyboardMoveLanes`). */
+  selections: GraphSelections;
   /** Selects one alone, or nothing. */
   select: (selection: GraphSelection | null) => void;
   homeChangeset: number | null;
@@ -34,7 +36,7 @@ export interface GraphKeyboard {
   toggleDetails: () => void;
   /** Esc with nothing selected: out of the focus on a branch. */
   exitFocus: () => void;
-  /** The branches moved in the repository shown: ⌘↑ and ⌘↓ move the selected one (`graphMoveBranch*`); null while it isn't known. */
+  /** The branches moved in the repository shown: ⌘↑ and ⌘↓ move the selected ones (`graphMoveBranch*`); null while it isn't known. */
   positions: BranchPositions | null;
 }
 
@@ -50,12 +52,15 @@ export function keyboardMergeSource(selection: GraphSelection | null, inWorkspac
 }
 
 /**
- * The lane ⌘↑ and ⌘↓ move: the branch selected, or the selected changeset's. Null with nothing on a drawn branch
- * selected, so the keys aren't bound and reach the rest of the window.
+ * The lanes ⌘↑ and ⌘↓ move: each branch selected, or each selected changeset's, once. Empty with nothing on a drawn
+ * branch selected, so the keys aren't bound and reach the rest of the window.
  */
-export function keyboardMoveLane(layout: GraphLayout, selection: GraphSelection | null): Lane | null {
-  const branchName = selectedBranchOf(layout, selection);
-  return (branchName !== null ? layout.lanesByBranch.get(branchName) : undefined) ?? null;
+export function keyboardMoveLanes(layout: GraphLayout, selections: GraphSelections): Lane[] {
+  const names = new Set(selections.map((selection) => selectedBranchOf(layout, selection)));
+  return [...names].flatMap((name) => {
+    const lane = name === null ? undefined : layout.lanesByBranch.get(name);
+    return lane ? [lane] : [];
+  });
 }
 
 /** The Branch Explorer's `graph*` shortcuts, pressed anywhere in the view but in its fields, buttons and menus. */
@@ -73,7 +78,8 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
   const { selection, select, homeChangeset, repository, canvas, goHome } = keyboard;
   const selectedId = selection?.kind === 'changeset' ? selection.id : null;
   const branchName = selectedBranchOf(layout, selection);
-  const lane = keyboardMoveLane(layout, selection);
+  const lane = branchName !== null ? layout.lanesByBranch.get(branchName) : undefined;
+  const movingLanes = keyboardMoveLanes(layout, keyboard.selections);
   const { positions } = keyboard;
 
   // Keyboard moves glide the view along, just enough to keep the selection in sight.
@@ -128,7 +134,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
         if (source !== null) graphActions.merge('merge', source);
       }),
     ],
-    ...(lane && positions ? BRANCH_MOVES.map(({ move, shortcutId }): [ShortcutId, () => void] => [shortcutId, () => moveBranch(layout, lane, move, positions)]) : []),
+    ...(movingLanes.length > 0 && positions ? BRANCH_MOVES.map(({ move, shortcutId }): [ShortcutId, () => void] => [shortcutId, () => moveBranches(layout, movingLanes, move, positions)]) : []),
     ['graphDetails', keyboard.toggleDetails],
     ['graphContextMenu', openContextMenu],
     // ⌘F is the palette command's; the view adds the plain key.

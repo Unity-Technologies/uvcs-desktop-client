@@ -2,8 +2,8 @@ import '../../testing/fakeWindow';
 import type { KeyboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphActions } from './graphActions';
-import { handleGraphKey, keyboardMergeSource, keyboardMoveLane, type GraphKeyboard } from './graphKeyboard';
-import type { GraphSelection } from './graphSelection';
+import { handleGraphKey, keyboardMergeSource, keyboardMoveLanes, type GraphKeyboard } from './graphKeyboard';
+import type { GraphSelection, GraphSelections } from './graphSelection';
 import { branch, changeset, sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -31,6 +31,7 @@ function keyboardOn(selection: GraphSelection, selected: (GraphSelection | null)
   return {
     layout: layoutGraph(sampleHistory()),
     selection,
+    selections: [selection],
     select: (next) => selected.push(next),
     homeChangeset: 6,
     repository: 'game@local',
@@ -70,22 +71,26 @@ describe('the keys that act on one object', () => {
   });
 });
 
-describe('keyboardMoveLane', () => {
+describe('keyboardMoveLanes', () => {
   const layout = layoutGraph({
-    branches: [branch('/main', '', 1), branch('/main/task', '/main', 2)].map((each, index) => ({ ...each, id: index + 1 })),
-    changesets: [changeset(0, '/main', -1), changeset(1, '/main/task', 0)],
+    branches: [branch('/main', '', 1), branch('/main/task', '/main', 2), branch('/main/other', '/main', 3)].map((each, index) => ({ ...each, id: index + 1 })),
+    changesets: [changeset(0, '/main', -1), changeset(1, '/main/task', 0), changeset(2, '/main/task', 1), changeset(3, '/main/other', 0)],
     mergeLinks: [],
     labels: [],
   });
+  const names = (selections: GraphSelections) => keyboardMoveLanes(layout, selections).map((lane) => lane.branch.name);
 
   it('moves the branch selected, or the branch of the changeset selected', () => {
-    expect(keyboardMoveLane(layout, { kind: 'branch', name: '/main/task' })?.branch.name).toBe('/main/task');
-    expect(keyboardMoveLane(layout, { kind: 'changeset', id: 1 })?.branch.name).toBe('/main/task');
+    expect(names([{ kind: 'branch', name: '/main/task' }])).toEqual(['/main/task']);
+    expect(names([{ kind: 'changeset', id: 1 }])).toEqual(['/main/task']);
+  });
+
+  it('moves every branch selected, each once', () => {
+    expect(names([{ kind: 'changeset', id: 1 }, { kind: 'changeset', id: 2 }, { kind: 'branch', name: '/main/other' }])).toEqual(['/main/task', '/main/other']);
   });
 
   it('moves nothing with nothing on a drawn branch selected, so the key is left to the rest of the window', () => {
-    expect(keyboardMoveLane(layout, null)).toBeNull();
-    expect(keyboardMoveLane(layout, { kind: 'branch', name: '/main/gone' })).toBeNull();
-    expect(keyboardMoveLane(layout, { kind: 'changeset', id: 99 })).toBeNull();
+    expect(names([])).toEqual([]);
+    expect(names([{ kind: 'branch', name: '/main/gone' }, { kind: 'changeset', id: 99 }])).toEqual([]);
   });
 });

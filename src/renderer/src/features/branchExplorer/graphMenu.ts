@@ -87,23 +87,22 @@ function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository,
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),
     menuAction('related', () => showRelatedTo(branch.name)),
-    menuSubmenu('position', branchPositionEntries(layout, lane, positions)),
+    menuSubmenu('position', branchPositionEntries(layout, [lane], positions)),
   ]);
 }
 
 /**
  * The lists' menus for every object selected, which offer what applies to several (a diff of two changesets or two
- * labels, hiding or deleting branches); the graph's ways around one object (its parent, head, base) aren't for several.
+ * labels, hiding or deleting branches), and Position for branches, which moves them together; the graph's ways around
+ * one object (its parent, head, base) aren't for several.
  */
 function selectionMenu(selections: GraphSelections, context: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { place, layout, currentBranch, loadedChangeset, repository } = context;
   const lead = selections.at(-1)!;
   if (lead.kind === 'branch') {
-    const branches = selections.flatMap((selection) => {
-      const branch = selection.kind === 'branch' ? layout.lanesByBranch.get(selection.name)?.branch : undefined;
-      return branch ? [{ ...branch, repository }] : [];
-    });
-    return branchMenu(place, branches, currentBranch, host);
+    const lanes = selections.flatMap((selection) => (selection.kind === 'branch' ? present(layout.lanesByBranch.get(selection.name)) : []));
+    const branches = lanes.map(({ branch }) => ({ ...branch, repository }));
+    return withEntries(branchMenu(place, branches, currentBranch, host), [menuSubmenu('position', branchPositionEntries(layout, lanes, context.positions))]);
   }
   if (lead.kind === 'changeset' && lead.label !== undefined) {
     return labelMenu(place, selections.flatMap((selection) => present(selectedLabel(layout, selection, repository ?? ''))), host);
