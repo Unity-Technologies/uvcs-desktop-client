@@ -23,9 +23,9 @@ describe('issueReferenceReader', () => {
     expect(reader.referencesIn('#4').map(({ key }) => key)).toEqual(['acme/game#4']);
   });
 
-  it('writes a picked issue as the grammar reads it back: a Jira key, `#12` for the one repository bound', () => {
+  it('writes a picked issue as the grammar reads it back, its `#` kept as typed: `#VCS-12`, `#12` for the one repository bound', () => {
     const jiraReader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS', 'OPS'] }, jira);
-    expect(jiraReader.referenceText('VCS-12')).toBe('VCS-12');
+    expect(jiraReader.referenceText('VCS-12')).toBe('#VCS-12');
     const one = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['Acme/Game'] }, github);
     expect(one.referenceText('acme/game#12')).toBe('#12');
     expect(one.referenceText('acme/tools#3')).toBe('acme/tools#3');

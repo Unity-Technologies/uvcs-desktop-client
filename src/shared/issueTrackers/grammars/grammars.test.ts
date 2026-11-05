@@ -22,6 +22,12 @@ describe('Jira Cloud references', () => {
     expect(keysIn('scmVCS-12 /a/VCS-12 x.VCS-12 VCS-012 VCS-12x VCS-12_fix', ['VCS'])).toEqual([]);
   });
 
+  it('reads a key written with `#` before it, the `#` part of it, as a picked issue writes it', () => {
+    expect(jiraCloudGrammar.referencesReader(['VCS'])('Fixes #VCS-12.').map(({ key, source, from, to }) => ({ key, source, from, to }))).toEqual([{ key: 'VCS-12', source: '#VCS-12', from: 6, to: 13 }]);
+    // Never after a word or another `#`: `C#VCS-1` and `##VCS-1` are no references.
+    expect(keysIn('C#VCS-1 ##VCS-1', ['VCS'])).toEqual([]);
+  });
+
   it('reads a key in emphasis', () => {
     expect(keysIn('_VCS-12_ and **VCS-13**', ['VCS']).map(({ key }) => key)).toEqual(['VCS-12', 'VCS-13']);
   });
