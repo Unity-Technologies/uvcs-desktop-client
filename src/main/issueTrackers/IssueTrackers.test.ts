@@ -29,7 +29,7 @@ const SIGNED_IN: TrackerAnswers = {
 /** A wait that never ends by itself, only when canceled: the poll it holds back is never sent. */
 const waitUntilCanceled: Wait = (_ms, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('canceled'))));
 
-function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
+function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, consentAsync = undefined as ((server: string) => Promise<boolean>) | undefined, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'trackers-'));
   const tracker = fakeTrackerHttp(answers);
   const announced: IssueTrackerSetup[] = [];
@@ -45,7 +45,7 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
     wait,
     oauthClientIds: clientIds,
     openExternal: (url) => opened.push(url),
-    askHostConsent: async (server) => consent(server),
+    askHostConsent: consentAsync ?? (async (server) => consent(server)),
   });
   return { engine, tracker, announced, opened };
 }
@@ -101,6 +101,32 @@ describe('IssueTrackers', () => {
     expect((await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN })).kind).toBe('signedIn');
     expect((await engine.signInWithToken({ repository: 'other@acme@unity', link, token: TOKEN })).kind).toBe('signedIn');
     expect(asked).toEqual(['https://git.acme.com']);
+  });
+
+  it('asks one question at a time per host: sign-ins on their way wait for its answer', async () => {
+    let answer = (_allowed: boolean): void => undefined;
+    const asked: string[] = [];
+    const { engine, tracker } = trackers({}, { consentAsync: (server) => (asked.push(server), new Promise<boolean>((resolve) => (answer = resolve))) });
+    const link = 'https://evil.example/a/b/issues/1';
+    const first = engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
+    const second = engine.signInWithToken({ repository: 'other@acme@unity', link, token: TOKEN });
+    await new Promise((resolve) => setImmediate(resolve));
+    answer(false);
+    expect([await first, await second]).toEqual([
+      { kind: 'failed', failure: { reason: 'hostDeclined', server: 'https://evil.example' } },
+      { kind: 'failed', failure: { reason: 'hostDeclined', server: 'https://evil.example' } },
+    ]);
+    expect(asked).toEqual(['https://evil.example']);
+    expect(tracker.requests).toEqual([]);
+  });
+
+  it('asks again on the next sign-in after a decline: each is the user’s own paste', async () => {
+    const asked: string[] = [];
+    const { engine } = trackers({}, { consent: (server) => (asked.push(server), false) });
+    const link = 'https://evil.example/a/b/issues/1';
+    await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
+    await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
+    expect(asked).toEqual(['https://evil.example', 'https://evil.example']);
   });
 
   it('asks nothing for github.com or Jira Cloud', async () => {
