@@ -263,12 +263,16 @@ export function connectsWithSignIn(pickedId: string | null, linkRead: boolean, s
 }
 
 /**
- * What a repository's part of Settings shows: Connect once a sign-in or a tracker was picked (`starting`); its
- * starting card while it has no tracker, or the user is changing it; else its tracker's card.
+ * What a repository's part of Settings shows, with what it needs: Connect once a sign-in or a tracker was picked
+ * (`start`); its starting card while it has no tracker, or the user is changing the one it has (`changingFrom`, for
+ * Back); else its tracker's card.
  */
-export function repositoryTrackerView(state: { starting: boolean; connected: boolean; changing: boolean }): 'connect' | 'start' | 'connected' {
-  if (state.starting) return 'connect';
-  return !state.connected || state.changing ? 'start' : 'connected';
+export type RepositoryTrackerView<Start, Connected> = { kind: 'connect'; start: Start } | { kind: 'start'; changingFrom: Connected | null } | { kind: 'connected'; connected: Connected };
+
+export function repositoryTrackerView<Start, Connected>(state: { start: Start | null; connected: Connected | null; changing: boolean }): RepositoryTrackerView<Start, Connected> {
+  if (state.start !== null) return { kind: 'connect', start: state.start };
+  if (state.connected === null || state.changing) return { kind: 'start', changingFrom: state.changing ? state.connected : null };
+  return { kind: 'connected', connected: state.connected };
 }
 
 /** Connect's step: the link until one reads back, then signing in (`connectSteps`). */
