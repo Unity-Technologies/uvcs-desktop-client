@@ -10,6 +10,8 @@
 // are read-only, as resolution's API Token Authentication makes them: any POST is a 403. A search takes a boolean
 // `validateQuery`, and anything else is a 400, as Data Center answers it.
 // Searches (`#` in a comment): the account's open issues are those not done; words find the titles holding them all.
+// Jira Cloud has two projects, VCS and OPS. A Jira token holding `offline` signs in and proves its project, then Jira
+// is out of reach for it (Settings says it can't reach Jira).
 'use strict';
 
 const JIRA = 'https://acme.atlassian.net';
@@ -68,6 +70,17 @@ function tokenOf(headers) {
 }
 
 const myselfAsked = new Map();
+const projectAsked = new Map();
+
+/** Jira out of reach once a token holding `offline` signed in and proved its project. */
+function offline(token, path) {
+  if (!path.startsWith('/rest/api/3/project/')) return;
+  const asked = (projectAsked.get(token) ?? 0) + 1;
+  projectAsked.set(token, asked);
+  if (asked > 1) throw new Error('Jira is out of reach');
+}
+
+const JIRA_PROJECTS = { VCS: 'Version Control', OPS: 'Operations' };
 
 function expiring(token, path) {
   if (path === '/rest/api/3/issue/bulkfetch') return answer(401, { errorMessages: ['Client must be authenticated'] });
@@ -85,9 +98,10 @@ function jira(url, init) {
   const path = url.pathname.replace(/^\/ex\/jira\/fake-cloud/, '');
   const expired = token.includes('expiring') ? expiring(token, path) : null;
   if (expired) return expired;
+  if (token.includes('offline')) offline(token, path);
   if (path === '/rest/api/3/myself') return answer(200, { accountId: '5b10ac8d', displayName: 'Ana Díaz', emailAddress: 'ana@acme.com' });
   const project = /^\/rest\/api\/3\/project\/([A-Z0-9_]+)$/.exec(path);
-  if (project) return project[1] === 'VCS' ? answer(200, { key: 'VCS', name: 'Version Control' }) : answer(404, { errorMessages: ['No project could be found'] });
+  if (project) return JIRA_PROJECTS[project[1]] ? answer(200, { key: project[1], name: JIRA_PROJECTS[project[1]] }) : answer(404, { errorMessages: ['No project could be found'] });
   if (path === '/rest/api/3/search/jql') return answer(200, { issues: jiraSearched(JSON.parse(init.body).jql) });
   if (path === '/rest/api/3/search/approximate-count') return answer(200, { count: JSON.parse(init.body).jql.includes('currentUser') ? 6 : 214 });
   if (path === '/rest/api/3/issue/bulkfetch') {
