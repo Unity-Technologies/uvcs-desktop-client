@@ -57,6 +57,23 @@ so opening it asks nothing more. A condition `cm` refuses fails only its own rul
 a question, no earlier answer colors or hides anything (`shownRuleMatches`). A rule's find has no date range or
 `limit`, since it must hold for everything the graph may draw; it prints one field per object matched (`matchRules`).
 
+"Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, and `isOnIn` and `withOnIn` in
+`model/offByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
+colored and no rule asks the server anything, and the tab dims them until they're turned back on. With no rule, the tab shows
+no switch, so adding the first one turns the rules on (`addingTurnsRulesOn`).
+
+### Changeset colors
+
+The display options' third tab (`ChangesetColorsTab`) gives each person picked a color their changesets take
+(`UserColors`, `model/userColors.ts`). People keep their color in every repository, so the list is the view's, not a
+repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
+yet, by name (`usersToAdd`); each one added takes the first of `BRANCH_HUES` no one has (`withUsersAdded`). A
+changeset's color is its format rule's, else its author's, else its branch's: the authors' colors go under the rules'
+(`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off in the window's repository
+alone and keeps the list, as "Apply these rules" does (`setUserColorsOn`, `useAppliedUserColors`). With no one colored,
+the tab shows no switch, so adding the first person turns the colors on there (`addingTurnsColorsOn`). The tab reads
+the view's own history query, so opening it asks the server nothing.
+
 ## Loading
 
 While the history is read, the canvas's pane shows the date ruler and a few branches drawn with the graph's own
