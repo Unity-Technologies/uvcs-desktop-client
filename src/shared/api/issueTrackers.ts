@@ -1,14 +1,20 @@
 import type { BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
 
-/** A sign-in for a repository, from a link to one of its tracker's issues: main reads the link itself. */
-export interface RepositorySignIn {
-  /** The repository's spec, as `cm` names it. */
-  repository: string;
+/**
+ * A sign-in from a link to one of its tracker's issues, main reading the link itself: for a repository, which it binds
+ * to the link's project; or, from a window with no repository, for the sign-in alone, which any repository can use.
+ */
+export interface LinkSignIn {
+  /** The repository's spec, as `cm` names it; none for a sign-in alone. */
+  repository?: string;
   /** A link to any issue of the tracker: it names the server and the project. */
   link: string;
   /** Jira Cloud's account email, which its token goes with. */
   email?: string;
 }
+
+/** A link's sign-in for a repository. */
+export type RepositorySignIn = LinkSignIn & { repository: string };
 
 /** Whose token page: a link's tracker, or a connection's (signing in again). */
 export type TokenPageTarget = { link: string } | { connectionId: string };
@@ -24,8 +30,8 @@ export interface IssueTrackersApi {
   /** The connections, without secrets, and the bindings. */
   setup(): Promise<IssueTrackerSetup>;
 
-  /** Signs in with a token and binds the repository to the link's project, proving it. */
-  signInWithToken(request: RepositorySignIn & { token: string }): Promise<SignInOutcome>;
+  /** Signs in with a token, proving the link's project, and binds the repository to it when there's one. */
+  signInWithToken(request: LinkSignIn & { token: string }): Promise<SignInOutcome>;
   /** A connection whose credential stopped working, with a new token. */
   signInAgain(request: { connectionId: string; email?: string; token: string }): Promise<SignInOutcome>;
   /** Tries a connection's kept credential once more (`whoAmI`), before asking for a new one. */
@@ -34,10 +40,10 @@ export interface IssueTrackersApi {
   openTokenPage(target: TokenPageTarget, choice?: TokenPageChoice): Promise<void>;
 
   /**
-   * Starts GitHub's device flow: the code the user enters on the page it names. For a repository by a link, or for a
-   * connection signing in again (its bindings kept).
+   * Starts GitHub's device flow: the code the user enters on the page it names. By a link (for a repository, or the
+   * sign-in alone), or for a connection signing in again (its bindings kept).
    */
-  startDeviceSignIn(request: RepositorySignIn | { connectionId: string }): Promise<DeviceSignIn | { failure: SignInFailure }>;
+  startDeviceSignIn(request: LinkSignIn | { connectionId: string }): Promise<DeviceSignIn | { failure: SignInFailure }>;
   /** Waits for the user to approve the code, then signs in and binds as a token would. */
   finishDeviceSignIn(flowId: string): Promise<SignInOutcome>;
   cancelDeviceSignIn(flowId: string): Promise<void>;

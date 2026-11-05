@@ -1,4 +1,4 @@
-import type { RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
+import type { LinkSignIn, RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { BoundProject, BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, TrackerErrorReason, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
@@ -79,7 +79,7 @@ export class IssueTrackers {
     return { connections, bindings: [...store.bindings()], sessionOnly, deviceFlowHosts: deviceFlowHostsOf(this.deps.oauthClientIds) };
   }
 
-  async signInWithToken(request: RepositorySignIn & { token: string }): Promise<SignInOutcome> {
+  async signInWithToken(request: LinkSignIn & { token: string }): Promise<SignInOutcome> {
     const reading = this.readLink(request.link);
     if ('failure' in reading) return failed(reading.failure);
     const credential = this.credentialOf(reading.kind, request.token, request.email);
@@ -134,8 +134,8 @@ export class IssueTrackers {
     if (tracker) this.deps.openExternal(await this.tokenPages.urlOf(tracker, choice));
   }
 
-  /** A first sign-in for a repository, by a link; or a connection's again, by its id, its bindings kept. */
-  async startDeviceSignIn(request: RepositorySignIn | { connectionId: string }, ownerId?: number): Promise<DeviceSignIn | { failure: SignInFailure }> {
+  /** A first sign-in by a link, for a repository or alone; or a connection's again, by its id, its bindings kept. */
+  async startDeviceSignIn(request: LinkSignIn | { connectionId: string }, ownerId?: number): Promise<DeviceSignIn | { failure: SignInFailure }> {
     const again = 'connectionId' in request ? this.deps.store.connection(request.connectionId) : undefined;
     const reading = 'connectionId' in request ? (again ?? { failure: { reason: 'unexpected', message: 'This sign-in is gone' } as const }) : this.readLink(request.link);
     if ('failure' in reading) return reading;
@@ -156,7 +156,7 @@ export class IssueTrackers {
       (end) => {
         if (!('token' in end)) return failed({ reason: end.failed === 'unexpected' ? 'tokenRefused' : end.failed });
         if (again) return this.renewCredential(again, { token: end.token }, 'deviceCode');
-        return 'repository' in request && 'project' in reading ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: 'canceled' });
+        return 'link' in request && 'project' in reading ? this.completeSignIn(reading, request.repository, { token: end.token }, 'deviceCode') : failed({ reason: 'canceled' });
       },
       (error: unknown) => (canceling.signal.aborted ? failed({ reason: 'canceled' }) : failed(signInFailureOf(error, reading.server))),
     );
@@ -338,7 +338,7 @@ export class IssueTrackers {
     return { token, ...(kind === 'jiraCloud' && { email: email!.trim() }) };
   }
 
-  private async completeSignIn(reading: RecognizedLink, repository: string, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
+  private async completeSignIn(reading: RecognizedLink, repository: string | undefined, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
     if (!(await this.hostAllowed(reading.server, reading.kind))) return failed({ reason: 'hostDeclined', server: reading.server });
     const provider = this.providers[reading.kind];
     let signedIn;
@@ -388,11 +388,14 @@ export class IssueTrackers {
     return asked;
   }
 
-  /** Proves `project` with the connection, then binds the repository to it; nothing is bound when the project can't be read. */
-  private async bindProven(connection: StoredConnection, repository: string, projects: string[], project: string): Promise<SignInOutcome> {
+  /**
+   * Proves `project` with the connection, then binds the repository to it (none: a sign-in alone, from a window with no
+   * repository); nothing is bound when the project can't be read.
+   */
+  private async bindProven(connection: StoredConnection, repository: string | undefined, projects: string[], project: string): Promise<SignInOutcome> {
     try {
       const access = await this.providers[connection.kind].projectAccess(this.connectionHttp(connection), connection, project);
-      this.deps.store.bind({ repository, connectionId: connection.id, projects });
+      if (repository) this.deps.store.bind({ repository, connectionId: connection.id, projects });
       this.announce();
       return { kind: 'signedIn', connection: this.withCredential(connection), access };
     } catch (error) {
