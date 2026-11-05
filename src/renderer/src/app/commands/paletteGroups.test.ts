@@ -108,11 +108,12 @@ describe('paletteGroups without a search', () => {
     ]);
   });
 
-  it('lists labels only when asked for them (@)', () => {
-    const lists = { labels: labels(label(1, 'v1')), branches: branches(branch(1, '/main')) };
+  it('lists labels and code reviews only when asked for them (lb:, cr:)', () => {
+    const lists = { labels: labels(label(1, 'v1')), branches: branches(branch(1, '/main')), codeReviews: [review(5, 'Review login')] };
 
     expect(sections(groupsFor({ lists }))).toEqual(['branches']);
-    expect(sections(groupsFor({ lists, scope: 'refs' }))).toEqual(['branches', 'labels']);
+    expect(sections(groupsFor({ lists, scope: 'labels' }))).toEqual(['labels']);
+    expect(labelsIn(groupsFor({ lists, scope: 'codeReviews' }), 'codeReviews')).toEqual(['Review login']);
   });
 
   it('caps each section at MAX_PER_SECTION rows', () => {

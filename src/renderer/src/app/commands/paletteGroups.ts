@@ -114,7 +114,8 @@ export interface PaletteGroupsInput {
 
 /**
  * The palette's object sections, in the scope: without a search, what is at hand (pending changes, the current, recent
- * and newest branches, the latest changesets and shelves; labels only when asked for with `@`); with one, the cached
+ * and newest branches, the latest changesets and shelves; labels and code reviews only when asked for with `lb:` and
+ * `cr:`); with one, the cached
  * lists' matches followed by the few the server found that they miss. Empty sections are left out.
  */
 export function paletteGroups(input: PaletteGroupsInput): SearchGroup[] {
@@ -127,11 +128,11 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
   const branches = byRecency(lists.branches?.items ?? [], context.currentBranch, lists.recentBranchGuids);
   return [
     { section: 'branches', heading: 'Branches', results: firstOnes(branches).map((branch) => branchResult(branch, context)) },
-    // Labels pile up by the thousand; without a search they only show when asked for (`@`).
+    // Labels pile up by the thousand; without a search they only show when asked for (`lb:`).
     {
       section: 'labels',
       heading: 'Labels',
-      results: scope === 'refs' ? firstOnes(lists.labels?.items ?? []).map((label) => labelResult(label, context)) : [],
+      results: scope === 'labels' ? firstOnes(lists.labels?.items ?? []).map((label) => labelResult(label, context)) : [],
     },
     {
       section: 'files',
@@ -147,6 +148,12 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
       section: 'shelves',
       heading: 'Shelves',
       results: firstOnes([...(lists.shelves ?? [])].sort((a, b) => b.id - a.id)).map((shelve) => shelveResult(shelve, context)),
+    },
+    // Reviews are what a branch is waiting on, not what is at hand: the newest show when asked for (`cr:`).
+    {
+      section: 'codeReviews',
+      heading: 'Code reviews',
+      results: scope === 'codeReviews' ? firstOnes(lists.codeReviews ?? []).map((review) => codeReviewResult(review, context)) : [],
     },
   ];
 }

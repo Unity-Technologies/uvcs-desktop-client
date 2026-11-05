@@ -27,7 +27,7 @@ describe('shownSections', () => {
 
   it('keeps only the sections the scope takes', () => {
     expect(ids(shownSections(groups, '', 'commands')).map(([heading]) => heading)).toEqual(['Commands']);
-    expect(ids(shownSections(groups, '', 'refs')).map(([heading]) => heading)).toEqual(['Branches']);
+    expect(ids(shownSections(groups, '', 'branches')).map(([heading]) => heading)).toEqual(['Branches']);
   });
 });
 

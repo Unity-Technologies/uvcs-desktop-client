@@ -36,7 +36,7 @@ export function CommandPalette() {
 /**
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
- * the best matches come first. `>`, `@`, `/` and `#` narrow the search; a pasted link opens it. Enter opens a result (a workspace in a new
+ * the best matches come first. A prefix narrows the search to one section (`SCOPE_PREFIXES`); a pasted link opens it. Enter opens a result (a workspace in a new
  * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
