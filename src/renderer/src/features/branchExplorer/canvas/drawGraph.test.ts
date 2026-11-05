@@ -27,9 +27,11 @@ interface Placed {
   transform: number[];
 }
 
-/** A 2D context that records what is placed where, and the transforms. Everything else does nothing. */
-function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][] } {
+/** A 2D context that records what is placed where, the transforms, and how often it strokes and fills with each ink. Everything else does nothing. */
+function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Map<unknown, number> } {
   const placed: Placed[] = [];
+  const inks = new Map<unknown, number>();
+  const use = (ink: unknown) => inks.set(ink, (inks.get(ink) ?? 0) + 1);
   const transforms: number[][] = [];
   const saved: number[][] = [];
   let transform = [1, 0, 0, 1, 0, 0];
@@ -38,6 +40,8 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
     save: () => saved.push(transform),
     restore: () => (transform = saved.pop() ?? transform),
     measureText: (text: string) => ({ width: text.length * 6 }),
+    stroke: () => use(state.strokeStyle),
+    fill: () => use(state.fillStyle),
   };
   const state: Record<string | symbol, unknown> = { font: '10px sans-serif', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000' };
   const ctx = new Proxy(state, {
@@ -51,7 +55,7 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
       return true;
     },
   });
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms, inks };
 }
 
 const INK = '#888888';
@@ -72,8 +76,6 @@ const palette: GraphPalette = {
   accentContrast: INK,
   accentSoft: INK,
   accentWash: INK,
-  multipleSelection: INK,
-  multipleSelectionSoft: INK,
   searchHit: INK,
   labelBackground: INK,
   labelText: INK,
@@ -126,7 +128,6 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     selectedPending: false,
     selectedChangesets: new Set([focus.changeset.id]),
     selectedBranches: new Set([lane.branch.name]),
-    multipleSelection: false,
     hoveredChangeset: focus.changeset.id,
     hoveredBranch: lane.branch.name,
     hoveredReview: null,
@@ -198,7 +199,7 @@ describe('drawGraph far into a huge history', () => {
  * The small sample history at full size, centered, nothing selected: every display option has something to draw.
  * Comments are off (their captions measure fonts on a real canvas), as `drawFar` has them.
  */
-function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
+function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<GraphScene> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
   const layout = layoutGraph(sampleHistory());
   const recording = recordingContext();
   const middle = layout.nodesByColumn[Math.floor(layout.nodesByColumn.length / 2)]!;
@@ -213,7 +214,6 @@ function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof 
     selectedPending: false,
     selectedChangesets: new Set(),
     selectedBranches: new Set(),
-    multipleSelection: false,
     hoveredChangeset: null,
     hoveredBranch: null,
     hoveredReview: null,
@@ -226,6 +226,7 @@ function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof 
     searchQuery: '',
     searchPing: 0,
     reviews: new Map(),
+    ...selection,
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),
@@ -272,5 +273,34 @@ describe('drawGraph draws only what its display options ask for', () => {
     expect(textsOf(placed)).toContain('a');
     expect(textsOf(placed)).not.toContain('/main/a');
     expect(drawn.cutBranchNames.find((lane) => lane.branch.name === '/main/a')).not.toBeNull();
+  });
+});
+
+describe('drawGraph draws a selection the same however many things it holds', () => {
+  const SELECTION_RING = '#0969da';
+  const SELECTION_SOFT = 'rgba(9, 105, 218, 0.12)';
+  const selectionPalette: GraphPalette = { ...palette, accent: SELECTION_RING, accentSoft: SELECTION_SOFT };
+  /**
+   * The inks drawing a selection uses more than the graph drawn with nothing selected. Counted, not just seen: /main
+   * is drawn in the accent too, so the ring's ink is already there with nothing selected.
+   */
+  const inksOfSelection = (selection: Partial<GraphScene>) => {
+    const unselected = drawSample({}, { palette: selectionPalette }).inks;
+    return [...drawSample({}, { palette: selectionPalette, ...selection }).inks]
+      .filter(([ink, uses]) => uses > (unselected.get(ink) ?? 0))
+      .map(([ink]) => ink)
+      .sort();
+  };
+
+  it('draws several branches in the selection color, as it draws one', () => {
+    const one = inksOfSelection({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(inksOfSelection({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']) })).toEqual(one);
+  });
+
+  it('draws several changesets in the selection color, as it draws one', () => {
+    const one = inksOfSelection({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(inksOfSelection({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]) })).toEqual(one);
   });
 });

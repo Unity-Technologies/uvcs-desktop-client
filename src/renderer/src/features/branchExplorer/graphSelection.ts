@@ -131,7 +131,7 @@ export function selectionsLaidOut(selections: GraphSelections, layout: GraphLayo
   return kept.length === selections.length ? selections : kept;
 }
 
-/** What the graph draws as selected (the lead, and every selected changeset and branch), and in which color. */
+/** What the graph draws as selected: the lead, and every selected changeset and branch, all in the same selection color. */
 export interface SelectionHighlights {
   /** The lead's, when it is a changeset (a label's is its changeset). */
   selectedChangeset: number | null;
@@ -140,8 +140,6 @@ export interface SelectionHighlights {
   /** Every changeset selected, the lead's included; labels select theirs. */
   selectedChangesets: ReadonlySet<number>;
   selectedBranches: ReadonlySet<string>;
-  /** Several things are selected: they are drawn in the multiple selection's color. */
-  multipleSelection: boolean;
 }
 
 export function selectionHighlights(selections: GraphSelections): SelectionHighlights {
@@ -152,7 +150,6 @@ export function selectionHighlights(selections: GraphSelections): SelectionHighl
     selectedPending: lead?.kind === 'pending',
     selectedChangesets: new Set(selections.flatMap((selection) => (selection.kind === 'changeset' ? [selection.id] : []))),
     selectedBranches: new Set(selections.flatMap((selection) => (selection.kind === 'branch' ? [selection.name] : []))),
-    multipleSelection: selections.length > 1,
   };
 }
 

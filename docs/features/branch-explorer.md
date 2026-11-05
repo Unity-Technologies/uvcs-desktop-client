@@ -185,8 +185,9 @@ A click selects what it lands on, alone; Ctrl+click (⌘ on macOS, `isModPressed
 out (`selectedOnClick` in `graphSelection.ts`). A selection holds one kind only, changesets, labels or branches
 (`groupOf`): Ctrl+clicking another kind starts a new one, and a merge link or the pending changes always select
 alone. The last one picked leads (`leadOf`): the keyboard moves from it and collapses the selection to it, and the
-graph keeps it on screen as it is laid out again. Several selected are drawn in `--selection-multiple`, a magenta, in
-place of the accent (`selectionHighlights`, `selectionInks`), as the official client does.
+graph keeps it on screen as it is laid out again. One selected or several, each is drawn in the accent, the
+selection color of the whole app (`selectionHighlights`): no second color tells a first and a second apart, since
+what acts on two changesets orders them by id (`intervalMenu`).
 
 A right-click on something selected keeps the selection (`selectedOnContextClick`), and its menu is the lists' menu
 for all of it (`graphMenu`'s `selectionMenu`): two changesets get their diff, more get none; branches get Hide and
