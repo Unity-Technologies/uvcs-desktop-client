@@ -11,7 +11,7 @@ export function signInFailureOf(error: unknown, server: string, project?: string
   if (!(error instanceof TrackerError)) return { reason: 'unexpected', message: error instanceof Error ? error.message : String(error) };
   switch (error.reason) {
     case 'signInRefused':
-      return { reason: 'tokenRefused' };
+      return error.toLogin ? { reason: 'sentToLogin', server } : { reason: 'tokenRefused' };
     case 'noAccess':
       return project ? { reason: 'projectUnreadable', project } : { reason: 'tokenRefused' };
     case 'unreachable':

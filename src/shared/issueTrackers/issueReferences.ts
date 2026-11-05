@@ -39,7 +39,7 @@ export function issueReferenceReader(binding: RepositoryTrackerBinding, connecti
       const reading = grammar.recognize(url);
       if (!reading || !('key' in reading) || reading.shows !== 'issuePage') return null;
       // A Jira key names its project; GitHub's address names any repository on the server, as `owner/repo#12` does.
-      return connection.kind === 'jiraCloud' && !projects.includes(reading.project) ? null : reading.key;
+      return connection.kind !== 'github' && !projects.includes(reading.project) ? null : reading.key;
     },
     issueUrl: (key) => grammar.issueUrl(connection.server, key),
   };

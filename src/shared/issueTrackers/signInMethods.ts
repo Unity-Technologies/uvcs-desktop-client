@@ -30,5 +30,9 @@ export function signInMethodsFor(kind: IssueTrackerKind, server: string, deviceF
       return deviceFlowHosts.includes(new URL(server).hostname.toLowerCase()) ? ['deviceCode', 'token'] : ['token'];
     case 'jiraCloud':
       return ['token'];
+    // A personal access token. Browser sign-in (OAuth) would need an application link each site's admin sets up: a
+    // `browser` method joins here once it's offered.
+    case 'jiraDataCenter':
+      return ['token'];
   }
 }

@@ -146,7 +146,11 @@ export class TrackerHttp {
   }
 
   private failureOf(status: number, header: HeaderOf, url: URL, where: string): TrackerError | null {
-    if (status >= 300 && status < 400) return new TrackerError('unexpected', `${where} sent the request elsewhere (${redirectHost(header, url)})`);
+    if (status >= 300 && status < 400) {
+      // A server behind single sign-on answers a refused credential with its login page.
+      if (redirectsToLogin(header, url)) return new TrackerError('signInRefused', `${url.host} sent the request to its login page`, undefined, true);
+      return new TrackerError('unexpected', `${where} sent the request elsewhere (${redirectHost(header, url)})`);
+    }
     if (status === 401) return new TrackerError('signInRefused', `${url.host} refused the sign-in`);
     if (isRateLimited(status, header)) return new TrackerError('rateLimited', `${url.host} asked to wait`, restUntil(header, this.now()));
     return null;
@@ -172,6 +176,15 @@ function parseJson(text: string): unknown {
     return JSON.parse(text);
   } catch {
     return undefined;
+  }
+}
+
+/** Whether a redirect leads to a login page: `login.jsp`, `/login`, a SAML or SSO servlet (`samlsso`). */
+function redirectsToLogin(header: HeaderOf, url: URL): boolean {
+  try {
+    return /login|saml|sso/i.test(new URL(header('location') ?? '', url).pathname);
+  } catch {
+    return false;
   }
 }
 

@@ -1,20 +1,23 @@
 import type { IssueTrackerKind } from '../domain/issueTrackers';
 import { githubGrammar } from './grammars/github';
 import { jiraCloudGrammar } from './grammars/jiraCloud';
+import { jiraDataCenterGrammar } from './grammars/jiraDataCenter';
 import type { NotAnIssueLink, RecognizedLink, TrackerGrammar } from './trackerGrammar';
 
 /** Every tracker's grammar, by kind: a new kind doesn't compile until it has one. */
 export const TRACKER_GRAMMARS: Readonly<Record<IssueTrackerKind, TrackerGrammar>> = {
   jiraCloud: jiraCloudGrammar,
+  jiraDataCenter: jiraDataCenterGrammar,
   github: githubGrammar,
 };
 
 /**
  * The order links are read in (docs/features/issue-trackers.md, "Ambiguous links"): by their host first where it says
- * the tracker (`*.atlassian.net`), GitHub's last, as any other host's `/owner/repo/issues/12` is read as an Enterprise
- * Server's.
+ * the tracker (`*.atlassian.net`), then any other host's `/browse/KEY-1` as Jira Data Center's, GitHub's last, as any
+ * other host's `/owner/repo/issues/12` is read as an Enterprise Server's. The two shapes never meet: a key isn't
+ * `issues`, and `browse` holds no number.
  */
-const RECOGNIZING_ORDER: readonly TrackerGrammar[] = [jiraCloudGrammar, githubGrammar];
+const RECOGNIZING_ORDER: readonly TrackerGrammar[] = [jiraCloudGrammar, jiraDataCenterGrammar, githubGrammar];
 
 export type LinkReading = RecognizedLink | NotAnIssueLink | { notALink: true } | { unknownTracker: true };
 

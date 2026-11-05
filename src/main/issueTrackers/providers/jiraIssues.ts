@@ -19,10 +19,15 @@ export function jiraStatusCategory(key: string | undefined): IssueStatusCategory
   }
 }
 
-/** A user as Jira's REST API v3 gives one (`myself`, an issue's assignee). */
+/** A key or a value in JQL, quoted; a key is letters, digits and `_`, but the quotes keep it a value whatever it is. */
+export function jqlString(value: string): string {
+  return `"${value.replace(/["\\]/g, (mark) => `\\${mark}`)}"`;
+}
+
+/** A user as Jira's REST API gives one (`myself`, an issue's assignee): Cloud's `accountId`, Data Center's `key`. */
 export function jiraAccount(user: unknown): TrackerAccount | null {
   if (!isRecord(user)) return null;
-  const id = stringOf(user.accountId) ?? stringOf(user.name) ?? '';
+  const id = stringOf(user.accountId) ?? stringOf(user.key) ?? stringOf(user.name) ?? '';
   const name = stringOf(user.displayName) ?? id;
   const email = stringOf(user.emailAddress);
   return { id, name, ...(email && { email }) };

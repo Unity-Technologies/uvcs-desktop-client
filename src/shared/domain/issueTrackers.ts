@@ -4,8 +4,11 @@
  * stays in the main process (`TrackerSecrets`).
  */
 
-/** The trackers the app reaches. GitHub.com, its data residency hosts and Enterprise Server are one API, one kind. */
-export type IssueTrackerKind = 'jiraCloud' | 'github';
+/**
+ * The trackers the app reaches. GitHub.com, its data residency hosts and Enterprise Server are one API, one kind; Jira
+ * Cloud and Data Center are two (another sign-in, another REST API version, other endpoints).
+ */
+export type IssueTrackerKind = 'jiraCloud' | 'jiraDataCenter' | 'github';
 
 /**
  * How a sign-in is made, preferred first in `signInMethodsFor`: a code the user approves in the browser
@@ -111,6 +114,8 @@ export type SignInFailure =
   | { reason: 'hostDeclined'; server: string }
   | { reason: 'tokenShape' }
   | { reason: 'tokenRefused' }
+  /** The server sent the signed-in request to its login page (an SSO server refusing a token). */
+  | { reason: 'sentToLogin'; server: string }
   | { reason: 'emailNeeded' }
   | { reason: 'projectUnreadable'; project: string }
   | { reason: 'notGitHubEnterprise'; server: string }

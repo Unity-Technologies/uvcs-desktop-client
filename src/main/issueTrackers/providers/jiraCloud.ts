@@ -2,7 +2,7 @@ import type { ProjectAccess } from '@shared/domain/issueTrackers';
 import type { ConnectionHttp } from '../TrackerHttp';
 import { TrackerError } from '../TrackerError';
 import { isRecord, numberOf, okJson, stringOf, type IssueTrackerProvider, type ProviderConnection } from './IssueTrackerProvider';
-import { JIRA_ISSUE_FIELDS, jiraAccount, jiraIssueReads } from './jiraIssues';
+import { JIRA_ISSUE_FIELDS, jiraAccount, jiraIssueReads, jqlString } from './jiraIssues';
 
 /** Atlassian's gateway: a scoped API token works only through it (`/ex/jira/<cloudId>`), never at the site. */
 const ATLASSIAN_GATEWAY = 'https://api.atlassian.com';
@@ -10,11 +10,6 @@ const ATLASSIAN_GATEWAY = 'https://api.atlassian.com';
 /** Where the connection's REST API is: the base its token answered on, the site by default. */
 function apiOf(connection: ProviderConnection): string {
   return connection.apiBase ?? connection.server;
-}
-
-/** A project key goes into JQL quoted; a key is letters, digits and `_`, but the quotes keep it a value whatever it is. */
-function jqlString(value: string): string {
-  return `"${value.replace(/["\\]/g, (mark) => `\\${mark}`)}"`;
 }
 
 export const jiraCloudProvider: IssueTrackerProvider = {

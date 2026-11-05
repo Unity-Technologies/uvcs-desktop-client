@@ -31,10 +31,18 @@ describe('TrackerHttp', () => {
   });
 
   it('fails a redirect, naming only where it led', async () => {
-    const tracker = fakeTrackerHttp({ [`GET ${MYSELF}`]: { status: 302, headers: { Location: 'https://login.example.com/sso?token=secret' } } });
+    const tracker = fakeTrackerHttp({ [`GET ${MYSELF}`]: { status: 302, headers: { Location: 'https://elsewhere.example.com/landing?token=secret' } } });
     const error = await failureOf(tracker.http.bound(ORIGINS, 'Basic abc').send({ method: 'GET', url: MYSELF }));
     expect(error.reason).toBe('unexpected');
-    expect(error.message).toBe('acme.atlassian.net/rest/api/3/myself sent the request elsewhere (login.example.com)');
+    expect(error.message).toBe('acme.atlassian.net/rest/api/3/myself sent the request elsewhere (elsewhere.example.com)');
+  });
+
+  it('takes a redirect to a login page as a refused sign-in, telling the connection', async () => {
+    const tracker = fakeTrackerHttp({ [`GET ${MYSELF}`]: { status: 302, headers: { Location: '/plugins/servlet/samlsso?redirectTo=%2Frest' } } });
+    const refused = vi.fn();
+    const error = await failureOf(tracker.http.bound(ORIGINS, 'Bearer t', refused).send({ method: 'GET', url: MYSELF }));
+    expect(error).toMatchObject({ reason: 'signInRefused', toLogin: true, message: 'acme.atlassian.net sent the request to its login page' });
+    expect(refused).toHaveBeenCalledOnce();
   });
 
   it('tells a refused sign-in to the connection', async () => {

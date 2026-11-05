@@ -10,6 +10,8 @@ export class TrackerError extends Error {
     message: string,
     /** Until when the tracker asked to be left alone (`rateLimited`), ms since the epoch. */
     readonly until?: number,
+    /** A refused sign-in the server sent to its login page (an SSO server's answer to a refused token). */
+    readonly toLogin = false,
   ) {
     super(message);
     this.name = 'TrackerError';
