@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutFromPendingChangesView } from './fileListLayoutStore';
+import { layoutFromPendingChangesView } from './fileListViewStore';
 
 describe('layoutFromPendingChangesView', () => {
   it('starts from the layout the Changes view kept when it had its own', () => {

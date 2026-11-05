@@ -1,4 +1,5 @@
 import type { BranchIncomingChanges, IncomingChanges } from '@shared/domain/incoming';
+import type { HostDiffs } from '../../components/diffExpansion';
 
 /**
  * What the Incoming view shows under its header: the panes' skeleton while it reads, why it couldn't check, that the
@@ -20,6 +21,12 @@ export function incomingViewState(incoming: IncomingChanges | undefined, pending
   if (!incoming) return pending || !failed ? { kind: 'reading' } : { kind: 'failed' };
   if (!incoming.branch) return { kind: 'notOnBranch' };
   return incoming.changesetCount === 0 ? { kind: 'upToDate' } : { kind: 'incoming', incoming };
+}
+
+/** The diffs Incoming can show, for an expanded diff to end once there are none (`collapsesWithHost`): up to date, say. */
+export function incomingDiffs(kind: IncomingViewState['kind']): HostDiffs {
+  if (kind === 'reading') return 'reading';
+  return kind === 'incoming' ? 'some' : 'none';
 }
 
 /**

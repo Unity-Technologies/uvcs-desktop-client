@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { FileTreeCell } from '../../components/FileTreeCell';
-import { ItemTag } from '../../components/ItemTag';
+import { MetaTag } from '../../components/MetaTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
-import type { PathTreeRow } from '../../lib/pathTree';
+import { folderItemCount, type PathTreeRow } from '../../lib/pathTree';
 import { diffEntryStatus } from './diffEntrySources';
 
 interface DiffEntryRowProps {
@@ -23,7 +23,7 @@ interface DiffEntryRowProps {
 export function DiffEntryRow({ row, level = row.depth, tree, extras, faded, hasMeta }: DiffEntryRowProps) {
   const tagged = hasMeta ? (
     <>
-      <ItemTag>+ meta</ItemTag>
+      <MetaTag />
       {extras}
     </>
   ) : (
@@ -36,7 +36,7 @@ export function DiffEntryRow({ row, level = row.depth, tree, extras, faded, hasM
         <TreeFolderLabel
           name={row.name}
           collapsed={row.collapsed}
-          count={row.items.length - (row.item ? 1 : 0)}
+          count={folderItemCount(row)}
           status={status}
           deleted={status?.tone === 'deleted'}
           extras={tagged}

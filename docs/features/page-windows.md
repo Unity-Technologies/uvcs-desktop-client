@@ -51,6 +51,8 @@ window" is what browsers and the official client say.
   branch, Update workspace…) runs there the same way (`useMenuCommands`). The Window menu lists each page window under
   its workspace window.
 - **Its commands show in its workspace window's command log** (`commandLogOf`).
+- **Its diff expands** (Expand Diff, diff.md "Expanding the diff"): the page's files go out of sight under its top bar,
+  and following the selection to another object keeps it expanded, as the page is replaced at the same depth.
 - **A reload keeps Follow selection**: main holds whether a page window follows, and tells a page loaded again, the
   page window's and its workspace window's (`did-finish-load`).
 - **A write run from it** (reverting a file from a history, say) refreshes the workspace window too, and the other way

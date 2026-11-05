@@ -3,7 +3,9 @@ import { useEffect, useMemo } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchWorkedOn } from '../../components/workingObject';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { EmptyState } from '../../ui/EmptyState';
+import { Stowable } from '../../ui/Stowable';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { isCheckinCandidate } from './changeCategories';
@@ -26,6 +28,7 @@ export function PendingChangesView() {
   const pendingCount = useMemo(() => allChanges.filter(isCheckinCandidate).length, [allChanges]);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
   const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
+  const diffExpanded = useDiffExpanded();
 
   // The next change ends the success moment, and so does the workspace moving to another changeset.
   const loadedChangeset = workspace?.loadedChangeset;
@@ -51,8 +54,10 @@ export function PendingChangesView() {
 
   return (
     <>
-      {header}
-      <LeftChangesBanner />
+      <Stowable stowed={diffExpanded}>
+        {header}
+        <LeftChangesBanner />
+      </Stowable>
       <PendingChangesPanes workspacePath={workspacePath} workspace={workspace} snapshot={snapshot} nothingPending={nothingPending} review={review} readAt={dataUpdatedAt} />
     </>
   );

@@ -7,7 +7,7 @@ import { isMenuCommandEnabled, REPOSITORY_MENU_COMMANDS, WORKSPACE_MENU_COMMANDS
 const read = (path: string) => readFileSync(join(__dirname, path), 'utf8');
 const menuCommands = [...read('appMenuTemplate.ts').matchAll(/commandItem\([^,]+, '([^']+)'/g)].map(([, id]) => id);
 // Every place's commands (`usePlaceCommands`), and a workspace's own.
-const PLACE_COMMAND_SOURCES = ['../../renderer/src/app/shell/usePlaceCommands.ts'];
+const PLACE_COMMAND_SOURCES = ['../../renderer/src/app/shell/usePlaceCommands.ts', '../../renderer/src/app/shell/useDiffExpansion.ts'];
 const WORKSPACE_COMMAND_SOURCES = [
   ...PLACE_COMMAND_SOURCES,
   '../../renderer/src/app/shell/useWorkspaceCommands.ts',

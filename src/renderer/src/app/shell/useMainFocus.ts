@@ -1,4 +1,6 @@
 import { useEffect, type RefObject } from 'react';
+import { restoredFocusMover } from '../../components/diffExpansion';
+import { isDiffExpanded } from '../../components/diffExpansionStore';
 import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { useNavigation } from '../navigation/navigationStore';
 import { isAimedAtMainList } from './mainFocusKeys';
@@ -25,7 +27,7 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
     const focusIfLost = (): void => {
       requestAnimationFrame(() => {
         const root = contentRef.current;
-        if (root && document.activeElement === document.body && document.hasFocus() && !isKeyboardTaken()) focusMain(root);
+        if (root && document.activeElement === document.body && document.hasFocus() && !isKeyboardTaken()) focusMain(root, restoredFocusMover(isDiffExpanded()));
       });
     };
 

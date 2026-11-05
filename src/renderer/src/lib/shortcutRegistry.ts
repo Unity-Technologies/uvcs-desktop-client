@@ -107,6 +107,10 @@ export const SHORTCUTS = {
   editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'] },
   leaveEditor: { area: 'Diff', label: 'Leave the text for the file list (edits stay)', keys: ['escape'] },
   saveFile: { area: 'Diff', label: 'Save the edits', keys: ['mod+s'] },
+  // E for Expand, on every OS: no browser, desktop or the diff's editor takes it, and it stays clear of the window's
+  // own full screen (⌃⌘F, F11), which is another thing. Esc leaves once nothing else takes it (`escapeCollapsesDiff`).
+  expandDiff: { area: 'Diff', label: 'Expand the diff to the whole window, or collapse it', keys: ['mod+shift+e'], commandId: 'view.expandDiff' },
+  collapseDiff: { area: 'Diff', label: 'Collapse the expanded diff', keys: ['escape'] },
 
   // The text of a diff or a merge, as its editor (Pierre's) takes the keys; its right-click menu shows them (`codeMenu`).
   // Pierre opens Replace with ⌥⌘F on every OS, Ctrl+Alt+F off macOS, where Ctrl+Alt is AltGr: there it takes Ctrl+H,
@@ -161,6 +165,8 @@ export const SHORTCUTS = {
   graphZoomIn: { area: 'Branch Explorer', label: 'Zoom in', keys: ['plus', '='] },
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'] },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'] },
+  // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there. From another view it opens the Branch Explorer with it shown.
+  graphTimeline: { area: 'Branch Explorer', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline' },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'] },
 
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'] },

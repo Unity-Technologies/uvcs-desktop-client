@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { wholeList } from '../../lib/itemRange';
 import { pairUnityMetas } from '../../lib/unityMetaPairs';
 import { groupReviewStatus, hasMark, isAllReviewed, needsReview, pairedReviewStatusOf, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
 
@@ -24,15 +25,20 @@ describe('review status', () => {
   });
 
   it('marks a folder reviewed once every file in it is', () => {
-    expect(groupReviewStatus(['a', 'folder'], statusOf)).toBe('reviewed');
-    expect(groupReviewStatus(['a', 'b'], statusOf)).toBe('unreviewed');
-    expect(groupReviewStatus(['folder'], statusOf)).toBeNull();
+    expect(groupReviewStatus(wholeList(['a', 'folder']), statusOf)).toBe('reviewed');
+    expect(groupReviewStatus(wholeList(['a', 'b']), statusOf)).toBe('unreviewed');
+    expect(groupReviewStatus(wholeList(['folder']), statusOf)).toBeNull();
+  });
+
+  it('goes over only what the folder holds of the list it was laid out from', () => {
+    expect(groupReviewStatus({ list: ['b', 'a', 'folder', 'b'], start: 1, end: 3 }, statusOf)).toBe('reviewed');
+    expect(partialReviewCount({ list: ['b', 'a', 'b', 'd'], start: 0, end: 2 }, statusOf)).toBe('1/2');
   });
 
   it("counts a folder's reviewed files while its review is under way, not before or after", () => {
-    expect(partialReviewCount(['a', 'b', 'd', 'folder'], statusOf)).toBe('1/3');
-    expect(partialReviewCount(['b', 'd'], statusOf)).toBeNull();
-    expect(partialReviewCount(['a', 'folder'], statusOf)).toBeNull();
+    expect(partialReviewCount(wholeList(['a', 'b', 'd', 'folder']), statusOf)).toBe('1/3');
+    expect(partialReviewCount(wholeList(['b', 'd']), statusOf)).toBeNull();
+    expect(partialReviewCount(wholeList(['a', 'folder']), statusOf)).toBeNull();
   });
 
   it('reviews files, not folders', () => {

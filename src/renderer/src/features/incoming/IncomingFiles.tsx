@@ -11,7 +11,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
-import { INCOMING_GROUP_TIPS, type IncomingFileGroup } from './incomingScope';
+import { incomingGroupTip, type IncomingListGroup } from './incomingScope';
+import type { FileTreeFolding } from '../../components/fileTreeFolding';
 import styles from './IncomingFiles.module.css';
 
 interface IncomingFilesProps {
@@ -22,9 +23,11 @@ interface IncomingFilesProps {
   files: DiffEntry[] | undefined;
   /** What they are, under the header (`incomingFilesSummary`). */
   summary: string;
-  rows: GroupedTreeRow<DiffEntry, IncomingFileGroup>[];
+  rows: GroupedTreeRow<DiffEntry, IncomingListGroup>[];
   tree: boolean;
   toggleCollapsed: (key: string) => void;
+  /** Closing or opening every group and folder, from the view menu; null for a flat list. */
+  folding: FileTreeFolding | null;
   query: string;
   filterBar: ReactNode;
   selection: SelectionState;
@@ -39,7 +42,7 @@ interface IncomingFilesProps {
 }
 
 /** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, markOf, noMatches }: IncomingFilesProps) {
+export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, markOf, noMatches }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
@@ -57,8 +60,9 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
           rows={rows}
           tree={tree}
           toggleCollapsed={toggleCollapsed}
+          folding={folding}
           renderItem={(row, level) => <DiffEntryRow row={row} level={level} tree={tree} extras={row.type === 'file' ? markOf(row.item) : undefined} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />}
-          groupTip={(group) => INCOMING_GROUP_TIPS[group]}
+          groupTip={incomingGroupTip}
           query={query}
           filterBar={filterBar}
           selection={selection}

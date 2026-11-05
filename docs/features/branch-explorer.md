@@ -92,6 +92,69 @@ changesets); with nothing to hold on to, and for "Go to the workspace" when the 
 end (`newestEnd`). A running glide (a reveal) is left alone. While the newest changesets are off screen to the
 right, a small solid button on the right edge glides back to them.
 
+## Timeline
+
+An overview strip over the graph (`timeline/GraphTimeline`), `TIMELINE_HEIGHT` (68 px) tall above the date ruler, as
+wide as the graph's pane. Hidden until the user shows it, then remembered with the view's preferences (`showTimeline`).
+One name, "Timeline", everywhere: the header button beside the details toggle ("Show timeline" / "Hide timeline",
+`TimelineToggleButton`, pressed while it shows), the Branch Explorer's View ▸ Timeline, the palette, ⌥⌘T (Alt+Shift+T
+off the Mac, where Ctrl+Alt is AltGr: `graphTimeline`) and the app's View ▸ Branch Explorer Timeline, which needs the
+view's name there. They all run one toggle (`timelineToggle`); the command, `branchExplorer.timeline`, is registered by
+every place (`usePlaceCommands`), and from another view it opens the Branch Explorer with the Timeline shown. It slides
+in only when the user shows it, never when the view opens with it or mounts it again (`slidesIn`,
+`useTimelineSlideIn`); while the history loads, the skeleton keeps its place (`GraphSkeleton`).
+
+It shows only what the graph loaded and draws (the same range and filters), and asks `cm` nothing.
+
+- **The axis is the canvas's** (`timelineAxis`): the whole graph, changesets in column order, squeezed into the strip,
+  `TIMELINE_INSET` px in from each end: room for the whole house at the newest end, ring and shadow included
+  (`HOUSE_REACH`). So the viewport is a frame of its own width wherever it goes (`viewportFrame`).
+  A calendar axis was tried and dropped: the frame grew and shrank as it moved.
+- **The curve is smooth activity** (`activityCurve`): for each column, the changesets within a window of its time
+  (`activityHalfWindow`: ±1 h for a week, ±12 h for three months, ±3.5 days for a year, growing with the range), as a
+  rate over the part of the window inside the loaded history (the ends would sink otherwise), a mean per pixel, a
+  Gaussian blur (σ 3 px) over the history's own pixels (`historyPixels`), scaled to the 98th percentile. It is drawn
+  through a point every `CURVE_STEP` px joined by a Catmull-Rom spline as cubic Béziers (`timelineCurves`,
+  `smoothPath`), so it reads as a line rather than a staircase of pixels. A count per day over the day's columns was
+  dropped: flat mesas with cliffs. Under it, in the accent, the share of the user's changesets or the people filter's
+  picks (`shareOwners`, which also names them in the hover card: "yours", one person picked by name, "by the people
+  picked"), sampled as the curve is and never above it, nor thinner than `SHARE_MIN_HEIGHT` where they have one. A "+N" node's changesets count at their own
+  times and in its column (`timelineHistory`, `changesetsInColumns`).
+- **The frame** is a rounded box (`FRAME_TOP`, `FRAME_HEIGHT`) around the curve: an accent outline over the faintest
+  accent wash (`--accent-wash`), a 3 px halo (`--accent-soft`) at half strength that turns full while the frame is
+  hovered or dragged, and nothing dimmed outside it. Dragging it pans (`viewportPannedBy`), dragging an edge zooms the canvas
+  with the other edge fixed (`viewportWithEdgeAt`, within `MIN_ZOOM` and `MAX_ZOOM`). Under `FRAME_LINE_BELOW` px it
+  is a line with a handle on top; from `FRAME_EDGES_FROM` px its edges have grips, shown while it is active
+  (`frameShape`, `timelineDrawing`'s `frameActive` and `grips`; the sizes in `timelineGeometry`).
+- **Marks** (`timelineMarks`): labels as ticks under the baseline in the label color (`--label-mark`, at 3:1 on the
+  strip), 2 px wide and 6 px tall (8 px merged), since 1.5 × 5 px read too thin (`LABEL_TICK_WIDTH`), those within `LABEL_MERGE_DISTANCE` of a
+  tick's first label one slightly taller tick (`labelTicks`); the house, the graph's own home badge (`drawHomeBadge`,
+  with a shadow, `--badge-shadow`), on the curve at the workspace's changeset, or at its pending changes past every
+  changeset with its ring dashed, as the graph moves its badge there (into the curve where it is tallest, under the
+  search ticks, the frame's outline over it), or pinned at the left with "‹" when the workspace is older than the range
+  (`homeMark`, `homeSpots`); /main's newest changeset as a diamond; the selected changeset as a pin (none where the
+  house stands) and the selected branch's lifetime in its hue (`branchLifetime`); search hits as ticks along the top,
+  one per pixel (`hitTicks`); more than `GAP_MIN_DAYS` without changesets as a slanted break mark across the baseline,
+  the longest of those closer than `GAP_MARK_SPACING` (`timelineGaps`). Merges into /main have no mark: they repeated
+  the curve.
+- **The axis's dates** name days (short ranges) or months where they begin, each 4 px after a hairline there (the
+  first, the range's start, has none), those that would run into the one before or be cut by the right edge left out,
+  a month in another year than the date before it with its year (`axisLabelCandidates`, `spacedAxisLabels`).
+- **Pointer** (`timelineTargetAt`, `timelinePress`; the frame answers only where it is drawn, not over the axis's
+  dates): a click glides the canvas there and brings the row it lands on into
+  view (`viewportAtColumn`, `clickedColumn`: a label tick to its newest label, a gap to where history resumes); press
+  and drag scrubs (`viewportForDrag`); after a drag the landed row comes into view (`viewportAfterDrag`). The wheel
+  pans the canvas, with ⌘ or Ctrl it zooms (`timelineWheel`). Hovering an empty spot shows a dashed frame where a
+  click would land (`ghostFrame`), and every target has a card (`timelineCard`): the hour, day or week under the
+  pointer (`bucketSize`) with "N changesets · M yours · K merged to /main" (K: changesets on /main a merge landed on,
+  each once; cherry picks and subtractive merges aren't merges into it) and its labels; the frame's dates, zoom and
+  changesets on screen; home (with its pending changes), gaps, labels and hits their own.
+
+What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it, with the strip's measurements in
+`timelineGeometry`. Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary
+searches, `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
+(`countCalls`).
+
 ## Pending changes
 
 While the workspace has changes under version control (private files alone

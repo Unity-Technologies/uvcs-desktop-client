@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
-import { itemsUnderRows, layoutPathTree } from './pathTree';
+import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, groupLevelsOf, hasChevronColumn, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
+import { itemsIn } from './itemRange';
+import { itemsUnderRows } from './pathTree';
+import { layoutPathTree } from './pathTreeLayout';
 
 interface Item {
   path: string;
@@ -10,8 +12,18 @@ interface Item {
 const keyOf = (item: Item): string => item.path;
 const sortedItems = (paths: string[]): Item[] => paths.map((path) => ({ path })).sort((a, b) => comparePaths(a.path, b.path));
 const group = (key: string, paths: string[]): TreeGroup<Item, string> => ({ key, label: key.toUpperCase(), group: key, sorted: sortedItems(paths) });
-const shape = (rows: GroupedTreeRow<Item, string>[]) =>
-  rows.map((row) => [row.type === 'group' ? `[${row.label}]` : row.type === 'folder' ? `${row.name}/` : row.key, groupedRowLevel(row, true)]);
+const nested = (key: string, subgroups: TreeGroup<Item, string>[]): TreeGroup<Item, string> => ({
+  key,
+  label: key.toUpperCase(),
+  group: key,
+  sorted: subgroups.flatMap((subgroup) => subgroup.sorted).sort((a, b) => comparePaths(a.path, b.path)),
+  subgroups,
+});
+const shape = (rows: GroupedTreeRow<Item, string>[]) => {
+  const groupLevels = groupLevelsOf(rows);
+  return rows.map((row) => [row.type === 'group' ? `[${row.label}]` : row.type === 'folder' ? `${row.name}/` : row.key, groupedRowLevel(row, groupLevels)]);
+};
+const byName = { compare: (a: Item, b: Item): number => (a.path.split('/').at(-1)! < b.path.split('/').at(-1)! ? -1 : 1) };
 
 describe('layoutGroupedTree', () => {
   it("puts each group's header before its items, a level above them, as a tree", () => {
@@ -45,9 +57,66 @@ describe('layoutGroupedTree', () => {
     expect(shape(layoutGroupedTree([group('empty', [])], keyOf, true))).toEqual([['[EMPTY]', 0]]);
   });
 
+  it('lays groups out inside groups, each a level in, with their items a level further', () => {
+    const rows = layoutGroupedTree([nested('default', [group('default:added', ['src/a.ts']), group('default:changed', ['z.ts'])]), nested('ui', [group('ui:changed', ['b.ts'])])], keyOf, true);
+    expect(shape(rows)).toEqual([
+      ['[DEFAULT]', 0],
+      ['[DEFAULT:ADDED]', 1],
+      ['src/', 2],
+      ['src/a.ts', 3],
+      ['[DEFAULT:CHANGED]', 1],
+      ['z.ts', 2],
+      ['[UI]', 0],
+      ['[UI:CHANGED]', 1],
+      ['b.ts', 2],
+    ]);
+  });
+
+  it("gives a group that holds others every item in them, for its count and its check", () => {
+    const [header] = layoutGroupedTree([nested('default', [group('a', ['x.ts']), group('b', ['w.ts'])])], keyOf, false);
+    expect(itemsUnderRows([header!]).map(keyOf)).toEqual(['w.ts', 'x.ts']);
+  });
+
+  it("orders each group's items, the files of each folder in a tree", () => {
+    const sorted = (tree: boolean) => shape(layoutGroupedTree([group('changes', ['b/z.ts', 'a/y.ts', 'b/x.ts'])], keyOf, tree, byName));
+    expect(sorted(false).map(([name]) => name)).toEqual(['[CHANGES]', 'b/x.ts', 'a/y.ts', 'b/z.ts']);
+    expect(sorted(true).map(([name]) => name)).toEqual(['[CHANGES]', 'a/', 'a/y.ts', 'b/', 'b/x.ts', 'b/z.ts']);
+  });
+
+  it("points each group's folders into that group's own list", () => {
+    const groups = [group('conflicts', ['src/a.ts', 'src/b.ts']), group('changes', ['src/c.ts', 'z.ts'])];
+    const folders = layoutGroupedTree(groups, keyOf, true).filter((row) => row.type === 'folder');
+    expect(folders.map((row) => row.type === 'folder' && [row.key, row.held.list === groups[0]!.sorted, itemsIn(row.held).map(keyOf)])).toEqual([
+      ['folder:conflicts:src', true, ['src/a.ts', 'src/b.ts']],
+      ['folder:changes:src', false, ['src/c.ts']],
+    ]);
+    expect(folders[1]!.type === 'folder' && folders[1]!.held.list).toBe(groups[1]!.sorted);
+  });
+
   it('gives a group every item it holds, for its count and for what acting on it means', () => {
     const [header] = layoutGroupedTree([group('changes', ['src/b.ts', 'z.ts'])], keyOf, true);
     expect(itemsUnderRows([header!]).map(keyOf)).toEqual(['src/b.ts', 'z.ts']);
+  });
+});
+
+describe('groupLevelsOf', () => {
+  it('counts no levels without groups, one with groups, and two with groups inside groups', () => {
+    expect(groupLevelsOf(layoutPathTree({ sorted: sortedItems(['a.ts']), keyOf, folderScope: 'all' }))).toBe(0);
+    expect(groupLevelsOf(layoutGroupedTree([group('one', ['a.ts'])], keyOf, true))).toBe(1);
+    expect(groupLevelsOf(layoutGroupedTree([nested('one', [group('one:a', ['a.ts'])])], keyOf, true))).toBe(2);
+  });
+
+  it('still counts two while the first group is closed, from the subgroups of the next', () => {
+    const rows = layoutGroupedTree([nested('one', [group('one:a', ['a.ts'])]), nested('two', [group('two:a', ['b.ts'])])], keyOf, true);
+    expect(groupLevelsOf(collapseGroupedTreeRows(rows, new Set(['one'])))).toBe(2);
+  });
+});
+
+describe('hasChevronColumn', () => {
+  it('leaves the chevron column in a tree or once grouped, so files start under a group\'s name; a flat list stays flush', () => {
+    expect(hasChevronColumn(0, false)).toBe(false);
+    expect(hasChevronColumn(0, true)).toBe(true);
+    expect(hasChevronColumn(1, false)).toBe(true);
   });
 });
 
@@ -94,6 +163,17 @@ describe('groupedRowsHolding', () => {
   it("names a file's folders, then its group: opening them shows it", () => {
     const rows = layoutGroupedTree([group('one', ['x.ts']), group('two', ['src/lib/b.ts'])], keyOf, true);
     expect(groupedRowsHolding(rows, 'src/lib/b.ts')).toEqual(['folder:two:src/lib', 'two']);
+  });
+
+  it('names the subgroup, then the group, of a file in groups inside groups', () => {
+    const rows = layoutGroupedTree([nested('one', [group('one:a', ['a.ts'])])], keyOf, false);
+    expect(groupedRowsHolding(rows, 'a.ts')).toEqual(['one:a', 'one']);
+  });
+
+  it('closes a subgroup alone, or everything in its group', () => {
+    const rows = layoutGroupedTree([nested('one', [group('one:a', ['a.ts']), group('one:b', ['b.ts'])])], keyOf, false);
+    expect(collapseGroupedTreeRows(rows, new Set(['one:a'])).map((row) => row.key)).toEqual(['one', 'one:a', 'one:b', 'b.ts']);
+    expect(collapseGroupedTreeRows(rows, new Set(['one'])).map((row) => row.key)).toEqual(['one']);
   });
 
   it('names only the group in a list', () => {

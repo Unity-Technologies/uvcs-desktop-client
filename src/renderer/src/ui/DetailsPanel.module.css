@@ -21,6 +21,11 @@
   flex: 1;
 }
 
+/* `changesOnly`: kept mounted out of sight, the changes pane taking the panel. */
+.top[hidden] {
+  display: none;
+}
+
 /* Selecting another row remounts the panel: its surfaces stay put while the content fades in, so the change reads as a
    crossfade instead of a flash (the changes pane's content too, `DetailsChangesPane`). */
 .hero > *,

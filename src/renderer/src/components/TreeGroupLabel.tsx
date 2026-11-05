@@ -1,9 +1,12 @@
 import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { formatCount } from '../lib/text';
 import styles from './FileTree.module.css';
 
 interface TreeGroupLabelProps {
   label: string;
+  /** Before the name: a status group's badge. */
+  icon?: ReactNode;
   collapsed: boolean;
   /** How many items it holds. */
   count: number;
@@ -21,10 +24,11 @@ export interface GroupProgress {
 }
 
 /** A group of a list of changed files (a merge's conflicts, Incoming's files changed on both sides): its chevron, name and count. */
-export function TreeGroupLabel({ label, collapsed, count, progress, tip }: TreeGroupLabelProps) {
+export function TreeGroupLabel({ label, icon, collapsed, count, progress, tip }: TreeGroupLabelProps) {
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
+      {icon}
       <span className={styles.groupLabel} data-tip={tip}>
         {label}
       </span>

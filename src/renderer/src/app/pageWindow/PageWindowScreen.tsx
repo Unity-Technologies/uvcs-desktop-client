@@ -12,6 +12,7 @@ import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { Breadcrumb } from '../shell/Breadcrumb';
 import { TopBar } from '../shell/TopBar';
+import { useDiffExpansion } from '../shell/useDiffExpansion';
 import { useWorkspaceWatcher } from '../shell/useWorkspaceWatcher';
 import { usePlace, useWorkspaceInfo } from '../workspace/useWorkspace';
 import { pageKey } from './followSelection';
@@ -31,6 +32,7 @@ export function PageWindowScreen() {
   const inWorkspace = usePlace().kind === 'workspace';
   useFollowSelection();
   usePageWindowCommands();
+  useDiffExpansion();
   useCopyLinkCommand();
   usePageWindowTitle();
   useShortcut(hotkey('back'), pageWindowGoBack);

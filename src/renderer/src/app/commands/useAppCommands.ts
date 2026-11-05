@@ -8,6 +8,9 @@ import { checkForUpdates } from '../updates/updateStore';
 import { SIDEBAR_SHORTCUT, toggleSidebar, useSidebarCollapsed } from '../shell/sidebarStore';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
+import { fileListViewCommands } from './fileListViewCommands';
+import { useFileListViewStore } from '../../components/fileListViewStore';
+import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { openShortcutsDialog } from './ShortcutsDialog';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
@@ -15,6 +18,7 @@ import { useShortcut } from '../../lib/useShortcut';
 /** Commands available everywhere, including the home screen. */
 export function useAppCommands(): void {
   const rail = useSidebarCollapsed();
+  const fileListView = useFileListViewStore();
   const commands = useMemo<Command[]>(
     () => [
       { id: 'app.settings', group: 'App', label: 'Settings', icon: Settings, shortcut: hotkey('settings'), run: openSettingsDialog },
@@ -41,7 +45,8 @@ export function useAppCommands(): void {
         icon: PanelLeft,
         keywords: ['rail', 'collapse', 'expand', 'navigation'],
         shortcut: SIDEBAR_SHORTCUT,
-        run: toggleSidebar,
+        // While a diff is expanded, it only gives the window back: the sidebar the user asked for shows as it was.
+        run: () => runWhileDiffExpanded('toggleSidebar', toggleSidebar),
       },
       {
         id: 'app.newWindow',
@@ -69,8 +74,9 @@ export function useAppCommands(): void {
         keywords: ['upgrade', 'version', 'new'],
         run: () => void checkForUpdates(),
       },
+      ...fileListViewCommands(fileListView, fileListView),
     ],
-    [rail],
+    [rail, fileListView],
   );
   useCommands(commands);
   // The sheet's other key (⌘/): a command runs from one key.

@@ -17,6 +17,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
+import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
@@ -47,8 +48,8 @@ interface CheckinPanelProps {
   behindCount: number;
   /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
   behindDescription: string | null;
-  /** The changelist whose files alone are checked ("Check in this changelist"), or null. */
-  preparedChangelist: string | null;
+  /** Says which changelist's files alone are checked ("Check in this changelist"): "Changelist ui"; or null. */
+  preparedChangelistNote: string | null;
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
   recentComments: string[];
@@ -73,7 +74,7 @@ export function CheckinPanel({
   merging,
   behindCount,
   behindDescription,
-  preparedChangelist,
+  preparedChangelistNote,
   allReviewed,
   recentComments,
   mode,
@@ -119,7 +120,8 @@ export function CheckinPanel({
       setKeepShelved(false);
     }
   };
-  useShortcut(hotkey('checkin'), () => void act(), canAct);
+  // Never out of sight behind an expanded diff: it gives the window back first (`runWhileDiffExpanded`).
+  useShortcut(hotkey('checkin'), () => runWhileDiffExpanded('checkin', () => void act()), canAct);
 
   // The panel stays on screen while nothing is pending, where the mode caret is disabled: it goes back to checking in.
   useEffect(() => {
@@ -204,9 +206,9 @@ export function CheckinPanel({
         <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(listedCount, busy)} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
-      {preparedChangelist !== null && (
+      {preparedChangelistNote !== null && (
         <div className={styles.prepared} data-tip="Only its files are checked, until they are checked in or shelved">
-          Changelist {preparedChangelist}
+          {preparedChangelistNote}
         </div>
       )}
     </div>

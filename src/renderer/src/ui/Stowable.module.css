@@ -1,0 +1,8 @@
+/* No box of its own: the children lay out in the parent's flex or grid as if the wrapper weren't there. */
+.stowable {
+  display: contents;
+}
+
+.stowable[hidden] {
+  display: none;
+}

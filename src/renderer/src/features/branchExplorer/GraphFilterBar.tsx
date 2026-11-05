@@ -9,6 +9,7 @@ import { MenuChip } from '../../ui/ToggleChip';
 import { BranchFilterPopover } from './BranchFilterPopover';
 import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { FocusChip } from './FocusChip';
+import { timelineToggle } from './timeline/timelineToggle';
 import type { GraphFocus } from './model/filterGraph';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
@@ -42,6 +43,14 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
       label: 'Only relevant changesets',
       icon: check(preferences.structureOnly),
       run: () => set({ structureOnly: !preferences.structureOnly }),
+    },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      icon: check(preferences.showTimeline),
+      shortcut: hotkey('graphTimeline'),
+      // The one toggle the header button, the palette and the shortcut run too.
+      run: () => set({ showTimeline: timelineToggle(preferences.showTimeline, true).show }),
     },
     SEPARATOR,
     { id: 'displayOptions', label: 'Display options…', run: openBranchExplorerOptionsDialog },

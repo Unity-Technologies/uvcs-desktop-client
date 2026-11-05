@@ -84,7 +84,8 @@ try {
     await sidebar.getByRole('button', { name: /^studio/ }).click();
     await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
     await main.getByRole('button', { name: 'Project: All projects' }).click();
-    await window.keyboard.type('racing');
+    await window.getByPlaceholder('Find a project').fill('racing');
+    await window.getByText('Racing', { exact: true }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
@@ -112,11 +113,33 @@ try {
       await settled();
     });
   }
+  await step('Branch Explorer timeline', async () => {
+    // From another view its shortcut opens the Branch Explorer with the timeline shown.
+    await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');
+    await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).click();
+    await main.getByRole('button', { name: 'Hide timeline' }).click();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor({ state: 'detached' });
+  });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
+  });
+  await step('Expanded diff', async () => {
+    // The header's button, then the key: the sidebar goes out of sight and the diff stays; Esc gives the window back.
+    const sidebar = window.getByRole('navigation');
+    await main.getByRole('button', { name: 'Expand diff' }).click();
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByText('void Jump() { }').first().waitFor();
+    await window.keyboard.press('Escape');
+    await sidebar.waitFor();
+    await window.keyboard.press('ControlOrMeta+Shift+E');
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByRole('button', { name: 'Expand diff', pressed: true }).click();
+    await sidebar.waitFor();
   });
   await step('A revision read from the disk', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Files( \d+)?$/ }).click();
@@ -126,7 +149,10 @@ try {
     // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
     // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
     await window.keyboard.press('ControlOrMeta+P');
-    await window.keyboard.type('camera');
+    // Enter picks only a result shown: the workspace's paths are read when the dialog first opens, slowly on CI.
+    const goToFile = window.getByRole('dialog', { name: 'Go to file' });
+    await goToFile.locator('input').fill('camera');
+    await goToFile.getByText('camera.cs', { exact: false }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByText('float distance = 8f;').first().waitFor();
     await main.getByText('float distance = 10f;').first().waitFor();
@@ -137,6 +163,12 @@ try {
     // The 3D view, and what changed in it: the fixture renamed the crate's material slot.
     await main.getByLabel('3D view of the model').waitFor();
     await main.getByRole('region', { name: 'What changed' }).waitFor();
+  });
+  await step('The .meta of a binary file', async () => {
+    await main.getByText('Assets/hurt.wav', { exact: true }).first().click();
+    await main.getByText('Binary file', { exact: true }).waitFor();
+    await main.getByRole('button', { name: '.meta', exact: true }).click();
+    await main.getByText('loadInBackground: 1').first().waitFor();
   });
   await step('A diff in a new window', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
@@ -182,6 +214,7 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Explore a repository', async () => {
     await window.keyboard.press('Escape');
@@ -220,6 +253,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Settings and dark theme', async () => {
     await window.keyboard.press('Escape');

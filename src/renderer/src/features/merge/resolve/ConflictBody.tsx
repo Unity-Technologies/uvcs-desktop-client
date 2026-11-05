@@ -6,6 +6,8 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { FileStepsContext } from '../../diff/viewer/fileSteps';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
+import { SteppedDiffFrame } from '../../diff/viewer/SteppedDiffFrame';
+import { diffContentsKey } from '../../diff/viewer/diffFrameHost';
 import type { StepView } from '../../diff/viewer/useStepNavigation';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
@@ -17,6 +19,9 @@ import { ReadOnlyText } from './ReadOnlyText';
 import type { FileConflictState } from './useFileConflicts';
 import { WholeFileChoice } from './WholeFileChoice';
 import styles from './FileConflictPanel.module.css';
+
+/** The merged result's other side: nothing read, the text is in memory. */
+const EMPTY_SOURCE = { kind: 'empty' } as const;
 
 interface ConflictBodyProps {
   workspacePath: string;
@@ -77,24 +82,32 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           onDecide={(conflictIndex, choice) => onDecide(decideConflict(decision, conflictIndex, choice))}
         />
       );
-    case 'changes':
+    case 'changes': {
+      // The merged result lives in memory: nothing to read it from, nor to edit in place.
+      const merged = { original: file.destination, modified: EMPTY_SOURCE, left: contents.destination, right: textContent(mergedText(state) ?? '') };
       return (
         <FileStepsContext.Provider value={changeArrows ? fileSteps : null}>
-          <LoadedFileDiff
-            place={workspacePlace(workspacePath)}
-            // The merged result lives in memory: nothing to read it from, nor to edit in place.
-            contents={{ original: file.destination, modified: { kind: 'empty' }, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
-            fileName={file.path}
+          <SteppedDiffFrame
+            stepsThroughChanges={changeArrows}
+            // In memory: always read, never another file's.
+            requested={{ key: diffContentsKey(merged.original, merged.modified), path: file.path, error: false, hasData: true, isPlaceholderData: false }}
             title={
               <span className={styles.diffTitle} data-tip={labels.destination}>
                 {labels.roles.destination.name} now → after the merge
               </span>
             }
-            identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
-            stepsThroughChanges={changeArrows}
-          />
+          >
+            <LoadedFileDiff
+              place={workspacePlace(workspacePath)}
+              contents={merged}
+              fileName={file.path}
+              identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
+              stepsThroughChanges={changeArrows}
+            />
+          </SteppedDiffFrame>
         </FileStepsContext.Provider>
       );
+    }
     case 'destination':
     case 'source':
       return (

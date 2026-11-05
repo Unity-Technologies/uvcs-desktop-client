@@ -2,6 +2,10 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { FileTreeList } from '../../components/FileTreeList';
 import type { MenuEntry } from '../../lib/actions';
+import type { FileTreeFolding } from '../../components/fileTreeFolding';
+import type { StatusGroup } from '../../components/statusGroups';
+import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { itemsIn } from '../../lib/itemRange';
 import type { PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -13,10 +17,12 @@ import { DiffEntryRow } from './DiffEntryRow';
 export type DiffEntryRowItem = PathTreeRow<DiffEntry>;
 
 interface DiffEntryListProps {
-  /** The files shown, the filter's and review mode's, as a list or a tree (`useFileTree`). */
-  rows: DiffEntryRowItem[];
+  /** The files shown, the filter's and review mode's, as a list or a tree, by status or not (`useGroupedFileTree`). */
+  rows: GroupedTreeRow<DiffEntry, StatusGroup>[];
   tree: boolean;
   toggleCollapsed: (key: string) => void;
+  /** Closing or opening every group and folder, from the view menu; null for a flat list. */
+  folding: FileTreeFolding | null;
   /** The filter's text, marked in the rows. */
   query: string;
   /** The filter's field and chips. */
@@ -36,13 +42,13 @@ interface DiffEntryListProps {
 export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 /** The files of a diff, as a list or a tree: filterable, and in review mode marked as they are reviewed, a folder at a time too. */
-export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches, metaOf = () => undefined }: DiffEntryListProps) {
+export function DiffEntryList({ rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches, metaOf = () => undefined }: DiffEntryListProps) {
   const { on, statusOf, toggle } = review;
 
   const renderItem = (row: DiffEntryRowItem, level: number) => {
     if (row.type === 'folder') {
-      const status = on ? groupReviewStatus(row.items, statusOf) : null;
-      const toggleFolder = status && <ReviewToggle folder status={status} partial={partialReviewCount(row.items, statusOf)} onToggle={() => toggle(row.items)} />;
+      const status = on ? groupReviewStatus(row.held, statusOf) : null;
+      const toggleFolder = status && <ReviewToggle folder status={status} partial={partialReviewCount(row.held, statusOf)} onToggle={() => toggle(itemsIn(row.held))} />;
       return <DiffEntryRow row={row} level={level} tree={tree} extras={toggleFolder} faded={status === 'reviewed'} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />;
     }
     const status = on ? statusOf(row.item) : null;
@@ -61,6 +67,7 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, s
       rows={rows}
       tree={tree}
       toggleCollapsed={toggleCollapsed}
+      folding={folding}
       renderItem={renderItem}
       query={query}
       belowFilterBar={review.bar}

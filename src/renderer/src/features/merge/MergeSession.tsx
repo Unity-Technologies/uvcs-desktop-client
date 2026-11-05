@@ -6,6 +6,7 @@ import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
@@ -13,7 +14,7 @@ import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
-import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
+import { FileStepsContext, selectNow, useFileSteps } from '../diff/viewer/fileSteps';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
@@ -28,7 +29,7 @@ import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
 import { MergePanes } from './MergePanes';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { pairMergeMetas } from './mergeMetaPairs';
 import { mergeItemTypes } from './mergeItemTypes';
@@ -81,11 +82,11 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const latest = useRef({ items: pairs.shown, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const { mergerFor, othersFor } = useFileMergers();
-  const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true });
+  const filter = useChangeFilter(pairs.shown, itemPath, mergeItemTones, { isViewFilter: true, viewOffer: MERGE_VIEW_OFFER });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
   const hidesAll = hidesEveryRow(pairs.shown.length, filter.visible.length);
-  const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
+  const { rows, tree, toggleCollapsed, rowKeyOf, folding } = useGroupedFileTree(content, pairs.shown, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), MERGE_ITEM_FACTS, selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
@@ -138,7 +139,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const conflictSteps = useFileSteps({
     keys: conflictKeys,
     current: selectedKey,
-    select: (key) => setSelection(singleSelection(key)),
+    select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))),
     pathOf: (key) => {
       const item = mergeItemAt(pairs.shown, rows, key);
       return item?.kind === 'fileConflict' ? item.file.path : key;
@@ -189,6 +190,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           progress={progress}
           tree={tree}
           toggleCollapsed={toggleCollapsed}
+          folding={folding}
           typeOf={typeOf}
           labels={labels}
           query={filter.query}
@@ -240,7 +242,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           <EmptyState
             icon={<Folder size={24} />}
             title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
-            description={`${pluralize(selectedGroup.items.length, 'item')}. Select one to see what the merge does to it.`}
+            description={`${pluralize(rangeLength(selectedGroup.held), 'item')}. Select one to see what the merge does to it.`}
           />
         ) : (
           <EmptyState title="Nothing selected" />

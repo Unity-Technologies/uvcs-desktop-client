@@ -42,6 +42,20 @@ describe('changelistHeadersOf', () => {
   const changes = [change('src/a.ts', ['changed']), change('src/ui/b.ts', ['checkedOut'], 'UI'), change('c.ts', ['changed'], 'UI')];
   const changelists = [{ name: 'UI', description: '' }];
 
+  it("gives the rows of a status group their changelist's header, not the status group's", () => {
+    const rows = layoutChangeRows({ sorted: sortChanges(changes), changelists, layout: 'list', grouping: 'changelist', groupByStatus: true });
+    const headers = changelistHeadersOf(rows);
+    expect(rows.map((row) => [row.key, headers.get(row.key)?.key])).toEqual([
+      ['changelist:', 'changelist:'],
+      ['status:changelist::changed', 'changelist:'],
+      ['change:src/a.ts', 'changelist:'],
+      ['changelist:UI', 'changelist:UI'],
+      ['status:changelist:UI:changed', 'changelist:UI'],
+      ['change:c.ts', 'changelist:UI'],
+      ['change:src/ui/b.ts', 'changelist:UI'],
+    ]);
+  });
+
   it("gives every row, folders and files, its changelist's header: dropping on it moves into that changelist", () => {
     const rows = layoutChangeRows({ sorted: sortChanges(changes), changelists, layout: 'tree', grouping: 'changelist' });
     const headers = changelistHeadersOf(rows);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
 import { openingStep, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
-import { fileSteps, type PendingArrival } from './fileSteps';
+import { fileSteps, pendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
 import { lineDiff } from './lineDiff';
 
@@ -18,16 +18,17 @@ const changesOf = (original: string, modified: string): number => listChangeRegi
 class DiffBesideList {
   private shown = '';
   private current: number | null = null;
-  private readonly pending: { current: PendingArrival | null } = { current: null };
+  private readonly pending = pendingArrival();
 
   /** `files`: each file of the list and how many changes its diff has. */
   constructor(private readonly files: Record<string, number>) {
     this.open(Object.keys(files)[0]!);
   }
 
-  /** The list's current file and the header's "3 of 12". */
+  /** The list's current file and the header's "3 of 12", which says nothing before a change is current. */
   get header(): string {
-    return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'change')}`;
+    const label = positionLabel({ count: this.count, current: this.current });
+    return label ? `${this.shown}: ${label}` : this.shown;
   }
 
   /** A file picked in the list, as a click on it. */
@@ -52,7 +53,10 @@ class DiffBesideList {
   }
 
   private steps() {
-    return fileSteps(Object.keys(this.files), this.shown, { select: (key) => this.open(key), pathOf: (key) => key }, this.pending);
+    return fileSteps(Object.keys(this.files), this.shown, { select: (key, selected) => {
+        selected();
+        this.open(key);
+      }, pathOf: (key) => key }, this.pending);
   }
 
   private open(path: string): void {
@@ -75,8 +79,8 @@ describe('stepping through the changes of a list of files', () => {
       'b.cs': changesOf(crlfOriginal, crlfModified),
     });
 
-  it('counts the changes of a file before the first move', () => {
-    expect(files().header).toBe('a.ts: 3 changes');
+  it('says nothing of a file before the first move', () => {
+    expect(files().header).toBe('a.ts');
   });
 
   it("goes through a file's changes, then on to the next file's first change, stepping past files with none", () => {
@@ -84,11 +88,11 @@ describe('stepping through the changes of a list of files', () => {
     const headers = [list.header];
     for (let press = 0; press < 9; press++) headers.push(list.press(1).header);
     expect(headers).toEqual([
-      'a.ts: 3 changes',
+      'a.ts',
       'a.ts: 1 of 3',
       'a.ts: 2 of 3',
       'a.ts: 3 of 3',
-      'logo.png: No changes',
+      'logo.png',
       'added.ts: 1 of 1',
       'b.cs: 1 of 3',
       'b.cs: 2 of 3',
@@ -101,7 +105,7 @@ describe('stepping through the changes of a list of files', () => {
     const list = files();
     for (let press = 0; press < 6; press++) list.press(1);
     expect(list.header).toBe('b.cs: 1 of 3');
-    expect([list.press(-1).header, list.press(-1).header, list.press(-1).header]).toEqual(['added.ts: 1 of 1', 'logo.png: No changes', 'a.ts: 3 of 3']);
+    expect([list.press(-1).header, list.press(-1).header, list.press(-1).header]).toEqual(['added.ts: 1 of 1', 'logo.png', 'a.ts: 3 of 3']);
   });
 
   it('stops at the last change of the last file and the first of the first', () => {
@@ -115,18 +119,18 @@ describe('stepping through the changes of a list of files', () => {
 
   it('keeps going on from a file without changes, whichever way', () => {
     const list = new DiffBesideList({ 'a.png': 0, 'same.txt': changesOf('same\n', 'same\n'), 'b.ts': 1 });
-    expect(list.header).toBe('a.png: No changes');
+    expect(list.header).toBe('a.png');
     expect(list.goesTo(1)).toBe('file');
-    expect(list.press(1).header).toBe('same.txt: No changes');
+    expect(list.press(1).header).toBe('same.txt');
     expect(list.goesTo(-1)).toBe('file');
     expect(list.press(1).header).toBe('b.ts: 1 of 1');
   });
 });
 
 describe('a file picked in the list', () => {
-  it('opens counting its changes, its first in view, and the first move goes to it', () => {
+  it('opens with its first change in view, none current, and the first move goes to it', () => {
     const list = new DiffBesideList({ 'a.ts': 2, 'b.ts': changesOf(original, modified) }).pick('b.ts');
-    expect([list.header, list.press(1).header]).toEqual(['b.ts: 3 changes', 'b.ts: 1 of 3']);
+    expect([list.header, list.press(1).header]).toEqual(['b.ts', 'b.ts: 1 of 3']);
   });
 });
 

@@ -16,7 +16,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, expanding a diff to the whole window, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -1101,7 +1101,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
   the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
-  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
+  ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
+  once a key was pressed, and a clicked button at the next key, so focus the app moves on its own (Expand Diff giving
+  the code the keyboard: `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
+  `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab (Go to line… too). New code uses
+  `focusAs` and `settleClickFocus`. Two older marks remain for what they alone can see: a click inside the code, whose
+  focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
+  skip), and focus a closing menu hands back to its trigger (`trackPointerReturnFocus`, `data-pointer-return-focus`).
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
@@ -1210,7 +1217,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   state shows under its column titles (`objectListLayout`), a page window keeps following the selection (the view, not
   its details, calls `useShowInFollowingWindow`), and a link to a file's lines shows Browse repository's details again
   (`showDetails`). Panes that show a diff beside its files (Changes, Incoming, merge, History, a diff) are not details:
-  they have no toggle.
+  they have no toggle. Their diff expands to the whole window instead, the merge page's aside (features/diff.md "Expanding the diff").
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
@@ -1247,40 +1254,39 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     (`ui/Button`), a dialog's primary button gives way before Cancel does, and a split button before the row it sits in.
   `scripts/sandboxes/long-branch-names.sh` builds a repository with such names to check a change against.
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
-  (after its checkbox), the files of every diff and details panel, the merge page, Incoming, Go to file,
-  the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
-  and, last on the row in one column, `ItemStatusMark`: the status letter (`StatusBadge`, the same tones and letters
-  everywhere; its tooltip says what it means there), or a dot for a folder with changes inside. A moved file that
-  changed shows its C before its M (`StatusMark.changedLabel`, in a diff's header too), and both filter chips find it
-  (`statusTones`). A moved item's name and its M show the move on hover, through the one tooltip
-  (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once ("in"), then one line each for
-  where it was ("from") and is ("to"), what the move removed and added tinted as a diff tints them
-  (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`), never wrapped
-  (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
-  and the shared folder, said twice, hid what changed. `ItemPathRow` is an item
-  named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
-  stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
-  letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
-  alert tone). A mark that leads somewhere is a button, its tooltip
-  saying where, that keeps the row's click and selection out of it; the row's menu offers the same to the keyboard: a
-  lock mark ("· click to see all locks") and the file's "Show in Locks" open the Locks view on that lock
-  (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored items dims: a private item keeps
-  its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey out, icon and name, with no
-  letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for their review mark. Files marks
-  what is notable only (a pending change, a checkout, a private item: `itemDecoration`); a list of changes letters
-  every row, as its filter chips do. In Changes every folder holds changes, so only its own change
-  marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source did);
-  `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
-  pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
-  its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
-  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
-  whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in once a
-  layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
-  rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
-  checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
-  takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked paths no longer pending don't count
-  (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms
-  for 500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
+  (after its checkbox), the files of every diff and details panel, the merge page, Incoming, Go to file, the Undo
+  dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name
+  (cut first, in the middle as every path is: `PathLabel`), extras and, last on the row in one column, `ItemStatusMark`:
+  the status letter (`StatusBadge`, the same tones and letters everywhere; its tooltip says what it means there), or a
+  dot for a folder with changes inside. A moved file that changed shows its C before its M (`StatusMark.changedLabel`,
+  in a diff's header too), and both filter chips find it (`statusTones`). A moved item's name and its M show the move on
+  hover, through the one tooltip (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once
+  ("in"), then one line each for where it was ("from") and is ("to"), the paths monospaced and what the move removed and
+  added tinted as a diff tints them (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first
+  (`trimFolderToFit`), never wrapped (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path
+  broke inside what the move added, and the shared folder, said twice, hid what changed. `ItemPathRow` is an item named
+  by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict stands (the merge
+  page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the letter, a quiet icon
+  whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the alert tone). A mark that
+  leads somewhere is a button, its tooltip saying where, that keeps the row's click and selection out of it; the row's
+  menu offers the same to the keyboard: a lock mark ("· click to see all locks") and the file's "Show in Locks" open the
+  Locks view on that lock (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored
+  items dims: a private item keeps its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey
+  out, icon and name, with no letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for
+  their review mark. Files marks what is notable only (a pending change, a checkout, a private item: `itemDecoration`);
+  a list of changes letters every row, as its filter chips do. In Changes every folder holds changes, so only its own
+  change marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source
+  did); `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read
+  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list
+  renders its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of
+  them (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
+  whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can go
+  in once a layout, counted where they are (`candidatesUnderRow`): a click on a box then asks each change once whether
+  it goes in, under the check-in rules (`consistentlyIncluded`, below), in one pass that adds everything up
+  (`checkinSelectionOf`). With every box checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and
+  a folder holding every change shown takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked
+  paths no longer pending don't count (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms for
+  500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
@@ -1291,33 +1297,74 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
     sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
-    order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
-    to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
-    one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
-    give.
-  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
-    one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), follows the
-    status chips, so it is in the same place in each list; a details panel too short for a filter bar has it in its
-    title. Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle).
-  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
-    holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
-    as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
-    holds while closed); `FileTreeCell` indents rows to their level. A click, Enter, ← and → open and close folders
-    (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
-    (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
-    `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
-    a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
-    every other diff alone. A list is scoped by its workspace too (`folderListScope`): `/main/feature` or cs:3 name
-    other things in another repository. A selection made from outside the list (a diff opened on a file, the merge
-    page or a resolve run moving to a conflict) opens the groups and folders holding it, so its row shows
-    (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a folder closed around it stays closed.
+    order. That path order is the default and the one every list's items come in; a sort is laid over it.
+  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`) or extension
+    (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
+    sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
+    (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
+    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
+    when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
+    million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
+    leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
+    a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
+    the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
+    nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
+    entries have none, so it would mean reading the disk or the server for every file.
+  - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
+    and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
+    alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
+    `fileListViewMenuModel`) takes the room of one button and follows the status chips, so it is in the same place in
+    each list; a details panel too short for a filter bar has it in its title. Its choices apply with the menu open, so
+    the list behind it shows each. Its button is an eye, since it holds the whole view and not only the layout, and
+    names that view in its tooltip ("View options: Tree, grouped by status"). Each list says what it offers
+    (`FileListViewOffer`): Changes adds grouping by changelist; the merge page and a details panel offer no grouping.
+    It ends with "Collapse all" or "Expand all" for a list with groups or folders (`fileTreeFoldingOf`, given by the
+    list around its toolbar: `FileTreeFoldingContext`). The palette has its choices too (`fileListViewCommands`).
+    Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
+    its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
+    (marks, the R key, the review bar), not how the files are laid out.
+  - **One tree**: `layoutPathTree` (`lib/pathTreeLayout`) lays out any items with a path: a folder's row, folders holding
+    only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder) as its
+    own row, with its status; a path listed twice (two conflicts on one path) is two rows, never a folder holding
+    itself. Its work grows with the items and the folders, never with how deep they sit: in path order a folder's items
+    are one run of the list, so a folder's or a group's row points into the list it was laid out from (`held`, an
+    `ItemRange` of `lib/itemRange`: the list, which never changes in place, and where the run starts and ends) instead
+    of copying it. What is drawn with every row walks its run without copying it (`forEachIn`, `countIn`; a count:
+    `folderItemCount`, `rangeLength`; a folder's check, `checkStateOver`; its review mark, `groupReviewStatus`); only
+    what acts on the files once copies them (`itemsIn`: a menu, a check, a review toggle). Each layout walks each path's
+    folders in place: the folders around an item are those it shares with the one before (a row stays open until its run
+    ends), a run's end is found by halves, and only the folders shown become strings. A folder copying its run, or
+    cutting each path into a string per folder above it, costs files × depth on every key typed in the filter: 170 ms a
+    key for 100,000 changes eight folders deep, 1.2 s for a million, where the run and the walk take 35 ms and 0.2 s.
+    Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it holds while closed);
+    `FileTreeCell` indents rows to their level. Every list with its own pane draws indent guides (`FileTreeList`,
+    Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row. They are always
+    on: a guide costs nothing to read past, and an option for it would be one more knob. Drawing the one holding the
+    selected row stronger, as an editor's explorer does, was tried and dropped: it moved with every selection and read
+    as noise, where the selected row's own highlight already says where it is. A details panel's short list draws none.
+    A click, Enter, ← and → open and close folders (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the
+    review key act on everything in it (`itemsUnderRows`), and in review mode its mark marks every file in it, showing
+    how far its review got ("2/5", `partialReviewCount`). Closed folders are remembered for the session per list
+    (`useCollapsedFolders`: the Changes of a workspace, one diff, one details pane, one Incoming scope, one merge), so
+    closing one in a changeset's diff leaves every other diff alone. A list is scoped by its workspace too
+    (`folderListScope`): `/main/feature` or cs:3 name other things in another repository. A selection made from outside
+    the list (a diff opened on a file, the merge page or a resolve run moving to a conflict) opens the groups and
+    folders holding it, so its row shows (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a
+    folder closed around it stays closed.
   - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
     changes and changes to apply, the merge page's directory conflicts, file conflicts and changes to apply) lays them
     out with `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name,
     count, or what its items' progress says instead, `FileTreeList`'s `groupProgress`, the merge page's
     `mergeGroupProgress`; what it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
-    do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
-    them.
+    do. Grouping by status is a choice (`groupByStatus`, off by default): each status the files have becomes a group
+    (`statusGroupsOf`, in the chips' order, each file in its own status's, a moved file that changed in Moved), headed
+    by its badge, inside the list's own groups when it has some (`withStatusGroups`, `TreeGroup.subgroups`: Changes'
+    changelists, Incoming's), so every file sits as many groups in (`groupLevelsOf`). It was rejected once, when it was
+    the only order: a row jumps to another group when its status changes, and a folder's changes split apart. As a
+    choice made for it, that is what it asks for; a status group's checkbox checks or unchecks every change of that
+    status at once, which the chips can't. A list whose own groups already say what happens to each file (the merge
+    page) offers none (`GroupedFileListFacts.statusGroup` undefined).
   - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
     drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
@@ -1341,19 +1388,27 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
   - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
-    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`ItemTag`), and leaves the meta out
-    of its counts (`pairUnityMetas`, `lib/unityMetaPairs`: `pairPendingMetas` for Changes, `pairDiffMetas` for a diff
-    and a details panel's changed files, `pairIncomingMetas`, `pairMergeMetas`). A meta joins its asset only when both
-    are listed and changed the same way (the same kinds and changelist in Changes, the same status in a diff), with the
-    name matched exactly as Unity writes it; otherwise it keeps its own row, so nothing that changed alone is hidden. A
-    conflict never joins: each is a decision with its own panel (Incoming keeps a colliding meta apart; the merge page
-    every conflict). Pairing is always on, not tied to a Unity project: a `.meta` beside its asset means Unity.
+    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
+    Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
+    `pairPendingMetas` for Changes, `pairDiffMetas` for a diff and a details panel's changed files, `pairIncomingMetas`,
+    `pairMergeMetas`); Changes adds the metas apart ("6 files + 2 meta", `changesCountLabel`) so its list adds up to the
+    changes pending its header counts (ignored, cloaked or hidden items the list's options show aren't pending). A meta
+    joins its asset only when both are listed and changed the same way (the same kinds and changelist in Changes, the
+    same status in a diff), with the name matched exactly as Unity writes it; otherwise it keeps its own row, so nothing
+    that changed alone is hidden. A conflict never joins: each is a decision with its own panel (Incoming keeps a
+    colliding meta apart; the merge page every conflict). Pairing is always on, not tied to a Unity project: a `.meta`
+    beside its asset means Unity.
     What changes data takes the meta along (`withMetas`): Changes' checkbox, undo, add, checkout, changelists and filter
     rules; a diff's revert and restore, whose "Restore to…" goes away when the meta comes back too, as an asset moved
     without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's
     own: "Open .meta diff" (`metaDiff`), "View .meta history" (`metaHistory`), and in Changes "Open .meta". Selecting
-    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar (`MetaDiffButton`, `diffedItem`) or "Open
+    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar, there whatever the asset's diff is (text,
+    image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`), right
+    before the change arrows so it doesn't move as the asset's and the meta's controls differ, or "Open
     .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
+    "Since review" shares that slot, whatever the diff is: a committed file's (`EntryDiff`) compares the reviewed
+    revision with the current one, which an image or a model shows as for any two revisions; in Changes it needs a
+    snapshot, which `ReviewStore` keeps only of text files.
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
   badge cut into its bottom-right corner (`FolderXlinkIcon`: one color, the cutout and arrow transparent), in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
@@ -1377,7 +1432,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
-  output. Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
+  output. Each command line is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the
+  command and its subcommand (`lock list`, `find branch`) in one color, option names in another (each kept whole on its
+  line), `--format`'s `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and
+  numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name
+  turns red. Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with

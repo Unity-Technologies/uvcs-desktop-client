@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffPaneOf } from './diffPane';
+import { diffPaneDiffs, diffPaneOf } from './diffPane';
 
 const nothingSelected = { entrySelected: false, folderSelected: false };
 
@@ -20,5 +20,18 @@ describe('diffPaneOf', () => {
 
   it('has no match while filters hide every file, even with one still selected', () => {
     expect(diffPaneOf({ listedCount: 2, shownCount: 0, entrySelected: true, folderSelected: false })).toBe('noMatches');
+  });
+});
+
+describe('diffPaneDiffs', () => {
+  it('has no diff to keep expanded when the diff lists none, or the filters and review mode hide them all', () => {
+    expect(diffPaneDiffs('noDifferences')).toBe('none');
+    expect(diffPaneDiffs('noMatches')).toBe('none');
+  });
+
+  it('is reading while blank (the next changeset of a branch, a followed selection), and has diffs otherwise', () => {
+    expect(diffPaneDiffs('blank')).toBe('reading');
+    expect(diffPaneDiffs('entry')).toBe('some');
+    expect(diffPaneDiffs('folder')).toBe('some');
   });
 });

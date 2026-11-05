@@ -1,3 +1,4 @@
+import { isInFront } from '../lib/inFront';
 import { useDetailsPaneStore } from './detailsPaneStore';
 
 /** A details toggle on screen: the view or page it's in, by its details' key, and the element it was drawn in. */
@@ -26,8 +27,4 @@ export function detailsKeyInFront<Element>(toggles: Iterable<MountedDetailsToggl
 export function toggleDetailsInFront(): void {
   const detailsKey = detailsKeyInFront(mounted, isInFront);
   if (detailsKey !== undefined) useDetailsPaneStore.getState().toggleHidden(detailsKey);
-}
-
-function isInFront(element: HTMLElement): boolean {
-  return element.isConnected && element.closest('[hidden]') === null;
 }

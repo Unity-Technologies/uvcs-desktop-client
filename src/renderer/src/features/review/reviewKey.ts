@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { someIn } from '../../lib/itemRange';
 import type { ListReview } from './useReviewMode';
 import { needsReview, reviewableOf, shouldMarkReviewed, type ReviewStatusOf } from './reviewStatus';
 
@@ -43,5 +44,5 @@ export function stepToNextReviewable<T>(rows: readonly GroupedTreeRow<T, unknown
 
 function holdsReview<T>(row: GroupedTreeRow<T, unknown>, statusOf: ReviewStatusOf<T>): boolean {
   if (row.type === 'file') return needsReview(statusOf, row.item);
-  return row.collapsed && row.items.some((item) => needsReview(statusOf, item));
+  return row.collapsed && someIn(row.held, (item) => needsReview(statusOf, item));
 }

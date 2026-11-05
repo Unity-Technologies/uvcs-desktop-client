@@ -2,6 +2,7 @@ import type { Editor } from '@pierre/diffs/edit';
 import { useRef, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import type { FocusedLines } from '../../../app/navigation/pages';
 import type { MenuEntry } from '../../../lib/actions';
+import { focusAs } from '../../../lib/focusRing';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -33,7 +34,6 @@ import type { LineRange } from './lineSelection';
 import type { ScrollToLine } from './useLineLinks';
 import { editorHasFocusIn, pageTextSelection, rowUnderPointer } from './pierreDom';
 import { openPierreSearchPanel } from './pierreSearchPanel';
-import { focusWithoutRing } from './usePointerFocusMark';
 import { orderedSpan, shownLineCount, wholeTextSpan, type TextSpan } from './textSpans';
 
 interface CodeMenuOptions {
@@ -106,7 +106,8 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     // The scroll placed the line; the caret mustn't move it again to the view's edge.
     if (typedEditor) return typedEditor.focus({ lineNumber: line, character: 0, preventScroll: true });
     latest.current.lines?.select({ start: line, side, end: line, endSide: side });
-    focusWithoutRing(container);
+    // Back to the code the command was chosen in: the line shows where the user is, so no ring around the pane.
+    focusAs(container, 'app');
   };
 
   const compareWithClipboard = (selection: CodeFragment): void => {
