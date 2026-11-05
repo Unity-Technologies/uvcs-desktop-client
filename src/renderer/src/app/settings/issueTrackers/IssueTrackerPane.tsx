@@ -12,7 +12,7 @@ import { TextField } from '../../../ui/TextField';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
-import { connectedTrackerOf, connectFailureWords, proofWords, signInRows } from './connectFlow';
+import { addProjectReady, connectedTrackerOf, connectFailureWords, proofWords, signInRows } from './connectFlow';
 import { ConnectTracker } from './ConnectTracker';
 import { SignInAgain } from './SignInAgain';
 import styles from './IssueTrackerPane.module.css';
@@ -89,7 +89,7 @@ function AddProject({ repository, kind, onAdded }: { repository: string; kind: I
   return (
     <div className={styles.row}>
       <TextField className={styles.field} aria-label="A link to an issue of the other project" placeholder="Link to an issue of the project" value={link} onChange={(event) => setLink(event.target.value)} />
-      <Button size="small" variant="primary" disabled={!link.trim()} onClick={() => void add()}>
+      <Button size="small" variant="primary" disabled={!addProjectReady(link)} onClick={() => void add()}>
         Add
       </Button>
       {problem && <p className={styles.problem}>{problem}</p>}

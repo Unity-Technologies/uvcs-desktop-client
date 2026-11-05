@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { accountWords, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, signInAgainStep, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { accountWords, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -127,11 +127,24 @@ describe('the token step’s words and readiness', () => {
     expect(tokenStepWords('github')).toEqual({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
   });
 
-  it('can sign in once Jira’s email is given, and never while signing in', () => {
-    expect(tokenStepReady('jiraCloud', ' ', false)).toBe(false);
-    expect(tokenStepReady('jiraCloud', 'ana@acme.com', false)).toBe(true);
-    expect(tokenStepReady('github', '', false)).toBe(true);
-    expect(tokenStepReady('github', '', true)).toBe(false);
+  it('can sign in with a token given, Jira’s email too, and never while signing in', () => {
+    expect(tokenStepReady('jiraCloud', ' ', 'token', false)).toBe(false);
+    expect(tokenStepReady('jiraCloud', 'ana@acme.com', 'token', false)).toBe(true);
+    expect(tokenStepReady('github', '', 'token', false)).toBe(true);
+    expect(tokenStepReady('github', '', '  ', false)).toBe(false);
+    expect(tokenStepReady('github', '', 'token', true)).toBe(false);
+  });
+
+  it('shows the server’s best way to sign in, unless a token was chosen', () => {
+    expect(signInMethodShown(['deviceCode', 'token'], false)).toBe('deviceCode');
+    expect(signInMethodShown(['deviceCode', 'token'], true)).toBe('token');
+    expect(signInMethodShown(['token'], false)).toBe('token');
+  });
+
+  it('adds a project by a link that reads as an issue', () => {
+    expect(addProjectReady('https://github.com/acme/tools/issues/1')).toBe(true);
+    expect(addProjectReady('  ')).toBe(false);
+    expect(addProjectReady('https://github.com/acme/tools')).toBe(false);
   });
 });
 
@@ -147,6 +160,15 @@ describe('signInAgainStep', () => {
       words: "Jira couldn't be reached at acme.atlassian.net.",
     });
     expect(signInAgainStep({ kind: 'github', server: 'https://github.com' }, { reason: 'rateLimited' }, [])).toMatchObject({ kind: 'problem' });
+  });
+});
+
+describe('signInAgainView', () => {
+  it('starts with why and “Sign in again”, says “Try again” after a try that couldn’t reach the tracker, then signs in', () => {
+    expect(signInAgainView(null, 'Jira stopped accepting this sign-in.', false)).toEqual({ kind: 'retry', words: 'Jira stopped accepting this sign-in.', button: 'Sign in again' });
+    expect(signInAgainView({ kind: 'problem', words: "Jira couldn't be reached at acme.atlassian.net." }, 'why', false)).toEqual({ kind: 'retry', words: "Jira couldn't be reached at acme.atlassian.net.", button: 'Try again' });
+    expect(signInAgainView({ kind: 'askCredential', methods: ['deviceCode', 'token'] }, 'why', false)).toEqual({ kind: 'deviceCode' });
+    expect(signInAgainView({ kind: 'askCredential', methods: ['deviceCode', 'token'] }, 'why', true)).toEqual({ kind: 'token' });
   });
 });
 

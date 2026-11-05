@@ -75,9 +75,19 @@ export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
   }
 }
 
-/** Whether the token step can sign in: not while signing in, and with Jira Cloud's email given. */
-export function tokenStepReady(kind: IssueTrackerKind, email: string, busy: boolean): boolean {
-  return !busy && (tokenStepWords(kind).emailLabel === undefined || email.trim() !== '');
+/** Whether the token step can sign in with `token`: one given, not while signing in, and Jira Cloud's email given. */
+export function tokenStepReady(kind: IssueTrackerKind, email: string, token: string, busy: boolean): boolean {
+  return !busy && token.trim() !== '' && (tokenStepWords(kind).emailLabel === undefined || email.trim() !== '');
+}
+
+/** Which way to sign in shows: the server's best, unless the user chose a token instead ("Use a token instead"). */
+export function signInMethodShown(methods: readonly SignInMethodKind[], tokenChosen: boolean): 'deviceCode' | 'token' {
+  return methods[0] === 'deviceCode' && !tokenChosen ? 'deviceCode' : 'token';
+}
+
+/** Whether "Add a project" can read its link: one that reads back as an issue. */
+export function addProjectReady(link: string): boolean {
+  return linkReadBack(link).kind === 'read';
 }
 
 /**
@@ -90,6 +100,18 @@ export type SignInAgainStep = { kind: 'askCredential'; methods: SignInMethodKind
 export function signInAgainStep(connection: Pick<TrackerConnection, 'kind' | 'server'>, failure: SignInFailure, deviceFlowHosts: readonly string[]): SignInAgainStep {
   if (failure.reason === 'tokenRefused') return { kind: 'askCredential', methods: signInMethodsFor(connection.kind, connection.server, deviceFlowHosts) };
   return { kind: 'problem', words: connectFailureWords(failure, { trackerName: TRACKER_GRAMMARS[connection.kind].name, server: connection.server }).words };
+}
+
+/**
+ * What "Sign in again" shows: before any try, why it's needed and "Sign in again"; after a try that couldn't reach the
+ * tracker, why and "Try again"; once a new credential is needed, the way to sign in (`signInMethodShown`).
+ */
+export type SignInAgainView = { kind: 'retry'; words: string; button: string } | { kind: 'deviceCode' } | { kind: 'token' };
+
+export function signInAgainView(step: SignInAgainStep | null, why: string, tokenChosen: boolean): SignInAgainView {
+  if (!step) return { kind: 'retry', words: why, button: 'Sign in again' };
+  if (step.kind === 'problem') return { kind: 'retry', words: step.words, button: 'Try again' };
+  return { kind: signInMethodShown(step.methods, tokenChosen) };
 }
 
 /** Whether a token pasted in the field signs in at once: one of the tracker's known shapes (`ghp_`, `ATATT`). */

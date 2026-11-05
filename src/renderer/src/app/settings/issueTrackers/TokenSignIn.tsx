@@ -40,7 +40,6 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const email = typedEmail ?? suggestedEmail(cmUser, keptEmail);
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
-  const ready = tokenStepReady(kind, email, busy);
 
   const submit = async (typed: string, { pasted = false } = {}): Promise<void> => {
     setBusy(true);
@@ -57,7 +56,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   };
   const pasted = (event: ClipboardEvent<HTMLInputElement>): void => {
     const text = event.clipboardData.getData('text');
-    if (!ready || !submitsOnPaste(kind, text)) return;
+    if (!tokenStepReady(kind, email, text, busy) || !submitsOnPaste(kind, text)) return;
     event.preventDefault();
     void submit(text, { pasted: true });
   };
@@ -65,7 +64,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const enterSignsIn = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    if (ready && token.trim()) void submit(token);
+    if (tokenStepReady(kind, email, token, busy)) void submit(token);
   };
   const failed = failure && connectFailureWords(failure, { trackerName, server, ...(words.emailLabel && { email }) });
 
@@ -89,7 +88,7 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
         hint={words.hint}
       />
       <div className={styles.row}>
-        <Button size="small" variant="primary" disabled={!ready || !token.trim()} loading={busy} onClick={() => void submit(token)}>
+        <Button size="small" variant="primary" disabled={!tokenStepReady(kind, email, token, busy)} loading={busy} onClick={() => void submit(token)}>
           Sign in
         </Button>
       </div>

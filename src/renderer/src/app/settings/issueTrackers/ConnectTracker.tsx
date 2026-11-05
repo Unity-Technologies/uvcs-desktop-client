@@ -10,7 +10,7 @@ import { useIssueTrackerSetup } from '../../../components/issues/useIssueTracker
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { useSession } from '../../workspace/sessionStore';
-import { connectFailureWords, LINK_EXAMPLES, LINK_PLACEHOLDER, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep } from './connectFlow';
+import { connectFailureWords, signInMethodShown, LINK_EXAMPLES, LINK_PLACEHOLDER, linkReadBack, signInStepFor, suggestedTrackerLink, type SignInStep } from './connectFlow';
 import { DeviceSignIn } from './DeviceSignIn';
 import { TokenSignIn } from './TokenSignIn';
 import styles from './IssueTrackerPane.module.css';
@@ -86,7 +86,8 @@ interface SignInForProps {
 /** The sign-in step for a link read back: a sign-in already there in one click, else the tracker's best method. */
 function SignInFor({ link, linkText, step, repository, onConnected }: SignInForProps) {
   const [failure, setFailure] = useState<SignInFailure | null>(null);
-  const [method, setMethod] = useState(step.kind === 'signIn' ? step.methods[0]! : 'token');
+  const [tokenChosen, setTokenChosen] = useState(false);
+  const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
   const [busy, setBusy] = useState(false);
   const finish = (outcome: SignInOutcome): void => {
     if (outcome.kind === 'signedIn') onConnected(outcome);
@@ -116,7 +117,7 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
       <h3 className={styles.cardTitle}>Sign in to {step.trackerName}</h3>
       <p className={styles.cardLine}>So the app can show each issue’s title and status.</p>
       {method === 'deviceCode' ? (
-        <DeviceSignIn request={{ repository, link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setMethod('token')} />
+        <DeviceSignIn request={{ repository, link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
       ) : (
         <TokenSignIn
           kind={link.kind}
