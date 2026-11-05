@@ -217,6 +217,11 @@ describe('signInRows', () => {
     });
     expect(unused!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in.');
   });
+
+  it('says the window’s repository is one of those that lose their tracker', () => {
+    const [here] = signInRows(setup([jira]), 'game@acme@unity');
+    expect(here!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository goes back to showing issues as plain text.');
+  });
 });
 
 describe('otherTokenPageOffered', () => {
@@ -231,6 +236,10 @@ describe('the sign-ins Connect offers first', () => {
   it('offers the sign-ins that work, never one that needs signing in again', () => {
     expect(usableSignIns(setup([jira, { ...jira, id: 'r', credential: 'refused' }])).map((row) => row.id)).toEqual(['j']);
     expect(usableSignIns(undefined)).toEqual([]);
+  });
+
+  it('marks the one the window’s repository uses, when it changes its tracker', () => {
+    expect(usableSignIns(setup([jira]), 'game@acme@unity').map((row) => row.detail)).toEqual(['acme.atlassian.net · This repository']);
   });
 
   it('says which sign-in was picked until a link to another server is pasted', () => {
