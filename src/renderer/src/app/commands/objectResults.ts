@@ -45,6 +45,8 @@ export interface ResultContext {
   place: Place;
   term: string;
   currentBranch?: string;
+  /** Who the user is on the place's server (`usePlaceUser`); undefined while it's read. */
+  me?: string;
   loadedChangeset?: number | null;
   /** What the workspace is on, for the menus that switch to an object (`codeReviewMenu`). */
   workspaceOn?: WorkspaceSelector;

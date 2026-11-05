@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import type { Place } from '@shared/domain/place';
+import { placeId, type Place } from '@shared/domain/place';
+import { usePlaceUser } from '../account/accounts';
+import { peopleSeenIn } from '../../components/people/usePeopleSeen';
 import { branchWorkedOn } from '../../components/workingObject';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 // The palette lists changes as the flat list does.
@@ -8,6 +10,7 @@ import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
 import { paletteBranches, paletteGroups } from './paletteGroups';
+import { palettePeople, peopleIndex } from './personResults';
 import { isSearching, type PaletteScope } from './paletteScope';
 import type { SearchGroup } from './searchResults';
 import { NOWHERE, usePaletteLists } from './usePaletteLists';
@@ -27,7 +30,8 @@ export interface PaletteSearch {
  * - once typing pauses, `cm find ... like` asks the server for what the cache may miss (objects created since, or
  *   beyond the cached limits). Changeset comments take seconds to search on big repositories, so only on demand.
  * Without a search it lists what is at hand: the pending changes, the current, recent and newest branches, the
- * latest changesets and shelves. Sections outside `scope` are left out.
+ * latest changesets and shelves. People (`@`) are the owners of those lists and those the views showed, no query of
+ * their own. Sections outside `scope` are left out.
  */
 export function usePaletteSearch(shown: Place | null, query: string, scope: PaletteScope): PaletteSearch {
   const enabled = shown !== null;
@@ -50,6 +54,14 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
   const branchWords = useMemo(() => createWordFilterIndex(everyBranch?.map((branch) => [branch.name, branch.comment]) ?? []), [everyBranch]);
   const labelWords = useMemo(() => createWordFilterIndex(labels.data?.map((label) => [label.name, label.comment]) ?? []), [labels.data]);
+  const me = usePlaceUser();
+  const asksForPeople = scope === 'people';
+  // Indexed only once asked for: one walk of every list's owners.
+  const people = useMemo(() => {
+    if (!enabled || !asksForPeople) return undefined;
+    const owners = [everyBranch, labels.data, changesets.data, shelves.data, codeReviews.data].flatMap((list) => (list ?? []).map((row) => row.owner));
+    return peopleIndex(palettePeople(owners, peopleSeenIn(placeId(place)), me));
+  }, [enabled, asksForPeople, everyBranch, labels.data, changesets.data, shelves.data, codeReviews.data, place, me]);
   const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
   const serverWaits = (search: { isFetching: boolean }): boolean => server.searches && (serverTerm !== term || search.isFetching);
@@ -63,6 +75,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
         { section: 'changesets', waiting: changesets.isPending },
         { section: 'shelves', waiting: shelves.isPending || serverWaits(foundShelves) },
         { section: 'codeReviews', waiting: codeReviews.isPending || serverWaits(foundCodeReviews) },
+        { section: 'people', waiting: branches.isPending || labels.isPending || changesets.isPending || shelves.isPending || codeReviews.isPending },
       ],
       scope,
     );
@@ -74,6 +87,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
       place,
       term,
       currentBranch: branchWorkedOn(workspace.data?.selector),
+      me,
       loadedChangeset: workspace.data?.loadedChangeset,
       workspaceOn: workspace.data?.selector,
       changelists: pendingChanges.data?.changelists ?? [],
@@ -91,6 +105,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
         shelves: shelves.data,
         codeReviews: codeReviews.data,
         recentBranchGuids: recentBranches,
+        people,
       },
       server: { term: serverTerm, branches: foundBranches.data, labels: foundLabels.data, shelves: foundShelves.data, codeReviews: foundCodeReviews.data },
       changesetSearch: {
@@ -108,6 +123,8 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     scope,
     serverTerm,
     workspace.data,
+    me,
+    people,
     recentBranches,
     pendingChanges.data,
     changes,

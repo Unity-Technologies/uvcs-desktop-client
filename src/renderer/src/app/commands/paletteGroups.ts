@@ -21,7 +21,9 @@ import {
   type ObjectMatch,
   type ResultContext,
 } from './objectResults';
+import { rankCandidates, type CandidateIndex } from '../../components/commentEditor/suggestionRanking';
 import { isInScope, type PaletteScope } from './paletteScope';
+import { personResult } from './personResults';
 import type { SearchGroup, SearchResult } from './searchResults';
 
 /** Rows a section can show once expanded; each section shows fewer until then (see `collapseGroups`). */
@@ -81,6 +83,8 @@ export interface CachedLists {
   codeReviews?: readonly CodeReviewSummary[];
   /** GUIDs (lowercase) of the branches switched to lately, most recent first. */
   recentBranchGuids: readonly string[];
+  /** Who `@` offers (`palettePeople`, `peopleIndex`); read only once asked for. */
+  people?: CandidateIndex<string>;
 }
 
 /** What the server found for `term` (the term as typing last paused), to add what the cached lists miss. */
@@ -114,13 +118,19 @@ export interface PaletteGroupsInput {
 
 /**
  * The palette's object sections, in the scope: without a search, what is at hand (pending changes, the current, recent
- * and newest branches, the latest changesets and shelves; labels and code reviews only when asked for with `lb:` and
- * `cr:`); with one, the cached
+ * and newest branches, the latest changesets and shelves; labels, code reviews and people only when asked for with
+ * `lb:`, `cr:` and `@`); with one, the cached
  * lists' matches followed by the few the server found that they miss. Empty sections are left out.
  */
 export function paletteGroups(input: PaletteGroupsInput): SearchGroup[] {
-  const groups = input.context.term ? searchGroups(input) : listGroups(input);
+  const groups = [...(input.context.term ? searchGroups(input) : listGroups(input)), peopleGroup(input)];
   return groups.filter((group) => group.results.length > 0 && isInScope(group.section, input.scope));
+}
+
+/** People, only when asked for (`@`): in any search, a name typed would list everyone who shares a word of it. */
+function peopleGroup({ scope, context, lists }: PaletteGroupsInput): SearchGroup {
+  const people = scope === 'people' && lists.people ? rankCandidates(lists.people, context.term, MAX_PER_SECTION) : [];
+  return { section: 'people', heading: 'People', results: people.map((person) => personResult(person, context.me)) };
 }
 
 function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[] {

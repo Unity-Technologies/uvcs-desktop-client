@@ -28,6 +28,7 @@ import {
   type ServerMatches,
 } from './paletteGroups';
 import type { PaletteScope } from './paletteScope';
+import { palettePeople, peopleIndex } from './personResults';
 import { rankGroups, type SearchGroup } from './searchResults';
 
 const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
@@ -61,6 +62,7 @@ interface Search {
   term?: string;
   scope?: PaletteScope;
   currentBranch?: string;
+  me?: string;
   lists?: Partial<CachedLists>;
   server?: Partial<ServerMatches>;
   changesetSearch?: Partial<ChangesetSearch>;
@@ -68,8 +70,8 @@ interface Search {
 }
 
 /** The palette's groups for what is typed; the server answered for the same term unless told otherwise. */
-function groupsFor({ term = '', scope = 'all', currentBranch, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
-  const context: ResultContext = { place, term, currentBranch, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
+function groupsFor({ term = '', scope = 'all', currentBranch, me, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
+  const context: ResultContext = { place, term, currentBranch, me, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
   const input: PaletteGroupsInput = {
     scope,
     context,
@@ -437,5 +439,25 @@ describe('lacksServerMatch', () => {
   it('decides nothing until both lists are read', () => {
     expect(lacksServerMatch(undefined, [{ id: 1 }])).toBe(false);
     expect(lacksServerMatch([{ id: 1 }], undefined)).toBe(false);
+  });
+});
+
+describe('paletteGroups: people', () => {
+  const people = peopleIndex(palettePeople(['ana.diaz', 'tom', 'anabel.ruiz', 'bob'], [], 'tom'));
+
+  it('lists who `@` offers, the user first, and no one in any other scope', () => {
+    expect(labelsIn(groupsFor({ scope: 'people', me: 'tom', lists: { people } }), 'people')).toEqual(['Tom', 'Ana Diaz', 'Anabel Ruiz', 'Bob']);
+    expect(sections(groupsFor({ term: 'ana', lists: { people } }))).not.toContain('people');
+    expect(sections(groupsFor({ lists: { people } }))).not.toContain('people');
+  });
+
+  it('finds people by the name shown and as stored, the name typed first', () => {
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ana', lists: { people } }), 'people')).toEqual(['Ana Diaz', 'Anabel Ruiz']);
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ruiz', lists: { people } }), 'people')).toEqual(['Anabel Ruiz']);
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ana.diaz', lists: { people } }), 'people')).toEqual(['Ana Diaz']);
+  });
+
+  it('shows nothing while the people are unread', () => {
+    expect(groupsFor({ scope: 'people' })).toEqual([]);
   });
 });
