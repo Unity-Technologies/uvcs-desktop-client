@@ -27,9 +27,10 @@ interface Placed {
   transform: number[];
 }
 
-/** A 2D context that records what is placed where, and the transforms. Everything else does nothing. */
-function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][] } {
+/** A 2D context that records what is placed where, the transforms, and the inks it strokes and fills with. Everything else does nothing. */
+function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Set<unknown> } {
   const placed: Placed[] = [];
+  const inks = new Set<unknown>();
   const transforms: number[][] = [];
   const saved: number[][] = [];
   let transform = [1, 0, 0, 1, 0, 0];
@@ -38,6 +39,8 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
     save: () => saved.push(transform),
     restore: () => (transform = saved.pop() ?? transform),
     measureText: (text: string) => ({ width: text.length * 6 }),
+    stroke: () => inks.add(state.strokeStyle),
+    fill: () => inks.add(state.fillStyle),
   };
   const state: Record<string | symbol, unknown> = { font: '10px sans-serif', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000' };
   const ctx = new Proxy(state, {
@@ -51,7 +54,7 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
       return true;
     },
   });
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms, inks };
 }
 
 const INK = '#888888';
@@ -198,7 +201,7 @@ describe('drawGraph far into a huge history', () => {
  * The small sample history at full size, centered, nothing selected: every display option has something to draw.
  * Comments are off (their captions measure fonts on a real canvas), as `drawFar` has them.
  */
-function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
+function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<GraphScene> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
   const layout = layoutGraph(sampleHistory());
   const recording = recordingContext();
   const middle = layout.nodesByColumn[Math.floor(layout.nodesByColumn.length / 2)]!;
@@ -226,6 +229,7 @@ function drawSample(options: Partial<GraphViewOptions> = {}): ReturnType<typeof 
     searchQuery: '',
     searchPing: 0,
     reviews: new Map(),
+    ...selection,
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),
@@ -272,5 +276,27 @@ describe('drawGraph draws only what its display options ask for', () => {
     expect(textsOf(placed)).toContain('a');
     expect(textsOf(placed)).not.toContain('/main/a');
     expect(drawn.cutBranchNames.find((lane) => lane.branch.name === '/main/a')).not.toBeNull();
+  });
+});
+
+describe('drawGraph draws a selection the same however many things it holds', () => {
+  const SELECTION_SOFT = 'rgba(9, 105, 218, 0.12)';
+  const selectionPalette: GraphPalette = { ...palette, accent: '#0969da', accentSoft: SELECTION_SOFT };
+  /** The inks drawing a selection adds to the graph drawn with nothing selected. */
+  const selectionInks = (selection: Partial<GraphScene>) => {
+    const unselected = drawSample({}, { palette: selectionPalette }).inks;
+    return [...drawSample({}, { palette: selectionPalette, ...selection }).inks].filter((ink) => !unselected.has(ink));
+  };
+
+  it('draws several branches in the selection color, as it draws one', () => {
+    const one = selectionInks({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
+    expect(one).toContain(SELECTION_SOFT);
+    expect(selectionInks({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']), multipleSelection: true })).toEqual(one);
+  });
+
+  it('draws several changesets in the selection color, as it draws one', () => {
+    const one = selectionInks({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
+    expect(one).toContain(SELECTION_SOFT);
+    expect(selectionInks({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]), multipleSelection: true })).toEqual(one);
   });
 });
