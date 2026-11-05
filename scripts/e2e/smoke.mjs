@@ -207,6 +207,13 @@ try {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
+  await step('A prefix in the palette', async () => {
+    // `@` narrows it to people: the owners of what it read, with no command of its own.
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('@');
+    await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
+    await palette.getByRole('combobox').fill('');
+  });
   await step('A link pasted in the palette', async () => {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
