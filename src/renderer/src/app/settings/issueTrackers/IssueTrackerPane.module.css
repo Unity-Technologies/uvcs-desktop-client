@@ -538,6 +538,14 @@
   transform: translateX(2px);
 }
 
+/* Home with no sign-in yet: what to do, in the card's body. */
+.noSignIns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+}
+
 /* The picker's groups where sign-ins come first: "Use a sign-in you already have", then the other trackers. */
 .pickerTitle {
   margin: var(--space-1) 0 0;

@@ -9,6 +9,7 @@ import { connectedTrackerOf } from './connectFlow';
 import { ConnectTracker } from './ConnectTracker';
 import { SignInsCard } from './SignInsCard';
 import { TrackerCard } from './TrackerCard';
+import type { TrackerChoice } from './trackerChoices';
 import styles from './IssueTrackerPane.module.css';
 
 /**
@@ -50,12 +51,12 @@ function RepositoryTracker({ repository }: { repository: string }) {
 }
 
 /**
- * A window with no repository: with no sign-in yet, Connect itself, to sign in alone (any repository then connects in
- * one click); once there are sign-ins, "Add a sign-in" over them opens it again.
+ * A window with no repository: the sign-ins this computer keeps, always (none yet says so); "Add a sign-in" offers the
+ * trackers in a menu, and the one picked opens Connect at its link step, to sign in alone (any repository then
+ * connects to it in one click). Back, or signing in, returns to the sign-ins.
  */
 function SignInAlone() {
-  const signIns = useIssueTrackerSetup()?.connections.length ?? 0;
-  const [adding, setAdding] = useState(false);
-  if (signIns === 0 || adding) return <ConnectTracker onConnected={() => setAdding(false)} {...(signIns > 0 && { onCancel: () => setAdding(false) })} />;
-  return <SignInsCard onAdd={() => setAdding(true)} />;
+  const [adding, setAdding] = useState<TrackerChoice | null>(null);
+  if (adding) return <ConnectTracker key={adding} startWith={adding} onConnected={() => setAdding(null)} onCancel={() => setAdding(null)} />;
+  return <SignInsCard onAdd={setAdding} />;
 }

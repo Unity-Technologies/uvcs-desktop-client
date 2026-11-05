@@ -418,7 +418,9 @@ brand colors as `--brand-*` tokens). What each card shows is decided in pure mod
 
 In a window with no repository, Connect signs in alone (`connectWords`: "Sign in to an issue tracker"): the link
 proves the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in
-one click. With no sign-in yet that's the whole pane; with some, their card, whose header's "Add a sign-in" opens it.
+one click. Home always shows the sign-ins' card ("No sign-ins yet" when there's none); its header's "Add a sign-in"
+offers the trackers in a menu, each its logo, name and servers (`DescribedMenu`), and the one picked opens Connect at
+its link step (`startWith`), Back returning to the sign-ins.
 
 **Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its name, kind and host, how it
 stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Change tracker…" (a repository has one tracker, so it replaces

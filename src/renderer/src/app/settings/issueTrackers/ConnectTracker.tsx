@@ -29,8 +29,10 @@ interface ConnectTrackerProps {
   /** None in a window with no repository: the sign-in alone, kept for any repository to use. */
   repository?: string;
   onConnected: (outcome: SignedIn) => void;
-  /** Changing a tracker already connected: back to it. */
+  /** Changing a tracker already connected: back to it. Adding a sign-in on Home: back to the sign-ins. */
   onCancel?: () => void;
+  /** The tracker already chosen (Home's "Add a sign-in" menu): no first step to pick one, and Back leaves. */
+  startWith?: TrackerChoice;
 }
 
 /**
@@ -39,8 +41,8 @@ interface ConnectTrackerProps {
  * its own link shapes and read back in words; sign in, or use a sign-in already there. Back goes one step back, or to
  * the tracker connected. A link to another tracker's issue moves to that tracker (`choiceAfterLink`).
  */
-export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTrackerProps) {
-  const [choice, setChoice] = useState<TrackerChoice | null>(null);
+export function ConnectTracker({ repository, onConnected, onCancel, startWith }: ConnectTrackerProps) {
+  const [choice, setChoice] = useState<TrackerChoice | null>(startWith ?? null);
   const [link, setLink] = useState('');
   const [switched, setSwitched] = useState(false);
   const [differentAccount, setDifferentAccount] = useState(false);
@@ -68,7 +70,7 @@ export function ConnectTracker({ repository, onConnected, onCancel }: ConnectTra
     setSwitched(next.switched || (switched && text.trim() !== ''));
     setDifferentAccount(false);
   };
-  const back = choice ? () => choose(null) : onCancel;
+  const back = choice && !startWith ? () => choose(null) : onCancel;
 
   return (
     <section className={styles.card} aria-label="Connect an issue tracker">
