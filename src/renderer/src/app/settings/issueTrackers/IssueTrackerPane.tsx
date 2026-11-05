@@ -1,6 +1,6 @@
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
-import type { ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
+import type { IssueTrackerKind, ProjectAccess, SignInOutcome } from '@shared/domain/issueTrackers';
 import { workspacePathOf } from '@shared/domain/place';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
@@ -12,7 +12,7 @@ import { TextField } from '../../../ui/TextField';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
-import { connectedTrackerOf, connectFailureWords, hostOf, proofWords } from './connectFlow';
+import { connectedTrackerOf, connectFailureWords, proofWords, signInRows } from './connectFlow';
 import { ConnectTracker } from './ConnectTracker';
 import { SignInAgain } from './SignInAgain';
 import styles from './IssueTrackerPane.module.css';
@@ -67,7 +67,7 @@ function RepositoryTracker({ repository }: { repository: string }) {
 }
 
 /** Another project of the same tracker, by a link to one of its issues. */
-function AddProject({ repository, kind, onAdded }: { repository: string; kind: keyof typeof TRACKER_GRAMMARS; onAdded: (access: ProjectAccess) => void }) {
+function AddProject({ repository, kind, onAdded }: { repository: string; kind: IssueTrackerKind; onAdded: (access: ProjectAccess) => void }) {
   const [adding, setAdding] = useState(false);
   const [link, setLink] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -99,22 +99,19 @@ function AddProject({ repository, kind, onAdded }: { repository: string; kind: k
 
 /** The sign-ins this computer keeps, with no repository to connect: each can be signed out of. */
 function SignIns() {
-  const setup = useIssueTrackerSetup();
-  const connections = setup?.connections ?? [];
+  const rows = signInRows(useIssueTrackerSetup());
   return (
     <section className={styles.step} aria-label="Issue tracker sign-ins">
       <p className={styles.intro}>Open a workspace or a repository to connect its issue tracker.</p>
-      {connections.length > 0 && (
+      {rows.length > 0 && (
         <ul className={styles.list}>
-          {connections.map((connection) => (
-            <li key={connection.id} className={styles.listRow}>
+          {rows.map((row) => (
+            <li key={row.id} className={styles.listRow}>
               <div className={styles.listText}>
-                <span>
-                  {TRACKER_GRAMMARS[connection.kind].name} at {hostOf(connection.server)}
-                </span>
-                <span className={styles.listSecondary}>Signed in as {connection.account.name}</span>
+                <span>{row.title}</span>
+                <span className={styles.listSecondary}>{row.account}</span>
               </div>
-              <IconButton icon={<LogOut size={14} />} label={`Sign out of ${hostOf(connection.server)}`} onClick={() => void api.issueTrackers.signOut(connection.id)} />
+              <IconButton icon={<LogOut size={14} />} label={row.signOut} onClick={() => void api.issueTrackers.signOut(row.id)} />
             </li>
           ))}
         </ul>

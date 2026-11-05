@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { accountWords, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, signInAgainStep, signInRows, tokenStepReady, tokenStepWords, proofWords, signInStepFor, submitsOnPaste, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -31,12 +31,12 @@ describe('signInStepFor', () => {
   });
 
   it('asks to sign in where none covers it, or the one there stopped working', () => {
-    expect(signInStepFor(link('https://other.atlassian.net/browse/OPS-3'), setup([jira]))).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'Jira', needsEmail: true });
+    expect(signInStepFor(link('https://other.atlassian.net/browse/OPS-3'), setup([jira]))).toEqual({ kind: 'signIn', methods: ['token'], trackerName: 'Jira' });
     expect(signInStepFor(link('https://acme.atlassian.net/browse/OPS-3'), setup([{ ...jira, credential: 'refused' }]))).toMatchObject({ kind: 'signIn' });
   });
 
   it('offers GitHub’s device flow first where it can', () => {
-    expect(signInStepFor(link('https://github.com/acme/game/issues/1'), setup([], ['github.com']))).toEqual({ kind: 'signIn', methods: ['deviceCode', 'token'], trackerName: 'GitHub', needsEmail: false });
+    expect(signInStepFor(link('https://github.com/acme/game/issues/1'), setup([], ['github.com']))).toEqual({ kind: 'signIn', methods: ['deviceCode', 'token'], trackerName: 'GitHub' });
   });
 });
 
@@ -117,5 +117,45 @@ describe('deviceCodeWords', () => {
       instruction: "Paste this code at github.com/login/device, opened in your browser. It's copied.",
       waiting: 'Waiting for GitHub…',
     });
+  });
+});
+
+describe('the token step’s words and readiness', () => {
+  it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
+    expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' });
+    expect(tokenStepWords('github')).toEqual({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
+  });
+
+  it('can sign in once Jira’s email is given, and never while signing in', () => {
+    expect(tokenStepReady('jiraCloud', ' ', false)).toBe(false);
+    expect(tokenStepReady('jiraCloud', 'ana@acme.com', false)).toBe(true);
+    expect(tokenStepReady('github', '', false)).toBe(true);
+    expect(tokenStepReady('github', '', true)).toBe(false);
+  });
+});
+
+describe('signInAgainStep', () => {
+  it('asks for a new credential only when the tracker refused the one kept, by the server’s best method', () => {
+    expect(signInAgainStep({ kind: 'github', server: 'https://github.com' }, { reason: 'tokenRefused' }, ['github.com'])).toEqual({ kind: 'askCredential', methods: ['deviceCode', 'token'] });
+    expect(signInAgainStep({ kind: 'jiraCloud', server: 'https://acme.atlassian.net' }, { reason: 'tokenRefused' }, [])).toEqual({ kind: 'askCredential', methods: ['token'] });
+  });
+
+  it('keeps the credential when the tracker is out of reach or asked to wait, saying so', () => {
+    expect(signInAgainStep({ kind: 'jiraCloud', server: 'https://acme.atlassian.net' }, { reason: 'unreachable', server: 'https://acme.atlassian.net' }, [])).toEqual({
+      kind: 'problem',
+      words: "Jira couldn't be reached at acme.atlassian.net.",
+    });
+    expect(signInAgainStep({ kind: 'github', server: 'https://github.com' }, { reason: 'rateLimited' }, [])).toMatchObject({ kind: 'problem' });
+  });
+});
+
+describe('signInRows', () => {
+  it('lists each sign-in with its tracker and account, or that it needs signing in again', () => {
+    expect(signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]))).toEqual([
+      { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Signed in as Ana Díaz', signOut: 'Sign out of acme.atlassian.net' },
+      { id: 'r', title: 'Jira at acme.atlassian.net', account: 'Needs signing in again', signOut: 'Sign out of acme.atlassian.net' },
+    ]);
+    expect(accountWords({ ...jira, credential: 'missing' })).toBe('Needs signing in again');
+    expect(signInRows(undefined)).toEqual([]);
   });
 });

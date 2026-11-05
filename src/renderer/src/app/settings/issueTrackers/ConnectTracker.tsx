@@ -116,9 +116,16 @@ function SignInFor({ link, linkText, step, repository, onConnected }: SignInForP
       <h3 className={styles.cardTitle}>Sign in to {step.trackerName}</h3>
       <p className={styles.cardLine}>So the app can show each issue’s title and status.</p>
       {method === 'deviceCode' ? (
-        <DeviceSignIn repository={repository} linkText={linkText} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setMethod('token')} />
+        <DeviceSignIn request={{ repository, link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setMethod('token')} />
       ) : (
-        <TokenSignIn request={{ repository, link: linkText }} pageTarget={{ link: linkText }} link={link} trackerName={step.trackerName} needsEmail={step.needsEmail} failure={failure} onOutcome={finish} />
+        <TokenSignIn
+          kind={link.kind}
+          server={link.server}
+          pageTarget={{ link: linkText }}
+          failure={failure}
+          onOutcome={finish}
+          signIn={(source, email) => api.issueTrackers.signInWithToken({ repository, link: linkText, source, ...(email && { email }) })}
+        />
       )}
       {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
     </div>

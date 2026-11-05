@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { RepositorySignIn } from '@shared/api/issueTrackers';
 import type { DeviceSignIn as DeviceCode, SignInOutcome } from '@shared/domain/issueTrackers';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
@@ -7,8 +8,8 @@ import { deviceCodeWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 
 interface DeviceSignInProps {
-  repository: string;
-  linkText: string;
+  /** A first sign-in for a repository, by a link; or a connection's again. */
+  request: RepositorySignIn | { connectionId: string };
   trackerName: string;
   onOutcome: (outcome: SignInOutcome) => void;
   /** A token instead, for those who'd rather (a quiet link). */
@@ -20,7 +21,7 @@ interface DeviceSignInProps {
  * shows the one-time code, copies it and opens the tracker's page, where the user pastes it and approves; main polls
  * at the tracker's pace meanwhile, and the proof follows.
  */
-export function DeviceSignIn({ repository, linkText, trackerName, onOutcome, onUseToken }: DeviceSignInProps) {
+export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: DeviceSignInProps) {
   const [code, setCode] = useState<DeviceCode | null>(null);
   const [starting, setStarting] = useState(false);
   const flow = useRef<string | null>(null);
@@ -34,7 +35,7 @@ export function DeviceSignIn({ repository, linkText, trackerName, onOutcome, onU
 
   const start = async (): Promise<void> => {
     setStarting(true);
-    const started = await api.issueTrackers.startDeviceSignIn({ repository, link: linkText });
+    const started = await api.issueTrackers.startDeviceSignIn(request);
     setStarting(false);
     if ('failure' in started) return onOutcome({ kind: 'failed', failure: started.failure });
     flow.current = started.flowId;

@@ -42,14 +42,14 @@ export function linkReadBack(text: string): LinkReadBack {
 }
 
 /** What signing in to a pasted link's tracker takes: a connection already signed in, or the ways to sign in. */
-export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string; needsEmail: boolean };
+export type SignInStep = { kind: 'useConnection'; connection: TrackerConnection; words: string } | { kind: 'signIn'; methods: SignInMethodKind[]; trackerName: string };
 
 export function signInStepFor(link: RecognizedLink, setup: IssueTrackerSetup): SignInStep {
   const connection = coveringConnection(setup.connections, link.kind, link.server, link.project);
   if (connection && (connection.credential === 'kept' || connection.credential === 'session')) {
     return { kind: 'useConnection', connection, words: `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)} · signed in as ${connection.account.name}` };
   }
-  return { kind: 'signIn', methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts), trackerName: TRACKER_GRAMMARS[link.kind].name, needsEmail: link.kind === 'jiraCloud' };
+  return { kind: 'signIn', methods: signInMethodsFor(link.kind, link.server, setup.deviceFlowHosts), trackerName: TRACKER_GRAMMARS[link.kind].name };
 }
 
 /** Jira Cloud's email, filled in with the `cm` user when that's an address (as on Unity Cloud), else the one kept. */
@@ -58,12 +58,46 @@ export function suggestedEmail(cmUser: string | undefined, kept: string | undefi
   return cmUser && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cmUser.trim()) ? cmUser.trim() : '';
 }
 
+/** The token step's words per tracker: the field's label, the email's for Jira Cloud, and what the token is for. */
+export interface TokenStepWords {
+  tokenLabel: string;
+  /** Jira Cloud's token goes with the account's email. */
+  emailLabel?: string;
+  hint: string;
+}
+
+export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
+  switch (kind) {
+    case 'jiraCloud':
+      return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' };
+    case 'github':
+      return { tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' };
+  }
+}
+
+/** Whether the token step can sign in: not while signing in, and with Jira Cloud's email given. */
+export function tokenStepReady(kind: IssueTrackerKind, email: string, busy: boolean): boolean {
+  return !busy && (tokenStepWords(kind).emailLabel === undefined || email.trim() !== '');
+}
+
+/**
+ * What "Sign in again" does after trying the kept credential once more (`retrySignIn`): a credential the tracker
+ * refused needs a new one, by the server's methods (`signInMethodsFor`); out of reach or rate limited, the credential
+ * stays and the section says why, to try again later.
+ */
+export type SignInAgainStep = { kind: 'askCredential'; methods: SignInMethodKind[] } | { kind: 'problem'; words: string };
+
+export function signInAgainStep(connection: Pick<TrackerConnection, 'kind' | 'server'>, failure: SignInFailure, deviceFlowHosts: readonly string[]): SignInAgainStep {
+  if (failure.reason === 'tokenRefused') return { kind: 'askCredential', methods: signInMethodsFor(connection.kind, connection.server, deviceFlowHosts) };
+  return { kind: 'problem', words: connectFailureWords(failure, { trackerName: TRACKER_GRAMMARS[connection.kind].name, server: connection.server }).words };
+}
+
 /** Whether a token pasted in the field signs in at once: one of the tracker's known shapes (`ghp_`, `ATATT`). */
 export function submitsOnPaste(kind: IssueTrackerKind, value: string): boolean {
   return TRACKER_GRAMMARS[kind].tokenShape(value.trim()) === 'known';
 }
 
-/** The proof a sign-in works (study's "Signed in" step): the project, its open issues and those assigned to the account. */
+/** The proof a sign-in works: the project, its open issues and those assigned to the account. */
 export function proofWords(link: Pick<RecognizedLink, 'kind'>, access: ProjectAccess): string {
   const project = link.kind === 'jiraCloud' ? `Project ${access.project}` : access.name;
   if (access.openIssues === undefined) return project;
@@ -83,6 +117,26 @@ export interface ConnectedTracker {
   sessionOnly?: string;
 }
 
+/** A connection in words, as the section names it: "Jira at acme.atlassian.net". */
+export function connectionTitle(connection: Pick<TrackerConnection, 'kind' | 'server'>): string {
+  return `${TRACKER_GRAMMARS[connection.kind].name} at ${hostOf(connection.server)}`;
+}
+
+/** Whether a connection signs in now: "Signed in as Ana", or that it needs signing in again. */
+export function accountWords(connection: Pick<TrackerConnection, 'credential' | 'account'>): string {
+  return connection.credential === 'refused' || connection.credential === 'missing' ? 'Needs signing in again' : `Signed in as ${connection.account.name}`;
+}
+
+/** The sign-ins this computer keeps, as a window with no repository lists them. */
+export function signInRows(setup: IssueTrackerSetup | undefined): { id: string; title: string; account: string; signOut: string }[] {
+  return (setup?.connections ?? []).map((connection) => ({
+    id: connection.id,
+    title: connectionTitle(connection),
+    account: accountWords(connection),
+    signOut: `Sign out of ${hostOf(connection.server)}`,
+  }));
+}
+
 export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: string | undefined): ConnectedTracker | null {
   if (!setup || !repository) return null;
   const binding = bindingOf(setup.bindings, repository);
@@ -91,7 +145,7 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
   const name = TRACKER_GRAMMARS[connection.kind].name;
   return {
     connection,
-    title: `${name} at ${hostOf(connection.server)}`,
+    title: connectionTitle(connection),
     projects: connection.kind === 'jiraCloud' ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
     account: `Signed in as ${connection.account.name}`,
     ...(connection.credential === 'refused' && { signInAgain: `${name} stopped accepting this sign-in.` }),
