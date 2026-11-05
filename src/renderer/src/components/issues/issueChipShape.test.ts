@@ -80,6 +80,12 @@ describe('connectionsToReread', () => {
 });
 
 describe('placeTrackerOf', () => {
+  it('builds a repository’s reader once per setup, whatever reads it', () => {
+    const read = setup([connection]);
+    expect(placeTrackerOf(read, 'game@acme@unity')).toBe(placeTrackerOf(read, 'game@acme@unity'));
+    expect(placeTrackerOf(setup([connection]), 'game@acme@unity')).not.toBe(placeTrackerOf(read, 'game@acme@unity'));
+  });
+
   it('finds the place’s repository’s tracker, and none for another repository or before the setup is read', () => {
     expect(placeTrackerOf(setup([connection]), 'game@acme@unity')?.connection.id).toBe('c1');
     expect(placeTrackerOf(setup([connection]), 'other@acme@unity')).toBeNull();
