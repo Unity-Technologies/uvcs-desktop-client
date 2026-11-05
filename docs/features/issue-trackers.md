@@ -380,23 +380,50 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
 
 ## Connecting: Settings › Issue tracker
 
-One section (`IssueTrackerPane`), for the window's repository; in a window with no repository, the sign-ins this
-computer keeps, each with Sign out. Its steps, each one state of the same section:
+One section (`IssueTrackerPane`), for the window's repository. Each state is one card (`styles.card`): a tinted header
+saying what it is and where the user stands, its sections parted by hairlines, one obvious next action. Status reads
+in its own tokens (`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. What each card shows is decided in
+pure modules (`connectFlow`, `trackerCardContent`); the components only draw it.
 
-1. **Empty**: one sentence ("Paste a link to any issue from your tracker."), the field's placeholder shaped like an
-   issue link, and the link shapes per tracker under it (`LINK_EXAMPLES`). Nothing is filled in by itself.
+**Connect** (`ConnectTracker`), its header the title and its steps, Link · Sign in · Connected (`ConnectSteps`,
+`connectSteps`); changing a tracker already connected adds Back.
+
+1. **Empty**: a mark, "See your issues where comments name them", one line, the field (its placeholder shaped like an
+   issue link) and the link shapes per tracker under it (`LINK_EXAMPLES`). Nothing is filled in by itself.
 2. **A suggestion**: when the branch comments the window already read hold issue addresses a grammar recognizes
    (`suggestedTrackerLink`, over the cached branch lists, no command), "Your branch comments link to Jira", the server
    and project, how many comments, and "Use this", which fills the field. Never filled in silently.
-3. **Pasted**: read back in words ("Jira Cloud · unity3d.atlassian.net · project VCS", `linkReadBack`), with nothing
-   sent. A link that isn't an issue says what it is and what to paste instead.
-4. **Sign in** (`signInStepFor`): when a connection already covers the link, "Use Jira at unity3d.atlassian.net ·
-   signed in as Daniel Peñalba" binds it in one click. Otherwise the tracker's best sign-in method ("Sign-in").
-5. **Proof**: "Signed in as Daniel Peñalba" and "Project VCS · 214 open issues, 6 assigned to you" (`proofWords`).
-   The pasted issue isn't shown back: it was a sample. Sign-in works but the project can't be read: the message names
-   the project, and nothing is bound.
-6. **Done**: the repository's tracker, projects and account, with Change, "Add a project", Disconnect, and on a
-   credential `refused` or `missing`, "Sign in again".
+3. **Pasted**: read back with nothing sent, checked: the tracker's kind as a badge, then the host and the project
+   bold (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't an issue says what it is and
+   what to paste instead.
+4. **Next: sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and
+   "Use it". Otherwise the tracker's best sign-in method ("Sign-in"). In the token step one button leads
+   (`tokenStepLead`): "Create a token" until a token is in the field, then "Sign in". A failure is said under it,
+   scrolled into view.
+
+**Connected** (`TrackerCard`): the header holds the tracker's mark (`TrackerIcon`: neutral glyphs, no brand's), its
+name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Use another tracker…" and
+"Disconnect…", which asks first (`disconnectQuestion`). Then:
+
+- **The moment of success**, right after connecting: a green callout, "Connected to Jira", and the proof, checked,
+  its values bold ("Signed in as **Daniel Peñalba**", "Project **VCS** · 214 open issues, 6 assigned to you",
+  `proofLines`). The pasted issue isn't shown back: it was a sample. It rises in once (none with reduced motion) and
+  settles after `SUCCESS_SHOWN_MS`. Sign-in works but the project can't be read: the message names the project, and
+  nothing is bound.
+- **Needs signing in** (a credential `refused` or `missing`): an amber pill and a callout saying why, that issues
+  show as plain links until then, and "Sign in again" (`SignInAgain`).
+- **Can't reach Jira** (every project out of reach): a red pill and a callout saying where (`unreachableWords`), with
+  Try again.
+- **Account**: the account's initials, name, and email or login (`accountLines`).
+- **Projects**: one line on what they're for, with a reference as written ("Keys like VCS-123 in this repository's
+  comments show as chips…", `projectsExplained`); a row each, its key in mono, its name and counts once read
+  (`projectRows`, from `readProjects`: each project's `projectAccess`, read as the card shows and kept five minutes,
+  keyed by the connection, its credential's state and the projects: `useBoundProjects`), removable on hover or focus
+  while another stays (`removeProject`); "+ Add a project" opens a row of its own: a full-width field for a link to
+  an issue of the other project, read back as pasted, with Add and Cancel.
+
+In a window with no repository, the sign-ins this computer keeps: a row each with its mark, name, account and pill,
+and Sign out on hover or focus (`signInRows`).
 
 Each failure gets one plain sentence (`connectFailureWords`), and one a new token would fix gets "Create a new token".
 
@@ -491,7 +518,8 @@ The trackers' servers get the care `cm`'s does (CLAUDE.md "Every `cm` command ea
   words; a key typed is a batched read; a search a newer one replaced is aborted. Never one per key pressed.
 - Read on a settled selection, a card opened, or a focus once stale; never on a timer.
 - Cached five minutes, a missing issue too; a failure until it may be tried again.
-- Connect's requests only when asked (the table above).
+- Connect's requests only when asked (the table above). Settings shows the projects' names and counts with one proof
+  per project (`readProjects`), as the card shows and kept five minutes; never while a sign-in needs renewing.
 - A refused credential, or a rate limit, stops requests to that connection or origin until they can succeed; nothing
   retries in a loop and nothing blocks.
 

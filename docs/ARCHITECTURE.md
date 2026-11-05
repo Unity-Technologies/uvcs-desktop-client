@@ -997,7 +997,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
   canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
-  development build too (scripts/e2e/README.md).
+  development build too (scripts/e2e/README.md). An effect returns a clean-up or nothing: an arrow that returns what
+  a DOM call gives can hand React a promise (`scrollIntoView` returns one in the Chromium the app runs), which crashes
+  the window as the effect runs again (`effectsReturnCleanUps.test.ts`).
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
