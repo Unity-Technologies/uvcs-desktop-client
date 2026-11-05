@@ -63,10 +63,13 @@ describe('connectedTrackerOf', () => {
 });
 
 describe('the token step', () => {
-  it('signs in on paste only for a token of the tracker’s known shape', () => {
+  it('signs in on paste for anything shaped like a token, on every tracker alike', () => {
     expect(submitsOnPaste('github', ` ghp_${'a'.repeat(36)}\n`)).toBe(true);
-    expect(submitsOnPaste('github', 'my-token-1234567890')).toBe(false);
     expect(submitsOnPaste('jiraCloud', `ATATT${'x'.repeat(40)}`)).toBe(true);
+    // Jira Data Center's tokens have no prefix of their own: one that looks like a token signs in all the same.
+    expect(submitsOnPaste('jiraDataCenter', 'fake-data-center-token-for-tests-0123456789')).toBe(true);
+    expect(submitsOnPaste('jiraDataCenter', 'short')).toBe(false);
+    expect(submitsOnPaste('github', 'a sentence pasted by mistake')).toBe(false);
   });
 
   it('fills Jira’s email in with the cm user when that’s an address, else the one kept', () => {
