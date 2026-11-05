@@ -1046,16 +1046,16 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   narrows the search to its section (`SCOPE_PREFIXES`, `parseScope`), beside the palette's own `>` commands and `/`
   files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
   editor's own `:` emoji. A surface adds prefixes of its own, never another meaning for a shared one
-  (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it;
-  a changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names
-  that shelve or review, first and as a full match, from the lists already read (`namedFirst`). `#` is no one's: it's kept for issues. The
-  footer names the prefixes that work where the palette is open (`offeredPrefixes`), its own at the end of the
-  keys' row and the shared ones on a row of their own. Labels, code reviews and people
-  are listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
+  (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it; a
+  changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names that
+  shelve or review, first and as a full match (`namedFirst`): with its row when the lists read hold it, else by its
+  number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked. `#` is
+  no one's: it's kept for issues. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
+  its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
+  listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
-  suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time range it remembers
-  (`showPersonChangesets`,
-  the people filter's `onlyPerson`).
+  suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time
+  range it remembers (`showPersonChangesets`, the people filter's `onlyPerson`).
 - **Long menus scroll** within the room the window leaves them (`ui/menu/Menu.module.css`: Radix measures it), never
   running off-screen: a picker of many tools, a long "Open with ▸".
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:

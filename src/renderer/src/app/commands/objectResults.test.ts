@@ -16,7 +16,8 @@ import { navigation } from '../navigation/navigationStore';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../queryClient';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
-import { branchResult, changesetResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
+import { branchResult, changesetResult, exactCodeReviewResult, exactShelveResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
+import { whereTheWindowIs } from '../../testing/operationOutcome';
 
 const change: PendingChange = { path: 'src/app.ts', kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' };
 const branch: Branch = { id: 3, name: '/main/task', guid: 'g', parent: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', headChangeset: 5, repository: 'repo@server' };
@@ -140,5 +141,15 @@ describe('changeset and shelve results', () => {
     expect(changesetResult(changeset('Fix'), contextFor('12')).detailMatches).toEqual([3, 4]);
     expect(changesetResult(changeset('Fix'), contextFor('cs ana')).detailMatches).toEqual([]);
     expect(shelveResult(shelve('Fix'), contextFor('sh:4')).detailMatches).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe('a shelve or code review typed by number', () => {
+  it("opens it by its number alone, the shelve's changes and the review's page", () => {
+    exactShelveResult(4).run();
+    expect(whereTheWindowIs().pages.at(-1)).toMatchObject({ kind: 'diff', target: { kind: 'shelve', shelveId: 4 } });
+
+    exactCodeReviewResult(311).run();
+    expect(whereTheWindowIs().pages.at(-1)).toMatchObject({ kind: 'codeReview', reviewId: 311 });
   });
 });

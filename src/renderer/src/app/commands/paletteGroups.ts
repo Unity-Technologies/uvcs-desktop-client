@@ -15,6 +15,8 @@ import {
   changesetResult,
   codeReviewResult,
   exactChangesetResult,
+  exactCodeReviewResult,
+  exactShelveResult,
   fileResult,
   labelResult,
   shelveResult,
@@ -233,8 +235,10 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
       section: 'shelves',
       heading: 'Shelves',
       results: namedFirst(
-        lists.shelves?.find((shelve) => shelve.id === shelveId),
+        shelveId,
+        lists.shelves,
         (shelve) => shelveResult(shelve, context),
+        exactShelveResult,
         withServerMatches(
           firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
             shelveResult(shelve, context),
@@ -249,8 +253,10 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
       section: 'codeReviews',
       heading: 'Code reviews',
       results: namedFirst(
-        lists.codeReviews?.find((review) => review.id === reviewId),
+        reviewId,
+        lists.codeReviews,
         (review) => codeReviewResult(review, context),
+        exactCodeReviewResult,
         withServerMatches(
           firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
           server.codeReviews,
@@ -268,12 +274,20 @@ function typedId(term: string): number | undefined {
 }
 
 /**
- * The object the search names by its id (`named`, one of the lists read; undefined for none) first, as a full match,
- * then the other matches without it, as a changeset typed by number opens (`exactChangeset`).
+ * The object the search names by its id (`id`; undefined for none) first, as a full match, then the other matches
+ * without it, as a changeset typed by number opens (`exactChangeset`): with its row when the list read holds it, else
+ * by its number alone (`byNumber`), an older one the list doesn't reach, read only once it's picked.
  */
-function namedFirst<T>(named: T | undefined, toResult: (item: T) => SearchResult, matches: SearchResult[]): SearchResult[] {
-  if (named === undefined) return matches;
-  const exact = { ...toResult(named), quality: 1 };
+function namedFirst<T extends { id: number }>(
+  id: number | undefined,
+  read: readonly T[] | undefined,
+  toResult: (item: T) => SearchResult,
+  byNumber: (id: number) => SearchResult,
+  matches: SearchResult[],
+): SearchResult[] {
+  if (id === undefined) return matches;
+  const named = read?.find((item) => item.id === id);
+  const exact = named ? { ...toResult(named), quality: 1 } : byNumber(id);
   return [exact, ...matches.filter((result) => result.id !== exact.id)];
 }
 

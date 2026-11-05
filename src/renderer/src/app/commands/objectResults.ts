@@ -216,6 +216,17 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
   };
 }
 
+/** A shelve typed by number (`sh:4`) that the shelves read don't hold: opened by its number alone. */
+export function exactShelveResult(shelveId: number): SearchResult {
+  return {
+    id: `shelve:${shelveId}`,
+    icon: Archive,
+    label: `Shelve ${shelveId}`,
+    quality: 1,
+    run: () => showShelveChanges({ id: shelveId }),
+  };
+}
+
 export function codeReviewResult(review: CodeReviewSummary, context: ResultContext): SearchResult {
   const { term } = context;
   return {
@@ -227,6 +238,17 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
     quality: wordMatchQuality(review.title, term),
     menu: () => codeReviewMenu(context.place, [review], context.workspaceOn),
     run: () => openReview(review),
+  };
+}
+
+/** A code review typed by number (`cr:311`) that the reviews read don't hold: opened by its number alone. */
+export function exactCodeReviewResult(reviewId: number): SearchResult {
+  return {
+    id: `codeReview:${reviewId}`,
+    icon: MessageSquareCode,
+    label: `Code review ${reviewId}`,
+    quality: 1,
+    run: () => openReview({ id: reviewId }),
   };
 }
 
