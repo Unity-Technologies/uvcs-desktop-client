@@ -119,7 +119,14 @@ export type SignInFailure =
   | { reason: 'canceled' }
   | { reason: 'unexpected'; message: string };
 
-export type SignInOutcome = { kind: 'signedIn'; connection: TrackerConnection; access: ProjectAccess } | { kind: 'failed'; failure: SignInFailure };
+/** A sign-in that worked, with the proof of its project (none when signing in again, which proves only the account). */
+export type SignInOutcome = { kind: 'signedIn'; connection: TrackerConnection; access?: ProjectAccess } | { kind: 'failed'; failure: SignInFailure };
+
+/**
+ * Where a token comes from: typed or pasted in the field, sent to main once, or the one main finds copied (`copied`),
+ * which never reaches the window.
+ */
+export type TokenSource = { token: string } | { copied: true };
 
 /** A device flow under way: the code the user enters at `verificationUri`. */
 export interface DeviceSignIn {

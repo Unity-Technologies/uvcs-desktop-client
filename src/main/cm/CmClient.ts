@@ -102,6 +102,15 @@ export class CmClient {
     this.shellPool = this.runners.createShellPool(cmPath);
   }
 
+  /**
+   * Logs what isn't a command of `cm`'s beside them, numbered with them, to the same listeners: an issue tracker's
+   * request (docs/features/issue-trackers.md, "The HTTP client").
+   */
+  logEntry(entry: Omit<CommandLogEntry, 'id'>): void {
+    const logged = { ...entry, id: this.nextCommandId++ };
+    this.logListeners.forEach((listener) => listener(logged));
+  }
+
   onCommandLogged(listener: CommandLogListener): () => void {
     this.logListeners.add(listener);
     return () => this.logListeners.delete(listener);

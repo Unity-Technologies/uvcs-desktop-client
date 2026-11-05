@@ -119,4 +119,12 @@ describe('repositories', () => {
 
     expect(lines()).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
   });
+
+  it('tells a rename by the repository’s spec before and after, so its issue tracker follows it', async () => {
+    const fake = fakeCmClient({ 'repository rename': '' });
+    const renames: string[][] = [];
+    const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm), (from, to) => renames.push([from, to]));
+    await service.rename('tools@acme@cloud', 'build-tools');
+    expect(renames).toEqual([['tools@acme@cloud', 'build-tools@acme@cloud']]);
+  });
 });

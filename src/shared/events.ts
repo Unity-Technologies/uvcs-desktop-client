@@ -2,6 +2,7 @@ import type { FoundPath, FoundPathsSource } from './domain/explorer';
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
 import type { PageSeed, PageWindowPage } from './domain/pageWindow';
+import type { IssueTrackerSetup } from './domain/issueTrackers';
 import type { AppSettings } from './domain/settings';
 import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
@@ -18,6 +19,12 @@ export interface CommandLogEntry {
   outsideWorkspaces?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
+  /**
+   * A request to an issue tracker, logged beside `cm`'s commands (docs/features/issue-trackers.md): its line is its
+   * method, host and path, its `exitCode` 0 or 1, and its answer's status `httpStatus` (none when none came).
+   */
+  source?: 'tracker';
+  httpStatus?: number;
 }
 
 /** An error the main process didn't expect, which nothing caught (`handleUnexpectedErrors`); its secrets hidden. */
@@ -47,6 +54,8 @@ export interface UvcsEvents {
   operationProgress: OperationProgressEvent;
   /** The best paths a repository's search (`explorer.findRepositoryPaths`) found so far, as they change. */
   repositoryPathsFound: { searchId: string; paths: FoundPath[]; source: FoundPathsSource };
+  /** A tracker was signed in to or out of, a credential stopped working, or a repository's tracker changed. */
+  issueTrackersChanged: IssueTrackerSetup;
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
   /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
