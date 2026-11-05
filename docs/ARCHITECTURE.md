@@ -564,6 +564,12 @@ carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on it
 the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
 and toasts name a Git remote by the same rule, its user info dropped (`gitRemoteLabel`).
 
+An issue tracker's credential (docs/features/issue-trackers.md "Secrets") is kept by main alone, encrypted with the
+system's keychain (`safeStorage`, `TrackerSecrets`), or for the session only where there is none; it never goes back
+to a window, and a token goes to main once, as it's signed in with. Every tracker request goes through `TrackerHttp`,
+which sends a credential only to its connection's own origins, over `https:`, follows no redirect and sends no cookie.
+The trackers' token shapes are hidden in any text logged (`TRACKER_TOKENS`).
+
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
@@ -587,6 +593,10 @@ request and never written into `PRIVACY.md` by the change itself.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
+- **The issue tracker the user connected** (Jira Cloud, GitHub; docs/features/issue-trackers.md "What leaves the
+  device"), from main only (`TrackerHttp`): signing in, and the issues a comment shown names (a Jira binding's
+  project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a comment names, never from a place
+  with no tracker connected.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
@@ -1457,7 +1467,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
-  output. Each command line is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the
+  output. An issue tracker's requests show among the commands (`source: 'tracker'`: method, host and path, a failure
+  as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the
   command and its subcommand (`lock list`, `find branch`) in one color, option names in another (each kept whole on its
   line), `--format`'s `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and
   numbers; the line is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name

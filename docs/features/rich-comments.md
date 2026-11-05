@@ -35,6 +35,7 @@ before.
   | `uvcs://…`, or the official client's `plastic://…` (`isAppLink`) | what the link opens (docs/features/deep-links.md), its text kept as written |
   | `@ana`, `@ACME\tom`, `@ana@acme.com`, `@josé` | a person, as `cm` names owners, in any script |
   | `:tada:` | an emoji, by GitHub's names (`gemoji`) |
+  | `VCS-12`, `#12`, `acme/game#12`, an issue's bare address | an issue of the repository's tracker, only where one is connected (docs/features/issue-trackers.md) |
 
   The prefixes are `cm`'s own, read as `cm` reads them: lower case only (`CS:12` isn't one), the body up to the
   first `@`, then the repository with `rep:` and `repserver:` dropped. `cm` has no spec for a code
