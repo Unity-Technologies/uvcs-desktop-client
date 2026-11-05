@@ -10,11 +10,10 @@
 // are read-only, as resolution's API Token Authentication makes them: any POST is a 403. A search takes a boolean
 // `validateQuery`, and anything else is a 400, as Data Center answers it.
 // Searches (`#` in a comment): the account's open issues are those not done; words find the titles holding them all.
-// Jira Cloud has two projects, VCS and OPS. A Jira token holding `offline` signs in and proves its project, then Jira
-// is out of reach for it (Settings says it can't reach Jira).
+// Jira Cloud is any `*.atlassian.net` site, with two projects, VCS and OPS. A Jira token holding `offline` signs in and
+// proves its project, then Jira is out of reach for it (Settings says it can't reach Jira); one holding `revoked` is
+// refused instead (Settings asks to sign in again).
 'use strict';
-
-const JIRA = 'https://acme.atlassian.net';
 
 const JIRA_ISSUES = {
   'VCS-12': { summary: 'Keep the selection when the layout changes', status: 'In Progress', category: 'indeterminate', type: 'Bug', assignee: 'Lena Marsh' },
@@ -72,12 +71,14 @@ function tokenOf(headers) {
 const myselfAsked = new Map();
 const projectAsked = new Map();
 
-/** Jira out of reach once a token holding `offline` signed in and proved its project. */
-function offline(token, path) {
-  if (!path.startsWith('/rest/api/3/project/')) return;
+/** Once a token holding `offline` or `revoked` signed in and proved its project: Jira out of reach, or refusing it. */
+function laterProjectRead(token, path) {
+  if (!path.startsWith('/rest/api/3/project/')) return null;
   const asked = (projectAsked.get(token) ?? 0) + 1;
   projectAsked.set(token, asked);
-  if (asked > 1) throw new Error('Jira is out of reach');
+  if (asked === 1) return null;
+  if (token.includes('revoked')) return answer(401, { errorMessages: ['Client must be authenticated'] });
+  throw new Error('Jira is out of reach');
 }
 
 const JIRA_PROJECTS = { VCS: 'Version Control', OPS: 'Operations' };
@@ -98,7 +99,8 @@ function jira(url, init) {
   const path = url.pathname.replace(/^\/ex\/jira\/fake-cloud/, '');
   const expired = token.includes('expiring') ? expiring(token, path) : null;
   if (expired) return expired;
-  if (token.includes('offline')) offline(token, path);
+  const later = token.includes('offline') || token.includes('revoked') ? laterProjectRead(token, path) : null;
+  if (later) return later;
   if (path === '/rest/api/3/myself') return answer(200, { accountId: '5b10ac8d', displayName: 'Ana Díaz', emailAddress: 'ana@acme.com' });
   const project = /^\/rest\/api\/3\/project\/([A-Z0-9_]+)$/.exec(path);
   if (project) return JIRA_PROJECTS[project[1]] ? answer(200, { key: project[1], name: JIRA_PROJECTS[project[1]] }) : answer(404, { errorMessages: ['No project could be found'] });
@@ -185,7 +187,7 @@ function jiraDataCenter(url, init) {
 exports.fetch = async (address, init) => {
   const url = new URL(address);
   if (url.origin === DATA_CENTER) return jiraDataCenter(url, init);
-  if (url.origin === JIRA || url.host === 'api.atlassian.com') return jira(url, init);
+  if (url.hostname.endsWith('.atlassian.net') || url.host === 'api.atlassian.com') return jira(url, init);
   if (url.host === 'github.com' || url.host === 'api.github.com') return github(url, init);
   return answer(404, undefined);
 };
