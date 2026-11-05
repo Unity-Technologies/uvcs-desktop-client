@@ -10,6 +10,7 @@ import { pluralize } from '../../../lib/text';
 /** The shapes of an issue's link per tracker, under the empty field: what to paste, seen at once. */
 export const LINK_EXAMPLES: readonly { tracker: string; shape: string }[] = [
   { tracker: 'Jira', shape: 'your-company.atlassian.net/browse/PROJ-123' },
+  { tracker: 'Jira Data Center', shape: 'jira.your-company.com/browse/PROJ-123' },
   { tracker: 'GitHub', shape: 'github.com/owner/repo/issues/123' },
 ];
 
@@ -18,7 +19,13 @@ export const LINK_PLACEHOLDER = 'https://your-company.atlassian.net/browse/PROJ-
 /** A tracker's kind in words, its server's kind told apart: "Jira Cloud", "GitHub", "GitHub Enterprise Server". */
 export function trackerKindName(kind: IssueTrackerKind, server: string): string {
   if (kind === 'jiraCloud') return 'Jira Cloud';
+  if (kind === 'jiraDataCenter') return 'Jira Data Center';
   return isGitHubCloud(server) ? 'GitHub' : 'GitHub Enterprise Server';
+}
+
+/** Jira, Cloud or Data Center: its projects named by key ("Project VCS"). */
+function isJira(kind: IssueTrackerKind): boolean {
+  return kind !== 'github';
 }
 
 /** A server by its host, as people say it: `acme.atlassian.net`. */
@@ -33,7 +40,7 @@ export function linkReadBack(text: string): LinkReadBack {
   if (!text.trim()) return { kind: 'none' };
   const reading = recognizeTrackerLink(text);
   if (isRecognizedLink(reading)) {
-    const project = reading.kind === 'jiraCloud' ? `project ${reading.project}` : reading.project;
+    const project = isJira(reading.kind) ? `project ${reading.project}` : reading.project;
     return { kind: 'read', words: `${trackerKindName(reading.kind, reading.server)} · ${hostOf(reading.server)} · ${project}`, link: reading };
   }
   if ('notAnIssue' in reading) return { kind: 'problem', words: `That's a link to ${reading.notAnIssue}, not an issue. Open any issue and copy its address.` };
@@ -70,6 +77,8 @@ export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
   switch (kind) {
     case 'jiraCloud':
       return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' };
+    case 'jiraDataCenter':
+      return { tokenLabel: 'Jira personal access token', hint: 'Made in your Jira profile, under Personal Access Tokens. The app only reads issues with it.' };
     case 'github':
       return { tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' };
   }
@@ -130,7 +139,7 @@ export function submitsOnPaste(kind: IssueTrackerKind, value: string): boolean {
 
 /** The proof a sign-in works: the project, its open issues and those assigned to the account. */
 export function proofWords(link: Pick<RecognizedLink, 'kind'>, access: ProjectAccess): string {
-  const project = link.kind === 'jiraCloud' ? `Project ${access.project}` : access.name;
+  const project = isJira(link.kind) ? `Project ${access.project}` : access.name;
   if (access.openIssues === undefined) return project;
   const assigned = access.assignedToYou === undefined ? '' : `, ${access.assignedToYou} assigned to you`;
   return `${project} · ${pluralize(access.openIssues, 'open issue')}${assigned}`;
@@ -177,7 +186,7 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
   return {
     connection,
     title: connectionTitle(connection),
-    projects: connection.kind === 'jiraCloud' ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
+    projects: isJira(connection.kind) ? binding.projects.map((project) => `Project ${project}`).join(', ') : binding.projects.join(', '),
     account: accountWords(connection),
     ...(connection.credential === 'refused' && { signInAgain: `${name} stopped accepting this sign-in.` }),
     ...(connection.credential === 'missing' && { signInAgain: `This computer no longer has the ${name} sign-in.` }),
@@ -208,6 +217,8 @@ export function connectFailureWords(failure: SignInFailure, context: { trackerNa
         words: context.email ? `${trackerName} didn't accept this token for ${context.email}. Check the email, or create a new token.` : `${trackerName} didn't accept this token. Create a new one.`,
         offersTokenPage: true,
       };
+    case 'sentToLogin':
+      return { words: `${trackerName} sent this sign-in to its login page at ${hostOf(failure.server)}. Check the token, or create a new one.`, offersTokenPage: true };
     case 'emailNeeded':
       return { words: `${trackerName} needs the email you sign in with, along with the token.`, offersTokenPage: false };
     case 'projectUnreadable':

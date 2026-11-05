@@ -6,6 +6,10 @@ const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://a
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
 
 describe('linkReadBack', () => {
+  it('reads a Jira Data Center link back as Data Center', () => {
+    expect(linkReadBack('https://jira.unity3d.com/browse/VCS-1009081')).toMatchObject({ kind: 'read', words: 'Jira Data Center · jira.unity3d.com · project VCS' });
+  });
+
   it('reads a pasted link back in words, sending nothing', () => {
     expect(linkReadBack('https://unity3d.atlassian.net/browse/VCS-1009139')).toMatchObject({ kind: 'read', words: 'Jira Cloud · unity3d.atlassian.net · project VCS' });
     expect(linkReadBack('https://github.com/acme/game/issues/12')).toMatchObject({ words: 'GitHub · github.com · acme/game' });
@@ -87,6 +91,10 @@ describe('connectFailureWords', () => {
     });
     expect(connectFailureWords({ reason: 'unreachable', server: 'https://acme.atlassian.net' }, { trackerName: 'Jira', server: 'https://acme.atlassian.net' }).words).toBe("Jira couldn't be reached at acme.atlassian.net.");
     expect(connectFailureWords({ reason: 'notGitHubEnterprise', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("This doesn't look like GitHub Enterprise Server.");
+    expect(connectFailureWords({ reason: 'sentToLogin', server: 'https://jira.unity3d.com' }, { trackerName: 'Jira' })).toEqual({
+      words: 'Jira sent this sign-in to its login page at jira.unity3d.com. Check the token, or create a new one.',
+      offersTokenPage: true,
+    });
     expect(connectFailureWords({ reason: 'hostDeclined', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("Not signed in: git.acme.com wasn't allowed.");
   });
 });
@@ -125,6 +133,8 @@ describe('the token step’s words and readiness', () => {
   it('asks Jira for the email its token goes with, and says the app only reads issues with a token', () => {
     expect(tokenStepWords('jiraCloud')).toEqual({ tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' });
     expect(tokenStepWords('github')).toEqual({ tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' });
+    expect(tokenStepWords('jiraDataCenter')).toEqual({ tokenLabel: 'Jira personal access token', hint: 'Made in your Jira profile, under Personal Access Tokens. The app only reads issues with it.' });
+    expect(tokenStepReady('jiraDataCenter', '', 'token', false)).toBe(true);
   });
 
   it('can sign in with a token given, Jira’s email too, and never while signing in', () => {
