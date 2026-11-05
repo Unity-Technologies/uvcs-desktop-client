@@ -64,7 +64,8 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
  * The single entry point to the `cm` CLI.
  * Quick commands reuse pooled `cm shell` sessions: a warm one answers in a few ms, where starting a `cm` process costs
  * 100-150 ms before the command even runs. Commands that may run long, stream progress or can be cancelled run as
- * dedicated processes, so they never hold a pooled session that reads are waiting for.
+ * dedicated processes, so they never hold a pooled session that reads are waiting for; an operation's is a `cm shell`
+ * of its own, which exits after it (`processCommand`).
  */
 export class CmClient {
   private cmPath: string;
@@ -266,7 +267,7 @@ export class CmClient {
     return result.output;
   }
 
-  /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
+  /** A process of its own: `cm` as it is, or a `cm shell` of its own for an operation or a command line too long to start one with (`processCommand`). */
   private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions, reading: OutputReading): Promise<CmResult> {
     const { args: started, input } = processCommand(args, this.platform);
     const { runProcess } = this.runners;

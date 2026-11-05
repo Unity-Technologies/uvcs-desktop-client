@@ -36,8 +36,8 @@ only as it opens).
 move too, and the list then shows every one that moved ("New changelist…" clears them once a name is given, so
 cancelling leaves them). As every move to a changelist (`moveToChangelist`), it checks out the changed files that
 aren't yet (only checked-out and added items live in a changelist), then moves them all in one
-`cm changelist <name> add`, however many: `CmClient` runs it as a process of its own past a few paths (`runsLong`), and
-through a `cm shell` of its own when too long for a command line. Only the default changelist's header can need that
+`cm changelist <name> add`, however many: `CmClient` runs it as a process of its own past a few paths (`runsLong`),
+a `cm shell` of its own, as every operation that takes a process (`processCommand`). Only the default changelist's header can need that
 checkout, since a user changelist holds no item that isn't checked out or added; moving from it checks out every
 changed file it holds, which may take locks, without asking: it is what selecting all its files and moving them does,
 and that doesn't ask either.

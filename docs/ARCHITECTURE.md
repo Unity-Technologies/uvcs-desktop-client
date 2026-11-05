@@ -61,6 +61,13 @@ you touch:
      workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
+   - Every operation that takes a process (`isOperation`: what changes the workspace, a shelve, a sync) runs in a
+     `cm shell` of its own, on every OS, that reads its command line and exits after it (`processCommand`): `cm`
+     counts a `cm shell`'s commands as the app's, and a plain process's as a script's. It costs the shell's start,
+     about half a second, so the quick reads that take a process (a connection check, `version`, `cat`, a read
+     before the pooled sessions are warm) still start `cm` as it is on macOS and Linux. An operation whose arguments
+     hold a quote or a line break, which a shell's line can't carry, starts as it is too; comments never do, since
+     they go through `-commentsfile`.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
      So is, on Windows, a command that prints text (see Parsing).
