@@ -7,7 +7,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
 import { usePlaceUser } from '../../account/accounts';
-import { clearsClipboardAfter, connectFailureWords, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
+import { clearsClipboardAfter, connectFailureWords, otherTokenPageOffered, submitsOnPaste, suggestedEmail, tokenStepReady, tokenStepWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 
 interface TokenSignInProps {
@@ -53,6 +53,9 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
   const openTokenPage = (): void => {
     void api.issueTrackers.openTokenPage(pageTarget);
   };
+  const openOtherTokenPage = (): void => {
+    void api.issueTrackers.openTokenPage(pageTarget, 'other');
+  };
   const pasted = (event: ClipboardEvent<HTMLInputElement>): void => {
     const text = event.clipboardData.getData('text');
     if (!tokenStepReady(kind, email, text, busy) || !submitsOnPaste(kind, text)) return;
@@ -74,6 +77,11 @@ export function TokenSignIn({ kind, server, pageTarget, failure, signIn, onOutco
         <Button size="small" icon={<ExternalLink size={13} />} onClick={openTokenPage}>
           Create a token
         </Button>
+        {otherTokenPageOffered(kind) && (
+          <Button size="small" variant="ghost" onClick={openOtherTokenPage} title={`Opens the other page ${trackerName} makes tokens on`}>
+            Other token page
+          </Button>
+        )}
       </div>
       <TextField
         label={words.tokenLabel}

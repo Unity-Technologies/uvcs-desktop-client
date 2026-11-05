@@ -23,6 +23,14 @@ export function trackerKindName(kind: IssueTrackerKind, server: string): string 
   return isGitHubCloud(server) ? 'GitHub' : 'GitHub Enterprise Server';
 }
 
+/**
+ * Whether the token step offers "Other token page": only where a tracker makes tokens on two pages and main picks one
+ * (Jira Data Center: its own, or the API Token Authentication app's, `TokenPages`).
+ */
+export function otherTokenPageOffered(kind: IssueTrackerKind): boolean {
+  return kind === 'jiraDataCenter';
+}
+
 /** Jira, Cloud or Data Center: its projects named by key ("Project VCS"). */
 function isJira(kind: IssueTrackerKind): boolean {
   return kind !== 'github';
@@ -78,7 +86,8 @@ export function tokenStepWords(kind: IssueTrackerKind): TokenStepWords {
     case 'jiraCloud':
       return { tokenLabel: 'Jira API token', emailLabel: 'Your Atlassian account email', hint: 'Made on your Atlassian account’s Security page. The app only reads issues with it.' };
     case 'jiraDataCenter':
-      return { tokenLabel: 'Jira personal access token', hint: 'Made in your Jira profile, under Personal Access Tokens. The app only reads issues with it.' };
+      // Jira's own personal access token, or one an app such as API Token Authentication makes: "Jira token" names both.
+      return { tokenLabel: 'Jira token', hint: 'The app only reads issues with it.' };
     case 'github':
       return { tokenLabel: 'GitHub token', hint: 'The app only reads issues with it.' };
   }
