@@ -7,7 +7,7 @@ import { signInMenuEntries } from './signInMenuEntries';
 
 /** A sign-in's ⋯ menu beside its Use (`signInMenuEntries`): signing out of it, asked first. */
 export function SignInMenu({ row }: { row: SignInRow }) {
-  const menu = signInMenuEntries(row, () => askToSignOut(row));
+  const menu = signInMenuEntries(row, () => void askToSignOut(row));
   return (
     <ActionDropdownMenu entries={menu.entries}>
       <IconButton size="small" icon={<MoreHorizontal size={15} />} label={menu.label} />

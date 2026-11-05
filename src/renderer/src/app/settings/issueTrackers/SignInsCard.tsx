@@ -67,7 +67,7 @@ function SignInTile({ row }: { row: SignInRow }) {
     <li className={tileStyles.signInTile} aria-label={`${row.account}, ${row.title}`}>
       <SignInIdentity row={row} />
       {row.needsAttention && <StatusPill status={row.status} />}
-      <Button className={tileStyles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={() => askToSignOut(row)}>
+      <Button className={tileStyles.tileAction} size="small" variant="ghost" title={row.signOut} onClick={() => void askToSignOut(row)}>
         Sign out
       </Button>
     </li>
