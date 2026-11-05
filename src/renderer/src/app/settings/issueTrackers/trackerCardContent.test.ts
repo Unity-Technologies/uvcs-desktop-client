@@ -12,7 +12,7 @@ describe('trackerStatus', () => {
   });
 
   it('needs signing in when the credential was refused or is gone, or the projects’ read was refused', () => {
-    expect(trackerStatus({ ...jira, credential: 'refused' }, undefined)).toEqual({ tone: 'caution', label: 'Needs signing in' });
+    expect(trackerStatus({ ...jira, credential: 'refused' }, undefined)).toEqual({ tone: 'caution', label: 'Needs sign-in' });
     expect(trackerStatus({ ...jira, credential: 'missing' }, undefined)).toMatchObject({ tone: 'caution' });
     expect(trackerStatus(jira, { kind: 'failed', reason: 'signInRefused' })).toMatchObject({ tone: 'caution' });
   });

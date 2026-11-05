@@ -380,28 +380,39 @@ is plain text, with no list and no hint (`focusModeHints({ issues })`).
 
 ## Connecting: Settings › Issue tracker
 
-One section (`IssueTrackerPane`), for the window's repository. Each state is one card (`styles.card`): a tinted header
-saying what it is and where the user stands, its sections parted by hairlines, one obvious next action. Status reads
-in its own tokens (`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. What each card shows is decided in
-pure modules (`connectFlow`, `trackerCardContent`); the components only draw it.
+The same pane in every window (`IssueTrackerPane`): the window's repository's tracker, then the sign-ins this
+computer keeps (`SignInsCard`). Each state is one card (`styles.card`): a tinted header saying what it is and where the
+user stands, its sections parted by hairlines, one obvious next action. Status reads in its own tokens
+(`--positive-*`, `--caution-*`, `--danger-*`), never a raw color. Each tracker shows its own logo (`TrackerLogo`, its
+brand colors as `--brand-*` tokens). What each card shows is decided in pure modules (`connectFlow`,
+`trackerChoices`, `trackerCardContent`); the components only draw it.
 
-**Connect** (`ConnectTracker`), its header the title and its steps, Link · Sign in · Connected (`ConnectSteps`,
-`connectSteps`); changing a tracker already connected adds Back.
+**Connect** (`ConnectTracker`), its header the title and its steps, Tracker · Link · Sign in (`ConnectSteps`,
+`connectSteps`; the first names the tracker once picked). Back goes one step back, or to the tracker connected.
 
-1. **Empty**: a mark, "See your issues where comments name them", one line, the field (its placeholder shaped like an
-   issue link) and the link shapes per tracker under it (`LINK_EXAMPLES`). Nothing is filled in by itself.
-2. **A suggestion**: when the branch comments the window already read hold issue addresses a grammar recognizes
-   (`suggestedTrackerLink`, over the cached branch lists, no command), "Your branch comments link to Jira", the server
-   and project, how many comments, and "Use this", which fills the field. Never filled in silently.
-3. **Pasted**: read back with nothing sent, checked: the tracker's kind as a badge, then the host and the project
-   bold (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't an issue says what it is and
-   what to paste instead.
-4. **Next: sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and
-   "Use it". Otherwise the tracker's best sign-in method ("Sign-in"). In the token step one button leads
-   (`tokenStepLead`): "Create a token" until a token is in the field, then "Sign in". A failure is said under it,
-   scrolled into view.
+1. **Pick the tracker** (`TrackerPicker`): an upright card each, its logo, name and servers (`TRACKER_CHOICES`: Jira,
+   "Cloud or Data Center", one card, since the link tells them apart; GitHub, "github.com or Enterprise"), reached
+   with the arrow keys too (`choiceKeyMove`). A tracker shows here only once it works: no "coming soon". When the
+   branch comments the window already read hold issue addresses a grammar recognizes (`suggestedTrackerLink`, over
+   the cached branch lists, no command), "Your branch comments link to Jira" above the cards, with "Use it", which
+   picks the tracker and fills the link. Never filled in silently.
+2. **The link**: a field for a link to any of its issues, with only that tracker's link shapes under it
+   (`TrackerChoiceCard.examples`). Pasted, it's read back with nothing sent, checked: the tracker's kind as a badge,
+   then the host and the project bold (`linkReadBack`'s `parts`; its `words` for screen readers). A link that isn't
+   an issue says what it is and what to paste instead. A link to another tracker's issue is taken, never refused:
+   the step moves to that tracker and says so (`choiceAfterLink`, `switchedWords`).
+3. **Sign in** (`signInStepFor`): when a connection already covers the link, "Next: use your Jira sign-in" and "Use
+   it". Otherwise the tracker's best sign-in method ("Sign-in"). A token is two numbered steps (`TokenSignIn`,
+   `tokenStepWords`): "Get a token from Jira", with one button opening its page (and, for Data Center, the other
+   page as a quiet link: `OTHER_TOKEN_PAGE_WORDS`), then "Paste it here", the field with Sign in beside it. One
+   button leads (`tokenStepLead`): the page's until a token is in the field, then Sign in, and step one is checked.
+   A failure is said under it, scrolled into view.
 
-**Connected** (`TrackerCard`): the header holds the tracker's mark (`TrackerIcon`: neutral glyphs, no brand's), its
+In a window with no repository, Connect signs in alone (`connectWords`: "Sign in to an issue tracker"): the link
+proves the sign-in and binds nothing (`LinkSignIn` without a repository), and any repository then connects to it in
+one click. With no sign-in yet that's the whole pane; with some, "Add a sign-in" over their list opens it.
+
+**Connected** (`TrackerCard`): the header holds the tracker's logo (`TrackerIcon`), its
 name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ menu: "Use another tracker…" and
 "Disconnect…", which asks first (`disconnectQuestion`). Then:
 
@@ -410,7 +421,7 @@ name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ men
   `proofLines`). The pasted issue isn't shown back: it was a sample. It rises in once (none with reduced motion) and
   settles after `SUCCESS_SHOWN_MS`. Sign-in works but the project can't be read: the message names the project, and
   nothing is bound.
-- **Needs signing in** (a credential `refused` or `missing`): an amber pill and a callout saying why, that issues
+- **Needs sign-in** (a credential `refused` or `missing`): an amber pill and a callout saying why, that issues
   show as plain links until then, and "Sign in again" (`SignInAgain`).
 - **Can't reach Jira** (every project out of reach): a red pill and a callout saying where (`unreachableWords`), with
   Try again.
@@ -422,8 +433,9 @@ name, kind and host, how it stands (`StatusPill`, `trackerStatus`) and a ⋯ men
   while another stays (`removeProject`); "+ Add a project" opens a row of its own: a full-width field for a link to
   an issue of the other project, read back as pasted, with Add and Cancel.
 
-In a window with no repository, the sign-ins this computer keeps: a row each with its mark, name, account and pill,
-and Sign out on hover or focus (`signInRows`).
+**Sign-ins** (`SignInsCard`), in every window: a row each with its logo, name, account and pill, the one the
+window's repository uses marked "This repository", and Sign out, which asks first and names how many repositories lose
+their tracker with it (`signInRows`, `signOutQuestion`).
 
 Each failure gets one plain sentence (`connectFailureWords`), and one a new token would fix gets "Create a new token".
 
@@ -535,7 +547,7 @@ The trackers' servers get the care `cm`'s does (CLAUDE.md "Every `cm` command ea
    `recognizeTrackerLink`'s order and in "Ambiguous links".
 3. Its provider (`main/issueTrackers/providers/<kind>.ts`), its JSON parsers beside it, tested with `fakeTrackerHttp`
    and responses recorded from the tracker, its errors included.
-4. Its sign-in methods (`signInMethodsFor`), its words (`trackerKindName`, `LINK_EXAMPLES`), and its rows in the
+4. Its sign-in methods (`signInMethodsFor`), its words (`trackerKindName`, `TRACKER_CHOICES`), and its rows in the
    tables above.
 
 The registries' `Record`s fail to compile until 2 and 3 exist.

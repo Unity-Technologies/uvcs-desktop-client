@@ -16,11 +16,11 @@ export function needsSignIn(connection: Pick<TrackerConnection, 'credential'>): 
 }
 
 /**
- * The connection's status (docs/features/issue-trackers.md, "Connecting"): "Connected"; "Needs signing in" when its
+ * The connection's status (docs/features/issue-trackers.md, "Connecting"): "Connected"; "Needs sign-in" when its
  * credential stopped working (or the projects' read was refused); "Can't reach Jira" when no project answered.
  */
 export function trackerStatus(connection: Pick<TrackerConnection, 'credential' | 'kind'>, projects: BoundProjectsAnswer | undefined): TrackerStatus {
-  if (needsSignIn(connection) || (projects?.kind === 'failed' && projects.reason === 'signInRefused')) return { tone: 'caution', label: 'Needs signing in' };
+  if (needsSignIn(connection) || (projects?.kind === 'failed' && projects.reason === 'signInRefused')) return { tone: 'caution', label: 'Needs sign-in' };
   if (projects?.kind === 'failed' && projects.reason === 'unreachable') return { tone: 'danger', label: `Can't reach ${TRACKER_GRAMMARS[connection.kind].name}` };
   return { tone: 'positive', label: 'Connected' };
 }
