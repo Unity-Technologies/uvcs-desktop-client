@@ -8,7 +8,7 @@
 export type IssueTrackerKind = 'jiraCloud' | 'github';
 
 /**
- * How a sign-in is made, preferred first in a provider's `signInMethods`: a code the user approves in the browser
+ * How a sign-in is made, preferred first in `signInMethodsFor`: a code the user approves in the browser
  * (OAuth's device flow, RFC 8628), a sign-in page in the browser (OAuth with a redirect), or a token the user creates.
  */
 export type SignInMethodKind = 'deviceCode' | 'browser' | 'token';
