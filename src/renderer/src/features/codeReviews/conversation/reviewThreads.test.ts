@@ -83,6 +83,12 @@ describe('timelineOf', () => {
     expect(timeline.map((item) => (item.kind === 'event' ? item.event.id : item.thread.root.id))).toEqual([7, 8, 9]);
   });
 
+  it("leaves out an event this version doesn't read", () => {
+    const unread: ReviewEvent = { id: 3, author: 'ana', date: '2026-11-06T10:00:00+01:00', kind: 'other', text: '[mergerequest-status-draft-to-open]' };
+
+    expect(timelineOf({ comments: [], events: [unread] })).toEqual([]);
+  });
+
   it('compares dates written with different offsets by the moment they name', () => {
     const timeline = timelineOf({ comments: [comment(1, { date: '2026-11-06T10:00:00+01:00' })], events: [event(2, '2026-11-06T09:30:00+00:00')] });
 

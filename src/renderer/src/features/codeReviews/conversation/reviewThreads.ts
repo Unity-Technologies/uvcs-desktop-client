@@ -1,4 +1,8 @@
-import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
+import type { ReviewComment, ReviewConversation, ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { isShownEvent } from './reviewEventText';
+
+/** An event the timeline shows: one this version reads. */
+export type ShownEvent = ReviewEvent & Exclude<ReviewEventChange, { kind: 'other' }>;
 
 /**
  * Where a thread stands, as the server counts it (its open items, `{unresolvedissues}`): a change request is open
@@ -14,7 +18,7 @@ export interface ReviewThread {
 }
 
 /** What the conversation shows, in the order it happened: the server's notes and the threads, by when each started. */
-export type TimelineItem = { kind: 'event'; event: ReviewEvent } | { kind: 'thread'; thread: ReviewThread };
+export type TimelineItem = { kind: 'event'; event: ShownEvent } | { kind: 'thread'; thread: ReviewThread };
 
 /**
  * The comments as threads, in the order they came: each thread a comment and every reply under it, at any depth
@@ -59,10 +63,13 @@ function threadState(root: ReviewComment, replies: readonly ReviewComment[]): Th
   return { kind: 'none' };
 }
 
-/** The events and threads by date, oldest first; at the same moment, in the order the server wrote them. */
+/**
+ * The events and threads by date, oldest first; at the same moment, in the order the server wrote them. An event this
+ * version doesn't read (`isShownEvent`) is left out rather than shown as the server wrote it.
+ */
 export function timelineOf(conversation: Pick<ReviewConversation, 'comments' | 'events'>): TimelineItem[] {
   const items: TimelineItem[] = [
-    ...conversation.events.map((event): TimelineItem => ({ kind: 'event', event })),
+    ...conversation.events.filter(isShownEvent).map((event): TimelineItem => ({ kind: 'event', event })),
     ...threadsOf(conversation.comments).map((thread): TimelineItem => ({ kind: 'thread', thread })),
   ];
   return items.sort((a, b) => Date.parse(startOf(a).date) - Date.parse(startOf(b).date) || startOf(a).id - startOf(b).id);

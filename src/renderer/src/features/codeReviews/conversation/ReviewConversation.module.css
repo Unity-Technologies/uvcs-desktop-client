@@ -247,12 +247,12 @@
   color: var(--text-secondary);
 }
 
-.event[data-status='Reviewed'] .eventIcon {
+.event[data-icon='Reviewed'] .eventIcon {
   background: color-mix(in srgb, var(--status-added) 16%, transparent);
   color: var(--status-added);
 }
 
-.event[data-status='Rework required'] .eventIcon {
+.event[data-icon='Rework required'] .eventIcon {
   background: color-mix(in srgb, var(--status-changed) 16%, transparent);
   color: var(--status-changed);
 }

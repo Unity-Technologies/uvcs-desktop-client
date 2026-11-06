@@ -1,30 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { reviewEventText } from './reviewEventText';
+import type { ReviewEvent } from '@shared/domain/reviewConversation';
+import { isShownEvent, reviewEventRow } from './reviewEventText';
 
-describe('reviewEventText', () => {
+describe('reviewEventRow', () => {
   it('names the reviewers asked, joined as a sentence', () => {
-    expect(reviewEventText({ kind: 'reviewRequested', reviewers: ['ana@acme.com'] })).toBe('requested a review from Ana');
-    expect(reviewEventText({ kind: 'reviewRequested', reviewers: ['ana@acme.com', 'bob.smith', 'qa-team'] })).toBe('requested a review from Ana, Bob Smith and Qa Team');
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: ['ana@acme.com'] })).toEqual({ icon: 'reviewRequested', text: 'requested a review from Ana' });
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: ['ana@acme.com', 'bob.smith', 'qa-team'] }).text).toBe('requested a review from Ana, Bob Smith and Qa Team');
   });
 
   it("says a review was requested when an older server didn't name who from", () => {
-    expect(reviewEventText({ kind: 'reviewRequested', reviewers: [] })).toBe('requested a review');
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: [] }).text).toBe('requested a review');
   });
 
-  it('says what each status change means', () => {
-    const status = (to: 'Under review' | 'Reviewed' | 'Rework required') => reviewEventText({ kind: 'statusChanged', status: to, comment: '', guid: 'g' });
-
-    expect([status('Reviewed'), status('Rework required'), status('Under review')]).toEqual(['marked it Reviewed', 'asked for rework', 'marked it Under review']);
+  it('says what each status change means, in its icon, with what its reviewer said', () => {
+    expect(reviewEventRow({ kind: 'statusChanged', status: 'Reviewed', comment: 'Ship it', guid: 'g' })).toEqual({ icon: 'Reviewed', text: 'marked it Reviewed', comment: 'Ship it' });
+    expect(reviewEventRow({ kind: 'statusChanged', status: 'Rework required', comment: '', guid: 'g' })).toEqual({ icon: 'Rework required', text: 'asked for rework' });
+    expect(reviewEventRow({ kind: 'statusChanged', status: 'Under review', comment: ' \n', guid: 'g' })).toEqual({ icon: 'Under review', text: 'marked it Under review' });
   });
 
   it('says who was asked again or removed, and what a title was renamed from and to', () => {
-    expect(reviewEventText({ kind: 'reviewRequestedAgain', reviewer: 'bob.smith' })).toBe('asked Bob Smith to review it again');
-    expect(reviewEventText({ kind: 'reviewRequestedAgain', reviewer: '' })).toBe('asked for a review again');
-    expect(reviewEventText({ kind: 'reviewerRemoved', reviewer: 'qa-team' })).toBe('removed Qa Team from the reviewers');
-    expect(reviewEventText({ kind: 'titleChanged', from: 'Switch', to: 'Switching keeps changes' })).toBe('renamed it from “Switch” to “Switching keeps changes”');
+    expect(reviewEventRow({ kind: 'reviewRequestedAgain', reviewer: 'bob.smith' })).toEqual({ icon: 'reviewRequestedAgain', text: 'asked Bob Smith to review it again' });
+    expect(reviewEventRow({ kind: 'reviewRequestedAgain', reviewer: '' }).text).toBe('asked for a review again');
+    expect(reviewEventRow({ kind: 'reviewerRemoved', reviewer: 'qa-team' })).toEqual({ icon: 'reviewerRemoved', text: 'removed Qa Team from the reviewers' });
+    expect(reviewEventRow({ kind: 'titleChanged', from: 'Switch', to: 'Switching keeps changes' })).toEqual({ icon: 'renamed', text: 'renamed it from “Switch” to “Switching keeps changes”' });
   });
+});
 
-  it("shows what it doesn't read yet as written", () => {
-    expect(reviewEventText({ kind: 'other', text: '[mergerequest-status-draft-to-open]' })).toBe('[mergerequest-status-draft-to-open]');
+describe('isShownEvent', () => {
+  const at = { id: 1, author: 'ana', date: '' };
+
+  it("leaves out what this version doesn't read, so the server's own text never shows", () => {
+    expect(isShownEvent({ ...at, kind: 'other', text: '[mergerequest-status-draft-to-open]' } as ReviewEvent)).toBe(false);
+    expect(isShownEvent({ ...at, kind: 'titleChanged', from: 'a', to: 'b' })).toBe(true);
   });
 });
