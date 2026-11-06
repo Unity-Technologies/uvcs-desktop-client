@@ -12,8 +12,11 @@ export interface ReviewEventRow {
   comment?: string;
 }
 
+/** A change the timeline shows, and who made it when known: what they did to themselves reads so. */
+type ShownChange = Exclude<ReviewEventChange, { kind: 'other' }> & { author?: string };
+
 /** An event the timeline shows; none for one this version doesn't read (`other`), which `timelineOf` leaves out. */
-export function reviewEventRow(change: Exclude<ReviewEventChange, { kind: 'other' }>): ReviewEventRow {
+export function reviewEventRow(change: ShownChange): ReviewEventRow {
   const text = reviewEventText(change);
   switch (change.kind) {
     case 'statusChanged':
@@ -30,20 +33,33 @@ export function isShownEvent(event: ReviewEvent): event is ReviewEvent & Exclude
   return event.kind !== 'other';
 }
 
-/** What an event says after its author's name: "requested a review from Ana and QA Team". */
-function reviewEventText(change: Exclude<ReviewEventChange, { kind: 'other' }>): string {
+/**
+ * What an event says after its author's name: "requested a review from Ana and QA Team". What the author did to
+ * themselves reads so: "added themselves as a reviewer", "left the reviewers".
+ */
+function reviewEventText(change: ShownChange): string {
+  const isAuthor = (name: string): boolean => change.author !== undefined && name.toLowerCase() === change.author.toLowerCase();
+  const named = (name: string): string => (isAuthor(name) ? 'themselves' : displayName(name));
   switch (change.kind) {
     case 'reviewRequested':
-      return change.reviewers.length === 0 ? 'requested a review' : `requested a review from ${listed(change.reviewers.map(displayName))}`;
+      if (change.reviewers.length === 0) return 'requested a review';
+      if (change.reviewers.every(isAuthor)) return 'added themselves as a reviewer';
+      return `requested a review from ${listed(change.reviewers.map(named))}`;
     case 'reviewRequestedAgain':
-      return change.reviewer ? `asked ${displayName(change.reviewer)} to review it again` : 'asked for a review again';
+      return change.reviewer ? `asked ${named(change.reviewer)} to review it again` : 'asked for a review again';
     case 'reviewerRemoved':
-      return `removed ${displayName(change.reviewer)} from the reviewers`;
+      return isAuthor(change.reviewer) ? 'left the reviewers' : `removed ${displayName(change.reviewer)} from the reviewers`;
     case 'statusChanged':
       return STATUS_WORDS[change.status];
     case 'titleChanged':
       return `renamed it from “${change.from}” to “${change.to}”`;
   }
+}
+
+/** What a folded run of reviewer changes says: "Ana and Bob changed the reviewers 5 times". */
+export function reviewerChangesText(events: readonly Pick<ReviewEvent, 'author'>[]): string {
+  const authors = [...new Map(events.map((event) => [event.author.toLowerCase(), displayName(event.author)])).values()];
+  return `${listed(authors)} changed the reviewers ${events.length} times`;
 }
 
 const STATUS_WORDS = {

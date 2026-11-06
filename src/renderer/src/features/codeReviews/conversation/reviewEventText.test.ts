@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewEvent } from '@shared/domain/reviewConversation';
-import { isShownEvent, reviewEventRow } from './reviewEventText';
+import { isShownEvent, reviewerChangesText, reviewEventRow } from './reviewEventText';
 
 describe('reviewEventRow', () => {
   it('names the reviewers asked, joined as a sentence', () => {
@@ -23,6 +23,29 @@ describe('reviewEventRow', () => {
     expect(reviewEventRow({ kind: 'reviewRequestedAgain', reviewer: '' }).text).toBe('asked for a review again');
     expect(reviewEventRow({ kind: 'reviewerRemoved', reviewer: 'qa-team' })).toEqual({ icon: 'reviewerRemoved', text: 'removed Qa Team from the reviewers' });
     expect(reviewEventRow({ kind: 'titleChanged', from: 'Switch', to: 'Switching keeps changes' })).toEqual({ icon: 'renamed', text: 'renamed it from “Switch” to “Switching keeps changes”' });
+  });
+});
+
+describe('an event its author made on themselves', () => {
+  it('says they added themselves or left, rather than naming them twice', () => {
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: ['Sergio.Luis'], author: 'sergio.luis' }).text).toBe('added themselves as a reviewer');
+    expect(reviewEventRow({ kind: 'reviewerRemoved', reviewer: 'sergio.luis', author: 'sergio.luis' }).text).toBe('left the reviewers');
+  });
+
+  it('calls them "themselves" among others asked', () => {
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: ['ana@acme.com', 'sergio.luis'], author: 'sergio.luis' }).text).toBe('requested a review from Ana and themselves');
+  });
+
+  it('names whoever else was asked or removed', () => {
+    expect(reviewEventRow({ kind: 'reviewRequested', reviewers: ['ana@acme.com'], author: 'sergio.luis' }).text).toBe('requested a review from Ana');
+    expect(reviewEventRow({ kind: 'reviewerRemoved', reviewer: 'ana@acme.com', author: 'sergio.luis' }).text).toBe('removed Ana from the reviewers');
+  });
+});
+
+describe('reviewerChangesText', () => {
+  it('names everyone who changed the reviewers once, and how many times they did', () => {
+    const events = [{ author: 'ana@acme.com' }, { author: 'bob.smith' }, { author: 'Ana@acme.com' }];
+    expect(reviewerChangesText(events)).toBe('Ana and Bob Smith changed the reviewers 3 times');
   });
 });
 
