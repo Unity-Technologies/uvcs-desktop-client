@@ -1,0 +1,11 @@
+/* A neutral, opaque disc: in a stack it overlaps someone's avatar, which mustn't show through. */
+.group {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+  color: var(--text-secondary);
+}

@@ -23,19 +23,47 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   set, the page's popover saying so, the menu asking first ("You'll be added as one").
   Whether the user is a reviewer goes by name (`isReviewer`, `ownStatus`): a member of a reviewer group isn't known to
   be one, so they are added as a user, as the server does itself when a group member sets a status.
-- **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users (`cm listusers
-  --onlyusers`, read once and kept, `useMemberNames`), the reviewers checked first (`offeredReviewers`). What changed
-  applies as it closes (`reviewerChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b`, one
-  `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or, once they gave a
-  status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id> --re-request
-  --users=a`, which puts them back to "Under review"). What the picker changes is worked out against the reviewers as it
-  opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile isn't removed. A server whose
-  directory can't list everyone (an LDAP size limit) is asked for the names typed instead (`--filter`). A group reads as
-  a user here, so removing a group or asking it again (`--users`) fails with a toast until groups are told apart (`cm
-  listusers --onlygroups`, `--groups`). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's **Add
-  reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one `cm codereview
-  reviewer add`. Groups are shown as reviewers but can't be added from the app yet (`--groups`). A new review asks its
-  reviewers in the command that creates it (`cm codereview <target> <title> --users=a,b`, `createReviewArgs`).
+- **Groups** are reviewers as users are: picked, shown, removed and asked again. `cm find review` prints a reviewer's
+  name only (`{reviewers}`, the same for a user and a group). `cm codereview reviewer list <id> --format` prints each
+  one's type (`{user}`, `{status}`, `{type}`: `user` or `group`, never translated; `LISTED_REVIEWERS`), one review at a
+  time: the review's page reads it for its review (`CodeReviewsApi.reviewers`, `useReviewersOf`, one command read
+  with the page's other reads and again whenever the reviews are; never per row of a list, nor for a review with no
+  reviewers, `readsReviewerTypes`), and so does the list's Change reviewers dialog for the review it opens on, its
+  picker waiting for it (`dialogPick`). It is read even where the server's groups answered: a name missing from that
+  list (a server that lists none, a group made since it was read) can't be told from a user, and the page's writes
+  must name each one as `cm` takes it. Where that type is read (`CodeReviewer.kind`), it decides: the
+  page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
+  groups too. Elsewhere (the list's stack, the picker's offered groups, the new-review dialog) the server's groups
+  (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
+  `useReviewerGroups`, `reviewerGroups`) tell a group from a user by name, whatever its case (`isGroup`,
+  `reviewerRef`). A group shows the group icon where a user shows their avatar
+  (`GroupAvatar`: the reviewers' stack, the review's page, the picker), its name as the server writes it
+  (`reviewerLabel`), and its tooltip says it's a group (`reviewerText`). Every command names a group in `--groups` and
+  a user in `--users`, both in one command when both change (`reviewersOptions`): `cm` looks a name up among its
+  option's kind only, and a group in `--users` fails ("No such user"). On a server that lists no groups (one that
+  takes the names its system knows), or whose directory refuses the whole list (a size limit), the list's stack shows a
+  group reviewer as a user (only its page knows better), and the picker finds groups only by a search, adding one as a
+  group. A refused list
+  is asked once, not again by each row that shows reviewers (`MEMBER_NAMES_QUERY`, `retryOnMount: false`). A user and
+  a group of the same name read as the group.
+- **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users and groups
+  (`cm listusers --onlyusers` and `--onlygroups`, each read once and kept, `useMemberNames`): the reviewers checked
+  first, then the groups, then the users, each by name (`offeredReviewers`), as the official client lists them. What
+  changed applies as it closes (`pickChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b
+  --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
+  once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id>
+  --re-request --users=a` or `--groups=g`, which puts them back to "Under review"). What the picker changes is worked
+  out against the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile
+  isn't removed; the reviewers it opened with are a group or a user as "Groups" says (their type from `cm` where it
+  was read, else the server's groups as it applies), and someone checked keeps the kind they were listed with
+  (`pickedKind`). A server whose directory can't list everyone (an LDAP size limit) is
+  asked for the names typed instead (`--filter`), users and groups alike (`useServerMembers`, `memberListing`), the
+  note under the rows saying which can't be listed (`pickerFooter`). The author can be a reviewer, marked
+  **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
+  (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
+  at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
+  A new review asks the reviewers typed, separated by commas (`typedReviewers`, a group as one), in the command that
+  creates it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`).
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
 - `cm codereview -e --status` isn't used: it sets the status of the review's first reviewer, and fails on a review
   with more than one.
@@ -43,7 +71,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 ## The list
 
 - One `cm find review` reads each review with its reviewers and the status each gave (`{reviewers}`,
-  `name:Status` pairs, `parseReviewers`; a group's name reads as a user's), the number of comments (`{comments}`: comments, questions, change requests
+  `name:Status` pairs, `parseReviewers`; which are groups, the server's groups say: see "Groups"), the number of comments (`{comments}`: comments, questions, change requests
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).

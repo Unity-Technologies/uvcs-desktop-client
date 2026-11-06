@@ -85,7 +85,7 @@ const REVIEWS = [
     id: 81,
     title: 'Review the HUD',
     codereviewstatusname: 'Rework required',
-    reviewers: 'ana.diaz@acme.com:Reviewed,bob.smith@acme.com:Rework required,qa-team:Under review,eva.lopez@acme.com:Reviewed',
+    reviewers: 'ana.diaz@acme.com:Reviewed,bob.smith@acme.com:Rework required,Developers:Under review,eva.lopez@acme.com:Reviewed',
     comments: 14,
     unresolvedissues: 0,
     targettype: 'branch',

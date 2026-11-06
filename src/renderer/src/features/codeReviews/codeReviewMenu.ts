@@ -9,7 +9,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
-import { addReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
+import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
 
@@ -49,7 +49,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
           run: () => void setOwnReviewStatus(place, single, status, { user }),
         })),
       ),
-    single && menuAction('addReviewers', () => void addReviewers(place, single)),
+    single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
     single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);

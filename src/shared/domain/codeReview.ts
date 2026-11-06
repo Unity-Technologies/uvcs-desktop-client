@@ -1,3 +1,5 @@
+import type { MemberKind, MemberRef } from './member';
+
 export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework required'] as const;
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
@@ -9,6 +11,11 @@ export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
 export interface CodeReviewer {
   name: string;
   status: CodeReviewStatus;
+  /**
+   * A user or a group, where it was read from the review alone (`cm codereview reviewer list`, `CodeReviewsApi.reviewers`).
+   * A list of reviews doesn't know it: `cm find review` prints the names only.
+   */
+  kind?: MemberKind;
 }
 
 export type CodeReviewTarget =
@@ -76,6 +83,6 @@ export interface CreateCodeReviewRequest {
   /** `br:/main/task`, `cs:12` or `sh:3`. */
   targetSpec: string;
   title: string;
-  /** The users asked to review it. */
-  reviewers?: string[];
+  /** The users and groups asked to review it. */
+  reviewers?: MemberRef[];
 }

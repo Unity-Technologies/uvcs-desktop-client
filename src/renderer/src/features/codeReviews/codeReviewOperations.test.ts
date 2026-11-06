@@ -3,16 +3,23 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
+// The reviewers' dialog renders the picker; a test says what the user picked in it, or that they cancelled.
+vi.mock('./ReviewersDialog', () => ({ pickReviewers: vi.fn() }));
 
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
-import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { addReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
+import { chooseReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
+import { pickReviewers } from './ReviewersDialog';
+
+const user = (name: string): MemberRef => ({ name, kind: 'user' });
+const group = (name: string): MemberRef => ({ name, kind: 'group' });
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -55,7 +62,7 @@ describe('setting your own review status', () => {
 
     const reviewCalls = fakeApi.calls().filter(({ method }) => method.startsWith('codeReviews.'));
     expect(reviewCalls.map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.addReviewers', 31, ['eva']],
+      ['codeReviews.addReviewers', 31, [user('eva')]],
       ['codeReviews.setOwnStatus', 31, 'Rework required'],
     ]);
   });
@@ -148,11 +155,11 @@ describe('changing the reviewers', () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await changeReviewers(inWs, review('ana'), { add: ['carl', 'dana'], remove: ['ana'] });
+    await changeReviewers(inWs, review('ana'), { add: [user('carl'), group('Developers')], remove: [user('ana')] });
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.addReviewers', 31, ['carl', 'dana']],
-      ['codeReviews.removeReviewers', 31, ['ana']],
+      ['codeReviews.addReviewers', 31, [user('carl'), group('Developers')]],
+      ['codeReviews.removeReviewers', 31, [user('ana')]],
     ]);
     expect(refreshed()).toEqual(['codeReviews']);
   });
@@ -161,40 +168,46 @@ describe('changing the reviewers', () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
 
     await changeReviewers(inWs, review('ana'), { add: [], remove: [] });
-    await changeReviewers(inWs, review('ana'), { add: [], remove: ['ana'] });
+    await changeReviewers(inWs, review('ana'), { add: [], remove: [user('ana')] });
 
     expect(fakeApi.methods()).toEqual(['codeReviews.removeReviewers']);
   });
 
-  it('removes one reviewer, or asks one to review again', async () => {
+  it('removes one reviewer, or asks one to review again, a group as a group', async () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
     fakeApi.answer('codeReviews.reRequestReview', () => undefined);
 
-    await removeReviewer(inWs, review('ana'), 'ana');
-    await reRequestReview(inWs, review('ana'), 'ana');
+    await removeReviewer(inWs, review('ana'), user('ana'));
+    await reRequestReview(inWs, review('Developers'), group('Developers'));
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.removeReviewers', 31, ['ana']],
-      ['codeReviews.reRequestReview', 31, ['ana']],
+      ['codeReviews.removeReviewers', 31, [user('ana')]],
+      ['codeReviews.reRequestReview', 31, [group('Developers')]],
     ]);
   });
 });
 
 describe('review operations', () => {
-  it('adds every reviewer typed, separated by commas, in one call', async () => {
+  it('applies what the reviewers dialog picked, the review’s, with one call to add and one to remove', async () => {
     fakeApi.answer('codeReviews.addReviewers', () => undefined);
-    answerPrompts('carl, dana');
+    fakeApi.answer('codeReviews.removeReviewers', () => undefined);
+    vi.mocked(pickReviewers).mockResolvedValueOnce({ add: [user('carl'), group('Developers')], remove: [user('ana')] });
+    const listed = review('ana');
 
-    await addReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, listed);
 
-    expect(fakeApi.argsOf('codeReviews.addReviewers')).toEqual([[inWs, 31, ['carl', 'dana']]]);
+    expect(vi.mocked(pickReviewers)).toHaveBeenLastCalledWith(listed);
+    expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
+      ['codeReviews.addReviewers', 31, [user('carl'), group('Developers')]],
+      ['codeReviews.removeReviewers', 31, [user('ana')]],
+    ]);
   });
 
-  it('adds nobody when the prompt is cancelled or left empty', async () => {
-    answerPrompts(' , ');
+  it('changes nobody when the dialog is cancelled or nothing was picked', async () => {
+    vi.mocked(pickReviewers).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ add: [], remove: [] });
 
-    await addReviewers(inWs, review('ana'));
-    await addReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -224,14 +237,14 @@ describe('review operations', () => {
     fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
     fakeApi.answer('codeReviews.addReviewers', () => undefined);
     fakeApi.answer('codeReviews.remove', () => undefined);
-    answerPrompts('carl');
+    vi.mocked(pickReviewers).mockResolvedValueOnce({ add: [user('carl')], remove: [] });
 
     const afterStatus = watchRefreshes(ws);
     await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
     expect(afterStatus()).toEqual(['codeReviews']);
 
     const afterAdding = watchRefreshes(ws);
-    await addReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
     expect(afterAdding()).toEqual(['codeReviews']);
 
     const afterDelete = watchRefreshes(ws);

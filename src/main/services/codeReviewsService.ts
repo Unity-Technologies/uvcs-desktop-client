@@ -3,8 +3,8 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { addReviewersArgs, createReviewArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
-import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
+import { addReviewersArgs, createReviewArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
+import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -64,25 +64,30 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       return review;
     },
 
+    reviewers(place, reviewId) {
+      const at = cmPlace(place);
+      return cm.queryRecords(listReviewersArgs(reviewId, at), layoutReader(LISTED_REVIEWERS), at.options);
+    },
+
     async create(place, request) {
       const at = cmPlace(place);
       const output = await cm.query(createReviewArgs(request, at), at.options);
       return Number.parseInt(output.trim(), 10);
     },
 
-    async addReviewers(place, reviewId, users) {
+    async addReviewers(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(addReviewersArgs(reviewId, users, at), at.options);
+      await cm.query(addReviewersArgs(reviewId, reviewers, at), at.options);
     },
 
-    async removeReviewers(place, reviewId, users) {
+    async removeReviewers(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(removeReviewersArgs(reviewId, users, at), at.options);
+      await cm.query(removeReviewersArgs(reviewId, reviewers, at), at.options);
     },
 
-    async reRequestReview(place, reviewId, users) {
+    async reRequestReview(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(reRequestReviewArgs(reviewId, users, at), at.options);
+      await cm.query(reRequestReviewArgs(reviewId, reviewers, at), at.options);
     },
 
     async setOwnStatus(place, reviewId, status, comment) {

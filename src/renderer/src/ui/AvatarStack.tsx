@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { avatarStackLayout, type StackSlot } from './avatarStackLayout';
+import { GroupAvatar } from './GroupAvatar';
 import styles from './AvatarStack.module.css';
 
 export interface StackedAvatar {
@@ -10,6 +11,8 @@ export interface StackedAvatar {
   tip: string;
   /** What the avatar stands for, in its corner once the stack spreads: an icon in a color (`var(--status-added)`). */
   badge?: { icon: LucideIcon; color: string };
+  /** A group, not a person: its icon instead of an avatar. */
+  group?: boolean;
 }
 
 interface AvatarStackProps {
@@ -42,7 +45,7 @@ export function AvatarStack({ avatars, size, more, label }: AvatarStackProps) {
     >
       {avatars.map((avatar, index) => (
         <span key={avatar.user} className={styles.item} style={slotStyle(slots[index]!)} data-tip={avatar.tip}>
-          <Avatar user={avatar.user} size={size} tip={null} />
+          {avatar.group ? <GroupAvatar size={size} /> : <Avatar user={avatar.user} size={size} tip={null} />}
           {avatar.badge && (
             <span className={styles.badge} style={{ '--badge-color': avatar.badge.color } as CSSProperties}>
               <avatar.badge.icon size={7} strokeWidth={3} aria-hidden />

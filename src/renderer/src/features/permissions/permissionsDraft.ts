@@ -1,9 +1,9 @@
+import type { MemberRef } from '@shared/domain/member';
 import {
   NO_BITS,
   PERMISSION_NAMES,
   type AclBits,
   type EntryChange,
-  type MemberRef,
   type ObjectPermissions,
   type PermissionChanges,
   type PermissionName,

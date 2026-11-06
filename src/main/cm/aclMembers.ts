@@ -1,4 +1,5 @@
-import { EVERYONE, type MemberKind, type MemberRef } from '@shared/domain/permissions';
+import type { MemberKind, MemberRef } from '@shared/domain/member';
+import { EVERYONE } from '@shared/domain/permissions';
 import type { ReadLine } from './LineReader';
 
 /**

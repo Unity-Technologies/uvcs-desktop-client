@@ -19,8 +19,8 @@ export function listedReview(lists: readonly { data: unknown; readAt: number }[]
 }
 
 /**
- * The review from the workspace's code review queries in `client` (lists; the single reviews and summaries without
- * their target are skipped), but those an operation marked stale and nobody read again: their copy may hold an old status.
+ * The review from the workspace's code review queries in `client` (lists; the single reviews, a review's typed reviewers
+ * (`useReviewersOf`, objects with no id) and summaries without their target are skipped), but those an operation marked stale and nobody read again: their copy may hold an old status.
  */
 export function listedReviewIn(client: QueryClient, place: Place, reviewId: number): { review: CodeReview; readAt: number } | undefined {
   const lists = client

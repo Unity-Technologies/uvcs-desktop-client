@@ -64,7 +64,8 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   changeset: 'operation',
   checkin: 'operation',
   checkout: 'operation',
-  codereview: 'operation',
+  // `cm codereview reviewer list` lists a review's reviewers; every other `cm codereview` writes.
+  codereview: (args) => (args[1] === 'reviewer' && (args[2] === 'list' || args[2] === 'ls') ? 'list' : 'operation'),
   label: 'operation',
   move: 'operation',
   pull: 'operation',

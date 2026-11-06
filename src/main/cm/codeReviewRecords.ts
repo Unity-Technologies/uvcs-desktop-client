@@ -1,6 +1,6 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewer, type CodeReviewStatus, type CodeReviewSummary } from '@shared/domain/codeReview';
 import { foundObjects } from './foundObjects';
-import { integerValue } from './formatRecords';
+import { integerValue, type RecordLayout } from './formatRecords';
 
 /** A review as `cm find review` reports it; branch targets come as object ids (`id:54`) to be resolved. */
 export interface RawCodeReview extends CodeReviewSummary {
@@ -30,6 +30,15 @@ export const FOUND_REVIEWS = foundObjects(
     targetId: integerValue(value('target').replace(/^id:/, '')),
   }),
 );
+
+/**
+ * `cm codereview reviewer list --format`: one record per reviewer, `{type}` saying `user` or `group` (never
+ * translated). It is the only output that tells a group reviewer from a user, one review at a time.
+ */
+export const LISTED_REVIEWERS: RecordLayout<CodeReviewer, 'user' | 'status' | 'type'> = {
+  fields: ['user', 'status', 'type'],
+  read: (value) => ({ name: value('user'), status: toStatus(value('status')), kind: value('type').trim().toLowerCase() === 'group' ? 'group' : 'user' }),
+};
 
 /**
  * `{reviewers}`: `name:Status` pairs joined by commas (`ana:Reviewed,qa-team:Under review`), empty for none. A status

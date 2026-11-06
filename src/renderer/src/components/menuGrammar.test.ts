@@ -318,7 +318,7 @@ describe('menus without a workspace', () => {
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
     expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'rename', 'delete']));
-    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'yourReview', 'addReviewers', 'copy', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'yourReview', 'changeReviewers', 'copy', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toContain('newCodeReview');
   });
 
