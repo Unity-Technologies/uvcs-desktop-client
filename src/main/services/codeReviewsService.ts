@@ -3,7 +3,7 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { addReviewersArgs, createReviewArgs, ownStatusArgs, renameReviewArgs } from '../cm/codeReviewArgs';
+import { addReviewersArgs, createReviewArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
@@ -72,6 +72,16 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     async addReviewers(place, reviewId, users) {
       const at = cmPlace(place);
       await cm.query(addReviewersArgs(reviewId, users, at), at.options);
+    },
+
+    async removeReviewers(place, reviewId, users) {
+      const at = cmPlace(place);
+      await cm.query(removeReviewersArgs(reviewId, users, at), at.options);
+    },
+
+    async reRequestReview(place, reviewId, users) {
+      const at = cmPlace(place);
+      await cm.query(reRequestReviewArgs(reviewId, users, at), at.options);
     },
 
     async setOwnStatus(place, reviewId, status, comment) {
