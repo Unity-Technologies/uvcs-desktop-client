@@ -2,6 +2,8 @@
   display: inline-flex;
   align-items: center;
   min-width: 0;
+  /* Room for the status in each avatar's corner, which a list's cell would clip. */
+  padding: 3px 3px 3px 0;
 }
 
 /* Each avatar a little apart from the one before; the status its reviewer gave sits in its corner, in its color. */
