@@ -3,7 +3,7 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { addReviewersArgs, createReviewArgs, ownStatusArgs } from '../cm/codeReviewArgs';
+import { addReviewersArgs, createReviewArgs, ownStatusArgs, renameReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
@@ -81,6 +81,11 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
         return;
       }
       await withTempFile(comment, (commentsFile) => cm.query(ownStatusArgs(reviewId, status, commentsFile, at), at.options));
+    },
+
+    async rename(place, reviewId, title) {
+      const at = cmPlace(place);
+      await cm.query(renameReviewArgs(reviewId, title, at), at.options);
     },
 
     async remove(place, reviewIds) {

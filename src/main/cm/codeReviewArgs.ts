@@ -19,6 +19,11 @@ export function ownStatusArgs(reviewId: number, status: CodeReviewStatus, commen
   return ['codereview', 'review', String(reviewId), STATUS_OPTIONS[status], ...(commentsFile ? [`-commentsfile=${commentsFile}`] : []), ...at.repositoryOption];
 }
 
+/** `cm codereview -e --title`: a title is one line. */
+export function renameReviewArgs(reviewId: number, title: string, at: CmPlace): string[] {
+  return ['codereview', '-e', String(reviewId), `--title=${title}`, ...at.repositoryOption];
+}
+
 const STATUS_OPTIONS: Record<CodeReviewStatus, string> = {
   'Under review': '--under-review',
   Reviewed: '--reviewed',

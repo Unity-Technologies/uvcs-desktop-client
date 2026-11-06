@@ -11,5 +11,7 @@ export interface CodeReviewsApi {
   addReviewers(place: Place, reviewId: number, users: string[]): Promise<void>;
   /** Sets the signed-in user's own status as a reviewer, with what they say about it. */
   setOwnStatus(place: Place, reviewId: number, status: CodeReviewStatus, comment?: string): Promise<void>;
+  /** Gives the review a new title; the server notes the rename in its conversation. */
+  rename(place: Place, reviewId: number, title: string): Promise<void>;
   remove(place: Place, reviewIds: number[]): Promise<void>;
 }

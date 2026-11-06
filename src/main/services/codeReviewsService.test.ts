@@ -186,6 +186,14 @@ describe('code review writes', () => {
     expect(lines()).toEqual(['codereview review 6 --reviewed']);
   });
 
+  it('renames a review', async () => {
+    const { service, commands } = codeReviews({ 'codereview -e': '' });
+
+    await service.rename(IN_WORKSPACE, 6, 'Switching keeps changes');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', '-e', '6', '--title=Switching keeps changes'] }]);
+  });
+
   it('deletes several reviews with one command', async () => {
     const { service, lines } = codeReviews({ 'codereview -d': '' });
 
