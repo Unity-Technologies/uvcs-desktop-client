@@ -4,6 +4,9 @@ export const PEEK_SHARE = 0.5;
 /** The room between two avatars once the stack spreads: enough for a ring around each (`AvatarStack`'s) to stay apart. */
 export const SPREAD_GAP = 8;
 
+/** How far an avatar's ring reaches past it on each side: `AvatarStack.module.css`'s outer `box-shadow`, 3px. */
+export const RING_REACH = 3;
+
 /** Where one avatar of a stack sits, at rest and spread, and how far up it lies. */
 export interface StackSlot {
   /** Its left edge at rest, from the stack's. */

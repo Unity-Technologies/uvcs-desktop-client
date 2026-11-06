@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerRing, reviewersText, reviewerText, shownReviewers } from './reviewers';
+import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerRing, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -16,6 +16,27 @@ describe('shownReviewers', () => {
   it('names a sole reviewer beside their avatar, and shows nobody for a review nobody was asked to', () => {
     expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], rest: [], soleName: 'Ana' });
     expect(shownReviewers([], 3)).toEqual({ shown: [], rest: [] });
+  });
+});
+
+describe('stackedReviewers', () => {
+  it('stacks the first three, each named with their status and ringed in its color, and names the rest in "+N"', () => {
+    expect(stackedReviewers([ANA, BOB, QA, EVA])).toEqual({
+      avatars: [
+        { user: 'ana@acme.com', tip: 'Ana: Reviewed', ring: 'var(--status-added)' },
+        { user: 'bob@acme.com', tip: 'Bob: Under review' },
+        { user: 'qa-team', tip: 'Qa Team: Rework required', ring: 'var(--status-changed)' },
+      ],
+      more: { count: 1, tip: 'Eva: Under review' },
+    });
+  });
+
+  it('has no "+N" for three or fewer', () => {
+    expect(stackedReviewers([ANA, BOB, QA]).more).toBeUndefined();
+  });
+
+  it("names a sole reviewer beside their avatar", () => {
+    expect(stackedReviewers([ANA])).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', ring: 'var(--status-added)' }], soleName: 'Ana' });
   });
 });
 

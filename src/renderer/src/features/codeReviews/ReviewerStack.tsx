@@ -1,6 +1,6 @@
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import { AvatarStack } from '../../ui/AvatarStack';
-import { NO_REVIEWERS, reviewerRing, reviewersText, reviewerText, shownReviewers } from './reviewers';
+import { NO_REVIEWERS, REVIEWER_AVATAR_SIZE, reviewersText, stackedReviewers } from './reviewers';
 import styles from './ReviewerStack.module.css';
 
 /**
@@ -9,17 +9,12 @@ import styles from './ReviewerStack.module.css';
  * shows beside their avatar.
  */
 export function ReviewerStack({ reviewers }: { reviewers: readonly CodeReviewer[] }) {
-  const { shown, rest, soleName } = shownReviewers(reviewers);
-  if (shown.length === 0) return <span className={styles.nobody}>{NO_REVIEWERS}</span>;
+  if (reviewers.length === 0) return <span className={styles.nobody}>{NO_REVIEWERS}</span>;
+  const { avatars, more, soleName } = stackedReviewers(reviewers);
 
   return (
     <span className={styles.reviewers}>
-      <AvatarStack
-        avatars={shown.map((reviewer) => ({ user: reviewer.name, tip: reviewerText(reviewer), ring: reviewerRing(reviewer.status) }))}
-        size={18}
-        more={rest.length > 0 ? { count: rest.length, tip: reviewersText(rest) } : undefined}
-        label={reviewersText(reviewers)}
-      />
+      <AvatarStack avatars={avatars} size={REVIEWER_AVATAR_SIZE} more={more} label={reviewersText(reviewers)} />
       {soleName && <span className={styles.name}>{soleName}</span>}
     </span>
   );

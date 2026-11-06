@@ -8,6 +8,7 @@ import type { Column } from '../../ui/table/column';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { commentCountsSortValue } from './commentCounts';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
+import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
 import { ReviewerStack } from './ReviewerStack';
 import { describeTarget } from './reviewTarget';
 import styles from './codeReviewColumns.module.css';
@@ -38,8 +39,7 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   {
     id: 'reviewers',
     header: 'Reviewers',
-    // Three avatars and "+N", or a sole reviewer's avatar and name.
-    width: 130,
+    width: REVIEWERS_COLUMN_WIDTH,
     hideBelow: 700,
     render: (review) => <ReviewerStack reviewers={review.reviewers} />,
     sortValue: (review) => review.reviewers.map((reviewer) => reviewer.name).join(','),
