@@ -307,6 +307,8 @@ only the lines in view.
 The header's "Merge options" button (`MergeOptionsMenu`) opens a popover with what the merge offers
 (`mergeOptionsOffered`); a merge offering nothing (a shelve with no conflicting files) shows no button. The button is
 marked while any option differs from the default, and in a narrow header (under 960px, a container query) shows only its icon.
+It sits after the button that resolves files one by one in a merge tool, which comes and goes as the contributor
+changes: before it, the button and its open popover would move each time.
 
 - **Conflicting files**: "Merge both", "Keep yours" / "Keep incoming" ("Keep destination" / "Keep source" into a
   branch: `contributorSegments`). Shown only when files conflict. It isn't sent to `cm`: it decides every conflicting

@@ -37,7 +37,10 @@ interface MergeHeaderProps {
    * way, which takes the status's place.
    */
   run?: { control: ReactNode; running: boolean };
-  /** How the merge is calculated and who contributes to its conflicting files (`MergeOptionsMenu`), before the run control. */
+  /**
+   * How the merge is calculated and who contributes to its conflicting files (`MergeOptionsMenu`), after the run control: that
+   * one comes and goes, and the options' popover, anchored to its button, would jump with it.
+   */
   mergeOptions?: ReactNode;
   /** What else the merge does once it's in, under the comment (finishing a task: `TaskMergeOptions`). */
   options?: ReactNode;
@@ -96,8 +99,8 @@ export function MergeHeader({
             {progress}
           </span>
         )}
-        {mergeOptions}
         {run?.control}
+        {mergeOptions}
         {!intoServerBranch && mergeButton}
       </div>
 
