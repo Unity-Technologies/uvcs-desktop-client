@@ -1,35 +1,40 @@
 import { useMemo, useState } from 'react';
 import { usePlaceServer } from '../../../app/workspace/useWorkspace';
+import { PersonRow } from '../../../components/people/PersonRow';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
-import { displayName, userFilterTexts } from '../../../lib/userName';
-import { Avatar } from '../../../ui/Avatar';
+import { useDebouncedValue } from '../../../lib/useDebouncedValue';
+import { userFilterTexts } from '../../../lib/userName';
 import { FilterChecklist } from '../../../ui/FilterChecklist';
-import { Highlight } from '../../../ui/Highlight';
 import { useMemberNames } from '../../permissions/permissionsQueries';
 import { offeredReviewers } from '../reviewers';
-import type { CodeReview } from '@shared/domain/codeReview';
-import styles from './ReviewConversation.module.css';
+import { isPicked, pickerEmptyText, togglePicked, type ReviewerPick } from '../reviewerPick';
+
+/** How long typing pauses before a server that can't list everyone is asked for the names typed. */
+const SEARCH_PAUSE_MS = 300;
+
+const NO_USERS: readonly string[] = [];
 
 interface ReviewerPickerProps {
-  review: CodeReview;
-  /** Who is checked: the reviewers as the picker opened, changed by each click; applied once it closes. */
-  picked: readonly string[];
-  onPickedChange: (picked: string[]) => void;
+  pick: ReviewerPick;
+  onPickChange: (pick: ReviewerPick) => void;
 }
 
 /**
- * The reviewers' popover: a field to find anyone on the server (`cm listusers`, read once and kept), the reviewers
- * checked at the top. Checking asks someone, unchecking takes them off; it all applies as the popover closes.
+ * The reviewers' popover: a field to find anyone on the server (`cm listusers`, read once and kept), the reviewers as
+ * it opened checked at the top. Checking asks someone, unchecking takes them off; it all applies as the popover
+ * closes. A server whose directory can't list everyone (an LDAP size limit) is asked for the names typed instead.
  */
-export function ReviewerPicker({ review, picked, onPickedChange }: ReviewerPickerProps) {
-  const server = usePlaceServer();
+export function ReviewerPicker({ pick, onPickChange }: ReviewerPickerProps) {
+  const server = usePlaceServer() ?? '';
   const [search, setSearch] = useState('');
-  const { data: users = [], isPending } = useMemberNames(server ?? '', 'user', { enabled: server !== undefined });
-  // The reviewers as the popover opened lead the list: checking and unchecking never moves a row.
-  const [reviewersOnOpen] = useState(review.reviewers);
-  const offered = useMemo(() => offeredReviewers(users, reviewersOnOpen), [users, reviewersOnOpen]);
+  const typed = useDebouncedValue(search.trim(), SEARCH_PAUSE_MS);
+  const everyone = useMemberNames(server, 'user', { enabled: server !== '' });
+  const listFailed = Boolean(everyone.error);
+  const searched = useMemberNames(server, 'user', { filter: typed, enabled: listFailed && typed !== '' });
+  const users = everyone.data ?? searched.data ?? NO_USERS;
+  const offered = useMemo(() => offeredReviewers(users, pick.onOpen), [users, pick.onOpen]);
   const rows = useMemo(() => offered.filter((user) => matchesWordFilter(userFilterTexts(user), search)), [offered, search]);
-  const isPicked = (user: string): boolean => picked.some((name) => name.toLowerCase() === user.toLowerCase());
+  const loading = (everyone.isLoading && !listFailed) || searched.isFetching;
 
   return (
     <FilterChecklist
@@ -38,22 +43,11 @@ export function ReviewerPicker({ review, picked, onPickedChange }: ReviewerPicke
       onSearchChange={setSearch}
       placeholder="Find a user"
       label="Reviewers"
-      isChecked={isPicked}
-      onToggle={(user) => onPickedChange(isPicked(user) ? picked.filter((name) => name.toLowerCase() !== user.toLowerCase()) : [...picked, user])}
-      renderRow={(user) => (
-        <>
-          <Avatar user={user} size={18} tip={null} />
-          <span className={styles.pickerName}>
-            <Highlight text={displayName(user)} />
-          </span>
-          {displayName(user).toLowerCase() !== user.toLowerCase() && (
-            <span className={styles.pickerStored}>
-              <Highlight text={user} />
-            </span>
-          )}
-        </>
-      )}
-      empty={isPending ? 'Reading the users…' : <>No one matches “{search.trim()}”</>}
+      isChecked={(user) => isPicked(pick, user)}
+      onToggle={(user) => onPickChange(togglePicked(pick, user))}
+      renderRow={(user) => <PersonRow user={user} />}
+      empty={pickerEmptyText({ listFailed, loading, search })}
+      footer={listFailed ? 'The server can’t list everyone: type a name to look it up.' : undefined}
     />
   );
 }

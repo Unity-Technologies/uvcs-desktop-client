@@ -7,7 +7,8 @@ import { Avatar } from '../../../ui/Avatar';
 import { FilterPopover } from '../../../ui/FilterPopover';
 import { IconButton } from '../../../ui/IconButton';
 import { changeReviewers, removeReviewer, reRequestReview } from '../codeReviewOperations';
-import { canReRequest, isAuthor, reviewerChanges } from '../reviewers';
+import { canReRequest, isAuthor } from '../reviewers';
+import { pickChanges, startPick, type ReviewerPick } from '../reviewerPick';
 import { ReviewStatusIcon } from '../ReviewStatusIcon';
 import { ReviewerPicker } from './ReviewerPicker';
 import styles from './ReviewConversation.module.css';
@@ -18,15 +19,15 @@ import styles from './ReviewConversation.module.css';
  */
 export function ReviewersSection({ review }: { review: CodeReview }) {
   const place = usePlace();
-  const [picked, setPicked] = useState<string[] | null>(null);
+  const [pick, setPick] = useState<ReviewerPick | null>(null);
 
   const openPicker = (open: boolean): void => {
     if (open) {
-      setPicked(review.reviewers.map((reviewer) => reviewer.name));
+      setPick(startPick(review.reviewers));
       return;
     }
-    if (picked) void changeReviewers(place, review, reviewerChanges(review.reviewers, picked));
-    setPicked(null);
+    if (pick) void changeReviewers(place, review, pickChanges(pick));
+    setPick(null);
   };
 
   return (
@@ -37,11 +38,11 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
         </h2>
         <FilterPopover
           width={300}
-          open={picked !== null}
+          open={pick !== null}
           onOpenChange={openPicker}
           trigger={<IconButton size="small" icon={<Settings size={14} />} label="Change reviewers" />}
         >
-          {picked && <ReviewerPicker review={review} picked={picked} onPickedChange={setPicked} />}
+          {pick && <ReviewerPicker pick={pick} onPickChange={setPick} />}
         </FilterPopover>
       </div>
       {review.reviewers.length === 0 && <p className={styles.railEmpty}>Nobody yet</p>}
