@@ -27,8 +27,12 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   (`cm listusers --onlyusers`, read once and kept, `useMemberNames`), the reviewers checked first (`offeredReviewers`).
   What changed applies as it closes (`reviewerChanges`, `changeReviewers`): one `cm codereview reviewer add <id>
   --users=a,b`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
-  once they gave a status, asked to review again (`canReRequest`; `cm codereview review <id> --re-request --users=a`,
-  which puts them back to "Under review"). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's
+  once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review
+  <id> --re-request --users=a`, which puts them back to "Under review"). What the picker changes is worked out against
+  the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile isn't removed.
+  A server whose directory can't list everyone (an LDAP size limit) is asked for the names typed instead
+  (`--filter`). A group reads as a user here, so removing a group or asking it again (`--users`) fails with a toast
+  until groups are told apart (`cm listusers --onlygroups`, `--groups`). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's
   **Add reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one
   `cm codereview reviewer add`. Groups are shown as reviewers but can't be added from the app yet
   (`--groups`). A new review asks its reviewers in the command that creates it
