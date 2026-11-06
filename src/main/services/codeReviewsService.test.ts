@@ -10,6 +10,7 @@ import { readBranchNames } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../cm/formatRecords';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -126,6 +127,29 @@ describe('one code review', () => {
 
     expect(await service.get(IN_WORKSPACE, 6)).toMatchObject({ id: 6, title: 'Review 6', status: 'Under review', target: { kind: 'changeset' } });
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
+  });
+
+  // `cm codereview reviewer list` types each reviewer, which `{reviewers}` doesn't: a group shows as one even on a
+  // server whose `cm listusers --onlygroups` lists none (one that takes the system's own group names).
+  it("reads a review's reviewers with their types, read as they arrive, in one command", async () => {
+    const { service, commands } = codeReviews({
+      // As `cm` prints it with the app's separators: a record per reviewer, each after a line break.
+      'codereview reviewer list': formatOutput(['ana@acme.com', 'Reviewed', 'user'], ['staff', 'Under review', 'group'], ['Web Devs', 'Rework required', 'group']),
+    });
+
+    expect(await service.reviewers(IN_WORKSPACE, 6)).toEqual([
+      { name: 'ana@acme.com', status: 'Reviewed', kind: 'user' },
+      { name: 'staff', status: 'Under review', kind: 'group' },
+      { name: 'Web Devs', status: 'Rework required', kind: 'group' },
+    ]);
+    expect(commands).toMatchObject([{ via: 'query', readsRecords: true, args: ['codereview', 'reviewer', 'list', '6', `--format={user}${FIELD_SEPARATOR}{status}${FIELD_SEPARATOR}{type}${RECORD_SEPARATOR}`] }]);
+  });
+
+  it('reads no reviewers of a review nobody was asked to, and names the repository outside a workspace', async () => {
+    const { service, lines } = codeReviews({ 'codereview reviewer list': '' });
+
+    expect(await service.reviewers(repositoryPlace('game@local'), 6)).toEqual([]);
+    expect(lines()[0]).toMatch(/^codereview reviewer list 6 --format=\S+ --repository=game@local$/);
   });
 
   it("fails for a review that doesn't exist", async () => {
