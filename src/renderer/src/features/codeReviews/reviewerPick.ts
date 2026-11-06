@@ -1,5 +1,5 @@
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { reviewerChanges, type ReviewerChanges } from './reviewers';
+import { offeredReviewers, reviewerChanges, type ReviewerChanges } from './reviewers';
 
 /**
  * The reviewer picker's state while it's open: the reviewers as it opened, and who is checked. What it changes is
@@ -12,7 +12,7 @@ export interface ReviewerPick {
 }
 
 export function startPick(reviewers: readonly CodeReviewer[]): ReviewerPick {
-  return { onOpen: reviewers, picked: reviewers.map((reviewer) => reviewer.name) };
+  return { onOpen: [...reviewers], picked: reviewers.map((reviewer) => reviewer.name) };
 }
 
 /** Whether `user` is checked, whatever the case of their name. */
@@ -28,6 +28,18 @@ export function togglePicked(pick: ReviewerPick, user: string): ReviewerPick {
 /** What the user's checks change: added who they checked, removed who they unchecked, from the reviewers as it opened. */
 export function pickChanges(pick: ReviewerPick): ReviewerChanges {
   return reviewerChanges(pick.onOpen, pick.picked);
+}
+
+/**
+ * The rows the picker offers: the reviewers as it opened, then whoever the user checked that the list no longer
+ * returns (a server that can't list everyone answers only the last search: what will be applied stays in view), then
+ * everyone else listed. Checking someone listed never moves their row.
+ */
+export function pickOffered(pick: ReviewerPick, users: readonly string[]): string[] {
+  const offered = offeredReviewers(users, pick.onOpen);
+  const inView = new Set(offered.map((name) => name.toLowerCase()));
+  const checkedOutOfView = pick.picked.filter((name) => !inView.has(name.toLowerCase()));
+  return [...offered.slice(0, pick.onOpen.length), ...checkedOutOfView, ...offered.slice(pick.onOpen.length)];
 }
 
 /** Whether the picker can't list everyone and finds users by what's typed instead (a directory with a size limit). */

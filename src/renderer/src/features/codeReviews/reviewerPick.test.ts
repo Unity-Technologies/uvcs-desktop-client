@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { isPicked, pickChanges, pickerEmptyText, startPick, togglePicked } from './reviewerPick';
+import { isPicked, pickChanges, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -22,9 +22,23 @@ describe('the reviewer pick', () => {
   });
 
   it("never removes someone another person added while it was open: it goes by the reviewers it opened with", () => {
-    const pick = togglePicked(startPick([ANA]), 'eva@acme.com');
-    // Carl joined meanwhile; he was never in the pick, so nothing removes him.
+    const reviewers = [ANA];
+    const pick = togglePicked(startPick(reviewers), 'eva@acme.com');
+    reviewers.push({ name: 'carl@acme.com', status: 'Under review' });
+
     expect(pickChanges(pick)).toEqual({ add: ['eva@acme.com'], remove: [] });
+  });
+});
+
+describe('pickOffered', () => {
+  it('never moves a listed user they checked: the rows stay put while picking', () => {
+    const pick = togglePicked(startPick([ANA]), 'zoe@acme.com');
+    expect(pickOffered(pick, ['zoe@acme.com', 'eva@acme.com', 'ana@acme.com'])).toEqual(['ana@acme.com', 'eva@acme.com', 'zoe@acme.com']);
+  });
+
+  it('keeps a user checked from an earlier search in view, where the server only answers the last one', () => {
+    const pick = togglePicked(startPick([ANA]), 'eva@acme.com');
+    expect(pickOffered(pick, ['bob@acme.com'])).toEqual(['ana@acme.com', 'eva@acme.com', 'bob@acme.com']);
   });
 });
 

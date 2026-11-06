@@ -6,8 +6,7 @@ import { useDebouncedValue } from '../../../lib/useDebouncedValue';
 import { userFilterTexts } from '../../../lib/userName';
 import { FilterChecklist } from '../../../ui/FilterChecklist';
 import { useMemberNames } from '../../permissions/permissionsQueries';
-import { offeredReviewers } from '../reviewers';
-import { isPicked, pickerEmptyText, togglePicked, type ReviewerPick } from '../reviewerPick';
+import { isPicked, pickerEmptyText, pickOffered, togglePicked, type ReviewerPick } from '../reviewerPick';
 
 /** How long typing pauses before a server that can't list everyone is asked for the names typed. */
 const SEARCH_PAUSE_MS = 300;
@@ -32,7 +31,7 @@ export function ReviewerPicker({ pick, onPickChange }: ReviewerPickerProps) {
   const listFailed = Boolean(everyone.error);
   const searched = useMemberNames(server, 'user', { filter: typed, enabled: listFailed && typed !== '' });
   const users = everyone.data ?? searched.data ?? NO_USERS;
-  const offered = useMemo(() => offeredReviewers(users, pick.onOpen), [users, pick.onOpen]);
+  const offered = useMemo(() => pickOffered(pick, users), [pick, users]);
   const rows = useMemo(() => offered.filter((user) => matchesWordFilter(userFilterTexts(user), search)), [offered, search]);
   const loading = (everyone.isLoading && !listFailed) || searched.isFetching;
 
