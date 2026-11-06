@@ -35,9 +35,13 @@ export type Page =
     }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
   | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
-  | { kind: 'codeReview'; reviewId: number; focusPath?: string; focusLines?: FocusedLines }
+  /** `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show. */
+  | { kind: 'codeReview'; reviewId: number; tab?: ReviewTab; focusPath?: string; focusLines?: FocusedLines }
   /** `focusPath` selects an item of the tree there (a repository path, as `DiffEntry.path`), `focusLines` its lines. */
   | { kind: 'browseRepository'; changesetId: number; focusPath?: string; focusLines?: FocusedLines };
+
+/** A code review page's tabs: what was said on it, and the changes it reviews. */
+export type ReviewTab = 'conversation' | 'changes';
 
 /** Lines a page opens scrolled to and selected: a link's `#L40-L52`, of a diff's newer or older side. */
 export type FocusedLines = LinkLines;
