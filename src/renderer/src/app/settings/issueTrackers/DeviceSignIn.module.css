@@ -3,11 +3,19 @@
 /* A value to look at and type elsewhere: the device flow's code. */
 .preview {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-2);
   padding: 10px var(--space-3);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
+}
+
+.previewText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .previewLabel {

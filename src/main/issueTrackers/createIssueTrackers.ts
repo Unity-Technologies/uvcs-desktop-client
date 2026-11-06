@@ -28,7 +28,7 @@ interface TrackersWiring {
  * (`askHostConsent`).
  *
  * A development build reads two variables: `UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for
- * GitHub's device flow, and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do
+ * GitHub's device flow in place of the app's (`GITHUB_OAUTH_CLIENT_IDS`), and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do
  * (`scripts/e2e/fakeTrackers.cjs`), to see the flows with no account. A packaged app reads neither.
  */
 export function createIssueTrackers({ userData, logRequest, changed, development, env }: TrackersWiring): IssueTrackers {

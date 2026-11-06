@@ -2,11 +2,12 @@ import type { IssueTrackerKind, SignInMethodKind } from '../domain/issueTrackers
 
 /**
  * The OAuth apps the device flow signs in with, by the host they're registered on: a client id is public (the device
- * flow needs no secret), so it ships with the app. Empty until the app is registered: GitHub's device flow is then not
- * offered, and a token is.
+ * flow needs no secret), so it ships with the app. A host whose id is empty isn't offered the device flow, only a
+ * token. The app keeps no refresh token, so the OAuth app's "Expire user access tokens" stays off
+ * (docs/features/issue-trackers.md, "The device flow").
  */
 export const GITHUB_OAUTH_CLIENT_IDS: Readonly<Record<string, string>> = {
-  'github.com': '',
+  'github.com': 'Ov23li9k9uyuCxbsWJSa',
 };
 
 /** The scopes the device flow asks for: `repo`, as GitHub has no narrower scope that reads a private repository's issues. */
