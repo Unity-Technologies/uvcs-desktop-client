@@ -432,9 +432,10 @@ describe('paletteGroups for a number alone', () => {
     expect(sections(groupsFor({ typed: '77', lists: { codeReviews: [] } }))).not.toContain('codeReviews');
   });
 
-  it('shows its title after `cr:` once the server found it, and its number alone until then', () => {
+  it('shows its title after `cr:` once the server found it, its number alone until then, and nothing once none has it', () => {
     expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] }, server: { reviewNumbered: [review(900, 'Old login')] } }), 'codeReviews')).toEqual(['Old login']);
     expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] } }), 'codeReviews')).toEqual(['Code review 900']);
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] }, server: { reviewNumbered: [] } }), 'codeReviews')).toEqual([]);
   });
 
   it('names the shelve with that number among those read first, and none it has not read', () => {
@@ -481,6 +482,7 @@ describe('reviewNumberToLookUp', () => {
     expect(reviewNumberToLookUp('311', 'changesets', [])).toBeUndefined();
     expect(reviewNumberToLookUp('311 login', 'all', [])).toBeUndefined();
     expect(reviewNumberToLookUp('cs:311', 'all', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('1000000000000000000000000', 'all', [])).toBeUndefined();
   });
 });
 

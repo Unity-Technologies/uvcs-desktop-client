@@ -199,8 +199,9 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
   const withServerMatches = <T,>(local: SearchResult[], found: readonly T[] | undefined, textOf: (item: T) => string, toResult: (item: T) => SearchResult) =>
     addServerMatches(local, answered(found), term, textOf, toResult);
   // Only a number after its prefix opens what may not exist; a number alone names a shelve or review once it's known.
+  // After `cr:` the number opens until the server answered that no review has it.
   const openShelveByNumber = scope === 'shelves' ? exactShelveResult : undefined;
-  const openReviewByNumber = scope === 'codeReviews' ? exactCodeReviewResult : undefined;
+  const openReviewByNumber = scope === 'codeReviews' && answered(server.reviewNumbered) === undefined ? exactCodeReviewResult : undefined;
 
   const recentChangesetResults = firstOnes(
     (lists.changesets ?? []).filter(
@@ -281,15 +282,18 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
  * section's own prefix (`sh:4`, `cr:311`), as the spec does in a comment. Undefined for anything else, and in another
  * section's scope (`cs:1234`).
  */
-export function typedObjectNumber(term: string, scope: PaletteScope, section: 'shelves' | 'codeReviews'): number | undefined {
-  return isInScope(section, scope) && /^\d+$/.test(term) ? Number(term) : undefined;
+function typedObjectNumber(term: string, scope: PaletteScope, section: 'shelves' | 'codeReviews'): number | undefined {
+  const number = /^\d+$/.test(term) ? Number(term) : undefined;
+  return isInScope(section, scope) && number !== undefined && Number.isSafeInteger(number) ? number : undefined;
 }
 
 /**
  * The code review number to ask the server about (`cm find review "where id = N"`, `ServerMatches.reviewNumbered`):
  * one typed (`typedObjectNumber`) that the newest reviews read don't hold. A number alone shows its review only once
  * it is known to exist, never as a row that opens to an error; review numbers are object ids, so on a large
- * repository they are far past every changeset's.
+ * repository they are far past every changeset's. A changeset's number typed costs this lookup too: nothing read rules
+ * a review out (an old review's id can be a recent changeset's number, and one past the newest review read may have
+ * been created since), and it is one indexed find, once typing pauses.
  */
 export function reviewNumberToLookUp(term: string, scope: PaletteScope, newest: readonly { id: number }[] | undefined): number | undefined {
   const id = typedObjectNumber(term, scope, 'codeReviews');
