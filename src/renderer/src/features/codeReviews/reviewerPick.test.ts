@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import { NO_GROUPS, reviewerGroups } from './reviewerGroups';
-import { changesReviewers, isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
+import { changesReviewers, dialogPick, isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -80,6 +80,28 @@ describe('a pick of reviewers read with their types', () => {
 
   it('shows a group reviewer as a group though the server lists no groups', () => {
     expect(pickedKind(startPick([STAFF], NO_GROUPS), 'staff', NO_GROUPS)).toBe('group');
+  });
+});
+
+describe('dialogPick', () => {
+  const STAFF: CodeReviewer = { name: 'staff', status: 'Under review', kind: 'group' };
+
+  it('waits for the review’s reviewers typed by cm before it offers a pick', () => {
+    expect(dialogPick(null, { reviewers: [{ name: 'staff', status: 'Under review' }], settled: false }, NO_GROUPS)).toBeNull();
+  });
+
+  it('starts from the reviewers cm typed once they are read', () => {
+    expect(dialogPick(null, { reviewers: [STAFF], settled: true }, NO_GROUPS)).toEqual(startPick([STAFF], NO_GROUPS));
+  });
+
+  it('starts from the reviewers as the list read them where cm could not type them', () => {
+    const untyped: CodeReviewer = { name: 'Developers', status: 'Under review' };
+    expect(dialogPick(null, { reviewers: [untyped], settled: true }, GROUPS)?.picked).toEqual([group('Developers')]);
+  });
+
+  it('keeps what the user picked once they picked', () => {
+    const picked = togglePicked(startPick([STAFF], NO_GROUPS), user('eva@acme.com'));
+    expect(dialogPick(picked, { reviewers: [], settled: true }, NO_GROUPS)).toBe(picked);
   });
 });
 

@@ -145,6 +145,12 @@ describe('one code review', () => {
     expect(commands).toMatchObject([{ via: 'query', readsRecords: true, args: ['codereview', 'reviewer', 'list', '6', `--format={user}${FIELD_SEPARATOR}{status}${FIELD_SEPARATOR}{type}${RECORD_SEPARATOR}`] }]);
   });
 
+  it('reads a type it does not know as a user, and a group whatever its case or spaces', async () => {
+    const { service } = codeReviews({ 'codereview reviewer list': formatOutput(['staff', 'Reviewed', ' Group '], ['bot', 'Reviewed', 'robot']) });
+
+    expect((await service.reviewers(IN_WORKSPACE, 6)).map(({ kind }) => kind)).toEqual(['group', 'user']);
+  });
+
   it('reads no reviewers of a review nobody was asked to, and names the repository outside a workspace', async () => {
     const { service, lines } = codeReviews({ 'codereview reviewer list': '' });
 
