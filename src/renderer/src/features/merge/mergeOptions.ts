@@ -46,6 +46,15 @@ export function offersMergingAgain(request: MergeRequest): boolean {
   return offersIgnoreMergeTracking(request) && !request.ignoreMergeTracking;
 }
 
+/**
+ * What a merge with nothing to merge offers: to apply the changes again ignoring merge tracking where `cm` can,
+ * or, once options are set, to go back to the merge without them (a chosen ancestor can leave nothing to merge).
+ */
+export function nothingToMergeAction(request: MergeRequest): 'mergeAgain' | 'withoutOptions' | null {
+  if (offersMergingAgain(request)) return 'mergeAgain';
+  return hasMergeOptions(request) ? 'withoutOptions' : null;
+}
+
 export function withoutMergeOptions(request: MergeRequest): MergeRequest {
   const { ignoreMergeTracking: _ignored, ancestorSpec: _ancestor, ...rest } = request;
   return rest;

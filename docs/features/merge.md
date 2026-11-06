@@ -324,7 +324,8 @@ marked while any option differs from the default.
 
 Both request options are in `mergeSourceArgs`, so the preview and the merge get them, and in the plan's query key, so
 changing one previews the merge again (`MergePage` holds the request). A preview that fails with options offers "Merge
-without options" (`hasMergeOptions`, `withoutMergeOptions`). Options last only for the merge on the page.
+without options" (`hasMergeOptions`, `withoutMergeOptions`), and so does one with nothing to merge, as a chosen
+ancestor can leave (`nothingToMergeAction`). Options last only for the merge on the page.
 
 The official clients also offer manual conflict resolution, which opens the merge tool on every file. It isn't here:
 the app never opens a tool by itself, and every file already offers "Resolve in" its tool.

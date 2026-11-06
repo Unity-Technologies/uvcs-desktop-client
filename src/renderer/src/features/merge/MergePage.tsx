@@ -8,7 +8,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
-import { hasMergeOptions, offersMergingAgain, withIgnoreMergeTracking, withoutMergeOptions } from './mergeOptions';
+import { hasMergeOptions, nothingToMergeAction, withIgnoreMergeTracking, withoutMergeOptions } from './mergeOptions';
 import { MergeSession } from './MergeSession';
 import { useMergePlan } from './useMergePlan';
 
@@ -66,15 +66,20 @@ function MergeNotPossible({ plan, request, onRequestChange }: MergeNotPossiblePr
           action={<Button onClick={() => navigation.goToView('changes')}>Go to Changes</Button>}
         />
       );
-    case 'alreadyMerged':
+    case 'alreadyMerged': {
+      const action = nothingToMergeAction(request);
       return (
         <EmptyState
           icon={<CheckCircle2 size={22} />}
           title="Nothing to merge"
           description="The destination already has all these changes."
-          action={offersMergingAgain(request) && <Button onClick={() => onRequestChange(withIgnoreMergeTracking(request, true))}>Merge them again</Button>}
+          action={
+            (action === 'mergeAgain' && <Button onClick={() => onRequestChange(withIgnoreMergeTracking(request, true))}>Merge them again</Button>) ||
+            (action === 'withoutOptions' && <Button onClick={() => onRequestChange(withoutMergeOptions(request))}>Merge without options</Button>)
+          }
         />
       );
+    }
     default:
       return <EmptyState icon={<GitMerge size={22} />} title="This interval can't be merged" description="Check the changesets you picked and try again." />;
   }
