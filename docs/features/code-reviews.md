@@ -23,20 +23,19 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   set, the page's popover saying so, the menu asking first ("You'll be added as one").
   Whether the user is a reviewer goes by name (`isReviewer`, `ownStatus`): a member of a reviewer group isn't known to
   be one, so they are added as a user, as the server does itself when a group member sets a status.
-- **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users
-  (`cm listusers --onlyusers`, read once and kept, `useMemberNames`), the reviewers checked first (`offeredReviewers`).
-  What changed applies as it closes (`reviewerChanges`, `changeReviewers`): one `cm codereview reviewer add <id>
-  --users=a,b`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
-  once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review
-  <id> --re-request --users=a`, which puts them back to "Under review"). What the picker changes is worked out against
-  the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile isn't removed.
-  A server whose directory can't list everyone (an LDAP size limit) is asked for the names typed instead
-  (`--filter`). A group reads as a user here, so removing a group or asking it again (`--users`) fails with a toast
-  until groups are told apart (`cm listusers --onlygroups`, `--groups`). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's
-  **Add reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one
-  `cm codereview reviewer add`. Groups are shown as reviewers but can't be added from the app yet
-  (`--groups`). A new review asks its reviewers in the command that creates it
-  (`cm codereview <target> <title> --users=a,b`, `createReviewArgs`).
+- **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users (`cm listusers
+  --onlyusers`, read once and kept, `useMemberNames`), the reviewers checked first (`offeredReviewers`). What changed
+  applies as it closes (`reviewerChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b`, one
+  `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or, once they gave a
+  status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id> --re-request
+  --users=a`, which puts them back to "Under review"). What the picker changes is worked out against the reviewers as it
+  opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile isn't removed. A server whose
+  directory can't list everyone (an LDAP size limit) is asked for the names typed instead (`--filter`). A group reads as
+  a user here, so removing a group or asking it again (`--users`) fails with a toast until groups are told apart (`cm
+  listusers --onlygroups`, `--groups`). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's **Add
+  reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one `cm codereview
+  reviewer add`. Groups are shown as reviewers but can't be added from the app yet (`--groups`). A new review asks its
+  reviewers in the command that creates it (`cm codereview <target> <title> --users=a,b`, `createReviewArgs`).
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
 - `cm codereview -e --status` isn't used: it sets the status of the review's first reviewer, and fails on a review
   with more than one.
@@ -48,10 +47,11 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
-- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar with its reviewer's status icon in a corner once they
-  gave one, `statusMarked`, "Under review" being where everyone starts; the tooltip naming each with theirs), the comments with how many are open (`ReviewCommentCounts`; sorted
-  by what's open first, `commentCountsSortValue`), the changes, the author, when it was created (the list's order and
-  its period go by it; hidden in a narrower window) and the last activity.
+- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar with its reviewer's status icon in a
+  corner once they gave one, `statusMarked`, "Under review" being where everyone starts; the tooltip naming each with
+  theirs), the comments with how many are open (`ReviewCommentCounts`; sorted by what's open first,
+  `commentCountsSortValue`), the changes, the author, when it was created (the list's order and its period go by it;
+  hidden in a narrower window) and the last activity.
 - **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
   doesn't list but the official client uses.
 
