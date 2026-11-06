@@ -96,6 +96,11 @@ export interface ServerMatches {
   labels?: readonly Label[];
   shelves?: readonly Shelve[];
   codeReviews?: readonly CodeReviewSummary[];
+  /**
+   * The review whose number the term is, as the server found it (`reviewNumberToLookUp`): empty when there is none.
+   * Undefined until asked, and when nothing asks (a term that isn't a number, a review the newest ones read hold).
+   */
+  reviewNumbered?: readonly CodeReviewSummary[];
 }
 
 /** The on-demand search of every changeset's comment. */
@@ -185,14 +190,17 @@ function byRecency(branches: readonly Branch[], currentBranch: string | undefine
 
 function searchGroups({ scope, context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
   const { term } = context;
-  // A number after `sh:` or `cr:` names that shelve or review, as the spec does in a comment.
-  const shelveId = scope === 'shelves' ? typedId(term) : undefined;
-  const reviewId = scope === 'codeReviews' ? typedId(term) : undefined;
+  const shelveId = typedObjectNumber(term, scope, 'shelves');
+  const reviewId = typedObjectNumber(term, scope, 'codeReviews');
   const workspacePath = workspacePathOf(context.place);
   // A changeset typed (`1234` or `cs:1234`) opens it, whether or not it is recent.
   const changesetNumber = typedChangesetNumber(term);
+  const answered = <T,>(found: readonly T[] | undefined) => (server.term === term ? found : undefined);
   const withServerMatches = <T,>(local: SearchResult[], found: readonly T[] | undefined, textOf: (item: T) => string, toResult: (item: T) => SearchResult) =>
-    addServerMatches(local, server.term === term ? found : undefined, term, textOf, toResult);
+    addServerMatches(local, answered(found), term, textOf, toResult);
+  // Only a number after its prefix opens what may not exist; a number alone names a shelve or review once it's known.
+  const openShelveByNumber = scope === 'shelves' ? exactShelveResult : undefined;
+  const openReviewByNumber = scope === 'codeReviews' ? exactCodeReviewResult : undefined;
 
   const recentChangesetResults = firstOnes(
     (lists.changesets ?? []).filter(
@@ -226,7 +234,7 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
       section: 'changesets',
       heading: 'Changesets',
       results: [
-        ...(changesetNumber !== undefined ? [exactChangeset(changesetNumber, lists.changesets, context)] : []),
+        ...(changesetNumber !== undefined ? [exactChangeset(changesetNumber, lists.changesets, context, scope)] : []),
         ...recentChangesetResults,
         ...searchAllChangesets(term, changesetSearch, recentChangesetResults, context),
       ],
@@ -238,7 +246,7 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
         shelveId,
         lists.shelves,
         (shelve) => shelveResult(shelve, context),
-        exactShelveResult,
+        openShelveByNumber,
         withServerMatches(
           firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
             shelveResult(shelve, context),
@@ -254,9 +262,9 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
       heading: 'Code reviews',
       results: namedFirst(
         reviewId,
-        lists.codeReviews,
+        [...(lists.codeReviews ?? []), ...(answered(server.reviewNumbered) ?? [])],
         (review) => codeReviewResult(review, context),
-        exactCodeReviewResult,
+        openReviewByNumber,
         withServerMatches(
           firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
           server.codeReviews,
@@ -268,27 +276,43 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
   ];
 }
 
-/** The id a narrowed search's text names when it is a number alone (`sh:4` → 4); undefined for anything else. */
-function typedId(term: string): number | undefined {
-  return /^\d+$/.test(term) ? Number(term) : undefined;
+/**
+ * The shelve or code review number a search names: a number alone (`1234`, a changeset's too), or one after the
+ * section's own prefix (`sh:4`, `cr:311`), as the spec does in a comment. Undefined for anything else, and in another
+ * section's scope (`cs:1234`).
+ */
+export function typedObjectNumber(term: string, scope: PaletteScope, section: 'shelves' | 'codeReviews'): number | undefined {
+  return isInScope(section, scope) && /^\d+$/.test(term) ? Number(term) : undefined;
+}
+
+/**
+ * The code review number to ask the server about (`cm find review "where id = N"`, `ServerMatches.reviewNumbered`):
+ * one typed (`typedObjectNumber`) that the newest reviews read don't hold. A number alone shows its review only once
+ * it is known to exist, never as a row that opens to an error; review numbers are object ids, so on a large
+ * repository they are far past every changeset's.
+ */
+export function reviewNumberToLookUp(term: string, scope: PaletteScope, newest: readonly { id: number }[] | undefined): number | undefined {
+  const id = typedObjectNumber(term, scope, 'codeReviews');
+  return id !== undefined && !newest?.some((review) => review.id === id) ? id : undefined;
 }
 
 /**
  * The object the search names by its id (`id`; undefined for none) first, as a full match, then the other matches
- * without it, as a changeset typed by number opens (`exactChangeset`): with its row when the list read holds it, else
- * by its number alone (`byNumber`), an older one the list doesn't reach, read only once it's picked.
+ * without it, as a changeset typed by number opens (`exactChangeset`): with its row when a list read holds it, else
+ * by its number alone (`byNumber`), an older one the list doesn't reach, read only once it's picked. Without
+ * `byNumber` (a number typed alone), only an object read is named.
  */
 function namedFirst<T extends { id: number }>(
   id: number | undefined,
   read: readonly T[] | undefined,
   toResult: (item: T) => SearchResult,
-  byNumber: (id: number) => SearchResult,
+  byNumber: ((id: number) => SearchResult) | undefined,
   matches: SearchResult[],
 ): SearchResult[] {
   if (id === undefined) return matches;
   const named = read?.find((item) => item.id === id);
-  const exact = named ? { ...toResult(named), quality: 1 } : byNumber(id);
-  return [exact, ...matches.filter((result) => result.id !== exact.id)];
+  const exact = named ? { ...toResult(named), quality: 1 } : byNumber?.(id);
+  return exact ? [exact, ...matches.filter((result) => result.id !== exact.id)] : matches;
 }
 
 function firstOnes<T>(items: readonly T[]): T[] {
@@ -335,10 +359,23 @@ function addServerMatches<T>(
   return [...local, ...extras.slice(0, MAX_SERVER_EXTRAS)];
 }
 
-/** A recent changeset shows with its comment; an older one is opened by number alone. */
-function exactChangeset(id: number, recent: readonly Changeset[] | undefined, context: ResultContext): SearchResult {
+/**
+ * How well a number alone matches a changeset past the newest one read, which likely names none (one created since
+ * would be just past it): below the shelve or code review the same number names, which then comes first, yet close
+ * enough to the best to stay (`rankGroups`).
+ */
+export const UNLIKELY_CHANGESET_QUALITY = 0.9;
+
+/**
+ * A recent changeset shows with its comment; an older one is opened by number alone. A number alone past the newest
+ * changeset read ranks below a full match (`UNLIKELY_CHANGESET_QUALITY`); after `cs:` it's what was asked for.
+ */
+function exactChangeset(id: number, recent: readonly Changeset[] | undefined, context: ResultContext, scope: PaletteScope): SearchResult {
   const changeset = recent?.find((candidate) => candidate.id === id);
-  return changeset ? { ...changesetResult(changeset, context), quality: 1 } : exactChangesetResult(id);
+  if (changeset) return { ...changesetResult(changeset, context), quality: 1 };
+  const newest = recent?.reduce((highest, candidate) => Math.max(highest, candidate.id), -1) ?? -1;
+  const unlikely = scope === 'all' && newest >= 0 && id > newest;
+  return { ...exactChangesetResult(id), quality: unlikely ? UNLIKELY_CHANGESET_QUALITY : 1 };
 }
 
 /** The row offering to search every changeset's comment, then telling how that search goes, then what it found. */

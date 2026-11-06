@@ -37,6 +37,11 @@ export function reviewSummariesKey(place: Place, text?: string): readonly unknow
   return queryKeys.inPlace(place, 'codeReviews', 'summaries', { text });
 }
 
+/** The review with one number, as the palette looks up a number typed (`reviewNumberToLookUp`). */
+export function reviewNumberedKey(place: Place, id: number): readonly unknown[] {
+  return queryKeys.inPlace(place, 'codeReviews', 'summaries', { id });
+}
+
 /**
  * The newest review of each branch by branch id, for status chips next to branch names (the lists showing them know
  * their branches' ids, so no name is looked up). The command palette lists the same reviews, read rarely;
