@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { permissionSpec, type MemberKind, type PermissionTarget } from '@shared/domain/permissions';
+import type { MemberKind } from '@shared/domain/member';
+import { permissionSpec, type PermissionTarget } from '@shared/domain/permissions';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';

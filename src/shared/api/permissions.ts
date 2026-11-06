@@ -1,4 +1,5 @@
-import type { MemberKind, ObjectPermissions, PermissionChanges, PermissionTarget } from '../domain/permissions';
+import type { MemberKind } from '../domain/member';
+import type { ObjectPermissions, PermissionChanges, PermissionTarget } from '../domain/permissions';
 
 /** Reading and setting who may do what on a server, a repository, a branch, a label, an attribute or a path. */
 export interface PermissionsApi {

@@ -1,4 +1,5 @@
-import { EVERYONE, OWNER, type MemberRef } from '@shared/domain/permissions';
+import type { MemberRef } from '@shared/domain/member';
+import { EVERYONE, OWNER } from '@shared/domain/permissions';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { naturalCompare } from '../../lib/naturalCompare';
 import { memberLabel, type MemberRole } from './members';

@@ -1,3 +1,5 @@
+import type { MemberRef } from './member';
+
 /**
  * Permissions (access control lists) of server objects, as `cm showacl`, `cm acl` and `cm setowner` know them
  * (docs/features/permissions.md).
@@ -136,14 +138,6 @@ export interface AclLevel {
 export const EVERYONE = 'ALL USERS';
 /** `OWNER`: whoever owns the object (`--user=OWNER` to `cm acl`). */
 export const OWNER = 'OWNER';
-
-export type MemberKind = 'user' | 'group';
-
-/** A user or group, which `cm acl` and `cm setowner` take as `--user=` or `--group=`. */
-export interface MemberRef {
-  name: string;
-  kind: MemberKind;
-}
 
 export interface ObjectPermissions {
   /** The chain as `cm showacl --extended` prints it, the closest list first. */
