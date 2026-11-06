@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { offersCommonAncestor, offersIgnoreMergeTracking } from './mergeOptions';
+import { appliedMergeOptions, offersCommonAncestor, offersIgnoreMergeTracking } from './mergeOptions';
 
 describe('offersIgnoreMergeTracking', () => {
   it('is offered where cm accepts it: a cherry pick or a subtractive merge, of one changeset or a range', () => {
@@ -28,5 +28,18 @@ describe('offersCommonAncestor', () => {
 
   it("is not offered for a shelve, whose base is the ancestor", () => {
     expect(offersCommonAncestor({ kind: 'merge', sourceSpec: 'sh:41' })).toBe(false);
+  });
+});
+
+describe('appliedMergeOptions', () => {
+  it('keeps the options the merge offers', () => {
+    expect(appliedMergeOptions({ kind: 'cherryPick', sourceSpec: 'cs:9', ignoreMergeTracking: true })).toEqual({ ignoreMergeTracking: true });
+    expect(appliedMergeOptions({ kind: 'merge', sourceSpec: 'br:/main/task', ancestorSpec: 'cs:5' })).toEqual({ ancestorSpec: 'cs:5' });
+  });
+
+  it('drops the options the merge does not offer, which cm would refuse or read otherwise', () => {
+    expect(appliedMergeOptions({ kind: 'merge', sourceSpec: 'br:/main/task', ignoreMergeTracking: true })).toEqual({});
+    expect(appliedMergeOptions({ kind: 'cherryPick', sourceSpec: 'cs:9', ancestorSpec: 'cs:5' })).toEqual({});
+    expect(appliedMergeOptions({ kind: 'cherryPick', sourceSpec: 'cs:9', ignoreMergeTracking: false })).toEqual({});
   });
 });

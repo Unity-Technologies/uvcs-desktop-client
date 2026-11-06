@@ -11,6 +11,7 @@ import {
   nothingToMergeAction,
   offersMergingAgain,
   withAncestor,
+  withIgnoreMergeTracking,
   withoutMergeOptions,
   type ContributorFile,
 } from './mergeOptions';
@@ -49,7 +50,15 @@ describe('hasMergeOptions and withoutMergeOptions', () => {
     expect(hasMergeOptions({ ...merge, ancestorSpec: 'cs:5' })).toBe(true);
     expect(hasMergeOptions({ ...cherryPick, ignoreMergeTracking: true })).toBe(true);
     expect(hasMergeOptions({ ...cherryPick, ignoreMergeTracking: false })).toBe(false);
+    expect(hasMergeOptions({ ...merge, ignoreMergeTracking: true })).toBe(false);
     expect(withoutMergeOptions({ ...cherryPick, ignoreMergeTracking: true, ancestorSpec: 'cs:5' })).toEqual(cherryPick);
+  });
+});
+
+describe('withIgnoreMergeTracking', () => {
+  it('turns ignoring merge tracking on, and off again without leaving the field behind', () => {
+    expect(withIgnoreMergeTracking(cherryPick, true)).toEqual({ ...cherryPick, ignoreMergeTracking: true });
+    expect(withIgnoreMergeTracking({ ...cherryPick, ignoreMergeTracking: true }, false)).toEqual(cherryPick);
   });
 });
 
