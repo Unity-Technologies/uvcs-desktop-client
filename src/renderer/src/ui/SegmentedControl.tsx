@@ -27,6 +27,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
   const tabStop = segmentTabStop(values, value);
 
   const pickWithArrows = (event: KeyboardEvent): void => {
+    if (tabStop === undefined) return;
     const next = segmentAfterKey(values, tabStop, event.key);
     if (next === null) return;
     event.preventDefault();
