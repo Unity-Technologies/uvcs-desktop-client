@@ -9,7 +9,7 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { commentLocationPage, locationText, threadBadges } from './threadBadges';
+import { commentLocationPage, locationText, replyAction, threadBadges } from './threadBadges';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewThreadCardProps {
@@ -55,7 +55,7 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
       )}
       <ReviewCommentView comment={root} thread={thread} user={user} />
       {replies.map((reply) => (
-        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={reply.kind === 'discard' ? 'discarded it' : undefined} />
+        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} />
       ))}
       <div className={styles.answer}>
         {answering === 'reply' && (

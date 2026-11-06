@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentLocationPage, locationText, threadBadges } from './threadBadges';
+import { commentLocationPage, locationText, openItemKind, replyAction, threadBadges } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -26,6 +26,18 @@ describe('threadBadges', () => {
   it('marks nothing on a plain or general comment', () => {
     expect(badgesOf(comment(1))).toEqual({});
     expect(badgesOf(comment(1, { kind: 'comment', anchor: ON_LINE }))).toEqual({});
+  });
+});
+
+describe('replyAction and openItemKind', () => {
+  it('says a discarding reply discarded it, and nothing of another', () => {
+    expect(replyAction({ kind: 'discard' })).toBe('discarded it');
+    expect(replyAction({ kind: 'comment' })).toBeUndefined();
+  });
+
+  it('calls an open thread a question or a change request', () => {
+    expect(openItemKind({ kind: 'question' })).toBe('Question');
+    expect(openItemKind({ kind: 'changeRequest' })).toBe('Change request');
   });
 });
 

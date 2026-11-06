@@ -1,4 +1,4 @@
-import type { ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
+import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { ReviewThread } from './reviewThreads';
 
@@ -26,6 +26,16 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
     case 'none':
       return kind ? { kind } : {};
   }
+}
+
+/** What a reply's header says after its author's name: a discard says so. */
+export function replyAction(reply: Pick<ReviewComment, 'kind'>): string | undefined {
+  return reply.kind === 'discard' ? 'discarded it' : undefined;
+}
+
+/** What an open thread is in the list of what's still open: its icon and what a screen reader calls it. */
+export function openItemKind(root: Pick<ReviewComment, 'kind'>): 'Question' | 'Change request' {
+  return root.kind === 'question' ? 'Question' : 'Change request';
 }
 
 /** What the location of a comment on a line reads: the file's name and the line. */

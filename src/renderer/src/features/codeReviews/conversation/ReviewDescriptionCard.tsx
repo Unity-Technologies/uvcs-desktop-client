@@ -4,11 +4,13 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewDescription } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
+import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { IconButton } from '../../../ui/IconButton';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { CommentComposer } from './CommentComposer';
+import { descriptionHeader } from './descriptionHeader';
 import { saveReviewDescription } from './reviewCommentOperations';
 import styles from './ReviewConversation.module.css';
 
@@ -19,19 +21,23 @@ import styles from './ReviewConversation.module.css';
 export function ReviewDescriptionCard({ review, description }: { review: CodeReview; description: ReviewDescription | undefined }) {
   const place = usePlace();
   const [editing, setEditing] = useState(false);
-  const author = description?.author ?? review.owner;
+  const header = descriptionHeader(review, description);
 
   return (
     <article className={styles.description} aria-label="Description">
-      <Avatar user={author} size={28} />
+      <Avatar user={header.author} size={28} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>
-          <span className={styles.author}>{displayName(author)}</span>
-          <RelativeTime date={description?.date ?? review.date} />
-          {description?.editedDate && <span className={styles.edited}>edited</span>}
+          <span className={styles.author}>{displayName(header.author)}</span>
+          <RelativeTime date={header.date} />
+          {header.editedDate && (
+            <span className={styles.edited} data-tip={`Edited ${formatDateTime(header.editedDate)}`}>
+              edited
+            </span>
+          )}
           {!editing && (
             <span className={styles.commentMenu}>
-              <IconButton size="small" icon={<Pencil size={13} />} label={description ? 'Edit description' : 'Add a description'} onClick={() => setEditing(true)} />
+              <IconButton size="small" icon={<Pencil size={13} />} label={header.editLabel} onClick={() => setEditing(true)} />
             </span>
           )}
         </header>
@@ -51,9 +57,9 @@ export function ReviewDescriptionCard({ review, description }: { review: CodeRev
             }}
             onCancel={() => setEditing(false)}
           />
-        ) : description?.text.trim() ? (
+        ) : header.text ? (
           <div className={`${styles.markdown} selectable`}>
-            <Markdown text={description.text} comment />
+            <Markdown text={header.text} comment />
           </div>
         ) : (
           <button type="button" className={styles.noDescription} onClick={() => setEditing(true)}>
