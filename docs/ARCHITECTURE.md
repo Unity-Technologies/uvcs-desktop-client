@@ -1079,7 +1079,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   A number alone (`1234`, `typedObjectNumber`) names a shelve or code review too, only once it is known to exist,
   never as a row that opens to an error: a shelve the recent shelves read hold, a review the newest reviews read hold
   or, once typing pauses, one `cm find review "where id = N"` found (`reviewNumberToLookUp`,
-  `ServerMatches.reviewNumbered`; no lookup for shelves, whose numbers nearly all exist and overlap the changesets').
+  `ServerMatches.reviewNumbered`; a changeset's number costs it too, as nothing read rules a review out; after `cr:`
+  the number alone shows until it answers none; no lookup for shelves, whose numbers nearly all exist and overlap the
+  changesets').
   The changeset comes first, unless the number is past the newest changeset read
   (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
   the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
