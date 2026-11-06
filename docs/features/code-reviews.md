@@ -65,7 +65,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   and "No matching code reviews" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB and 1.6 s; their branches are named from the names of every branch, read at
   most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
-  (`reviewSummariesQuery`).
+  (`reviewSummariesQuery`). The palette finds an older review by its title (`cm find review … like`) or its number,
+  typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
 
 ## The review's page
 
