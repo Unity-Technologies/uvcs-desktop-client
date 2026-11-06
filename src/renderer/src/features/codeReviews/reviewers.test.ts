@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers } from './reviewers';
+import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerRing, reviewersText, reviewerText, shownReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -8,14 +8,28 @@ const QA: CodeReviewer = { name: 'qa-team', status: 'Rework required' };
 const EVA: CodeReviewer = { name: 'eva@acme.com', status: 'Under review' };
 
 describe('shownReviewers', () => {
-  it('shows the first few and counts the rest, naming none', () => {
-    expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], more: 1 });
-    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], more: 0 });
+  it('shows the first few and leaves the rest to "+N", naming none beside them', () => {
+    expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], rest: [EVA] });
+    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], rest: [] });
   });
 
   it('names a sole reviewer beside their avatar, and shows nobody for a review nobody was asked to', () => {
-    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], more: 0, soleName: 'Ana' });
-    expect(shownReviewers([], 3)).toEqual({ shown: [], more: 0 });
+    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], rest: [], soleName: 'Ana' });
+    expect(shownReviewers([], 3)).toEqual({ shown: [], rest: [] });
+  });
+});
+
+describe('reviewerText', () => {
+  it("names a reviewer with their status, for their avatar's own tooltip", () => {
+    expect(reviewerText(QA)).toBe('Qa Team: Rework required');
+  });
+});
+
+describe('reviewerRing', () => {
+  it('rings a reviewer in the color of the status they gave, and in none while they review', () => {
+    expect(reviewerRing('Reviewed')).toBe('var(--status-added)');
+    expect(reviewerRing('Rework required')).toBe('var(--status-changed)');
+    expect(reviewerRing('Under review')).toBeUndefined();
   });
 });
 

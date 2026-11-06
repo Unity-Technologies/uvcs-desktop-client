@@ -34,8 +34,10 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
-- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar ringed in the color of its reviewer's
-  status, the tooltip naming each with theirs), the comments with how many are open (`ReviewCommentCounts`; sorted
+- Columns: the title, the status, the reviewers (`ReviewerStack`: their avatars stacked in `ui/AvatarStack`, each
+  ringed in the color of its reviewer's status, `reviewerRing`, three then a "+N" disc naming the rest; hovered, the
+  stack spreads and each avatar names its reviewer with their status, `reviewerText`; the details panel and the
+  review's page show the same), the comments with how many are open (`ReviewCommentCounts`; sorted
   by what's open first, `commentCountsSortValue`), the changes, the author, when it was created (the list's order and
   its period go by it; hidden in a narrower window) and the last activity.
 - **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help

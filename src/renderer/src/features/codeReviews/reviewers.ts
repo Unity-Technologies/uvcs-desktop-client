@@ -8,18 +8,40 @@ export const SHOWN_REVIEWERS = 3;
 export const NO_REVIEWERS = 'Nobody';
 
 /**
- * The reviewers a row shows, how many more there are, and the name of a sole reviewer, which fits beside their avatar
- * (several show only avatars, named in the tooltip).
+ * The reviewers a row shows, the rest it counts in "+N", and the name of a sole reviewer, which fits beside their
+ * avatar (several show only avatars, each named in its own tooltip).
  */
-export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; more: number; soleName?: string } {
-  const shown = reviewers.slice(0, max);
-  return { shown, more: Math.max(0, reviewers.length - max), ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }) };
+export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; rest: CodeReviewer[]; soleName?: string } {
+  return {
+    shown: reviewers.slice(0, max),
+    rest: reviewers.slice(max),
+    ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }),
+  };
 }
 
-/** Each reviewer with the status they gave: what the row's tooltip and a screen reader say. */
-export function reviewersText(reviewers: readonly CodeReviewer[]): string {
-  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map((reviewer) => `${displayName(reviewer.name)}: ${reviewer.status}`).join(', ');
+/** A reviewer with the status they gave: what their avatar's own tooltip says. */
+export function reviewerText(reviewer: CodeReviewer): string {
+  return `${displayName(reviewer.name)}: ${reviewer.status}`;
 }
+
+/** Each reviewer with the status they gave: what the row's tooltip, the "+N" one and a screen reader say. */
+export function reviewersText(reviewers: readonly CodeReviewer[]): string {
+  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map(reviewerText).join(', ');
+}
+
+/**
+ * The color a reviewer's avatar is ringed in: the color of the status they gave, as `CodeReviewStatusBadge` shows it;
+ * none while they review, the status every reviewer starts with.
+ */
+export function reviewerRing(status: CodeReviewStatus): string | undefined {
+  return REVIEWER_RINGS[status];
+}
+
+const REVIEWER_RINGS: Record<CodeReviewStatus, string | undefined> = {
+  'Under review': undefined,
+  Reviewed: 'var(--status-added)',
+  'Rework required': 'var(--status-changed)',
+};
 
 /**
  * Whether `user` is one of the review's reviewers by name, as `cm` writes both. Being a member of a reviewer group
