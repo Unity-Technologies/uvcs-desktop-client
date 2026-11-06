@@ -11,7 +11,8 @@ import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard } from './ReviewThreadCard';
-import { openThreads, threadsOf, timelineOf } from './reviewThreads';
+import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type TimelineEntry } from './reviewThreads';
+import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
 import styles from './ReviewConversation.module.css';
@@ -25,7 +26,7 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
   const place = usePlace();
   const user = usePlaceUser();
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
-  const timeline = useMemo(() => (conversation ? timelineOf(conversation) : []), [conversation]);
+  const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
@@ -43,9 +44,11 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
           <>
             <ReviewDescriptionCard review={review} description={conversation.description} />
             <ol className={styles.timeline}>
-              {timeline.map((item) => (
-                <li key={item.kind === 'event' ? `event-${item.event.id}` : `thread-${item.thread.root.id}`}>
-                  {item.kind === 'event' ? <TimelineEventRow event={item.event} /> : <ReviewThreadCard reviewId={review.id} thread={item.thread} user={user} />}
+              {timeline.map((entry) => (
+                <li key={entryKey(entry)}>
+                  {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
+                  {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
+                  {entry.kind === 'thread' && <ReviewThreadCard reviewId={review.id} thread={entry.thread} user={user} />}
                 </li>
               ))}
             </ol>
@@ -64,4 +67,15 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
       <ReviewSideRail review={review} open={open} />
     </div>
   );
+}
+
+function entryKey(entry: TimelineEntry): string {
+  switch (entry.kind) {
+    case 'event':
+      return `event-${entry.event.id}`;
+    case 'reviewerChanges':
+      return `events-${entry.events[0]!.id}`;
+    case 'thread':
+      return `thread-${entry.thread.root.id}`;
+  }
 }

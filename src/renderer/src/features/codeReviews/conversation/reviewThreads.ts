@@ -75,6 +75,38 @@ export function timelineOf(conversation: Pick<ReviewConversation, 'comments' | '
   return items.sort((a, b) => Date.parse(startOf(a).date) - Date.parse(startOf(b).date) || startOf(a).id - startOf(b).id);
 }
 
+/** A timeline entry: an item, or a run of reviewer changes shown as one line until opened. */
+export type TimelineEntry = TimelineItem | { kind: 'reviewerChanges'; events: ShownEvent[] };
+
+/** How many reviewer changes in a row fold into one line. */
+export const FOLDED_REVIEWER_CHANGES = 3;
+
+const REVIEWER_CHANGES = new Set<ShownEvent['kind']>(['reviewRequested', 'reviewRequestedAgain', 'reviewerRemoved']);
+
+/**
+ * The timeline with each run of `minimum` or more reviewer changes in a row (asked, asked again, removed) as one entry:
+ * people coming and going says little, and several in a row push what was said out of sight. Shorter runs stay.
+ */
+export function foldReviewerChanges(items: readonly TimelineItem[], minimum = FOLDED_REVIEWER_CHANGES): TimelineEntry[] {
+  const entries: TimelineEntry[] = [];
+  let run: ShownEvent[] = [];
+  const endRun = (): void => {
+    if (run.length >= minimum) entries.push({ kind: 'reviewerChanges', events: run });
+    else entries.push(...run.map((event): TimelineItem => ({ kind: 'event', event })));
+    run = [];
+  };
+  for (const item of items) {
+    if (item.kind === 'event' && REVIEWER_CHANGES.has(item.event.kind)) {
+      run.push(item.event);
+      continue;
+    }
+    endRun();
+    entries.push(item);
+  }
+  endRun();
+  return entries;
+}
+
 function startOf(item: TimelineItem): { date: string; id: number } {
   return item.kind === 'event' ? item.event : item.thread.root;
 }

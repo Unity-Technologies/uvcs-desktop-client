@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment, ReviewEvent } from '@shared/domain/reviewConversation';
-import { openThreads, threadsOf, timelineOf } from './reviewThreads';
+import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type TimelineItem } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -93,5 +93,28 @@ describe('timelineOf', () => {
     const timeline = timelineOf({ comments: [comment(1, { date: '2026-11-06T10:00:00+01:00' })], events: [event(2, '2026-11-06T09:30:00+00:00')] });
 
     expect(timeline.map((item) => item.kind)).toEqual(['thread', 'event']);
+  });
+});
+
+describe('foldReviewerChanges', () => {
+  const event = (id: number, change: Partial<ReviewEvent> = {}): TimelineItem => ({
+    kind: 'event',
+    event: { id, author: 'ana', date: '', kind: 'reviewRequested', reviewers: ['bob'], ...change } as Extract<TimelineItem, { kind: 'event' }>['event'],
+  });
+  const thread = (id: number): TimelineItem => ({ kind: 'thread', thread: threadsOf([comment(id)])[0]! });
+  const kinds = (items: ReturnType<typeof foldReviewerChanges>) => items.map((item) => (item.kind === 'reviewerChanges' ? `run:${item.events.map((e) => e.id).join(',')}` : item.kind));
+
+  it('folds three or more reviewer changes in a row into one entry', () => {
+    const items = [event(1), event(2, { kind: 'reviewerRemoved', reviewer: 'bob' }), event(3, { kind: 'reviewRequestedAgain', reviewer: 'bob' }), thread(4)];
+    expect(kinds(foldReviewerChanges(items))).toEqual(['run:1,2,3', 'thread']);
+  });
+
+  it('keeps a shorter run, and a run broken by a comment, as they are', () => {
+    expect(kinds(foldReviewerChanges([event(1), event(2), thread(3), event(4), event(5), event(6)]))).toEqual(['event', 'event', 'thread', 'run:4,5,6']);
+  });
+
+  it('never folds a status change or a rename, which say something', () => {
+    const status = event(2, { kind: 'statusChanged', status: 'Reviewed', comment: '', guid: 'g' });
+    expect(kinds(foldReviewerChanges([event(1), status, event(3), event(4)]))).toEqual(['event', 'event', 'event', 'event']);
   });
 });
