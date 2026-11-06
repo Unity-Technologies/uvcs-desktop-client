@@ -6,13 +6,15 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/column';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { commentCountsSortValue } from './commentCounts';
+import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerStack } from './ReviewerStack';
 import { describeTarget } from './reviewTarget';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the code reviews table: its number and title, status, who reviews it, what it reviews, who wrote it,
- * and when.
+ * Columns of the code reviews table: its number and title, status, who reviews it, its comments and how many are
+ * still open, what it reviews, who wrote it, and when anyone last did something on it.
  */
 export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   {
@@ -41,6 +43,14 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
     sortValue: (review) => review.reviewers.map((reviewer) => reviewer.name).join(','),
   },
   {
+    id: 'comments',
+    header: 'Comments',
+    width: 110,
+    hideBelow: 760,
+    render: (review) => <ReviewCommentCounts review={review} />,
+    sortValue: commentCountsSortValue,
+  },
+  {
     id: 'target',
     header: 'Changes',
     grow: 1,
@@ -49,5 +59,12 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
     render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
   },
   { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
-  { id: 'date', header: 'Created', width: 120, secondary: true, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
+  {
+    id: 'lastActivity',
+    header: 'Last activity',
+    width: 120,
+    secondary: true,
+    render: (review) => <RelativeTime date={review.lastActivity} />,
+    sortValue: (review) => review.lastActivity,
+  },
 ];

@@ -15,6 +15,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerStack } from './ReviewerStack';
 import { copiedWhat } from '../../components/copyMenu';
 
@@ -44,8 +45,10 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       primaryActionId="openReview"
       properties={[
         { label: 'Reviewers', value: <ReviewerStack reviewers={review.reviewers} /> },
+        { label: 'Comments', value: <ReviewCommentCounts review={review} /> },
         { label: 'Changes', value: describeTarget(target) },
         { label: 'Created', value: formatDateTime(review.date) },
+        { label: 'Last activity', value: formatDateTime(review.lastActivity) },
       ]}
       changes={
         diffTarget ? (

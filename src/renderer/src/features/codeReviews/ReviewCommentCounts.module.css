@@ -1,0 +1,28 @@
+.counts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.comments {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.comments[data-none='true'] {
+  color: var(--text-tertiary);
+}
+
+/* Open items wear the color of "Rework required" (CodeReviewStatusBadge): something is still asked of the author. */
+.open {
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  color: var(--status-changed);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}

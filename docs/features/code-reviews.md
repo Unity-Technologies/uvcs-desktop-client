@@ -25,9 +25,12 @@ server, with a destination branch: what this doc says of reviews holds for both.
 ## The list
 
 - One `cm find review` reads each review with its reviewers and the status each gave (`{reviewers}`,
-  `name:Status` pairs, `parseReviewers`). `{codereviewstatusname}` prints the status in English whatever the client's
-  language; `{status}` translates it (`FOUND_REVIEWS`).
-- The Reviewers column shows each reviewer's avatar ringed in the color of their status, the tooltip naming each with
-  theirs (`ReviewerStack`).
+  `name:Status` pairs, `parseReviewers`), the number of comments (`{comments}`: comments, questions, change requests
+  and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
+  with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
+  whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
+- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar ringed in the color of its reviewer's
+  status, the tooltip naming each with theirs), the comments with how many are open (`ReviewCommentCounts`; sorted
+  by what's open first, `commentCountsSortValue`), the changes, the author and the last activity.
 - **Assigned to me** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
   doesn't list but the official client uses.
