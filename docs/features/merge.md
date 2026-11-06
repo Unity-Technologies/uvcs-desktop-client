@@ -401,9 +401,10 @@ link with `limit 1`). Both open the merge page with the task (`openTaskMerge`, t
 does "Merge to another branch on the server…" on a task branch. The page then:
 
 - starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`);
-- offers, under the comment, "Mark the code review as reviewed (“<title>”)" when the branch has a review not reviewed
-  yet (its status beside it, a click opens it; the review comes from the list the branch chips share,
-  `useReviewsByBranch`), and "Hide the branch afterwards" (`TaskMergeOptions`);
+- offers, under the comment, "Mark your review as reviewed (“<title>”)" when the branch has a review the user is a
+  reviewer of and hasn't marked reviewed yet (`canMarkReviewed`; its status beside it, a click opens it; the review
+  comes from the list the branch chips share, `useReviewsByBranch`), and "Hide the branch afterwards"
+  (`TaskMergeOptions`). Only a reviewer gives a status (docs/features/code-reviews.md);
 - once merged, does what was picked and remembers where the task landed (`finishMergedTask`), so Changes shows the
   finished task: where it went, "Switch to <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge
   that finishes it after its destination moved carries the choices made.

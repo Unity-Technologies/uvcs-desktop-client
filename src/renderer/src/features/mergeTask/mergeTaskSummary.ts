@@ -1,4 +1,5 @@
 import type { Branch } from '@shared/domain/branch';
+import { isReviewer, ownStatus } from '../codeReviews/reviewers';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { firstLine } from '../../lib/text';
 
@@ -8,9 +9,12 @@ export function defaultMergeComment(branch: Pick<Branch, 'name' | 'comment'>): s
   return summary ? `Merge ${branch.name}: ${summary}` : `Merge ${branch.name}`;
 }
 
-/** Whether the merge can also mark the branch's review as reviewed: there is one, and it isn't yet. */
-export function canMarkReviewed(review: CodeReviewSummary | undefined): review is CodeReviewSummary {
-  return review !== undefined && review.status !== 'Reviewed';
+/**
+ * Whether the merge can also mark the branch's review as reviewed by `user`: there is one, they are one of its
+ * reviewers (only reviewers give a status), and they haven't marked it yet.
+ */
+export function canMarkReviewed(review: CodeReviewSummary | undefined, user: string | undefined): review is CodeReviewSummary {
+  return review !== undefined && isReviewer(review, user) && ownStatus(review, user) !== 'Reviewed';
 }
 
 /** Whether a branch looks like a task branch that can be finished by merging it to its parent. */

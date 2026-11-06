@@ -11,11 +11,12 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
-import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
+import { addReviewers, deleteReviews, setOwnReviewStatus } from './codeReviewOperations';
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
-const review = (assignee: string, id = 31): CodeReviewSummary => ({ id, title: `Review ${id}`, status: 'Under review', owner: 'bob', assignee, date: '' });
+const review = (reviewer: string, id = 31): CodeReviewSummary => codeReviewSummary({ id, reviewers: reviewer ? [{ name: reviewer, status: 'Under review' }] : [] });
 const workspaceOn = (server: string) =>
   queryClient.setQueryData<WorkspaceInfo>(queryKeys.inWorkspace(ws, 'info'), {
     name: 'ws',
@@ -27,45 +28,90 @@ const workspaceOn = (server: string) =>
     loadedChangeset: 5,
   });
 
-describe('changing a review status', () => {
-  it('sets the status alone on a review someone is assigned to, asking nothing', async () => {
-    fakeApi.answer('codeReviews.update', () => undefined);
-
-    await setReviewStatus(inWs, review('ana'), 'Reviewed');
-
-    expect(askedDialogs()).toEqual([]);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { status: 'Reviewed', assignee: undefined }]]);
-  });
-
-  it('asks for a reviewer first on a review nobody is assigned to (cm would keep its status), suggesting the user', async () => {
+describe('setting your own review status', () => {
+  const signedInAs = (user: string) => {
     workspaceOn('local');
     fakeApi.answer('accounts.list', () => []);
-    fakeApi.answer('system.currentUser', () => 'ana');
-    fakeApi.answer('codeReviews.update', () => undefined);
-    answerPrompts('ana');
+    fakeApi.answer('system.currentUser', () => user);
+  };
 
-    await setReviewStatus(inWs, review(' '), 'Rework required');
+  it("sets a reviewer's own status, asking nothing", async () => {
+    signedInAs('ana');
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
 
-    expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { status: 'Rework required', assignee: 'ana' }]]);
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
+
+    expect(askedDialogs()).toEqual([]);
+    expect(fakeApi.argsOf('codeReviews.setOwnStatus')).toEqual([[inWs, 31, 'Reviewed']]);
   });
 
-  it('changes nothing when the reviewer prompt is cancelled', async () => {
-    await setReviewStatus(inWs, review(''), 'Reviewed');
+  it("adds a user who isn't a reviewer yet once they agree, then sets their status", async () => {
+    signedInAs('eva');
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+    answerConfirms(true);
 
-    expect(fakeApi.methods()).toEqual([]);
+    await setOwnReviewStatus(inWs, review('ana'), 'Rework required');
+
+    const reviewCalls = fakeApi.calls().filter(({ method }) => method.startsWith('codeReviews.'));
+    expect(reviewCalls.map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
+      ['codeReviews.addReviewers', 31, ['eva']],
+      ['codeReviews.setOwnStatus', 31, 'Rework required'],
+    ]);
+  });
+
+  it('sends nothing when the user picks the status they gave already', async () => {
+    signedInAs('ana');
+
+    await setOwnReviewStatus(inWs, codeReviewSummary({ id: 31, reviewers: [{ name: 'ana', status: 'Reviewed' }] }), 'Reviewed');
+
+    expect(fakeApi.methods().filter((method) => method.startsWith('codeReviews.'))).toEqual([]);
+  });
+
+  it("sets the status as the user is when they can't be read yet, asking nothing, so the server answers", async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
+
+    expect(askedDialogs()).toEqual([]);
+    expect(fakeApi.argsOf('codeReviews.setOwnStatus')).toEqual([[inWs, 31, 'Reviewed']]);
+  });
+
+  it('takes the user the page already knows, reading no account', async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Rework required', 'ana');
+
+    expect(fakeApi.methods()).toEqual(['codeReviews.setOwnStatus']);
+  });
+
+  it("changes nothing when a user who isn't a reviewer declines", async () => {
+    signedInAs('eva');
+    answerConfirms(false);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
+
+    expect(fakeApi.methods()).toEqual(['accounts.list', 'system.currentUser']);
   });
 });
 
 describe('review operations', () => {
-  it('reassigns to the reviewer typed, starting from the current one', async () => {
-    fakeApi.answer('codeReviews.update', () => undefined);
-    answerPrompts('carl');
+  it('adds every reviewer typed, separated by commas, in one call', async () => {
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
+    answerPrompts('carl, dana');
 
-    await reassignReview(inWs, review('ana'));
+    await addReviewers(inWs, review('ana'));
 
-    expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { assignee: 'carl' }]]);
+    expect(fakeApi.argsOf('codeReviews.addReviewers')).toEqual([[inWs, 31, ['carl', 'dana']]]);
+  });
+
+  it('adds nobody when the prompt is cancelled or left empty', async () => {
+    answerPrompts(' , ');
+
+    await addReviewers(inWs, review('ana'));
+    await addReviewers(inWs, review('ana'));
+
+    expect(fakeApi.methods()).toEqual([]);
   });
 
   it('deletes the reviews picked in one call, and tells it did', async () => {
@@ -77,17 +123,21 @@ describe('review operations', () => {
   });
 
   it('refreshes only the reviews (their lists and the branch chips), never the history nor the workspace', async () => {
-    fakeApi.answer('codeReviews.update', () => undefined);
+    workspaceOn('local');
+    fakeApi.answer('accounts.list', () => []);
+    fakeApi.answer('system.currentUser', () => 'ana');
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
     fakeApi.answer('codeReviews.remove', () => undefined);
     answerPrompts('carl');
 
     const afterStatus = watchRefreshes(ws);
-    await setReviewStatus(inWs, review('ana'), 'Reviewed');
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
     expect(afterStatus()).toEqual(['codeReviews']);
 
-    const afterAssign = watchRefreshes(ws);
-    await reassignReview(inWs, review('ana'));
-    expect(afterAssign()).toEqual(['codeReviews']);
+    const afterAdding = watchRefreshes(ws);
+    await addReviewers(inWs, review('ana'));
+    expect(afterAdding()).toEqual(['codeReviews']);
 
     const afterDelete = watchRefreshes(ws);
     await deleteReviews(inWs, [review('ana')]);

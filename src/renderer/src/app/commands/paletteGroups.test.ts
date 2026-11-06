@@ -1,4 +1,5 @@
 import '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { describe, expect, it, vi } from 'vitest';
 import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 
@@ -46,7 +47,7 @@ const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
 const label = (id: number, name: string): Label => ({ id, name, changeset: 1, branch: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', repository: 'repo@server' });
 const changeset = (id: number, comment: string): Changeset => ({ id, comment, guid: `cs-${id}`, branch: '/main', owner: 'ana', date: '2026-01-01T00:00:00Z', parent: id - 1, repository: 'repo@server' });
 const shelve = (id: number, comment: string): Shelve => ({ id, comment, guid: `sh-${id}`, owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
-const review = (id: number, title: string): CodeReviewSummary => ({ id, title, status: 'Under review', owner: 'ana', assignee: '', date: '2026-01-01T00:00:00Z' });
+const review = (id: number, title: string): CodeReviewSummary => codeReviewSummary({ id, title, owner: 'ana', date: '2026-01-01T00:00:00Z' });
 const change = (path: string): PendingChange => ({ path, kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' });
 
 function indexed<T>(items: T[], nameOf: (item: T) => string): IndexedList<T> {

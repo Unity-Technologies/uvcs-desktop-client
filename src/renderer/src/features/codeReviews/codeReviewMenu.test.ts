@@ -1,4 +1,5 @@
 import '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ran = vi.hoisted(() => [] as string[]);
@@ -22,7 +23,7 @@ import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { codeReviewMenu } from './codeReviewMenu';
 
 const ws = '/ws';
-const summary: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
+const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
 const reviewOf = (target: CodeReviewTarget): CodeReview => ({ ...summary, target });
 const onBranch = (name: string): WorkspaceSelector => ({ kind: 'branch', name });
 

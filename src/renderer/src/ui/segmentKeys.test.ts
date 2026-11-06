@@ -10,6 +10,11 @@ describe('segmentAfterKey', () => {
     expect(segmentAfterKey(values, 'mine', 'ArrowLeft')).toBe('recent');
   });
 
+  it('steps from the first segment, the Tab stop, while none is checked', () => {
+    expect(segmentAfterKey(values, undefined, 'ArrowRight')).toBe('everyone');
+    expect(segmentAfterKey(values, undefined, 'ArrowLeft')).toBe('recent');
+  });
+
   it('leaves other keys, ↑ and ↓ included, to the control around it', () => {
     expect(segmentAfterKey(values, 'mine', 'ArrowDown')).toBeNull();
     expect(segmentAfterKey(values, 'mine', 'Enter')).toBeNull();

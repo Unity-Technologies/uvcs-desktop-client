@@ -15,7 +15,7 @@ export function openTaskMerge(branch: TaskBranch): void {
 }
 
 /**
- * What finishing a task does once it's merged into its destination: marks its review as reviewed and hides its branch
+ * What finishing a task does once it's merged into its destination: marks the user's review as reviewed and hides its branch
  * when asked to, and remembers where it landed, for Changes to show what to do next (`FinishedTaskCard`).
  */
 export async function finishMergedTask(
@@ -26,8 +26,8 @@ export async function finishMergedTask(
   if (review) {
     await runAction(
       workspacePlace(workspacePath),
-      "Couldn't mark the code review as reviewed",
-      () => api.codeReviews.update(workspacePlace(workspacePath), review.id, { status: 'Reviewed' }),
+      "Couldn't mark your review as reviewed",
+      () => api.codeReviews.setOwnStatus(workspacePlace(workspacePath), review.id, 'Reviewed'),
       isAffectedByCodeReviews,
     );
   }

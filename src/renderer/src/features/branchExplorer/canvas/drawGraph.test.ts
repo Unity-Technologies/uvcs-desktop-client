@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { codeReviewSummary } from '../../../testing/codeReviewSummary';
 import { AVATAR_COLORS } from '../../../lib/avatarColors';
 import { largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
@@ -139,7 +140,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     search,
     searchQuery,
     searchPing: 0.3,
-    reviews: new Map([[lane.branch.id, { id: 1, title: 'Review', status: 'Reviewed', owner: 'jane', assignee: '', date: '' }]]),
+    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane' })]]),
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),

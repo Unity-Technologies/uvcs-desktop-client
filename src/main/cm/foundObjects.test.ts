@@ -37,7 +37,7 @@ describe('found objects', () => {
   // The lists showed comments, titles and values trimmed when they came from XML; they still do.
   it('trims the free text each list shows, and nothing else', () => {
     const branch = recordsIn(recordsOutput(FOUND_BRANCHES, { name: '/main/a ', owner: ' ana ', comment: '\n  Fix crash\n\n' }), FOUND_BRANCHES);
-    const review = recordsIn(recordsOutput(FOUND_REVIEWS, { id: 1, title: ' Review it ', status: 'Status Reviewed' }), FOUND_REVIEWS);
+    const review = recordsIn(recordsOutput(FOUND_REVIEWS, { id: 1, title: ' Review it ', codereviewstatusname: 'Reviewed' }), FOUND_REVIEWS);
     const values = recordsIn(recordsOutput(FOUND_ATTRIBUTE_VALUES, { name: 'notes', value: '- one\n' }), FOUND_ATTRIBUTE_VALUES);
     const others = [
       recordsIn(recordsOutput(FOUND_CHANGESETS, { comment: ' text\n' }), FOUND_CHANGESETS)[0]?.comment,

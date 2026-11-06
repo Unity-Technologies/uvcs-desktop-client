@@ -174,7 +174,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           merging={merging}
           onMerge={() => void merge()}
           run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
-          options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
+          options={finishing && <TaskMergeOptions review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
             conflicting &&
