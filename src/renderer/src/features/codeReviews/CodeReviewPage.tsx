@@ -13,7 +13,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar } from '../../ui/Skeleton';
-import { tabPanelId, Tabs } from '../../ui/Tabs';
+import { tabId, tabPanelId, Tabs } from '../../ui/Tabs';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { DiffPage } from '../diff/DiffPage';
@@ -70,7 +70,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           />
         </div>
       </Stowable>
-      <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, tab)} aria-labelledby={`${TABS_ID}-tab-${tab}`}>
+      <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, tab)} aria-labelledby={tabId(TABS_ID, tab)}>
         {tab === 'conversation' ? (
           <ReviewConversationTab review={review} />
         ) : diffTarget ? (

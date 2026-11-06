@@ -45,7 +45,7 @@ export function Tabs<Value extends string>({ value, tabs, onChange, label, idPre
           key={tab.value}
           type="button"
           role="tab"
-          id={`${idPrefix}-tab-${tab.value}`}
+          id={tabId(idPrefix, tab.value)}
           aria-selected={tab.value === value}
           aria-controls={tabPanelId(idPrefix, tab.value)}
           tabIndex={tab.value === value ? 0 : -1}
@@ -60,6 +60,10 @@ export function Tabs<Value extends string>({ value, tabs, onChange, label, idPre
       ))}
     </div>
   );
+}
+
+export function tabId(idPrefix: string, value: string): string {
+  return `${idPrefix}-tab-${value}`;
 }
 
 export function tabPanelId(idPrefix: string, value: string): string {
