@@ -46,13 +46,19 @@ export function offersMergingAgain(request: MergeRequest): boolean {
   return offersIgnoreMergeTracking(request) && !request.ignoreMergeTracking;
 }
 
+/** A button that previews the merge again with another request. */
+export interface MergeRequestAction {
+  label: string;
+  request: MergeRequest;
+}
+
 /**
  * What a merge with nothing to merge offers: to apply the changes again ignoring merge tracking where `cm` can,
  * or, once options are set, to go back to the merge without them (a chosen ancestor can leave nothing to merge).
  */
-export function nothingToMergeAction(request: MergeRequest): 'mergeAgain' | 'withoutOptions' | null {
-  if (offersMergingAgain(request)) return 'mergeAgain';
-  return hasMergeOptions(request) ? 'withoutOptions' : null;
+export function nothingToMergeAction(request: MergeRequest): MergeRequestAction | null {
+  if (offersMergingAgain(request)) return { label: 'Merge them again', request: withIgnoreMergeTracking(request, true) };
+  return hasMergeOptions(request) ? { label: 'Merge without options', request: withoutMergeOptions(request) } : null;
 }
 
 export function withoutMergeOptions(request: MergeRequest): MergeRequest {

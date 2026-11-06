@@ -8,7 +8,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
-import { hasMergeOptions, nothingToMergeAction, withIgnoreMergeTracking, withoutMergeOptions } from './mergeOptions';
+import { hasMergeOptions, nothingToMergeAction, withoutMergeOptions } from './mergeOptions';
 import { MergeSession } from './MergeSession';
 import { useMergePlan } from './useMergePlan';
 
@@ -73,10 +73,7 @@ function MergeNotPossible({ plan, request, onRequestChange }: MergeNotPossiblePr
           icon={<CheckCircle2 size={22} />}
           title="Nothing to merge"
           description="The destination already has all these changes."
-          action={
-            (action === 'mergeAgain' && <Button onClick={() => onRequestChange(withIgnoreMergeTracking(request, true))}>Merge them again</Button>) ||
-            (action === 'withoutOptions' && <Button onClick={() => onRequestChange(withoutMergeOptions(request))}>Merge without options</Button>)
-          }
+          action={action && <Button onClick={() => onRequestChange(action.request)}>{action.label}</Button>}
         />
       );
     }
