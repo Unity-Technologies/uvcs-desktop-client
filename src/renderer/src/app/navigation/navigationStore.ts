@@ -11,6 +11,8 @@ interface NavigationStore {
   pages: Page[];
   goToView: (view: ViewId) => void;
   openPage: (page: Page) => void;
+  /** Shows `page` in place of the one on top, as a page moving within itself does (a review's tab): Back skips it. */
+  replacePage: (page: Page) => void;
   goBack: () => void;
 }
 
@@ -27,6 +29,7 @@ export const useNavigation = create<NavigationStore>((set, get) => ({
     if (routed({ kind: 'openPage', page }, get().pages) === 'workspaceWindow') return void api.windows.openPageInWorkspaceWindow(page);
     set((state) => ({ pages: [...state.pages, page] }));
   },
+  replacePage: (page) => set((state) => ({ pages: [...state.pages.slice(0, -1), page] })),
   goBack: () => {
     if (routed({ kind: 'goBack' }, get().pages) === 'close') return window.close();
     set((state) => ({ pages: state.pages.slice(0, -1) }));
@@ -42,5 +45,6 @@ function routed(request: NavigationRequest, pages: readonly Page[]): ReturnType<
 export const navigation = {
   goToView: (view: ViewId) => useNavigation.getState().goToView(view),
   openPage: (page: Page) => useNavigation.getState().openPage(page),
+  replacePage: (page: Page) => useNavigation.getState().replacePage(page),
   goBack: () => useNavigation.getState().goBack(),
 };

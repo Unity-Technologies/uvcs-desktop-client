@@ -30,6 +30,23 @@ describe('navigation', () => {
     expect(useNavigation.getState()).toMatchObject({ view: 'changes', pages: [history] });
   });
 
+  it('shows a page in place of the one on top, so Back goes to the one before', () => {
+    navigation.openPage(history);
+    navigation.openPage(browse);
+    const moved: Page = { kind: 'browseRepository', changesetId: 12, focusPath: 'src/a.cs' };
+    navigation.replacePage(moved);
+
+    expect(useNavigation.getState().pages).toEqual([history, moved]);
+    navigation.goBack();
+    expect(useNavigation.getState().pages).toEqual([history]);
+  });
+
+  it('opens a page shown in place when none is open', () => {
+    navigation.replacePage(history);
+
+    expect(useNavigation.getState().pages).toEqual([history]);
+  });
+
   it('stays on the view when going back with no page open', () => {
     navigation.goBack();
 
