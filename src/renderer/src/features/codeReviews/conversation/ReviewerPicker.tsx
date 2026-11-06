@@ -1,19 +1,17 @@
-import type { MemberKind } from '@shared/domain/member';
 import { useMemo, useState } from 'react';
 import { usePlaceServer } from '../../../app/workspace/useWorkspace';
 import { PersonRow } from '../../../components/people/PersonRow';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { useDebouncedValue } from '../../../lib/useDebouncedValue';
 import { FilterChecklist } from '../../../ui/FilterChecklist';
-import { useMemberNames } from '../../permissions/permissionsQueries';
 import { reviewerFilterTexts, reviewerGroups } from '../reviewerGroups';
 import { isPicked, pickedKind, pickerEmptyText, pickOffered, togglePicked, type ReviewerPick } from '../reviewerPick';
+import { pickerFooter } from '../serverMembers';
+import { useServerMembers } from '../useServerMembers';
 import { GroupRow } from './GroupRow';
 
 /** How long typing pauses before a server that can't list everyone is asked for the names typed. */
 const SEARCH_PAUSE_MS = 300;
-
-const NO_NAMES: readonly string[] = [];
 
 interface ReviewerPickerProps {
   pick: ReviewerPick;
@@ -32,7 +30,6 @@ export function ReviewerPicker({ pick, onPickChange }: ReviewerPickerProps) {
   const typed = useDebouncedValue(search.trim(), SEARCH_PAUSE_MS);
   const users = useServerMembers(server, 'user', typed);
   const groups = useServerMembers(server, 'group', typed);
-  const listFailed = users.listFailed || groups.listFailed;
   const groupSet = useMemo(() => reviewerGroups(groups.names), [groups.names]);
   const offered = useMemo(() => pickOffered(pick, { users: users.names, groups: groups.names }), [pick, users.names, groups.names]);
   const rows = useMemo(() => offered.filter((name) => matchesWordFilter(reviewerFilterTexts(name, groupSet), search)), [offered, groupSet, search]);
@@ -47,20 +44,8 @@ export function ReviewerPicker({ pick, onPickChange }: ReviewerPickerProps) {
       isChecked={(name) => isPicked(pick, name)}
       onToggle={(name) => onPickChange(togglePicked(pick, { name, kind: pickedKind(pick, name, groupSet) }))}
       renderRow={(name) => (pickedKind(pick, name, groupSet) === 'group' ? <GroupRow group={name} /> : <PersonRow user={name} />)}
-      empty={pickerEmptyText({ listFailed, loading: users.loading || groups.loading, search })}
-      footer={listFailed ? 'The server can’t list everyone: type a name to look it up.' : undefined}
+      empty={pickerEmptyText({ listFailed: users.listFailed || groups.listFailed, loading: users.loading || groups.loading, search })}
+      footer={pickerFooter(users, groups)}
     />
   );
-}
-
-/** The server's users or groups: the whole list, or, where it can't be read, those matching what was typed. */
-function useServerMembers(server: string, kind: MemberKind, typed: string) {
-  const everyone = useMemberNames(server, kind, { enabled: server !== '' });
-  const listFailed = Boolean(everyone.error);
-  const searched = useMemberNames(server, kind, { filter: typed, enabled: listFailed && typed !== '' });
-  return {
-    names: everyone.data ?? searched.data ?? NO_NAMES,
-    listFailed,
-    loading: (everyone.isLoading && !listFailed) || searched.isFetching,
-  };
 }
