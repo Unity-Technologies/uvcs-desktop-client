@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, offersFocusMode, isOwnFocusGroup } from './focusMode';
 import { EditorState } from '@codemirror/state';
 
 /**
@@ -89,5 +89,17 @@ describe('caretOpeningFocusMode', () => {
     expect(caretOpeningFocusMode(editorState('A dr‸aft'), true)).toBeNull();
     expect(caretOpeningFocusMode(editorState('‸A draft'), true)).toBeNull();
     expect(caretOpeningFocusMode(editorState('‸'), false)).toBeNull();
+  });
+});
+
+describe('isOwnFocusGroup', () => {
+  it('makes a comment of many lines on its own its own larger editor', () => {
+    expect(isOwnFocusGroup({ singleLine: false, inGroup: false, inPopover: false })).toBe(true);
+  });
+
+  it("never in a popover, whose transform a fixed panel would follow, nor a one-line field or one in a group", () => {
+    expect(isOwnFocusGroup({ singleLine: false, inGroup: false, inPopover: true })).toBe(false);
+    expect(isOwnFocusGroup({ singleLine: true, inGroup: false, inPopover: false })).toBe(false);
+    expect(isOwnFocusGroup({ singleLine: false, inGroup: true, inPopover: false })).toBe(false);
   });
 });

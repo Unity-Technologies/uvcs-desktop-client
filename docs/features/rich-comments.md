@@ -256,6 +256,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   strip, the hints a caption under the box; a changeset's comment (and a shelve's) adds its title field on top. A
   comment of many lines on its own is a group of one (`CommentField`), so no field draws a larger editor of its own
   (`focusModeSurfaces.test.ts`): a branch's once filled its panel edge to edge, its hints inside the text.
+  A field in a popover (a status's comment) offers none (`isOwnFocusGroup`, `inPopover`): the popover is moved into
+  place with a transform, which the fixed panel would follow, shrunk into it.
   From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was

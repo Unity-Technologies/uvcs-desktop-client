@@ -11,6 +11,15 @@ export function offersFocusMode(singleLine: boolean): boolean {
 }
 
 /**
+ * Whether a field is a group of one (`CommentField`), its own larger editor: a comment of many lines outside any group,
+ * unless it's in a popover. A popover is moved into place with a transform, which a fixed panel inside it would follow
+ * (shrunk into the popover, dimming only it), and a popover's field holds a short note (a status's comment).
+ */
+export function isOwnFocusGroup({ singleLine, inGroup, inPopover }: { singleLine: boolean; inGroup: boolean; inPopover: boolean }): boolean {
+  return !singleLine && !inGroup && !inPopover;
+}
+
+/**
  * How the larger editor shows, the same everywhere (`focusModeFor`): a panel over the window, the rest dimmed behind
  * it, above the dialog it opened from. Growing a dialog's field in place was dropped: the dialog grew too tall, or
  * its field barely grew, by how much room its other fields left.

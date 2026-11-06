@@ -22,6 +22,8 @@ export interface CommentFieldProps {
   id?: string;
   /** The id of the label shown above the field, which names the editor (`fieldLabelAttributes`). */
   labelledBy?: string;
+  /** In a popover, which can't hold the larger editor's panel: a comment of many lines offers none (`isOwnFocusGroup`). */
+  inPopover?: boolean;
   /** Its part in a `CommentFocusGroup` (the check-in's summary or description): focus mode opens the group. */
   groupField?: GroupField;
   placeholder: string;

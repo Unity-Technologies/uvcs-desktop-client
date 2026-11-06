@@ -66,6 +66,7 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
         label="What you say about it"
         submitLabel={`Mark as ${status}`}
         optional
+        inPopover
         onSubmit={async (comment) => {
           // Closes once set; a status the server refused keeps the popover and what the user wrote, to try again.
           const set = await setOwnReviewStatus(place, review, status, { user, comment, joiningAgreed: true });

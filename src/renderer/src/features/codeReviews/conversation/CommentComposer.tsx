@@ -25,10 +25,12 @@ interface CommentComposerProps {
   optional?: boolean;
   autoFocus?: boolean;
   danger?: boolean;
+  /** In a popover: no larger editor (`isOwnFocusGroup`). */
+  inPopover?: boolean;
 }
 
 /** The rich editor of a review's comments, as every comment in the app is written; ⌘↵ sends. */
-export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger }: CommentComposerProps) {
+export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover }: CommentComposerProps) {
   const draft = useCommentDraftStore((state) => state.drafts[draftKey]);
   const keep = useCommentDraftStore((state) => state.keep);
   const forget = useCommentDraftStore((state) => state.forget);
@@ -64,6 +66,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
         onChange={(written) => keep(draftKey, { summary: '', description: written })}
         placeholder={placeholder}
         label={label}
+        inPopover={inPopover}
         autoFocus={autoFocus}
         disabled={sending}
         onSubmit={() => void send()}
