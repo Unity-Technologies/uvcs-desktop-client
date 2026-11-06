@@ -8,6 +8,7 @@ import {
   contributorSegments,
   hasMergeOptions,
   mergeOptionsOffered,
+  offersMergingAgain,
   withAncestor,
   withoutMergeOptions,
   type ContributorFile,
@@ -48,6 +49,14 @@ describe('hasMergeOptions and withoutMergeOptions', () => {
     expect(hasMergeOptions({ ...cherryPick, ignoreMergeTracking: true })).toBe(true);
     expect(hasMergeOptions({ ...cherryPick, ignoreMergeTracking: false })).toBe(false);
     expect(withoutMergeOptions({ ...cherryPick, ignoreMergeTracking: true, ancestorSpec: 'cs:5' })).toEqual(cherryPick);
+  });
+});
+
+describe('offersMergingAgain', () => {
+  it('offers to apply already merged changes again where cm can ignore merge tracking, once', () => {
+    expect(offersMergingAgain(cherryPick)).toBe(true);
+    expect(offersMergingAgain({ ...cherryPick, ignoreMergeTracking: true })).toBe(false);
+    expect(offersMergingAgain(merge)).toBe(false);
   });
 });
 
