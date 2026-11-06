@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import { NO_GROUPS, reviewerGroups } from './reviewerGroups';
-import { isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
+import { changesReviewers, isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -40,6 +40,14 @@ describe('the reviewer pick', () => {
     reviewers.push({ name: 'carl@acme.com', status: 'Under review' });
 
     expect(pickChanges(pick, GROUPS)).toEqual({ add: [user('eva@acme.com')], remove: [] });
+  });
+});
+
+describe('changesReviewers', () => {
+  it('lets Save apply a pick that adds or removes someone, and not one that changes no one', () => {
+    expect(changesReviewers({ add: [], remove: [] })).toBe(false);
+    expect(changesReviewers({ add: [group('Artists')], remove: [] })).toBe(true);
+    expect(changesReviewers({ add: [], remove: [user('ana@acme.com')] })).toBe(true);
   });
 });
 
