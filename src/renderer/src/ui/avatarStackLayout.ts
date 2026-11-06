@@ -1,11 +1,14 @@
 /** How much of each avatar behind the first one peeks out while the stack rests, as a share of its size. */
 export const PEEK_SHARE = 0.5;
 
-/** How far an avatar's corner badge reaches past it, right and down: `AvatarStack.module.css`'s `.badge`, 3px. */
-export const BADGE_REACH = 3;
+/**
+ * How far an avatar's corner badge reaches past it, right and down: `AvatarStack.module.css`'s `.badge`, 3px out, then
+ * its 1.5px ring in the surface's color.
+ */
+export const BADGE_REACH = 4.5;
 
 /** The room between two avatars once the stack spreads: a little more than a badge reaches, so it clears the next one. */
-export const SPREAD_GAP = 4;
+export const SPREAD_GAP = 5;
 
 /** Where one avatar of a stack sits, at rest and spread, and how far up it lies. */
 export interface StackSlot {

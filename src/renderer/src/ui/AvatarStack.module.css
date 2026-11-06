@@ -24,9 +24,10 @@
   pointer-events: auto;
 }
 
-/* Each avatar is ringed apart from the one it overlaps in the surface's color. The slide rides `translate` and the hovered avatar's growth `scale`, separate properties so the growth doesn't
-   stretch the slide with it. Spreading staggers from the first avatar, folding back from the last; the delays are
-   made of a duration token, so reduced motion (which zeroes them) makes both instant. */
+/* Each avatar is ringed apart from the one it overlaps in the surface's color. The slide rides `translate` and the
+   hovered avatar's growth `scale`, separate properties so the growth doesn't stretch the slide with it. Spreading
+   staggers from the first avatar, folding back from the last; the delays are made of a duration token, so reduced
+   motion (which zeroes them) makes both instant. */
 .item {
   position: absolute;
   top: 0;

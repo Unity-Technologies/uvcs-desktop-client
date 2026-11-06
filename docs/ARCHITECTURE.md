@@ -1498,8 +1498,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
     A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
   - Several people in little room are one `ui/AvatarStack`: overlapping at rest, spreading on hover over what follows
-    (it keeps its resting width), each avatar with its own tooltip and an optional corner badge (a reviewer's status), shown only spread;
-    its `label` is for screen readers only, never a tooltip of the whole. Its geometry is `avatarStackLayout`. What
-    the spread covers steps aside while it does: the people filter's label fades out.
+    (it keeps its resting width), each avatar with its own tooltip and an optional corner badge (a reviewer's status),
+    shown only spread; its `label` is for screen readers only, never a tooltip of the whole. Its geometry is
+    `avatarStackLayout`. What the spread covers steps aside while it does: the people filter's label fades out.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
     inside the layout they will fill ("One layout from the first frame").

@@ -71,6 +71,11 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     expect(contrastRatio(foreground.rgb, tint)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--status-moved', '--status-changed', '--status-added'])("draws a reviewer's status badge, its icon on %s, at 3:1", (fill) => {
+    // `AvatarStack`'s `.badge`: a review status's icon in `--text-inverse` on the status's color (`REVIEW_STATUS_COLORS`).
+    expect(ratio(tokens, '--text-inverse', fill)).toBeGreaterThanOrEqual(3);
+  });
+
   it.each(['--icon-folder', '--icon-file'])('draws item icons in %s at 3:1 on every surface', (icon) => {
     for (const surface of SURFACES) expect(ratio(tokens, icon, surface), surface).toBeGreaterThanOrEqual(3);
   });

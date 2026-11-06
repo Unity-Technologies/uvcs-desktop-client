@@ -26,7 +26,8 @@ const rulesOf = (file: string, selector: string): Rule[] => rules.filter((rule) 
 
 /**
  * What shows on hover and is no control, so the keyboard has nothing to reach: a stack of avatars' badges, decoration
- * of a stack that takes no focus, whose label tells a screen reader every reviewer's status (`AvatarStack`).
+ * of a stack that takes no focus, whose label tells a screen reader every reviewer's status (`AvatarStack`). A sighted
+ * keyboard user reads each reviewer's status where it shows at rest: the review's page, beside its conversation.
  */
 const NOT_CONTROLS = new Set(['ui/AvatarStack.module.css: .stack:hover .badge']);
 
