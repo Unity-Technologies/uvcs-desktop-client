@@ -1,5 +1,7 @@
 import type { CodeReviewer, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { LucideIcon } from 'lucide-react';
 import { displayName } from '../../lib/userName';
+import { REVIEW_STATUS_COLORS, REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import type { StackedAvatar } from '../../ui/AvatarStack';
 
 /** How many reviewers a row shows before "+N". */
@@ -24,27 +26,22 @@ export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_R
 export const REVIEWER_AVATAR_SIZE = 18;
 
 /**
- * The Reviewers column's width: the stack of `SHOWN_REVIEWERS` avatars and "+N" spread, with their rings, inside the
+ * The Reviewers column's width: the stack of `SHOWN_REVIEWERS` avatars and "+N" spread, with its last badge, inside the
  * cell's padding (`reviewersColumn.test.ts` holds it to that), or a sole reviewer's avatar and name.
  */
 export const REVIEWERS_COLUMN_WIDTH = 130;
 
 /**
- * The reviewers' stack: each shown reviewer's avatar, named with their status and ringed in its color, then a "+N"
+ * The reviewers' stack: each shown reviewer's avatar, named with their status and badged with its icon, then a "+N"
  * disc naming the rest; a sole reviewer's name goes beside it.
  */
 export function stackedReviewers(reviewers: readonly CodeReviewer[]): { avatars: StackedAvatar[]; more?: { count: number; tip: string }; soleName?: string } {
   const { shown, rest, soleName } = shownReviewers(reviewers);
   return {
-    avatars: shown.map((reviewer) => ({ user: reviewer.name, tip: reviewerText(reviewer), ...ringOf(reviewer.status) })),
+    avatars: shown.map((reviewer) => ({ user: reviewer.name, tip: reviewerText(reviewer), badge: reviewerBadge(reviewer.status) })),
     ...(rest.length > 0 && { more: { count: rest.length, tip: reviewersText(rest) } }),
     ...(soleName && { soleName }),
   };
-}
-
-function ringOf(status: CodeReviewStatus): { ring?: string } {
-  const ring = reviewerRing(status);
-  return ring ? { ring } : {};
 }
 
 /** A reviewer with the status they gave: what their avatar's own tooltip says. */
@@ -57,19 +54,10 @@ export function reviewersText(reviewers: readonly CodeReviewer[]): string {
   return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map(reviewerText).join(', ');
 }
 
-/**
- * The color a reviewer's avatar is ringed in: the color of the status they gave, as `CodeReviewStatusBadge` shows it;
- * none while they review, the status every reviewer starts with.
- */
-export function reviewerRing(status: CodeReviewStatus): string | undefined {
-  return REVIEWER_RINGS[status];
+/** A reviewer's badge in the stack: the icon of the status they gave, in its color; every status has one. */
+export function reviewerBadge(status: CodeReviewStatus): { icon: LucideIcon; color: string } {
+  return { icon: REVIEW_STATUS_ICONS[status], color: REVIEW_STATUS_COLORS[status] };
 }
-
-const REVIEWER_RINGS: Record<CodeReviewStatus, string | undefined> = {
-  'Under review': undefined,
-  Reviewed: 'var(--status-added)',
-  'Rework required': 'var(--status-changed)',
-};
 
 /**
  * Whether `user` is one of the review's reviewers by name, as `cm` writes both. Being a member of a reviewer group

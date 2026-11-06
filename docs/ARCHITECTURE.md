@@ -1242,7 +1242,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
-  a `DataTable` (`ui/table/`: only the rows in view render; a cell is as tall as its row, so a ring or a lifted avatar
+  a `DataTable` (`ui/table/`: only the rows in view render; a cell is as tall as its row, so a corner badge or a lifted avatar
   isn't cut; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
   it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
@@ -1498,7 +1498,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
     A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
   - Several people in little room are one `ui/AvatarStack`: overlapping at rest, spreading on hover over what follows
-    (it keeps its resting width), each avatar with its own tooltip and an optional ring color (a reviewer's status);
+    (it keeps its resting width), each avatar with its own tooltip and an optional corner badge (a reviewer's status), shown only spread;
     its `label` is for screen readers only, never a tooltip of the whole. Its geometry is `avatarStackLayout`. What
     the spread covers steps aside while it does: the people filter's label fades out.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),

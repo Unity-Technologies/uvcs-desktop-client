@@ -35,9 +35,10 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
 - Columns: the title, the status, the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
-  `ui/AvatarStack`, each ringed in the color of its reviewer's status, `reviewerRing`, three then a "+N" disc whose
-  tooltip names the rest; hovered, the stack spreads and each avatar's tooltip names its reviewer with their status,
-  `reviewerText`; the details panel and the review's page show the same; the column is `REVIEWERS_COLUMN_WIDTH`, wide
+  `ui/AvatarStack`, three then a "+N" disc whose tooltip names the rest; hovered, the stack spreads and each avatar
+  shows its reviewer's status as a badge in its corner, the status's icon in its color (`reviewerBadge`,
+  `REVIEW_STATUS_ICONS`: an eye, a flag, a thumbs-up), fading in as the avatar settles, and its tooltip names them
+  with it, `reviewerText`; at rest the stack shows only who, the Status column saying where the review stands; the details panel and the review's page show the same; the column is `REVIEWERS_COLUMN_WIDTH`, wide
   enough for the stack spread), the comments with how many are open (`ReviewCommentCounts`; sorted
   by what's open first, `commentCountsSortValue`), the changes, the author, when it was created (the list's order and
   its period go by it; hidden in a narrower window) and the last activity.

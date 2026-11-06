@@ -24,8 +24,7 @@
   pointer-events: auto;
 }
 
-/* Each avatar is ringed apart from the one it overlaps in the surface's color, then in its own ring color, if any.
-   The slide rides `translate` and the hovered avatar's growth `scale`, separate properties so the growth doesn't
+/* Each avatar is ringed apart from the one it overlaps in the surface's color. The slide rides `translate` and the hovered avatar's growth `scale`, separate properties so the growth doesn't
    stretch the slide with it. Spreading staggers from the first avatar, folding back from the last; the delays are
    made of a duration token, so reduced motion (which zeroes them) makes both instant. */
 .item {
@@ -35,9 +34,7 @@
   z-index: var(--layer);
   display: inline-flex;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 1.5px var(--bg-surface),
-    0 0 0 3px var(--avatar-ring, transparent);
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
   translate: var(--rest-x);
   transition-property: translate, scale, box-shadow;
   transition-duration: var(--duration-slow), var(--duration-fast), var(--duration-normal);
@@ -49,7 +46,6 @@
   translate: var(--spread-x);
   box-shadow:
     0 0 0 1.5px var(--bg-surface),
-    0 0 0 3px var(--avatar-ring, transparent),
     var(--shadow-md);
   transition-delay: calc(var(--order) * var(--duration-instant) / 4), 0s, 0s;
 }
@@ -75,4 +71,34 @@
   font-size: calc(var(--avatar-size) * 0.42);
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
+}
+
+/* What an avatar stands for, in its corner (`BADGE_REACH` past it): hidden at rest, where the stack says only who,
+   it fades in as its avatar settles once spread, after the same stagger as its slide, and leaves at once as the
+   stack folds. Its delays are made of duration tokens, so reduced motion makes it instant. */
+.badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  background: var(--badge-color);
+  color: var(--text-inverse);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out);
+}
+
+.stack:hover .badge {
+  opacity: 1;
+  scale: 1;
+  transition-duration: var(--duration-normal);
+  transition-delay: calc(var(--order) * var(--duration-instant) / 4 + var(--duration-slow) * 0.6);
 }

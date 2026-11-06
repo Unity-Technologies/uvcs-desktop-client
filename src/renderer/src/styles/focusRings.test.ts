@@ -24,6 +24,12 @@ const rules: Rule[] = filesUnder(RENDERER, (name) => name.endsWith('.module.css'
 
 const rulesOf = (file: string, selector: string): Rule[] => rules.filter((rule) => rule.file === file && rule.selector === selector);
 
+/**
+ * What shows on hover and is no control, so the keyboard has nothing to reach: a stack of avatars' badges, decoration
+ * of a stack that takes no focus, whose label tells a screen reader every reviewer's status (`AvatarStack`).
+ */
+const NOT_CONTROLS = new Set(['ui/AvatarStack.module.css: .stack:hover .badge']);
+
 describe('focus rings', () => {
   // The global ring is a box-shadow on :focus-visible; a state selector is more specific, so its own shadow would win.
   it('stay visible on checked, pressed and active controls that draw a shadow of their own', () => {
@@ -41,6 +47,7 @@ describe('focus rings', () => {
   it('come with the controls that only show on hover, which show for the keyboard too', () => {
     const offenders = rules
       .filter((rule) => /opacity:\s*1\b/.test(rule.body))
+      .filter((rule) => !NOT_CONTROLS.has(`${rule.file}: ${rule.selector}`))
       .flatMap((rule) => {
         const target = /:hover\s+(\.[\w-]+)$/.exec(rule.selector)?.[1];
         if (!target) return [];
