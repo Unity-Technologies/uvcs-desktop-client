@@ -4,22 +4,31 @@
   min-width: 0;
 }
 
-/* Each avatar is ringed in the color of the status its reviewer gave (CodeReviewStatusBadge's), and overlaps the one before. */
+/* Each avatar overlaps the one before; the status its reviewer gave sits in its corner, in the status's color. */
 .reviewer {
+  position: relative;
   display: inline-flex;
   flex: none;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 1.5px var(--bg-surface),
-    0 0 0 3px var(--reviewer-status);
 }
 
 .reviewer + .reviewer {
   margin-left: 2px;
 }
 
-.reviewer[data-status='Under review'] {
-  --reviewer-status: transparent;
+.status {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  background: var(--reviewer-status);
+  color: var(--text-inverse);
 }
 
 .reviewer[data-status='Reviewed'] {

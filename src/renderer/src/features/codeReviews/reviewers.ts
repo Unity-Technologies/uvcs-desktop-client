@@ -16,6 +16,14 @@ export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_R
   return { shown, more: Math.max(0, reviewers.length - max), ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }) };
 }
 
+/**
+ * Whether an avatar shows the status its reviewer gave: once they gave one. "Under review" is where every reviewer
+ * starts, waiting: marking it on every avatar would only add noise.
+ */
+export function statusMarked(status: CodeReviewStatus): boolean {
+  return status !== 'Under review';
+}
+
 /** Each reviewer with the status they gave: what the row's tooltip and a screen reader say. */
 export function reviewersText(reviewers: readonly CodeReviewer[]): string {
   return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map((reviewer) => `${displayName(reviewer.name)}: ${reviewer.status}`).join(', ');

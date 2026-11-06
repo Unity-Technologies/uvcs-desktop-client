@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers } from './reviewers';
+import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers, statusMarked } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -67,5 +67,13 @@ describe('reviewerNames', () => {
   it('splits the names typed at commas, once each, ignoring blanks', () => {
     expect(reviewerNames(' ana, bob,,ana , ')).toEqual(['ana', 'bob']);
     expect(reviewerNames('')).toEqual([]);
+  });
+});
+
+describe('statusMarked', () => {
+  it('marks an avatar once its reviewer gave a status, never while they are still to review', () => {
+    expect(statusMarked('Reviewed')).toBe(true);
+    expect(statusMarked('Rework required')).toBe(true);
+    expect(statusMarked('Under review')).toBe(false);
   });
 });
