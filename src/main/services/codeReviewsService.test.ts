@@ -1,4 +1,5 @@
 import { MAX_LISTED_CODE_REVIEWS } from '@shared/domain/codeReview';
+import type { MemberRef } from '@shared/domain/member';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -44,6 +45,9 @@ function codeReviews(answers: Record<string, CmAnswer>) {
   const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
   return { ...fake, branchNames, service: createCodeReviewsService(serviceContext(fake.cm), { branchNames }) };
 }
+
+const user = (name: string): MemberRef => ({ name, kind: 'user' });
+const group = (name: string): MemberRef => ({ name, kind: 'group' });
 
 const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
   'find branch': ({ line }) => (line.includes("hidden = 'true'") ? formatOutput(['21', '/main/old']) : formatOutput(['37', '/main/task1'])),
@@ -135,8 +139,16 @@ describe('code review writes', () => {
   it('creates a review asking its reviewers in the same command, and returns its id', async () => {
     const { service, commands } = codeReviews({ codereview: '42\n' });
 
-    expect(await service.create(IN_WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', reviewers: ['bob', ' eva ', ''] })).toBe(42);
+    expect(await service.create(IN_WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', reviewers: [user('bob'), user(' eva '), user('')] })).toBe(42);
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'br:/main/task1', 'Jump', '--users=bob,eva', '--format={id}'] }]);
+  });
+
+  it('creates a review asking a group too, each kind in its own option', async () => {
+    const { service, commands } = codeReviews({ codereview: '42\n' });
+
+    await service.create(IN_WORKSPACE, { targetSpec: 'cs:12', title: 'Jump', reviewers: [user('bob'), group('Developers')] });
+
+    expect(commands).toMatchObject([{ args: ['codereview', 'cs:12', 'Jump', '--users=bob', '--groups=Developers', '--format={id}'] }]);
   });
 
   it('creates a review asking nobody', async () => {
@@ -150,7 +162,7 @@ describe('code review writes', () => {
   it('asks several reviewers with one command', async () => {
     const { service, commands } = codeReviews({ 'codereview reviewer add': '' });
 
-    await service.addReviewers(IN_WORKSPACE, 6, ['bob', 'eva']);
+    await service.addReviewers(IN_WORKSPACE, 6, [user('bob'), user('eva')]);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'reviewer', 'add', '6', '--users=bob,eva'] }]);
   });
@@ -158,7 +170,7 @@ describe('code review writes', () => {
   it('removes several reviewers with one command', async () => {
     const { service, commands } = codeReviews({ 'codereview reviewer remove': '' });
 
-    await service.removeReviewers(IN_WORKSPACE, 6, ['bob', 'eva']);
+    await service.removeReviewers(IN_WORKSPACE, 6, [user('bob'), user('eva')]);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'reviewer', 'remove', '6', '--users=bob,eva'] }]);
   });
@@ -166,9 +178,25 @@ describe('code review writes', () => {
   it('asks reviewers to review again with one command', async () => {
     const { service, commands } = codeReviews({ 'codereview review': '' });
 
-    await service.reRequestReview(IN_WORKSPACE, 6, ['bob', 'eva']);
+    await service.reRequestReview(IN_WORKSPACE, 6, [user('bob'), user('eva')]);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'review', '6', '--re-request', '--users=bob,eva'] }]);
+  });
+
+  // `cm` looks a `--users` name up among the users only ("No such user"), so a group goes in `--groups`.
+  it('adds, removes and asks again groups and users in one command each, every kind in its own option', async () => {
+    const { service, commands } = codeReviews({ 'codereview reviewer add': '', 'codereview reviewer remove': '', 'codereview review': '' });
+    const reviewers = [group('Web Devs'), user('bob'), group('Artists')];
+
+    await service.addReviewers(IN_WORKSPACE, 6, reviewers);
+    await service.removeReviewers(IN_WORKSPACE, 6, [group('Developers')]);
+    await service.reRequestReview(IN_WORKSPACE, 6, [group('Developers')]);
+
+    expect(commands.map(({ args }) => args)).toEqual([
+      ['codereview', 'reviewer', 'add', '6', '--users=bob', '--groups=Web Devs,Artists'],
+      ['codereview', 'reviewer', 'remove', '6', '--groups=Developers'],
+      ['codereview', 'review', '6', '--re-request', '--groups=Developers'],
+    ]);
   });
 
   it.each([
@@ -241,9 +269,9 @@ describe('code reviews of a repository explored without a workspace', () => {
     const { service, lines } = codeReviews({ codereview: '42\n' });
 
     expect(await service.create(ON_REPOSITORY, { targetSpec: 'cs:12', title: 'Jump' })).toBe(42);
-    await service.addReviewers(ON_REPOSITORY, 6, ['bob']);
-    await service.removeReviewers(ON_REPOSITORY, 6, ['eva']);
-    await service.reRequestReview(ON_REPOSITORY, 6, ['bob']);
+    await service.addReviewers(ON_REPOSITORY, 6, [user('bob')]);
+    await service.removeReviewers(ON_REPOSITORY, 6, [user('eva')]);
+    await service.reRequestReview(ON_REPOSITORY, 6, [user('bob')]);
     await service.setOwnStatus(ON_REPOSITORY, 6, 'Reviewed');
     await service.remove(ON_REPOSITORY, [6, 7]);
 
