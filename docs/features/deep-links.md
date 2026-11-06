@@ -43,7 +43,7 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 | `…/branches/main/task001` | the branch's diff |
 | `…/labels/v1.2`, `…/labels/v1.1..v1.2` | the label's diff, or between two labels |
 | `…/shelves/12` | the shelve's diff |
-| `…/code-reviews/311`, `…/merge-requests/311` | the code review |
+| `…/code-reviews/311`, `…/merge-requests/311` | the code review, on its conversation |
 
 A workspace link takes the same views and pages but `browse` (`uvcs:///wk/game/-/history/a.cs`); its item is the
 workspace's own.
@@ -52,7 +52,7 @@ Pages inside an object (`…/<object>/-/<page>`):
 
 | Page | Shows | Objects |
 | --- | --- | --- |
-| `files/<path>` | the object's diff, on that file | all |
+| `files/<path>` | the object's diff, on that file (a review's Changes tab) | all |
 | `browse[/<path>]` | the repository as it was there, the item selected | changesets, branches (the head), labels |
 | `history/<path>` | the item's history, from there | changesets, branches, labels |
 | `annotate/<path>` | the item annotated as it was there | changesets, branches, labels |

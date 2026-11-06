@@ -1,4 +1,5 @@
 import type { DiffTarget } from '@shared/domain/diff';
+import { openingTab } from '../../features/codeReviews/reviewTab';
 import { shortBranchName } from '@shared/domain/specs';
 import type { LinkLines, LinkObject } from '@shared/links/link';
 import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
@@ -35,8 +36,11 @@ function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
       const object = diffTargetObject(page.target);
       return object && { object, ...fileIn(page.focusPath, shown) };
     }
-    case 'codeReview':
-      return { object: { kind: 'codeReview', id: page.reviewId }, ...fileIn(page.focusPath, shown) };
+    case 'codeReview': {
+      // Its conversation names the review alone; its changes, the file they show too.
+      const file = openingTab(page) === 'changes' ? fileIn(page.focusPath, shown) : {};
+      return { object: { kind: 'codeReview', id: page.reviewId }, ...file };
+    }
     case 'history':
       return historyLinkTarget(page, shown);
     case 'browseRepository': {

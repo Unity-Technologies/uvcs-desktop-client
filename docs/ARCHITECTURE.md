@@ -33,7 +33,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, how the review's status follows, the list's columns, the `cm codereview` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 

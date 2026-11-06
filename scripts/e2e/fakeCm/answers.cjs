@@ -12,6 +12,7 @@ const FINDABLE = {
   attribute: repository.ATTRIBUTES,
   attributetype: repository.ATTRIBUTE_TYPES,
   branch: repository.BRANCHES,
+  changereviewcomment: repository.REVIEW_COMMENTS,
   changeset: repository.CHANGESETS,
   label: repository.LABELS,
   merge: repository.MERGES,

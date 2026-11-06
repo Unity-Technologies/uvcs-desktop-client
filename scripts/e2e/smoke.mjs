@@ -152,6 +152,13 @@ try {
       await settled();
     });
   }
+  await step("A code review's conversation", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Code reviews( \d+)?$/ }).click();
+    await main.getByText('Review player movement', { exact: true }).dblclick();
+    await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
+    await main.getByText('Jump only when grounded.').first().waitFor();
+    await settled();
+  });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
     await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');

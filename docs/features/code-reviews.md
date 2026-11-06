@@ -40,3 +40,46 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   its period go by it; hidden in a narrower window) and the last activity.
 - **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
   doesn't list but the official client uses.
+
+## The review's page
+
+- The header: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the server
+  notes the rename), the status, who wants a review of what, the reviewers, and **Your review**. Then two tabs
+  (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the
+  tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a file (`focusPath`,
+  a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
+  (`navigation.replacePage`), so Back leaves the review, and the page's link follows it: the review alone on its
+  conversation, the review and its file on its changes (`pageLinkTarget`).
+
+## The conversation
+
+- One `cm find changereviewcomment "where reviewid = N order by date asc"` reads everything said on a review
+  (`FOUND_REVIEW_COMMENTS`, `conversationOf`): the comments, each with its kind (`ReviewCommentKind`), the comment it
+  replies to (`{parent}`), where it is (`{revisionid}`, `{itemid}`, `{path}`, `{line}`, `{changeset}`), when it was
+  edited (`{modifieddate}`, the creation date when never edited) and the changeset that applied a change request
+  (`{appliedinchangeset}`). The server writes its own notes among them (`timeline`), their meaning in a prefix of the
+  text: the description is the newest `[description]` one; the others are events (`ReviewEvent`): review requests
+  (`[requested-review-from]a;b`; an older server's `[requested-review-from-<id>]` names no one), a reviewer asked
+  again or removed, a status with what its reviewer said (`[status-reviewed]…`), a rename (`[renamed-title]a#->#b`).
+  What this version doesn't read yet (a merge request's statuses) shows its text (`other`).
+- It reads under the reviews' area (`useReviewConversation`), so every write on a review reads it and the lists again,
+  their counts changing with it (`isAffectedByCodeReviews`), and a focus once stale reads it, as others write on it.
+- The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (edited in place;
+  an emptied one clears it, `cm codereview -e --descriptionfile`), then the threads and the events by when each
+  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Beside it,
+  the reviewers with the status each gave and **Open**: the change requests and questions still open, a click
+  scrolling to each (`ReviewSideRail`).
+- A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
+  deleted starts a thread of its own. One on a line shows its file and line first, a click opening the Changes tab
+  there (`commentLocationPage`), then its kind and where it stands (`threadBadges`), as the server counts open ones:
+  a change request is **Open** until a changeset applies it (**Applied in** its changeset, a chip) or a reply discards
+  it (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no
+  other way to resolve one). Other comments are never open.
+- Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
+  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
+  reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
+  (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+- Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
+  on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
+  comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
+  discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
