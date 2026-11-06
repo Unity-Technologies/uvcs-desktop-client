@@ -46,18 +46,30 @@
 }
 
 /* A comment: its avatar beside it, then who, when and its menu, then what it says. */
-.comment,
-.description {
+.comment {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-3);
 }
 
+/* The description opens the review: its band takes the accent's tint, a comment's stays neutral. */
 .description {
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-subtle));
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
+}
+
+.descriptionHeader {
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-subtle));
+  background: var(--accent-soft);
+  color: var(--text-secondary);
+}
+
+.descriptionBody {
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .commentBody {

@@ -27,22 +27,24 @@ export function ReviewDescriptionCard({ review, description }: { review: CodeRev
 
   return (
     <article className={styles.description} aria-label="Description">
-      <Avatar user={header.author} size={28} />
-      <div className={styles.commentBody}>
-        <header className={styles.commentHeader}>
-          <span className={styles.author}>{displayName(header.author)}</span>
-          <RelativeTime date={header.date} />
-          {header.editedDate && (
-            <span className={styles.edited} data-tip={`Edited ${formatDateTime(header.editedDate)}`}>
-              edited
-            </span>
-          )}
-          {!editing && (
-            <span className={styles.commentMenu}>
-              <IconButton size="small" icon={<Pencil size={13} />} label={header.editLabel} onClick={() => setEditing(true)} />
-            </span>
-          )}
-        </header>
+      {/* An accent band, not a comment's neutral one: the description opens the review and reads apart from what follows. */}
+      <header className={`${styles.commentHeader} ${styles.descriptionHeader}`}>
+        <Avatar user={header.author} size={20} />
+        <span className={styles.author}>{displayName(header.author)}</span>
+        <span>{header.action}</span>
+        <RelativeTime date={header.date} />
+        {header.editedDate && (
+          <span className={styles.edited} data-tip={`Edited ${formatDateTime(header.editedDate)}`}>
+            edited
+          </span>
+        )}
+        {!editing && (
+          <span className={styles.commentMenu}>
+            <IconButton size="small" icon={<Pencil size={13} />} label={header.editLabel} onClick={() => setEditing(true)} />
+          </span>
+        )}
+      </header>
+      <div className={styles.descriptionBody}>
         {editing ? (
           <CommentComposer
             draftKey={commentDraftKey(placeId(place), 'reviewDescription', review.id)}

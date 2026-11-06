@@ -81,7 +81,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   What this version doesn't read yet (a merge request's statuses) shows its text (`other`).
 - It reads under the reviews' area (`useReviewConversation`), so every write on a review reads it and the lists again,
   their counts changing with it (`isAffectedByCodeReviews`), and a focus once stale reads it, as others write on it.
-- The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (edited in place;
+- The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (its band in the
+  accent's tint, apart from the comments' neutral ones, saying who "wrote the description" or "opened the review",
+  `descriptionHeader`; edited in place;
   an emptied one clears it, `cm codereview -e --descriptionfile`), then the threads and the events by when each
   started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Oldest first
   is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
