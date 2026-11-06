@@ -50,6 +50,16 @@
 .othersLabel {
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.picked {
+  display: inline-flex;
+}
+
+/* The avatars spread over the label beside them: it steps aside while they do, so neither reads through the other. */
+.others:has(.picked:hover) .othersLabel {
+  opacity: 0;
 }
 
 .chevron {

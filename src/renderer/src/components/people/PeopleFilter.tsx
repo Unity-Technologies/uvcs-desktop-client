@@ -41,7 +41,9 @@ export function PeopleFilter({ value, onChange, people, mineTip }: PeopleFilterP
           >
             {others.length > 0 ? (
               <>
-                <AvatarStack avatars={stackedPeople(others)} size={16} />
+                <span className={styles.picked}>
+                  <AvatarStack avatars={stackedPeople(others)} size={16} />
+                </span>
                 <span className={styles.othersLabel}>{othersLabel(others)}</span>
               </>
             ) : (
