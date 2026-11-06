@@ -2,6 +2,7 @@ import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/cod
 import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { linkCopyText } from '../../app/links/linkTo';
+import { navigation } from '../../app/navigation/navigationStore';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -62,6 +63,9 @@ export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEnt
   return groupedMenu([
     menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
     copySubmenu('Code review', codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
-    menuAction('delete', () => void deleteReviews(place, [review])),
+    // Its page has nothing left to show once it's gone: back to where the user came from.
+    menuAction('delete', async () => {
+      if (await deleteReviews(place, [review])) navigation.goBack();
+    }),
   ]);
 }

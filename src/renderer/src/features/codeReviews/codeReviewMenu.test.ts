@@ -4,6 +4,8 @@ import { whereTheWindowIs } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+
 const ran = vi.hoisted(() => [] as string[]);
 vi.mock('../branches/branchOperations', async (importOriginal) => ({
   ...(await importOriginal<object>()),
