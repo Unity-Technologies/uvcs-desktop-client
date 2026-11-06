@@ -57,7 +57,10 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
           <li key={reviewer.name} className={styles.reviewer}>
             <ReviewStatusIcon status={reviewer.status} label={reviewer.status} />
             {isGroup(reviewer.name, groups) ? <GroupAvatar size={20} tip="Group" /> : <Avatar user={reviewer.name} size={20} />}
-            <span className={styles.reviewerName}>{reviewerLabel(reviewer.name, groups)}</span>
+            <span className={styles.reviewerName}>
+              {reviewerLabel(reviewer.name, groups)}
+              {isGroup(reviewer.name, groups) && <span className="visually-hidden"> (group)</span>}
+            </span>
             {isAuthor(review, reviewer.name) && <span className={styles.pill}>Author</span>}
             <span className={styles.reviewerActions}>
               {canReRequest(reviewer, user) && (
