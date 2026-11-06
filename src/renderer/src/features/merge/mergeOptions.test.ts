@@ -71,10 +71,16 @@ describe('offersMergingAgain', () => {
 });
 
 describe('nothingToMergeAction', () => {
-  it('offers to merge again ignoring merge tracking, or to go back to the merge without options, or nothing', () => {
-    expect(nothingToMergeAction(cherryPick)).toBe('mergeAgain');
-    expect(nothingToMergeAction({ ...merge, ancestorSpec: 'cs:3' })).toBe('withoutOptions');
-    expect(nothingToMergeAction({ ...cherryPick, ignoreMergeTracking: true })).toBe('withoutOptions');
+  it('offers to merge the changes again, ignoring merge tracking, where the merge can', () => {
+    expect(nothingToMergeAction(cherryPick)).toEqual({ label: 'Merge them again', request: { ...cherryPick, ignoreMergeTracking: true } });
+  });
+
+  it('offers to go back to the merge without its options once they are set', () => {
+    expect(nothingToMergeAction({ ...merge, ancestorSpec: 'cs:3' })).toEqual({ label: 'Merge without options', request: merge });
+    expect(nothingToMergeAction({ ...cherryPick, ignoreMergeTracking: true })).toEqual({ label: 'Merge without options', request: cherryPick });
+  });
+
+  it('offers nothing to a merge with no options to change', () => {
     expect(nothingToMergeAction(merge)).toBeNull();
   });
 });
