@@ -90,7 +90,8 @@
 
 .comment:hover .commentMenu,
 .description:hover .commentMenu,
-.commentMenu:focus-within {
+.commentMenu:focus-within,
+.commentMenu:has([aria-expanded='true']) {
   opacity: 1;
 }
 

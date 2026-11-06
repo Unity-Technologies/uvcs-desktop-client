@@ -4,7 +4,7 @@ import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useState } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
-import { Markdown } from '../../../components/Markdown';
+import { CommentLine } from '../../../components/comments/CommentLine';
 import { Button } from '../../../ui/Button';
 import { CommentComposer } from './CommentComposer';
 import { canDiscard } from './commentPermissions';
@@ -49,7 +49,7 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
             {badges.state && (
               <span className={styles.stateBadge} data-tone={badges.state.tone}>
                 {badges.state.label}
-                {badges.appliedIn !== undefined && <Markdown text={`cs:${badges.appliedIn}`} comment />}
+                {badges.appliedIn !== undefined && <CommentLine comment={`cs:${badges.appliedIn}`} />}
               </span>
             )}
           </span>

@@ -1,9 +1,9 @@
 import type { DiffTarget } from '@shared/domain/diff';
-import { openingTab } from '../../features/codeReviews/reviewTab';
 import { shortBranchName } from '@shared/domain/specs';
 import type { LinkLines, LinkObject } from '@shared/links/link';
 import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
 import type { ShownRevision } from '../../features/history/shownRevision';
+import { openingTab } from '../../features/codeReviews/reviewTab';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
 import { LINK_VIEW_IDS, type LinkTarget } from './linkNavigation';
