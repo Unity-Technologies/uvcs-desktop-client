@@ -43,8 +43,8 @@ export function MergeOptionsMenu({ request, labels, offered, contributor, onCont
       width={340}
       align="end"
       trigger={
-        <Button variant="ghost" size="small" icon={<SlidersHorizontal size={13} />} className={styles.trigger} data-changed={changed || undefined}>
-          Merge options
+        <Button variant="ghost" size="small" icon={<SlidersHorizontal size={13} />} className={styles.trigger} data-changed={changed || undefined} title="Merge options" aria-label="Merge options">
+          <span className={styles.triggerLabel}>Merge options</span>
         </Button>
       }
     >

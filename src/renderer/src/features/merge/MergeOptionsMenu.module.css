@@ -2,6 +2,13 @@
   color: var(--accent-text);
 }
 
+/* Narrow, the merge header (a size container) keeps the icon only, so the merge buttons after it keep their room. */
+@container (max-width: 960px) {
+  .triggerLabel {
+    display: none;
+  }
+}
+
 .options {
   display: flex;
   flex-direction: column;
