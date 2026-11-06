@@ -13,19 +13,31 @@ import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { changesOwnStatus, isReviewer, reviewerNames } from './reviewers';
+import { changesOwnStatus, isReviewer, reviewerNames, type ReviewerChanges } from './reviewers';
+
+/** How the user's own status is set: who they are when already known, what they say, whether they agreed to join. */
+export interface OwnStatusOptions {
+  /** Who the user is, when the caller knows already; otherwise read from the place's server. */
+  user?: string;
+  /** What they say about it, sent with the status. */
+  comment?: string;
+  /** The user was told already that they'll be added as a reviewer (the page's popover says so): no question asked. */
+  joiningAgreed?: boolean;
+}
 
 /**
- * Sets the user's own status on a review, unless it's the one they gave already. Only reviewers give one, so a user
- * known not to be one yet is asked to join first: both happen at once. A user not known (their account still being
- * read) sets it as they are: the server takes it from a reviewer or a member of a reviewer group, and says why not to
- * anyone else.
+ * Sets the user's own status on a review, with what they say about it, unless it's the one they gave already and they
+ * say nothing. Only reviewers give one, so a user known not to be one yet is asked to join first (unless they agreed
+ * already): both happen at once. A user not known (their account still being read) sets it as they are: the server
+ * takes it from a reviewer or a member of a reviewer group, and says why not to anyone else.
  */
-export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, knownUser?: string): Promise<void> {
-  const user = knownUser ?? (await placeUser(place));
-  if (!changesOwnStatus(review, user, status)) return;
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, options: OwnStatusOptions = {}): Promise<void> {
+  const user = options.user ?? (await placeUser(place));
+  const comment = options.comment?.trim() ? options.comment : undefined;
+  // What they say is worth sending even with the status they gave already: it's a note on the review.
+  if (!changesOwnStatus(review, user, status) && !comment) return;
   const joining = user !== undefined && !isReviewer(review, user) ? user : undefined;
-  if (joining) {
+  if (joining && !options.joiningAgreed) {
     const confirmed = await confirm({
       title: `Mark as “${status}”`,
       message: "You aren't one of its reviewers yet. You'll be added as one.",
@@ -38,7 +50,7 @@ export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary
     "Couldn't change your review status",
     async () => {
       if (joining) await api.codeReviews.addReviewers(place, review.id, [joining]);
-      await api.codeReviews.setOwnStatus(place, review.id, status);
+      await api.codeReviews.setOwnStatus(place, review.id, status, ...(comment ? [comment] : []));
     },
     isAffectedByCodeReviews,
   );
@@ -70,6 +82,29 @@ export async function addReviewers(place: Place, review: CodeReviewSummary): Pro
   const users = typed === undefined ? [] : reviewerNames(typed);
   if (users.length === 0) return;
   await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
+}
+
+/** Adds and removes reviewers as the reviewer picker left them: one command for those added, one for those removed. */
+export async function changeReviewers(place: Place, review: Pick<CodeReviewSummary, 'id'>, { add, remove }: ReviewerChanges): Promise<void> {
+  if (add.length === 0 && remove.length === 0) return;
+  await runAction(
+    place,
+    "Couldn't change the reviewers",
+    async () => {
+      if (add.length > 0) await api.codeReviews.addReviewers(place, review.id, add);
+      if (remove.length > 0) await api.codeReviews.removeReviewers(place, review.id, remove);
+    },
+    isAffectedByCodeReviews,
+  );
+}
+
+export async function removeReviewer(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: string): Promise<void> {
+  await runAction(place, "Couldn't remove the reviewer", () => api.codeReviews.removeReviewers(place, review.id, [reviewer]), isAffectedByCodeReviews);
+}
+
+/** Asks a reviewer to review it again: their status goes back to "Under review". */
+export async function reRequestReview(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: string): Promise<void> {
+  await runAction(place, "Couldn't ask for a review again", () => api.codeReviews.reRequestReview(place, review.id, [reviewer]), isAffectedByCodeReviews);
 }
 
 /** Gives the review a new title; resolves to whether it did. */

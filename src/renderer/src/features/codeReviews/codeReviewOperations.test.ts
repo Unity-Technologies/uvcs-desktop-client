@@ -12,7 +12,7 @@ import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { addReviewers, deleteReviews, renameReview, setOwnReviewStatus } from './codeReviewOperations';
+import { addReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -80,7 +80,7 @@ describe('setting your own review status', () => {
   it('takes the user the page already knows, reading no account', async () => {
     fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
 
-    await setOwnReviewStatus(inWs, review('ana'), 'Rework required', 'ana');
+    await setOwnReviewStatus(inWs, review('ana'), 'Rework required', { user: 'ana' });
 
     expect(fakeApi.methods()).toEqual(['codeReviews.setOwnStatus']);
   });
@@ -92,6 +92,75 @@ describe('setting your own review status', () => {
     await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
 
     expect(fakeApi.methods()).toEqual(['accounts.list', 'system.currentUser']);
+  });
+});
+
+describe('setting your own review status with a comment', () => {
+  it('sends what the reviewer says with their status', async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed', { user: 'ana', comment: 'Ship it' });
+
+    expect(fakeApi.argsOf('codeReviews.setOwnStatus')).toEqual([[inWs, 31, 'Reviewed', 'Ship it']]);
+  });
+
+  it('sends a comment even with the status the reviewer gave already, and nothing without one', async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Under review', { user: 'ana', comment: 'Looking again' });
+    await setOwnReviewStatus(inWs, review('ana'), 'Under review', { user: 'ana', comment: '  ' });
+
+    expect(fakeApi.argsOf('codeReviews.setOwnStatus')).toEqual([[inWs, 31, 'Under review', 'Looking again']]);
+  });
+});
+
+describe('joining as a reviewer from the page', () => {
+  it('asks nothing of a user told already they will be added, and adds them before their status', async () => {
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed', { user: 'eva', joiningAgreed: true });
+
+    expect(askedDialogs()).toEqual([]);
+    expect(fakeApi.methods()).toEqual(['codeReviews.addReviewers', 'codeReviews.setOwnStatus']);
+  });
+});
+
+describe('changing the reviewers', () => {
+  it('adds and removes with one call each, reading only the reviews again', async () => {
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
+    fakeApi.answer('codeReviews.removeReviewers', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await changeReviewers(inWs, review('ana'), { add: ['carl', 'dana'], remove: ['ana'] });
+
+    expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
+      ['codeReviews.addReviewers', 31, ['carl', 'dana']],
+      ['codeReviews.removeReviewers', 31, ['ana']],
+    ]);
+    expect(refreshed()).toEqual(['codeReviews']);
+  });
+
+  it('asks nothing when the picker changed nothing, and only what changed otherwise', async () => {
+    fakeApi.answer('codeReviews.removeReviewers', () => undefined);
+
+    await changeReviewers(inWs, review('ana'), { add: [], remove: [] });
+    await changeReviewers(inWs, review('ana'), { add: [], remove: ['ana'] });
+
+    expect(fakeApi.methods()).toEqual(['codeReviews.removeReviewers']);
+  });
+
+  it('removes one reviewer, or asks one to review again', async () => {
+    fakeApi.answer('codeReviews.removeReviewers', () => undefined);
+    fakeApi.answer('codeReviews.reRequestReview', () => undefined);
+
+    await removeReviewer(inWs, review('ana'), 'ana');
+    await reRequestReview(inWs, review('ana'), 'ana');
+
+    expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
+      ['codeReviews.removeReviewers', 31, ['ana']],
+      ['codeReviews.reRequestReview', 31, ['ana']],
+    ]);
   });
 });
 

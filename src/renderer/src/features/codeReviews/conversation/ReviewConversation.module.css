@@ -408,7 +408,7 @@
 }
 
 .reviewerName {
-  flex: 1;
+  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -466,5 +466,55 @@
 
 .foldedLine .author {
   flex: none;
+  white-space: nowrap;
+}
+
+.railHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  margin: -4px 0;
+}
+
+.authorTag {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 16px;
+}
+
+/* Asking again and removing show under the pointer, or once a key reaches them. */
+.reviewerActions {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.reviewer:hover .reviewerActions,
+.reviewerActions:focus-within {
+  opacity: 1;
+}
+
+.pickerName {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerStored {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }

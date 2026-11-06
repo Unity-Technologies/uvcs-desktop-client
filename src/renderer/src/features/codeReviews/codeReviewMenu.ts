@@ -45,11 +45,23 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
           id: `yourReview.${status}`,
           label: status,
           checked: status === ownStatus(single, user),
-          run: () => void setOwnReviewStatus(place, single, status, user),
+          run: () => void setOwnReviewStatus(place, single, status, { user }),
         })),
       ),
     single && menuAction('addReviewers', () => void addReviewers(place, single)),
     single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
+  ]);
+}
+
+/**
+ * The menu of a review's own page, its header's ⋯: what the page doesn't show already (its status, reviewers and the
+ * reviewed code have their own controls), so deleting it stays out of the way.
+ */
+export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEntry[] {
+  return groupedMenu([
+    menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
+    copySubmenu('Code review', codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    menuAction('delete', () => void deleteReviews(place, [review])),
   ]);
 }

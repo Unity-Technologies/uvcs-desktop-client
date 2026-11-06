@@ -59,3 +59,39 @@ export function changesOwnStatus(review: Pick<CodeReviewSummary, 'reviewers'>, u
 export function reviewerNames(typed: string): string[] {
   return [...new Set(typed.split(',').map((name) => name.trim()).filter(Boolean))];
 }
+
+/** What picking reviewers changes: who to add, who to remove, by name as `cm` writes them. */
+export interface ReviewerChanges {
+  add: string[];
+  remove: string[];
+}
+
+/** The reviewers to add and remove for `picked` to be the review's reviewers: none when they already are. */
+export function reviewerChanges(reviewers: readonly CodeReviewer[], picked: readonly string[]): ReviewerChanges {
+  const current = new Set(reviewers.map((reviewer) => reviewer.name.toLowerCase()));
+  const chosen = new Set(picked.map((name) => name.toLowerCase()));
+  return {
+    add: picked.filter((name) => !current.has(name.toLowerCase())),
+    remove: reviewers.filter((reviewer) => !chosen.has(reviewer.name.toLowerCase())).map((reviewer) => reviewer.name),
+  };
+}
+
+/**
+ * Who the reviewer picker offers: the review's reviewers first, as they were when it opened (rows don't jump while
+ * picking), then the server's other users by the name shown. A reviewer the server doesn't list (a group) still shows.
+ */
+export function offeredReviewers(users: readonly string[], reviewers: readonly CodeReviewer[]): string[] {
+  const named = new Set(reviewers.map((reviewer) => reviewer.name.toLowerCase()));
+  const others = users.filter((user) => !named.has(user.toLowerCase())).sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  return [...reviewers.map((reviewer) => reviewer.name), ...others];
+}
+
+/** Whether a reviewer can be asked to review again: once they gave a status, which asking puts back to "Under review". */
+export function canReRequest(reviewer: CodeReviewer): boolean {
+  return reviewer.status !== 'Under review';
+}
+
+/** Whether a reviewer is the review's author, who may review their own changes too. */
+export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, reviewer: CodeReviewer): boolean {
+  return reviewer.name.toLowerCase() === review.owner.toLowerCase();
+}
