@@ -21,18 +21,20 @@ interface CommentComposerProps {
   onCancel?: () => void;
   /** A comment may be saved empty (a description, cleared). */
   allowEmpty?: boolean;
+  /** The text goes with something else (a status): sendable empty, as it opened. */
+  optional?: boolean;
   autoFocus?: boolean;
   danger?: boolean;
 }
 
 /** The rich editor of a review's comments, as every comment in the app is written; ⌘↵ sends. */
-export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, autoFocus, danger }: CommentComposerProps) {
+export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger }: CommentComposerProps) {
   const draft = useCommentDraftStore((state) => state.drafts[draftKey]);
   const keep = useCommentDraftStore((state) => state.keep);
   const forget = useCommentDraftStore((state) => state.forget);
   const [sending, setSending] = useState(false);
   const text = composerText(draft, initialText);
-  const sendable = isSendable(text, initialText, allowEmpty);
+  const sendable = isSendable(text, initialText, allowEmpty, optional);
 
   const send = async (): Promise<void> => {
     if (!sendable || sending) return;

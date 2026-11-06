@@ -26,3 +26,10 @@ describe('isSendable', () => {
     expect(isSendable('', 'Why', false)).toBe(false);
   });
 });
+
+describe('an optional text', () => {
+  it('is always sendable, empty or as it opened', () => {
+    expect(isSendable('', '', false, true)).toBe(true);
+    expect(isSendable('LGTM', '', false, true)).toBe(true);
+  });
+});
