@@ -24,16 +24,23 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   Whether the user is a reviewer goes by name (`isReviewer`, `ownStatus`): a member of a reviewer group isn't known to
   be one, so they are added as a user, as the server does itself when a group member sets a status.
 - **Groups** are reviewers as users are: picked, shown, removed and asked again. `cm find review` prints a reviewer's
-  name only (`{reviewers}`, the same for a user and a group), and `cm codereview reviewer list`, which prints each
-  one's type, reads one review at a time; so the server's groups (`cm listusers <server> --onlygroups`, read once and
-  kept, the list Permissions and the picker read too: `useReviewerGroups`, `reviewerGroups`) tell a group from a user
-  by name, whatever its case (`isGroup`, `reviewerRef`). A group shows the group icon where a user shows their avatar
+  name only (`{reviewers}`, the same for a user and a group). `cm codereview reviewer list <id> --format` prints each
+  one's type (`{user}`, `{status}`, `{type}`: `user` or `group`, never translated; `LISTED_REVIEWERS`), one review at a
+  time: the review's page reads it for its review (`CodeReviewsApi.reviewers`, `useReviewersOf`, one command read
+  with the page's other reads and again whenever the reviews are; never per row of a list), and so does the list's
+  Change reviewers dialog for the review it opens on. Where that type is read (`CodeReviewer.kind`), it decides: the
+  page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
+  groups too. Elsewhere (the list's stack, the picker's offered groups, the new-review dialog) the server's groups
+  (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
+  `useReviewerGroups`, `reviewerGroups`) tell a group from a user by name, whatever its case (`isGroup`,
+  `reviewerRef`). A group shows the group icon where a user shows their avatar
   (`GroupAvatar`: the reviewers' stack, the review's page, the picker), its name as the server writes it
   (`reviewerLabel`), and its tooltip says it's a group (`reviewerText`). Every command names a group in `--groups` and
   a user in `--users`, both in one command when both change (`reviewersOptions`): `cm` looks a name up among its
-  option's kind only, and a group in `--users` fails ("No such user"). A server that lists no groups (one that takes
-  the names its system knows), or whose directory refuses the whole list (a size limit), has its group reviewers read
-  as users, and removing one fails with a toast; a group found there by a search is still added as one. A refused list
+  option's kind only, and a group in `--users` fails ("No such user"). On a server that lists no groups (one that
+  takes the names its system knows), or whose directory refuses the whole list (a size limit), the list's stack shows a
+  group reviewer as a user (only its page knows better), and the picker finds groups only by a search, adding one as a
+  group. A refused list
   is asked once, not again by each row that shows reviewers (`MEMBER_NAMES_QUERY`, `retryOnMount: false`). A user and
   a group of the same name read as the group.
 - **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users and groups
