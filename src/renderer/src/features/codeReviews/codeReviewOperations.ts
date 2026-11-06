@@ -72,6 +72,11 @@ export async function addReviewers(place: Place, review: CodeReviewSummary): Pro
   await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
 }
 
+/** Gives the review a new title; resolves to whether it did. */
+export function renameReview(place: Place, reviewId: number, title: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't rename the review", () => api.codeReviews.rename(place, reviewId, title), isAffectedByCodeReviews);
+}
+
 /** Resolves to true when the reviews were deleted. */
 export async function deleteReviews(place: Place, reviews: CodeReviewSummary[]): Promise<boolean> {
   const confirmed = await confirm({

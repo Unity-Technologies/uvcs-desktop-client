@@ -11,7 +11,6 @@ import {
   deleteReviewComment,
   discardChangeRequest,
   editReviewComment,
-  renameReview,
   replyToComment,
   saveReviewDescription,
 } from './reviewCommentOperations';
@@ -21,8 +20,8 @@ const inWs = workspacePlace(ws);
 const comment = { guid: 'c1' };
 
 describe('writing on a review', () => {
-  it('adds, replies, discards, edits, describes and renames, each with one call', async () => {
-    for (const method of ['reviewComments.add', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.setDescription', 'codeReviews.rename'] as const) {
+  it('adds, replies, discards, edits and describes, each with one call', async () => {
+    for (const method of ['reviewComments.add', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.setDescription'] as const) {
       fakeApi.answer(method, () => undefined);
     }
 
@@ -31,7 +30,6 @@ describe('writing on a review', () => {
     expect(await discardChangeRequest(inWs, comment, 'cm calls it target')).toBe(true);
     expect(await editReviewComment(inWs, comment, 'Nicer')).toBe(true);
     expect(await saveReviewDescription(inWs, 41, '')).toBe(true);
-    expect(await renameReview(inWs, 41, 'Switching keeps changes')).toBe(true);
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
       ['reviewComments.add', 41, 'Nice'],
@@ -39,7 +37,6 @@ describe('writing on a review', () => {
       ['reviewComments.reply', 'c1', 'cm calls it target', { discard: true }],
       ['reviewComments.edit', 'c1', 'Nicer'],
       ['reviewComments.setDescription', 41, ''],
-      ['codeReviews.rename', 41, 'Switching keeps changes'],
     ]);
   });
 

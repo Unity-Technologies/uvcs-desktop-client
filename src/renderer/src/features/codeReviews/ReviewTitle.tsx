@@ -7,7 +7,7 @@ import { CommentField } from '../../components/commentEditor/CommentField';
 import { oneLineText } from '../../components/commentEditor/commentFieldText';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
-import { renameReview } from './conversation/reviewCommentOperations';
+import { renameReview } from './codeReviewOperations';
 import { titleToSave } from './reviewTitleEdit';
 import styles from './CodeReviewPage.module.css';
 

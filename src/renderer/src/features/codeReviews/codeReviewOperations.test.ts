@@ -12,7 +12,7 @@ import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { addReviewers, deleteReviews, setOwnReviewStatus } from './codeReviewOperations';
+import { addReviewers, deleteReviews, renameReview, setOwnReviewStatus } from './codeReviewOperations';
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -112,6 +112,16 @@ describe('review operations', () => {
     await addReviewers(inWs, review('ana'));
 
     expect(fakeApi.methods()).toEqual([]);
+  });
+
+  it('renames a review with one call, reading only the reviews again', async () => {
+    fakeApi.answer('codeReviews.rename', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    expect(await renameReview(inWs, 31, 'Switching keeps changes')).toBe(true);
+
+    expect(fakeApi.argsOf('codeReviews.rename')).toEqual([[inWs, 31, 'Switching keeps changes']]);
+    expect(refreshed()).toEqual(['codeReviews']);
   });
 
   it('deletes the reviews picked in one call, and tells it did', async () => {

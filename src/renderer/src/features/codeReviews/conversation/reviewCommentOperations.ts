@@ -34,7 +34,3 @@ export async function deleteReviewComment(place: Place, comment: Pick<ReviewComm
 export function saveReviewDescription(place: Place, reviewId: number, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't save the description", () => api.reviewComments.setDescription(place, reviewId, text), isAffectedByCodeReviews);
 }
-
-export function renameReview(place: Place, reviewId: number, title: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't rename the review", () => api.codeReviews.rename(place, reviewId, title), isAffectedByCodeReviews);
-}
