@@ -20,7 +20,9 @@ import {
   MAX_PER_SECTION,
   paletteBranches,
   paletteGroups,
+  reviewNumberToLookUp,
   searchesServerFor,
+  UNLIKELY_CHANGESET_QUALITY,
   type CachedLists,
   type ChangesetSearch,
   type DescribedList,
@@ -204,12 +206,11 @@ describe('paletteGroups with a search', () => {
     ]);
   });
 
-  it('reads a number as an id only after its own prefix: alone, it is searched for as text', () => {
-    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4K textures')], codeReviews: [review(311, 'Login screen')] };
+  it("reads a number after another kind's prefix as that kind's only", () => {
+    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4K textures')], codeReviews: [review(4, 'Login screen')] };
 
     expect(labelsIn(groupsFor({ typed: 'sh:4', lists }), 'codeReviews')).toEqual([]);
-    expect(labelsIn(groupsFor({ typed: '311', lists }), 'codeReviews')).toEqual([]);
-    expect(labelsIn(groupsFor({ typed: 'cr:4', lists }), 'codeReviews')).toEqual(['Code review 4']);
+    expect(labelsIn(groupsFor({ typed: 'cr:5', lists }), 'codeReviews')).toEqual(['Code review 5']);
   });
 
   it('opens a shelve or code review by its number when the lists read hold none by it, older than they reach', () => {
@@ -402,6 +403,84 @@ describe('paletteGroups for a changeset number', () => {
 
   it('opens an older changeset by number alone, and offers no search of every comment', () => {
     expect(labelsIn(groupsFor({ term: '77', lists: { changesets: [] } }), 'changesets')).toEqual(['Changeset 77']);
+  });
+});
+
+describe('paletteGroups for a number alone', () => {
+  const resultsIn = (groups: SearchGroup[], section: string) => groups.find((group) => group.section === section)?.results ?? [];
+  const firstRowOf = (groups: SearchGroup[]) => rankGroups(groups)[0]?.results[0]?.label;
+
+  it('names the code review with that number among the newest read, first in its section and as a full match', () => {
+    const groups = groupsFor({ typed: '311', lists: { codeReviews: [review(3110, 'Review 311 fixes'), review(311, 'Login screen')] } });
+
+    expect(resultsIn(groups, 'codeReviews').map((result) => [result.label, result.quality])).toEqual([
+      ['Login screen', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+    expect(labelsIn(groups, 'changesets')).toEqual(['Changeset 311']);
+  });
+
+  it('names an older review once the server found it by its number, for the term typed now', () => {
+    const groups = groupsFor({ typed: '31392466', lists: { codeReviews: [] }, server: { reviewNumbered: [review(31392466, 'Update report dialog')] } });
+
+    expect(resultsIn(groups, 'codeReviews').map((result) => [result.label, result.quality])).toEqual([['Update report dialog', 1]]);
+    expect(labelsIn(groupsFor({ typed: '31392466', lists: { codeReviews: [] }, server: { term: '3139246', reviewNumbered: [review(3139246, 'Older')] } }), 'codeReviews')).toEqual([]);
+  });
+
+  it("offers no review for a number no review has, nor while the server hasn't answered: no row that opens to an error", () => {
+    expect(sections(groupsFor({ typed: '77', lists: { codeReviews: [] }, server: { reviewNumbered: [] } }))).not.toContain('codeReviews');
+    expect(sections(groupsFor({ typed: '77', lists: { codeReviews: [] } }))).not.toContain('codeReviews');
+  });
+
+  it('shows its title after `cr:` once the server found it, and its number alone until then', () => {
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] }, server: { reviewNumbered: [review(900, 'Old login')] } }), 'codeReviews')).toEqual(['Old login']);
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] } }), 'codeReviews')).toEqual(['Code review 900']);
+  });
+
+  it('names the shelve with that number among those read first, and none it has not read', () => {
+    const shelves = [shelve(40, 'Forty'), shelve(4, 'Four')];
+
+    expect(resultsIn(groupsFor({ typed: '4', lists: { shelves } }), 'shelves').map((result) => [result.label, result.quality])).toEqual([
+      ['Four', 1],
+      ['Forty', expect.any(Number)],
+    ]);
+    expect(labelsIn(groupsFor({ typed: '5', lists: { shelves } }), 'shelves')).toEqual([]);
+  });
+
+  it('puts the changeset first when the number is a recent changeset, or one older than the newest read', () => {
+    const codeReviews = [review(120, 'Login screen')];
+
+    expect(firstRowOf(groupsFor({ typed: '120', lists: { changesets: [changeset(120, 'Recent work')], codeReviews } }))).toBe('Recent work');
+    expect(firstRowOf(groupsFor({ typed: '120', lists: { changesets: [changeset(500, 'Newest')], codeReviews } }))).toBe('Changeset 120');
+  });
+
+  it('puts the review or shelve first when the number is past the newest changeset read, the changeset still offered', () => {
+    const lists = { changesets: [changeset(281411, 'Newest')], codeReviews: [review(31392466, 'Update report dialog')] };
+    const groups = groupsFor({ typed: '31392466', lists });
+
+    expect(firstRowOf(groups)).toBe('Update report dialog');
+    expect(resultsIn(groups, 'changesets').map((result) => [result.label, result.quality])).toEqual([['Changeset 31392466', UNLIKELY_CHANGESET_QUALITY]]);
+    expect(firstRowOf(groupsFor({ typed: '290000', lists: { ...lists, shelves: [shelve(290000, 'Shelved')] } }))).toBe('Shelved');
+  });
+
+  it('keeps a changeset asked for with `cs:` a full match, and names no review or shelve by it', () => {
+    const groups = groupsFor({ typed: 'cs:400', lists: { changesets: [changeset(300, 'Newest')], codeReviews: [review(400, 'Login')], shelves: [shelve(400, 'Shelved')] } });
+
+    expect(groups.map((group) => [group.section, group.results.map((result) => [result.label, result.quality])])).toEqual([['changesets', [['Changeset 400', 1]]]]);
+  });
+});
+
+describe('reviewNumberToLookUp', () => {
+  it('asks the server about a number alone or after `cr:` that the newest reviews read lack', () => {
+    expect(reviewNumberToLookUp('311', 'all', [])).toBe(311);
+    expect(reviewNumberToLookUp('311', 'codeReviews', undefined)).toBe(311);
+  });
+
+  it('asks nothing for a review read, another kind, or text', () => {
+    expect(reviewNumberToLookUp('311', 'all', [{ id: 311 }])).toBeUndefined();
+    expect(reviewNumberToLookUp('311', 'changesets', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('311 login', 'all', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('cs:311', 'all', [])).toBeUndefined();
   });
 });
 
