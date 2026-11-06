@@ -27,15 +27,16 @@ export interface OwnStatusOptions {
 
 /**
  * Sets the user's own status on a review, with what they say about it, unless it's the one they gave already and they
- * say nothing. Only reviewers give one, so a user known not to be one yet is asked to join first (unless they agreed
+ * say nothing; resolves to whether it's set (false when the server refused it or the user said no), so what they
+ * wrote is kept to try again. Only reviewers give one, so a user known not to be one yet is asked to join first (unless they agreed
  * already): both happen at once. A user not known (their account still being read) sets it as they are: the server
  * takes it from a reviewer or a member of a reviewer group, and says why not to anyone else.
  */
-export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, options: OwnStatusOptions = {}): Promise<void> {
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, options: OwnStatusOptions = {}): Promise<boolean> {
   const user = options.user ?? (await placeUser(place));
   const comment = options.comment?.trim() ? options.comment : undefined;
   // What they say is worth sending even with the status they gave already: it's a note on the review.
-  if (!changesOwnStatus(review, user, status) && !comment) return;
+  if (!changesOwnStatus(review, user, status) && !comment) return true;
   const joining = user !== undefined && !isReviewer(review, user) ? user : undefined;
   if (joining && !options.joiningAgreed) {
     const confirmed = await confirm({
@@ -43,9 +44,9 @@ export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary
       message: "You aren't one of its reviewers yet. You'll be added as one.",
       confirmLabel: 'Add me and mark',
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
   }
-  await runAction(
+  return runVoidAction(
     place,
     "Couldn't change your review status",
     async () => {

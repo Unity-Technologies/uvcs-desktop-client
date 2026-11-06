@@ -43,7 +43,7 @@ export function OwnReviewButton({ review }: { review: CodeReview }) {
 function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: string | undefined; onDone: () => void }) {
   const place = usePlace();
   const button = ownReviewButton(review, user);
-  const [status, setStatus] = useState<CodeReviewStatus>(button.status ?? 'Reviewed');
+  const [status, setStatus] = useState<CodeReviewStatus>(button.preselected);
 
   return (
     <div className={styles.ownReviewForm}>
@@ -65,9 +65,10 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
         submitLabel={`Mark as ${status}`}
         optional
         onSubmit={async (comment) => {
-          onDone();
-          await setOwnReviewStatus(place, review, status, { user, comment, joiningAgreed: true });
-          return true;
+          // Closes once set; a status the server refused keeps the popover and what the user wrote, to try again.
+          const set = await setOwnReviewStatus(place, review, status, { user, comment, joiningAgreed: true });
+          if (set) onDone();
+          return set;
         }}
       />
     </div>

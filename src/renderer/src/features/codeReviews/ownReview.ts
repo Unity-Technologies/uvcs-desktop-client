@@ -7,10 +7,12 @@ export interface OwnReviewButtonState {
   status?: CodeReviewStatus;
   /** The user isn't a reviewer yet: setting a status adds them, which the popover says. */
   joining: boolean;
+  /** The status the popover starts on: the one they gave, else Reviewed, what someone opening it most often gives. */
+  preselected: CodeReviewStatus;
 }
 
 export function ownReviewButton(review: Pick<CodeReviewSummary, 'reviewers'>, user: string | undefined): OwnReviewButtonState {
   const status = ownStatus(review, user);
-  if (status) return { label: status, status, joining: false };
-  return { label: 'Review', joining: user !== undefined && !isReviewer(review, user) };
+  if (status) return { label: status, status, joining: false, preselected: status };
+  return { label: 'Review', joining: user !== undefined && !isReviewer(review, user), preselected: 'Reviewed' };
 }
