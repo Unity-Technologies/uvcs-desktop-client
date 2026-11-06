@@ -1,7 +1,6 @@
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import { Avatar } from '../../ui/Avatar';
-import { displayName } from '../../lib/userName';
-import { reviewersText, shownReviewers } from './reviewers';
+import { NO_REVIEWERS, reviewersText, shownReviewers } from './reviewers';
 import styles from './ReviewerStack.module.css';
 
 /**
@@ -9,8 +8,8 @@ import styles from './ReviewerStack.module.css';
  * The tooltip names each with their status.
  */
 export function ReviewerStack({ reviewers }: { reviewers: readonly CodeReviewer[] }) {
-  const { shown, more } = shownReviewers(reviewers);
-  if (shown.length === 0) return <span className={styles.nobody}>Nobody</span>;
+  const { shown, more, soleName } = shownReviewers(reviewers);
+  if (shown.length === 0) return <span className={styles.nobody}>{NO_REVIEWERS}</span>;
 
   return (
     <span className={styles.stack} data-tip={reviewersText(reviewers)} aria-label={reviewersText(reviewers)}>
@@ -20,7 +19,7 @@ export function ReviewerStack({ reviewers }: { reviewers: readonly CodeReviewer[
         </span>
       ))}
       {more > 0 && <span className={styles.more}>+{more}</span>}
-      {shown.length === 1 && <span className={styles.name}>{displayName(shown[0]!.name)}</span>}
+      {soleName && <span className={styles.name}>{soleName}</span>}
     </span>
   );
 }

@@ -114,8 +114,8 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         <span className={styles.ownReviewLabel}>Your review</span>
         <SegmentedControl<CodeReviewStatus>
           label="Your review"
-          value={ownStatus(review, user) ?? 'Under review'}
-          onChange={(status) => void setOwnReviewStatus(place, review, status)}
+          value={ownStatus(review, user)}
+          onChange={(status) => void setOwnReviewStatus(place, review, status, user)}
           segments={CODE_REVIEW_STATUSES.map((status) => ({ value: status, label: status }))}
         />
         <div className={styles.spacer} />

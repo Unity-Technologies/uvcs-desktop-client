@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers } from './reviewers';
+import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -8,12 +8,13 @@ const QA: CodeReviewer = { name: 'qa-team', status: 'Rework required' };
 const EVA: CodeReviewer = { name: 'eva@acme.com', status: 'Under review' };
 
 describe('shownReviewers', () => {
-  it('shows the first few and counts the rest', () => {
+  it('shows the first few and counts the rest, naming none', () => {
     expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], more: 1 });
+    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], more: 0 });
   });
 
-  it('shows everyone when they fit, and nobody for a review nobody was asked to', () => {
-    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], more: 0 });
+  it('names a sole reviewer beside their avatar, and shows nobody for a review nobody was asked to', () => {
+    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], more: 0, soleName: 'Ana' });
     expect(shownReviewers([], 3)).toEqual({ shown: [], more: 0 });
   });
 });
@@ -24,7 +25,7 @@ describe('reviewersText', () => {
   });
 
   it('says when nobody was asked', () => {
-    expect(reviewersText([])).toBe('Nobody asked yet');
+    expect(reviewersText([])).toBe('Nobody');
   });
 });
 
@@ -47,6 +48,18 @@ describe('ownStatus', () => {
   it("is none for a user who isn't a reviewer, or isn't known yet", () => {
     expect(ownStatus({ reviewers: [ANA] }, 'eva@acme.com')).toBeUndefined();
     expect(ownStatus({ reviewers: [ANA] }, undefined)).toBeUndefined();
+  });
+});
+
+describe('changesOwnStatus', () => {
+  it("changes nothing when the user picks the status they gave already", () => {
+    expect(changesOwnStatus({ reviewers: [ANA] }, 'ana@acme.com', 'Reviewed')).toBe(false);
+    expect(changesOwnStatus({ reviewers: [ANA] }, 'ana@acme.com', 'Rework required')).toBe(true);
+  });
+
+  it("changes something for a user who isn't a reviewer, or isn't known yet, whatever they pick", () => {
+    expect(changesOwnStatus({ reviewers: [ANA] }, 'eva@acme.com', 'Under review')).toBe(true);
+    expect(changesOwnStatus({ reviewers: [ANA] }, undefined, 'Under review')).toBe(true);
   });
 });
 

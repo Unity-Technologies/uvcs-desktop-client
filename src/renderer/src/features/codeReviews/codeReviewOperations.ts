@@ -4,7 +4,7 @@ import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/do
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { readServerUser } from '../../app/account/accounts';
+import { cachedServerUser, readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
@@ -13,28 +13,31 @@ import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { isReviewer, reviewerNames } from './reviewers';
+import { changesOwnStatus, isReviewer, reviewerNames } from './reviewers';
 
 /**
- * Sets the user's own status on a review. Only reviewers give one, so a user who isn't one yet is asked to join
- * first: both happen at once.
+ * Sets the user's own status on a review, unless it's the one they gave already. Only reviewers give one, so a user
+ * known not to be one yet is asked to join first: both happen at once. A user not known (their account still being
+ * read) sets it as they are: the server takes it from a reviewer or a member of a reviewer group, and says why not to
+ * anyone else.
  */
-export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
-  const user = await placeUser(place);
-  const joining = !isReviewer(review, user);
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, knownUser?: string): Promise<void> {
+  const user = knownUser ?? (await placeUser(place));
+  if (!changesOwnStatus(review, user, status)) return;
+  const joining = user !== undefined && !isReviewer(review, user) ? user : undefined;
   if (joining) {
     const confirmed = await confirm({
       title: `Mark as “${status}”`,
       message: "You aren't one of its reviewers yet. You'll be added as one.",
       confirmLabel: 'Add me and mark',
     });
-    if (!confirmed || !user) return;
+    if (!confirmed) return;
   }
   await runAction(
     place,
     "Couldn't change your review status",
     async () => {
-      if (joining && user) await api.codeReviews.addReviewers(place, review.id, [user]);
+      if (joining) await api.codeReviews.addReviewers(place, review.id, [joining]);
       await api.codeReviews.setOwnStatus(place, review.id, status);
     },
     isAffectedByCodeReviews,
@@ -43,9 +46,18 @@ export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary
 
 /** Who the user is on the place's server, if already known or quick to read. */
 async function placeUser(place: Place): Promise<string | undefined> {
-  const server =
-    place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
+  const server = placeServer(place);
   return server ? readServerUser(server).catch(() => undefined) : undefined;
+}
+
+/** Who the user is on the place's server, if the window read it already: for menus, which are built at once. */
+export function cachedPlaceUser(place: Place): string | undefined {
+  const server = placeServer(place);
+  return server ? cachedServerUser(server) : undefined;
+}
+
+function placeServer(place: Place): string | undefined {
+  return place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
 }
 
 export async function addReviewers(place: Place, review: CodeReviewSummary): Promise<void> {

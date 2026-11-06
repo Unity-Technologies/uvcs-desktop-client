@@ -60,6 +60,31 @@ describe('setting your own review status', () => {
     ]);
   });
 
+  it('sends nothing when the user picks the status they gave already', async () => {
+    signedInAs('ana');
+
+    await setOwnReviewStatus(inWs, codeReviewSummary({ id: 31, reviewers: [{ name: 'ana', status: 'Reviewed' }] }), 'Reviewed');
+
+    expect(fakeApi.methods().filter((method) => method.startsWith('codeReviews.'))).toEqual([]);
+  });
+
+  it("sets the status as the user is when they can't be read yet, asking nothing, so the server answers", async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Reviewed');
+
+    expect(askedDialogs()).toEqual([]);
+    expect(fakeApi.argsOf('codeReviews.setOwnStatus')).toEqual([[inWs, 31, 'Reviewed']]);
+  });
+
+  it('takes the user the page already knows, reading no account', async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    await setOwnReviewStatus(inWs, review('ana'), 'Rework required', 'ana');
+
+    expect(fakeApi.methods()).toEqual(['codeReviews.setOwnStatus']);
+  });
+
   it("changes nothing when a user who isn't a reviewer declines", async () => {
     signedInAs('eva');
     answerConfirms(false);

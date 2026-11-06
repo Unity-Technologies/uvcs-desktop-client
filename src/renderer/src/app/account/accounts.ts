@@ -49,6 +49,13 @@ export async function readServerUser(server: string): Promise<string> {
   return queryClient.fetchQuery(defaultUserQuery);
 }
 
+/** Who you are on `server` if the window read it already (its accounts, or the default user), without reading it. */
+export function cachedServerUser(server: string): string | undefined {
+  const accounts = queryClient.getQueryData(accountsQuery.queryKey);
+  const account = accounts && accountForServer(accounts, server);
+  return account ? account.user : queryClient.getQueryData(defaultUserQuery.queryKey);
+}
+
 export async function removeAccount(account: Account): Promise<void> {
   const { label } = describeServer(account.server);
   const confirmed = await confirm({
