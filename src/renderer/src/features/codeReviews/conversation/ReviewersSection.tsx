@@ -13,6 +13,7 @@ import { canReRequest, isAuthor } from '../reviewers';
 import { pickChanges, startPick, type ReviewerPick } from '../reviewerPick';
 import { ReviewStatusIcon } from '../ReviewStatusIcon';
 import { useReviewerGroups } from '../useReviewerGroups';
+import { useReviewersOf } from '../useReviewersOf';
 import { ReviewerPicker } from './ReviewerPicker';
 import styles from './ReviewConversation.module.css';
 
@@ -25,11 +26,12 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
   const place = usePlace();
   const user = usePlaceUser();
   const groups = useReviewerGroups();
+  const { reviewers } = useReviewersOf(review);
   const [pick, setPick] = useState<ReviewerPick | null>(null);
 
   const openPicker = (open: boolean): void => {
     if (open) {
-      setPick(startPick(review.reviewers, groups));
+      setPick(startPick(reviewers, groups));
       return;
     }
     if (pick) void changeReviewers(place, review, pickChanges(pick, groups));
@@ -51,9 +53,9 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
           {pick && <ReviewerPicker pick={pick} onPickChange={setPick} />}
         </FilterPopover>
       </div>
-      {review.reviewers.length === 0 && <p className={styles.railEmpty}>Nobody yet</p>}
+      {reviewers.length === 0 && <p className={styles.railEmpty}>Nobody yet</p>}
       <ul className={styles.reviewers}>
-        {review.reviewers.map((reviewer) => (
+        {reviewers.map((reviewer) => (
           <li key={reviewer.name} className={styles.reviewer}>
             <ReviewStatusIcon status={reviewer.status} label={reviewer.status} />
             {isGroup(reviewer, groups) ? <GroupAvatar size={20} tip="Group" /> : <Avatar user={reviewer.name} size={20} />}

@@ -56,10 +56,28 @@ const COMMANDS = {
   'repository list': repositoryList,
   showacl: showAcl,
   showowner: ([spec]) => `${spec} ${OWNER} User\n`,
-  listusers: ([, kind]) => (kind === '--onlygroups' ? 'Developers\nArtists\n' : `${OWNER}\nana@example.com\n`),
+  listusers: ([, kind]) => (kind === '--onlygroups' ? `${GROUPS.join('\n')}\n` : `${OWNER}\nana@example.com\n`),
   acl: () => 'Command finished successfully\n',
   setowner: () => '',
+  'codereview reviewer': reviewerList,
 };
+
+/** The server's groups, as `cm listusers --onlygroups` lists them. */
+const GROUPS = ['Developers', 'Artists'];
+
+/** `cm codereview reviewer list <id> --format=…`: the review's reviewers, each typed `user` or `group`. */
+function reviewerList(args) {
+  const [action, id] = args;
+  if (action !== 'list') throw new Error(`The fake cm doesn't change reviewers (${action})`);
+  const review = repository.REVIEWS.find((each) => String(each.id) === id);
+  if (!review) throw new Error(`The code review ${id} does not exist`);
+  const reviewers = review.reviewers.split(',').filter(Boolean).map((pair) => {
+    const colon = pair.lastIndexOf(':');
+    const user = pair.slice(0, colon);
+    return { user, status: pair.slice(colon + 1), type: GROUPS.includes(user) ? 'group' : 'user' };
+  });
+  return formatted(args, reviewers);
+}
 
 /**
  * `cm showacl <spec> --extended`, indented as cm 11 prints it: every object shares the repository's list, which
