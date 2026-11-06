@@ -51,7 +51,7 @@ export interface CodeReviewFilter {
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
   /** Only reviews the user is one of the reviewers of. */
-  assignedToMe?: boolean;
+  reviewerIsMe?: boolean;
   status?: CodeReviewStatus;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;

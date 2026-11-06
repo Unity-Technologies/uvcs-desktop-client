@@ -53,7 +53,7 @@ describe('code review list', () => {
   it('lists the newest reviews with one cm find, filtered on the server', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
-    await service.list(IN_WORKSPACE, { assignedToMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
+    await service.list(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
 
     expect(commands).toMatchObject([
       {

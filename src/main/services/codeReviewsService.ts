@@ -23,7 +23,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
-      ...(filter.assignedToMe ? ["reviewer = 'me'"] : []),
+      ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
     ];
     return findReviews(place, conditions, {

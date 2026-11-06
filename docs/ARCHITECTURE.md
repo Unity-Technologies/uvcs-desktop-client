@@ -1189,7 +1189,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
+    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
     is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
