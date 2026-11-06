@@ -20,7 +20,7 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
-import { codeReviewMenu } from './codeReviewMenu';
+import { codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
 
 const ws = '/ws';
 const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
@@ -103,5 +103,14 @@ describe('getting the reviewed code into the workspace', () => {
   it('comes right after the ways to open the review, here or in a new window, as what the review does to the workspace', () => {
     const menu = codeReviewMenu(workspacePlace(ws), [reviewOf({ kind: 'branch', branch: '/main/task' })], onBranch('/main'));
     expect(actions(menu).map((entry) => entry.id).slice(0, 3)).toEqual(['openReview', 'reviewInNewWindow', 'switch']);
+  });
+});
+
+describe("a review's page menu", () => {
+  it("offers only what the page doesn't show: a new window, Copy and Delete", () => {
+    const ids = reviewPageMenu(workspacePlace(ws), summary)
+      .filter((entry) => entry !== SEPARATOR)
+      .map((entry) => entry.id);
+    expect(ids).toEqual(['reviewInNewWindow', 'copy', 'delete']);
   });
 });
