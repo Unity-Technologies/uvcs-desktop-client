@@ -69,19 +69,19 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       return Number.parseInt(output.trim(), 10);
     },
 
-    async addReviewers(place, reviewId, users) {
+    async addReviewers(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(addReviewersArgs(reviewId, users, at), at.options);
+      await cm.query(addReviewersArgs(reviewId, reviewers, at), at.options);
     },
 
-    async removeReviewers(place, reviewId, users) {
+    async removeReviewers(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(removeReviewersArgs(reviewId, users, at), at.options);
+      await cm.query(removeReviewersArgs(reviewId, reviewers, at), at.options);
     },
 
-    async reRequestReview(place, reviewId, users) {
+    async reRequestReview(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(reRequestReviewArgs(reviewId, users, at), at.options);
+      await cm.query(reRequestReviewArgs(reviewId, reviewers, at), at.options);
     },
 
     async setOwnStatus(place, reviewId, status, comment) {

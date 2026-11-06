@@ -1,24 +1,25 @@
 import type { CodeReviewStatus, CreateCodeReviewRequest } from '@shared/domain/codeReview';
+import type { MemberKind, MemberRef } from '@shared/domain/member';
 import type { CmPlace } from './cmPlace';
 
 /** `cm codereview <target> <title>`, printing the new review's id; the reviewers it asks, if any, in the same command. */
 export function createReviewArgs({ targetSpec, title, reviewers = [] }: CreateCodeReviewRequest, at: CmPlace): string[] {
-  return ['codereview', at.spec(targetSpec), title, ...usersOption(reviewers), '--format={id}', ...at.repositoryOption];
+  return ['codereview', at.spec(targetSpec), title, ...reviewersOptions(reviewers), '--format={id}', ...at.repositoryOption];
 }
 
-/** `cm codereview reviewer add`: one command for every user, which `cm` asks one by one. */
-export function addReviewersArgs(reviewId: number, users: string[], at: CmPlace): string[] {
-  return ['codereview', 'reviewer', 'add', String(reviewId), ...usersOption(users), ...at.repositoryOption];
+/** `cm codereview reviewer add`: one command for every user and group, which `cm` asks one by one. */
+export function addReviewersArgs(reviewId: number, reviewers: readonly MemberRef[], at: CmPlace): string[] {
+  return ['codereview', 'reviewer', 'add', String(reviewId), ...reviewersOptions(reviewers), ...at.repositoryOption];
 }
 
-/** `cm codereview reviewer remove`: one command for every user; the other reviewers stay. */
-export function removeReviewersArgs(reviewId: number, users: string[], at: CmPlace): string[] {
-  return ['codereview', 'reviewer', 'remove', String(reviewId), ...usersOption(users), ...at.repositoryOption];
+/** `cm codereview reviewer remove`: one command for every user and group; the other reviewers stay. */
+export function removeReviewersArgs(reviewId: number, reviewers: readonly MemberRef[], at: CmPlace): string[] {
+  return ['codereview', 'reviewer', 'remove', String(reviewId), ...reviewersOptions(reviewers), ...at.repositoryOption];
 }
 
 /** `cm codereview review --re-request`: the reviewers named go back to "Under review", asked to review it again. */
-export function reRequestReviewArgs(reviewId: number, users: string[], at: CmPlace): string[] {
-  return ['codereview', 'review', String(reviewId), '--re-request', ...usersOption(users), ...at.repositoryOption];
+export function reRequestReviewArgs(reviewId: number, reviewers: readonly MemberRef[], at: CmPlace): string[] {
+  return ['codereview', 'review', String(reviewId), '--re-request', ...reviewersOptions(reviewers), ...at.repositoryOption];
 }
 
 /**
@@ -40,7 +41,15 @@ const STATUS_OPTIONS: Record<CodeReviewStatus, string> = {
   'Rework required': '--rework-required',
 };
 
-function usersOption(users: string[]): string[] {
-  const names = users.map((user) => user.trim()).filter(Boolean);
-  return names.length > 0 ? [`--users=${names.join(',')}`] : [];
+/**
+ * The reviewers named, users in `--users` and groups in `--groups`, both in one command: `cm` looks a name up among
+ * its option's kind only (a group in `--users` fails, "No such user"). An option that would name nobody is left out.
+ */
+function reviewersOptions(reviewers: readonly MemberRef[]): string[] {
+  return [namesOption('--users', reviewers, 'user'), namesOption('--groups', reviewers, 'group')].filter((option) => option !== undefined);
+}
+
+function namesOption(option: string, reviewers: readonly MemberRef[], kind: MemberKind): string | undefined {
+  const names = reviewers.filter((reviewer) => reviewer.kind === kind).map((reviewer) => reviewer.name.trim()).filter(Boolean);
+  return names.length > 0 ? `${option}=${names.join(',')}` : undefined;
 }

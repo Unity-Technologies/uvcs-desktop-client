@@ -1,3 +1,5 @@
+import type { MemberRef } from './member';
+
 export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework required'] as const;
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
@@ -66,6 +68,6 @@ export interface CreateCodeReviewRequest {
   /** `br:/main/task`, `cs:12` or `sh:3`. */
   targetSpec: string;
   title: string;
-  /** The users asked to review it. */
-  reviewers?: string[];
+  /** The users and groups asked to review it. */
+  reviewers?: MemberRef[];
 }
