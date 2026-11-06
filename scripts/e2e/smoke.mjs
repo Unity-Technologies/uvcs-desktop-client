@@ -260,6 +260,13 @@ try {
     await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
     await palette.getByRole('combobox').fill('');
   });
+  await step("A code review's number in the palette", async () => {
+    // A number alone names a review too, first when it's past every changeset (the fake's reach changeset 7).
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('80');
+    await palette.getByRole('option').first().filter({ hasText: 'Review player movement' }).waitFor();
+    await palette.getByRole('combobox').fill('');
+  });
   await step('A link pasted in the palette', async () => {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
