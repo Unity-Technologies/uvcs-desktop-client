@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { avatarStackLayout, SPREAD_GAP } from './avatarStackLayout';
+import { avatarStackLayout, BADGE_REACH, SPREAD_GAP } from './avatarStackLayout';
 
 describe('avatarStackLayout', () => {
   it('overlaps the avatars at rest, half of each one behind showing', () => {
@@ -8,7 +8,8 @@ describe('avatarStackLayout', () => {
     expect(restWidth).toBe(36);
   });
 
-  it('spreads them side by side, apart enough for their rings', () => {
+  it('spreads them side by side, apart enough for each badge to clear the next avatar', () => {
+    expect(SPREAD_GAP).toBeGreaterThan(BADGE_REACH);
     const { slots, spreadWidth } = avatarStackLayout(3, 18);
     expect(slots.map((slot) => slot.spreadX)).toEqual([0, 18 + SPREAD_GAP, 2 * (18 + SPREAD_GAP)]);
     expect(spreadWidth).toBe(3 * 18 + 2 * SPREAD_GAP);

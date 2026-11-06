@@ -1,6 +1,7 @@
+import { Eye, Flag, ThumbsUp } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerRing, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
+import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerBadge, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -20,12 +21,12 @@ describe('shownReviewers', () => {
 });
 
 describe('stackedReviewers', () => {
-  it('stacks the first three, each named with their status and ringed in its color, and names the rest in "+N"', () => {
+  it('stacks the first three, each named with their status and badged with its icon, and names the rest in "+N"', () => {
     expect(stackedReviewers([ANA, BOB, QA, EVA])).toEqual({
       avatars: [
-        { user: 'ana@acme.com', tip: 'Ana: Reviewed', ring: 'var(--status-added)' },
-        { user: 'bob@acme.com', tip: 'Bob: Under review' },
-        { user: 'qa-team', tip: 'Qa Team: Rework required', ring: 'var(--status-changed)' },
+        { user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') },
+        { user: 'bob@acme.com', tip: 'Bob: Under review', badge: reviewerBadge('Under review') },
+        { user: 'qa-team', tip: 'Qa Team: Rework required', badge: reviewerBadge('Rework required') },
       ],
       more: { count: 1, tip: 'Eva: Under review' },
     });
@@ -36,7 +37,7 @@ describe('stackedReviewers', () => {
   });
 
   it("names a sole reviewer beside their avatar", () => {
-    expect(stackedReviewers([ANA])).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', ring: 'var(--status-added)' }], soleName: 'Ana' });
+    expect(stackedReviewers([ANA])).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') }], soleName: 'Ana' });
   });
 });
 
@@ -46,11 +47,11 @@ describe('reviewerText', () => {
   });
 });
 
-describe('reviewerRing', () => {
-  it('rings a reviewer in the color of the status they gave, and in none while they review', () => {
-    expect(reviewerRing('Reviewed')).toBe('var(--status-added)');
-    expect(reviewerRing('Rework required')).toBe('var(--status-changed)');
-    expect(reviewerRing('Under review')).toBeUndefined();
+describe('reviewerBadge', () => {
+  it("badges every reviewer with their status's icon, in its color: an eye, a flag, a thumbs-up", () => {
+    expect(reviewerBadge('Under review')).toEqual({ icon: Eye, color: 'var(--status-moved)' });
+    expect(reviewerBadge('Rework required')).toEqual({ icon: Flag, color: 'var(--status-changed)' });
+    expect(reviewerBadge('Reviewed')).toEqual({ icon: ThumbsUp, color: 'var(--status-added)' });
   });
 });
 
