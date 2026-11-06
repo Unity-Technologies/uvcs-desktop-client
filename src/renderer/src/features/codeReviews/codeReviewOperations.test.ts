@@ -15,7 +15,7 @@ import { queryClient } from '../../app/queryClient';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { addReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
+import { chooseReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
 import { pickReviewers } from './ReviewersDialog';
 
 const user = (name: string): MemberRef => ({ name, kind: 'user' });
@@ -194,7 +194,7 @@ describe('review operations', () => {
     vi.mocked(pickReviewers).mockResolvedValueOnce({ add: [user('carl'), group('Developers')], remove: [user('ana')] });
     const listed = review('ana');
 
-    await addReviewers(inWs, listed);
+    await chooseReviewers(inWs, listed);
 
     expect(vi.mocked(pickReviewers)).toHaveBeenLastCalledWith(listed);
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
@@ -206,8 +206,8 @@ describe('review operations', () => {
   it('changes nobody when the dialog is cancelled or nothing was picked', async () => {
     vi.mocked(pickReviewers).mockResolvedValueOnce(undefined).mockResolvedValueOnce({ add: [], remove: [] });
 
-    await addReviewers(inWs, review('ana'));
-    await addReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -244,7 +244,7 @@ describe('review operations', () => {
     expect(afterStatus()).toEqual(['codeReviews']);
 
     const afterAdding = watchRefreshes(ws);
-    await addReviewers(inWs, review('ana'));
+    await chooseReviewers(inWs, review('ana'));
     expect(afterAdding()).toEqual(['codeReviews']);
 
     const afterDelete = watchRefreshes(ws);

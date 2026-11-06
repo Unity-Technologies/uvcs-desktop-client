@@ -179,7 +179,7 @@ export const MENU_WORDS = {
   checkout: word('act', PenLine, 'Check out'),
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
-  addReviewers: word('act', UserPlus, 'Add reviewers…'),
+  changeReviewers: word('act', UserPlus, 'Change reviewers…'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),

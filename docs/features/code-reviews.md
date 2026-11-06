@@ -45,7 +45,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   isn't removed; the reviewers it opened with are told apart by the groups as it applies, and someone checked keeps
   the kind they were listed with (`pickedKind`). A server whose directory can't list everyone (an LDAP size limit) is
   asked for the names typed instead (`--filter`), users and groups alike. The author can be a reviewer, marked
-  **Author** (`isAuthor`). The list's **Add reviewers** (`addReviewers`) opens the same picker in a dialog
+  **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
   A new review asks the reviewers typed, separated by commas (`typedReviewers`, a group as one), in the command that

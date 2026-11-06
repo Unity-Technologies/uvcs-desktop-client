@@ -76,7 +76,7 @@ function placeServer(place: Place): string | undefined {
 }
 
 /** Picks the review's reviewers in a dialog, as the page's picker does, and applies what changed. */
-export async function addReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
+export async function chooseReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
   const changes = await pickReviewers(review);
   if (changes) await changeReviewers(place, review, changes);
 }
