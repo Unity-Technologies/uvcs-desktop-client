@@ -19,7 +19,7 @@ export function shownReviewers(reviewers: readonly CodeReviewer[], groups: Revie
   return {
     shown: reviewers.slice(0, max),
     rest: reviewers.slice(max),
-    ...(reviewers.length === 1 && { soleName: reviewerLabel(reviewers[0]!.name, groups) }),
+    ...(reviewers.length === 1 && { soleName: reviewerLabel(reviewers[0]!, groups) }),
   };
 }
 
@@ -43,7 +43,7 @@ export function stackedReviewers(reviewers: readonly CodeReviewer[], groups: Rev
       user: reviewer.name,
       tip: reviewerText(reviewer, groups),
       badge: reviewerBadge(reviewer.status),
-      ...(isGroup(reviewer.name, groups) && { group: true }),
+      ...(isGroup(reviewer, groups) && { group: true }),
     })),
     ...(rest.length > 0 && { more: { count: rest.length, tip: reviewersText(rest, groups) } }),
     ...(soleName && { soleName }),
@@ -52,8 +52,8 @@ export function stackedReviewers(reviewers: readonly CodeReviewer[], groups: Rev
 
 /** A reviewer with the status they gave, a group said to be one: what their avatar's own tooltip says. */
 export function reviewerText(reviewer: CodeReviewer, groups: ReviewerGroups): string {
-  const name = reviewerLabel(reviewer.name, groups);
-  return `${isGroup(reviewer.name, groups) ? `${name} (group)` : name}: ${reviewer.status}`;
+  const name = reviewerLabel(reviewer, groups);
+  return `${isGroup(reviewer, groups) ? `${name} (group)` : name}: ${reviewer.status}`;
 }
 
 /** Each reviewer with the status they gave: what the row's tooltip, the "+N" one and a screen reader say. */

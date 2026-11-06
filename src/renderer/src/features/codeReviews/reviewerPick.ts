@@ -1,17 +1,17 @@
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import type { MemberKind, MemberRef } from '@shared/domain/member';
-import { isGroup, reviewerRef, type ReviewerGroups } from './reviewerGroups';
+import { isGroup, reviewerRef, type NamedReviewer, type ReviewerGroups } from './reviewerGroups';
 import { offeredReviewers, type ServerMembers } from './reviewers';
 
 /**
- * The reviewer picker's state while it's open: the reviewers' names as it opened, and who is checked. What it changes
- * is worked out against the reviewers it opened with, never the review as it reads later: someone another person
- * added while it was open isn't removed for not being checked. The reviewers it opened with are told apart by the
- * server's groups as it applies (the groups may still be read as it opens); someone the user checks keeps the kind
- * they were listed with (a group found by a search the server answered stays a group).
+ * The reviewer picker's state while it's open: the reviewers as it opened, and who is checked. What it changes is
+ * worked out against the reviewers it opened with, never the review as it reads later: someone another person added
+ * while it was open isn't removed for not being checked. A reviewer it opened with is a group as `cm` typed them (the
+ * review's page reads it), else as the server's groups say as it applies (they may still be read as it opens); someone
+ * the user checks keeps the kind they were listed with (a group found by a search the server answered stays a group).
  */
 export interface ReviewerPick {
-  onOpen: readonly string[];
+  onOpen: readonly NamedReviewer[];
   picked: readonly MemberRef[];
 }
 
@@ -23,7 +23,7 @@ export interface ReviewerChanges {
 
 /** The pick as the picker opens: the review's reviewers checked. */
 export function startPick(reviewers: readonly CodeReviewer[], groups: ReviewerGroups): ReviewerPick {
-  return { onOpen: reviewers.map((reviewer) => reviewer.name), picked: reviewers.map((reviewer) => reviewerRef(reviewer.name, groups)) };
+  return { onOpen: reviewers.map(({ name, kind }) => ({ name, kind })), picked: reviewers.map((reviewer) => reviewerRef(reviewer, groups)) };
 }
 
 /** Whether `name` is checked, whatever its case. */
@@ -39,12 +39,12 @@ export function togglePicked(pick: ReviewerPick, member: MemberRef): ReviewerPic
 
 /**
  * What the user's checks change: added who they checked, removed who they unchecked, from the reviewers as it opened,
- * each a group when the server lists one by its name.
+ * each a group as `cm` typed them, or the server lists one by its name.
  */
 export function pickChanges(pick: ReviewerPick, groups: ReviewerGroups): ReviewerChanges {
   return {
-    add: pick.picked.filter((member) => !opened(pick, member.name)),
-    remove: pick.onOpen.filter((name) => !isPicked(pick, name)).map((name) => reviewerRef(name, groups)),
+    add: pick.picked.filter((member) => !openedReviewer(pick, member.name)),
+    remove: pick.onOpen.filter((reviewer) => !isPicked(pick, reviewer.name)).map((reviewer) => reviewerRef(reviewer, groups)),
   };
 }
 
@@ -54,16 +54,17 @@ export function changesReviewers({ add, remove }: ReviewerChanges): boolean {
 }
 
 /**
- * Whether a row is a user or a group: a reviewer it opened with, or anyone not checked, as the server lists them;
- * someone checked as they were listed then (a group found by an earlier search may no longer be listed).
+ * Whether a row is a user or a group: a reviewer it opened with as `cm` typed them or the server lists them; anyone
+ * else checked as they were listed then (a group found by an earlier search may no longer be listed), or as listed.
  */
 export function pickedKind(pick: ReviewerPick, name: string, groups: ReviewerGroups): MemberKind {
-  const checked = opened(pick, name) ? undefined : pick.picked.find((member) => sameName(member.name, name));
-  return checked?.kind ?? (isGroup(name, groups) ? 'group' : 'user');
+  const reviewer = openedReviewer(pick, name);
+  const checked = reviewer ? undefined : pick.picked.find((member) => sameName(member.name, name));
+  return checked?.kind ?? (isGroup(reviewer ?? { name }, groups) ? 'group' : 'user');
 }
 
-function opened(pick: ReviewerPick, name: string): boolean {
-  return pick.onOpen.some((each) => sameName(each, name));
+function openedReviewer(pick: ReviewerPick, name: string): NamedReviewer | undefined {
+  return pick.onOpen.find((each) => sameName(each.name, name));
 }
 
 /**
@@ -72,7 +73,7 @@ function opened(pick: ReviewerPick, name: string): boolean {
  * everyone else listed, groups before users. Checking someone listed never moves their row.
  */
 export function pickOffered(pick: ReviewerPick, members: ServerMembers): string[] {
-  const offered = offeredReviewers(members, pick.onOpen);
+  const offered = offeredReviewers(members, pick.onOpen.map((reviewer) => reviewer.name));
   const inView = new Set(offered.map((name) => name.toLowerCase()));
   const checkedOutOfView = pick.picked.filter((member) => !inView.has(member.name.toLowerCase())).map((member) => member.name);
   return [...offered.slice(0, pick.onOpen.length), ...checkedOutOfView, ...offered.slice(pick.onOpen.length)];

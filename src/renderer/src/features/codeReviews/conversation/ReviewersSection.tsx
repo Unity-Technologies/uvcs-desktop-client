@@ -56,10 +56,10 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
         {review.reviewers.map((reviewer) => (
           <li key={reviewer.name} className={styles.reviewer}>
             <ReviewStatusIcon status={reviewer.status} label={reviewer.status} />
-            {isGroup(reviewer.name, groups) ? <GroupAvatar size={20} tip="Group" /> : <Avatar user={reviewer.name} size={20} />}
+            {isGroup(reviewer, groups) ? <GroupAvatar size={20} tip="Group" /> : <Avatar user={reviewer.name} size={20} />}
             <span className={styles.reviewerName}>
-              {reviewerLabel(reviewer.name, groups)}
-              {isGroup(reviewer.name, groups) && <span className="visually-hidden"> (group)</span>}
+              {reviewerLabel(reviewer, groups)}
+              {isGroup(reviewer, groups) && <span className="visually-hidden"> (group)</span>}
             </span>
             {isAuthor(review, reviewer.name) && <span className={styles.pill}>Author</span>}
             <span className={styles.reviewerActions}>
@@ -68,10 +68,10 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
                   size="small"
                   icon={<RotateCcw size={13} />}
                   label="Ask to review again"
-                  onClick={() => void reRequestReview(place, review, reviewerRef(reviewer.name, groups))}
+                  onClick={() => void reRequestReview(place, review, reviewerRef(reviewer, groups))}
                 />
               )}
-              <IconButton size="small" icon={<X size={13} />} label="Remove reviewer" onClick={() => void removeReviewer(place, review, reviewerRef(reviewer.name, groups))} />
+              <IconButton size="small" icon={<X size={13} />} label="Remove reviewer" onClick={() => void removeReviewer(place, review, reviewerRef(reviewer, groups))} />
             </span>
           </li>
         ))}
