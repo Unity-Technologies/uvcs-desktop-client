@@ -59,6 +59,13 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   the last activity.
 - **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
   doesn't list but the official client uses.
+- The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
+  status, I'm a reviewer), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
+  looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
+  and "No matching code reviews" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
+  time, in one `cm find` of about 1.5 MB and 1.6 s; their branches are named from the names of every branch, read at
+  most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
+  (`reviewSummariesQuery`).
 
 ## The review's page
 

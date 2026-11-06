@@ -49,7 +49,7 @@ export function usePaletteServerSearch(shown: Place | null, typed: string, scope
     shelves: useQuery({ queryKey: shelvesKey(place, textFilter), queryFn: () => api.shelves.list(place, textFilter), ...server('shelves') }),
     codeReviews: useQuery({
       queryKey: reviewSummariesKey(place, term),
-      queryFn: () => api.codeReviews.listSummaries(place, { text: term }),
+      queryFn: () => api.codeReviews.listSummaries(place, { text: term, limit: SERVER_SEARCH_LIMIT }),
       ...server('codeReviews'),
     }),
   };

@@ -57,10 +57,18 @@ export interface CodeReviewFilter {
   sinceDate?: string;
   /** Only reviews whose title contains it. */
   text?: string;
+  /**
+   * The newest ones up to this many; none reads every review the other fields keep, as the Code reviews view does
+   * (a large repository holds thousands: its time range bounds them).
+   */
+  limit?: number;
 }
 
-/** Repositories can hold thousands of reviews; lists show the newest ones up to this many. */
-export const MAX_LISTED_CODE_REVIEWS = 300;
+/**
+ * The newest reviews the palette and the branch chips read (`reviewSummariesQuery`): enough for the reviews in flight,
+ * read rarely; an older one is found by its title or number (`usePaletteServerSearch`).
+ */
+export const NEWEST_CODE_REVIEWS = 300;
 
 export interface CreateCodeReviewRequest {
   /** `br:/main/task`, `cs:12` or `sh:3`. */
