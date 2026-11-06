@@ -47,7 +47,14 @@ describe('stackedReviewers', () => {
     expect(stackedReviewers([ANA], GROUPS)).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') }], soleName: 'Ana' });
   });
 
-  it('shows a group the server does not list as a user: nothing tells them apart', () => {
+  it('shows a group by the type cm gave it, though the server lists no groups', () => {
+    expect(stackedReviewers([{ name: 'staff', status: 'Reviewed', kind: 'group' }], NO_GROUPS)).toEqual({
+      avatars: [{ user: 'staff', tip: 'staff (group): Reviewed', badge: reviewerBadge('Reviewed'), group: true }],
+      soleName: 'staff',
+    });
+  });
+
+  it('shows a group the server does not list as a user where no type was read: nothing tells them apart', () => {
     expect(stackedReviewers([QA], NO_GROUPS).avatars).toEqual([{ user: 'qa-team', tip: 'Qa Team: Rework required', badge: reviewerBadge('Rework required') }]);
   });
 });

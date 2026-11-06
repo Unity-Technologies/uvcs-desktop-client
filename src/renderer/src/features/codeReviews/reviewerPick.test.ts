@@ -69,6 +69,20 @@ describe('pickedKind', () => {
   });
 });
 
+describe('a pick of reviewers read with their types', () => {
+  // The page reads its review's reviewers with `cm codereview reviewer list`, which says which are groups.
+  const STAFF: CodeReviewer = { name: 'staff', status: 'Reviewed', kind: 'group' };
+
+  it('removes a group reviewer as a group though the server lists no groups', () => {
+    const pick = togglePicked(startPick([ANA, STAFF], NO_GROUPS), user('staff'));
+    expect(pickChanges(pick, NO_GROUPS)).toEqual({ add: [], remove: [group('staff')] });
+  });
+
+  it('shows a group reviewer as a group though the server lists no groups', () => {
+    expect(pickedKind(startPick([STAFF], NO_GROUPS), 'staff', NO_GROUPS)).toBe('group');
+  });
+});
+
 describe('a pick opened before the server’s groups were read', () => {
   it('removes a group reviewer as a group, as the groups read by then say', () => {
     const pick = togglePicked(startPick([ANA, DEVELOPERS], NO_GROUPS), user('Developers'));
