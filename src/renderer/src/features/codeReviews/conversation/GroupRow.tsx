@@ -1,8 +1,8 @@
-import { GroupAvatar } from '../../ui/GroupAvatar';
-import { Highlight } from '../../ui/Highlight';
+import { GroupAvatar } from '../../../ui/GroupAvatar';
+import { Highlight } from '../../../ui/Highlight';
 import styles from './GroupRow.module.css';
 
-/** A group in a picker's row, beside people (`PersonRow`): the group icon where they show an avatar, then its name as the server names it, marked where the search matched. */
+/** A group in a picker's row, beside people (`PersonRow`), in the reviewer picker: the group icon where they show an avatar, then its name as the server names it, marked where the search matched. */
 export function GroupRow({ group }: { group: string }) {
   return (
     <>

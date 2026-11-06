@@ -8,7 +8,7 @@ import { FilterChecklist } from '../../../ui/FilterChecklist';
 import { useMemberNames } from '../../permissions/permissionsQueries';
 import { reviewerFilterTexts, reviewerGroups } from '../reviewerGroups';
 import { isPicked, pickedKind, pickerEmptyText, pickOffered, togglePicked, type ReviewerPick } from '../reviewerPick';
-import { GroupRow } from '../../../components/people/GroupRow';
+import { GroupRow } from './GroupRow';
 
 /** How long typing pauses before a server that can't list everyone is asked for the names typed. */
 const SEARCH_PAUSE_MS = 300;
