@@ -323,7 +323,9 @@ marked while any option differs from the default, and in a narrow header (under 
   changesets they name, and a shelve's is its base.
 
 Both request options are in `mergeSourceArgs`, so the preview and the merge get them, and in the plan's query key, so
-changing one previews the merge again (`MergePage` holds the request). A preview that fails with options offers "Merge
+changing one previews the merge again (`MergePage` holds the request) and starts the file decisions, the comment and
+the choices over, since the files to merge can change. Only the options the merge offers reach `cm` or count as set
+(`appliedMergeOptions`). A preview that fails with options offers "Merge
 without options" (`hasMergeOptions`, `withoutMergeOptions`), and so does one with nothing to merge, as a chosen
 ancestor can leave (`nothingToMergeAction`). Options last only for the merge on the page.
 
