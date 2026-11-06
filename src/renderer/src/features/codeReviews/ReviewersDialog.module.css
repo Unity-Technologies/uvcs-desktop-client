@@ -5,3 +5,8 @@
   height: 360px;
   margin: calc(-1 * var(--space-2)) 0;
 }
+
+.reading {
+  margin: var(--space-3) var(--space-2);
+  color: var(--text-tertiary);
+}

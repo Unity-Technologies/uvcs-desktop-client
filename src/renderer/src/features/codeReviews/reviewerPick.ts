@@ -2,6 +2,7 @@ import type { CodeReviewer } from '@shared/domain/codeReview';
 import type { MemberKind, MemberRef } from '@shared/domain/member';
 import { isGroup, reviewerRef, type NamedReviewer, type ReviewerGroups } from './reviewerGroups';
 import { offeredReviewers, type ServerMembers } from './reviewers';
+import type { ReviewersRead } from './reviewersRead';
 
 /**
  * The reviewer picker's state while it's open: the reviewers as it opened, and who is checked. What it changes is
@@ -25,6 +26,23 @@ export interface ReviewerChanges {
 export function startPick(reviewers: readonly CodeReviewer[], groups: ReviewerGroups): ReviewerPick {
   return { onOpen: reviewers.map(({ name, kind }) => ({ name, kind })), picked: reviewers.map((reviewer) => reviewerRef(reviewer, groups)) };
 }
+
+/**
+ * The pick of a dialog that reads the review's typed reviewers as it opens: none while `cm` answers (a group must be
+ * known as one before it can be removed), then the reviewers as read; once the user picked, their pick.
+ */
+export function dialogPick(picked: ReviewerPick | null, read: ReviewersRead, groups: ReviewerGroups): ReviewerPick | null {
+  if (picked) return picked;
+  return read.settled ? startPick(read.reviewers, groups) : null;
+}
+
+/** What a dialog's Save applies: its pick's changes, none while it has no pick yet. */
+export function dialogChanges(pick: ReviewerPick | null, groups: ReviewerGroups): ReviewerChanges {
+  return pick ? pickChanges(pick, groups) : { add: [], remove: [] };
+}
+
+/** What a dialog shows while it waits for the review's typed reviewers. */
+export const READING_REVIEWERS = 'Reading the reviewers…';
 
 /** Whether `name` is checked, whatever its case. */
 export function isPicked(pick: ReviewerPick, name: string): boolean {

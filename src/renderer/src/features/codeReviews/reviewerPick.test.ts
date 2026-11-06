@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import { NO_GROUPS, reviewerGroups } from './reviewerGroups';
-import { changesReviewers, dialogPick, isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
+import { changesReviewers, dialogChanges, dialogPick, isPicked, pickChanges, pickedKind, pickerEmptyText, pickOffered, startPick, togglePicked } from './reviewerPick';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -97,6 +97,12 @@ describe('dialogPick', () => {
   it('starts from the reviewers as the list read them where cm could not type them', () => {
     const untyped: CodeReviewer = { name: 'Developers', status: 'Under review' };
     expect(dialogPick(null, { reviewers: [untyped], settled: true }, GROUPS)?.picked).toEqual([group('Developers')]);
+  });
+
+  it('saves nothing while it waits, and the pick’s changes once it has one', () => {
+    expect(dialogChanges(null, NO_GROUPS)).toEqual({ add: [], remove: [] });
+    const pick = togglePicked(startPick([STAFF], NO_GROUPS), user('staff'));
+    expect(dialogChanges(pick, NO_GROUPS)).toEqual({ add: [], remove: [group('staff')] });
   });
 
   it('keeps what the user picked once they picked', () => {
