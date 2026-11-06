@@ -1,5 +1,8 @@
 import type { CodeReviewer, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { LucideIcon } from 'lucide-react';
 import { displayName } from '../../lib/userName';
+import { REVIEW_STATUS_COLORS, REVIEW_STATUS_ICONS } from './reviewStatusIcons';
+import type { StackedAvatar } from '../../ui/AvatarStack';
 
 /** How many reviewers a row shows before "+N". */
 export const SHOWN_REVIEWERS = 3;
@@ -8,25 +11,52 @@ export const SHOWN_REVIEWERS = 3;
 export const NO_REVIEWERS = 'Nobody';
 
 /**
- * The reviewers a row shows, how many more there are, and the name of a sole reviewer, which fits beside their avatar
- * (several show only avatars, named in the tooltip).
+ * The reviewers a row shows, the rest it counts in "+N", and the name of a sole reviewer, which fits beside their
+ * avatar (several show only avatars, each named in its own tooltip).
  */
-export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; more: number; soleName?: string } {
-  const shown = reviewers.slice(0, max);
-  return { shown, more: Math.max(0, reviewers.length - max), ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }) };
+export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; rest: CodeReviewer[]; soleName?: string } {
+  return {
+    shown: reviewers.slice(0, max),
+    rest: reviewers.slice(max),
+    ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }),
+  };
 }
+
+/** How big a reviewer's avatar is, in the list, the details and the review's page alike. */
+export const REVIEWER_AVATAR_SIZE = 18;
 
 /**
- * Whether an avatar shows the status its reviewer gave: once they gave one. "Under review" is where every reviewer
- * starts, waiting: marking it on every avatar would only add noise.
+ * The Reviewers column's width: the stack of `SHOWN_REVIEWERS` avatars and "+N" spread, with its last badge, inside the
+ * cell's padding (`reviewersColumn.test.ts` holds it to that), or a sole reviewer's avatar and name.
  */
-export function statusMarked(status: CodeReviewStatus): boolean {
-  return status !== 'Under review';
+export const REVIEWERS_COLUMN_WIDTH = 130;
+
+/**
+ * The reviewers' stack: each shown reviewer's avatar, named with their status and badged with its icon, then a "+N"
+ * disc naming the rest; a sole reviewer's name goes beside it.
+ */
+export function stackedReviewers(reviewers: readonly CodeReviewer[]): { avatars: StackedAvatar[]; more?: { count: number; tip: string }; soleName?: string } {
+  const { shown, rest, soleName } = shownReviewers(reviewers);
+  return {
+    avatars: shown.map((reviewer) => ({ user: reviewer.name, tip: reviewerText(reviewer), badge: reviewerBadge(reviewer.status) })),
+    ...(rest.length > 0 && { more: { count: rest.length, tip: reviewersText(rest) } }),
+    ...(soleName && { soleName }),
+  };
 }
 
-/** Each reviewer with the status they gave: what the row's tooltip and a screen reader say. */
+/** A reviewer with the status they gave: what their avatar's own tooltip says. */
+export function reviewerText(reviewer: CodeReviewer): string {
+  return `${displayName(reviewer.name)}: ${reviewer.status}`;
+}
+
+/** Each reviewer with the status they gave: what the row's tooltip, the "+N" one and a screen reader say. */
 export function reviewersText(reviewers: readonly CodeReviewer[]): string {
-  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map((reviewer) => `${displayName(reviewer.name)}: ${reviewer.status}`).join(', ');
+  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map(reviewerText).join(', ');
+}
+
+/** A reviewer's badge in the stack: the icon of the status they gave, in its color; every status has one. */
+export function reviewerBadge(status: CodeReviewStatus): { icon: LucideIcon; color: string } {
+  return { icon: REVIEW_STATUS_ICONS[status], color: REVIEW_STATUS_COLORS[status] };
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   pickedNames,
   pickedOwners,
   rememberedPick,
+  stackedPeople,
   togglePerson,
 } from './peopleFilter';
 
@@ -93,6 +94,15 @@ describe('labels', () => {
     expect(describePick(MINE)).toBe('Mine');
     expect(describePick({ mine: true, others: [ANA] })).toBe('Mine and Ana Diaz');
     expect(describePick({ mine: false, others: [ANA, BOB] })).toBe('Ana Diaz +1');
+  });
+
+  it('stack the avatars of the first three people picked, each named', () => {
+    expect(stackedPeople([ANA, BOB, 'carl', 'dora'])).toEqual([
+      { user: ANA, tip: 'Ana Diaz' },
+      { user: BOB, tip: 'Bob' },
+      { user: 'carl', tip: 'Carl' },
+    ]);
+    expect(stackedPeople([])).toEqual([]);
   });
 });
 

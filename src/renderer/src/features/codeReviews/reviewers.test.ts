@@ -1,6 +1,7 @@
+import { Eye, Flag, ThumbsUp } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewersText, shownReviewers, statusMarked, reviewerChanges, offeredReviewers, canReRequest, isAuthor } from './reviewers';
+import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerBadge, reviewerChanges, reviewerNames, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -8,14 +9,49 @@ const QA: CodeReviewer = { name: 'qa-team', status: 'Rework required' };
 const EVA: CodeReviewer = { name: 'eva@acme.com', status: 'Under review' };
 
 describe('shownReviewers', () => {
-  it('shows the first few and counts the rest, naming none', () => {
-    expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], more: 1 });
-    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], more: 0 });
+  it('shows the first few and leaves the rest to "+N", naming none beside them', () => {
+    expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], rest: [EVA] });
+    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], rest: [] });
   });
 
   it('names a sole reviewer beside their avatar, and shows nobody for a review nobody was asked to', () => {
-    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], more: 0, soleName: 'Ana' });
-    expect(shownReviewers([], 3)).toEqual({ shown: [], more: 0 });
+    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], rest: [], soleName: 'Ana' });
+    expect(shownReviewers([], 3)).toEqual({ shown: [], rest: [] });
+  });
+});
+
+describe('stackedReviewers', () => {
+  it('stacks the first three, each named with their status and badged with its icon, and names the rest in "+N"', () => {
+    expect(stackedReviewers([ANA, BOB, QA, EVA])).toEqual({
+      avatars: [
+        { user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') },
+        { user: 'bob@acme.com', tip: 'Bob: Under review', badge: reviewerBadge('Under review') },
+        { user: 'qa-team', tip: 'Qa Team: Rework required', badge: reviewerBadge('Rework required') },
+      ],
+      more: { count: 1, tip: 'Eva: Under review' },
+    });
+  });
+
+  it('has no "+N" for three or fewer', () => {
+    expect(stackedReviewers([ANA, BOB, QA]).more).toBeUndefined();
+  });
+
+  it("names a sole reviewer beside their avatar", () => {
+    expect(stackedReviewers([ANA])).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') }], soleName: 'Ana' });
+  });
+});
+
+describe('reviewerText', () => {
+  it("names a reviewer with their status, for their avatar's own tooltip", () => {
+    expect(reviewerText(QA)).toBe('Qa Team: Rework required');
+  });
+});
+
+describe('reviewerBadge', () => {
+  it("badges every reviewer with their status's icon, in its color: an eye, a flag, a thumbs-up", () => {
+    expect(reviewerBadge('Under review')).toEqual({ icon: Eye, color: 'var(--status-moved)' });
+    expect(reviewerBadge('Rework required')).toEqual({ icon: Flag, color: 'var(--status-changed)' });
+    expect(reviewerBadge('Reviewed')).toEqual({ icon: ThumbsUp, color: 'var(--status-added)' });
   });
 });
 
@@ -67,14 +103,6 @@ describe('reviewerNames', () => {
   it('splits the names typed at commas, once each, ignoring blanks', () => {
     expect(reviewerNames(' ana, bob,,ana , ')).toEqual(['ana', 'bob']);
     expect(reviewerNames('')).toEqual([]);
-  });
-});
-
-describe('statusMarked', () => {
-  it('marks an avatar once its reviewer gave a status, never while they are still to review', () => {
-    expect(statusMarked('Reviewed')).toBe(true);
-    expect(statusMarked('Rework required')).toBe(true);
-    expect(statusMarked('Under review')).toBe(false);
   });
 });
 

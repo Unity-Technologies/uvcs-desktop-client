@@ -3,7 +3,7 @@ import { Markdown } from '../../../components/Markdown';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
-import { REVIEW_STATUS_ICONS } from '../ReviewStatusIcon';
+import { REVIEW_STATUS_ICONS } from '../reviewStatusIcons';
 import { reviewEventRow, type ReviewEventIcon } from './reviewEventText';
 import type { ShownEvent } from './reviewThreads';
 import styles from './ReviewConversation.module.css';

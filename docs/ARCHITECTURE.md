@@ -1182,7 +1182,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `userFilterTexts`, marked with `HighlightQuery`, Everyone and You first, then the people picked when it opened and
     the rest by name, avatars, several at once, only the rows in view rendered; ↑↓ move, Enter toggles, Space toggles
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
-    (`lib/peopleFilter`: `othersLabel`, `describePick`). The people offered come from the rows: a list read whole
+    (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
     lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
@@ -1242,7 +1242,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
-  a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
+  a `DataTable` (`ui/table/`: only the rows in view render; a cell is as tall as its row, so a corner badge or a lifted avatar
+  isn't cut; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
   it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
   the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
@@ -1495,5 +1496,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
+    A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
+  - Several people in little room are one `ui/AvatarStack`: overlapping at rest, spreading on hover over what follows
+    (it keeps its resting width), each avatar with its own tooltip and an optional corner badge (a reviewer's status),
+    shown only spread; its `label` is for screen readers only, never a tooltip of the whole. Its geometry is
+    `avatarStackLayout`. What the spread covers steps aside while it does: the people filter's label fades out.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
     inside the layout they will fill ("One layout from the first frame").

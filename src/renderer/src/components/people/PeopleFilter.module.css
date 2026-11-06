@@ -50,28 +50,22 @@
 .othersLabel {
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.picked {
+  display: inline-flex;
+}
+
+/* The avatars spread over the label beside them: it steps aside while they do, so neither reads through the other. */
+.others:has(.picked:hover) .othersLabel {
+  opacity: 0;
 }
 
 .chevron {
   flex: none;
   margin-right: -2px;
   opacity: 0.7;
-}
-
-.stack {
-  display: inline-flex;
-  flex: none;
-}
-
-/* Each avatar overlaps the one before, ringed in the chip's color so they read apart. */
-.stacked {
-  display: inline-flex;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--bg-surface);
-}
-
-.stacked + .stacked {
-  margin-left: -5px;
 }
 
 .everyone {

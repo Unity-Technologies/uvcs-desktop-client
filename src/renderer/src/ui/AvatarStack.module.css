@@ -1,0 +1,105 @@
+/* The stack keeps its resting width (set inline); spread, the avatars float over what follows it. Its own stacking
+   context keeps their layers from reaching over the rest of the page. */
+.stack {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  isolation: isolate;
+}
+
+/* While spread, the pointer crossing the gaps between avatars still holds the stack open: a strip under them, as wide
+   as they spread, catches it. */
+.stack::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: var(--spread-width);
+  height: 100%;
+  pointer-events: none;
+}
+
+.stack:hover::after {
+  pointer-events: auto;
+}
+
+/* Each avatar is ringed apart from the one it overlaps in the surface's color. The slide rides `translate` and the
+   hovered avatar's growth `scale`, separate properties so the growth doesn't stretch the slide with it. Spreading
+   staggers from the first avatar, folding back from the last; the delays are made of a duration token, so reduced
+   motion (which zeroes them) makes both instant. */
+.item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--layer);
+  display: inline-flex;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  translate: var(--rest-x);
+  transition-property: translate, scale, box-shadow;
+  transition-duration: var(--duration-slow), var(--duration-fast), var(--duration-normal);
+  transition-timing-function: var(--ease-spring), var(--ease-out), var(--ease-out);
+  transition-delay: calc(var(--reverse-order) * var(--duration-instant) / 5), 0s, 0s;
+}
+
+.stack:hover .item {
+  translate: var(--spread-x);
+  box-shadow:
+    0 0 0 1.5px var(--bg-surface),
+    var(--shadow-md);
+  transition-delay: calc(var(--order) * var(--duration-instant) / 4), 0s, 0s;
+}
+
+/* The avatar under the pointer grows a little and comes to the front. */
+.stack:hover .item:hover {
+  z-index: calc(var(--layer) + 100);
+  scale: 1.2;
+}
+
+/* The people left out: a neutral disc rather than someone's colored one, opaque so the avatar it overlaps doesn't show
+   through. */
+.more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+  color: var(--text-secondary);
+  font-size: calc(var(--avatar-size) * 0.42);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* What an avatar stands for, in its corner (`BADGE_REACH` past it): hidden at rest, where the stack says only who,
+   it fades in as its avatar settles once spread, after the same stagger as its slide, and leaves at once as the
+   stack folds. Its delays are made of duration tokens, so reduced motion makes it instant. */
+.badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  background: var(--badge-color);
+  color: var(--text-inverse);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out);
+}
+
+.stack:hover .badge {
+  opacity: 1;
+  scale: 1;
+  transition-duration: var(--duration-normal);
+  transition-delay: calc(var(--order) * var(--duration-instant) / 4 + var(--duration-slow) * 0.6);
+}

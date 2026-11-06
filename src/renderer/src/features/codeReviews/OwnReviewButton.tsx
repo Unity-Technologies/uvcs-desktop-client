@@ -10,7 +10,8 @@ import { Popover } from '../../ui/Popover';
 import { setOwnReviewStatus } from './codeReviewOperations';
 import { CommentComposer } from './conversation/CommentComposer';
 import { ownReviewButton } from './ownReview';
-import { REVIEW_STATUS_ICONS, ReviewStatusIcon } from './ReviewStatusIcon';
+import { ReviewStatusIcon } from './ReviewStatusIcon';
+import { REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import styles from './CodeReviewPage.module.css';
 
 /**

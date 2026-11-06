@@ -1,6 +1,6 @@
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import { SHORT_STATUS } from './reviewsByBranch';
-import { REVIEW_STATUS_ICONS } from './ReviewStatusIcon';
+import { REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import styles from './CodeReviewStatusBadge.module.css';
 
 interface CodeReviewStatusBadgeProps {
