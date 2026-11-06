@@ -23,6 +23,14 @@ describe('canDeleteComment', () => {
     expect(canDeleteComment(answered!.root, answered!, 'ana@acme.com')).toBe(false);
   });
 
+  it('keeps a reply that someone answered from being deleted, wherever it is in the thread', () => {
+    const [thread] = threadsOf([comment(1), comment(2, { parentId: 1 }), comment(3, { parentId: 2, author: 'bob@acme.com' })]);
+    const [answered, answer] = thread!.replies;
+
+    expect(canDeleteComment(answered!, thread!, 'ana@acme.com')).toBe(false);
+    expect(canDeleteComment(answer!, thread!, 'bob@acme.com')).toBe(true);
+  });
+
   it('lets the author delete a reply, and nobody else', () => {
     const [thread] = threadsOf([comment(1), comment(2, { parentId: 1, author: 'bob@acme.com' })]);
     const [answer] = thread!.replies;

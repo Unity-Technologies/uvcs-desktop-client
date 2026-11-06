@@ -20,6 +20,15 @@ describe('threadsOf', () => {
     ]);
   });
 
+  it('keeps a reply to a reply in its thread, at any depth, in the order they came', () => {
+    const threads = threadsOf([comment(1), reply(2, 1), comment(3), reply(4, 2), reply(5, 4), reply(6, 1)]);
+
+    expect(threads.map(({ root, replies }) => [root.id, replies.map((answer) => answer.id)])).toEqual([
+      [1, [2, 4, 5, 6]],
+      [3, []],
+    ]);
+  });
+
   it("starts a thread with a reply whose comment is gone, so it isn't lost", () => {
     expect(threadsOf([reply(5, 99)]).map((thread) => thread.root.id)).toEqual([5]);
   });

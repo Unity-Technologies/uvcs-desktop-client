@@ -17,20 +17,37 @@ export interface ReviewThread {
 export type TimelineItem = { kind: 'event'; event: ReviewEvent } | { kind: 'thread'; thread: ReviewThread };
 
 /**
- * The comments as threads, in the order they came. A reply whose comment is gone (another client deleted it, keeping
+ * The comments as threads, in the order they came: each thread a comment and every reply under it, at any depth
+ * (other clients answer replies too), oldest first. A reply whose comment is gone (another client deleted it, keeping
  * its replies) starts a thread of its own, so nothing said is lost.
  */
 export function threadsOf(comments: readonly ReviewComment[]): ReviewThread[] {
-  const ids = new Set(comments.map((comment) => comment.id));
-  const isReply = (comment: ReviewComment): boolean => comment.parentId !== undefined && ids.has(comment.parentId);
+  const byId = new Map(comments.map((comment) => [comment.id, comment]));
+  const rootOf = (comment: ReviewComment): ReviewComment => {
+    let current = comment;
+    const seen = new Set<number>();
+    while (current.parentId !== undefined && byId.has(current.parentId) && !seen.has(current.id)) {
+      seen.add(current.id);
+      current = byId.get(current.parentId)!;
+    }
+    return current;
+  };
   const replies = new Map<number, ReviewComment[]>();
-  for (const comment of comments.filter(isReply)) replies.set(comment.parentId!, [...(replies.get(comment.parentId!) ?? []), comment]);
-  return comments
-    .filter((comment) => !isReply(comment))
-    .map((root) => {
-      const answers = replies.get(root.id) ?? [];
-      return { root, replies: answers, state: threadState(root, answers) };
-    });
+  const roots: ReviewComment[] = [];
+  for (const comment of comments) {
+    const root = rootOf(comment);
+    if (root === comment) roots.push(comment);
+    else replies.set(root.id, [...(replies.get(root.id) ?? []), comment]);
+  }
+  return roots.map((root) => {
+    const answers = replies.get(root.id) ?? [];
+    return { root, replies: answers, state: threadState(root, answers) };
+  });
+}
+
+/** Whether anyone replied to `comment` itself, in its thread. */
+export function hasReplies(comment: ReviewComment, thread: ReviewThread): boolean {
+  return thread.replies.some((reply) => reply.parentId === comment.id);
 }
 
 function threadState(root: ReviewComment, replies: readonly ReviewComment[]): ThreadState {
