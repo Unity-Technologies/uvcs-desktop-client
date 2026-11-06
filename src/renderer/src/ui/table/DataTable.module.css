@@ -108,8 +108,9 @@
   background: var(--bg-selected-strong);
 }
 
-/* A cell is as tall as its row, its content centered in it, so what reaches past the content's box (an avatar's ring,
-   a stack of avatars spread and lifted) shows whole rather than cut at the content's height. */
+/* A cell is as tall as its row, its content centered in it, so a little that reaches past the content's box (an
+   avatar's ring) shows whole rather than cut at the content's height. What reaches past the row (a lifted avatar's
+   shadow) is still cut at the cell's edge. */
 .cell {
   display: flex;
   align-self: stretch;

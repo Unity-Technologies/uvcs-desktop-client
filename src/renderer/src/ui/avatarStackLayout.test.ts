@@ -24,7 +24,7 @@ describe('avatarStackLayout', () => {
     expect(slots.map((slot) => slot.reverseOrder)).toEqual([2, 1, 0]);
   });
 
-  it('takes one avatar the same room at rest and spread, and none none', () => {
+  it('takes one avatar the same room at rest and spread, and none takes none', () => {
     expect(avatarStackLayout(1, 16)).toMatchObject({ restWidth: 16, spreadWidth: 16 });
     expect(avatarStackLayout(0, 16)).toEqual({ slots: [], restWidth: 0, spreadWidth: 0 });
   });
