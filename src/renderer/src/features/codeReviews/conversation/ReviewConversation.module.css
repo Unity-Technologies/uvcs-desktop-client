@@ -193,6 +193,8 @@
   padding: 0;
   border: none;
   background: none;
+  /* A link to the file in Changes: the hand says so. */
+  cursor: pointer;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
