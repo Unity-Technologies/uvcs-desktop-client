@@ -10,7 +10,7 @@ import { Popover } from '../../ui/Popover';
 import { setOwnReviewStatus } from './codeReviewOperations';
 import { CommentComposer } from './conversation/CommentComposer';
 import { ownReviewButton } from './ownReview';
-import { ReviewStatusIcon } from './ReviewStatusIcon';
+import { REVIEW_STATUS_ICONS, ReviewStatusIcon } from './ReviewStatusIcon';
 import styles from './CodeReviewPage.module.css';
 
 /**
@@ -21,6 +21,8 @@ export function OwnReviewButton({ review }: { review: CodeReview }) {
   const user = usePlaceUser();
   const [open, setOpen] = useState(false);
   const button = ownReviewButton(review, user);
+  // In the button's own color: a status's color on the button's fill can't be read.
+  const StatusIcon = button.status && REVIEW_STATUS_ICONS[button.status];
 
   return (
     <Popover
@@ -29,7 +31,7 @@ export function OwnReviewButton({ review }: { review: CodeReview }) {
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <Button variant="primary" icon={button.status && <ReviewStatusIcon status={button.status} size={14} />} className={styles.ownReview}>
+        <Button variant="primary" icon={StatusIcon && <StatusIcon size={14} aria-hidden />} className={styles.ownReview}>
           {button.label}
           <ChevronDown size={13} aria-hidden />
         </Button>
