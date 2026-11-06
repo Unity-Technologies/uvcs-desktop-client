@@ -1,15 +1,19 @@
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import { offersCommonAncestor, offersIgnoreMergeTracking } from '@shared/domain/mergeOptions';
 import { MERGE_FIELD_SEPARATOR, MERGE_PREVIEW_RECORD_ARGS } from '../cm/mergeOutput';
 
 export const MACHINE_READABLE_ARGS = ['--machinereadable', `--fieldseparator=${MERGE_FIELD_SEPARATOR}`];
 
-/** The source and kind of a merge, as `cm merge` arguments. */
+/** The source and kind of a merge, and the options the user chose for it, as `cm merge` arguments. */
 export function mergeSourceArgs(request: MergeRequest): string[] {
   return [
     request.sourceSpec,
     ...(request.kind === 'cherryPick' ? ['--cherrypicking'] : []),
     ...(request.kind === 'subtractive' ? ['--subtractive'] : []),
     ...(request.intervalOriginSpec ? [`--interval-origin=${request.intervalOriginSpec}`] : []),
+    ...(request.ignoreMergeTracking && offersIgnoreMergeTracking(request) ? ['--forced'] : []),
+    // `--ancestor` without `--strategy=manual` would make `cm` cherry pick the interval from it instead.
+    ...(request.ancestorSpec && offersCommonAncestor(request) ? ['--strategy=manual', `--ancestor=${request.ancestorSpec}`] : []),
     ...(request.destinationBranch ? [`--to=br:${request.destinationBranch}`] : []),
   ];
 }
