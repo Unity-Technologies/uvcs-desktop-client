@@ -1,4 +1,10 @@
-/* The conversation scrolls as one column, its rail beside it; the rail drops under it in a narrow window. */
+/* The tab scrolls as a whole, its scrollbar at the window's edge, not beside the centered column. */
+.scroller {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* The conversation, a column with its rail beside it; the rail drops under it in a narrow window. */
 .conversation {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 240px;
@@ -6,10 +12,8 @@
   align-items: start;
   width: 100%;
   max-width: 1120px;
-  height: 100%;
   margin: 0 auto;
   padding: var(--space-5) var(--space-6) var(--space-8);
-  overflow-y: auto;
 }
 
 @media (max-width: 860px) {
@@ -381,7 +385,7 @@ button.pill:hover {
 /* The rail: who reviews, and what's still open. */
 .rail {
   position: sticky;
-  top: 0;
+  top: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);

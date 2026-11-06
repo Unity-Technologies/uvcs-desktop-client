@@ -32,39 +32,42 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
 
   return (
-    <div className={styles.conversation}>
-      <div className={styles.main}>
-        {isPending ? (
-          <div className={styles.loading} aria-busy="true" aria-label="Loading">
-            <SkeletonBar width="60%" />
-            <SkeletonBar width="85%" />
-            <SkeletonBar width="40%" />
+    // The whole tab scrolls, its scrollbar at the window's edge; the conversation is a column centered in it.
+    <div className={styles.scroller}>
+      <div className={styles.conversation}>
+        <div className={styles.main}>
+          {isPending ? (
+            <div className={styles.loading} aria-busy="true" aria-label="Loading">
+              <SkeletonBar width="60%" />
+              <SkeletonBar width="85%" />
+              <SkeletonBar width="40%" />
+            </div>
+          ) : (
+            <>
+              <ReviewDescriptionCard review={review} description={conversation.description} />
+              <ol className={styles.timeline}>
+                {timeline.map((entry) => (
+                  <li key={entryKey(entry)}>
+                    {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
+                    {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
+                    {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} />}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+          <div className={styles.newComment}>
+            <CommentComposer
+              draftKey={commentDraftKey(placeId(place), 'reviewComment', review.id)}
+              placeholder="Leave a comment"
+              label="New comment"
+              submitLabel="Comment"
+              onSubmit={(text) => addReviewComment(place, review.id, text)}
+            />
           </div>
-        ) : (
-          <>
-            <ReviewDescriptionCard review={review} description={conversation.description} />
-            <ol className={styles.timeline}>
-              {timeline.map((entry) => (
-                <li key={entryKey(entry)}>
-                  {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
-                  {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                  {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} />}
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
-        <div className={styles.newComment}>
-          <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewComment', review.id)}
-            placeholder="Leave a comment"
-            label="New comment"
-            submitLabel="Comment"
-            onSubmit={(text) => addReviewComment(place, review.id, text)}
-          />
         </div>
+        <ReviewSideRail review={review} open={open} />
       </div>
-      <ReviewSideRail review={review} open={open} />
     </div>
   );
 }
