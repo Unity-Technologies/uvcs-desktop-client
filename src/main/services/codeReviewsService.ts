@@ -3,8 +3,8 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { addReviewersArgs, createReviewArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
-import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
+import { addReviewersArgs, createReviewArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
+import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -61,6 +61,11 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       const [review] = await resolveTargets(place, await findReviewById(place, reviewId));
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
       return review;
+    },
+
+    reviewers(place, reviewId) {
+      const at = cmPlace(place);
+      return cm.queryRecords(listReviewersArgs(reviewId, at), layoutReader(LISTED_REVIEWERS), at.options);
     },
 
     async create(place, request) {

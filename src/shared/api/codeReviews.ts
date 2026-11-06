@@ -1,12 +1,17 @@
 import type { MemberRef } from '../domain/member';
 import type { Place } from '../domain/place';
-import type { CodeReview, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest } from '../domain/codeReview';
+import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
   list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
   /** Like `list`, but a single `cm find`: for searches that never show the targets. */
   listSummaries(place: Place, filter: CodeReviewFilter): Promise<CodeReviewSummary[]>;
   get(place: Place, reviewId: number): Promise<CodeReview>;
+  /**
+   * The review's reviewers, each with its status and whether it's a user or a group (`CodeReviewer.kind`): one
+   * `cm codereview reviewer list`, for one review at a time (its page), never a list's rows.
+   */
+  reviewers(place: Place, reviewId: number): Promise<CodeReviewer[]>;
   create(place: Place, request: CreateCodeReviewRequest): Promise<number>;
   /** Asks these users and groups to review it too; one already asked stays as they are. */
   addReviewers(place: Place, reviewId: number, reviewers: MemberRef[]): Promise<void>;

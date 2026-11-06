@@ -1,10 +1,17 @@
 import type { CodeReviewStatus, CreateCodeReviewRequest } from '@shared/domain/codeReview';
 import type { MemberKind, MemberRef } from '@shared/domain/member';
 import type { CmPlace } from './cmPlace';
+import { LISTED_REVIEWERS } from './codeReviewRecords';
+import { layoutFormat } from './formatRecords';
 
 /** `cm codereview <target> <title>`, printing the new review's id; the reviewers it asks, if any, in the same command. */
 export function createReviewArgs({ targetSpec, title, reviewers = [] }: CreateCodeReviewRequest, at: CmPlace): string[] {
   return ['codereview', at.spec(targetSpec), title, ...reviewersOptions(reviewers), '--format={id}', ...at.repositoryOption];
+}
+
+/** `cm codereview reviewer list`: the review's reviewers, each with its status and whether it's a user or a group. */
+export function listReviewersArgs(reviewId: number, at: CmPlace): string[] {
+  return ['codereview', 'reviewer', 'list', String(reviewId), layoutFormat(LISTED_REVIEWERS), ...at.repositoryOption];
 }
 
 /** `cm codereview reviewer add`: one command for every user and group, which `cm` asks one by one. */
