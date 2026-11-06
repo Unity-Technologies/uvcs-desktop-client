@@ -28,6 +28,8 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
+import { MergeOptionsMenu } from './MergeOptionsMenu';
+import { contributorDecisions, contributorOf, mergeOptionsOffered, type Contributor } from './mergeOptions';
 import { MergePanes } from './MergePanes';
 import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
@@ -50,19 +52,28 @@ interface MergeSessionProps {
   /** A task branch merged into a branch on the server, which the merge also finishes. */
   task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
+  /** A request with other merge options: the page previews it again (`MergeOptionsMenu`). */
+  onRequestChange: (request: MergeRequest) => void;
 }
 
 const itemKey = (item: MergeItem): string => item.key;
 const itemPath = (item: MergeItem): string => item.path;
 
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
-export function MergeSession({ workspacePath, request, initialPlan, task, onCompleted }: MergeSessionProps) {
+export function MergeSession({ workspacePath, request, initialPlan, task, onCompleted, onRequestChange }: MergeSessionProps) {
   const directory = useDirectoryDecisions(workspacePath, request, initialPlan);
   const { plan } = directory;
   // The contributors stay with every decision: the labels, and every file state built on them, stay as they are.
   const labels = useMemo(() => mergeLabels(request, initialPlan), [request, initialPlan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
   const { states: fileStates, decide, reset, resolveInTool, openFile } = useFileConflicts(workspacePath, conflictedFiles, labels);
+  const optionsOffered = mergeOptionsOffered(request, fileStates.length);
+  const chooseContributor = (contributor: Contributor): void => {
+    for (const { key, decision } of contributorDecisions(fileStates, contributor)) {
+      if (decision) decide(key, decision);
+      else reset(key);
+    }
+  };
   const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
@@ -174,6 +185,18 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           merging={merging}
           onMerge={() => void merge()}
           run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
+          mergeOptions={
+            optionsOffered.any && (
+              <MergeOptionsMenu
+                request={request}
+                labels={labels}
+                offered={optionsOffered}
+                contributor={contributorOf(fileStates)}
+                onContributorChange={chooseContributor}
+                onRequestChange={onRequestChange}
+              />
+            )
+          }
           options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
