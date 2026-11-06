@@ -23,7 +23,7 @@ interface ReviewStatusIconProps {
 export function ReviewStatusIcon({ status, size = 14, label }: ReviewStatusIconProps) {
   const Icon = REVIEW_STATUS_ICONS[status];
   return (
-    <span className={styles.icon} data-status={status} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+    <span className={styles.icon} data-status={status} role={label ? 'img' : undefined} aria-label={label} data-tip={label} aria-hidden={label ? undefined : true}>
       <Icon size={size} />
     </span>
   );
