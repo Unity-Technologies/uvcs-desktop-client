@@ -1,8 +1,9 @@
-import { CheckCircle2, CircleDot, Pencil, RotateCcw, UserMinus, UserPlus, type LucideIcon } from 'lucide-react';
+import { Pencil, RotateCcw, UserMinus, UserPlus, type LucideIcon } from 'lucide-react';
 import { Markdown } from '../../../components/Markdown';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
+import { REVIEW_STATUS_ICONS } from '../ReviewStatusIcon';
 import { reviewEventRow, type ReviewEventIcon } from './reviewEventText';
 import type { ShownEvent } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
@@ -12,9 +13,7 @@ const ICONS: Record<ReviewEventIcon, LucideIcon> = {
   reviewRequestedAgain: RotateCcw,
   reviewerRemoved: UserMinus,
   renamed: Pencil,
-  'Under review': CircleDot,
-  Reviewed: CheckCircle2,
-  'Rework required': RotateCcw,
+  ...REVIEW_STATUS_ICONS,
 };
 
 /** A quiet line for what the server noted: who did what, when; a status change with what its reviewer said under it. */
