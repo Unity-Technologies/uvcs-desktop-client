@@ -1,4 +1,3 @@
-import { MAX_LISTED_CODE_REVIEWS } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -55,7 +54,7 @@ const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
 };
 
 describe('code review list', () => {
-  it('lists the newest reviews with one cm find, filtered on the server', async () => {
+  it('lists every review the filters keep with one cm find, filtered on the server, with no cap', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
     await service.list(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
@@ -65,7 +64,7 @@ describe('code review list', () => {
         via: 'query',
         args: findQueryArgs(
           FOUND_REVIEWS,
-          `where reviewer = 'me' and status = 'Reviewed' and title like '%ix%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 300`,
+          `where reviewer = 'me' and status = 'Reviewed' and title like '%ix%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc`,
         ),
         options: { cwd: WORKSPACE },
       },
@@ -99,7 +98,24 @@ describe('code review list', () => {
     const [listed] = await service.list(IN_WORKSPACE, {});
 
     expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
-    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc limit 300')]);
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc')]);
+  });
+
+  it('caps a list only when asked, as the palette and the branch chips read the newest reviews', async () => {
+    const { service, lines } = codeReviews({ 'find review': '' });
+
+    await service.listSummaries(IN_WORKSPACE, { limit: 50 });
+
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc limit 50')]);
+  });
+
+  it('finds one review by its number with one cm find, for the palette', async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
+
+    const found = await service.listSummaries(IN_WORKSPACE, { id: 6 });
+
+    expect(found.map((summary) => summary.id)).toEqual([6]);
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
   });
 
   it('lists summaries with branch targets by id, never reading branch names', async () => {
@@ -287,7 +303,7 @@ describe('code reviews of a repository explored without a workspace', () => {
 
     expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
     expect(commands.map(({ args }) => args[2])).toEqual([
-      `order by date desc limit ${MAX_LISTED_CODE_REVIEWS} on repository 'game@local'`,
+      "order by date desc on repository 'game@local'",
       "on repository 'game@local'",
       "where hidden = 'true' on repository 'game@local'",
     ]);

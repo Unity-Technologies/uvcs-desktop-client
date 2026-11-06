@@ -1,6 +1,6 @@
 import type { Place } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
+import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
@@ -22,6 +22,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
 
   function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
+      ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
@@ -30,7 +31,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       owners: filter.owners,
       sinceDate: filter.sinceDate,
       text: filter.text,
-      limit: MAX_LISTED_CODE_REVIEWS,
+      limit: filter.limit,
     });
   }
 

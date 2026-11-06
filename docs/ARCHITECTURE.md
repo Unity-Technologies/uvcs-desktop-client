@@ -1075,7 +1075,15 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it; a
   changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names that
   shelve or review, first and as a full match (`namedFirst`): with its row when the lists read hold it, else by its
-  number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked. `#` is
+  number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked.
+  A number alone (`1234`, `typedObjectNumber`) names a shelve or code review too, only once it is known to exist,
+  never as a row that opens to an error: a shelve the recent shelves read hold, a review the newest reviews read hold
+  or, once typing pauses, one `cm find review "where id = N"` found (`reviewNumberToLookUp`,
+  `ServerMatches.reviewNumbered`; a changeset's number costs it too, as nothing read rules a review out; after `cr:`
+  the number alone shows until it answers none; no lookup for shelves, whose numbers nearly all exist and overlap the
+  changesets').
+  The changeset comes first, unless the number is past the newest changeset read
+  (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
   the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
   its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and

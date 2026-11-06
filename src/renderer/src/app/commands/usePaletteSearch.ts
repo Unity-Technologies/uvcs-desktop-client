@@ -10,7 +10,7 @@ import { sortChanges } from '../../features/pendingChanges/changeOrder';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
-import { paletteBranches, paletteGroups } from './paletteGroups';
+import { paletteBranches, paletteGroups, reviewNumberToLookUp } from './paletteGroups';
 import { palettePeople } from './personResults';
 import { indexPeople } from '../../lib/peopleIndex';
 import { isSearching, type PaletteScope } from './paletteScope';
@@ -41,8 +41,8 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const term = query.trim();
   const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, hiddenBranches, labels, changesets, shelves, codeReviews } =
     usePaletteLists(shown);
-  const server = usePaletteServerSearch(shown, term, scope);
-  const { term: serverTerm, branches: foundBranches, labels: foundLabels, shelves: foundShelves, codeReviews: foundCodeReviews } = server;
+  const server = usePaletteServerSearch(shown, term, scope, codeReviews.data);
+  const { term: serverTerm, branches: foundBranches, labels: foundLabels, shelves: foundShelves, codeReviews: foundCodeReviews, reviewNumbered } = server;
   const { term: changesetSearchTerm, found: foundChangesets, start: setChangesetSearchTerm } = useChangesetSearch(shown);
 
   // Branches and labels are cached in full, so a server match missing from them means they are out of date.
@@ -69,6 +69,8 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
   const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
   const serverWaits = (search: { isFetching: boolean }): boolean => server.searches && (serverTerm !== term || search.isFetching);
+  // A number typed waits for its review's lookup through the pause too, as the searches do.
+  const looksUpReview = enabled && reviewNumberToLookUp(term, scope, codeReviews.data) !== undefined && (serverTerm !== term || reviewNumbered.isFetching);
   const isLoading =
     enabled &&
     isSearching(
@@ -78,7 +80,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
         { section: 'labels', waiting: labels.isPending || serverWaits(foundLabels) },
         { section: 'changesets', waiting: changesets.isPending },
         { section: 'shelves', waiting: shelves.isPending || serverWaits(foundShelves) },
-        { section: 'codeReviews', waiting: codeReviews.isPending || serverWaits(foundCodeReviews) },
+        { section: 'codeReviews', waiting: codeReviews.isPending || serverWaits(foundCodeReviews) || looksUpReview },
         { section: 'people', waiting: branches.isPending || labels.isPending || changesets.isPending || shelves.isPending || codeReviews.isPending },
       ],
       scope,
@@ -111,7 +113,14 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
         recentBranchGuids: recentBranches,
         people,
       },
-      server: { term: serverTerm, branches: foundBranches.data, labels: foundLabels.data, shelves: foundShelves.data, codeReviews: foundCodeReviews.data },
+      server: {
+        term: serverTerm,
+        branches: foundBranches.data,
+        labels: foundLabels.data,
+        shelves: foundShelves.data,
+        codeReviews: foundCodeReviews.data,
+        reviewNumbered: reviewNumbered.data,
+      },
       changesetSearch: {
         term: changesetSearchTerm,
         found: foundChangesets.data,
@@ -147,6 +156,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     foundLabels.data,
     foundShelves.data,
     foundCodeReviews.data,
+    reviewNumbered.data,
     changesetSearchTerm,
     foundChangesets.data,
     foundChangesets.isFetching,

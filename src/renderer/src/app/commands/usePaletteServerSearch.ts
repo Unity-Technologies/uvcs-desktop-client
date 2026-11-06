@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { reviewSummariesKey } from '../../features/codeReviews/useCodeReviews';
+import { reviewNumberedKey, reviewSummariesKey } from '../../features/codeReviews/useCodeReviews';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { queryClient } from '../queryClient';
-import { lacksServerMatch, searchesServerFor } from './paletteGroups';
+import { lacksServerMatch, reviewNumberToLookUp, searchesServerFor } from './paletteGroups';
 import { branchesKey, changesetsKey, labelsKey, shelvesKey } from './paletteQueries';
 import { isInScope, type PaletteScope, type SectionId } from './paletteScope';
 import { NOWHERE } from './usePaletteLists';
@@ -32,11 +33,14 @@ export function labelSearchQuery(place: Place, term: string) {
 
 /**
  * Once typing pauses, `cm find ... like` asks the server for what the cached lists may miss (objects created since,
- * or beyond the cached limits), only for the sections in scope. `term` is the settled term the answers are for.
+ * or beyond the cached limits), only for the sections in scope; a number typed asks for the code review it names when
+ * the newest reviews read (`newestReviews`) lack it (`reviewNumberToLookUp`: one `cm find review "where id = N"`).
+ * `term` is the settled term the answers are for.
  */
-export function usePaletteServerSearch(shown: Place | null, typed: string, scope: PaletteScope) {
+export function usePaletteServerSearch(shown: Place | null, typed: string, scope: PaletteScope, newestReviews: readonly CodeReviewSummary[] | undefined) {
   const place = shown ?? NOWHERE;
   const term = useDebouncedValue(typed, SERVER_SEARCH_DELAY_MS);
+  const reviewNumber = shown === null ? undefined : reviewNumberToLookUp(term, scope, newestReviews);
   const searches = shown !== null && searchesServerFor(term);
   const server = (section: SectionId) => ({ enabled: searches && isInScope(section, scope), staleTime: SERVER_SEARCH_STALE_TIME });
   const textFilter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
@@ -49,8 +53,14 @@ export function usePaletteServerSearch(shown: Place | null, typed: string, scope
     shelves: useQuery({ queryKey: shelvesKey(place, textFilter), queryFn: () => api.shelves.list(place, textFilter), ...server('shelves') }),
     codeReviews: useQuery({
       queryKey: reviewSummariesKey(place, term),
-      queryFn: () => api.codeReviews.listSummaries(place, { text: term }),
+      queryFn: () => api.codeReviews.listSummaries(place, { text: term, limit: SERVER_SEARCH_LIMIT }),
       ...server('codeReviews'),
+    }),
+    reviewNumbered: useQuery({
+      queryKey: reviewNumberedKey(place, reviewNumber ?? 0),
+      queryFn: () => api.codeReviews.listSummaries(place, { id: reviewNumber }),
+      enabled: reviewNumber !== undefined,
+      staleTime: SERVER_SEARCH_STALE_TIME,
     }),
   };
 }

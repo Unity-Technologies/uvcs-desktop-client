@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
-import type { CodeReviewFilter } from '@shared/domain/codeReview';
+import { NEWEST_CODE_REVIEWS, type CodeReviewFilter } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
@@ -37,6 +37,11 @@ export function reviewSummariesKey(place: Place, text?: string): readonly unknow
   return queryKeys.inPlace(place, 'codeReviews', 'summaries', { text });
 }
 
+/** The review with one number, as the palette looks up a number typed (`reviewNumberToLookUp`). */
+export function reviewNumberedKey(place: Place, id: number): readonly unknown[] {
+  return queryKeys.inPlace(place, 'codeReviews', 'summaries', { id });
+}
+
 /**
  * The newest review of each branch by branch id, for status chips next to branch names (the lists showing them know
  * their branches' ids, so no name is looked up). The command palette lists the same reviews, read rarely;
@@ -48,13 +53,13 @@ export function useReviewsByBranch(enabled = true) {
 }
 
 /**
- * How the newest reviews of the repository are read, all of them (`reviewSummariesKey` without a text): rarely, as
- * the palette reads the same list, and a focus never reads them again.
+ * How the newest reviews of the repository are read (`NEWEST_CODE_REVIEWS`, `reviewSummariesKey` without a text):
+ * rarely, as the palette reads the same list, and a focus never reads them again.
  */
 export function reviewSummariesQuery(place: Place) {
   return {
     queryKey: reviewSummariesKey(place),
-    queryFn: () => api.codeReviews.listSummaries(place, {}),
+    queryFn: () => api.codeReviews.listSummaries(place, { limit: NEWEST_CODE_REVIEWS }),
     ...SLOW_CHANGING_QUERY,
   };
 }
