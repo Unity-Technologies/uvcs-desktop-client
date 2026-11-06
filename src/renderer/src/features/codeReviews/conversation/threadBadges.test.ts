@@ -47,12 +47,16 @@ describe('a comment on a line', () => {
   });
 
   it('opens the review on its Changes tab at that file and line', () => {
-    expect(commentLocationPage(41, ON_LINE)).toEqual({
+    expect(commentLocationPage(41, ON_LINE, undefined)).toEqual({
       kind: 'codeReview',
       reviewId: 41,
       tab: 'changes',
       focusPath: 'Assets/Scripts/SwitchFlow.cs',
       focusLines: { side: 'new', first: 11, last: 11 },
     });
+  });
+
+  it("opens one written in a single changeset's diff on its file only, whose lines the whole diff may not share", () => {
+    expect(commentLocationPage(41, ON_LINE, 2)).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs' });
   });
 });

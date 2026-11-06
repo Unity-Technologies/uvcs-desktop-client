@@ -36,7 +36,7 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
       {(anchor || badges.kind) && (
         <div className={styles.threadHeader}>
           {anchor && (
-            <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, anchor))}>
+            <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, anchor, root.changesetId))}>
               <FileCode2 size={13} aria-hidden />
               <span className={styles.locationPath}>{locationText(anchor).path}</span>
               <span className={styles.locationLine}>{locationText(anchor).line}</span>

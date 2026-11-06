@@ -71,7 +71,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   scrolling to each (`ReviewSideRail`).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
   deleted starts a thread of its own. One on a line shows its file and line first, a click opening the Changes tab
-  there (`commentLocationPage`), then its kind and where it stands (`threadBadges`), as the server counts open ones:
+  there (`commentLocationPage`: the line selected when the comment was written in the whole review's diff; one
+  written in a single changeset's diff opens on its file only; one on an older revision of the file, or on a file the
+  review deletes, still opens at its line number in the newest version, until the Changes tab places comments), then its kind and where it stands (`threadBadges`), as the server counts open ones:
   a change request is **Open** until a changeset applies it (**Applied in** its changeset, a chip) or a reply discards
   it (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no
   other way to resolve one). Other comments are never open.

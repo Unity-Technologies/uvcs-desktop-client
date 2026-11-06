@@ -44,15 +44,14 @@ export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line'
 }
 
 /**
- * The review on its Changes tab at a comment's file and line: the diff names files without the leading slash. The
- * line is the newer side's, where comments are written; one on a file the review deletes is on the older side.
+ * The review on its Changes tab at a comment's file: the diff names files without the leading slash. Its line is
+ * selected on the newer side when the comment was written in the whole review's diff; one written in a single
+ * changeset's diff opens on its file only, as the whole diff's lines may not be that changeset's. A comment on an
+ * older revision of the file, or on a file the review deletes, still opens at its line number in the newest version:
+ * placing it exactly needs the diff's revisions, which the Changes tab reads.
  */
-export function commentLocationPage(reviewId: number, anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>): PageOf<'codeReview'> {
-  return {
-    kind: 'codeReview',
-    reviewId,
-    tab: 'changes',
-    focusPath: anchor.path.replace(/^\//, ''),
-    focusLines: { side: 'new', first: anchor.line, last: anchor.line },
-  };
+export function commentLocationPage(reviewId: number, anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>, changesetId: number | undefined): PageOf<'codeReview'> {
+  const focusPath = anchor.path.replace(/^\//, '');
+  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath };
+  return changesetId === undefined ? { ...page, focusLines: { side: 'new', first: anchor.line, last: anchor.line } } : page;
 }
