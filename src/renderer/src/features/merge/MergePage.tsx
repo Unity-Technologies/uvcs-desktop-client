@@ -1,6 +1,6 @@
 import { CheckCircle2, FileDiff, GitMerge } from 'lucide-react';
 import { useState } from 'react';
-import type { MergePlan } from '@shared/domain/merge';
+import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -8,18 +8,25 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
+import { hasMergeOptions, nothingToMergeAction, withoutMergeOptions } from './mergeOptions';
 import { MergeSession } from './MergeSession';
 import { useMergePlan } from './useMergePlan';
 
 /** Previews a merge, walks the user through its conflicts and runs it. */
 export function MergePage({ page }: PageProps<'merge'>) {
+  // The merge options edit the request on this page: a page opened again with another request starts afresh.
+  return <MergeOfRequest key={JSON.stringify(page.request)} page={page} />;
+}
+
+function MergeOfRequest({ page }: PageProps<'merge'>) {
   const workspacePath = useWorkspacePath();
-  const { data: plan, isLoading, error, refetch, isFetching } = useMergePlan(workspacePath, page.request);
+  const [request, setRequest] = useState(page.request);
+  const { data: plan, isLoading, error, refetch, isFetching } = useMergePlan(workspacePath, request);
   // Once merged into the workspace, the plan no longer holds (the workspace has pending changes): the page says what happened instead.
   const [completion, setCompletion] = useState<MergeCompletion>();
 
-  if (completion) return <MergeCompleted request={page.request} completion={completion} />;
-  if (isLoading) return <MergeCalculating request={page.request} />;
+  if (completion) return <MergeCompleted request={request} completion={completion} />;
+  if (isLoading) return <MergeCalculating request={request} />;
   if (error || !plan) {
     return (
       <EmptyState
@@ -27,19 +34,28 @@ export function MergePage({ page }: PageProps<'merge'>) {
         title="Couldn't prepare the merge"
         description={error?.message}
         action={
-          <Button loading={isFetching} onClick={() => void refetch()}>
-            Try again
-          </Button>
+          <>
+            {hasMergeOptions(request) && <Button onClick={() => setRequest(withoutMergeOptions(request))}>Merge without options</Button>}
+            <Button loading={isFetching} onClick={() => void refetch()}>
+              Try again
+            </Button>
+          </>
         }
       />
     );
   }
 
-  if (plan.status !== 'ready') return <MergeNotPossible plan={plan} />;
-  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} initialPlan={plan} task={page.task} onCompleted={setCompletion} />;
+  if (plan.status !== 'ready') return <MergeNotPossible plan={plan} request={request} onRequestChange={setRequest} />;
+  return <MergeSession key={JSON.stringify(request)} workspacePath={workspacePath} request={request} initialPlan={plan} task={page.task} onCompleted={setCompletion} onRequestChange={setRequest} />;
 }
 
-function MergeNotPossible({ plan }: { plan: MergePlan }) {
+interface MergeNotPossibleProps {
+  plan: MergePlan;
+  request: MergeRequest;
+  onRequestChange: (request: MergeRequest) => void;
+}
+
+function MergeNotPossible({ plan, request, onRequestChange }: MergeNotPossibleProps) {
   switch (plan.status) {
     case 'pendingChanges':
       return (
@@ -50,8 +66,17 @@ function MergeNotPossible({ plan }: { plan: MergePlan }) {
           action={<Button onClick={() => navigation.goToView('changes')}>Go to Changes</Button>}
         />
       );
-    case 'alreadyMerged':
-      return <EmptyState icon={<CheckCircle2 size={22} />} title="Nothing to merge" description="The destination already has all these changes." />;
+    case 'alreadyMerged': {
+      const action = nothingToMergeAction(request);
+      return (
+        <EmptyState
+          icon={<CheckCircle2 size={22} />}
+          title="Nothing to merge"
+          description="The destination already has all these changes."
+          action={action && <Button onClick={() => onRequestChange(action.request)}>{action.label}</Button>}
+        />
+      );
+    }
     default:
       return <EmptyState icon={<GitMerge size={22} />} title="This interval can't be merged" description="Check the changesets you picked and try again." />;
   }
