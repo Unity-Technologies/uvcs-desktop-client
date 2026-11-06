@@ -1,4 +1,6 @@
 import { Pencil } from 'lucide-react';
+import { placeId } from '@shared/domain/place';
+import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewDescription } from '@shared/domain/reviewConversation';
@@ -43,7 +45,7 @@ export function ReviewDescriptionCard({ review, description }: { review: CodeRev
         </header>
         {editing ? (
           <CommentComposer
-            draftKey={`review-description:${review.id}`}
+            draftKey={commentDraftKey(placeId(place), 'reviewDescription', review.id)}
             initialText={description?.text ?? ''}
             placeholder="What these changes do, and what to look at"
             label="Description"

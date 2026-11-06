@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { placeId } from '@shared/domain/place';
+import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { usePlace } from '../../../app/workspace/useWorkspace';
@@ -51,7 +53,7 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
         )}
         <div className={styles.newComment}>
           <CommentComposer
-            draftKey={`review-comment:${review.id}`}
+            draftKey={commentDraftKey(placeId(place), 'reviewComment', review.id)}
             placeholder="Leave a comment"
             label="New comment"
             submitLabel="Comment"

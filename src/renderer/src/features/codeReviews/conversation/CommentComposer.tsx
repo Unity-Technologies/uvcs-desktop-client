@@ -8,7 +8,7 @@ import { composerText, isSendable } from './composerText';
 import styles from './CommentComposer.module.css';
 
 interface CommentComposerProps {
-  /** Whose draft it writes, kept while the window lives (`useCommentDraftStore`): leaving the page keeps it. */
+  /** Whose draft it writes (`commentDraftKey`, in its place), kept while the window lives (`useCommentDraftStore`). */
   draftKey: string;
   /** What it starts with when there's no draft: the comment being edited. */
   initialText?: string;

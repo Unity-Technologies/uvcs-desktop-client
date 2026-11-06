@@ -1,4 +1,6 @@
 import { FileCode2 } from 'lucide-react';
+import { placeId } from '@shared/domain/place';
+import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useState } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
@@ -60,7 +62,7 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
       <div className={styles.answer}>
         {answering === 'reply' && (
           <CommentComposer
-            draftKey={`review-reply:${root.guid}`}
+            draftKey={commentDraftKey(placeId(place), 'reviewReply', root.guid)}
             placeholder="Reply"
             label="Reply"
             submitLabel="Reply"
@@ -75,7 +77,7 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
         )}
         {answering === 'discard' && (
           <CommentComposer
-            draftKey={`review-discard:${root.guid}`}
+            draftKey={commentDraftKey(placeId(place), 'reviewDiscard', root.guid)}
             placeholder="Why isn't this change needed?"
             label="Why the change request is discarded"
             submitLabel="Discard change request"

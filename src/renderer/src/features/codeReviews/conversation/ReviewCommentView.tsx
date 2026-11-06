@@ -1,4 +1,6 @@
 import { MoreHorizontal } from 'lucide-react';
+import { placeId } from '@shared/domain/place';
+import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useState } from 'react';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
@@ -55,7 +57,7 @@ export function ReviewCommentView({ comment, thread, user, action }: ReviewComme
         </header>
         {editing ? (
           <CommentComposer
-            draftKey={`review-comment-edit:${comment.guid}`}
+            draftKey={commentDraftKey(placeId(place), 'reviewCommentEdit', comment.guid)}
             initialText={comment.text}
             placeholder="Write a comment"
             label="Edit comment"
