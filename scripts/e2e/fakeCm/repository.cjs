@@ -96,6 +96,15 @@ const REVIEWS = [
   },
 ];
 
+/** Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its reply, a status. */
+const REVIEW_COMMENT_FIELDS = { owner: OWNER, parent: -1, revisionid: -1, itemid: '', path: '', line: '', changeset: -1, appliedinchangeset: -1, reviewid: 80 };
+const REVIEW_COMMENTS = [
+  { ...REVIEW_COMMENT_FIELDS, id: 90, guid: 'ffffffff-0000-0000-0000-000000000090', date: daysAgo(8), modifieddate: daysAgo(8), type: 'timeline', comment: '[description]Makes the player **jump**.' },
+  { ...REVIEW_COMMENT_FIELDS, id: 91, guid: 'ffffffff-0000-0000-0000-000000000091', date: daysAgo(7), modifieddate: daysAgo(7), type: 'change', comment: 'Jump only when grounded.', revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  { ...REVIEW_COMMENT_FIELDS, id: 92, guid: 'ffffffff-0000-0000-0000-000000000092', date: daysAgo(6), modifieddate: daysAgo(6), type: 'comment', comment: 'On it.', parent: 91, revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  { ...REVIEW_COMMENT_FIELDS, id: 93, guid: 'ffffffff-0000-0000-0000-000000000093', date: daysAgo(2), modifieddate: daysAgo(2), type: 'timeline', comment: '[status-rework-required]One change first.' },
+];
+
 const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is', date: daysAgo(30), ...common }];
 
 /** Attribute values set on objects (`srcobj`), as `cm find attribute` finds them. */
@@ -179,6 +188,7 @@ module.exports = {
   REPOSITORY,
   REPOSITORY_SPEC,
   REVIEWS,
+  REVIEW_COMMENTS,
   REVISIONS,
   SERVER,
   SHELVES,

@@ -11,12 +11,27 @@ export function addReviewersArgs(reviewId: number, users: string[], at: CmPlace)
   return ['codereview', 'reviewer', 'add', String(reviewId), ...usersOption(users), ...at.repositoryOption];
 }
 
+/** `cm codereview reviewer remove`: one command for every user; the other reviewers stay. */
+export function removeReviewersArgs(reviewId: number, users: string[], at: CmPlace): string[] {
+  return ['codereview', 'reviewer', 'remove', String(reviewId), ...usersOption(users), ...at.repositoryOption];
+}
+
+/** `cm codereview review --re-request`: the reviewers named go back to "Under review", asked to review it again. */
+export function reRequestReviewArgs(reviewId: number, users: string[], at: CmPlace): string[] {
+  return ['codereview', 'review', String(reviewId), '--re-request', ...usersOption(users), ...at.repositoryOption];
+}
+
 /**
  * `cm codereview review`: the signed-in user's own status. What they say about it, which may hold lines, goes in a
  * file: a `cm shell` line can't carry quotes or line breaks.
  */
 export function ownStatusArgs(reviewId: number, status: CodeReviewStatus, commentsFile: string | undefined, at: CmPlace): string[] {
   return ['codereview', 'review', String(reviewId), STATUS_OPTIONS[status], ...(commentsFile ? [`-commentsfile=${commentsFile}`] : []), ...at.repositoryOption];
+}
+
+/** `cm codereview -e --title`: a title is one line. */
+export function renameReviewArgs(reviewId: number, title: string, at: CmPlace): string[] {
+  return ['codereview', '-e', String(reviewId), `--title=${title}`, ...at.repositoryOption];
 }
 
 const STATUS_OPTIONS: Record<CodeReviewStatus, string> = {

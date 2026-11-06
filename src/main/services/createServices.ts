@@ -21,6 +21,7 @@ import { createBranchExplorerService } from './branchExplorerService';
 import { createBranchesService } from './branchesService';
 import { createChangesetsService } from './changesetsService';
 import { createCodeReviewsService } from './codeReviewsService';
+import { createReviewCommentsService } from './reviewCommentsService';
 import { createContentService } from './contentService';
 import { createDiffService } from './diffService';
 import { createExplorerService } from './explorerService';
@@ -64,6 +65,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     branches: createBranchesService(context, naming),
     changesets: createChangesetsService(context),
     codeReviews: createCodeReviewsService(context, naming),
+    reviewComments: createReviewCommentsService(context),
     content: createContentService(context),
     diff: createDiffService(context),
     explorer: createExplorerService(context),

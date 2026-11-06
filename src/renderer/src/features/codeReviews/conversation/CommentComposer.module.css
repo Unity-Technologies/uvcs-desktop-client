@@ -1,0 +1,35 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field {
+  width: 100%;
+  min-height: calc(3 * 1.55em + 12px);
+  max-height: calc(16 * 1.55em + 12px);
+  padding: 6px var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+
+.field:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.hint {
+  margin-right: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

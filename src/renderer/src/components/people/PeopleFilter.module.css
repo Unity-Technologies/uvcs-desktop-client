@@ -72,21 +72,6 @@
   font-weight: var(--weight-medium);
 }
 
-.name {
-  flex: none;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stored {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  text-overflow: ellipsis;
-}
-
 .clear {
   padding: 0;
   border: none;

@@ -6,6 +6,7 @@ import { CommentFocusGroup, FocusGroupContext } from './CommentFocusGroup';
 import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
 import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
+import { isOwnFocusGroup } from './focusMode';
 import styles from './CommentField.module.css';
 
 type LiveEditor = typeof import('./LiveCommentEditor').LiveCommentEditor;
@@ -36,7 +37,7 @@ export function preloadCommentEditor(): void {
  */
 export function CommentField(props: CommentFieldProps) {
   const group = useContext(FocusGroupContext);
-  if (props.singleLine || group) return <EditorField {...props} />;
+  if (!isOwnFocusGroup({ singleLine: props.singleLine ?? false, inGroup: group !== null, inPopover: props.inPopover ?? false })) return <EditorField {...props} />;
   return (
     <CommentFocusGroup>
       <EditorField {...props} groupField="description" />

@@ -2,6 +2,7 @@ import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/cod
 import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { linkCopyText } from '../../app/links/linkTo';
+import { navigation } from '../../app/navigation/navigationStore';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -45,11 +46,26 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
           id: `yourReview.${status}`,
           label: status,
           checked: status === ownStatus(single, user),
-          run: () => void setOwnReviewStatus(place, single, status, user),
+          run: () => void setOwnReviewStatus(place, single, status, { user }),
         })),
       ),
     single && menuAction('addReviewers', () => void addReviewers(place, single)),
     single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
+  ]);
+}
+
+/**
+ * The menu of a review's own page, its header's ⋯: what the page doesn't show already (its status, reviewers and the
+ * reviewed code have their own controls), so deleting it stays out of the way.
+ */
+export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEntry[] {
+  return groupedMenu([
+    menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
+    copySubmenu('Code review', codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    // Its page has nothing left to show once it's gone: back to where the user came from.
+    menuAction('delete', async () => {
+      if (await deleteReviews(place, [review])) navigation.goBack();
+    }),
   ]);
 }

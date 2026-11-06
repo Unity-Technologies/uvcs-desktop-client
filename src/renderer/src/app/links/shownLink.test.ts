@@ -24,8 +24,13 @@ describe('pageLinkTarget', () => {
     expect(pageLinkTarget({ kind: 'merge', request: { kind: 'merge', sourceSpec: 'br:/main/task' } } as never, null)).toBeNull();
   });
 
-  it('names a review and its file', () => {
-    expect(pageLinkTarget({ kind: 'codeReview', reviewId: 311 }, { path: 'a.cs', lines: LINES })).toEqual({
+  it("names a review on its conversation alone, even when it opened on a file", () => {
+    expect(pageLinkTarget({ kind: 'codeReview', reviewId: 311 }, null)).toEqual({ object: { kind: 'codeReview', id: 311 } });
+    expect(pageLinkTarget({ kind: 'codeReview', reviewId: 311, tab: 'conversation', focusPath: 'a.cs' }, null)).toEqual({ object: { kind: 'codeReview', id: 311 } });
+  });
+
+  it('names a review and the file its changes show', () => {
+    expect(pageLinkTarget({ kind: 'codeReview', reviewId: 311, tab: 'changes' }, { path: 'a.cs', lines: LINES })).toEqual({
       object: { kind: 'codeReview', id: 311 },
       page: { kind: 'diffFile', path: '/a.cs' },
       lines: LINES,

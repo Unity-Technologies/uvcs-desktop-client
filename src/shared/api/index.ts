@@ -20,6 +20,7 @@ import type { PendingChangesApi } from './pendingChanges';
 import type { PermissionsApi } from './permissions';
 import type { RepositoriesApi } from './repositories';
 import type { ReviewApi } from './review';
+import type { ReviewCommentsApi } from './reviewComments';
 import type { SettingsApi } from './settings';
 import type { ShelvesApi } from './shelves';
 import type { SyncApi } from './sync';
@@ -58,6 +59,7 @@ export interface UvcsApi {
   permissions: PermissionsApi;
   repositories: RepositoriesApi;
   review: ReviewApi;
+  reviewComments: ReviewCommentsApi;
   settings: SettingsApi;
   shelves: ShelvesApi;
   sync: SyncApi;

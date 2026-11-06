@@ -155,6 +155,22 @@ describe('code review writes', () => {
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'reviewer', 'add', '6', '--users=bob,eva'] }]);
   });
 
+  it('removes several reviewers with one command', async () => {
+    const { service, commands } = codeReviews({ 'codereview reviewer remove': '' });
+
+    await service.removeReviewers(IN_WORKSPACE, 6, ['bob', 'eva']);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'reviewer', 'remove', '6', '--users=bob,eva'] }]);
+  });
+
+  it('asks reviewers to review again with one command', async () => {
+    const { service, commands } = codeReviews({ 'codereview review': '' });
+
+    await service.reRequestReview(IN_WORKSPACE, 6, ['bob', 'eva']);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'review', '6', '--re-request', '--users=bob,eva'] }]);
+  });
+
   it.each([
     ['Reviewed', '--reviewed'],
     ['Rework required', '--rework-required'],
@@ -184,6 +200,14 @@ describe('code review writes', () => {
     await service.setOwnStatus(IN_WORKSPACE, 6, 'Reviewed', '  \n');
 
     expect(lines()).toEqual(['codereview review 6 --reviewed']);
+  });
+
+  it('renames a review', async () => {
+    const { service, commands } = codeReviews({ 'codereview -e': '' });
+
+    await service.rename(IN_WORKSPACE, 6, 'Switching keeps changes');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', '-e', '6', '--title=Switching keeps changes'] }]);
   });
 
   it('deletes several reviews with one command', async () => {
@@ -218,12 +242,16 @@ describe('code reviews of a repository explored without a workspace', () => {
 
     expect(await service.create(ON_REPOSITORY, { targetSpec: 'cs:12', title: 'Jump' })).toBe(42);
     await service.addReviewers(ON_REPOSITORY, 6, ['bob']);
+    await service.removeReviewers(ON_REPOSITORY, 6, ['eva']);
+    await service.reRequestReview(ON_REPOSITORY, 6, ['bob']);
     await service.setOwnStatus(ON_REPOSITORY, 6, 'Reviewed');
     await service.remove(ON_REPOSITORY, [6, 7]);
 
     expect(lines()).toEqual([
       'codereview cs:12@game@local Jump --format={id} --repository=game@local',
       'codereview reviewer add 6 --users=bob --repository=game@local',
+      'codereview reviewer remove 6 --users=eva --repository=game@local',
+      'codereview review 6 --re-request --users=bob --repository=game@local',
       'codereview review 6 --reviewed --repository=game@local',
       'codereview -d 6 7 --repository=game@local',
     ]);

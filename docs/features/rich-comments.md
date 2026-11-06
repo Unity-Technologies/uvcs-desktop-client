@@ -126,6 +126,7 @@ does.
 | Where | How |
 | --- | --- |
 | Details panels (`DetailsHeading` → `FoldedComment`), a diff's header (`SummaryComment`), History's revision (`RevisionHeader`), the annotate card, the Branch Explorer's caption card | The whole comment: the title as a line (`CommentLine`), the description as Markdown (`Markdown` with `comment`) |
+| A code review's conversation: its description, comments and replies, and what a reviewer said with a status (docs/features/code-reviews.md) | The whole comment as Markdown (`Markdown` with `comment`), no title of its own: a review's comment is a message, not a commit's |
 | Every list (changesets, branches, labels, shelves, attributes, code reviews, History, Incoming, the changeset picker, the branch search, My shelves, a check-in's rejection) | The first line: inline formatting, compact chips, emoji, links as their text, images by their description (`CommentLine`); the filter's words marked |
 | What holds only text: the Branch Explorer's canvas, its tooltips, the palette's rows (reviews' titles too), notifications, the branch pill, the comparison title | Without marks (`commentLineText`, `commentText`): references as written, emoji as themselves; a line with nothing Markdown could read skips the parsing (the canvas asks for thousands) |
 
@@ -171,8 +172,9 @@ Every comment field writes a comment the same way (`CommentField`, `components/c
 shelve composer (`CheckinPanel`: its summary and description), the details panels' editor (`CommentEditor`, through
 `DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`, a changeset's or a shelve's), New branch,
 New label and New attribute (`CommentArea`: a press on its label puts the caret in the editor, which a `<label
-htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
-(`CreateCodeReviewDialog`). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
+htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) a new code review's title
+(`CreateCodeReviewDialog`), a review's title edited in place (`ReviewTitle`), and its conversation's description, comments,
+replies and discards (`CommentComposer`: ⌘↵ sends, its draft kept per place, docs/features/code-reviews.md). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
 A changeset's or a shelve's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
 panels' editor open it in its parts (`editingParts`: its title and the rest when it has one; whole in the description
@@ -254,6 +256,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   strip, the hints a caption under the box; a changeset's comment (and a shelve's) adds its title field on top. A
   comment of many lines on its own is a group of one (`CommentField`), so no field draws a larger editor of its own
   (`focusModeSurfaces.test.ts`): a branch's once filled its panel edge to edge, its hints inside the text.
+  A field in a popover (a status's comment) offers none (`isOwnFocusGroup`, `inPopover`): the popover is moved into
+  place with a transform, which the fixed panel would follow, shrunk into it.
   From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was

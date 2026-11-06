@@ -1,7 +1,7 @@
 import { Eye, Flag, ThumbsUp } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { changesOwnStatus, isReviewer, ownStatus, reviewerNames, reviewerBadge, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
+import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerBadge, reviewerChanges, reviewerNames, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -103,5 +103,36 @@ describe('reviewerNames', () => {
   it('splits the names typed at commas, once each, ignoring blanks', () => {
     expect(reviewerNames(' ana, bob,,ana , ')).toEqual(['ana', 'bob']);
     expect(reviewerNames('')).toEqual([]);
+  });
+});
+
+describe('reviewerChanges', () => {
+  it('adds who was picked and removes who was unpicked, matching names whatever their case', () => {
+    expect(reviewerChanges([ANA, BOB], ['ANA@acme.com', 'eva@acme.com'])).toEqual({ add: ['eva@acme.com'], remove: ['bob@acme.com'] });
+  });
+
+  it('changes nothing when the picked are the reviewers', () => {
+    expect(reviewerChanges([ANA, BOB], ['bob@acme.com', 'ana@acme.com'])).toEqual({ add: [], remove: [] });
+  });
+});
+
+describe('offeredReviewers', () => {
+  it('offers the reviewers first, a group the server does not list among them, then everyone else by name', () => {
+    expect(offeredReviewers(['zoe@acme.com', 'ana@acme.com', 'carl@acme.com'], [ANA, QA])).toEqual(['ana@acme.com', 'qa-team', 'carl@acme.com', 'zoe@acme.com']);
+  });
+});
+
+describe('canReRequest and isAuthor', () => {
+  it('asks again only a reviewer who gave a status', () => {
+    expect([ANA, BOB, QA].map((reviewer) => canReRequest(reviewer, 'eva@acme.com'))).toEqual([true, false, true]);
+  });
+
+  it('never offers the user to ask themselves again', () => {
+    expect(canReRequest(ANA, 'Ana@acme.com')).toBe(false);
+  });
+
+  it('knows the author among the reviewers, whatever the case', () => {
+    expect(isAuthor({ owner: 'Ana@acme.com' }, ANA.name)).toBe(true);
+    expect(isAuthor({ owner: 'Ana@acme.com' }, BOB.name)).toBe(false);
   });
 });
