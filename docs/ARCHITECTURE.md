@@ -1496,5 +1496,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
+    A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
+  - Several people in little room are one `ui/AvatarStack`: overlapping at rest, spreading on hover over what follows
+    (it keeps its resting width), each avatar with its own tooltip and an optional ring color (a reviewer's status);
+    its geometry is `avatarStackLayout`.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
     inside the layout they will fill ("One layout from the first frame").
