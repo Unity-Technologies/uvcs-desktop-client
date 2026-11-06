@@ -30,7 +30,7 @@ export function useMemberNames(server: string, kind: MemberKind, { filter = '', 
     queryFn: () => api.permissions.members(server, kind, filter || undefined),
     enabled,
     placeholderData: keepWhileSearching ? keepPreviousData : undefined,
-    ...SLOW_CHANGING_QUERY,
+    ...MEMBER_NAMES_QUERY,
   });
 }
 
@@ -38,4 +38,4 @@ export function useMemberNames(server: string, kind: MemberKind, { filter = '', 
  * How a list of users or groups is kept. A list the server refused (a directory with a size limit) isn't asked again
  * by every view that shows it as it mounts (`retryOnMount`): each row of the reviews list reads the groups.
  */
-export const MEMBER_NAMES_QUERY = { ...SLOW_CHANGING_QUERY } as const;
+export const MEMBER_NAMES_QUERY = { ...SLOW_CHANGING_QUERY, retryOnMount: false } as const;
