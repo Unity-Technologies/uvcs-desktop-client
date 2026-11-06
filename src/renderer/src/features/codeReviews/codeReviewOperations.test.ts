@@ -114,6 +114,22 @@ describe('setting your own review status with a comment', () => {
   });
 });
 
+describe('whether your status was set', () => {
+  it('tells it was, or that the server refused it, so what the user wrote is kept to try again', async () => {
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+    expect(await setOwnReviewStatus(inWs, review('ana'), 'Reviewed', { user: 'ana', comment: 'Ship it' })).toBe(true);
+
+    fakeApi.answer('codeReviews.setOwnStatus', () => {
+      throw new Error('Access denied');
+    });
+    expect(await setOwnReviewStatus(inWs, review('ana'), 'Reviewed', { user: 'ana', comment: 'Ship it' })).toBe(false);
+  });
+
+  it('tells it was set when there was nothing to change', async () => {
+    expect(await setOwnReviewStatus(inWs, review('ana'), 'Under review', { user: 'ana' })).toBe(true);
+  });
+});
+
 describe('joining as a reviewer from the page', () => {
   it('asks nothing of a user told already they will be added, and adds them before their status', async () => {
     fakeApi.answer('codeReviews.addReviewers', () => undefined);

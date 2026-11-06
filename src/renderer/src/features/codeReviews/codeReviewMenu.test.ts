@@ -1,4 +1,6 @@
-import '../../testing/fakeWindow';
+import { fakeApi } from '../../testing/fakeWindow';
+import { answerConfirms } from '../../testing/fakeDialogs';
+import { whereTheWindowIs } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +22,8 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
+import { navigation } from '../../app/navigation/navigationStore';
+import { codeReviewPage } from './codeReviewOperations';
 import { codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
 
 const ws = '/ws';
@@ -107,6 +111,20 @@ describe('getting the reviewed code into the workspace', () => {
 });
 
 describe("a review's page menu", () => {
+  it('leaves the page of a review it deleted, and stays on one it kept', async () => {
+    fakeApi.answer('codeReviews.remove', () => undefined);
+    const deleteEntry = () => actions(reviewPageMenu(workspacePlace(ws), summary)).find((entry) => entry.id === 'delete')!;
+    navigation.openPage(codeReviewPage(summary));
+
+    answerConfirms(false);
+    await deleteEntry().run();
+    expect(whereTheWindowIs().pages).toEqual([codeReviewPage(summary)]);
+
+    answerConfirms(true);
+    await deleteEntry().run();
+    expect(whereTheWindowIs().pages).toEqual([]);
+  });
+
   it("offers only what the page doesn't show: a new window, Copy and Delete", () => {
     const ids = reviewPageMenu(workspacePlace(ws), summary)
       .filter((entry) => entry !== SEPARATOR)

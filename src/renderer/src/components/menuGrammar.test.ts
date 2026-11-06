@@ -28,7 +28,7 @@ import { branchMenu } from '../features/branches/branchMenu';
 import { workingObjectMenu } from '../features/branches/workingObjectMenu';
 import { revisionMenu } from '../features/browseRepository/revisionMenu';
 import { changesetMenu } from '../features/changesets/changesetMenu';
-import { codeReviewMenu } from '../features/codeReviews/codeReviewMenu';
+import { codeReviewMenu, reviewPageMenu } from '../features/codeReviews/codeReviewMenu';
 import { diffEntryMenu } from '../features/diff/diffEntryMenu';
 import { fileMenu } from '../features/files/fileMenu';
 import { PendingChangesIndex } from '../features/files/itemStatus';
@@ -197,6 +197,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   othersShelve: () => shelveMenu(workspacePlace(ws), [shelve], { mine: false }),
   leftShelve: () => shelveMenu(workspacePlace(ws), [shelve], { left: true }),
   codeReview: () => codeReviewMenu(workspacePlace(ws), [review]),
+  codeReviewPage: () => reviewPageMenu(workspacePlace(ws), review),
   branchCodeReview: () => codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector),
   branchCodeReviewOnItsBranch: () => codeReviewMenu(workspacePlace(ws), [branchReview], { kind: 'branch', name: branch.name }),
   changesetCodeReview: () => codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector),
