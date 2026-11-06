@@ -15,3 +15,11 @@ export function offersIgnoreMergeTracking(request: MergeRequest): boolean {
 export function offersCommonAncestor(request: MergeRequest): boolean {
   return request.kind === 'merge' && !request.intervalOriginSpec && !request.sourceSpec.startsWith('sh:');
 }
+
+/** The request's options that reach `cm`: those the merge offers. One it doesn't is left out, as if never set. */
+export function appliedMergeOptions(request: MergeRequest): Pick<MergeRequest, 'ignoreMergeTracking' | 'ancestorSpec'> {
+  return {
+    ...(request.ignoreMergeTracking && offersIgnoreMergeTracking(request) ? { ignoreMergeTracking: true } : {}),
+    ...(request.ancestorSpec && offersCommonAncestor(request) ? { ancestorSpec: request.ancestorSpec } : {}),
+  };
+}

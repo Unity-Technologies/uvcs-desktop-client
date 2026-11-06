@@ -1,19 +1,20 @@
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
-import { offersCommonAncestor, offersIgnoreMergeTracking } from '@shared/domain/mergeOptions';
+import { appliedMergeOptions } from '@shared/domain/mergeOptions';
 import { MERGE_FIELD_SEPARATOR, MERGE_PREVIEW_RECORD_ARGS } from '../cm/mergeOutput';
 
 export const MACHINE_READABLE_ARGS = ['--machinereadable', `--fieldseparator=${MERGE_FIELD_SEPARATOR}`];
 
 /** The source and kind of a merge, and the options the user chose for it, as `cm merge` arguments. */
 export function mergeSourceArgs(request: MergeRequest): string[] {
+  const applied = appliedMergeOptions(request);
   return [
     request.sourceSpec,
     ...(request.kind === 'cherryPick' ? ['--cherrypicking'] : []),
     ...(request.kind === 'subtractive' ? ['--subtractive'] : []),
     ...(request.intervalOriginSpec ? [`--interval-origin=${request.intervalOriginSpec}`] : []),
-    ...(request.ignoreMergeTracking && offersIgnoreMergeTracking(request) ? ['--forced'] : []),
+    ...(applied.ignoreMergeTracking ? ['--forced'] : []),
     // `--ancestor` without `--strategy=manual` would make `cm` cherry pick the interval from it instead.
-    ...(request.ancestorSpec && offersCommonAncestor(request) ? ['--strategy=manual', `--ancestor=${request.ancestorSpec}`] : []),
+    ...(applied.ancestorSpec ? ['--strategy=manual', `--ancestor=${applied.ancestorSpec}`] : []),
     ...(request.destinationBranch ? [`--to=br:${request.destinationBranch}`] : []),
   ];
 }

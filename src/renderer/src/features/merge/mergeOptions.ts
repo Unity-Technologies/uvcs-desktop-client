@@ -1,5 +1,5 @@
 import type { MergeRequest } from '@shared/domain/merge';
-import { offersCommonAncestor, offersIgnoreMergeTracking } from '@shared/domain/mergeOptions';
+import { appliedMergeOptions, offersCommonAncestor, offersIgnoreMergeTracking } from '@shared/domain/mergeOptions';
 import { spec } from '@shared/domain/specs';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
 import type { FileConflictState } from './resolve/useFileConflicts';
@@ -38,7 +38,7 @@ export function mergeOptionsOffered(request: MergeRequest, fileConflictCount: nu
 
 /** Whether the request changes how the merge is calculated: the plan read with it may fail where one without wouldn't. */
 export function hasMergeOptions(request: MergeRequest): boolean {
-  return Boolean(request.ignoreMergeTracking) || request.ancestorSpec !== undefined;
+  return Object.keys(appliedMergeOptions(request)).length > 0;
 }
 
 /** Whether a merge with nothing to merge can apply the changes again, ignoring that they were merged before. */
