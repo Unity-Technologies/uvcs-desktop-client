@@ -13,8 +13,7 @@ import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { prompt } from '../../ui/dialog/prompt';
-import { NO_GROUPS, typedReviewers } from './reviewerGroups';
+import { pickReviewers } from './ReviewersDialog';
 import type { ReviewerChanges } from './reviewerPick';
 import { changesOwnStatus, isReviewer } from './reviewers';
 
@@ -76,16 +75,10 @@ function placeServer(place: Place): string | undefined {
   return place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
 }
 
+/** Picks the review's reviewers in a dialog, as the page's picker does, and applies what changed. */
 export async function addReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
-  const typed = await prompt({
-    title: 'Add reviewers',
-    label: 'Reviewers',
-    description: 'The users who should review these changes, separated by commas.',
-    confirmLabel: 'Add',
-  });
-  const users = typed === undefined ? [] : typedReviewers(typed, NO_GROUPS);
-  if (users.length === 0) return;
-  await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
+  const changes = await pickReviewers(review);
+  if (changes) await changeReviewers(place, review, changes);
 }
 
 /** Adds and removes reviewers as the reviewer picker left them: one command for those added, one for those removed. */
