@@ -1242,7 +1242,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
-  a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
+  a `DataTable` (`ui/table/`: only the rows in view render; a cell is as tall as its row, so a ring or a lifted avatar
+  isn't cut; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
   it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
   the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
