@@ -91,7 +91,7 @@ export function canReRequest(reviewer: CodeReviewer): boolean {
   return reviewer.status !== 'Under review';
 }
 
-/** Whether a reviewer is the review's author, who may review their own changes too. */
-export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, reviewer: CodeReviewer): boolean {
-  return reviewer.name.toLowerCase() === review.owner.toLowerCase();
+/** Whether `user` is the review's author: as a reviewer (they may review their own changes too), or a comment's. */
+export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, user: string): boolean {
+  return user.toLowerCase() === review.owner.toLowerCase();
 }

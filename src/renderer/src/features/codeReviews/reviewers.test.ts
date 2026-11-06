@@ -100,7 +100,7 @@ describe('canReRequest and isAuthor', () => {
   });
 
   it('knows the author among the reviewers, whatever the case', () => {
-    expect(isAuthor({ owner: 'Ana@acme.com' }, ANA)).toBe(true);
-    expect(isAuthor({ owner: 'Ana@acme.com' }, BOB)).toBe(false);
+    expect(isAuthor({ owner: 'Ana@acme.com' }, ANA.name)).toBe(true);
+    expect(isAuthor({ owner: 'Ana@acme.com' }, BOB.name)).toBe(false);
   });
 });

@@ -24,10 +24,12 @@ interface ReviewCommentViewProps {
   user: string | undefined;
   /** What the comment's header says after its author's name ("discarded it"), beside when. */
   action?: string;
+  /** Whether its author wrote the review: marked Author, as who answers for the changes. */
+  byReviewAuthor?: boolean;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action }: ReviewCommentViewProps) {
+export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false }: ReviewCommentViewProps) {
   const place = usePlace();
   const [editing, setEditing] = useState(false);
   const menu = commentMenu(comment, thread, user, {
@@ -44,6 +46,7 @@ export function ReviewCommentView({ comment, thread, user, action }: ReviewComme
           <span className={styles.author}>{displayName(comment.author)}</span>
           {action && <span className={styles.action}>{action}</span>}
           <RelativeTime date={comment.date} />
+          {byReviewAuthor && <span className={styles.pill}>Author</span>}
           {comment.editedDate && (
             <span className={styles.edited} data-tip={`Edited ${formatDateTime(comment.editedDate)}`}>
               edited

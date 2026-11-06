@@ -1,5 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
+import type { CodeReview } from '@shared/domain/codeReview';
+import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useState } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
@@ -18,7 +20,7 @@ import { ThreadKindIcon } from './ThreadKindIcon';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewThreadCardProps {
-  reviewId: number;
+  review: Pick<CodeReview, 'id' | 'owner'>;
   thread: ReviewThread;
   user: string | undefined;
 }
@@ -26,11 +28,11 @@ interface ReviewThreadCardProps {
 type Answering = 'reply' | 'discard' | null;
 
 /**
- * A comment and its replies as one card. A change request or a question has a header line: its kind's icon, its file
- * and line on a line (a click opens them in Changes), and where it stands. A settled one starts folded to that line and
+ * A comment and its replies as one card. A change request or a question has a header band: its kind's icon, its file
+ * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
  * its first words (`startsFolded`); a click shows it whole.
  */
-export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardProps) {
+export function ReviewThreadCard({ review, thread, user }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread));
   const badges = threadBadges(thread);
   const foldable = startsFolded(thread);
@@ -38,8 +40,10 @@ export function ReviewThreadCard({ reviewId, thread, user }: ReviewThreadCardPro
 
   return (
     <section className={styles.thread} data-folded={folded} id={threadElementId(thread.root.id)}>
-      {hasHeader && <ThreadHeader reviewId={reviewId} thread={thread} folded={folded} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
-      {folded ? <FoldedThread thread={thread} onOpen={() => setFolded(false)} /> : <WholeThread thread={thread} user={user} />}
+      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
+      <div className={styles.threadBody}>
+        {folded ? <FoldedThread thread={thread} onOpen={() => setFolded(false)} /> : <WholeThread review={review} thread={thread} user={user} />}
+      </div>
     </section>
   );
 }
@@ -77,7 +81,7 @@ function ThreadHeader({ reviewId, thread, folded, onToggle }: ThreadHeaderProps)
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
-          <span className={styles.state} data-tone={badges.state.tone}>
+          <span className={styles.pill} data-tone={badges.state.tone}>
             {badges.state.label}
             {badges.appliedIn !== undefined && <CommentLine comment={`cs:${badges.appliedIn}`} />}
           </span>
@@ -102,16 +106,16 @@ function FoldedThread({ thread, onOpen }: { thread: ReviewThread; onOpen: () => 
 }
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
-function WholeThread({ thread, user }: { thread: ReviewThread; user: string | undefined }) {
+function WholeThread({ review, thread, user }: { review: Pick<CodeReview, 'owner'>; thread: ReviewThread; user: string | undefined }) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
 
   return (
     <>
-      <ReviewCommentView comment={root} thread={thread} user={user} />
+      <ReviewCommentView comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} />
       {replies.map((reply) => (
-        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} />
+        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} />
       ))}
       <div className={styles.answer}>
         {answering === 'reply' && (

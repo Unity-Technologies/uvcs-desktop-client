@@ -53,7 +53,7 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
             <span className={styles.reviewerName}>
               {displayName(reviewer.name)}
             </span>
-            {isAuthor(review, reviewer) && <span className={styles.authorTag}>Author</span>}
+            {isAuthor(review, reviewer.name) && <span className={styles.pill}>Author</span>}
             <span className={styles.reviewerActions}>
               {canReRequest(reviewer) && (
                 <IconButton size="small" icon={<RotateCcw size={13} />} label="Ask to review again" onClick={() => void reRequestReview(place, review, reviewer.name)} />

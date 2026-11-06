@@ -48,7 +48,7 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
                 <li key={entryKey(entry)}>
                   {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
                   {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                  {entry.kind === 'thread' && <ReviewThreadCard reviewId={review.id} thread={entry.thread} user={user} />}
+                  {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} />}
                 </li>
               ))}
             </ol>
