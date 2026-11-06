@@ -8,6 +8,7 @@ import {
   contributorSegments,
   hasMergeOptions,
   mergeOptionsOffered,
+  nothingToMergeAction,
   offersMergingAgain,
   withAncestor,
   withoutMergeOptions,
@@ -57,6 +58,15 @@ describe('offersMergingAgain', () => {
     expect(offersMergingAgain(cherryPick)).toBe(true);
     expect(offersMergingAgain({ ...cherryPick, ignoreMergeTracking: true })).toBe(false);
     expect(offersMergingAgain(merge)).toBe(false);
+  });
+});
+
+describe('nothingToMergeAction', () => {
+  it('offers to merge again ignoring merge tracking, or to go back to the merge without options, or nothing', () => {
+    expect(nothingToMergeAction(cherryPick)).toBe('mergeAgain');
+    expect(nothingToMergeAction({ ...merge, ancestorSpec: 'cs:3' })).toBe('withoutOptions');
+    expect(nothingToMergeAction({ ...cherryPick, ignoreMergeTracking: true })).toBe('withoutOptions');
+    expect(nothingToMergeAction(merge)).toBeNull();
   });
 });
 
