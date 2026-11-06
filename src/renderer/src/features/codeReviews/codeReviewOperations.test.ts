@@ -6,6 +6,7 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
@@ -13,6 +14,9 @@ import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeD
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { addReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
+
+const user = (name: string): MemberRef => ({ name, kind: 'user' });
+const group = (name: string): MemberRef => ({ name, kind: 'group' });
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -55,7 +59,7 @@ describe('setting your own review status', () => {
 
     const reviewCalls = fakeApi.calls().filter(({ method }) => method.startsWith('codeReviews.'));
     expect(reviewCalls.map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.addReviewers', 31, ['eva']],
+      ['codeReviews.addReviewers', 31, [user('eva')]],
       ['codeReviews.setOwnStatus', 31, 'Rework required'],
     ]);
   });
@@ -148,11 +152,11 @@ describe('changing the reviewers', () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await changeReviewers(inWs, review('ana'), { add: ['carl', 'dana'], remove: ['ana'] });
+    await changeReviewers(inWs, review('ana'), { add: [user('carl'), group('Developers')], remove: [user('ana')] });
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.addReviewers', 31, ['carl', 'dana']],
-      ['codeReviews.removeReviewers', 31, ['ana']],
+      ['codeReviews.addReviewers', 31, [user('carl'), group('Developers')]],
+      ['codeReviews.removeReviewers', 31, [user('ana')]],
     ]);
     expect(refreshed()).toEqual(['codeReviews']);
   });
@@ -161,21 +165,21 @@ describe('changing the reviewers', () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
 
     await changeReviewers(inWs, review('ana'), { add: [], remove: [] });
-    await changeReviewers(inWs, review('ana'), { add: [], remove: ['ana'] });
+    await changeReviewers(inWs, review('ana'), { add: [], remove: [user('ana')] });
 
     expect(fakeApi.methods()).toEqual(['codeReviews.removeReviewers']);
   });
 
-  it('removes one reviewer, or asks one to review again', async () => {
+  it('removes one reviewer, or asks one to review again, a group as a group', async () => {
     fakeApi.answer('codeReviews.removeReviewers', () => undefined);
     fakeApi.answer('codeReviews.reRequestReview', () => undefined);
 
-    await removeReviewer(inWs, review('ana'), 'ana');
-    await reRequestReview(inWs, review('ana'), 'ana');
+    await removeReviewer(inWs, review('ana'), user('ana'));
+    await reRequestReview(inWs, review('Developers'), group('Developers'));
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
-      ['codeReviews.removeReviewers', 31, ['ana']],
-      ['codeReviews.reRequestReview', 31, ['ana']],
+      ['codeReviews.removeReviewers', 31, [user('ana')]],
+      ['codeReviews.reRequestReview', 31, [group('Developers')]],
     ]);
   });
 });
@@ -187,7 +191,7 @@ describe('review operations', () => {
 
     await addReviewers(inWs, review('ana'));
 
-    expect(fakeApi.argsOf('codeReviews.addReviewers')).toEqual([[inWs, 31, ['carl', 'dana']]]);
+    expect(fakeApi.argsOf('codeReviews.addReviewers')).toEqual([[inWs, 31, [user('carl'), user('dana')]]]);
   });
 
   it('adds nobody when the prompt is cancelled or left empty', async () => {

@@ -1,49 +1,64 @@
 import { Eye, Flag, ThumbsUp } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
-import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerBadge, reviewerChanges, reviewerNames, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
+import { NO_GROUPS, reviewerGroups } from './reviewerGroups';
+import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerBadge, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
 const QA: CodeReviewer = { name: 'qa-team', status: 'Rework required' };
 const EVA: CodeReviewer = { name: 'eva@acme.com', status: 'Under review' };
+/** The server's groups, as `cm listusers --onlygroups` lists them. */
+const GROUPS = reviewerGroups(['qa-team', 'Developers']);
 
 describe('shownReviewers', () => {
   it('shows the first few and leaves the rest to "+N", naming none beside them', () => {
-    expect(shownReviewers([ANA, BOB, QA, EVA], 3)).toEqual({ shown: [ANA, BOB, QA], rest: [EVA] });
-    expect(shownReviewers([ANA, BOB], 3)).toEqual({ shown: [ANA, BOB], rest: [] });
+    expect(shownReviewers([ANA, BOB, QA, EVA], GROUPS, 3)).toEqual({ shown: [ANA, BOB, QA], rest: [EVA] });
+    expect(shownReviewers([ANA, BOB], GROUPS, 3)).toEqual({ shown: [ANA, BOB], rest: [] });
   });
 
   it('names a sole reviewer beside their avatar, and shows nobody for a review nobody was asked to', () => {
-    expect(shownReviewers([ANA], 3)).toEqual({ shown: [ANA], rest: [], soleName: 'Ana' });
-    expect(shownReviewers([], 3)).toEqual({ shown: [], rest: [] });
+    expect(shownReviewers([ANA], GROUPS, 3)).toEqual({ shown: [ANA], rest: [], soleName: 'Ana' });
+    expect(shownReviewers([], GROUPS, 3)).toEqual({ shown: [], rest: [] });
+  });
+
+  it('names a sole group as the server names it', () => {
+    expect(shownReviewers([QA], GROUPS, 3).soleName).toBe('qa-team');
   });
 });
 
 describe('stackedReviewers', () => {
   it('stacks the first three, each named with their status and badged with its icon, and names the rest in "+N"', () => {
-    expect(stackedReviewers([ANA, BOB, QA, EVA])).toEqual({
+    expect(stackedReviewers([ANA, BOB, QA, EVA], GROUPS)).toEqual({
       avatars: [
         { user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') },
         { user: 'bob@acme.com', tip: 'Bob: Under review', badge: reviewerBadge('Under review') },
-        { user: 'qa-team', tip: 'Qa Team: Rework required', badge: reviewerBadge('Rework required') },
+        { user: 'qa-team', tip: 'qa-team (group): Rework required', badge: reviewerBadge('Rework required'), group: true },
       ],
       more: { count: 1, tip: 'Eva: Under review' },
     });
   });
 
   it('has no "+N" for three or fewer', () => {
-    expect(stackedReviewers([ANA, BOB, QA]).more).toBeUndefined();
+    expect(stackedReviewers([ANA, BOB, QA], GROUPS).more).toBeUndefined();
   });
 
   it("names a sole reviewer beside their avatar", () => {
-    expect(stackedReviewers([ANA])).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') }], soleName: 'Ana' });
+    expect(stackedReviewers([ANA], GROUPS)).toEqual({ avatars: [{ user: 'ana@acme.com', tip: 'Ana: Reviewed', badge: reviewerBadge('Reviewed') }], soleName: 'Ana' });
+  });
+
+  it('shows a group the server does not list as a user: nothing tells them apart', () => {
+    expect(stackedReviewers([QA], NO_GROUPS).avatars).toEqual([{ user: 'qa-team', tip: 'Qa Team: Rework required', badge: reviewerBadge('Rework required') }]);
   });
 });
 
 describe('reviewerText', () => {
   it("names a reviewer with their status, for their avatar's own tooltip", () => {
-    expect(reviewerText(QA)).toBe('Qa Team: Rework required');
+    expect(reviewerText(ANA, GROUPS)).toBe('Ana: Reviewed');
+  });
+
+  it('says a group is one, by its own name', () => {
+    expect(reviewerText(QA, GROUPS)).toBe('qa-team (group): Rework required');
   });
 });
 
@@ -57,11 +72,11 @@ describe('reviewerBadge', () => {
 
 describe('reviewersText', () => {
   it('names each reviewer with their status', () => {
-    expect(reviewersText([ANA, QA])).toBe('Ana: Reviewed, Qa Team: Rework required');
+    expect(reviewersText([ANA, QA], GROUPS)).toBe('Ana: Reviewed, qa-team (group): Rework required');
   });
 
   it('says when nobody was asked', () => {
-    expect(reviewersText([])).toBe('Nobody');
+    expect(reviewersText([], GROUPS)).toBe('Nobody');
   });
 });
 
@@ -99,26 +114,18 @@ describe('changesOwnStatus', () => {
   });
 });
 
-describe('reviewerNames', () => {
-  it('splits the names typed at commas, once each, ignoring blanks', () => {
-    expect(reviewerNames(' ana, bob,,ana , ')).toEqual(['ana', 'bob']);
-    expect(reviewerNames('')).toEqual([]);
-  });
-});
-
-describe('reviewerChanges', () => {
-  it('adds who was picked and removes who was unpicked, matching names whatever their case', () => {
-    expect(reviewerChanges([ANA, BOB], ['ANA@acme.com', 'eva@acme.com'])).toEqual({ add: ['eva@acme.com'], remove: ['bob@acme.com'] });
-  });
-
-  it('changes nothing when the picked are the reviewers', () => {
-    expect(reviewerChanges([ANA, BOB], ['bob@acme.com', 'ana@acme.com'])).toEqual({ add: [], remove: [] });
-  });
-});
-
 describe('offeredReviewers', () => {
-  it('offers the reviewers first, a group the server does not list among them, then everyone else by name', () => {
-    expect(offeredReviewers(['zoe@acme.com', 'ana@acme.com', 'carl@acme.com'], [ANA, QA])).toEqual(['ana@acme.com', 'qa-team', 'carl@acme.com', 'zoe@acme.com']);
+  it('offers the reviewers first, then the other groups by name, then the other users by the name shown', () => {
+    const members = { users: ['zoe@acme.com', 'ana@acme.com', 'carl@acme.com'], groups: ['Web Devs', 'qa-team', 'Artists'] };
+    expect(offeredReviewers(members, [ANA.name, QA.name])).toEqual(['ana@acme.com', 'qa-team', 'Artists', 'Web Devs', 'carl@acme.com', 'zoe@acme.com']);
+  });
+
+  it('still offers a reviewer the server does not list', () => {
+    expect(offeredReviewers({ users: ['carl@acme.com'], groups: [] }, [QA.name])).toEqual(['qa-team', 'carl@acme.com']);
+  });
+
+  it('offers a name once, as the group, where a user and a group share it', () => {
+    expect(offeredReviewers({ users: ['builders', 'carl@acme.com'], groups: ['Builders'] }, [])).toEqual(['Builders', 'carl@acme.com']);
   });
 });
 

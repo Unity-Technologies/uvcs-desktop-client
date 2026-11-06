@@ -1,6 +1,7 @@
 import { serverOfRepository } from '@shared/domain/permissions';
 import type { Place } from '@shared/domain/place';
 import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -11,9 +12,11 @@ import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
-import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { changesOwnStatus, isReviewer, reviewerNames, type ReviewerChanges } from './reviewers';
+import { prompt } from '../../ui/dialog/prompt';
+import { NO_GROUPS, typedReviewers } from './reviewerGroups';
+import type { ReviewerChanges } from './reviewerPick';
+import { changesOwnStatus, isReviewer } from './reviewers';
 
 /** How the user's own status is set: who they are when already known, what they say, whether they agreed to join. */
 export interface OwnStatusOptions {
@@ -50,7 +53,7 @@ export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary
     place,
     "Couldn't change your review status",
     async () => {
-      if (joining) await api.codeReviews.addReviewers(place, review.id, [joining]);
+      if (joining) await api.codeReviews.addReviewers(place, review.id, [{ name: joining, kind: 'user' }]);
       await api.codeReviews.setOwnStatus(place, review.id, status, ...(comment ? [comment] : []));
     },
     isAffectedByCodeReviews,
@@ -80,7 +83,7 @@ export async function addReviewers(place: Place, review: CodeReviewSummary): Pro
     description: 'The users who should review these changes, separated by commas.',
     confirmLabel: 'Add',
   });
-  const users = typed === undefined ? [] : reviewerNames(typed);
+  const users = typed === undefined ? [] : typedReviewers(typed, NO_GROUPS);
   if (users.length === 0) return;
   await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
 }
@@ -99,12 +102,12 @@ export async function changeReviewers(place: Place, review: Pick<CodeReviewSumma
   );
 }
 
-export async function removeReviewer(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: string): Promise<void> {
+export async function removeReviewer(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: MemberRef): Promise<void> {
   await runAction(place, "Couldn't remove the reviewer", () => api.codeReviews.removeReviewers(place, review.id, [reviewer]), isAffectedByCodeReviews);
 }
 
-/** Asks a reviewer to review it again: their status goes back to "Under review". */
-export async function reRequestReview(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: string): Promise<void> {
+/** Asks a reviewer, a user or a group, to review it again: their status goes back to "Under review". */
+export async function reRequestReview(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: MemberRef): Promise<void> {
   await runAction(place, "Couldn't ask for a review again", () => api.codeReviews.reRequestReview(place, review.id, [reviewer]), isAffectedByCodeReviews);
 }
 

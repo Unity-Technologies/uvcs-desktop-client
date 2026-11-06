@@ -14,7 +14,8 @@ import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
 import { branchSuggestions } from './branchSuggestions';
-import { reviewerNames } from './reviewers';
+import { typedReviewers } from './reviewerGroups';
+import { useReviewerGroups } from './useReviewerGroups';
 import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from './reviewDraft';
 
 /**
@@ -40,6 +41,7 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
   const [title, setTitle] = useState(initialTarget.title ?? '');
   const [reviewers, setReviewers] = useState('');
   const [creating, setCreating] = useState(false);
+  const groups = useReviewerGroups();
 
   // Only the best few of the tens of thousands a repository may hold: suggesting every one made the field slow to
   // open and to type in.
@@ -53,7 +55,7 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
     const reviewId = await runAction(
       place,
       "Couldn't create the code review",
-      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), reviewers: reviewerNames(reviewers) }),
+      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), reviewers: typedReviewers(reviewers, groups) }),
       isAffectedByCodeReviews,
     );
     setCreating(false);

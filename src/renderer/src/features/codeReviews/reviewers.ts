@@ -1,6 +1,7 @@
 import type { CodeReviewer, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 import type { LucideIcon } from 'lucide-react';
 import { displayName } from '../../lib/userName';
+import { isGroup, reviewerLabel, type ReviewerGroups } from './reviewerGroups';
 import { REVIEW_STATUS_COLORS, REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import type { StackedAvatar } from '../../ui/AvatarStack';
 
@@ -14,11 +15,11 @@ export const NO_REVIEWERS = 'Nobody';
  * The reviewers a row shows, the rest it counts in "+N", and the name of a sole reviewer, which fits beside their
  * avatar (several show only avatars, each named in its own tooltip).
  */
-export function shownReviewers(reviewers: readonly CodeReviewer[], max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; rest: CodeReviewer[]; soleName?: string } {
+export function shownReviewers(reviewers: readonly CodeReviewer[], groups: ReviewerGroups, max = SHOWN_REVIEWERS): { shown: CodeReviewer[]; rest: CodeReviewer[]; soleName?: string } {
   return {
     shown: reviewers.slice(0, max),
     rest: reviewers.slice(max),
-    ...(reviewers.length === 1 && { soleName: displayName(reviewers[0]!.name) }),
+    ...(reviewers.length === 1 && { soleName: reviewerLabel(reviewers[0]!.name, groups) }),
   };
 }
 
@@ -32,26 +33,32 @@ export const REVIEWER_AVATAR_SIZE = 18;
 export const REVIEWERS_COLUMN_WIDTH = 130;
 
 /**
- * The reviewers' stack: each shown reviewer's avatar, named with their status and badged with its icon, then a "+N"
- * disc naming the rest; a sole reviewer's name goes beside it.
+ * The reviewers' stack: each shown reviewer's avatar (a group's icon for a group), named with their status and badged
+ * with its icon, then a "+N" disc naming the rest; a sole reviewer's name goes beside it.
  */
-export function stackedReviewers(reviewers: readonly CodeReviewer[]): { avatars: StackedAvatar[]; more?: { count: number; tip: string }; soleName?: string } {
-  const { shown, rest, soleName } = shownReviewers(reviewers);
+export function stackedReviewers(reviewers: readonly CodeReviewer[], groups: ReviewerGroups): { avatars: StackedAvatar[]; more?: { count: number; tip: string }; soleName?: string } {
+  const { shown, rest, soleName } = shownReviewers(reviewers, groups);
   return {
-    avatars: shown.map((reviewer) => ({ user: reviewer.name, tip: reviewerText(reviewer), badge: reviewerBadge(reviewer.status) })),
-    ...(rest.length > 0 && { more: { count: rest.length, tip: reviewersText(rest) } }),
+    avatars: shown.map((reviewer) => ({
+      user: reviewer.name,
+      tip: reviewerText(reviewer, groups),
+      badge: reviewerBadge(reviewer.status),
+      ...(isGroup(reviewer.name, groups) && { group: true }),
+    })),
+    ...(rest.length > 0 && { more: { count: rest.length, tip: reviewersText(rest, groups) } }),
     ...(soleName && { soleName }),
   };
 }
 
-/** A reviewer with the status they gave: what their avatar's own tooltip says. */
-export function reviewerText(reviewer: CodeReviewer): string {
-  return `${displayName(reviewer.name)}: ${reviewer.status}`;
+/** A reviewer with the status they gave, a group said to be one: what their avatar's own tooltip says. */
+export function reviewerText(reviewer: CodeReviewer, groups: ReviewerGroups): string {
+  const name = reviewerLabel(reviewer.name, groups);
+  return `${isGroup(reviewer.name, groups) ? `${name} (group)` : name}: ${reviewer.status}`;
 }
 
 /** Each reviewer with the status they gave: what the row's tooltip, the "+N" one and a screen reader say. */
-export function reviewersText(reviewers: readonly CodeReviewer[]): string {
-  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map(reviewerText).join(', ');
+export function reviewersText(reviewers: readonly CodeReviewer[], groups: ReviewerGroups): string {
+  return reviewers.length === 0 ? NO_REVIEWERS : reviewers.map((reviewer) => reviewerText(reviewer, groups)).join(', ');
 }
 
 /** A reviewer's badge in the stack: the icon of the status they gave, in its color; every status has one. */
@@ -85,35 +92,26 @@ export function changesOwnStatus(review: Pick<CodeReviewSummary, 'reviewers'>, u
   return ownStatus(review, user) !== status;
 }
 
-/** Names typed into one field, split at commas: `ana, bob` asks both. */
-export function reviewerNames(typed: string): string[] {
-  return [...new Set(typed.split(',').map((name) => name.trim()).filter(Boolean))];
-}
-
-/** What picking reviewers changes: who to add, who to remove, by name as `cm` writes them. */
-export interface ReviewerChanges {
-  add: string[];
-  remove: string[];
-}
-
-/** The reviewers to add and remove for `picked` to be the review's reviewers: none when they already are. */
-export function reviewerChanges(reviewers: readonly CodeReviewer[], picked: readonly string[]): ReviewerChanges {
-  const current = new Set(reviewers.map((reviewer) => reviewer.name.toLowerCase()));
-  const chosen = new Set(picked.map((name) => name.toLowerCase()));
-  return {
-    add: picked.filter((name) => !current.has(name.toLowerCase())),
-    remove: reviewers.filter((reviewer) => !chosen.has(reviewer.name.toLowerCase())).map((reviewer) => reviewer.name),
-  };
+/** Who the server lists to pick from (`cm listusers --onlyusers` and `--onlygroups`). */
+export interface ServerMembers {
+  users: readonly string[];
+  groups: readonly string[];
 }
 
 /**
  * Who the reviewer picker offers: the review's reviewers first, as they were when it opened (rows don't jump while
- * picking), then the server's other users by the name shown. A reviewer the server doesn't list (a group) still shows.
+ * picking), then the server's other groups by name, then its other users by the name shown, as the official client
+ * lists them. A reviewer the server doesn't list still shows; a name is offered once, as a group when it is one.
  */
-export function offeredReviewers(users: readonly string[], reviewers: readonly CodeReviewer[]): string[] {
-  const named = new Set(reviewers.map((reviewer) => reviewer.name.toLowerCase()));
-  const others = users.filter((user) => !named.has(user.toLowerCase())).sort((a, b) => displayName(a).localeCompare(displayName(b)));
-  return [...reviewers.map((reviewer) => reviewer.name), ...others];
+export function offeredReviewers({ users, groups }: ServerMembers, reviewers: readonly string[]): string[] {
+  const offered = [...reviewers];
+  const named = new Set(offered.map((name) => name.toLowerCase()));
+  const others = (names: readonly string[], label: (name: string) => string): string[] => {
+    const unnamed = names.filter((name) => !named.has(name.toLowerCase())).sort((a, b) => label(a).localeCompare(label(b)));
+    for (const name of unnamed) named.add(name.toLowerCase());
+    return unnamed;
+  };
+  return [...offered, ...others(groups, (name) => name), ...others(users, displayName)];
 }
 
 /**
