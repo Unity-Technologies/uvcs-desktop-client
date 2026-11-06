@@ -41,6 +41,11 @@ export function hasMergeOptions(request: MergeRequest): boolean {
   return Boolean(request.ignoreMergeTracking) || request.ancestorSpec !== undefined;
 }
 
+/** Whether a merge with nothing to merge can apply the changes again, ignoring that they were merged before. */
+export function offersMergingAgain(request: MergeRequest): boolean {
+  return offersIgnoreMergeTracking(request) && !request.ignoreMergeTracking;
+}
+
 export function withoutMergeOptions(request: MergeRequest): MergeRequest {
   const { ignoreMergeTracking: _ignored, ancestorSpec: _ancestor, ...rest } = request;
   return rest;
