@@ -86,9 +86,12 @@ export function offeredReviewers(users: readonly string[], reviewers: readonly C
   return [...reviewers.map((reviewer) => reviewer.name), ...others];
 }
 
-/** Whether a reviewer can be asked to review again: once they gave a status, which asking puts back to "Under review". */
-export function canReRequest(reviewer: CodeReviewer): boolean {
-  return reviewer.status !== 'Under review';
+/**
+ * Whether a reviewer can be asked to review again: once they gave a status, which asking puts back to "Under review".
+ * Not the user themselves: they set their own status with Your review.
+ */
+export function canReRequest(reviewer: CodeReviewer, user: string | undefined): boolean {
+  return reviewer.status !== 'Under review' && reviewer.name.toLowerCase() !== user?.toLowerCase();
 }
 
 /** Whether `user` is the review's author: as a reviewer (they may review their own changes too), or a comment's. */

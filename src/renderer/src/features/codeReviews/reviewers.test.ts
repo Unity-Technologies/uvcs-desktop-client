@@ -96,7 +96,11 @@ describe('offeredReviewers', () => {
 
 describe('canReRequest and isAuthor', () => {
   it('asks again only a reviewer who gave a status', () => {
-    expect([ANA, BOB, QA].map(canReRequest)).toEqual([true, false, true]);
+    expect([ANA, BOB, QA].map((reviewer) => canReRequest(reviewer, 'eva@acme.com'))).toEqual([true, false, true]);
+  });
+
+  it('never offers the user to ask themselves again', () => {
+    expect(canReRequest(ANA, 'Ana@acme.com')).toBe(false);
   });
 
   it('knows the author among the reviewers, whatever the case', () => {

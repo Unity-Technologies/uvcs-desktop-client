@@ -1,6 +1,7 @@
 import { RotateCcw, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import { usePlaceUser } from '../../../app/account/accounts';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
@@ -19,6 +20,7 @@ import styles from './ReviewConversation.module.css';
  */
 export function ReviewersSection({ review }: { review: CodeReview }) {
   const place = usePlace();
+  const user = usePlaceUser();
   const [pick, setPick] = useState<ReviewerPick | null>(null);
 
   const openPicker = (open: boolean): void => {
@@ -56,7 +58,7 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
             </span>
             {isAuthor(review, reviewer.name) && <span className={styles.pill}>Author</span>}
             <span className={styles.reviewerActions}>
-              {canReRequest(reviewer) && (
+              {canReRequest(reviewer, user) && (
                 <IconButton size="small" icon={<RotateCcw size={13} />} label="Ask to review again" onClick={() => void reRequestReview(place, review, reviewer.name)} />
               )}
               <IconButton size="small" icon={<X size={13} />} label="Remove reviewer" onClick={() => void removeReviewer(place, review, reviewer.name)} />
