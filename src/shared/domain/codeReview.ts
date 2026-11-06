@@ -48,6 +48,8 @@ export interface CodeReview extends CodeReviewSummary {
 }
 
 export interface CodeReviewFilter {
+  /** Only the review with this number: the palette's lookup of a number typed. */
+  id?: number;
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
   /** Only reviews the user is one of the reviewers of. */
