@@ -261,6 +261,16 @@
   color: var(--status-added);
 }
 
+/* "Applied in 281299": the pill is the changeset's link as a whole. */
+button.pill {
+  font-family: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+button.pill:hover {
+  background: color-mix(in srgb, var(--status-added) 10%, transparent);
+}
 
 .foldedLine {
   display: flex;

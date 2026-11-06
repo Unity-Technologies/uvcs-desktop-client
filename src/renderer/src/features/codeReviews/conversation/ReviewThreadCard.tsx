@@ -15,7 +15,8 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges } from './threadBadges';
+import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges, type ThreadBadges } from './threadBadges';
+import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import styles from './ReviewConversation.module.css';
 
@@ -81,13 +82,29 @@ function ThreadHeader({ reviewId, thread, folded, onToggle }: ThreadHeaderProps)
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
-          <span className={styles.pill} data-tone={badges.state.tone}>
-            {badges.state.label}
-            {badges.appliedIn !== undefined && <CommentLine comment={`cs:${badges.appliedIn}`} plainReferences />}
-          </span>
+          <StatePill state={badges.state} appliedIn={badges.appliedIn} />
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * Where a thread stands, as an outlined pill. "Applied in 281299" is one link as a whole, opening the changeset that
+ * applied it: a chip inside the pill would be a frame in a frame.
+ */
+function StatePill({ state, appliedIn }: { state: NonNullable<ThreadBadges['state']>; appliedIn: number | undefined }) {
+  if (appliedIn === undefined) {
+    return (
+      <span className={styles.pill} data-tone={state.tone}>
+        {state.label}
+      </span>
+    );
+  }
+  return (
+    <button type="button" className={styles.pill} data-tone={state.tone} data-tip={`Open changeset ${appliedIn}`} onClick={() => openChangesetDiff({ id: appliedIn })}>
+      {state.label} {appliedIn}
+    </button>
   );
 }
 

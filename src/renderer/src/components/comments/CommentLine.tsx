@@ -11,8 +11,6 @@ interface CommentLineProps {
   comment: string;
   /** False inside something clicked as a whole (a button, a picker's option): its chips are no links (`ReferenceChip`). */
   interactive?: boolean;
-  /** Its references read as words, inside something that frames them already (a pill): `ReferenceChip`'s `plain`. */
-  plainReferences?: boolean;
   /** What shows for an empty comment, in the caller's style ("No comment"). */
   placeholder?: ReactNode;
 }
@@ -22,23 +20,17 @@ interface CommentLineProps {
  * comments show"): its inline formatting, references as compact chips, emoji; no blocks, no images (their
  * description instead), links as their text. Its words are marked where the list's filter matched (`Highlight`).
  */
-export const CommentLine = memo(function CommentLine({ comment, interactive = true, plainReferences = false, placeholder = null }: CommentLineProps) {
+export const CommentLine = memo(function CommentLine({ comment, interactive = true, placeholder = null }: CommentLineProps) {
   const issues = useIssueReferences();
   const inlines = useMemo(() => commentLineInlines(comment, issues), [comment, issues]);
   if (inlines.length === 0) return placeholder;
-  return <span onCopy={copyTitleAsSource}>{renderInlines(inlines, { interactive, plain: plainReferences })}</span>;
+  return <span onCopy={copyTitleAsSource}>{renderInlines(inlines, interactive)}</span>;
 });
 
 /** A line shows a comment's title only, never all of it: copying from it is a part's copy, with no source to give. */
 const copyTitleAsSource = copyAsSource();
 
-/** How a line's references show: links or not, chips or words. */
-interface ChipLook {
-  interactive: boolean;
-  plain: boolean;
-}
-
-function renderInlines(inlines: readonly MarkdownInline[], look: ChipLook): ReactNode[] {
+function renderInlines(inlines: readonly MarkdownInline[], interactive: boolean): ReactNode[] {
   return inlines.map((inline, index) => {
     switch (inline.kind) {
       case 'text':
@@ -50,17 +42,17 @@ function renderInlines(inlines: readonly MarkdownInline[], look: ChipLook): Reac
           </code>
         );
       case 'strong':
-        return <strong key={index}>{renderInlines(inline.children, look)}</strong>;
+        return <strong key={index}>{renderInlines(inline.children, interactive)}</strong>;
       case 'emphasis':
-        return <em key={index}>{renderInlines(inline.children, look)}</em>;
+        return <em key={index}>{renderInlines(inline.children, interactive)}</em>;
       case 'strike':
         return (
           <del key={index} className={styles.strike}>
-            {renderInlines(inline.children, look)}
+            {renderInlines(inline.children, interactive)}
           </del>
         );
       case 'link':
-        return <span key={index}>{renderInlines(inline.children, look)}</span>;
+        return <span key={index}>{renderInlines(inline.children, interactive)}</span>;
       case 'image':
         return <Highlight key={index} text={inline.alt} />;
       case 'key':
@@ -72,7 +64,7 @@ function renderInlines(inlines: readonly MarkdownInline[], look: ChipLook): Reac
       case 'break':
         return ' ';
       case 'reference':
-        return <ReferenceChip key={index} reference={inline.reference} source={inline.source} compact interactive={look.interactive} plain={look.plain} />;
+        return <ReferenceChip key={index} reference={inline.reference} source={inline.source} compact interactive={interactive} />;
     }
   });
 }
