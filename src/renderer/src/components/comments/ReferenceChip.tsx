@@ -24,10 +24,12 @@ interface ReferenceChipProps {
    * so the click is the row's.
    */
   interactive?: boolean;
+  /** An object read as words inside something that frames it already (a pill): no fill, no icon, the color around it. */
+  plain?: boolean;
 }
 
 /** A changeset, branch, person or emoji a comment names, as `chipContent` says it shows; a click opens an object. */
-export const ReferenceChip = memo(function ReferenceChip({ reference, source, compact = false, interactive = true }: ReferenceChipProps) {
+export const ReferenceChip = memo(function ReferenceChip({ reference, source, compact = false, interactive = true, plain = false }: ReferenceChipProps) {
   const placeRepository = usePlaceRepository();
   const chip = useMemo(() => chipContent(reference, placeRepository), [reference, placeRepository]);
   switch (chip.kind) {
@@ -57,6 +59,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
           source={source}
           compact={compact}
           interactive={interactive}
+          plain={plain}
           icon={chip.icon}
           label={chip.label}
           title={chip.title}
@@ -75,7 +78,7 @@ function PlaceIssueChip({ reference, source, compact, interactive }: { reference
 
 type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 
-function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, plain, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
   const remote = useRemoteObject(reference, placeRepository);
   const cached = useCachedObject(cachedAs) ?? remote.found;
@@ -90,10 +93,10 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
   // An empty `data-tip`: the app's tooltip of the row or cell around it gives way to the chip's card (`findTip`).
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
+  const shown = { className: plain ? styles.plain : styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
   const content = (
     <>
-      <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
+      {!plain && <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />}
       <span className={styles.label}>{label}</span>
       {repository && <span className={styles.repository}>{repository}</span>}
       {!compact && summary && <span className={styles.summary}>{summary}</span>}

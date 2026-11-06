@@ -83,7 +83,7 @@ function ThreadHeader({ reviewId, thread, folded, onToggle }: ThreadHeaderProps)
         {badges.state && (
           <span className={styles.pill} data-tone={badges.state.tone}>
             {badges.state.label}
-            {badges.appliedIn !== undefined && <CommentLine comment={`cs:${badges.appliedIn}`} />}
+            {badges.appliedIn !== undefined && <CommentLine comment={`cs:${badges.appliedIn}`} plainReferences />}
           </span>
         )}
       </span>
