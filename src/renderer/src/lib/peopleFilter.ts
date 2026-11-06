@@ -79,6 +79,14 @@ export function othersLabel(others: readonly string[]): string {
   return others.length === 1 ? displayName(first) : `${displayName(first)} +${others.length - 1}`;
 }
 
+/** How many of the people picked by name the picker's button stacks the avatars of; its label counts the rest. */
+export const STACKED_PEOPLE = 3;
+
+/** The people picked by name whose avatars the picker's button stacks, each named for their own tooltip. */
+export function stackedPeople(others: readonly string[]): { user: string; tip: string }[] {
+  return others.slice(0, STACKED_PEOPLE).map((user) => ({ user, tip: displayName(user) }));
+}
+
 /** The pick in words, for tooltips and screen readers: "Everyone", "Mine", "Mine and Ana Diaz", "Ana Diaz +2". */
 export function describePick(pick: PeoplePick): string {
   if (isEveryone(pick)) return 'Everyone';

@@ -1,39 +1,7 @@
-.stack {
+.reviewers {
   display: inline-flex;
   align-items: center;
   min-width: 0;
-}
-
-/* Each avatar is ringed in the color of the status its reviewer gave (CodeReviewStatusBadge's), and overlaps the one before. */
-.reviewer {
-  display: inline-flex;
-  flex: none;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1.5px var(--bg-surface),
-    0 0 0 3px var(--reviewer-status);
-}
-
-.reviewer + .reviewer {
-  margin-left: 2px;
-}
-
-.reviewer[data-status='Under review'] {
-  --reviewer-status: transparent;
-}
-
-.reviewer[data-status='Reviewed'] {
-  --reviewer-status: var(--status-added);
-}
-
-.reviewer[data-status='Rework required'] {
-  --reviewer-status: var(--status-changed);
-}
-
-.more {
-  margin-left: var(--space-2);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .name {
