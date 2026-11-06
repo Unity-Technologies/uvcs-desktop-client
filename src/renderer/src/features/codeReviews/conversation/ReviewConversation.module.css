@@ -236,7 +236,7 @@
   color: var(--text-tertiary);
 }
 
-/* A pill outlined in its words' color: where a thread stands, who wrote the review. Only what's open takes a color. */
+/* A pill outlined in its words' color: where a thread stands (open amber, done green), who wrote the review. */
 .pill {
   display: inline-flex;
   flex: none;
@@ -254,6 +254,31 @@
 .pill[data-tone='open'] {
   border-color: color-mix(in srgb, var(--status-changed) 60%, transparent);
   color: var(--status-changed);
+}
+
+.pill[data-tone='resolved'] {
+  border-color: color-mix(in srgb, var(--status-added) 55%, transparent);
+  color: var(--status-added);
+}
+
+/* The changeset that applied it reads as a plain link inside the pill: a chip's own fill would be a frame in a frame. */
+.pill [data-source] {
+  padding: 0;
+  background: none;
+  /* The pill's own color: a second color in so small a frame reads forced; hovering underlines the link. */
+  color: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+/* "Applied in 277637" reads as words: the changeset's icon would only repeat what "Applied in" says. */
+.pill [data-source] svg {
+  display: none;
+}
+
+.pill [data-source]:hover {
+  background: none;
+  text-decoration: underline;
 }
 
 .foldedLine {

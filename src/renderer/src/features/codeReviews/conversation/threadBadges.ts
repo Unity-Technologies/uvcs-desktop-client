@@ -5,8 +5,9 @@ import type { ReviewThread } from './reviewThreads';
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
 export interface ThreadBadges {
   kind?: 'Change request' | 'Question';
-  state?: { label: string; tone: 'open' | 'resolved' };
-  /** The changeset that applied a change request, shown as a chip that opens it. */
+  /** Open takes the color of what's still asked; resolved (applied, answered) of what's done; discarded stays neutral. */
+  state?: { label: string; tone: 'open' | 'resolved' | 'discarded' };
+  /** The changeset that applied a change request, in its pill, opening it: "Applied in cs:4". */
   appliedIn?: number;
 }
 
@@ -22,7 +23,7 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
     case 'applied':
       return { kind, state: { label: 'Applied in', tone: 'resolved' }, appliedIn: state.changesetId };
     case 'discarded':
-      return { kind, state: { label: 'Discarded', tone: 'resolved' } };
+      return { kind, state: { label: 'Discarded', tone: 'discarded' } };
     case 'none':
       return kind ? { kind } : {};
   }

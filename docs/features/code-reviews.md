@@ -97,11 +97,12 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   review deletes, still opens at its line number in the newest version, until the Changes tab places comments). Its
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
-  is **Open** until a changeset applies it (**Applied in** its changeset, a chip) or a reply discards it
+  is **Open** until a changeset applies it (**Applied in** its changeset, a link in the pill) or a reply discards it
   (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
   way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
-  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. No chips, no colored edge: only
-  **Open** takes a color, the one of "Rework required".
+  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. Where it stands is an outlined pill:
+  **Open** in the color of "Rework required", **Applied in** and **Answered** in the color of "Reviewed",
+  **Discarded** neutral.
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
   reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
