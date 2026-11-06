@@ -33,7 +33,7 @@ can't show.
 | ----------------------- | ------------------------------------------------------------------------------------------- | ------- |
 | Read a list and parents | `cm showacl <spec> --extended`                                                              | `query` |
 | Read the owner          | `cm showowner <spec>`, only when the list the object came from didn't read it (`knownOwner`) | `query` |
-| Groups and users        | `cm listusers <server> --onlygroups` / `--onlyusers` [`--filter=`]; mentions too (below)    | `query` |
+| Groups and users        | `cm listusers <server> --onlygroups` / `--onlyusers` [`--filter=`]; mentions and reviewers too | `query` |
 | Set an entry            | `cm acl --user=\|--group= -allowed=+a,-b -denied=… -overrideallowed=… -overridedenied=… <spec>` | `query` |
 | Set the owner           | `cm setowner --user=\|--group= <spec>`                                                       | `query` |
 | Remove a secured path   | `cm acl --delete path:…`                                                                    | `query` |
