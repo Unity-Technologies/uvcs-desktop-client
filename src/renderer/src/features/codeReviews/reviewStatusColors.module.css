@@ -1,0 +1,15 @@
+/*
+ * The color of each review status, read as --review-status-color by whatever shows one (CodeReviewStatusBadge,
+ * ReviewStatusIcon, ReviewerStack's corner): composed into an element that carries the status as data-status.
+ */
+.statusColor[data-status='Under review'] {
+  --review-status-color: var(--status-moved);
+}
+
+.statusColor[data-status='Reviewed'] {
+  --review-status-color: var(--status-added);
+}
+
+.statusColor[data-status='Rework required'] {
+  --review-status-color: var(--status-changed);
+}

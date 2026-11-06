@@ -4,8 +4,9 @@
   min-width: 0;
 }
 
-/* Each avatar overlaps the one before; the status its reviewer gave sits in its corner, in the status's color. */
+/* Each avatar a little apart from the one before; the status its reviewer gave sits in its corner, in its color. */
 .reviewer {
+  composes: statusColor from './reviewStatusColors.module.css';
   position: relative;
   display: inline-flex;
   flex: none;
@@ -27,16 +28,8 @@
   height: 11px;
   border-radius: 50%;
   box-shadow: 0 0 0 1.5px var(--bg-surface);
-  background: var(--reviewer-status);
+  background: var(--review-status-color);
   color: var(--text-inverse);
-}
-
-.reviewer[data-status='Reviewed'] {
-  --reviewer-status: var(--status-added);
-}
-
-.reviewer[data-status='Rework required'] {
-  --reviewer-status: var(--status-changed);
 }
 
 .more {
