@@ -32,7 +32,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   (`reviewerLabel`), and its tooltip says it's a group (`reviewerText`). Every command names a group in `--groups` and
   a user in `--users`, both in one command when both change (`reviewersOptions`): `cm` looks a name up among its
   option's kind only, and a group in `--users` fails ("No such user"). A server that lists no groups (one that takes
-  the names its system knows) has its group reviewers read as users, and removing one fails with a toast. A user and
+  the names its system knows), or whose directory refuses the whole list (a size limit), has its group reviewers read
+  as users, and removing one fails with a toast; a group found there by a search is still added as one. A refused list
+  is asked once, not again by each row that shows reviewers (`MEMBER_NAMES_QUERY`, `retryOnMount: false`). A user and
   a group of the same name read as the group.
 - **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users and groups
   (`cm listusers --onlyusers` and `--onlygroups`, each read once and kept, `useMemberNames`): the reviewers checked
@@ -44,7 +46,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   out against the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile
   isn't removed; the reviewers it opened with are told apart by the groups as it applies, and someone checked keeps
   the kind they were listed with (`pickedKind`). A server whose directory can't list everyone (an LDAP size limit) is
-  asked for the names typed instead (`--filter`), users and groups alike. The author can be a reviewer, marked
+  asked for the names typed instead (`--filter`), users and groups alike (`useServerMembers`, `memberListing`), the
+  note under the rows saying which can't be listed (`pickerFooter`). The author can be a reviewer, marked
   **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
