@@ -1,3 +1,4 @@
+import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { commentMenu } from './commentMenu';
@@ -14,13 +15,13 @@ describe('commentMenu', () => {
   it('offers its author to edit and delete a comment nobody answered, and anyone to copy it', () => {
     const [thread] = threadsOf([comment(1)]);
 
-    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['edit', 'copyText', 'delete']);
+    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['copyText', 'separator', 'editComment', 'separator', 'delete']);
     expect(ids(commentMenu(thread!.root, thread!, 'bob', noop))).toEqual(['copyText']);
   });
 
   it('keeps an answered comment from being deleted', () => {
     const [thread] = threadsOf([comment(1), comment(2, { parentId: 1, author: 'bob' })]);
 
-    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['edit', 'copyText']);
+    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['copyText', 'separator', 'editComment']);
   });
 });

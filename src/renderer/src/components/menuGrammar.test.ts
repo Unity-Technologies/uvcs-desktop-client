@@ -1,4 +1,6 @@
 import { fakeApi } from '../testing/fakeWindow';
+import { commentMenu } from '../features/codeReviews/conversation/commentMenu';
+import { threadsOf } from '../features/codeReviews/conversation/reviewThreads';
 import { codeReviewSummary } from '../testing/codeReviewSummary';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -291,7 +293,12 @@ const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
   committedDiffText: () =>
     codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
 };
-const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS };
+/** A review comment's menu (`commentMenu`), its author's: every entry it offers. */
+const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
+const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
+  reviewComment: () => commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyText: () => {} }),
+};
+const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
 
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
