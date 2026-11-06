@@ -52,7 +52,7 @@ export function MergeOptionsMenu({ request, labels, offered, contributor, onCont
         {offered.contributor && (
           <section className={styles.section}>
             <h3 className={styles.title}>Conflicting files</h3>
-            <SegmentedControl label="Conflicting files" value={contributor} segments={contributorSegments(labels)} onChange={onContributorChange} stretch />
+            <SegmentedControl label="Conflicting files" value={contributor ?? undefined} segments={contributorSegments(labels)} onChange={onContributorChange} stretch />
           </section>
         )}
         {offered.ignoreMergeTracking && (

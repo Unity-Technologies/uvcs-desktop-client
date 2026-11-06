@@ -157,7 +157,10 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
   Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
   permission on the local server), `xlinks.sh` (a writable xlink with branch expansion rules and a read-only one
-  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks).
+  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks),
+  `code-reviews.sh` (a review holding every kind of comment: change requests pending, applied and discarded, questions
+  answered and not, comments on a deleted file, under one changeset and on an older revision; a description, a rename
+  and a status change; reviews of a changeset and a shelve).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).

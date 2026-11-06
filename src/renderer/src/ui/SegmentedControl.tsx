@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { segmentAfterKey, segmentTabStop } from './segmentKeys';
+import { segmentAfterKey } from './segmentKeys';
 import styles from './SegmentedControl.module.css';
 
 interface Segment<Value extends string> {
@@ -11,8 +11,8 @@ interface Segment<Value extends string> {
 }
 
 interface SegmentedControlProps<Value extends string> {
-  /** Null checks none: the items it decides were decided differently. */
-  value: Value | null;
+  /** The checked segment; none until one is picked (the first one is then the Tab stop, as in a native radio group). */
+  value: Value | undefined;
   segments: Segment<Value>[];
   onChange: (value: Value) => void;
   /** Fills the width it is given, sharing it equally between the segments. */
@@ -20,15 +20,16 @@ interface SegmentedControlProps<Value extends string> {
   label?: string;
 }
 
-/** A radio group: one Tab stop (the checked segment, `segmentTabStop`), ← → pick the others. */
+/** A radio group: one Tab stop (the checked segment), ← → pick the others. */
 export function SegmentedControl<Value extends string>({ value, segments, onChange, stretch = false, label }: SegmentedControlProps<Value>) {
   const controlRef = useRef<HTMLDivElement>(null);
-  const values = segments.map((segment) => segment.value);
-  const tabStop = segmentTabStop(values, value);
 
   const pickWithArrows = (event: KeyboardEvent): void => {
-    if (tabStop === undefined) return;
-    const next = segmentAfterKey(values, tabStop, event.key);
+    const next = segmentAfterKey(
+      segments.map((segment) => segment.value),
+      value,
+      event.key,
+    );
     if (next === null) return;
     event.preventDefault();
     onChange(next);
@@ -37,13 +38,13 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
 
   return (
     <div ref={controlRef} className={styles.control} role="radiogroup" aria-label={label} data-stretch={stretch} onKeyDown={pickWithArrows}>
-      {segments.map((segment) => (
+      {segments.map((segment, index) => (
         <button
           key={segment.value}
           type="button"
           role="radio"
           aria-checked={segment.value === value}
-          tabIndex={segment.value === tabStop ? 0 : -1}
+          tabIndex={segment.value === value || (value === undefined && index === 0) ? 0 : -1}
           data-value={segment.value}
           data-tip={segment.title}
           data-tip-shortcut={segment.shortcut}

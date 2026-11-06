@@ -33,6 +33,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, how the review's status follows, the list's columns, the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 
@@ -1188,8 +1189,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
-    is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
+    is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
     over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the

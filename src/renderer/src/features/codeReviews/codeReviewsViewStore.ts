@@ -9,13 +9,13 @@ interface CodeReviewsFilters extends ViewFilters {
   since: SincePreset;
   status: StatusFilter;
   /** Only the reviews the user is asked to review; the people filter goes by who created them. */
-  assignedToMe: boolean;
+  reviewerIsMe: boolean;
 }
 
-export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', assignedToMe: false };
+export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', reviewerIsMe: false };
 
 export const useCodeReviewsViewStore = createViewFilters<CodeReviewsFilters>(
   'code-reviews-view',
-  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', assignedToMe: false },
+  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', reviewerIsMe: false },
   CLEARED_CODE_REVIEW_FILTERS,
 );

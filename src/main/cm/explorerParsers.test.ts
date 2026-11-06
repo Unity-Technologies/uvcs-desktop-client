@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOUND_REVIEWS } from './codeReviewRecords';
+import { FOUND_REVIEWS, parseReviewers } from './codeReviewRecords';
 import { parseItemDetails } from './itemDetailsXml';
 import { lockReader } from './lockRecords';
 import { listedRevisionId, readTreeItem, TREE_ITEMS } from './treeItems';
@@ -147,17 +147,53 @@ describe('lockReader', () => {
 });
 
 describe('code review records', () => {
-  it('strips the status type name and splits the target', () => {
+  it('reads the status, the reviewers with theirs, the counts and the target, as cm find review prints them', () => {
     const output = recordsOutput(
       FOUND_REVIEWS,
-      { id: 60, title: 'Branch review', status: 'Status Rework required', targettype: 'Branch', target: 'id:54', assignee: '' },
-      { id: 62, title: 'Changeset review', status: 'Status Reviewed', targettype: 'Changeset', target: 2 },
-      { id: 63, title: 'Shelve review', status: 'Status Under review', targettype: 'Shelve', target: 3 },
+      {
+        id: 60,
+        title: 'Branch review',
+        codereviewstatusname: 'Rework required',
+        reviewers: 'ana@acme.com:Reviewed,qa-team:Rework required',
+        modifieddate: '2026-11-06T11:38:32+01:00',
+        comments: 12,
+        unresolvedissues: 2,
+        targettype: 'Branch',
+        target: 'id:54',
+      },
+      { id: 62, title: 'Changeset review', codereviewstatusname: 'Reviewed', reviewers: '', comments: 0, unresolvedissues: 0, targettype: 'Changeset', target: 2 },
+      { id: 63, title: 'Shelve review', codereviewstatusname: 'Under review', targettype: 'Shelve', target: 3 },
     );
     expect(recordsIn(output, FOUND_REVIEWS)).toMatchObject([
-      { id: 60, status: 'Rework required', targetType: 'branch', targetId: 54, assignee: '' },
-      { id: 62, status: 'Reviewed', targetType: 'changeset', targetId: 2 },
+      {
+        id: 60,
+        status: 'Rework required',
+        reviewers: [
+          { name: 'ana@acme.com', status: 'Reviewed' },
+          { name: 'qa-team', status: 'Rework required' },
+        ],
+        lastActivity: '2026-11-06T11:38:32+01:00',
+        commentCount: 12,
+        openIssueCount: 2,
+        targetType: 'branch',
+        targetId: 54,
+      },
+      { id: 62, status: 'Reviewed', reviewers: [], commentCount: 0, openIssueCount: 0, targetType: 'changeset', targetId: 2 },
       { id: 63, status: 'Under review', targetType: 'shelve', targetId: 3 },
     ]);
+  });
+});
+
+describe('parseReviewers', () => {
+  it('splits each name from its status at the last colon, so a name may hold one', () => {
+    expect(parseReviewers('ACME\\tom:Under review, team:dev:Reviewed')).toEqual([
+      { name: 'ACME\\tom', status: 'Under review' },
+      { name: 'team:dev', status: 'Reviewed' },
+    ]);
+  });
+
+  it('reads a name with no status as still to review, and none from an empty value', () => {
+    expect(parseReviewers('ana')).toEqual([{ name: 'ana', status: 'Under review' }]);
+    expect(parseReviewers('')).toEqual([]);
   });
 });

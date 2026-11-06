@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 function review(id: number, targetBranchId?: number): CodeReviewSummary {
-  return { id, title: `Review ${id}`, status: 'Under review', owner: 'jane', assignee: '', date: '2026-09-01', targetBranchId };
+  return codeReviewSummary({ id, owner: 'jane', date: '2026-09-01', targetBranchId });
 }
 
 describe('latestReviewByBranch', () => {

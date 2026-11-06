@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePlaceUser } from '../../app/account/accounts';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { NO_TASK_CHOICES, type FinishingTask, type TaskMerge, type TaskMergeChoices } from './taskMerge';
 
@@ -16,6 +17,7 @@ interface FinishingTaskState {
 export function useFinishingTask(task: TaskMerge | undefined): FinishingTaskState {
   const [choices, setChoices] = useState(task?.choices ?? NO_TASK_CHOICES);
   const { data: reviews } = useReviewsByBranch(task !== undefined);
-  const finishing = task && { task: { ...task, choices }, review: reviews?.get(task.branch.id) };
+  const user = usePlaceUser();
+  const finishing = task && { task: { ...task, choices }, review: reviews?.get(task.branch.id), user };
   return { choices, setChoices, finishing };
 }

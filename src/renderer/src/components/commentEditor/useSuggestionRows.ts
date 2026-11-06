@@ -93,7 +93,7 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
       ...(everyBranch.data ?? []).map((branch) => branch.owner),
       ...(everyLabel.data ?? []).map((label) => label.owner),
       ...(shelves.data ?? []).map((shelve) => shelve.owner),
-      ...(reviews.data ?? []).flatMap((review) => [review.owner, review.assignee].filter(Boolean)),
+      ...(reviews.data ?? []).flatMap((review) => [review.owner, ...review.reviewers.map((reviewer) => reviewer.name)]),
       ...peopleSeenIn(placeId(place)),
     ];
     const users = { every: everyUser.data, searched: searchedPeople, searching: searchingPeople };

@@ -44,11 +44,11 @@ export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, assignedToMe, update } = filters;
+  const { text: search, people, since, status, reviewerIsMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewerIsMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
@@ -93,8 +93,8 @@ export function CodeReviewsView() {
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
           <>
-            <ToggleChip pressed={assignedToMe} icon={<UserCheck size={13} />} onChange={(value) => update({ assignedToMe: value })}>
-              Assigned to me
+            <ToggleChip pressed={reviewerIsMe} icon={<UserCheck size={13} />} onChange={(value) => update({ reviewerIsMe: value })}>
+              I'm a reviewer
             </ToggleChip>
             <ChoiceChip<StatusFilter>
               value={status}

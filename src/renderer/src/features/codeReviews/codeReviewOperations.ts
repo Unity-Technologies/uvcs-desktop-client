@@ -4,7 +4,7 @@ import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/do
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { readServerUser } from '../../app/account/accounts';
+import { cachedServerUser, readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
@@ -13,42 +13,63 @@ import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { needsReviewerForStatus } from './reviewStatus';
+import { changesOwnStatus, isReviewer, reviewerNames } from './reviewers';
 
-/** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
-export async function setReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
-  let assignee: string | undefined;
-  if (needsReviewerForStatus(review)) {
-    assignee = await prompt({
+/**
+ * Sets the user's own status on a review, unless it's the one they gave already. Only reviewers give one, so a user
+ * known not to be one yet is asked to join first: both happen at once. A user not known (their account still being
+ * read) sets it as they are: the server takes it from a reviewer or a member of a reviewer group, and says why not to
+ * anyone else.
+ */
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, knownUser?: string): Promise<void> {
+  const user = knownUser ?? (await placeUser(place));
+  if (!changesOwnStatus(review, user, status)) return;
+  const joining = user !== undefined && !isReviewer(review, user) ? user : undefined;
+  if (joining) {
+    const confirmed = await confirm({
       title: `Mark as “${status}”`,
-      label: 'Reviewer',
-      initialValue: await suggestedReviewer(place),
-      acceptInitialValue: true,
-      description: 'A review needs a reviewer before its status can change.',
-      confirmLabel: 'Assign and mark',
+      message: "You aren't one of its reviewers yet. You'll be added as one.",
+      confirmLabel: 'Add me and mark',
     });
-    if (assignee === undefined) return;
+    if (!confirmed) return;
   }
-  await runAction(place, "Couldn't change the review status", () => api.codeReviews.update(place, review.id, { status, assignee }), isAffectedByCodeReviews);
+  await runAction(
+    place,
+    "Couldn't change your review status",
+    async () => {
+      if (joining) await api.codeReviews.addReviewers(place, review.id, [joining]);
+      await api.codeReviews.setOwnStatus(place, review.id, status);
+    },
+    isAffectedByCodeReviews,
+  );
 }
 
-/** Whoever changes the status is likely the one reviewing: you on the place's server, if already known or quick to read. */
-async function suggestedReviewer(place: Place): Promise<string | undefined> {
-  const server =
-    place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
+/** Who the user is on the place's server, if already known or quick to read. */
+async function placeUser(place: Place): Promise<string | undefined> {
+  const server = placeServer(place);
   return server ? readServerUser(server).catch(() => undefined) : undefined;
 }
 
-export async function reassignReview(place: Place, review: CodeReviewSummary): Promise<void> {
-  const assignee = await prompt({
-    title: 'Assign review',
-    label: 'Reviewer',
-    initialValue: review.assignee,
-    description: 'The user who should review these changes.',
-    confirmLabel: 'Assign',
+/** Who the user is on the place's server, if the window read it already: for menus, which are built at once. */
+export function cachedPlaceUser(place: Place): string | undefined {
+  const server = placeServer(place);
+  return server ? cachedServerUser(server) : undefined;
+}
+
+function placeServer(place: Place): string | undefined {
+  return place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
+}
+
+export async function addReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
+  const typed = await prompt({
+    title: 'Add reviewers',
+    label: 'Reviewers',
+    description: 'The users who should review these changes, separated by commas.',
+    confirmLabel: 'Add',
   });
-  if (assignee === undefined) return;
-  await runAction(place, "Couldn't assign the review", () => api.codeReviews.update(place, review.id, { assignee }), isAffectedByCodeReviews);
+  const users = typed === undefined ? [] : reviewerNames(typed);
+  if (users.length === 0) return;
+  await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
 }
 
 /** Resolves to true when the reviews were deleted. */

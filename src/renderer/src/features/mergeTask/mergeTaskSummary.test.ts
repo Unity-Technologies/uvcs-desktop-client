@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewer } from '@shared/domain/codeReview';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { canMarkReviewed, defaultMergeComment } from './mergeTaskSummary';
 
 describe('defaultMergeComment', () => {
@@ -10,12 +11,17 @@ describe('defaultMergeComment', () => {
 });
 
 describe('canMarkReviewed', () => {
-  const review = (status: CodeReview['status']) => ({ status }) as CodeReview;
+  const review = (...reviewers: CodeReviewer[]) => codeReviewSummary({ id: 12, reviewers });
 
-  it('only offers reviews not reviewed yet', () => {
-    expect(canMarkReviewed(review('Under review'))).toBe(true);
-    expect(canMarkReviewed(review('Rework required'))).toBe(true);
-    expect(canMarkReviewed(review('Reviewed'))).toBe(false);
-    expect(canMarkReviewed(undefined)).toBe(false);
+  it("offers the user's own review while they haven't marked it reviewed", () => {
+    expect(canMarkReviewed(review({ name: 'bob', status: 'Under review' }), 'bob')).toBe(true);
+    expect(canMarkReviewed(review({ name: 'bob', status: 'Rework required' }), 'bob')).toBe(true);
+    expect(canMarkReviewed(review({ name: 'bob', status: 'Reviewed' }), 'bob')).toBe(false);
+  });
+
+  it("offers nothing to a user who isn't a reviewer, nor without a review", () => {
+    expect(canMarkReviewed(review({ name: 'bob', status: 'Under review' }), 'eva')).toBe(false);
+    expect(canMarkReviewed(review(), 'bob')).toBe(false);
+    expect(canMarkReviewed(undefined, 'bob')).toBe(false);
   });
 });

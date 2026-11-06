@@ -1,4 +1,5 @@
 import { fakeApi } from '../testing/fakeWindow';
+import { codeReviewSummary } from '../testing/codeReviewSummary';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
@@ -79,7 +80,7 @@ const branch: Branch = {
 const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment: 'Finish feature', owner: 'jane@example.com', date: '2026-09-06T00:00:00Z', parent: 4, repository };
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
-const review: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
+const review: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
 /** The review as the Code reviews view lists it, its branch named. */
 const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
 /** A changeset's review, as every list reads it: its target needs no branch name. */
@@ -309,7 +310,7 @@ describe('menus without a workspace', () => {
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
     expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'rename', 'delete']));
-    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'status', 'assign', 'copy', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'yourReview', 'addReviewers', 'copy', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toContain('newCodeReview');
   });
 
