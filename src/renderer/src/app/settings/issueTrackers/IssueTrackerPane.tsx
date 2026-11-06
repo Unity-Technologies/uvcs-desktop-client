@@ -47,7 +47,7 @@ function RepositoryTracker({ repository }: { repository: string }) {
 
   const view = repositoryTrackerView({ start, connected, changing });
   if (view.kind === 'connect') return <ConnectTracker key={JSON.stringify(view.start)} repository={repository} start={view.start} onConnected={connectedNow} onCancel={() => setStart(null)} />;
-  if (view.kind === 'start') return <RepositoryStart onStart={setStart} {...(view.changingFrom && { onCancel: () => setChanging(false) })} />;
+  if (view.kind === 'start') return <RepositoryStart repository={repository} onStart={setStart} {...(view.changingFrom && { onCancel: () => setChanging(false) })} />;
   return (
     <>
       <TrackerCard repository={repository} connected={view.connected} onChange={() => setChanging(true)} />
