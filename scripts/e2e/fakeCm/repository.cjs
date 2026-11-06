@@ -81,6 +81,19 @@ const REVIEWS = [
     modifieddate: daysAgo(2),
     ...common,
   },
+  {
+    id: 81,
+    title: 'Review the HUD',
+    codereviewstatusname: 'Rework required',
+    reviewers: 'ana.diaz@acme.com:Reviewed,bob.smith@acme.com:Rework required,qa-team:Under review,eva.lopez@acme.com:Reviewed',
+    comments: 14,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:20',
+    date: daysAgo(6),
+    modifieddate: daysAgo(1),
+    ...common,
+  },
 ];
 
 const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is', date: daysAgo(30), ...common }];

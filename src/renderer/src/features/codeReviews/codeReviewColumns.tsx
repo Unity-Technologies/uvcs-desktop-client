@@ -14,7 +14,8 @@ import styles from './codeReviewColumns.module.css';
 
 /**
  * Columns of the code reviews table: its number and title, status, who reviews it, its comments and how many are
- * still open, what it reviews, who wrote it, and when anyone last did something on it.
+ * still open, what it reviews, who wrote it, when (the list's order and its period go by it), and when anyone last did
+ * something on it.
  */
 export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   {
@@ -37,7 +38,8 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   {
     id: 'reviewers',
     header: 'Reviewers',
-    grow: 1,
+    // Three avatars and "+N", or a sole reviewer's avatar and name.
+    width: 130,
     hideBelow: 700,
     render: (review) => <ReviewerStack reviewers={review.reviewers} />,
     sortValue: (review) => review.reviewers.map((reviewer) => reviewer.name).join(','),
@@ -58,7 +60,8 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
     hideBelow: 900,
     render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
   },
-  { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
+  { id: 'owner', header: 'Author', grow: 1, hideBelow: 900, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
+  { id: 'date', header: 'Created', width: 120, secondary: true, hideBelow: 1100, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
   {
     id: 'lastActivity',
     header: 'Last activity',
