@@ -38,9 +38,28 @@ export function openItemKind(root: Pick<ReviewComment, 'kind'>): 'Question' | 'C
   return root.kind === 'question' ? 'Question' : 'Change request';
 }
 
-/** What the location of a comment on a line reads: the file's name and the line. */
-export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>): { path: string; line: string } {
-  return { path: anchor.path.replace(/^\//, ''), line: `line ${anchor.line}` };
+/**
+ * What the location of a comment on a line reads: its folder, which gives way first in a narrow card, its file's name,
+ * whole, and the line.
+ */
+export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>): { folder: string; file: string; line: string } {
+  const path = anchor.path.replace(/^\//, '');
+  const slash = path.lastIndexOf('/');
+  return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1), line: `:${anchor.line}` };
+}
+
+/**
+ * Whether a thread starts folded to one line: once it's settled (a change request applied or discarded, a question
+ * answered), so what's still open stands out and a long review reads short. Open threads and plain comments show whole.
+ */
+export function startsFolded({ state }: Pick<ReviewThread, 'state'>): boolean {
+  return state.kind === 'applied' || state.kind === 'discarded' || state.kind === 'answered';
+}
+
+/** What a folded thread says after its location: how many replies it has, when it has any. */
+export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string | undefined {
+  if (replies.length === 0) return undefined;
+  return replies.length === 1 ? '1 reply' : `${replies.length} replies`;
 }
 
 /**

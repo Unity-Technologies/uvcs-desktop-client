@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentLocationPage, locationText, openItemKind, replyAction, threadBadges } from './threadBadges';
+import { commentLocationPage, locationText, openItemKind, replyAction, repliesText, startsFolded, threadBadges } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -43,7 +43,11 @@ describe('replyAction and openItemKind', () => {
 
 describe('a comment on a line', () => {
   it("reads as its file's path, as the diff names it, and its line", () => {
-    expect(locationText(ON_LINE)).toEqual({ path: 'Assets/Scripts/SwitchFlow.cs', line: 'line 11' });
+    expect(locationText(ON_LINE)).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: ':11' });
+  });
+
+  it('reads a file at the top of the repository with no folder', () => {
+    expect(locationText({ ...ON_LINE, path: '/README.md' })).toEqual({ folder: '', file: 'README.md', line: ':11' });
   });
 
   it('opens the review on its Changes tab at that file and line', () => {
@@ -58,5 +62,33 @@ describe('a comment on a line', () => {
 
   it("opens one written in a single changeset's diff on its file only, whose lines the whole diff may not share", () => {
     expect(commentLocationPage(41, ON_LINE, 2)).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs' });
+  });
+});
+
+describe('startsFolded', () => {
+  const [plain, open, answered, applied, discarded] = threadsOf([
+    comment(1),
+    comment(2, { kind: 'changeRequest' }),
+    comment(3, { kind: 'question' }),
+    comment(4, { kind: 'comment', parentId: 3 }),
+    comment(5, { kind: 'changeRequest', appliedInChangeset: 90 }),
+    comment(6, { kind: 'changeRequest' }),
+    comment(7, { kind: 'discard', parentId: 6 }),
+  ]);
+
+  it('folds a settled thread: applied, discarded, answered', () => {
+    expect([answered, applied, discarded].map((thread) => startsFolded(thread!))).toEqual([true, true, true]);
+  });
+
+  it('shows an open thread and a plain comment whole', () => {
+    expect([plain, open].map((thread) => startsFolded(thread!))).toEqual([false, false]);
+  });
+});
+
+describe('repliesText', () => {
+  it('counts the replies, saying nothing of none', () => {
+    expect(repliesText({ replies: [] })).toBeUndefined();
+    expect(repliesText({ replies: [comment(2)] })).toBe('1 reply');
+    expect(repliesText({ replies: [comment(2), comment(3)] })).toBe('2 replies');
   });
 });

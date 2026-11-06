@@ -1,4 +1,3 @@
-import { CircleHelp, GitPullRequestArrow } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentLineText } from '../../../lib/comments/commentText';
@@ -9,7 +8,7 @@ import { addReviewers } from '../codeReviewOperations';
 import { CodeReviewStatusBadge } from '../CodeReviewStatusBadge';
 import { threadElementId } from './ReviewThreadCard';
 import type { ReviewThread } from './reviewThreads';
-import { openItemKind } from './threadBadges';
+import { ThreadKindIcon } from './ThreadKindIcon';
 import styles from './ReviewConversation.module.css';
 
 /** Beside the conversation: who reviews it and the status each gave, and the change requests and questions still open. */
@@ -44,7 +43,7 @@ export function ReviewSideRail({ review, open }: { review: CodeReview; open: rea
           {open.map(({ root }) => (
             <li key={root.id}>
               <button type="button" className={styles.openItem} onClick={() => scrollToThread(root.id)}>
-                <OpenItemIcon kind={openItemKind(root)} />
+                <ThreadKindIcon root={root} />
                 <span className={styles.openText}>{commentLineText(root.text)}</span>
               </button>
             </li>
@@ -53,13 +52,6 @@ export function ReviewSideRail({ review, open }: { review: CodeReview; open: rea
       </section>
     </aside>
   );
-}
-
-const OPEN_ITEM_ICONS = { Question: CircleHelp, 'Change request': GitPullRequestArrow } as const;
-
-function OpenItemIcon({ kind }: { kind: ReturnType<typeof openItemKind> }) {
-  const Icon = OPEN_ITEM_ICONS[kind];
-  return <Icon size={13} aria-label={kind} />;
 }
 
 function scrollToThread(commentId: number): void {
