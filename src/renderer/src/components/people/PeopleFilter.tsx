@@ -1,8 +1,8 @@
 import { ChevronDown, User, Users } from 'lucide-react';
 import { usePlaceUser } from '../../app/account/accounts';
-import { describePick, othersLabel, withMine, type PeoplePick } from '../../lib/peopleFilter';
+import { describePick, othersLabel, stackedPeople, withMine, type PeoplePick } from '../../lib/peopleFilter';
+import { AvatarStack } from '../../ui/AvatarStack';
 import { FilterPopover } from '../../ui/FilterPopover';
-import { AvatarStack } from './AvatarStack';
 import { PeoplePicker } from './PeoplePicker';
 import styles from './PeopleFilter.module.css';
 
@@ -41,7 +41,7 @@ export function PeopleFilter({ value, onChange, people, mineTip }: PeopleFilterP
           >
             {others.length > 0 ? (
               <>
-                <AvatarStack users={others} />
+                <AvatarStack avatars={stackedPeople(others)} size={16} />
                 <span className={styles.othersLabel}>{othersLabel(others)}</span>
               </>
             ) : (

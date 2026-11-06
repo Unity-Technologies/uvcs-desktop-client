@@ -1182,7 +1182,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `userFilterTexts`, marked with `HighlightQuery`, Everyone and You first, then the people picked when it opened and
     the rest by name, avatars, several at once, only the rows in view rendered; ↑↓ move, Enter toggles, Space toggles
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
-    (`lib/peopleFilter`: `othersLabel`, `describePick`). The people offered come from the rows: a list read whole
+    (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
     lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`

@@ -58,22 +58,6 @@
   opacity: 0.7;
 }
 
-.stack {
-  display: inline-flex;
-  flex: none;
-}
-
-/* Each avatar overlaps the one before, ringed in the chip's color so they read apart. */
-.stacked {
-  display: inline-flex;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--bg-surface);
-}
-
-.stacked + .stacked {
-  margin-left: -5px;
-}
-
 .everyone {
   font-weight: var(--weight-medium);
 }
