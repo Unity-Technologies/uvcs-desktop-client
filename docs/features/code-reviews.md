@@ -27,8 +27,11 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   name only (`{reviewers}`, the same for a user and a group). `cm codereview reviewer list <id> --format` prints each
   one's type (`{user}`, `{status}`, `{type}`: `user` or `group`, never translated; `LISTED_REVIEWERS`), one review at a
   time: the review's page reads it for its review (`CodeReviewsApi.reviewers`, `useReviewersOf`, one command read
-  with the page's other reads and again whenever the reviews are; never per row of a list), and so does the list's
-  Change reviewers dialog for the review it opens on. Where that type is read (`CodeReviewer.kind`), it decides: the
+  with the page's other reads and again whenever the reviews are; never per row of a list, nor for a review with no
+  reviewers, `readsReviewerTypes`), and so does the list's Change reviewers dialog for the review it opens on, its
+  picker waiting for it (`dialogPick`). It is read even where the server's groups answered: a name missing from that
+  list (a server that lists none, a group made since it was read) can't be told from a user, and the page's writes
+  must name each one as `cm` takes it. Where that type is read (`CodeReviewer.kind`), it decides: the
   page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
   groups too. Elsewhere (the list's stack, the picker's offered groups, the new-review dialog) the server's groups
   (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
@@ -51,8 +54,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id>
   --re-request --users=a` or `--groups=g`, which puts them back to "Under review"). What the picker changes is worked
   out against the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile
-  isn't removed; the reviewers it opened with are told apart by the groups as it applies, and someone checked keeps
-  the kind they were listed with (`pickedKind`). A server whose directory can't list everyone (an LDAP size limit) is
+  isn't removed; the reviewers it opened with are a group or a user as "Groups" says (their type from `cm` where it
+  was read, else the server's groups as it applies), and someone checked keeps the kind they were listed with
+  (`pickedKind`). A server whose directory can't list everyone (an LDAP size limit) is
   asked for the names typed instead (`--filter`), users and groups alike (`useServerMembers`, `memberListing`), the
   note under the rows saying which can't be listed (`pickerFooter`). The author can be a reviewer, marked
   **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
