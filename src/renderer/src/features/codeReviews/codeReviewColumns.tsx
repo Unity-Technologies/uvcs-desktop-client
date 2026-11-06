@@ -6,10 +6,14 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/column';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { ReviewerStack } from './ReviewerStack';
 import { describeTarget } from './reviewTarget';
 import styles from './codeReviewColumns.module.css';
 
-/** Columns of the code reviews table: its number and title, status, what it reviews, who wrote it and who reviews it. */
+/**
+ * Columns of the code reviews table: its number and title, status, who reviews it, what it reviews, who wrote it,
+ * and when.
+ */
 export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   {
     id: 'title',
@@ -29,21 +33,21 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
   },
   { id: 'status', header: 'Status', width: 150, render: (review) => <CodeReviewStatusBadge status={review.status} />, sortValue: (review) => review.status },
   {
+    id: 'reviewers',
+    header: 'Reviewers',
+    grow: 1,
+    hideBelow: 700,
+    render: (review) => <ReviewerStack reviewers={review.reviewers} />,
+    sortValue: (review) => review.reviewers.map((reviewer) => reviewer.name).join(','),
+  },
+  {
     id: 'target',
     header: 'Changes',
     grow: 1,
     secondary: true,
-    hideBelow: 820,
+    hideBelow: 900,
     render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
   },
   { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
-  {
-    id: 'assignee',
-    header: 'Reviewer',
-    grow: 1,
-    hideBelow: 700,
-    render: (review) => (review.assignee ? <UserLabel user={review.assignee} /> : <span className={styles.unassigned}>Unassigned</span>),
-    sortValue: (review) => review.assignee,
-  },
   { id: 'date', header: 'Created', width: 120, secondary: true, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
 ];

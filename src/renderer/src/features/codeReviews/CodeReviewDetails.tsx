@@ -1,12 +1,10 @@
 import { CommentLine } from '../../components/comments/CommentLine';
 import { FileDiff, MessageSquareCode } from 'lucide-react';
-import { Fragment } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
-import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
@@ -17,6 +15,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { ReviewerStack } from './ReviewerStack';
 import { copiedWhat } from '../../components/copyMenu';
 
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
@@ -34,11 +33,6 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         target.kind === 'branch' && <BranchChip key="target" name={target.branch} />,
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,
         target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
-        review.assignee && (
-          <Fragment key="reviewer">
-            for <UserLabel user={review.assignee} />
-          </Fragment>
-        ),
       ]}
       badges={<CodeReviewStatusBadge status={review.status} />}
       primaryAction={
@@ -49,7 +43,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       menu={menu}
       primaryActionId="openReview"
       properties={[
-        { label: 'Reviewer', value: review.assignee ? <UserLabel user={review.assignee} /> : 'Unassigned' },
+        { label: 'Reviewers', value: <ReviewerStack reviewers={review.reviewers} /> },
         { label: 'Changes', value: describeTarget(target) },
         { label: 'Created', value: formatDateTime(review.date) },
       ]}

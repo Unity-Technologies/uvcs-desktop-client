@@ -2,6 +2,7 @@ import { commentLineText } from '../../lib/comments/commentText';
 import { CommentLine } from '../../components/comments/CommentLine';
 import { Trash2, UserPlus } from 'lucide-react';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -16,7 +17,9 @@ import { SkeletonBar } from '../../ui/Skeleton';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { DiffPage } from '../diff/DiffPage';
-import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
+import { addReviewers, deleteReviews, setOwnReviewStatus } from './codeReviewOperations';
+import { ownStatus } from './reviewers';
+import { ReviewerStack } from './ReviewerStack';
 import { reviewedCodeAction } from './reviewedCode';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
@@ -78,6 +81,7 @@ function ReviewHeaderSkeleton() {
 
 function ReviewHeader({ review }: { review: CodeReview }) {
   const place = usePlace();
+  const user = usePlaceUser();
   const { data: workspace } = useWorkspaceInfo();
   // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it, in a workspace.
   const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
@@ -103,19 +107,15 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         <span className={styles.dot}>·</span>
         <RelativeTime date={review.date} />
         <span className={styles.dot}>·</span>
-        {review.assignee ? (
-          <>
-            <span>Reviewer</span>
-            <UserLabel user={review.assignee} />
-          </>
-        ) : (
-          <span className={styles.unassigned}>No reviewer yet</span>
-        )}
+        <span>Reviewers</span>
+        <ReviewerStack reviewers={review.reviewers} />
       </div>
       <div className={styles.actions}>
+        <span className={styles.ownReviewLabel}>Your review</span>
         <SegmentedControl<CodeReviewStatus>
-          value={review.status}
-          onChange={(status) => void setReviewStatus(place, review, status)}
+          label="Your review"
+          value={ownStatus(review, user) ?? 'Under review'}
+          onChange={(status) => void setOwnReviewStatus(place, review, status)}
           segments={CODE_REVIEW_STATUSES.map((status) => ({ value: status, label: status }))}
         />
         <div className={styles.spacer} />
@@ -134,8 +134,8 @@ function ReviewHeader({ review }: { review: CodeReview }) {
             {reviewedCode.label}
           </Button>
         )}
-        <Button icon={<UserPlus size={14} />} onClick={() => void reassignReview(place, review)}>
-          Assign
+        <Button icon={<UserPlus size={14} />} onClick={() => void addReviewers(place, review)}>
+          Add reviewers
         </Button>
         <Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => void remove()}>
           Delete

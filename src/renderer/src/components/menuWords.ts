@@ -178,8 +178,8 @@ export const MENU_WORDS = {
   searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
   loadXlink: word('act', FolderDown, 'Load its files'),
-  status: word('act', CircleDot, 'Set status'),
-  assign: word('act', UserPlus, 'Assign reviewer…'),
+  yourReview: word('act', CircleDot, 'Your review'),
+  addReviewers: word('act', UserPlus, 'Add reviewers…'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),

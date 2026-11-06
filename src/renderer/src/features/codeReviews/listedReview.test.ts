@@ -1,4 +1,5 @@
 import '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { describe, expect, it } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -6,7 +7,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
 import { listedReview, listedReviewIn } from './listedReview';
 
-const review = (id: number, title: string): CodeReview => ({ id, title, status: 'Under review', owner: 'ana', assignee: 'bo', date: '2026-10-01', target: { kind: 'branch', branch: '/main/task' } });
+const review = (id: number, title: string): CodeReview => ({ ...codeReviewSummary({ id, title, owner: 'ana', date: '2026-10-01' }), target: { kind: 'branch', branch: '/main/task' } });
 
 describe('listedReview', () => {
   it('finds the review in the newest list holding it', () => {
@@ -19,7 +20,7 @@ describe('listedReview', () => {
   });
 
   it('skips summaries without the target, and what is not a list', () => {
-    const summary = { id: 4, title: 'chip', status: 'Under review', owner: 'ana', assignee: 'bo', date: '2026-10-01' };
+    const summary = codeReviewSummary({ id: 4, title: 'chip', owner: 'ana', date: '2026-10-01' });
 
     expect(listedReview([{ data: [summary], readAt: 300 }, { data: review(4, 'single'), readAt: 400 }], 4)).toBeUndefined();
   });

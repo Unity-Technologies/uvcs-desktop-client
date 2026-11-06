@@ -9,18 +9,20 @@ import styles from './TaskMergeOptions.module.css';
 interface TaskMergeOptionsProps {
   /** The task branch's review, when it has one. */
   review: CodeReviewSummary | undefined;
+  /** Who finishes the task, on the place's server. */
+  user: string | undefined;
   choices: TaskMergeChoices;
   onChange: (choices: TaskMergeChoices) => void;
 }
 
 /** What finishing a task does besides merging it, under the merge page's comment. */
-export function TaskMergeOptions({ review, choices, onChange }: TaskMergeOptionsProps) {
+export function TaskMergeOptions({ review, user, choices, onChange }: TaskMergeOptionsProps) {
   return (
     <div className={styles.options}>
-      {canMarkReviewed(review) && (
+      {canMarkReviewed(review, user) && (
         <span className={styles.review}>
           <Checkbox
-            label={`Mark the code review as reviewed (“${review.title}”)`}
+            label={`Mark your review as reviewed (“${review.title}”)`}
             checked={choices.markReviewed}
             onChange={(markReviewed) => onChange({ ...choices, markReviewed })}
           />

@@ -21,8 +21,9 @@ export function codeReviewsQuery({ since, people, status, assignedToMe }: CodeRe
   return { owners: pickedOwners(people), assignedToMe, status: status === 'any' ? undefined : status, sinceDate: sinceDateFor(since, today) };
 }
 
-/** What the row shows, which its filter looks through: its number, title, what it reviews, its author and its reviewer. */
-export function reviewFilterTexts(review: Pick<CodeReview, 'id' | 'title' | 'owner' | 'assignee'> & { target?: CodeReview['target'] }): string[] {
+/** What the row shows, which its filter looks through: its number, title, what it reviews, its author and its reviewers. */
+export function reviewFilterTexts(review: Pick<CodeReview, 'id' | 'title' | 'owner' | 'reviewers'> & { target?: CodeReview['target'] }): string[] {
   const target = review.target ? [describeTarget(review.target)] : [];
-  return [String(review.id), review.title, ...target, ...userFilterTexts(review.owner), ...(review.assignee ? userFilterTexts(review.assignee) : [])];
+  const reviewers = review.reviewers.flatMap((reviewer) => userFilterTexts(reviewer.name));
+  return [String(review.id), review.title, ...target, ...userFilterTexts(review.owner), ...reviewers];
 }

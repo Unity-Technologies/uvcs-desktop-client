@@ -8,7 +8,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
-import { codeReviewPage, deleteReviews, openReview, reassignReview, setReviewStatus } from './codeReviewOperations';
+import { addReviewers, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
@@ -38,15 +38,14 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
       }),
     single &&
       menuSubmenu(
-        'status',
+        'yourReview',
         CODE_REVIEW_STATUSES.map((status) => ({
-          id: `status.${status}`,
+          id: `yourReview.${status}`,
           label: status,
-          disabled: status === single.status,
-          run: () => void setReviewStatus(place, single, status),
+          run: () => void setOwnReviewStatus(place, single, status),
         })),
       ),
-    single && menuAction('assign', () => void reassignReview(place, single)),
+    single && menuAction('addReviewers', () => void addReviewers(place, single)),
     single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);

@@ -1,4 +1,5 @@
 import '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { compactFilter } from '../../lib/compactFilter';
@@ -27,23 +28,18 @@ describe('what Code reviews asks the server for', () => {
 
 describe('the code reviews filter', () => {
   const review: CodeReview = {
-    id: 31,
-    title: 'Login screen',
-    status: 'Under review',
-    owner: 'ana.diaz',
-    assignee: 'bob.smith',
-    date: '',
+    ...codeReviewSummary({ id: 31, title: 'Login screen', owner: 'ana.diaz', reviewers: [{ name: 'bob.smith', status: 'Reviewed' }, { name: 'qa-team', status: 'Under review' }] }),
     target: { kind: 'branch', branch: '/main/login' },
   };
   const matches = (search: string, shown = review) => matchesWordFilter(reviewFilterTexts(shown), search);
 
-  it('looks through the number, title, target, author and reviewer', () => {
-    expect(['31', 'login screen', '/main/login', 'Ana Diaz', 'Bob Smith', 'bob.smith'].every((search) => matches(search))).toBe(true);
+  it('looks through the number, title, target, author and every reviewer', () => {
+    expect(['31', 'login screen', '/main/login', 'Ana Diaz', 'Bob Smith', 'bob.smith', 'qa-team'].every((search) => matches(search))).toBe(true);
     expect(matches('checkout')).toBe(false);
   });
 
-  it('reads a review nobody is assigned to', () => {
-    expect(matches('login', { ...review, assignee: '' })).toBe(true);
+  it('reads a review nobody was asked to review', () => {
+    expect(matches('login', { ...review, reviewers: [] })).toBe(true);
   });
 });
 

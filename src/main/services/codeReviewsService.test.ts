@@ -1,4 +1,5 @@
 import { MAX_LISTED_CODE_REVIEWS } from '@shared/domain/codeReview';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,19 +11,23 @@ import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const IN_WORKSPACE = workspacePlace(WORKSPACE);
 
-function review(id: number, targetType: string, target: string, status = 'Under review') {
+function review(id: number, targetType: string, target: string) {
   return {
     id: id,
     title: `Review ${id}`,
-    status: status,
+    codereviewstatusname: 'Under review',
     owner: 'ana',
-    assignee: 'bob',
+    reviewers: 'bob:Under review',
     date: '2026-09-25T10:00:00+02:00',
+    modifieddate: '2026-09-26T10:00:00+02:00',
+    comments: 3,
+    unresolvedissues: 1,
     targettype: targetType,
     target: target,
   };
@@ -55,7 +60,7 @@ describe('code review list', () => {
         via: 'query',
         args: findQueryArgs(
           FOUND_REVIEWS,
-          `where assignee = 'me' and status = 'Reviewed' and title like '%ix%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 300`,
+          `where reviewer = 'me' and status = 'Reviewed' and title like '%ix%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 300`,
         ),
         options: { cwd: WORKSPACE },
       },
@@ -127,35 +132,58 @@ describe('one code review', () => {
 });
 
 describe('code review writes', () => {
-  it('creates a review and returns its id', async () => {
+  it('creates a review asking its reviewers in the same command, and returns its id', async () => {
     const { service, commands } = codeReviews({ codereview: '42\n' });
 
-    expect(await service.create(IN_WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', assignee: 'bob' })).toBe(42);
-    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'br:/main/task1', 'Jump', '--assignee=bob', '--format={id}'] }]);
+    expect(await service.create(IN_WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', reviewers: ['bob', ' eva ', ''] })).toBe(42);
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'br:/main/task1', 'Jump', '--users=bob,eva', '--format={id}'] }]);
   });
 
-  it('changes the assignee with one command, reading nothing back', async () => {
-    const { service, lines } = codeReviews({ 'codereview -e': '' });
+  it('creates a review asking nobody', async () => {
+    const { service, lines } = codeReviews({ codereview: '42\n' });
 
-    await service.update(IN_WORKSPACE, 6, { assignee: '' });
+    await service.create(IN_WORKSPACE, { targetSpec: 'cs:12', title: 'Jump', reviewers: [] });
 
-    expect(lines()).toEqual(['codereview -e 6 --assignee=']);
+    expect(lines()).toEqual(['codereview cs:12 Jump --format={id}']);
   });
 
-  it('checks that a status change took, as cm ignores it on reviews nobody is assigned to', async () => {
-    const { service, lines } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Reviewed')) });
+  it('asks several reviewers with one command', async () => {
+    const { service, commands } = codeReviews({ 'codereview reviewer add': '' });
 
-    await service.update(IN_WORKSPACE, 6, { status: 'Reviewed' });
+    await service.addReviewers(IN_WORKSPACE, 6, ['bob', 'eva']);
 
-    expect(lines()).toEqual(['codereview -e 6 --status=Reviewed', foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'reviewer', 'add', '6', '--users=bob,eva'] }]);
   });
 
-  it('fails when cm left the status as it was', async () => {
-    const { service } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Under review')) });
+  it.each([
+    ['Reviewed', '--reviewed'],
+    ['Rework required', '--rework-required'],
+    ['Under review', '--under-review'],
+  ] as const)('sets your own status %s with %s', async (status, option) => {
+    const { service, lines } = codeReviews({ 'codereview review': '' });
 
-    await expect(service.update(IN_WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow(
-      new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again."),
-    );
+    await service.setOwnStatus(IN_WORKSPACE, 6, status);
+
+    expect(lines()).toEqual([`codereview review 6 ${option}`]);
+  });
+
+  it('says why in a file deleted afterwards, as the comment may hold lines', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = codeReviews({ 'codereview review': answer });
+
+    await service.setOwnStatus(IN_WORKSPACE, 6, 'Rework required', 'Two changes\nbefore it goes in.');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'review', '6', '--rework-required', `-commentsfile=${seen.file}`] }]);
+    expect(seen.content).toBe('Two changes\nbefore it goes in.');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it('writes no file for a comment that says nothing', async () => {
+    const { service, lines } = codeReviews({ 'codereview review': '' });
+
+    await service.setOwnStatus(IN_WORKSPACE, 6, 'Reviewed', '  \n');
+
+    expect(lines()).toEqual(['codereview review 6 --reviewed']);
   });
 
   it('deletes several reviews with one command', async () => {
@@ -185,16 +213,18 @@ describe('code reviews of a repository explored without a workspace', () => {
   });
 
   // Outside a workspace, `cm codereview` with no `--repository` fails ("Object reference not set…") after creating.
-  it('creates, edits and deletes with --repository, the target spec naming the repository too', async () => {
+  it('creates, asks reviewers, sets a status and deletes with --repository, the target spec naming the repository too', async () => {
     const { service, lines } = codeReviews({ codereview: '42\n' });
 
     expect(await service.create(ON_REPOSITORY, { targetSpec: 'cs:12', title: 'Jump' })).toBe(42);
-    await service.update(ON_REPOSITORY, 6, { assignee: 'bob' });
+    await service.addReviewers(ON_REPOSITORY, 6, ['bob']);
+    await service.setOwnStatus(ON_REPOSITORY, 6, 'Reviewed');
     await service.remove(ON_REPOSITORY, [6, 7]);
 
     expect(lines()).toEqual([
       'codereview cs:12@game@local Jump --format={id} --repository=game@local',
-      'codereview -e 6 --assignee=bob --repository=game@local',
+      'codereview reviewer add 6 --users=bob --repository=game@local',
+      'codereview review 6 --reviewed --repository=game@local',
       'codereview -d 6 7 --repository=game@local',
     ]);
   });

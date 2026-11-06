@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -35,7 +36,7 @@ const branches: Branch[] = changesets.map((changeset, index) => ({
 }));
 const labels: Label[] = changesets.map((changeset, index) => ({ id: index, name: `v${index}.0-accelerator`, changeset: changeset.id, branch: changeset.branch, comment: changeset.comment, owner: changeset.owner, date: changeset.date, repository: 'game' }));
 const shelves: Shelve[] = changesets.map((changeset) => ({ id: changeset.id % 100, guid: changeset.guid, comment: changeset.comment, owner: changeset.owner, date: changeset.date, parentChangeset: changeset.parent, repository: 'game' }));
-const reviews: CodeReviewSummary[] = changesets.map((changeset, index) => ({ id: index + 40, title: changeset.comment.split('\n')[0]!, status: 'Under review', owner: changeset.owner, assignee: '', date: changeset.date }) as CodeReviewSummary);
+const reviews: CodeReviewSummary[] = changesets.map((changeset, index) => codeReviewSummary({ id: index + 40, title: changeset.comment.split('\n')[0]!, owner: changeset.owner, date: changeset.date }));
 /** The people a mention can name: those it reads back whole (`personIndex`), as written in the lists' rows. */
 const people = ['ana@acme.com', 'jose.diaz@acme.com', 'ana.lopez'];
 

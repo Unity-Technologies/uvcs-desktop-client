@@ -13,42 +13,51 @@ import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { needsReviewerForStatus } from './reviewStatus';
+import { isReviewer, reviewerNames } from './reviewers';
 
-/** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
-export async function setReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
-  let assignee: string | undefined;
-  if (needsReviewerForStatus(review)) {
-    assignee = await prompt({
+/**
+ * Sets the user's own status on a review. Only reviewers give one, so a user who isn't one yet is asked to join
+ * first: both happen at once.
+ */
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
+  const user = await placeUser(place);
+  const joining = !isReviewer(review, user);
+  if (joining) {
+    const confirmed = await confirm({
       title: `Mark as “${status}”`,
-      label: 'Reviewer',
-      initialValue: await suggestedReviewer(place),
-      acceptInitialValue: true,
-      description: 'A review needs a reviewer before its status can change.',
-      confirmLabel: 'Assign and mark',
+      message: "You aren't one of its reviewers yet. You'll be added as one.",
+      confirmLabel: 'Add me and mark',
     });
-    if (assignee === undefined) return;
+    if (!confirmed || !user) return;
   }
-  await runAction(place, "Couldn't change the review status", () => api.codeReviews.update(place, review.id, { status, assignee }), isAffectedByCodeReviews);
+  await runAction(
+    place,
+    "Couldn't change your review status",
+    async () => {
+      if (joining && user) await api.codeReviews.addReviewers(place, review.id, [user]);
+      await api.codeReviews.setOwnStatus(place, review.id, status);
+    },
+    isAffectedByCodeReviews,
+  );
 }
 
-/** Whoever changes the status is likely the one reviewing: you on the place's server, if already known or quick to read. */
-async function suggestedReviewer(place: Place): Promise<string | undefined> {
+/** Who the user is on the place's server, if already known or quick to read. */
+async function placeUser(place: Place): Promise<string | undefined> {
   const server =
     place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
   return server ? readServerUser(server).catch(() => undefined) : undefined;
 }
 
-export async function reassignReview(place: Place, review: CodeReviewSummary): Promise<void> {
-  const assignee = await prompt({
-    title: 'Assign review',
-    label: 'Reviewer',
-    initialValue: review.assignee,
-    description: 'The user who should review these changes.',
-    confirmLabel: 'Assign',
+export async function addReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
+  const typed = await prompt({
+    title: 'Add reviewers',
+    label: 'Reviewers',
+    description: 'The users who should review these changes, separated by commas.',
+    confirmLabel: 'Add',
   });
-  if (assignee === undefined) return;
-  await runAction(place, "Couldn't assign the review", () => api.codeReviews.update(place, review.id, { assignee }), isAffectedByCodeReviews);
+  const users = typed === undefined ? [] : reviewerNames(typed);
+  if (users.length === 0) return;
+  await runAction(place, "Couldn't add the reviewers", () => api.codeReviews.addReviewers(place, review.id, users), isAffectedByCodeReviews);
 }
 
 /** Resolves to true when the reviews were deleted. */
