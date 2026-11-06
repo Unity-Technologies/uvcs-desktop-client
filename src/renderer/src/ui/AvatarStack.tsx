@@ -16,7 +16,10 @@ interface AvatarStackProps {
   size: number;
   /** The people left out, counted in a last disc ("+2") whose tooltip names them. */
   more?: { count: number; tip: string };
-  /** What the stack says as a whole, to its tooltip and a screen reader; without one it is decoration. */
+  /**
+   * What the stack says as a whole to a screen reader; without one it is decoration. It is no tooltip: the pointer
+   * reads each avatar's own, and "+N"'s names the rest.
+   */
   label?: string;
 }
 
@@ -32,7 +35,6 @@ export function AvatarStack({ avatars, size, more, label }: AvatarStackProps) {
     <span
       className={styles.stack}
       style={{ width: restWidth, height: size, '--avatar-size': `${size}px`, '--spread-width': `${spreadWidth}px` } as CSSProperties}
-      data-tip={label}
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
