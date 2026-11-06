@@ -13,14 +13,24 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   required (`CodeReviewer`, `CodeReviewSummary.reviewers`). The server derives the review's own status from theirs:
   Rework required when anyone asks for it, Reviewed once everyone has, Under review otherwise, and Under review with
   no reviewers. The app never sets the review's status: each reviewer sets their own.
-- **Your review** (the page's control, the menu's "Your review" submenu, `setOwnReviewStatus`) sets the signed-in
-  user's status with `cm codereview review <id> --reviewed | --rework-required | --under-review`, with what they say
-  about it in a file (`-commentsfile`) when there is something. Only reviewers give a status: a user who isn't one yet
-  is asked first ("You'll be added as one") and added with `cm codereview reviewer add` before their status is set.
+- Each status has its icon wherever it shows (`REVIEW_STATUS_ICONS`, the official client's): an eye under review, a
+  flag for rework required, a thumbs-up once reviewed, in the status's color.
+- **Your review** (the page's button, `OwnReviewButton`; the menu's "Your review" submenu; `setOwnReviewStatus`) sets
+  the signed-in user's status with `cm codereview review <id> --reviewed | --rework-required | --under-review`, with
+  what they say about it in a file (`-commentsfile`) when there is something; a comment is sent even with the status
+  they gave already. The button reads their status, or Review when they aren't a reviewer (`ownReviewButton`). Only
+  reviewers give a status: a user who isn't one yet is added with `cm codereview reviewer add` before their status is
+  set, the page's popover saying so, the menu asking first ("You'll be added as one").
   Whether the user is a reviewer goes by name (`isReviewer`, `ownStatus`): a member of a reviewer group isn't known to
   be one, so they are added as a user, as the server does itself when a group member sets a status.
-- **Add reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one
-  `cm codereview reviewer add <id> --users=a,b`. Groups are shown as reviewers but can't be added from the app yet
+- **Picking reviewers** (the gear beside the page's Reviewers, `ReviewerPicker`) lists the server's users
+  (`cm listusers --onlyusers`, read once and kept, `useMemberNames`), the reviewers checked first (`offeredReviewers`).
+  What changed applies as it closes (`reviewerChanges`, `changeReviewers`): one `cm codereview reviewer add <id>
+  --users=a,b`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
+  once they gave a status, asked to review again (`canReRequest`; `cm codereview review <id> --re-request --users=a`,
+  which puts them back to "Under review"). The author can be a reviewer, marked **Author** (`isAuthor`). The menu's
+  **Add reviewers** (`addReviewers`) asks the users typed, separated by commas (`reviewerNames`), with one
+  `cm codereview reviewer add`. Groups are shown as reviewers but can't be added from the app yet
   (`--groups`). A new review asks its reviewers in the command that creates it
   (`cm codereview <target> <title> --users=a,b`, `createReviewArgs`).
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
@@ -34,8 +44,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
-- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar ringed in the color of its reviewer's
-  status, the tooltip naming each with theirs), the comments with how many are open (`ReviewCommentCounts`; sorted
+- Columns: the title, the status, the reviewers (`ReviewerStack`: each avatar with its reviewer's status icon in a corner once they
+  gave one, `statusMarked`, "Under review" being where everyone starts; the tooltip naming each with theirs), the comments with how many are open (`ReviewCommentCounts`; sorted
   by what's open first, `commentCountsSortValue`), the changes, the author, when it was created (the list's order and
   its period go by it; hidden in a narrower window) and the last activity.
 - **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
@@ -43,8 +53,11 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 
 ## The review's page
 
-- The header: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the server
-  notes the rename), the status, who wants a review of what, the reviewers, and **Your review**. Then two tabs
+- The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
+  server notes the rename), at its end the reviewed code to the workspace, **Your review** and the page's menu
+  (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays
+  out of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation,
+  not in the header. Then two tabs
   (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the
   tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a file (`focusPath`,
   a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
@@ -66,17 +79,25 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   their counts changing with it (`isAffectedByCodeReviews`), and a focus once stale reads it, as others write on it.
 - The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (edited in place;
   an emptied one clears it, `cm codereview -e --descriptionfile`), then the threads and the events by when each
-  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Beside it,
-  the reviewers with the status each gave and **Open**: the change requests and questions still open, a click
+  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Oldest first
+  is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
+  scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
+  a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
+  author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
+  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open, a click
   scrolling to each (`ReviewSideRail`).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
   deleted starts a thread of its own. One on a line shows its file and line first, a click opening the Changes tab
   there (`commentLocationPage`: the line selected when the comment was written in the whole review's diff; one
   written in a single changeset's diff opens on its file only; one on an older revision of the file, or on a file the
-  review deletes, still opens at its line number in the newest version, until the Changes tab places comments), then its kind and where it stands (`threadBadges`), as the server counts open ones:
-  a change request is **Open** until a changeset applies it (**Applied in** its changeset, a chip) or a reply discards
-  it (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no
-  other way to resolve one). Other comments are never open.
+  review deletes, still opens at its line number in the newest version, until the Changes tab places comments). Its
+  header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
+  (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
+  is **Open** until a changeset applies it (**Applied in** its changeset, a chip) or a reply discards it
+  (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
+  way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
+  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. No chips, no colored edge: only
+  **Open** takes a color, the one of "Rework required".
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
   reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
