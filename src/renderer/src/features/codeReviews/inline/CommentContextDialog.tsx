@@ -1,7 +1,7 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { useEffect, useMemo, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
-import { placeId, type Place } from '@shared/domain/place';
+import { samePlace as isSamePlace, type Place } from '@shared/domain/place';
 import { useSession } from '../../../app/workspace/sessionStore';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
@@ -13,6 +13,7 @@ import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext, type DiffAnnotations } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
+import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
 import { threadsOf } from '../conversation/reviewThreads';
 import { useReviewConversation } from '../conversation/useReviewConversation';
@@ -63,7 +64,7 @@ type DialogProps = CommentInContext & { onClose: () => void };
 
 function CommentContextDialog(props: DialogProps) {
   const current = useSession((state) => state.place);
-  const samePlace = current !== null && placeId(current) === placeId(props.place);
+  const samePlace = current !== null && isSamePlace(current, props.place);
   const { onClose } = props;
   useEffect(() => {
     if (!samePlace) onClose();
@@ -94,6 +95,9 @@ function ThreadInContext(props: DialogProps) {
       description={contextDescription(thread, view)}
       width={1200}
       onClose={onClose}
+      // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
+      // switch or the dialog itself after a click in the code.
+      marks={STEP_FRAME}
       headerAction={
         <SegmentedControl<ContextView>
           label="What to show"
