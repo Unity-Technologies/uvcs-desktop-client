@@ -7,7 +7,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
 import { fakeApi } from '../../testing/fakeWindow';
 import { readQuery, showQuery } from '../../testing/queryProbes';
-import { changesetQuery } from './useChangeset';
+import { changesetOnScreen, changesetQuery } from './useChangeset';
 
 const PLACE = workspacePlace('/ws');
 const WHERE = { placeRepository: 'game@local' };
@@ -61,5 +61,28 @@ describe('a changeset read by its number (useChangeset)', () => {
     await showChangeset();
 
     expect(fakeApi.argsOf('changesets.get')).toEqual([]);
+  });
+
+  it("shows one a list on screen holds as that list's read again says, and stops following it once it leaves the screen", async () => {
+    let reads = 0;
+    const list = await showQuery(client, BRANCH_LIST, { answer: () => [changeset(++reads === 1 ? 'listed' : 'comment edited')] });
+    expect(changesetOnScreen(client, PLACE, 42)?.comment).toBe('listed');
+
+    await client.refetchQueries({ queryKey: BRANCH_LIST });
+    expect(changesetOnScreen(client, PLACE, 42)?.comment).toBe('comment edited');
+
+    list.hide();
+    expect(changesetOnScreen(client, PLACE, 42)).toBeUndefined();
+  });
+
+  it("reads one under an xlink, another repository's, which the place's lists never hold", async () => {
+    await showQuery(client, BRANCH_LIST, { answer: () => [changeset('listed')] });
+
+    const view = new QueryObserver(client, changesetQuery(client, PLACE, 42, { repository: 'assets@local', placeRepository: 'game@local' }));
+    const stop = view.subscribe(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    stop();
+
+    expect(fakeApi.argsOf('changesets.get')).toHaveLength(1);
   });
 });
