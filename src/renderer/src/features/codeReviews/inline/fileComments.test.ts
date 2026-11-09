@@ -83,11 +83,15 @@ describe('annotationRowsOf', () => {
     expect(annotationRowsOf({ rows: lines }, outdated, 'additions').map((row) => row.metadata)).toEqual(['additions:9', 'additions:4', OUTDATED_ROW]);
   });
 
-  it('lists the outdated threads first while comments are hidden, the lines then in the order they were opened', () => {
+  it('lists, while comments are hidden, only what was opened, outdated threads too, in the order they were opened', () => {
     const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
     const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
-    expect(annotationRowsOf({ rows: lines }, outdated, 'additions', false).map((row) => row.metadata)).toEqual([OUTDATED_ROW, 'additions:9']);
+    const metadataOf = (opened: string[]) => annotationRowsOf({ rows: lines }, outdated, 'additions', opened).map((row) => row.metadata);
+    expect(metadataOf(['additions:9'])).toEqual(['additions:9']);
+    expect(metadataOf(['additions:9', OUTDATED_ROW])).toEqual(['additions:9', OUTDATED_ROW]);
+    expect(metadataOf([OUTDATED_ROW, 'additions:9'])).toEqual([OUTDATED_ROW, 'additions:9']);
+    expect(annotationRowsOf({ rows: [] }, [], 'additions', [OUTDATED_ROW])).toEqual([]);
   });
 
   it('puts the outdated threads above the code, on the side the file has', () => {
@@ -99,9 +103,9 @@ describe('annotationRowsOf', () => {
 describe('threadPlace', () => {
   const comments = fileCommentsOf({ threads: threadsOf([onLine(1, 30, 2), onLine(3, 20, 3)]), review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });
 
-  it("is a thread's line, or the top of the code for an outdated one, or nothing for another file's", () => {
+  it("is a thread's line, or the top of the code for an outdated one (opened as a line is), or nothing for another file's", () => {
     expect(threadPlace(comments, 1, 'additions')).toEqual({ side: 'additions', lineNumber: 2, lineKey: 'additions:2' });
-    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0 });
+    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0, lineKey: OUTDATED_ROW });
     expect(threadPlace(comments, 99, 'additions')).toBeNull();
   });
 });
