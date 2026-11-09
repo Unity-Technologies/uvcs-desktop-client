@@ -1,8 +1,13 @@
-/* Centered on its line, its right edge at `left`: a small pill over the end of the code. */
-.marker {
+/* Centered on its row, its right edge at `left`: small pills over the end of the code, side by side. */
+.spot {
   position: absolute;
   translate: -100% -50%;
   z-index: 2;
+  display: flex;
+  gap: 4px;
+}
+
+.marker {
   display: inline-flex;
   align-items: center;
   gap: 4px;

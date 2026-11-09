@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type { ChangedLine } from './changeBlocks';
-import { lineNumberCellSelector, type CodeLayout } from './lineActions';
+import { lineNumberCellSelector, topRowSelector, type CodeLayout } from './lineActions';
 import { paneRect, pierreShadowRoot } from './pierreDom';
 
 /** Where a line is, in the container's scrolled content: its row's top and bottom, and its pane's right edge. */
@@ -37,7 +37,8 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       const view = container.getBoundingClientRect();
       const next = new Map<string, LineBox>();
       for (const line of lines) {
-        const cell = root?.querySelector(lineNumberCellSelector(line, layout));
+        // Above the code (`lineNumber: 0`): its first row, whichever it is.
+        const cell = root?.querySelector(line.lineNumber < 1 ? topRowSelector(line.side, layout) : lineNumberCellSelector(line, layout));
         const pane = cell?.closest('[data-code]');
         if (!cell || !pane) continue;
         const rect = cell.getBoundingClientRect();

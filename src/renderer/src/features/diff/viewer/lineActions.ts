@@ -31,6 +31,15 @@ export function lineNumberCellSelector({ side, lineNumber }: ChangedLine, layout
   return cell;
 }
 
+/**
+ * The first row of a pane's code, whatever it is (a line, or the bar of unchanged lines folded): where what's above
+ * the code is marked (`LineMarker` at `lineNumber: 0`). Side by side, the side's pane; else the only one.
+ */
+export function topRowSelector(side: DiffSide, layout: CodeLayout): string {
+  const pane = layout === 'split' ? `[data-code][data-${side}]` : '[data-code]';
+  return `${pane} > [data-content] > :first-child`;
+}
+
 /** What a pointer's row says about its line: its number (cell or code), its type, and the pane it's in side by side. */
 export interface RowUnderPointer {
   lineNumber: number;

@@ -2,13 +2,15 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import { createContext, type ReactNode } from 'react';
 import type { ChangedLine } from './changeBlocks';
 import { lineToReveal, type HunkSides } from './lineToReveal';
+import type { LineBox } from './useLineBoxes';
 
 /**
  * What a place adds under a text diff's lines, given by it around the viewer (a review's comments in its Changes tab:
  * `ReviewFileAnnotator`). The viewer knows nothing of what they are:
  * - `rows`: Pierre's line annotations, each a row under its line drawn by `render` (`lineNumber: 0` is above the file's
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
- * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it;
+ * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it; `lineNumber: 0`, on the
+ *   code's first row, for the rows above the code;
  * - `scrollTo`: the line whose row to bring into view, line and row whole and high in the view, once each time it's a
  *   new object (the thread a link or a list went to); `lineNumber: 0`, the rows above the code;
  * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
@@ -22,7 +24,7 @@ export interface DiffAnnotations {
   opensAtRow: boolean;
 }
 
-/** A mark on a line, at the end of its pane. */
+/** A mark on a line, at the end of its pane; `lineNumber: 0`, on the first row (`topRowSelector`), for what's above the code. */
 export interface LineMarker extends ChangedLine {
   key: string;
   /** What it marks, as a screen reader says it. */
@@ -70,4 +72,33 @@ export const MARKER_INSET = 8;
 /** Where a line's marker ends (its right edge, `LineMarkers`): over the end of the line, just inside its pane. */
 export function markerLeft(paneRight: number): number {
   return paneRight - MARKER_INSET;
+}
+
+/** Where markers are drawn: those on one row of one pane side by side, centered on the row, ending inside the pane. */
+export interface MarkerSpot<M> {
+  key: string;
+  top: number;
+  left: number;
+  markers: M[];
+}
+
+/**
+ * The spots of the markers whose lines are rendered (`useLineBoxes`), in the markers' order: markers on the same row of
+ * the same pane share one, so none covers another (the one above the code, on the first row, and line 1's), the one
+ * above the code first. Rows a fraction of a pixel apart are the same row.
+ */
+export function markerSpots<M extends Pick<LineMarker, 'key' | 'lineNumber'>>(markers: readonly M[], boxes: ReadonlyMap<string, LineBox>): MarkerSpot<M>[] {
+  const spots = new Map<string, MarkerSpot<M>>();
+  for (const marker of markers) {
+    const box = boxes.get(marker.key);
+    if (!box) continue;
+    const top = (box.top + box.bottom) / 2;
+    const left = markerLeft(box.paneRight);
+    const at = `${Math.round(top)}:${Math.round(left)}`;
+    const spot = spots.get(at) ?? { key: marker.key, top, left, markers: [] };
+    spot.markers.push(marker);
+    spots.set(at, spot);
+  }
+  for (const spot of spots.values()) spot.markers.sort((a, b) => a.lineNumber - b.lineNumber);
+  return [...spots.values()];
 }
