@@ -20,6 +20,13 @@
   min-width: 0;
 }
 
+.toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .title {
   font-size: var(--text-lg);
   font-weight: 600;
