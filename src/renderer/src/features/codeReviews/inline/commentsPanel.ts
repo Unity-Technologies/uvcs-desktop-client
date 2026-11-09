@@ -4,6 +4,7 @@ import { lowerCasedText } from '../../../lib/lowerCasedText';
 import { matchesWordFilter, queryWords } from '../../../lib/matchesAllWords';
 import { pluralize } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
+import type { DiffLayout } from '../../diff/viewer/diffPreferencesStore';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
@@ -157,13 +158,14 @@ export const MIN_READABLE_DIFF_WIDTH = 480;
 
 /**
  * Whether a review's Comments panel starts hidden as its changes first show: with no comments on its code it would
- * only say so, beside a diff it narrows; and where the diff beside it would be narrower than `MIN_READABLE_DIFF_WIDTH`
- * (a window of about 1000 px), the markers on lines still saying where comments are. Decided once, as the changes
- * first show: a first comment, or a window widened, doesn't open it. The user's own choice (`DetailsToggleButton`) is
- * kept for the next review.
+ * only say so, beside a diff it narrows; and where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH`
+ * (unified, a window of about 1000 px; side by side, each side, a window of about 1850 px), the markers on lines still
+ * saying where comments are. Decided once, as the changes first show: a first comment, a window widened or the
+ * layout switched doesn't open it. The user's own choice (`DetailsToggleButton`) is kept for the next review.
  */
-export function commentsPanelStartsHidden({ codeThreads, diffWidth }: { codeThreads: number; diffWidth: number }): boolean {
-  return codeThreads === 0 || diffWidth < MIN_READABLE_DIFF_WIDTH;
+export function commentsPanelStartsHidden({ codeThreads, diffWidth, layout }: { codeThreads: number; diffWidth: number; layout: DiffLayout }): boolean {
+  const codeWidth = layout === 'split' ? diffWidth / 2 : diffWidth;
+  return codeThreads === 0 || codeWidth < MIN_READABLE_DIFF_WIDTH;
 }
 
 /** The width a review's diff has beside its list of files and the Comments panel. */

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
 import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
+import { useDiffPreferences } from '../diff/viewer/diffPreferencesStore';
 import { commentsPanelStartsHidden, diffWidthBesidePanel } from './inline/commentsPanel';
 
 /** The Comments panel beside a review's Changes, as a details panel: its key in the details' store. */
@@ -25,7 +26,8 @@ export function useCommentsPanelStart(codeThreads: number | null, tab: RefObject
     const panelWidth = detailsWidthOf(useDetailsPaneStore.getState(), COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
     // The files' list at its starting width: `SplitPane` keeps no width it was dragged to, so every diff opens with it.
     const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: FILES_WIDTH, panelWidth });
-    if (commentsPanelStartsHidden({ codeThreads, diffWidth })) startHidden(COMMENTS_PANEL_KEY, owner);
+    const { layout } = useDiffPreferences.getState();
+    if (commentsPanelStartsHidden({ codeThreads, diffWidth, layout })) startHidden(COMMENTS_PANEL_KEY, owner);
   }, [codeThreads, startHidden, tab, owner]);
   useEffect(
     () => () => {
