@@ -7,8 +7,8 @@ import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
 
-function thread(id: number): LineThread {
-  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', line: 3 } };
+function thread(id: number, extra: Partial<ReviewComment> = {}): LineThread {
+  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', line: 3 }, ...extra };
   return threadsOf([root])[0] as LineThread;
 }
 
@@ -62,7 +62,11 @@ describe('outdatedOpensFor', () => {
 
 describe('offersContext', () => {
   it('offers a thread written on an earlier version in context, and none on a version the diff shows', () => {
-    expect(offersContext({ earlier: { thread: thread(1), revisionId: 20 } })).toBe(true);
-    expect(offersContext({})).toBe(false);
+    expect(offersContext(thread(1), true)).toBe(true);
+    expect(offersContext(thread(1), false)).toBe(false);
+  });
+
+  it('leaves an applied change request to its "Applied in" pill, which opens the same dialog: one way in per card', () => {
+    expect(offersContext(thread(1, { kind: 'changeRequest', appliedInChangeset: 15 }), true)).toBe(false);
   });
 });
