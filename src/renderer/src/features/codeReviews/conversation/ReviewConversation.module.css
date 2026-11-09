@@ -218,9 +218,6 @@
 .location {
   display: flex;
   min-width: 0;
-  padding: 0;
-  border: none;
-  background: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -249,12 +246,15 @@
   color: var(--text-tertiary);
 }
 
-/* A link to the file in Changes: the hand says so. In the Comments panel, it only names where the card goes. */
-.location[data-link] {
+/* A link to the file in Changes: the hand says so. In the Comments panel, a span, it only names where the card goes. */
+button.location {
+  padding: 0;
+  border: none;
+  background: none;
   cursor: pointer;
 }
 
-.location[data-link]:hover .locationFile {
+button.location:hover .locationFile {
   color: var(--accent-text);
   text-decoration: underline;
 }

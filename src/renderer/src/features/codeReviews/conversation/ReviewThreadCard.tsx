@@ -104,8 +104,10 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
   );
 }
 
+/** A click on the card itself, not on a control inside it, nor the end of a drag selecting its text to copy. */
 function clickedOutsideControls(event: MouseEvent): boolean {
-  return event.target instanceof Element && event.target.closest('button, a, input, textarea') === null;
+  if (window.getSelection()?.isCollapsed === false) return false;
+  return event.target instanceof Element && event.target.closest('button, a, input, textarea, select, label, [role="button"]') === null;
 }
 
 interface ThreadHeaderProps {
@@ -141,7 +143,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
           <LocationParts location={location} />
         </span>
       ) : (
-        <button type="button" className={styles.location} data-link="" data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+        <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
           <LocationParts location={location} />
         </button>
       ))}
