@@ -226,6 +226,9 @@ and many people use the same server. Every `cm` command other than local reads (
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
+  A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
+  while the list is stale (`changesetOnScreen`; a branch review's "Changeset by changeset" reads its list, not each
+  changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
