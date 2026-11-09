@@ -1,4 +1,4 @@
-import { comparisonOf, contextMissingText, entryOfThread, type ContextComparison, type ContextEntry, type ContextView, type OnScreen, type ShownEntry } from './commentContext';
+import { appliedChangeset, comparisonOf, contextMissingText, entryOfThread, type ContextComparison, type ContextEntry, type ContextView, type OnScreen, type ShownEntry } from './commentContext';
 import type { LineThread } from './fileThreads';
 
 /** What a view of "See in context" shows: its comparison, once the diff it needs is read, or why there's none yet. */
@@ -6,6 +6,8 @@ export type ContextComparisonState =
   | { kind: 'reading' }
   | { kind: 'error'; message: string }
   | { kind: 'missing'; text: string }
+  /** A change request marked applied in a changeset that didn't change its file: the thread shows, and this says why. */
+  | { kind: 'notInChangeset'; changesetId: number; text: string }
   | { kind: 'comparison'; comparison: ContextComparison };
 
 /** The diff read for a view (`useDiffEntries`'s answer), when its entry isn't the one on screen. */
@@ -34,7 +36,9 @@ export function contextComparisonState({ thread, view, repository, onScreen, sou
   if (source.kind === 'read' && !read.data) return { kind: 'reading' };
   const entry = entryOf(source, onScreen, read, thread);
   const comparison = comparisonOf(thread, view, repository, entry);
-  return comparison ? { kind: 'comparison', comparison } : { kind: 'missing', text: contextMissingText(thread, view) };
+  if (comparison) return { kind: 'comparison', comparison };
+  const appliedIn = appliedChangeset(thread);
+  return view === 'since' && appliedIn !== undefined ? { kind: 'notInChangeset', changesetId: appliedIn, text: contextMissingText(thread, view) } : { kind: 'missing', text: contextMissingText(thread, view) };
 }
 
 function entryOf(source: ContextEntry, onScreen: OnScreen | null, read: ReadDiff, thread: LineThread): ShownEntry | null {

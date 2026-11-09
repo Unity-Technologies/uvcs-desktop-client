@@ -1,5 +1,6 @@
 import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
+import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
 import type { ReviewThread } from './reviewThreads';
 
@@ -36,6 +37,15 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
 /** What an Applied pill's tooltip says: the changeset that applied it, and what a click shows of it. */
 export function appliedPillTip(changesetId: number, seesHowApplied: boolean): string {
   return `Applied in changeset ${changesetId}: ${seesHowApplied ? 'see how it was applied' : 'open it'}`;
+}
+
+/**
+ * The reply an Answered pill leads to: the first, as any reply answers a question (`threadState`), with the pill's
+ * tooltip naming who wrote it. None for a thread not answered.
+ */
+export function answerOf({ state, replies }: Pick<ReviewThread, 'state' | 'replies'>): { replyId: number; tip: string } | undefined {
+  const answer = state.kind === 'answered' ? replies[0] : undefined;
+  return answer && { replyId: answer.id, tip: `Answered by ${displayName(answer.author)}: see the answer` };
 }
 
 /** What a reply's header says after its author's name: a discard says so. */

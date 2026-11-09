@@ -15,7 +15,7 @@ const FALLBACK_LINE_HEIGHT = 20;
 
 /**
  * Scrolls the diff in `container` so the row under `line` (a place's `DiffAnnotations.rows`), and its part gone to
- * (`ROW_FOCUS_ATTRIBUTE`), show whole and high in the view (`framedScrollTop`). A row the diff already shows is glided
+ * (`ROW_FOCUS_ATTRIBUTE`), read with context, a third of the way down (`framedScrollTop`). A row the diff already shows is glided
  * to (`scrollSmoothlyTo`); one not rendered yet (a file just opened, a row far away in a big diff) is jumped to where
  * Pierre lays its line out, then set right as it renders. It keeps it framed until it stops moving. Returns a function
  * that stops it.
@@ -31,7 +31,7 @@ export function scrollToAnnotationRow(container: HTMLElement, line: ChangedLine,
     if (rowFrame) {
       // Rendered the first time it's looked for: the diff was showing it already, and the reader sees it move there.
       glides ??= true;
-      const to = framedScrollTop(rowFrame, { scrollTop: aimedAt ?? container.scrollTop, height: container.clientHeight });
+      const to = framedScrollTop(rowFrame, { scrollTop: aimedAt ?? container.scrollTop, height: container.clientHeight, contentHeight: container.scrollHeight });
       if (to === null || (aimedAt !== null && Math.abs(to - aimedAt) < 1)) settled++;
       else {
         settled = 0;
@@ -59,14 +59,14 @@ function rowFrameOf(container: HTMLElement, line: ChangedLine, virtualizer: Virt
   const focusBox = (row.querySelector(`[${ROW_FOCUS_ATTRIBUTE}]`) ?? row).getBoundingClientRect();
   const offset = container.scrollTop - container.getBoundingClientRect().top;
   const lineHeight = line.lineNumber < 1 ? 0 : (lineBox(container, line, virtualizer)?.height ?? FALLBACK_LINE_HEIGHT);
-  return { lineTop: rowBox.top + offset - lineHeight, focusTop: focusBox.top + offset, focusBottom: focusBox.bottom + offset };
+  return { lineTop: rowBox.top + offset - lineHeight, focusTop: focusBox.top + offset, focusBottom: focusBox.bottom + offset, lineHeight };
 }
 
 /** Scrolls to where Pierre lays the line out, so its row renders; the rows above the code are at the diff's top. */
 function jumpNear(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer): void {
   if (line.lineNumber < 1) return void (container.scrollTop = 0);
   const box = lineBox(container, line, virtualizer);
-  if (box) container.scrollTop = scrollTopFor(box.top, container.clientHeight / 4);
+  if (box) container.scrollTop = scrollTopFor(box.top, container.clientHeight / 3);
 }
 
 function lineBox(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer): { top: number; height: number } | undefined {

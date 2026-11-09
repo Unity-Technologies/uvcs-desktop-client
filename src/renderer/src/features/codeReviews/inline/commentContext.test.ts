@@ -117,6 +117,11 @@ describe('contextViewLabels and contextDescription', () => {
     expect(contextDescription(applied, 'since')).toBe('Line 12 as it was, against changeset 15, which applied it');
   });
 
+  it("say a change request was marked applied in a changeset that didn't change its file, never that it applied it there", () => {
+    const applied = threadOn(20, { appliedInChangeset: 15 });
+    expect(contextDescription(applied, 'since', { fileInChangeset: false })).toBe('Line 12, marked applied in changeset 15');
+  });
+
   it('say what changed since for anything not applied', () => {
     const discarded = threadOn(20, {}, [{ kind: 'discard' }]);
     expect(contextViewLabels(discarded).since).toBe('Since then');

@@ -4,7 +4,7 @@
 # comment, applied by hand with `comment apply`, discarded), questions (answered and not), a plain comment on a line, a
 # comment on a deleted file, a comment filed under one changeset's diff, an edited comment, and comments on a revision
 # a later changeset replaced (the comments on an older revision): on lines it left alone, which the Changes tab shows at
-# their line in the newest one, and on a line it edited (an open question, the discarded request), outdated. The
+# their line in the newest one, and on a line it edited (an open question, the discarded request), outdated; and comments far down a long file and near its end. The
 # timeline gets a rename and a status change with a comment. Two more reviews have no comments: one of a changeset, one of a shelve.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
@@ -81,6 +81,8 @@ w Assets/Scripts/Retry.cs "public static class Retry
         for (var i = 0; i < count; i++) action();
     }
 }"
+# A long file, for comments gone to far down it and near its end (where the view stops scrolling).
+w Assets/Scripts/Commands.cs "$(echo 'public static class Commands'; echo '{'; for i in $(seq 1 796); do echo "    public static string Command$i => \"command $i\";"; done; echo '}')"
 checkin "$(text retry 'Retry reads better on several lines')"
 
 REVIEW=$(cm cr br:/main/task-2210 "Switch with changes" --users=me --format={id} \
@@ -107,6 +109,8 @@ EDITED=$(on_review --path=/Assets/Scripts/Retry.cs --line=1 --type=Comment -c="S
 sleep 1
 cm cr comment edit "$EDITED" -c="Static class reads well." >/dev/null
 on_review --path=/Assets/Scripts/LegacySwitch.cs --line=1 --type=Comment -c="Glad to see this one go." >/dev/null
+on_review --path=/Assets/Scripts/Commands.cs --line=400 --type=Change -c="Name it after what it does." >/dev/null
+on_review --path=/Assets/Scripts/Commands.cs --line=796 --type=Question -c="Is the last command still used?" >/dev/null
 on_review --path=/Assets/Scripts/SwitchFlow.cs --line=12 --changeset="cs:$FIRST" --type=Comment -c="In this changeset alone, the update comes last." >/dev/null
 
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null

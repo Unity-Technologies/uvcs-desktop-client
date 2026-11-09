@@ -2,6 +2,7 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import { createContext, type ReactNode } from 'react';
 import type { ChangedLine } from './changeBlocks';
 import { lineToReveal, type HunkSides } from './lineToReveal';
+import type { CodeLayout } from './lineActions';
 
 /**
  * What a place adds under a text diff's lines, given by it around the viewer (a review's comments in its Changes tab:
@@ -62,4 +63,34 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
 /** What names a set of rows, to tell a new one from the same rows built anew. */
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
+}
+
+/**
+ * The strip at the end of each code pane where a line's marker sits (`LineMarkers`): the code's own box ends before
+ * it (`markerRoomCss`), so a marker never draws over the code, however long its lines or narrow the pane. Wide
+ * enough for a marker's three avatars and its count.
+ */
+export const MARKER_ROOM = 64;
+
+/** Between a marker's right edge and its pane's. */
+const MARKER_INSET = 6;
+
+/** The strip the markers take: none without markers, so the code keeps its whole width. */
+export function markerRoom(markers: number): number {
+  return markers > 0 ? MARKER_ROOM : 0;
+}
+
+/**
+ * The CSS, in Pierre's shadow root, that ends the code before the markers' strip: in each pane holding markers side by
+ * side, the other keeping its whole width; in the one pane of a unified diff or a file.
+ */
+export function markerRoomCss(markers: readonly Pick<ChangedLine, 'side'>[], layout: CodeLayout): string {
+  if (markerRoom(markers.length) === 0) return '';
+  const panes = layout === 'split' ? (['deletions', 'additions'] as const).filter((side) => markers.some((marker) => marker.side === side)).map((side) => `[data-code][data-${side}]`) : ['[data-code]'];
+  return panes.map((pane) => `${pane}{margin-inline-end:${MARKER_ROOM}px}`).join('\n');
+}
+
+/** Where a marker's right edge goes, from where its pane's code ends: in the strip past it. */
+export function markerLeft(codeRight: number): number {
+  return codeRight + MARKER_ROOM - MARKER_INSET;
 }

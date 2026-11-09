@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
+import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -33,6 +33,25 @@ describe('appliedPillTip', () => {
   it('names the changeset that applied it, and what the pill does: how it was applied, else the changeset itself', () => {
     expect(appliedPillTip(4, true)).toBe('Applied in changeset 4: see how it was applied');
     expect(appliedPillTip(4, false)).toBe('Applied in changeset 4: open it');
+  });
+});
+
+describe('answerOf', () => {
+  it("is an answered question's first reply, which answered it, and its pill's tooltip names who wrote it", () => {
+    const answered = threadsOf([comment(1, { kind: 'question' }), comment(2, { parentId: 1, kind: 'comment', author: 'borja.lopez' }), comment(3, { parentId: 1, kind: 'comment' })])[0]!;
+    expect(answerOf(answered)).toEqual({ replyId: 2, tip: 'Answered by Borja Lopez: see the answer' });
+  });
+
+  it('is the reply written first, however cm listed them', () => {
+    const second = '2026-11-09T12:04:22+01:00';
+    const answered = threadsOf([comment(1, { kind: 'question' }), comment(5, { parentId: 1, kind: 'comment', date: second }), comment(4, { parentId: 1, kind: 'comment', date: second, author: 'bob' })])[0]!;
+    expect(answerOf(answered)?.replyId).toBe(4);
+  });
+
+  it('is none for a thread no reply answers: an open question, a change request, a plain comment', () => {
+    expect(answerOf(threadsOf([comment(1, { kind: 'question' })])[0]!)).toBeUndefined();
+    expect(answerOf(threadsOf([comment(1, { kind: 'changeRequest' }), comment(2, { parentId: 1, kind: 'discard' })])[0]!)).toBeUndefined();
+    expect(answerOf(threadsOf([comment(1, { kind: 'comment' }), comment(2, { parentId: 1, kind: 'comment' })])[0]!)).toBeUndefined();
   });
 });
 

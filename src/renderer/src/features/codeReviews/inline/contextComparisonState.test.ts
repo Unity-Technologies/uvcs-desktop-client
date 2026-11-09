@@ -51,7 +51,8 @@ describe('contextComparisonState', () => {
   it("says the changeset that applied a change request didn't change its file when it isn't among that changeset's", () => {
     const state = contextComparisonState({ thread: applied, view: 'since', repository: REPOSITORY, onScreen: null, source: READ, read: { data: [OTHER] } });
 
-    expect(state).toEqual({ kind: 'missing', text: "Changeset 40 didn't change this file" });
+    // Shown with the thread: an empty box said only that, the comment nowhere.
+    expect(state).toEqual({ kind: 'notInChangeset', changesetId: 40, text: "Changeset 40 didn't change this file" });
   });
 
   it("can't find the diff a thread was written on in a review whose target is unknown", () => {

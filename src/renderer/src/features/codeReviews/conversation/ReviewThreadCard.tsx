@@ -17,7 +17,7 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { appliedPillTip, commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
+import { answerOf, appliedPillTip, commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -69,6 +69,13 @@ type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSeeApplied }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
   const [shownHighlight, setShownHighlight] = useState(highlight);
+  // The Answered pill's: the reply that answered, gone to the how-many-th time.
+  const [answerShown, setAnswerShown] = useState<{ replyId: number; seq: number } | null>(null);
+  const answer = answerOf(thread);
+  const seeAnswer = answer && (() => {
+    setFolded(false);
+    setAnswerShown((shown) => ({ replyId: answer.replyId, seq: (shown?.seq ?? -1) + 1 }));
+  });
   const badges = threadBadges(thread);
   const foldable = startsFolded(thread);
   const hasHeader = thread.root.anchor.kind === 'line' || badges.kind !== undefined;
@@ -88,10 +95,15 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
       {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
     >
-      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
+      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onSeeAnswer={seeAnswer} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
       {inCode?.snippet}
       <div className={styles.threadBody}>
-        {folded ? <FoldedThread thread={thread} onOpen={() => setFolded(false)} /> : <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} />}
+        {folded ? (
+          // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
+          <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
+        ) : (
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={answerShown ?? undefined} />
+        )}
       </div>
     </section>
   );
@@ -140,9 +152,11 @@ interface ThreadHeaderProps {
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
   onSeeApplied?: () => void;
+  /** What "Answered" does: shows the thread whole at the reply that answered it (`answerOf`). */
+  onSeeAnswer?: () => void;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer }: ThreadHeaderProps) {
   const { root } = thread;
   const badges = threadBadges(thread);
   // In the code, the thread is at its line: its location would name where the user already is.
@@ -195,7 +209,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
-          <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
+          <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} answer={onSeeAnswer && answerOf(thread)} onSeeAnswer={onSeeAnswer} />
         )}
         {inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
@@ -203,12 +217,28 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
   );
 }
 
+interface StatePillProps {
+  state: NonNullable<ThreadBadges['state']>;
+  appliedIn: number | undefined;
+  onSeeApplied?: () => void;
+  /** The reply an Answered pill leads to, where the card can show it (`answerOf`). */
+  answer?: { tip: string };
+  onSeeAnswer?: () => void;
+}
+
 /**
  * Where a thread stands, as an outlined pill. "Applied" is one link as a whole, showing how the change
  * request was applied, in context (`onSeeApplied`), else opening the changeset that applied it: a chip inside the pill
- * would be a frame in a frame.
+ * would be a frame in a frame. "Answered" is one too, to the reply that answered (`onSeeAnswer`).
  */
-function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<ThreadBadges['state']>; appliedIn: number | undefined; onSeeApplied?: () => void }) {
+function StatePill({ state, appliedIn, onSeeApplied, answer, onSeeAnswer }: StatePillProps) {
+  if (answer && onSeeAnswer) {
+    return (
+      <button type="button" className={styles.pill} data-tone={state.tone} data-tip={answer.tip} onClick={onSeeAnswer}>
+        {state.label}
+      </button>
+    );
+  }
   if (appliedIn === undefined) {
     return (
       <span className={styles.pill} data-tone={state.tone}>
@@ -255,10 +285,10 @@ function LocationParts({ location }: { location: NonNullable<ReturnType<typeof l
  * A settled thread folded: who started it and its first words, a click showing it whole. While a list is searched,
  * the comment the words were found in instead (`excerpt`), the words marked (`HighlightQuery`), as every list marks them.
  */
-function FoldedThread({ thread, onOpen, excerpt }: { thread: ReviewThread; onOpen: () => void; excerpt?: ThreadSummaryCardProps['excerpt'] }) {
+function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread: ReviewThread; onOpen: () => void; excerpt?: ThreadSummaryCardProps['excerpt']; pointerOnly?: boolean }) {
   const author = excerpt?.author ?? thread.root.author;
   return (
-    <button type="button" className={styles.foldedLine} onClick={onOpen}>
+    <button type="button" className={styles.foldedLine} onClick={onOpen} tabIndex={pointerOnly ? -1 : undefined}>
       <Avatar user={author} size={16} tip={null} />
       <span className={styles.author}>
         <Highlight text={displayName(author)} />
@@ -269,7 +299,7 @@ function FoldedThread({ thread, onOpen, excerpt }: { thread: ReviewThread; onOpe
 }
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
-function WholeThread({ review, thread, user, threadActions }: { review: Pick<CodeReview, 'owner'>; thread: ReviewThread; user: string | undefined; threadActions?: ThreadActions }) {
+function WholeThread({ review, thread, user, threadActions, lit }: { review: Pick<CodeReview, 'owner'>; thread: ReviewThread; user: string | undefined; threadActions?: ThreadActions; lit?: { replyId: number; seq: number } }) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
@@ -278,7 +308,7 @@ function WholeThread({ review, thread, user, threadActions }: { review: Pick<Cod
     <>
       <ReviewCommentView comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
       {replies.map((reply) => (
-        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} />
+        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} lit={lit?.replyId === reply.id ? lit.seq : undefined} />
       ))}
       <div className={styles.answer}>
         {answering === 'reply' && (

@@ -1,3 +1,4 @@
+import { focusScrollTop } from '../../../lib/scrollPlacement';
 import type { ChangedLine } from './changeBlocks';
 
 /** The first line in view, where its row starts from the top of the view (negative when partly scrolled past), and its height. */
@@ -55,22 +56,25 @@ export interface RowFrame {
   /** The part of the row gone to (one thread of several under a line): the whole row when there's no such part. */
   focusTop: number;
   focusBottom: number;
+  /** The line's height, which the lines of context kept above it are counted in. */
+  lineHeight?: number;
 }
+
+/** Lines of context kept above a line gone to, however tall its card. */
+const CONTEXT_LINES = 3;
 
 /** Room kept between what's gone to and the edges of the view. */
 export const FRAME_MARGIN = 24;
 
 /**
- * Where to scroll so a line and the row gone to under it show whole, the line a quarter of the way down: what's read
- * next sits high in the view, not against its bottom. Taller than the view, the part gone to shows from its top. None
- * when it all shows already, away from the edges: the view doesn't move under the reader.
+ * Where to scroll so a line and the row gone to under it read with context (`focusScrollTop`): the line a third of
+ * the way down, lines above it, its row below. Taller than the view, the part gone to shows from its top. None when it
+ * all shows already, away from the edges: the view doesn't move under the reader.
  */
-export function framedScrollTop(frame: RowFrame, view: { scrollTop: number; height: number }): number | null {
-  const { lineTop, focusTop, focusBottom } = frame;
+export function framedScrollTop(frame: RowFrame, view: { scrollTop: number; height: number; contentHeight?: number }): number | null {
+  const { lineTop, focusTop, focusBottom, lineHeight = 0 } = frame;
   const inView = lineTop >= view.scrollTop + FRAME_MARGIN && focusBottom <= view.scrollTop + view.height - FRAME_MARGIN;
   if (inView) return null;
-  let top = lineTop - view.height / 4;
-  if (focusBottom - top > view.height - FRAME_MARGIN) top = focusBottom - view.height + FRAME_MARGIN;
-  if (focusTop - top < FRAME_MARGIN) top = focusTop - FRAME_MARGIN;
-  return Math.max(0, top);
+  if (focusBottom - focusTop > view.height - FRAME_MARGIN) return Math.max(0, focusTop - FRAME_MARGIN);
+  return focusScrollTop({ top: lineTop, bottom: focusBottom, contextAbove: CONTEXT_LINES * lineHeight, viewHeight: view.height, contentHeight: view.contentHeight ?? Infinity });
 }

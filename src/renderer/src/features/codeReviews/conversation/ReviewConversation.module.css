@@ -170,7 +170,8 @@
   gap: 6px;
   min-width: 0;
   min-height: 36px;
-  padding: 0 var(--space-3) 0 var(--space-4);
+  /* Its text sits on one baseline (see `.headerEnd`), whose line starts at the top: the padding centers it. */
+  padding: 7.5px var(--space-3) 7.5px var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-subtle);
   color: var(--text-secondary);
@@ -280,10 +281,20 @@ button.location:hover .locationFile {
   margin-left: 6px;
 }
 
+/*
+ * The path, its line, "1 reply" and the state read on one baseline: centered, the path's monospace and the reply count's
+ * UI font sat a pixel apart.
+ */
+.headerStart > .location,
+.headerStart > .writtenLine,
+.headerEnd {
+  align-self: baseline;
+}
+
 .headerEnd {
   display: inline-flex;
   flex: none;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
   margin-left: auto;
 }
@@ -317,7 +328,7 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* "Applied": the pill is a link as a whole, to how the change request was applied. */
+/* "Applied" and "Answered": the pill is a link as a whole, to how the change request was applied or to the answer. */
 button.pill {
   font-family: inherit;
   background: none;
@@ -611,7 +622,38 @@ button.pill:hover {
   }
 }
 
+/* The reply an Answered pill leads to, lit for a moment as a thread gone to is, alternating so a second click lights it again. */
+.comment[data-highlight] {
+  border-radius: var(--radius-md);
+}
+
+.comment[data-highlight='0'] {
+  animation: comment-lit-a 1.6s var(--ease-out);
+}
+
+.comment[data-highlight='1'] {
+  animation: comment-lit-b 1.6s var(--ease-out);
+}
+
+@keyframes comment-lit-a {
+  from {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+}
+
+@keyframes comment-lit-b {
+  from {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .comment[data-highlight] {
+    animation: none;
+  }
+
   .thread[data-highlight] {
     animation: none;
     border-color: var(--accent);

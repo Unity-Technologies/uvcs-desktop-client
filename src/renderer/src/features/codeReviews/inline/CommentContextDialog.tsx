@@ -13,6 +13,7 @@ import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
+import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
 import { useReviewThreads } from '../conversation/useReviewThreads';
 import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
 import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
@@ -88,10 +89,30 @@ function ThreadInContext(props: DialogProps) {
   const { thread } = live;
   const lists = appliedTarget !== null && listsAppliedFiles(thread, applied.data);
   const showsComment = !lists || commentShown;
+  return <ThreadDialog {...props} thread={thread} view={view} onViewChange={setView} lists={lists} showsComment={showsComment} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentShown} />;
+}
+
+type ThreadDialogProps = DialogProps & {
+  thread: LineThread;
+  view: ContextView;
+  onViewChange: (view: ContextView) => void;
+  lists: boolean;
+  showsComment: boolean;
+  appliedIn: number | undefined;
+  applied: ReturnType<typeof useDiffEntries>;
+  appliedTarget: DiffTarget | null;
+  onCommentShown: (shown: boolean) => void;
+};
+
+/** The dialog for a thread there: its view of the file, or of the changeset's files, or the thread alone and why. */
+function ThreadDialog(props: ThreadDialogProps) {
+  const { thread, view, onViewChange: setView, lists, showsComment, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, onClose } = props;
+  const state = useContextComparison(props);
+  const notInChangeset = state.kind === 'notInChangeset';
   return (
     <Dialog
       title={contextTitle(thread)}
-      description={showsComment ? contextDescription(thread, view) : appliedFilesDescription(thread)}
+      description={showsComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread)}
       width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
@@ -114,18 +135,44 @@ function ThreadInContext(props: DialogProps) {
         </>
       }
     >
-      <div className={styles.body}>
-        {lists && applied.data ? (
-          <div className={styles.files}>
-            <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
-          </div>
-        ) : (
-          <div className={styles.diff}>
-            <ViewDiff {...props} thread={thread} view={view} />
-          </div>
-        )}
-      </div>
+      {notInChangeset ? (
+        // No box of code to fill: the thread, and why there's no diff, in what they take.
+        <div className={styles.thread}>
+          <p className={styles.note}>{state.text}</p>
+          <ThreadCard {...props} />
+        </div>
+      ) : (
+        <div className={styles.body}>
+          {lists && applied.data && appliedTarget ? (
+            <div className={styles.files}>
+              <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
+            </div>
+          ) : (
+            <div className={styles.diff}>
+              <ViewDiff {...props} thread={thread} view={view} />
+            </div>
+          )}
+        </div>
+      )}
     </Dialog>
+  );
+}
+
+/** The thread alone, as the code shows it, its first comment's menu leading to the conversation. */
+function ThreadCard({ review, thread, user, showInConversation, onClose }: ViewProps) {
+  return (
+    <ReviewThreadCard
+      review={review}
+      thread={thread}
+      user={user}
+      highlight={0}
+      inCode={{
+        showInConversation: () => {
+          onClose();
+          showInConversation();
+        },
+      }}
+    />
   );
 }
 

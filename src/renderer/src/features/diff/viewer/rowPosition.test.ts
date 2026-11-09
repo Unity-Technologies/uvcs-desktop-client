@@ -62,17 +62,21 @@ describe('framedScrollTop', () => {
     expect(framedScrollTop({ lineTop: 100, focusTop: 120, focusBottom: 300 }, view)).toBeNull();
   });
 
-  it('puts a line out of view a quarter of the way down, its row under it', () => {
-    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1200 }, view)).toBe(900);
+  it('puts a line out of view a third of the way down, its row under it', () => {
+    expect(framedScrollTop({ lineTop: 1200, focusTop: 1220, focusBottom: 1300, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(1000);
+  });
+
+  it('stops at the end of the content: a comment at the end of a long file', () => {
+    expect(framedScrollTop({ lineTop: 9800, focusTop: 9820, focusBottom: 9990, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(9400);
   });
 
   it('moves a row that ends past the view, or against its bottom edge, up into it', () => {
-    expect(framedScrollTop({ lineTop: 200, focusTop: 220, focusBottom: 410 }, view)).toBe(100);
-    expect(framedScrollTop({ lineTop: 200, focusTop: 220, focusBottom: 390 }, view)).toBe(100);
+    expect(framedScrollTop({ lineTop: 300, focusTop: 320, focusBottom: 410 }, view)).toBe(300 - 400 / 3);
+    expect(framedScrollTop({ lineTop: 300, focusTop: 320, focusBottom: 390 }, view)).toBe(300 - 400 / 3);
   });
 
-  it('raises the line above a quarter down so a tall row ends inside the view', () => {
-    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1350 }, view)).toBe(1350 - 400 + FRAME_MARGIN);
+  it('raises the line above a third down so a tall row ends inside the view', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1350 }, view)).toBe(1350 - 400);
   });
 
   it('shows the part gone to from its top when it is taller than the view', () => {

@@ -79,4 +79,10 @@ describe("a shelve's diff", () => {
     expect(inRepository.appliesTo).toBeNull();
     expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'copy', 'editComment', 'delete']);
   });
+
+  it("offers no button of its own inside a code review's page, whose header applies it already", () => {
+    const inReview = shelveDiffMenu(workspacePlace(ws), shelve('Spike'), { records: [], me: 'ana@example.com', onApplied: () => {}, onDeleted: () => {}, pageApplies: true });
+    expect(inReview.appliesTo).toBeNull();
+    expect(ids(inReview.menu)).toEqual(['applyAndDelete', 'newCodeReview', 'copy', 'editComment', 'delete']);
+  });
 });
