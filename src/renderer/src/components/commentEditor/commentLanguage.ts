@@ -1,5 +1,6 @@
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import type { LanguageSupport } from '@codemirror/language';
+import { HighlightStyle, type LanguageSupport } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 
 /**
  * Markdown as the comment editor reads it: GitHub's (tables, task lists, strikethrough, bare links), as the shown
@@ -9,3 +10,16 @@ import type { LanguageSupport } from '@codemirror/language';
 export function commentMarkdown(): LanguageSupport {
   return markdown({ base: markdownLanguage });
 }
+
+/** Text the editor colors with the app's tokens (`LiveCommentEditor.module.css`): Markdown's own, around the caret. */
+export const commentMarkdownStyle = HighlightStyle.define([
+  { tag: tags.heading1, class: 'cm-heading1' },
+  { tag: tags.heading2, class: 'cm-heading2' },
+  { tag: [tags.heading3, tags.heading4, tags.heading5, tags.heading6], class: 'cm-heading3' },
+  { tag: tags.strong, class: 'cm-strong' },
+  { tag: tags.emphasis, class: 'cm-emphasis' },
+  { tag: tags.strikethrough, class: 'cm-strikethrough' },
+  { tag: tags.monospace, class: 'cm-inlineCode' },
+  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator, tags.url], class: 'cm-markup' },
+  { tag: tags.quote, class: 'cm-quote' },
+]);
