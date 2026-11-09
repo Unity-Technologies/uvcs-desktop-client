@@ -59,12 +59,32 @@ export function matchExcerpt(thread: Pick<LineThread, 'root' | 'replies'>, query
   let best: { author: string; text: string; found: number; at: number } | null = null;
   for (const comment of [thread.root, ...thread.replies]) {
     const text = commentText(comment.text).replace(/\s+/g, ' ').trim();
-    const lower = text.toLowerCase();
+    const { lower, originalIndex } = lowerCasedWithIndices(text);
     const positions = words.map((word) => lower.indexOf(word)).filter((at) => at !== -1);
-    if (positions.length > (best?.found ?? 0)) best = { author: comment.author, text, found: positions.length, at: Math.min(...positions) };
+    if (positions.length > (best?.found ?? 0)) best = { author: comment.author, text, found: positions.length, at: originalIndex(Math.min(...positions)) };
   }
   if (!best) return null;
   return { author: best.author, text: excerptFrom(best.text, best.at) };
+}
+
+/**
+ * The text lower-cased as the words typed are (`queryWords`), and where a match found in it starts in the text itself:
+ * a letter may grow when lower-cased (a Turkish İ becomes i and a combining dot), moving every match after it. Lower-cased
+ * whole when no letter grows, the common case, as the words typed are: a Greek Σ ending a word becomes ς only so.
+ */
+function lowerCasedWithIndices(text: string): { lower: string; originalIndex: (lowerIndex: number) => number } {
+  const whole = text.toLowerCase();
+  if (whole.length === text.length) return { lower: whole, originalIndex: (lowerIndex) => lowerIndex };
+  let lower = '';
+  const indices: number[] = [];
+  let at = 0;
+  for (const character of text) {
+    const lowered = character.toLowerCase();
+    lower += lowered;
+    for (let unit = 0; unit < lowered.length; unit++) indices.push(at);
+    at += character.length;
+  }
+  return { lower, originalIndex: (lowerIndex) => indices[lowerIndex] ?? lowerIndex };
 }
 
 function excerptFrom(text: string, at: number): string {
