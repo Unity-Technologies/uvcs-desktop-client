@@ -81,7 +81,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
   const listRef = useRef<HTMLDivElement>(null);
-  useFollowedCard(listRef, comments.focus?.seq);
+  useFollowedCard(listRef, comments.focus?.seq, order);
   return (
     <>
       <header className={styles.header}>
@@ -217,12 +217,12 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
 }
 
 /**
- * Each time a comment is gone to (a card, the arrows, N), its card is brought into the list's view, a third of the way
+ * Each time a comment is gone to (a card, the arrows, N), or the list is sorted again, its card is brought into the list's view, a third of the way
  * down (`listScrollTop`), gliding unless motion is reduced. The focus, when a
  * card before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
-function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined): void {
+function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined, order: CommentsOrder): void {
   // Before the paint: the ring the key drew on the card left never shows.
   useLayoutEffect(() => {
     const list = listRef.current;
@@ -236,7 +236,7 @@ function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: numbe
     const options: FocusOptions & { focusVisible?: boolean } = { preventScroll: true, focusVisible: false };
     if (control) control.focus(options);
     else focused.blur();
-  }, [listRef, focusSeq]);
+  }, [listRef, focusSeq, order]);
 }
 
 /** Where each list was last sent, while it glides there: N pressed again measures from it, not from mid-glide. */
