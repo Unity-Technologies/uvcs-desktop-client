@@ -200,7 +200,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
   for a thread not applied), the version commented on, the thread on the left, against what the changeset that applied it
   did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the comment is on
-  the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
+  the version it made; for a request marked applied in a changeset that didn't change its file, the thread alone under one line saying so,
+  the subtitle saying it was marked applied there, not applied: `notInChangeset`), or the review's
   newest version (its whole diff's, never a
   changeset's). A view waits for the diff it reads, says so when that read fails, and why it has nothing to compare
   otherwise (`contextComparisonState`). Every **Applied** pill (the

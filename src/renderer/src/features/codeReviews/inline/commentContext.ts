@@ -131,12 +131,16 @@ export function contextViewLabels(thread: LineThread): Record<ContextView, strin
   return { commented: 'When commented', since: appliedChangeset(thread) === undefined ? 'Since then' : 'How it was applied' };
 }
 
-/** What a view shows, under the dialog's title: the line and what it's compared with. */
-export function contextDescription(thread: LineThread, view: ContextView): string {
+/**
+ * What a view shows, under the dialog's title: the line and what it's compared with. A request marked applied in a
+ * changeset that didn't change its file (`fileInChangeset` false) is said to be marked so: nothing there applied it.
+ */
+export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true }: { fileInChangeset?: boolean } = {}): string {
   const { line } = thread.root.anchor;
   if (view === 'commented') return `Line ${line} in the diff it was written on`;
   const appliedIn = appliedChangeset(thread);
-  return appliedIn === undefined ? `Line ${line} as it was, against the newest version` : `Line ${line} as it was, against changeset ${appliedIn}, which applied it`;
+  if (appliedIn === undefined) return `Line ${line} as it was, against the newest version`;
+  return fileInChangeset ? `Line ${line} as it was, against changeset ${appliedIn}, which applied it` : `Line ${line}, marked applied in changeset ${appliedIn}`;
 }
 
 /** The changeset that applied a change request; none for any other thread. */

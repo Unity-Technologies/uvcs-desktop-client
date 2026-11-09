@@ -10,6 +10,8 @@ export function ContextViewPending({ state }: { state: Exclude<ContextComparison
     case 'error':
       return <EmptyState title="Couldn't load this diff" description={state.message} />;
     case 'missing':
+    // The dialog shows the thread with it (`ThreadDialog`); a list of the changeset's files never needs it.
+    case 'notInChangeset':
       return <EmptyState title={state.text} />;
   }
 }

@@ -16,3 +16,16 @@
   border-radius: var(--radius-md);
   background: var(--bg-surface);
 }
+
+/* A request marked applied in a changeset that didn't change its file: the thread, and one line saying so. */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 760px;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+}
