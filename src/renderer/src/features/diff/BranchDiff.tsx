@@ -20,7 +20,6 @@ import { DiffFocusRequestContext } from './diffFocusRequest';
 import { DiffFrame } from './DiffFrame';
 import { TargetDiff } from './TargetDiff';
 
-
 interface BranchDiffProps {
   branch: string;
   branchHead?: number;
@@ -74,8 +73,6 @@ interface ChangesetByChangesetProps {
   /** The changeset to show, selected as it opens and each time it's asked for. */
   focusChangeset?: ChangesetToShow;
 }
-
-
 
 function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset }: ChangesetByChangesetProps) {
   const place = usePlace();

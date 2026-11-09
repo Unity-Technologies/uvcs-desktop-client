@@ -43,26 +43,23 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
     return <XlinkDiff place={place} target={target} xlink={entry} entries={entries} onOpen={onOpen} />;
   }
 
-  const reviewedRevision = showsMeta ? null : reviewedRevisionToCompare(reviewMarks, entry);
   const sources = diffEntrySources(entry);
   const viewer = ({ original, controls }: AnnotatedEntry) => {
-    // One older side at a time: compared with what the place asks for ("Changes since this comment"), "Since review"
-    // isn't offered, as what's placed on that side is the place's.
-    const sinceRevision = original === undefined ? reviewedRevision : null;
-    const sinceReview = sinceRevision !== null && sinceReviewPath === entry.path;
+    const reviewedToOffer = showsMeta ? null : reviewedRevisionToCompare(reviewMarks, entry, original !== undefined);
+    const sinceReview = reviewedToOffer !== null && sinceReviewPath === entry.path;
     return (
       <FileDiffViewer
         place={place}
-        original={sinceReview ? { kind: 'revision', revision: { revisionId: sinceRevision, repository: entry.repository }, fileName: entry.path } : (original ?? sources.original)}
+        original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedToOffer, repository: entry.repository }, fileName: entry.path } : (original ?? sources.original)}
         modified={sources.modified}
         fileName={entry.path}
         title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
         identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
         compareControls={
-          (sinceRevision !== null || metaToggle || controls) && (
+          (reviewedToOffer !== null || metaToggle || controls) && (
             <>
               {controls}
-              {sinceRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />}
+              {reviewedToOffer !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />}
               {metaToggle}
             </>
           )
