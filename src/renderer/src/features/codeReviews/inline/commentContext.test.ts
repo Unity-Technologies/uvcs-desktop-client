@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { commentedComparison, comparisonOf, contextDescription, contextEntryOf, contextTitle, contextViewLabels, entryOfThread, liveThreadOf, sinceComparison, type ShownEntry } from './commentContext';
+import { appliedComparison, commentedComparison, comparisonOf, contextMissingText, contextDescription, contextEntryOf, contextTitle, contextViewLabels, entryOfThread, liveThreadOf, sinceComparison, type ShownEntry } from './commentContext';
 import type { LineThread } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
@@ -42,8 +42,8 @@ describe('contextEntryOf', () => {
     expect(contextEntryOf({ kind: 'shelve', shelveId: 3 }, inChangeset, 'commented', null)).toEqual({ kind: 'read', target: { kind: 'shelve', shelveId: 3 } });
   });
 
-  it("reads no diff for how a change request was applied, and the review's newest version for anything else, never a changeset's", () => {
-    expect(contextEntryOf(BRANCH, threadOn(20, { appliedInChangeset: 15 }), 'since', null)).toEqual({ kind: 'none' });
+  it("reads the diff of the changeset that applied a change request, and the review's newest version for anything else, never a changeset's", () => {
+    expect(contextEntryOf(BRANCH, threadOn(20, { appliedInChangeset: 15 }), 'since', null)).toEqual({ kind: 'read', target: { kind: 'changeset', changesetId: 15 } });
     expect(contextEntryOf(BRANCH, threadOn(20), 'since', whole)).toEqual({ kind: 'onScreen' });
     expect(contextEntryOf(BRANCH, threadOn(20, { changesetId: 8 }), 'since', { view: { kind: 'changeset', changesetId: 8 } })).toEqual({ kind: 'read', target: { kind: 'branch', branch: '/main/task' } });
     expect(contextEntryOf(BRANCH, threadOn(20), 'since', null)).toEqual({ kind: 'read', target: { kind: 'branch', branch: '/main/task' } });
@@ -85,18 +85,25 @@ describe('commentedComparison', () => {
   });
 });
 
-describe('sinceComparison', () => {
-  it('compares the version commented on with the file as the changeset that applied it left it, the thread on the older side', () => {
-    const applied = threadOn(20, { appliedInChangeset: 15 });
-    expect(sinceComparison(applied, REPOSITORY, null)).toEqual({
-      original: revision(20),
-      modified: { kind: 'spec', spec: 'itemid:7#cs:15@game@local', fileName: 'src/Player.cs' },
-      side: 'deletions',
-      line: 12,
-      fileName: 'src/Player.cs',
-    });
+describe('appliedComparison', () => {
+  const applied = threadOn(20, { appliedInChangeset: 15 });
+
+  it('compares the version commented on with what the changeset that applied it left, the thread on the older side', () => {
+    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 22, revisionId: 25 })).toEqual({ original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs' });
   });
 
+  it("shows that changeset's own diff when the comment is on the version it made, the thread on the newer side", () => {
+    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 18, revisionId: 20 })).toEqual({ original: revision(18), modified: revision(20), side: 'additions', line: 12, fileName: 'src/Player.cs' });
+  });
+
+  it("has nothing to compare when that changeset didn't change the file (marked applied by hand)", () => {
+    expect(appliedComparison(applied, null)).toBeNull();
+    expect(contextMissingText(applied, 'since')).toBe("Changeset 15 didn't change this file");
+    expect(contextMissingText(applied, 'commented')).toBe("Couldn't find the diff it was written on");
+  });
+});
+
+describe('sinceComparison', () => {
   it('compares a thread not applied with the newest version shown, or nothing when the diff deletes the file', () => {
     expect(sinceComparison(threadOn(20, { kind: 'question' }), REPOSITORY, SHOWN).modified).toEqual(revision(30));
     expect(sinceComparison(threadOn(20), REPOSITORY, { ...SHOWN, revisionId: -1 }).modified).toEqual({ kind: 'empty' });
@@ -135,9 +142,10 @@ describe('liveThreadOf', () => {
 });
 
 describe('comparisonOf', () => {
-  it('shows what was done since without an entry, but a thread as written only with the diff it was written in', () => {
+  it('shows what was done since without an entry, but a thread as written, or as applied, only with the diff it needs', () => {
     const applied = threadOn(20, { appliedInChangeset: 15 });
-    expect(comparisonOf(applied, 'since', REPOSITORY, null)?.side).toBe('deletions');
+    expect(comparisonOf(threadOn(20), 'since', REPOSITORY, null)?.side).toBe('deletions');
+    expect(comparisonOf(applied, 'since', REPOSITORY, { ...SHOWN, baseRevisionId: 22, revisionId: 25 })?.side).toBe('deletions');
     expect(comparisonOf(applied, 'commented', REPOSITORY, null)).toBeNull();
     expect(comparisonOf(applied, 'commented', REPOSITORY, SHOWN)?.side).toBe('additions');
   });
