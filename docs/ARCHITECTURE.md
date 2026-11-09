@@ -1128,7 +1128,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   exception is a diff shown in a dialog, whose step keys reach it, not the diff behind (`keysReach`, its dialog marked
   `STEP_FRAME`: docs/features/code-reviews.md "See in context").
   Whatever keeps a view mounted but hidden wraps it in `ViewShownContext` set to false: the place's view under a page
-  (`PlaceLayout`, `viewLayerShown`), a review's tab not picked (`CodeReviewPage`, `reviewTabShown`). Meanwhile
+  (`PlaceLayout`, `viewLayerShown`), a merge set aside (`PlaceLayout`, `showsMerge`; its own controls also read
+  `PageShownContext`), a review's tab not picked (`CodeReviewPage`, `reviewTabShown`). Meanwhile
   `useShortcut` listens to none of the keys inside it, so ⌘↩ under a merge page doesn't check in too. It covers
   `useShortcut` only: commands registered with `useCommands` run from `CommandShortcuts` whatever is shown. The
   window's own keys (Back, the app's commands and menu) are outside every hidden layer.
