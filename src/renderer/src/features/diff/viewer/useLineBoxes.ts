@@ -26,9 +26,14 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
   useEffect(() => {
     const container = containerRef.current;
     if (!container || lines.length === 0) return setBoxes(NO_BOXES);
+    // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
+    const resize = new ResizeObserver(() => void measure());
     /** Measures every line rendered; false while none of them is. */
     const measure = (): boolean => {
       const root = pierreShadowRoot(container);
+      // The code panes too: Pierre's host is at least as tall as the view, so in a short file a row added above the
+      // code (outdated comments) moves the lines without resizing the host. Observing a pane again does nothing.
+      for (const pane of root?.querySelectorAll('[data-code]') ?? []) resize.observe(pane);
       const view = container.getBoundingClientRect();
       const next = new Map<string, LineBox>();
       for (const line of lines) {
@@ -52,8 +57,6 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       if (!measure() && ++frames < MAX_FRAMES) frame = requestAnimationFrame(measureSoon);
     };
     measureSoon();
-    // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
-    const resize = new ResizeObserver(() => void measure());
     resize.observe(container);
     const observeContent = (): void => {
       for (const content of container.children) resize.observe(content);
