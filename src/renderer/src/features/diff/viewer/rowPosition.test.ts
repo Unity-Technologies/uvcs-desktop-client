@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
+import { FRAME_MARGIN, framedScrollTop, lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
 
 describe('topProbePoints', () => {
   const view = { left: 100, top: 50, width: 800, bottom: 1050 };
@@ -52,5 +52,34 @@ describe('scrollTopFor', () => {
 
   it('never scrolls above the top of the file', () => {
     expect(scrollTopFor(10, 25)).toBe(0);
+  });
+});
+
+describe('framedScrollTop', () => {
+  const view = { scrollTop: 0, height: 400 };
+
+  it('leaves the view where it is when the line and its row show whole, away from the edges', () => {
+    expect(framedScrollTop({ lineTop: 100, focusTop: 120, focusBottom: 300 }, view)).toBeNull();
+  });
+
+  it('puts a line out of view a quarter of the way down, its row under it', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1200 }, view)).toBe(900);
+  });
+
+  it('moves a row that ends past the view, or against its bottom edge, up into it', () => {
+    expect(framedScrollTop({ lineTop: 200, focusTop: 220, focusBottom: 410 }, view)).toBe(100);
+    expect(framedScrollTop({ lineTop: 200, focusTop: 220, focusBottom: 390 }, view)).toBe(100);
+  });
+
+  it('raises the line above a quarter down so a tall row ends inside the view', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1350 }, view)).toBe(1350 - 400 + FRAME_MARGIN);
+  });
+
+  it('shows the part gone to from its top when it is taller than the view', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1300, focusBottom: 2000 }, view)).toBe(1300 - FRAME_MARGIN);
+  });
+
+  it('never scrolls above the top of the content', () => {
+    expect(framedScrollTop({ lineTop: 0, focusTop: 0, focusBottom: 100 }, { scrollTop: 500, height: 400 })).toBe(0);
   });
 });
