@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { changeMarkLabel, scrollTopForTrackPoint } from './changeMarks';
 import { pressesThumb, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
@@ -43,6 +43,8 @@ export function ChangeMap({ view, count, tickTip, containerRef }: ChangeMapProps
   const thumb = thumbOf({ ...geometry, scrollTop });
   const drag = useRef<Drag | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Once per placing, not per scroll (`useScrollTop` renders on each): a review's tips read every thread's Markdown.
+  const tickTips = useMemo(() => view.ticks.map((tick) => tickTip?.(tick.keys)), [view.ticks, tickTip]);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
     event.stopPropagation();
@@ -82,8 +84,8 @@ export function ChangeMap({ view, count, tickTip, containerRef }: ChangeMapProps
       {view.marks.map((mark) => (
         <div key={mark.first} className={styles.mark} style={{ top: mark.top, height: mark.height }} data-kind={mark.kind} data-tip={changeMarkLabel(mark, count)} />
       ))}
-      {view.ticks.map((tick) => (
-        <div key={tick.keys[0]} className={styles.tick} style={{ top: tick.top }} data-emphasized={tick.emphasized ? '' : undefined} data-tip={tickTip?.(tick.keys)} />
+      {view.ticks.map((tick, index) => (
+        <div key={tick.keys[0]} className={styles.tick} style={{ top: tick.top }} data-emphasized={tick.emphasized ? '' : undefined} data-tip={tickTips[index]} />
       ))}
       <div className={styles.thumb} style={{ top: thumb.top, height: thumb.height }} data-dragging={dragging ? '' : undefined} />
     </div>
