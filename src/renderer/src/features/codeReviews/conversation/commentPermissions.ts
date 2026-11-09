@@ -1,5 +1,6 @@
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { hasReplies, type ReviewThread } from './reviewThreads';
+import { sameUser } from '../../../lib/userName';
 
 // What a user may do to a comment, as the official client allows it. The server checks only the permission on what
 // the review targets, so these rules are the clients' own.
@@ -23,5 +24,5 @@ export function canDiscard(thread: ReviewThread, user: string | undefined): bool
 }
 
 function isAuthor(comment: ReviewComment, user: string | undefined): boolean {
-  return user !== undefined && comment.author.toLowerCase() === user.toLowerCase();
+  return user !== undefined && sameUser(comment.author, user);
 }
