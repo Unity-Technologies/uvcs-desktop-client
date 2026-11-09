@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CommentsOrder } from './commentsPanel';
+import { knownCommentsOrder, type CommentsOrder } from './commentsPanel';
 
 interface ReviewCommentsPreferences {
   /** A review's comments show under their lines in its Changes tab; off, each line has a marker instead. */
@@ -20,6 +20,14 @@ export const useReviewCommentsStore = create<ReviewCommentsPreferences>()(
       panelOrder: 'code',
       setPanelOrder: (panelOrder) => set({ panelOrder }),
     }),
-    { name: 'review-comments', version: 0 },
+    {
+      name: 'review-comments',
+      version: 0,
+      // An order saved by another version that this one doesn't know falls back to the code's.
+      merge: (saved, current) => {
+        const kept = { ...current, ...(saved as Partial<ReviewCommentsPreferences>) };
+        return { ...kept, panelOrder: knownCommentsOrder(kept.panelOrder) };
+      },
+    },
   ),
 );

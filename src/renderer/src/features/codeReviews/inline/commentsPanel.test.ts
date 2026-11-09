@@ -10,6 +10,7 @@ import {
   commentsPanelCounts,
   commentsByFile,
   commentsOrderTip,
+  knownCommentsOrder,
   commentsPanelThreads,
   emptyCommentsText,
   initialCommentsFilter,
@@ -56,6 +57,14 @@ describe('commentsPanelThreads', () => {
     expect(commentsPanelThreads(THREADS, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([2, 4, 5, 3]);
   });
 
+  it('orders by when, not by which was written first: a thread started later can have moved earlier', () => {
+    const early = '2026-11-06T09:00:00Z';
+    const late = '2026-11-06T11:00:00Z';
+    const byDate = threadsOf([onLine(1, '/a.cs', 1, { date: late }), onLine(2, '/a.cs', 2, { date: early })]);
+    expect(commentsPanelThreads(byDate, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([1, 2]);
+    expect(commentsPanelThreads(byDate, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([2, 1]);
+  });
+
   it('lists threads that last moved at the same moment as they were started, in either direction', () => {
     const date = '2026-11-06T10:00:00Z';
     const sameTime = threadsOf([onLine(8, '/a.cs', 1, { date }), onLine(7, '/b.cs', 1, { date })]);
@@ -85,6 +94,14 @@ describe('commentsByFile', () => {
 
   it('has no group with nothing listed', () => {
     expect(commentsByFile([], 'code')).toEqual([]);
+  });
+});
+
+describe('knownCommentsOrder', () => {
+  it('keeps an order this version knows, and falls back to the code order for any other', () => {
+    expect(knownCommentsOrder('newest')).toBe('newest');
+    expect(knownCommentsOrder('byAuthor')).toBe('code');
+    expect(knownCommentsOrder(undefined)).toBe('code');
   });
 });
 

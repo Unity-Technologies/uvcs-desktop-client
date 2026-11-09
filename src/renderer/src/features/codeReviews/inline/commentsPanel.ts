@@ -95,6 +95,11 @@ export const COMMENTS_ORDERS: readonly { value: CommentsOrder; label: string }[]
   { value: 'code', label: 'Code order' },
 ];
 
+/** An order as saved, if this version knows it; else the code's order. */
+export function knownCommentsOrder(saved: unknown): CommentsOrder {
+  return COMMENTS_ORDERS.find((option) => option.value === saved)?.value ?? 'code';
+}
+
 /** The sort button's tooltip: what it does, then the order chosen. */
 export function commentsOrderTip(order: CommentsOrder): { tip: string; sub: string } {
   const sub = order === 'code' ? 'By file, then line' : 'By the latest comment or reply';
