@@ -176,8 +176,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   thread at its line (`commentContext`): **When commented**, the diff it was written on, as its author saw it (the
   older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's whole
   diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
-  for a thread not applied), the version commented on, the thread on the left, against the file as the changeset that
-  applied it left it (`itemid:N#cs:M`, one immutable read), or the review's newest version (its whole diff's, never a
+  for a thread not applied), the version commented on, the thread on the left, against what the changeset that applied it
+  did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the comment is on
+  the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
+  newest version (its whole diff's, never a
   changeset's). Every **Applied in N** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; its **Open changeset N** opens the
   changeset itself. The dialog shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it

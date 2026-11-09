@@ -22,6 +22,7 @@ import {
   comparisonOf,
   contextDescription,
   contextEntryOf,
+  contextMissingText,
   contextTitle,
   contextViewLabels,
   entryOfThread,
@@ -151,7 +152,7 @@ function ViewDiff(props: ViewProps) {
   if (source.kind === 'read' && !read.data) return <CenteredSpinner />;
   const entry = source.kind === 'onScreen' ? (onScreen?.entry ?? null) : source.kind === 'read' && read.data ? (entryOfThread(read.data, thread) ?? null) : null;
   const comparison = comparisonOf(thread, view, repository, entry);
-  if (!comparison) return <EmptyState title="Couldn't find the diff it was written on" />;
+  if (!comparison) return <EmptyState title={contextMissingText(thread, view)} />;
   return <ThreadDiff key={view} {...props} comparison={comparison} />;
 }
 

@@ -1,7 +1,6 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
-import { spec } from '@shared/domain/specs';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
 import { reviewDiffTarget } from '../reviewTarget';
@@ -39,9 +38,9 @@ export interface ContextRequest {
 }
 
 /**
- * Where a view finds the file's entry it compares from: the diff on screen's, a diff to read (the changeset the thread
- * was written in, or the review's whole diff, a read the Changes tab shares), or none (how a change request was
- * applied is read from the changeset that applied it).
+ * Where a view finds the file's entry it compares from: the diff on screen's, or a diff to read (the changeset the
+ * thread was written in, the changeset that applied it, or the review's whole diff, a read the Changes tab shares);
+ * none on a review whose target is unknown.
  */
 export type ContextEntry = { kind: 'onScreen' } | { kind: 'read'; target: DiffTarget } | { kind: 'none' };
 
@@ -51,8 +50,12 @@ export function contextEntryOf(review: CodeReviewTarget, thread: LineThread, vie
     const target = reviewDiffTarget(review);
     return target ? { kind: 'read', target } : { kind: 'none' };
   };
-  // Not applied, what it became is the review's newest version: the whole review's diff's, never a changeset's.
-  if (view === 'since') return appliedChangeset(thread) !== undefined ? { kind: 'none' } : whole();
+  // Applied, what the changeset that applied it did to the file; else what it became in the review's newest version:
+  // the whole review's diff's, never a changeset's.
+  if (view === 'since') {
+    const appliedIn = appliedChangeset(thread);
+    return appliedIn !== undefined ? { kind: 'read', target: { kind: 'changeset', changesetId: appliedIn } } : whole();
+  }
   const written = writtenIn(review, thread);
   if (written.kind === 'whole') return whole();
   if (onScreen?.view.kind === 'changeset' && onScreen.view.changesetId === written.changesetId) return { kind: 'onScreen' };
@@ -79,31 +82,43 @@ export function commentedComparison(thread: LineThread, written: ShownEntry): Co
 }
 
 /**
- * What was done to the version commented on: it against the file as the changeset that applied it left it, or, for
- * a thread not applied, the newest version of the diff (`newest`; nothing when it deletes the file); the thread on its
- * line on the older side.
+ * What was done to the version commented on, for a thread not applied: it against the review's newest version
+ * (`newest`; nothing when the review deletes the file), the thread on its line on the older side.
  */
 export function sinceComparison(thread: LineThread, repository: string, newest: ShownEntry | null): ContextComparison {
-  const { revisionId, line, itemId } = thread.root.anchor;
+  const { revisionId, line } = thread.root.anchor;
   const fileName = newest?.path ?? anchorPath(thread.root.anchor);
   const original = revisionSource(revisionId, repository, fileName);
-  const appliedIn = appliedChangeset(thread);
-  const modified: ContentSource =
-    appliedIn !== undefined
-      ? { kind: 'spec', spec: spec.itemAt(itemId, spec.changeset(appliedIn), repository), fileName: anchorPath(thread.root.anchor) }
-      : newest
-        ? newerSideOf(newest)
-        : EMPTY;
-  return { original, modified, side: 'deletions', line, fileName };
+  return { original, modified: newest ? newerSideOf(newest) : EMPTY, side: 'deletions', line, fileName };
 }
 
 /**
- * What a view compares, once its file's entry is found (`contextEntryOf`): none to show a thread as written without
- * the diff it was written in (the file isn't in it, or the review's target is unknown).
+ * How a change request was applied, from the file's entry in the diff of the changeset that applied it (`applied`):
+ * the version commented on against what that changeset left, the thread on the older side; that changeset's own diff
+ * when the comment is on the version it made, the thread on the newer side. None when it didn't change the file (the
+ * request marked applied by hand, `contextMissingText`).
+ */
+export function appliedComparison(thread: LineThread, applied: ShownEntry | null): ContextComparison | null {
+  if (!applied) return null;
+  const { revisionId, line } = thread.root.anchor;
+  const fileName = applied.path;
+  if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', line, fileName };
+  return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', line, fileName };
+}
+
+/**
+ * What a view compares, once its file's entry is found (`contextEntryOf`): none without the diff it needs (the file
+ * isn't in it, or the review's target is unknown).
  */
 export function comparisonOf(thread: LineThread, view: ContextView, repository: string, entry: ShownEntry | null): ContextComparison | null {
-  if (view === 'since') return sinceComparison(thread, repository, entry);
-  return entry ? commentedComparison(thread, entry) : null;
+  if (view === 'commented') return entry ? commentedComparison(thread, entry) : null;
+  return appliedChangeset(thread) === undefined ? sinceComparison(thread, repository, entry) : appliedComparison(thread, entry);
+}
+
+/** What a view says when it has nothing to compare (`comparisonOf`). */
+export function contextMissingText(thread: LineThread, view: ContextView): string {
+  const appliedIn = appliedChangeset(thread);
+  return view === 'since' && appliedIn !== undefined ? `Changeset ${appliedIn} didn't change this file` : "Couldn't find the diff it was written on";
 }
 
 /** The dialog's title: the file's name and the line the thread is on. */
