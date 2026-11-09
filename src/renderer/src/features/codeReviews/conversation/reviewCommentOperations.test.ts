@@ -40,13 +40,25 @@ describe('writing on a review', () => {
     ]);
   });
 
-  it('reads only the reviews again, their lists and conversations, never the workspace', async () => {
-    fakeApi.answer('reviewComments.add', () => undefined);
-    const refreshed = watchRefreshes(ws);
+  it('reads only the reviews again after each write, their lists and conversations, never the workspace', async () => {
+    for (const method of ['reviewComments.add', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.remove', 'reviewComments.setDescription'] as const) {
+      fakeApi.answer(method, () => undefined);
+    }
+    answerConfirms(true);
+    const writes = [
+      () => addReviewComment(inWs, 41, 'Nice'),
+      () => replyToComment(inWs, comment, 'Thanks'),
+      () => discardChangeRequest(inWs, comment, 'Not needed'),
+      () => editReviewComment(inWs, comment, 'Nicer'),
+      () => deleteReviewComment(inWs, comment),
+      () => saveReviewDescription(inWs, 41, 'Why'),
+    ];
 
-    await addReviewComment(inWs, 41, 'Nice');
-
-    expect(refreshed()).toEqual(['codeReviews']);
+    for (const write of writes) {
+      const refreshed = watchRefreshes(ws);
+      await write();
+      expect(refreshed()).toEqual(['codeReviews']);
+    }
   });
 
   it('says it failed and keeps the text to try again', async () => {
