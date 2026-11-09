@@ -62,8 +62,12 @@ describe('framedScrollTop', () => {
     expect(framedScrollTop({ lineTop: 100, focusTop: 120, focusBottom: 300 }, view)).toBeNull();
   });
 
-  it('puts a line out of view a quarter of the way down, its row under it', () => {
-    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1200 }, view)).toBe(900);
+  it('puts a line out of view a third of the way down, its row under it', () => {
+    expect(framedScrollTop({ lineTop: 1200, focusTop: 1220, focusBottom: 1300, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(1000);
+  });
+
+  it('stops at the end of the content: a comment at the end of a long file', () => {
+    expect(framedScrollTop({ lineTop: 9800, focusTop: 9820, focusBottom: 9990, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(9400);
   });
 
   it('moves a row that ends past the view, or against its bottom edge, up into it', () => {
