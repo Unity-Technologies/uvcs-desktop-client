@@ -99,3 +99,21 @@ export function changesDecisions(
 ): boolean {
   return !isDecidedAs(decisions, conflict, resolution) || (resolution.choice !== 'rename' && next.length > 0);
 }
+
+/** The box deciding the next conflicts of the same kind too, as the panel shows it. */
+export interface ApplyToNextBox {
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+}
+
+/**
+ * The box the panel shows for the `nextCount` conflicts of the same kind waiting after this one, with the choice
+ * `picked` and the box as the user left it (`checked`): none when none waits; off and disabled for Keep both, whose
+ * name belongs to one item (`withDecisionAndNext`).
+ */
+export function applyToNextBox(nextCount: number, picked: DirectoryConflictResolution['choice'] | undefined, checked: boolean): ApplyToNextBox | undefined {
+  if (nextCount === 0) return undefined;
+  const keepingBoth = picked === 'rename';
+  return { label: applyToNextLabel(nextCount), checked: checked && !keepingBoth, disabled: keepingBoth };
+}
