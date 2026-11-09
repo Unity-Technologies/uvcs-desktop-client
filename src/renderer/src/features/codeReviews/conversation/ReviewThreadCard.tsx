@@ -17,7 +17,8 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, appliedPillTip, commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
+import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
+import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -76,9 +77,8 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
     setFolded(false);
     setAnswerShown((shown) => ({ replyId: answer.replyId, seq: (shown?.seq ?? -1) + 1 }));
   });
-  const badges = threadBadges(thread);
   const foldable = startsFolded(thread);
-  const hasHeader = thread.root.anchor.kind === 'line' || badges.kind !== undefined;
+  const hasHeader = hasThreadHeader(thread);
   // Gone to again: shown whole, as what was asked for.
   if (highlight !== shownHighlight) {
     setShownHighlight(highlight);
@@ -158,71 +158,73 @@ interface ThreadHeaderProps {
 
 function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer }: ThreadHeaderProps) {
   const { root } = thread;
-  const badges = threadBadges(thread);
-  // In the code, the thread is at its line: its location would name where the user already is.
-  const anchor = root.anchor.kind === 'line' && !inCode ? root.anchor : null;
-  const location = anchor && locationText(anchor);
-  const replies = folded ? repliesText(thread) : undefined;
+  const header = threadHeaderOf({
+    thread,
+    place: inCode ? 'code' : cardOpens ? 'panel' : 'conversation',
+    folded,
+    foldable: onToggle !== undefined,
+    earlier: inCode?.earlier && { ...inCode.earlier, opensContext: inCode.seeInContext !== undefined },
+    hides: inCode?.hide !== undefined,
+    seesHowApplied: onSeeApplied !== undefined,
+    showsAnswer: onSeeAnswer !== undefined,
+  });
+  const { location, earlierTag, pill } = header;
+  const anchor = root.anchor.kind === 'line' ? root.anchor : null;
 
   return (
     <div className={styles.threadHeader}>
       <span className={styles.headerStart}>
-        {onToggle && (
-          <button type="button" className={styles.foldToggle} aria-expanded={!folded} aria-label={folded ? 'Show the thread' : 'Fold the thread'} onClick={onToggle}>
+        {header.foldToggle && (
+          <button type="button" className={styles.foldToggle} aria-expanded={header.foldToggle.expanded} aria-label={header.foldToggle.label} onClick={onToggle}>
             <ChevronRight size={14} aria-hidden />
           </button>
         )}
-        {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
-        {anchor && location && (cardOpens ? (
-          // The card goes to the thread: its file and line only name where, the line inside so that, cut short, the
-          // folder gives way first, then the line, the file's name last. The whole path and line in its tooltip.
-          <span className={styles.location} data-tip={`${location.folder}${location.file}, ${writtenLineText(anchor)}`} data-tip-overflow="">
-            <LocationParts location={location} />
-            <WrittenLine anchor={anchor} />
-          </span>
-        ) : (
+        {header.kindIcon && <ThreadKindIcon root={root} />}
+        {location && anchor && (location.linked ? (
           <>
             {/* The file, a link to it in Changes, opened at the comment. */}
-            <button type="button" className={styles.location} data-tip="Show in Changes" data-tip-sub={`${location.folder}${location.file}`} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+            <button type="button" className={styles.location} data-tip={location.tip} data-tip-sub={location.tipSub} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
               <LocationParts location={location} />
             </button>
-            <WrittenLine anchor={anchor} />
+            <WrittenLine line={location.line} />
           </>
+        ) : (
+          // The card goes to the thread: its file and line only name where, the line inside so that, cut short, the
+          // folder gives way first, then the line, the file's name last. The whole path and line in its tooltip.
+          <span className={styles.location} data-tip={location.tip} data-tip-overflow="">
+            <LocationParts location={location} />
+            <WrittenLine line={location.line} />
+          </span>
         ))}
-        {inCode && (
+        {header.kindLabel && (
           // Cut short in a narrow card, it says its whole name in its tooltip.
-          <span className={styles.kindLabel} data-tip={threadKindName(root)} data-tip-overflow="">
-            {threadKindName(root)}
+          <span className={styles.kindLabel} data-tip={header.kindLabel} data-tip-overflow="">
+            {header.kindLabel}
           </span>
         )}
-        {inCode?.earlier &&
-          (inCode.seeInContext ? (
-            <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={inCode.earlier.tip} onClick={inCode.seeInContext}>
-              {inCode.earlier.label}
+        {earlierTag &&
+          (earlierTag.opensContext ? (
+            <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>
+              {earlierTag.label}
             </button>
           ) : (
-            <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
-              {inCode.earlier.label}
+            <span className={styles.earlierTag} data-tip={earlierTag.tip}>
+              {earlierTag.label}
             </span>
           ))}
       </span>
       <span className={styles.headerEnd}>
-        {replies && <span className={styles.replyCount}>{replies}</span>}
-        {badges.state && (
-          <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} answer={onSeeAnswer && answerOf(thread)} onSeeAnswer={onSeeAnswer} />
-        )}
-        {inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
+        {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
+        {pill && <StatePill pill={pill} onSeeApplied={onSeeApplied} onSeeAnswer={onSeeAnswer} />}
+        {header.hides && inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
   );
 }
 
 interface StatePillProps {
-  state: NonNullable<ThreadBadges['state']>;
-  appliedIn: number | undefined;
+  pill: HeaderPill;
   onSeeApplied?: () => void;
-  /** The reply an Answered pill leads to, where the card can show it (`answerOf`). */
-  answer?: { tip: string };
   onSeeAnswer?: () => void;
 }
 
@@ -231,44 +233,41 @@ interface StatePillProps {
  * request was applied, in context (`onSeeApplied`), else opening the changeset that applied it: a chip inside the pill
  * would be a frame in a frame. "Answered" is one too, to the reply that answered (`onSeeAnswer`).
  */
-function StatePill({ state, appliedIn, onSeeApplied, answer, onSeeAnswer }: StatePillProps) {
-  if (answer && onSeeAnswer) {
-    return (
-      <button type="button" className={styles.pill} data-tone={state.tone} data-tip={answer.tip} onClick={onSeeAnswer}>
-        {state.label}
-      </button>
-    );
+function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
+  switch (pill.leadsTo) {
+    case 'answer':
+      return (
+        <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeAnswer}>
+          {pill.label}
+        </button>
+      );
+    case 'applied': {
+      const { changesetId } = pill;
+      return (
+        <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied ?? (() => openChangesetDiff({ id: changesetId }))}>
+          {pill.label}
+        </button>
+      );
+    }
+    case 'nothing':
+      return (
+        <span className={styles.pill} data-tone={pill.tone}>
+          {pill.label}
+        </span>
+      );
   }
-  if (appliedIn === undefined) {
-    return (
-      <span className={styles.pill} data-tone={state.tone}>
-        {state.label}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={styles.pill}
-      data-tone={state.tone}
-      data-tip={appliedPillTip(appliedIn, onSeeApplied !== undefined)}
-      onClick={onSeeApplied ?? (() => openChangesetDiff({ id: appliedIn }))}
-    >
-      {state.label}
-    </button>
-  );
 }
 
 /** Apart from the file, as text: the line it was written on, which an outdated comment's no longer is. */
-function WrittenLine({ anchor }: { anchor: Pick<Extract<ReviewThread['root']['anchor'], { kind: 'line' }>, 'line'> }) {
+function WrittenLine({ line }: { line: string }) {
   return (
     <span className={styles.writtenLine} data-tip="The line it was written on">
-      {writtenLineText(anchor)}
+      {line}
     </span>
   );
 }
 
-function LocationParts({ location }: { location: NonNullable<ReturnType<typeof locationText>> }) {
+function LocationParts({ location }: { location: Pick<HeaderLocation, 'folder' | 'file'> }) {
   return (
     <>
       <span className={styles.locationFolder}>
