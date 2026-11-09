@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_MARGIN, framedScrollTop, lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
+import { FRAME_MARGIN, framedScrollTop, lineAboveRow, lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
 
 describe('topProbePoints', () => {
   const view = { left: 100, top: 50, width: 800, bottom: 1050 };
@@ -85,5 +85,33 @@ describe('framedScrollTop', () => {
 
   it('never scrolls above the top of the content', () => {
     expect(framedScrollTop({ lineTop: 0, focusTop: 0, focusBottom: 100 }, { scrollTop: 500, height: 400 })).toBe(0);
+  });
+});
+
+describe('lineAboveRow', () => {
+  it('reads the line from where the diff lays it out, apart from the row under it', () => {
+    expect(lineAboveRow(1020, { top: 1000, height: 20 })).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it("doesn't count the row as part of the line when the diff's line box holds it (side by side, the row's line pairs with the other side's)", () => {
+    // Line 2141 of a 10,000-line file, its 253 px card under it: Pierre's box spans the line and the card.
+    expect(lineAboveRow(42828, { top: 42808, height: 273 })).toEqual({ lineTop: 42808, lineHeight: 20 });
+  });
+
+  it('takes one line above the row before the diff has laid the line out', () => {
+    expect(lineAboveRow(1020, undefined)).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it("takes one line above the row when the diff's box is out of date and doesn't sit above it", () => {
+    expect(lineAboveRow(1020, { top: 1500, height: 20 })).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it('frames a card on a line deep in a long file with the line a third down, its card whole below', () => {
+    const view = { scrollTop: 0, height: 622, contentHeight: 216919 };
+    const { lineTop, lineHeight } = lineAboveRow(42828, { top: 42808, height: 273 });
+    const to = framedScrollTop({ lineTop, lineHeight, focusTop: 42836, focusBottom: 43069 }, view);
+    expect(to).not.toBeNull();
+    expect(lineTop - to!).toBeGreaterThan(0);
+    expect(43069 - to!).toBeLessThanOrEqual(view.height);
   });
 });
