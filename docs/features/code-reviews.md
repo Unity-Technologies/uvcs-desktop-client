@@ -183,7 +183,15 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   changeset's). Every **Applied in N** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied, and is the only way in on an applied
   thread (`offersContext`): two buttons side by side opening one dialog read as two different things. Its **Open
-  changeset N** opens the changeset itself. The dialog shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
+  changeset N** opens the changeset itself. When that changeset changed other files too, the dialog lists them all, as
+  a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change types and tree, the commented
+  file selected first; `listsAppliedFiles`), so the reviewer sees what else the fix did and which file the comment is
+  on. The commented file's diff is the comment's (an `EntryAnnotatorContext` comparing its own versions,
+  `AnnotatedEntry.compared`); the header's view switch shows only while it's selected. No list for a fix of that file
+  alone, nor for a request marked applied in a changeset that didn't change it (the comment would have no file to sit
+  on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open the
+  changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog is
+  as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
   shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
   "Keyboard"), and closes if the
   window goes to another place. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:

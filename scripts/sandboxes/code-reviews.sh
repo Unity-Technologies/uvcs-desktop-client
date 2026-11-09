@@ -113,7 +113,12 @@ cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
 
 # The change request applied by a check-in: its comment names it, and the revision its comment is on becomes an older one.
-# It edits line 13 too: the comments on it are outdated.
+# It edits line 13 too: the comments on it are outdated. It adds a test as well, which See in context lists beside the
+# comment as what else the fix changed.
+w Assets/Tests/SwitchFlowTests.cs "public class SwitchFlowTests
+{
+    public void ShelvesBeforeUndoing() { }
+}"
 w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        var shelve = workspace.Shelve();
         workspace.Undo();
         workspace.Update(target, onFailure: () => workspace.Apply(shelve));

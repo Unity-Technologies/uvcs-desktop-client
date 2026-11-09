@@ -1,40 +1,28 @@
-import type { DiffLineAnnotation } from '@pierre/diffs';
 import { useEffect, useMemo, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import type { DiffTarget } from '@shared/domain/diff';
 import { samePlace as isSamePlace, type Place } from '@shared/domain/place';
 import { useSession } from '../../../app/workspace/sessionStore';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { EmptyState } from '../../../ui/EmptyState';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { useDiffEntries } from '../../diff/useDiffEntries';
-import { DiffAnnotationsContext, type DiffAnnotations } from '../../diff/viewer/diffAnnotations';
+import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
-import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
 import { threadsOf } from '../conversation/reviewThreads';
 import { useReviewConversation } from '../conversation/useReviewConversation';
-import {
-  appliedChangeset,
-  comparisonOf,
-  contextDescription,
-  contextEntryOf,
-  contextMissingText,
-  contextTitle,
-  contextViewLabels,
-  entryOfThread,
-  liveThreadOf,
-  type ContextComparison,
-  type ContextView,
-  type OnScreen,
-} from './commentContext';
+import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
+import { AppliedChangesetFiles } from './AppliedChangesetFiles';
+import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
+import { ContextViewSwitch } from './ContextViewSwitch';
 import type { LineThread } from './fileThreads';
+import { useContextComparison } from './useContextComparison';
+import { useThreadRow } from './useThreadRow';
 import styles from './CommentContextDialog.module.css';
-// The thread's row sets the app's own text back inside Pierre's shadow root, as a row of the review's diff does.
-import rowStyles from './InlineThreads.module.css';
 
 export interface CommentInContext {
   /** Where the review is: the dialog closes if the window goes elsewhere while it's open. */
@@ -51,17 +39,19 @@ export interface CommentInContext {
   showInConversation: () => void;
 }
 
-const THREAD_ROW = 'thread';
+/** As wide as the window allows, up to this: two versions of code side by side, and the changeset's files beside them. */
+const DIALOG_WIDTH = 1680;
 
 /**
  * A thread in context (`commentContext`): the diff it was written on, and what was done to that version since (how a
- * change request was applied), each with the thread at its line. A dialog, so the review's diff stays as it was.
+ * change request was applied), each with the thread at its line; a fix that changed other files too lists them, as a
+ * changeset's diff does (`AppliedChangesetFiles`). A dialog, so the review's diff stays as it was.
  */
 export function openCommentContextDialog(inContext: CommentInContext): void {
   openDialog((close) => <CommentContextDialog {...inContext} onClose={close} />);
 }
 
-type DialogProps = CommentInContext & { onClose: () => void };
+export type DialogProps = CommentInContext & { onClose: () => void };
 
 function CommentContextDialog(props: DialogProps) {
   const current = useSession((state) => state.place);
@@ -77,39 +67,37 @@ function CommentContextDialog(props: DialogProps) {
 function ThreadInContext(props: DialogProps) {
   const { review, threadId, startsOn = 'commented', onClose } = props;
   const [view, setView] = useState<ContextView>(startsOn);
+  // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
+  const [commentShown, setCommentShown] = useState(true);
   const { data: conversation } = useReviewConversation(review.id);
   const threads = useMemo(() => conversation && threadsOf(conversation.comments), [conversation]);
   const live = liveThreadOf(threads, threadId);
+  const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
+  // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.
+  const appliedTarget = useMemo<DiffTarget | null>(() => (appliedIn === undefined ? null : { kind: 'changeset', changesetId: appliedIn }), [appliedIn]);
+  const applied = useDiffEntries(appliedTarget);
   if (live.kind !== 'thread') {
     return (
-      <Dialog title="Comment" width={1200} onClose={onClose} footer={<CloseButton onClose={onClose} />}>
-        <div className={styles.diff}>{live.kind === 'gone' ? <EmptyState title="This comment was deleted" /> : <CenteredSpinner />}</div>
+      <Dialog title="Comment" width={DIALOG_WIDTH} onClose={onClose} footer={<CloseButton onClose={onClose} />}>
+        <div className={styles.body}>
+          <div className={styles.diff}>{live.kind === 'gone' ? <EmptyState title="This comment was deleted" /> : <CenteredSpinner />}</div>
+        </div>
       </Dialog>
     );
   }
   const { thread } = live;
-  const labels = contextViewLabels(thread);
-  const appliedIn = appliedChangeset(thread);
+  const lists = appliedTarget !== null && listsAppliedFiles(thread, applied.data);
+  const showsComment = !lists || commentShown;
   return (
     <Dialog
       title={contextTitle(thread)}
-      description={contextDescription(thread, view)}
-      width={1200}
+      description={showsComment ? contextDescription(thread, view) : appliedFilesDescription(thread)}
+      width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
       // switch or the dialog itself after a click in the code.
       marks={STEP_FRAME}
-      headerAction={
-        <SegmentedControl<ContextView>
-          label="What to show"
-          value={view}
-          onChange={setView}
-          segments={[
-            { value: 'commented', label: labels.commented, title: 'The diff the comment was written on' },
-            { value: 'since', label: labels.since, title: 'The version commented on, against what it became' },
-          ]}
-        />
-      }
+      headerAction={showsComment && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
       footer={
         <>
           {appliedIn !== undefined && (
@@ -126,8 +114,16 @@ function ThreadInContext(props: DialogProps) {
         </>
       }
     >
-      <div className={styles.diff}>
-        <ViewDiff {...props} thread={thread} view={view} />
+      <div className={styles.body}>
+        {lists && applied.data ? (
+          <div className={styles.files}>
+            <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
+          </div>
+        ) : (
+          <div className={styles.diff}>
+            <ViewDiff {...props} thread={thread} view={view} />
+          </div>
+        )}
       </div>
     </Dialog>
   );
@@ -141,55 +137,19 @@ function CloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
-type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
+export type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
 
-/** One view: the file's entry it compares from (on screen, read, or none needed), then the two versions. */
+/** One view of the commented file alone: its two versions, the thread under its line, scrolled to it. */
 function ViewDiff(props: ViewProps) {
-  const { review, thread, view, onScreen, repository } = props;
-  const source = contextEntryOf(review.target, thread, view, onScreen);
-  const read = useDiffEntries(source.kind === 'read' ? source.target : null);
-  if (source.kind === 'read' && read.error) return <EmptyState title="Couldn't load this diff" description={read.error.message} />;
-  if (source.kind === 'read' && !read.data) return <CenteredSpinner />;
-  const entry = source.kind === 'onScreen' ? (onScreen?.entry ?? null) : source.kind === 'read' && read.data ? (entryOfThread(read.data, thread) ?? null) : null;
-  const comparison = comparisonOf(thread, view, repository, entry);
-  if (!comparison) return <EmptyState title={contextMissingText(thread, view)} />;
-  return <ThreadDiff key={view} {...props} comparison={comparison} />;
-}
-
-/** Two versions of the file, the thread under its line, scrolled to it. */
-function ThreadDiff({ place, review, thread, user, comparison, showInConversation, onClose }: ViewProps & { comparison: ContextComparison }) {
-  const { side, line } = comparison;
-  // Its own object only when the line changes: a reply made here refreshes the thread, and scrolls nothing.
-  const scrollTo = useMemo(() => ({ side, lineNumber: line }), [side, line]);
-  const annotations = useMemo<DiffAnnotations>(
-    () => ({
-      rows: [{ side, lineNumber: line, metadata: THREAD_ROW }],
-      render: (_row: DiffLineAnnotation<string>) => (
-        <div className={rowStyles.row}>
-          <ReviewThreadCard
-            review={review}
-            thread={thread}
-            user={user}
-            // What the dialog is about: shown whole, ringed, even when settled (a settled thread starts folded).
-            highlight={0}
-            inCode={{
-              showInConversation: () => {
-                onClose();
-                showInConversation();
-              },
-            }}
-          />
-        </div>
-      ),
-      markers: [],
-      scrollTo,
-      opensAtRow: true,
-    }),
-    [review, thread, user, side, line, scrollTo, showInConversation, onClose],
-  );
+  const state = useContextComparison(props);
+  const comparison = state.kind === 'comparison' ? state.comparison : null;
+  const annotations = useThreadRow({ ...props, comparison });
+  if (state.kind === 'error') return <EmptyState title="Couldn't load this diff" description={state.message} />;
+  if (state.kind === 'reading') return <CenteredSpinner />;
+  if (state.kind === 'missing' || !comparison || !annotations) return <EmptyState title={state.kind === 'missing' ? state.text : ''} />;
   return (
-    <DiffAnnotationsContext.Provider value={annotations}>
-      <FileDiffViewer place={place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} />
+    <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
+      <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} />
     </DiffAnnotationsContext.Provider>
   );
 }

@@ -1,12 +1,18 @@
 /* The diff fills the dialog: as tall as the window allows, scrolling on its own. */
-.diff {
+.body {
   display: flex;
+  height: 66vh;
+}
+
+.diff,
+.files {
+  display: flex;
+  flex: 1;
   flex-direction: column;
-  height: 58vh;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
 }
-
