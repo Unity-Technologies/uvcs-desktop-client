@@ -26,6 +26,7 @@ function PanelBody({ comments, threads, onClose }: { comments: ReviewComments; t
   const [filter, setFilter] = useState<CommentsFilter>(() => initialCommentsFilter(threads));
   const counts = commentsPanelCounts(threads);
   const listed = commentsPanelThreads(threads, filter);
+  const { seeInContext } = comments;
   const empty = emptyCommentsText(filter, counts);
   return (
     <>
@@ -49,7 +50,13 @@ function PanelBody({ comments, threads, onClose }: { comments: ReviewComments; t
         <ul className={styles.list}>
           {listed.map((thread) => (
             <li key={thread.root.id}>
-              <ThreadSummaryCard reviewId={comments.review.id} thread={thread} current={comments.focus?.threadId === thread.root.id} onOpen={() => comments.goToThread(thread)} />
+              <ThreadSummaryCard
+                reviewId={comments.review.id}
+                thread={thread}
+                current={comments.focus?.threadId === thread.root.id}
+                onOpen={() => comments.goToThread(thread)}
+                onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+              />
             </li>
           ))}
         </ul>

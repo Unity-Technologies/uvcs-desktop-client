@@ -11,7 +11,9 @@ import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
-import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type TimelineEntry } from './reviewThreads';
+import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
+import { isLineThread } from '../inline/fileThreads';
+import { useCommentContext } from '../inline/useCommentContext';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
@@ -25,6 +27,10 @@ import styles from './ReviewConversation.module.css';
 export function ReviewConversationTab({ review, focusThread }: { review: CodeReview; focusThread?: number }) {
   const place = usePlace();
   const user = usePlaceUser();
+  const seeInContext = useCommentContext(review);
+  // "Applied in" shows how the change request was applied, in context, as in the code.
+  const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
+    seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
   const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
@@ -56,7 +62,15 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
                   <li key={entryKey(entry)}>
                     {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
                     {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                    {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} highlight={entry.thread.root.id === focusThread ? 1 : undefined} />}
+                    {entry.kind === 'thread' && (
+                      <ReviewThreadCard
+                        review={review}
+                        thread={entry.thread}
+                        user={user}
+                        highlight={entry.thread.root.id === focusThread ? 1 : undefined}
+                        onSeeApplied={seeAppliedOf(entry.thread)}
+                      />
+                    )}
                   </li>
                 ))}
               </ol>
