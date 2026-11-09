@@ -1,5 +1,7 @@
+import { X } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '../../../ui/EmptyState';
+import { IconButton } from '../../../ui/IconButton';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { SkeletonBar } from '../../../ui/Skeleton';
 import { ThreadSummaryCard } from '../conversation/ReviewThreadCard';
@@ -11,16 +13,16 @@ import styles from './ReviewCommentsPanel.module.css';
  * Beside a review's Changes: every comment on its code, what's still open first, each as the conversation shows a
  * settled thread. A click goes to the thread, in the mode it was written in (`goToThread`).
  */
-export function ReviewCommentsPanel({ comments }: { comments: ReviewComments }) {
+export function ReviewCommentsPanel({ comments, onClose }: { comments: ReviewComments; onClose: () => void }) {
   const { threads } = comments;
   return (
     <aside className={styles.panel} aria-label="Comments">
-      {threads ? <PanelBody comments={comments} threads={threads} /> : <Loading />}
+      {threads ? <PanelBody comments={comments} threads={threads} onClose={onClose} /> : <Loading />}
     </aside>
   );
 }
 
-function PanelBody({ comments, threads }: { comments: ReviewComments; threads: NonNullable<ReviewComments['threads']> }) {
+function PanelBody({ comments, threads, onClose }: { comments: ReviewComments; threads: NonNullable<ReviewComments['threads']>; onClose: () => void }) {
   const [filter, setFilter] = useState<CommentsFilter>(() => initialCommentsFilter(threads));
   const counts = commentsPanelCounts(threads);
   const listed = commentsPanelThreads(threads, filter);
@@ -38,6 +40,8 @@ function PanelBody({ comments, threads }: { comments: ReviewComments; threads: N
             { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
           ]}
         />
+        {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
+        <IconButton size="small" icon={<X size={14} />} label="Hide comments" onClick={onClose} />
       </header>
       {listed.length === 0 ? (
         <EmptyState title={empty.title} description={empty.description} />

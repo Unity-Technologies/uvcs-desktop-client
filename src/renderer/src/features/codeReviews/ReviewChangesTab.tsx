@@ -3,6 +3,7 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
+import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { commentLineText } from '../../lib/comments/commentText';
@@ -35,6 +36,7 @@ interface ReviewChangesTabProps {
  */
 export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabProps) {
   const user = usePlaceUser();
+  const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const { data: conversation } = useReviewConversation(review.id);
   const threads = useMemo(() => conversation && threadsOf(conversation.comments), [conversation]);
   const seq = useRef(1);
@@ -82,7 +84,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                 detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="comments" />}
               />
             }
-            details={<ReviewCommentsPanel comments={comments} />}
+            details={<ReviewCommentsPanel comments={comments} onClose={() => toggleDetails(COMMENTS_PANEL_KEY)} />}
           />
         </DiffFocusRequestContext.Provider>
       </EntryAnnotatorContext.Provider>
