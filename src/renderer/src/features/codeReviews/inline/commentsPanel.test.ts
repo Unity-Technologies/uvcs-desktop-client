@@ -3,6 +3,8 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread } from './fileThreads';
 import {
+  MIN_READABLE_DIFF_WIDTH,
+  diffWidthBesidePanel,
   commentsPanelStartsHidden,
   commentPosition,
   commentsPanelCounts,
@@ -196,7 +198,19 @@ describe('shownCommentsFilter', () => {
 
 describe('commentsPanelStartsHidden', () => {
   it('starts hidden on a review with no comments on its code, which it would only say', () => {
-    expect(commentsPanelStartsHidden({ codeThreads: 0 })).toBe(true);
-    expect(commentsPanelStartsHidden({ codeThreads: 1 })).toBe(false);
+    expect(commentsPanelStartsHidden({ codeThreads: 0, diffWidth: 1200 })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 1, diffWidth: 1200 })).toBe(false);
+  });
+
+  it('starts hidden where the diff beside it would be too narrow to read, the markers on lines saying where comments are', () => {
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH - 1 })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH })).toBe(false);
+  });
+});
+
+describe('diffWidthBesidePanel', () => {
+  it('is what the tab leaves the diff: its width less the files and the panel', () => {
+    // A 900 px window leaves the tab about 820: 820 - 340 - 340 = 140, which read as a strip of code.
+    expect(diffWidthBesidePanel({ tabWidth: 820, filesWidth: 340, panelWidth: 340 })).toBe(140);
   });
 });
