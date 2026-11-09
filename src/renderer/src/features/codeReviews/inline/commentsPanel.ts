@@ -1,17 +1,53 @@
 import { comparePaths } from '@shared/pathOrder';
+import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { pluralize } from '../../../lib/text';
+import { displayName } from '../../../lib/userName';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
 /** What the Comments panel lists: what's still open (change requests to apply, questions to answer), or every thread. */
 export type CommentsFilter = 'open' | 'all';
 
+/** A thread's kind, as the panel's kind chips find it. */
+export type ThreadKind = 'changeRequest' | 'question' | 'comment';
+
+/** The kind chips, in the order the panel shows them. */
+export const THREAD_KINDS: readonly ThreadKind[] = ['changeRequest', 'question', 'comment'];
+
+/** What the panel's filter row narrows the list to: words in what was said, and kinds (none chosen: every kind). */
+export interface CommentsSearch {
+  query: string;
+  kinds: ReadonlySet<ThreadKind>;
+}
+
+export const NO_COMMENTS_SEARCH: CommentsSearch = { query: '', kinds: new Set() };
+
+export function threadKindOf(thread: Pick<ReviewThread, 'root'>): ThreadKind {
+  const { kind } = thread.root;
+  return kind === 'changeRequest' || kind === 'question' ? kind : 'comment';
+}
+
+/**
+ * Whether a thread shows under the filter row: of a kind chosen, if any is, and holding every word typed in what a
+ * card can show: what was said in it, replies too, who said it, and its file.
+ */
+export function matchesCommentsSearch(thread: LineThread, { query, kinds }: CommentsSearch): boolean {
+  if (kinds.size > 0 && !kinds.has(threadKindOf(thread))) return false;
+  const comments = [thread.root, ...thread.replies];
+  return matchesWordFilter([...comments.flatMap((comment) => [comment.text, comment.author, displayName(comment.author)]), anchorPath(thread.root.anchor)], query);
+}
+
+/** Whether the filter row narrows anything. */
+export function isSearching({ query, kinds }: CommentsSearch): boolean {
+  return query.trim() !== '' || kinds.size > 0;
+}
+
 /**
  * The threads on lines of code the panel lists: by file, in the order the diff lists files, each file's by line, then
  * as they were started.
  */
-export function commentsPanelThreads(threads: readonly ReviewThread[], filter: CommentsFilter): LineThread[] {
-  const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && (filter === 'all' || thread.state.kind === 'open'));
+export function commentsPanelThreads(threads: readonly ReviewThread[], filter: CommentsFilter, search: CommentsSearch = NO_COMMENTS_SEARCH): LineThread[] {
+  const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && (filter === 'all' || thread.state.kind === 'open') && matchesCommentsSearch(thread, search));
   return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
 }
 
@@ -23,6 +59,19 @@ function pathOf(thread: LineThread): string {
 export function commentsPanelCounts(threads: readonly ReviewThread[]): Record<CommentsFilter, number> {
   const onLines = threads.filter(isLineThread);
   return { open: onLines.filter((thread) => thread.state.kind === 'open').length, all: onLines.length };
+}
+
+/** How many threads of each kind Open or All lists, for the kind chips. */
+export function threadKindCounts(threads: readonly ReviewThread[], filter: CommentsFilter): Record<ThreadKind, number> {
+  const counts: Record<ThreadKind, number> = { changeRequest: 0, question: 0, comment: 0 };
+  for (const thread of commentsPanelThreads(threads, filter)) counts[threadKindOf(thread)] += 1;
+  return counts;
+}
+
+/** What a kind chip is called, how many it finds in its tooltip. */
+export function threadKindChipLabel(kind: ThreadKind, count: number): string {
+  const names: Record<ThreadKind, string> = { changeRequest: 'Change requests', question: 'Questions', comment: 'Comments' };
+  return `${names[kind]} (${count})`;
 }
 
 /** The panel opens on what's still open, when anything is; else on everything said. */

@@ -220,7 +220,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
   conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, whole in a
   tooltip when cut short), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
-  anything is, `initialCommentsFilter`). A click anywhere on a card goes to the thread (not the end of a drag
+  anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was said,
+  replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the
+  files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
+  nothing offers "Clear filters". The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
   selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
   `ThreadFocus`). Under its header, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the previous
   and next; **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files

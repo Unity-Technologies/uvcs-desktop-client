@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { commentPosition, commentsPanelCounts, commentsPanelThreads, emptyCommentsText, initialCommentsFilter, shownCommentsFilter, steppedThread } from './commentsPanel';
+import {
+  commentPosition,
+  commentsPanelCounts,
+  commentsPanelThreads,
+  emptyCommentsText,
+  initialCommentsFilter,
+  isSearching,
+  shownCommentsFilter,
+  steppedThread,
+  threadKindChipLabel,
+  threadKindCounts,
+  threadKindOf,
+  type CommentsSearch,
+} from './commentsPanel';
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: '', kind: 'changeRequest', anchor: { kind: 'review' }, ...fields };
@@ -25,6 +38,49 @@ describe('commentsPanelThreads', () => {
 
   it('lists only what is still open', () => {
     expect(commentsPanelThreads(THREADS, 'open').map((thread) => thread.root.id)).toEqual([2]);
+  });
+});
+
+describe('the filter row', () => {
+  const words = threadsOf([
+    onLine(1, '/src/Player.cs', 1, { text: 'Rename the field', author: 'ana' }),
+    onLine(2, '/src/Enemy.cs', 2, { kind: 'question', text: 'Why a loop?', author: 'luis@unity3d.com' }),
+    comment(3, { parentId: 2, kind: 'comment', text: 'It reads better', author: 'ana' }),
+    onLine(4, '/src/Enemy.cs', 9, { kind: 'comment', text: 'Nice ÑANDÚ fix' }),
+  ]);
+  const search = (query: string, kinds: CommentsSearch['kinds'] = new Set()) => commentsPanelThreads(words, 'all', { query, kinds }).map((thread) => thread.root.id);
+
+  it('finds threads by every word typed, in what was said, replies too, in any case', () => {
+    expect(search('rename FIELD')).toEqual([1]);
+    expect(search('reads better')).toEqual([2]);
+    expect(search('ñandú')).toEqual([4]);
+    expect(search('rename loop')).toEqual([]);
+  });
+
+  it('finds them by who said them and by their file', () => {
+    expect(search('luis')).toEqual([2]);
+    expect(search('player')).toEqual([1]);
+  });
+
+  it('keeps only the kinds chosen, with the words', () => {
+    expect(search('', new Set(['question', 'comment']))).toEqual([2, 4]);
+    expect(search('loop', new Set(['changeRequest']))).toEqual([]);
+  });
+
+  it('counts each kind Open or All lists', () => {
+    expect(threadKindCounts(words, 'all')).toEqual({ changeRequest: 1, question: 1, comment: 1 });
+    expect(threadKindCounts(words, 'open')).toEqual({ changeRequest: 1, question: 0, comment: 0 });
+  });
+
+  it('names a chip with its count, and knows a comment of any other kind as a comment', () => {
+    expect(threadKindChipLabel('changeRequest', 3)).toBe('Change requests (3)');
+    expect(threadKindOf({ root: comment(9, { kind: 'general' }) })).toBe('comment');
+  });
+
+  it('narrows the list only with words or kinds', () => {
+    expect(isSearching({ query: ' ', kinds: new Set() })).toBe(false);
+    expect(isSearching({ query: 'a', kinds: new Set() })).toBe(true);
+    expect(isSearching({ query: '', kinds: new Set(['question']) })).toBe(true);
   });
 });
 

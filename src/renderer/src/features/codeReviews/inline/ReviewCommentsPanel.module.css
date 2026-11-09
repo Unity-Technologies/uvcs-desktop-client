@@ -16,6 +16,15 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Words and kinds to narrow the list to: the field gives way to the chips. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 /* Where the comment gone to is among those listed, and the arrows through them, as a diff's changes have theirs. */
 .stepper {
   display: flex;

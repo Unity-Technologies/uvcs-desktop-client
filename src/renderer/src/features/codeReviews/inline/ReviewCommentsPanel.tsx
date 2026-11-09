@@ -3,10 +3,29 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
+import { NoMatches } from '../../../ui/NoMatches';
+import { SearchField } from '../../../ui/SearchField';
+import { ToggleChip } from '../../../ui/ToggleChip';
+import { Tooltip } from '../../../ui/Tooltip';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { SkeletonBar } from '../../../ui/Skeleton';
 import { ThreadSummaryCard } from '../conversation/ReviewThreadCard';
-import { commentPosition, commentsPanelCounts, emptyCommentsText, steppedThread, type CommentsFilter } from './commentsPanel';
+import { threadKindName } from '../conversation/threadBadges';
+import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
+import {
+  commentPosition,
+  commentsPanelCounts,
+  emptyCommentsText,
+  isSearching,
+  NO_COMMENTS_SEARCH,
+  steppedThread,
+  THREAD_KINDS,
+  threadKindChipLabel,
+  threadKindCounts,
+  type CommentsFilter,
+  type CommentsSearch,
+  type ThreadKind,
+} from './commentsPanel';
 import type { LineThread } from './fileThreads';
 import type { ReviewComments } from './reviewComments';
 import styles from './ReviewCommentsPanel.module.css';
@@ -16,6 +35,9 @@ interface ReviewCommentsPanelProps {
   /** What it lists, kept by the Changes tab so the keys go through the same comments while it's hidden. */
   filter: CommentsFilter;
   onFilterChange: (filter: CommentsFilter) => void;
+  /** The words and kinds the filter row narrows it to, kept by the Changes tab too. */
+  search: CommentsSearch;
+  onSearchChange: (search: CommentsSearch) => void;
   listed: readonly LineThread[];
   /** Every comment, in the order the panel lists them: where one that left the list sat. */
   all: readonly LineThread[];
@@ -38,7 +60,7 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
   const counts = commentsPanelCounts(threads);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
@@ -61,6 +83,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
         {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
         <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
       </header>
+      {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter)} />}
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current)}</span>
@@ -68,7 +91,9 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
         </div>
       )}
-      {listed.length === 0 ? (
+      {listed.length === 0 && isSearching(search) ? (
+        <NoMatches noun="comments" onClear={() => onSearchChange(NO_COMMENTS_SEARCH)} />
+      ) : listed.length === 0 ? (
         <EmptyState title={empty.title} description={empty.description} />
       ) : (
         <ul ref={listRef} className={styles.list}>
@@ -86,6 +111,39 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
         </ul>
       )}
     </>
+  );
+}
+
+interface SearchRowProps {
+  search: CommentsSearch;
+  onChange: (search: CommentsSearch) => void;
+  kindCounts: Record<ThreadKind, number>;
+}
+
+/** Words to find in what was said, and a chip per kind, each its icon and how many Open or All lists. */
+function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
+  const toggle = (kind: ThreadKind): void => {
+    const kinds = new Set(search.kinds);
+    if (kinds.has(kind)) kinds.delete(kind);
+    else kinds.add(kind);
+    onChange({ ...search, kinds });
+  };
+  return (
+    <div className={styles.search}>
+      {/* Not the view's ⌘F field: that one is the files'. */}
+      <SearchField value={search.query} onChange={(query) => onChange({ ...search, query })} placeholder="Filter comments" width="100%" aria-label="Filter comments" />
+      {THREAD_KINDS.map((kind) => {
+        const Icon = THREAD_KIND_ICONS[threadKindName({ kind })];
+        const label = threadKindChipLabel(kind, kindCounts[kind]);
+        return (
+          <Tooltip key={kind} content={label}>
+            <ToggleChip size="small" pressed={search.kinds.has(kind)} onChange={() => toggle(kind)} icon={<Icon size={12} />} aria-label={label}>
+              {kindCounts[kind]}
+            </ToggleChip>
+          </Tooltip>
+        );
+      })}
+    </div>
   );
 }
 

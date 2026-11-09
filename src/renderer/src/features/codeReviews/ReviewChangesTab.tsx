@@ -21,7 +21,7 @@ import { reviewFileFlag } from './inline/reviewFileFlag';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
-import { commentsPanelThreads, initialCommentsFilter, shownCommentsFilter, steppedThread, type CommentsFilter } from './inline/commentsPanel';
+import { commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 
@@ -59,7 +59,8 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   if (threads && openedOn === null) setOpenedOn(initialCommentsFilter(threads));
   const filter = shownCommentsFilter(pickedFilter, openedOn);
   const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all') : []), [threads]);
-  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter) : []), [threads, filter]);
+  const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
+  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search) : []), [threads, filter, search]);
 
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
@@ -109,6 +110,8 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                   comments={comments}
                   filter={filter}
                   onFilterChange={setFilter}
+                  search={search}
+                  onSearchChange={setSearch}
                   listed={listed}
                   all={all}
                   onStep={step}
