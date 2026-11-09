@@ -832,8 +832,8 @@ comparison method); the image every image mode, with unsaved edits rendered. SVG
 A place showing a committed diff can add to each file's diff without the diff knowing what it adds (a review's comments,
 docs/features/code-reviews.md "Comments in the code"):
 
-- `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may compare
-  it with another older side (`AnnotatedEntry.original`) and add controls to its header. It may load on first use.
+- `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may add
+  controls to its header (`AnnotatedEntry`). It may load on first use.
 - `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
   code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses
   too), and a line to scroll to; while the place goes to one of its rows (`opensAtRow`), the diff doesn't open at its
