@@ -29,9 +29,8 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
   return (
     <div className={styles.row}>
       <div className={styles.threads}>
-        {line.threads.map((placed) => {
-          const { thread, earlier } = placed;
-          const offered = offersContext(placed) ? onSeeInContext : undefined;
+        {line.threads.map(({ thread, earlier }) => {
+          const offered = offersContext(thread, earlier !== undefined) ? onSeeInContext : undefined;
           return (
         <ThreadInRow
           key={thread.root.id}
@@ -90,7 +89,9 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
           {pluralize(outdated.length, 'outdated comment')}
         </button>
         {open &&
-          outdated.map(({ thread, revisionId }) => (
+          outdated.map(({ thread, revisionId }) => {
+            const offered = offersContext(thread, true) ? onSeeInContext : undefined;
+            return (
             <ThreadInRow
               key={thread.root.id}
               comments={comments}
@@ -101,10 +102,11 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
                 earlier: earlierTagOf(thread, true),
                 snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
                 showInConversation: () => comments.showInConversation(thread.root.id),
-                seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
+                seeInContext: offered && (() => offered(thread)),
               }}
             />
-          ))}
+            );
+          })}
       </div>
       {onClose && <CloseButton label="Hide the outdated comments" onClose={onClose} />}
     </div>
