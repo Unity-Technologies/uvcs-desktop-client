@@ -3,7 +3,7 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState, type MouseEvent, type ReactNode } from 'react';
+import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
@@ -134,6 +134,40 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
       </div>
+    </section>
+  );
+}
+
+/**
+ * A thread under its file's name in the Comments panel (`CommentsFileGroup`): its line apart, in the file's column for
+ * lines (`lineDigits`); who started it, its replies and where it stands; its kind and first words under them. As a
+ * card, anywhere on it goes to the thread, and its words are the way there by keyboard.
+ */
+export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerpt, lineDigits }: Omit<ThreadSummaryCardProps, 'reviewId'> & { lineDigits: number }) {
+  const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
+  const author = excerpt?.author ?? thread.root.author;
+  const line = thread.root.anchor.kind === 'line' ? thread.root.anchor.line : null;
+  return (
+    <section className={styles.row} data-current={current || undefined} style={{ '--line-digits': lineDigits } as CSSProperties} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+      <span className={styles.rowLine} data-tip="The line it was written on">
+        {line}
+      </span>
+      <span className={styles.rowAuthor}>
+        <Avatar user={author} size={16} tip={null} />
+        <span className={styles.author}>
+          <Highlight text={displayName(author)} />
+        </span>
+        {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
+      </span>
+      {header.pill && (
+        <span className={styles.rowState}>
+          <StatePill pill={header.pill} onSeeApplied={onSeeApplied} />
+        </span>
+      )}
+      <button type="button" className={styles.rowText} onClick={onOpen}>
+        <ThreadKindIcon root={thread.root} size={12} />
+        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+      </button>
     </section>
   );
 }

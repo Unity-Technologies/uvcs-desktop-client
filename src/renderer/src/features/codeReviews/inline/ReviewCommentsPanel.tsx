@@ -1,23 +1,26 @@
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { listScrollTop } from '../../../lib/scrollPlacement';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
-import { HighlightQuery } from '../../../ui/Highlight';
+import { Highlight, HighlightQuery } from '../../../ui/Highlight';
 import { NoMatches } from '../../../ui/NoMatches';
 import { SearchField } from '../../../ui/SearchField';
 import { ToggleChip } from '../../../ui/ToggleChip';
 import { Tooltip } from '../../../ui/Tooltip';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { SkeletonBar } from '../../../ui/Skeleton';
-import { ThreadSummaryCard } from '../conversation/ReviewThreadCard';
+import { ItemIcon } from '../../../components/ItemIcon';
+import { ThreadSummaryCard, ThreadSummaryRow } from '../conversation/ReviewThreadCard';
 import { threadKindName } from '../conversation/threadBadges';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import {
   commentPosition,
   commentsPanelCounts,
+  type CommentsFileGroup,
+  type CommentsOrder,
   emptyCommentsText,
   isSearching,
   matchExcerpt,
@@ -31,6 +34,7 @@ import {
   type ThreadKind,
 } from './commentsPanel';
 import type { LineThread } from './fileThreads';
+import { CommentsOrderMenu } from './CommentsOrderMenu';
 import type { ReviewComments } from './reviewComments';
 import styles from './ReviewCommentsPanel.module.css';
 
@@ -43,6 +47,12 @@ interface ReviewCommentsPanelProps {
   search: CommentsSearch;
   onSearchChange: (search: CommentsSearch) => void;
   listed: readonly LineThread[];
+  /** How they're ordered, kept for every review; in the code's order, `listed` under their files (`groups`). */
+  order: CommentsOrder;
+  onOrderChange: (order: CommentsOrder) => void;
+  groups: readonly CommentsFileGroup[] | null;
+  /** Shows a file's diff, its group's name clicked. */
+  onOpenFile: (path: string) => void;
   /** Every comment, in the order the panel lists them: where one that left the list sat. */
   all: readonly LineThread[];
   /** Goes to the comment after or before the one gone to (`steppedThread`). */
@@ -51,9 +61,10 @@ interface ReviewCommentsPanelProps {
 }
 
 /**
- * Beside a review's Changes: every comment on its code, what's still open first, each as the conversation shows a
- * settled thread. A click goes to the thread, in the mode it was written in (`goToThread`); the arrows (N, ⇧N) go
- * through them one by one.
+ * Beside a review's Changes: every comment on its code, or what's still open. In the code's order, under each file's
+ * name, a row per thread; newest or oldest first, each as the conversation shows a settled thread. A click goes to the
+ * thread, in the mode it was written in (`goToThread`); the arrows (N, ⇧N) go through them one by one, in the order
+ * shown.
  */
 export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelProps) {
   const { threads } = comments;
@@ -64,12 +75,12 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, onOpenFile, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
   const counts = commentsPanelCounts(threads);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   useFollowedCard(listRef, comments.focus?.seq);
   return (
     <>
@@ -90,7 +101,8 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
       {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter)} />}
       {listed.length > 0 && (
         <div className={styles.stepper}>
-          <span className={styles.position}>{commentPosition(listed, current)}</span>
+          <span className={styles.position}>{commentPosition(listed, current, groups)}</span>
+          <CommentsOrderMenu order={order} onChange={onOrderChange} />
           <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
         </div>
@@ -101,23 +113,74 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
         <EmptyState title={empty.title} description={empty.description} />
       ) : (
         <HighlightQuery query={search.query}>
-          <ul ref={listRef} className={styles.list}>
-            {listed.map((thread) => (
-              <li key={thread.root.id}>
-                <ThreadSummaryCard
-                  reviewId={comments.review.id}
-                  thread={thread}
-                  current={current === thread.root.id}
-                  onOpen={() => comments.goToThread(thread)}
-                  onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
-                  excerpt={matchExcerpt(thread, search.query)}
-                />
-              </li>
-            ))}
-          </ul>
+          {/* Where the card gone to is looked for (`useFollowedCard`), around either list. */}
+          <div ref={listRef} className={styles.listArea}>
+          {groups ? (
+            <div className={styles.groups}>
+              {groups.map((group) => (
+                <FileGroup key={group.path} group={group} onOpenFile={() => onOpenFile(group.path)}>
+                  {group.threads.map((thread) => (
+                    <li key={thread.root.id}>
+                      <ThreadSummaryRow
+                        thread={thread}
+                        current={current === thread.root.id}
+                        onOpen={() => comments.goToThread(thread)}
+                        onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                        excerpt={matchExcerpt(thread, search.query)}
+                        lineDigits={group.lineDigits}
+                      />
+                    </li>
+                  ))}
+                </FileGroup>
+              ))}
+            </div>
+          ) : (
+            <ul className={styles.list}>
+              {listed.map((thread) => (
+                <li key={thread.root.id}>
+                  <ThreadSummaryCard
+                    reviewId={comments.review.id}
+                    thread={thread}
+                    current={current === thread.root.id}
+                    onOpen={() => comments.goToThread(thread)}
+                    onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                    excerpt={matchExcerpt(thread, search.query)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          </div>
         </HighlightQuery>
       )}
     </>
+  );
+}
+
+/**
+ * A file's comments under its name, which stays at the top while they scroll: the name, its folder (cut from the
+ * start, the folder nearest the file staying), and how many. The name shows the file's diff.
+ */
+function FileGroup({ group, onOpenFile, children }: { group: CommentsFileGroup; onOpenFile: () => void; children: ReactNode }) {
+  return (
+    <section className={styles.group} aria-label={group.path}>
+      <button type="button" className={styles.groupHeader} data-tip="Show the file" data-tip-sub={group.path} onClick={onOpenFile}>
+        <ItemIcon itemType="file" name={group.file} />
+        <span className={styles.groupFile}>
+          <Highlight text={group.file} />
+        </span>
+        {group.folder && (
+          // Cut from its start (`direction: rtl`); the path itself still reads left to right.
+          <span className={styles.groupFolder}>
+            <bdi>
+              <Highlight text={group.folder} />
+            </bdi>
+          </span>
+        )}
+        <span className={styles.groupCount}>{group.threads.length}</span>
+      </button>
+      <ul className={styles.groupRows}>{children}</ul>
+    </section>
   );
 }
 
@@ -160,7 +223,7 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
  * card before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
-function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: number | undefined): void {
+function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined): void {
   // Before the paint: the ring the key drew on the card left never shows.
   useLayoutEffect(() => {
     const list = listRef.current;
