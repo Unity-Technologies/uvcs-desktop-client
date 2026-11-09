@@ -853,7 +853,9 @@ docs/features/code-reviews.md "Comments in the code"):
   above the line; a line near the top stays at the top, one near the end stops at the end (`focusScrollTop` in
   `lib/scrollPlacement`, through `framedScrollTop`; nothing moves when they already show, away from the edges). The line
   ends where its row starts (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the
-  card under it included. A row the diff already shows is glided to (`scrollSmoothlyTo`); one not rendered yet is jumped
+  card under it included. A row above the code has no line to keep: only its part gone to is framed (`rowFrameOf`), so a
+  card further down that row's stack (the third of several outdated comments) scrolls into view instead of staying cut
+  at the view's bottom, held there by the row's top. A row the diff already shows is glided to (`scrollSmoothlyTo`); one not rendered yet is jumped
   to where Pierre lays its line out, then set right as rows render and grow. While the place goes to one of its rows
   (`opensAtRow`), the diff doesn't open at its first change (`openingStep`'s `opensOnLines`), which would scroll past
   the row once placed. Every row's and marker's line is unfolded from a folded unchanged region (`linesToReveal`,
