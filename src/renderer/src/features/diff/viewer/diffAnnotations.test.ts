@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linesToReveal, MARKER_ROOM, markerLeft, markerRoom, rowsKey } from './diffAnnotations';
+import { linesToReveal, MARKER_ROOM, markerLeft, markerRoom, markerRoomCss, rowsKey } from './diffAnnotations';
 
 // Lines 1–10 unchanged, then line 11 replaced, then unchanged lines 12–40 (a hunk of 3 context lines each side).
 const HUNKS = [{ deletionStart: 8, deletionCount: 7, additionStart: 8, additionCount: 7 }];
@@ -42,5 +42,14 @@ describe('markerRoom and markerLeft', () => {
     const codeRight = 600;
     expect(markerLeft(codeRight)).toBeGreaterThan(codeRight);
     expect(markerLeft(codeRight)).toBeLessThanOrEqual(codeRight + MARKER_ROOM);
+  });
+});
+
+describe('markerRoomCss', () => {
+  it('ends the code early only in the panes holding markers, side by side; in the one pane of a unified diff', () => {
+    expect(markerRoomCss([{ side: 'additions' }, { side: 'additions' }], 'split')).toBe(`[data-code][data-additions]{margin-inline-end:${MARKER_ROOM}px}`);
+    expect(markerRoomCss([{ side: 'deletions' }, { side: 'additions' }], 'split')).toBe(`[data-code][data-deletions]{margin-inline-end:${MARKER_ROOM}px}\n[data-code][data-additions]{margin-inline-end:${MARKER_ROOM}px}`);
+    expect(markerRoomCss([{ side: 'deletions' }], 'unified')).toBe(`[data-code]{margin-inline-end:${MARKER_ROOM}px}`);
+    expect(markerRoomCss([], 'split')).toBe('');
   });
 });
