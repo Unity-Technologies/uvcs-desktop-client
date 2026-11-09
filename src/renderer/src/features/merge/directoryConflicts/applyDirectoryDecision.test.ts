@@ -35,6 +35,18 @@ describe('applyDirectoryDecision', () => {
     expect(shownToasts()).toEqual([]);
   });
 
+  it('decides the next conflicts the same way, in the same call, after the one decided', async () => {
+    const shared = conflictAt('/shared', 18);
+    fakeApi.answer('merge.decideDirectoryConflicts', () => ({ plan, decisions: [keepIncoming(game), keepIncoming(assets), keepIncoming(shared)] }));
+
+    await applyDirectoryDecision('/wk', request, 'page-1', [], game, { choice: 'source' }, [assets, shared]);
+
+    expect(fakeApi.calls()).toEqual([
+      { method: 'merge.decideDirectoryConflicts', args: ['/wk', request, 'page-1', [keepIncoming(game), keepIncoming(assets), keepIncoming(shared)]] },
+    ]);
+    expect(shownToasts()).toEqual([]);
+  });
+
   it('tells which decisions the merge no longer takes', async () => {
     fakeApi.answer('merge.decideDirectoryConflicts', () => ({ plan, decisions: [{ conflict: game, resolution: { choice: 'destination' } }] }));
 
