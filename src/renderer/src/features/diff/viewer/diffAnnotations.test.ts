@@ -50,6 +50,9 @@ describe('markerSpots', () => {
   it('puts markers on the same row side by side, the one above the code first, instead of one over the other', () => {
     const spots = markerSpots([marker('line', 1), marker('top', 0)], new Map([['line', box(100)], ['top', box(100.4)]]));
     expect(spots.map((spot) => spot.markers.map((each) => each.key))).toEqual([['top', 'line']]);
+    // Rows a fraction of a pixel apart, however they round.
+    const apart = markerSpots([marker('line', 1), marker('top', 0)], new Map([['line', box(100.4)], ['top', box(100.6)]]));
+    expect(apart.map((spot) => spot.markers.map((each) => each.key))).toEqual([['top', 'line']]);
   });
 
   it('keeps apart markers on other rows or panes, and leaves out those whose line is not rendered', () => {

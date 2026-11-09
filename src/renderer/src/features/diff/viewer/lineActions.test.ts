@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, topRowSelector, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
+import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, topRowOf, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
 
 const range = (start: number, end: number, side: 'additions' | 'deletions' = 'additions') => ({ start, side, end, endSide: side });
 
@@ -31,11 +31,25 @@ describe('lineNumberCellSelector', () => {
   });
 });
 
-describe('topRowSelector', () => {
-  it("finds the first row of a side's pane side by side, else of the only pane: the code's top, whatever line it is", () => {
-    expect(topRowSelector('deletions', 'split')).toBe('[data-code][data-deletions] > [data-content] > :first-child');
-    expect(topRowSelector('additions', 'unified')).toBe('[data-code] > [data-content] > :first-child');
-    expect(topRowSelector('additions', 'file')).toBe('[data-code] > [data-content] > :first-child');
+describe('topRowOf', () => {
+  const row = (name: string, annotation = false) => ({ name, annotation });
+  const isAnnotation = (each: { annotation: boolean }) => each.annotation;
+
+  it("is the pane's first row of code: a line, or the bar of the unchanged lines folded", () => {
+    expect(topRowOf([row('line 1'), row('line 2')], isAnnotation, false)?.name).toBe('line 1');
+    expect(topRowOf([row('8 unmodified lines'), row('line 9')], isAnnotation, false)?.name).toBe('8 unmodified lines');
+  });
+
+  it('skips the rows above the code (outdated comments opened), which are no line', () => {
+    expect(topRowOf([row('outdated comments', true), row('line 1')], isAnnotation, false)?.name).toBe('line 1');
+  });
+
+  it("is none while the file's top isn't rendered (a long file scrolled down): the first row rendered is a line far down", () => {
+    expect(topRowOf([row('line 900')], isAnnotation, true)).toBeNull();
+  });
+
+  it('is none in a pane with no rows rendered yet', () => {
+    expect(topRowOf([], isAnnotation, false)).toBeNull();
   });
 });
 

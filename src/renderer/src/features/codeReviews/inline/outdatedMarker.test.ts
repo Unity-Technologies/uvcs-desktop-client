@@ -19,45 +19,50 @@ function outdated(root: ReviewComment, ...replies: ReviewComment[]): EarlierThre
 }
 
 const NONE_OPENED: string[] = [];
+/** Comments hidden in the code: `inCode` false. */
+const HIDDEN = false;
 
 describe('outdatedMarkerOf', () => {
   it('marks a file with outdated comments while they are hidden, as a line with comments is', () => {
     const threads = [outdated(comment(1)), outdated(comment(2, { author: 'ana.garcia' }), reply(3, 2))];
-    const marker = outdatedMarkerOf(threads, NONE_OPENED);
+    const marker = outdatedMarkerOf(threads, NONE_OPENED, HIDDEN);
     expect(marker?.threads.map((entry) => entry.thread.root.id)).toEqual([1, 2]);
-    expect(marker?.label).toBe('2 outdated comments, by Borja and Ana Garcia');
+    expect(marker?.label).toBe('3 outdated comments, by Borja and Ana Garcia');
   });
 
-  it('counts the outdated threads, as the strip above the code does, not their replies', () => {
-    const marker = outdatedMarkerOf([outdated(comment(1), reply(2, 1), reply(3, 1))], NONE_OPENED);
-    expect(marker?.count).toBe(1);
-    expect(marker?.label).toBe('1 outdated comment, by Borja');
+  it('counts every comment, replies too, and names everyone who wrote, as a line marker does beside it', () => {
+    const marker = outdatedMarkerOf([outdated(comment(1), reply(2, 1, { author: 'ana.garcia' }), reply(3, 1))], NONE_OPENED, HIDDEN);
+    expect(marker?.label).toBe('3 outdated comments, by Borja and Ana Garcia');
   });
 
   it('says on hover what outdated means, then previews each thread', () => {
-    const marker = outdatedMarkerOf([outdated(comment(1, { kind: 'question', text: 'Why not a while loop?' }))], NONE_OPENED);
-    expect(marker?.tip).toBe('1 outdated comment, on lines changed since\n\nWhy not a while loop?\nQuestion · Open · Borja');
+    const marker = outdatedMarkerOf([outdated(comment(1, { kind: 'question', text: 'Why not a while loop?' }))], NONE_OPENED, HIDDEN);
+    expect(marker?.tip).toBe('Outdated: on lines changed since\n\nWhy not a while loop?\nQuestion · Open · Borja');
   });
 
   it('stands out while one of them is still open, as a line marker does', () => {
-    expect(outdatedMarkerOf([outdated(comment(1, { kind: 'question' }))], NONE_OPENED)?.emphasized).toBe(true);
-    expect(outdatedMarkerOf([outdated(comment(1))], NONE_OPENED)?.emphasized).toBe(false);
+    expect(outdatedMarkerOf([outdated(comment(1, { kind: 'question' }))], NONE_OPENED, HIDDEN)?.emphasized).toBe(true);
+    expect(outdatedMarkerOf([outdated(comment(1))], NONE_OPENED, HIDDEN)?.emphasized).toBe(false);
   });
 
   it('opens every outdated thread it marks, after what was already opened', () => {
-    const marker = outdatedMarkerOf([outdated(comment(1)), outdated(comment(2))], ['additions:12']);
+    const marker = outdatedMarkerOf([outdated(comment(1)), outdated(comment(2))], ['additions:12'], HIDDEN);
     expect(marker?.opens).toEqual(['additions:12', outdatedKey(1), outdatedKey(2)]);
   });
 
   it('marks only the ones still folded away: one gone to shows already', () => {
     const opened = [outdatedKey(1)];
-    const marker = outdatedMarkerOf([outdated(comment(1)), outdated(comment(2))], opened);
+    const marker = outdatedMarkerOf([outdated(comment(1)), outdated(comment(2))], opened, HIDDEN);
     expect(marker?.threads.map((entry) => entry.thread.root.id)).toEqual([2]);
     expect(marker?.opens).toEqual([outdatedKey(1), outdatedKey(2)]);
   });
 
+  it('marks nothing while comments show in the code: the outdated ones show above it', () => {
+    expect(outdatedMarkerOf([outdated(comment(1))], NONE_OPENED, true)).toBeNull();
+  });
+
   it('marks nothing when the file has none, or every one shows', () => {
-    expect(outdatedMarkerOf([], NONE_OPENED)).toBeNull();
-    expect(outdatedMarkerOf([outdated(comment(1))], [outdatedKey(1)])).toBeNull();
+    expect(outdatedMarkerOf([], NONE_OPENED, HIDDEN)).toBeNull();
+    expect(outdatedMarkerOf([outdated(comment(1))], [outdatedKey(1)], HIDDEN)).toBeNull();
   });
 });
