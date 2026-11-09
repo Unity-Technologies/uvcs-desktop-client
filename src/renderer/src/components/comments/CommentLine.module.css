@@ -9,8 +9,18 @@
   font-size: 0.92em;
 }
 
+/* A filter's match inside the code: in the text's color, as crimson on the match's yellow is too dark in the dark theme. */
+.code mark {
+  color: var(--text-primary);
+}
+
 .strike {
   color: var(--text-secondary);
+}
+
+/* Code struck through is as faded as the words around it. */
+.strike .code {
+  color: inherit;
 }
 
 /* A key (`<kbd>`), as a keycap: GitHub's way, in the app's tokens. */

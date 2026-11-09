@@ -88,6 +88,12 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     },
   );
 
+  it('writes a filter match inside inline code (`CommentLine.module.css`) at 4.5:1, in the text color: crimson is too dark on the match', () => {
+    const code = parseColor(tokens['--bg-code']!).rgb;
+    const match = composite(parseColor(tokens['--bg-match']!), code);
+    expect(contrastRatio(parseColor(tokens['--text-primary']!).rgb, match)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("draws the Branch Explorer Timeline's label ticks (--label-mark) at 3:1 on its strip (--bg-subtle)", () => {
     expect(ratio(tokens, '--label-mark', '--bg-subtle')).toBeGreaterThanOrEqual(3);
   });
