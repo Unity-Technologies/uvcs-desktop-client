@@ -11,6 +11,8 @@ import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } f
 export interface FileComments {
   lines: LineThreads[];
   outdated: EarlierThread[];
+  /** On an earlier version not read yet: placed at a line or outdated once it is. */
+  reading: EarlierThread[];
 }
 
 interface FileCommentsInput {
@@ -37,7 +39,7 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
     (text, line) => (lineIn === null ? null : lineIn(text, line)),
     (thread) => writtenIn(review, thread).kind === view.kind,
   );
-  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated };
+  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading };
 }
 
 /**
@@ -81,6 +83,16 @@ export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated:
   if (outdated.length === 0) return rows;
   const outdatedRow: DiffLineAnnotation<string> = { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };
   return inCode ? [...rows, outdatedRow] : [outdatedRow, ...rows];
+}
+
+/**
+ * Whether the file's diff has a thread, at a line, outdated, or still being placed: a diff opened to go to it opens at
+ * it, not at its first change (`DiffAnnotations.opensAtRow`), even before its earlier version is read.
+ */
+export function holdsThread(comments: FileComments | null, threadId: number): boolean {
+  if (!comments) return false;
+  const isIt = (entry: EarlierThread): boolean => entry.thread.root.id === threadId;
+  return lineOfThread(comments.lines, threadId) !== undefined || comments.outdated.some(isIt) || comments.reading.some(isIt);
 }
 
 /** Where a thread gone to is in the file's diff: at its line, or above the code when outdated; none when not here. */

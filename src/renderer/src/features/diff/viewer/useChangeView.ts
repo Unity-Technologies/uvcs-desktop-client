@@ -18,7 +18,7 @@ interface ChangeViewOptions {
   editor: RefObject<Editor | null>;
   /** Picks the change moved to, for ⌥⌘Z (`useBlockDiscard`). */
   pickChange: (change: ChangeRegion) => void;
-  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`). */
+  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`) or a row its place goes to (`DiffAnnotations.opensAtRow`). */
   opensOnLines: boolean;
 }
 

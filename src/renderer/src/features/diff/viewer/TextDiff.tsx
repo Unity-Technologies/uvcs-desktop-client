@@ -261,7 +261,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const pointerFocus = usePointerFocusMark();
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
-  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
+  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined || annotations?.opensAtRow === true });
   // Where the changes are, marked in the diff's own scrollbar.
   const changeMap = useChangeMap({
     containerRef: container,

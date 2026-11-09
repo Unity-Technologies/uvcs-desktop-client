@@ -9,7 +9,7 @@ import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '.
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, hasComments, isCommentable, markerCount, openedOnFocus } from './fileAnnotation';
-import { annotationRowsOf, fileCommentsOf, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import { reviewDiffViewOf } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
@@ -64,8 +64,10 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     [focus?.seq, focusPlace?.side, focusPlace?.lineNumber],
   );
 
+  // Gone to from elsewhere (the conversation), the file opens at the thread, even while its place is still worked out.
+  const opensAtRow = focus !== null && holdsThread(fileComments, focus.threadId);
   const annotations = useMemo<DiffAnnotations | null>(() => {
-    if (!comments || !hasComments(fileComments)) return null;
+    if (!comments || !fileComments || (!hasComments(fileComments) && !opensAtRow)) return null;
     const shown = shownThreadRows(fileComments.lines, inCode, openedKeys);
     const openLine = (key: string): void => setOpened({ path: entry.path, keys: [...openedKeys, key] });
     const closeLine = (key: string): void => setOpened({ path: entry.path, keys: openedKeys.filter((open) => open !== key) });
@@ -85,8 +87,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     }));
     const render = (row: DiffLineAnnotation<string>) =>
       renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onChangesSince: (revisionId) => setSince({ path: entry.path, revisionId }) });
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode), render, markers, scrollTo };
-  }, [comments, fileComments, inCode, openedKeys, topSide, scrollTo]);
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode), render, markers, scrollTo, opensAtRow };
+  }, [comments, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
 
   const controls = showsCommentControls(fileComments, sinceRevision !== null) && (
     <>

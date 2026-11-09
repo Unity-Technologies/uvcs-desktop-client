@@ -10,13 +10,16 @@ import { lineToReveal, type HunkSides } from './lineToReveal';
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
  * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it;
  * - `scrollTo`: a line to bring into view, once each time it's a new object (the thread a link or a list went to);
- *   `lineNumber: 0`, the rows above the code, at the diff's top.
+ *   `lineNumber: 0`, the rows above the code, at the diff's top;
+ * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
+ *   the diff doesn't open at its first change, which would scroll past it.
  */
 export interface DiffAnnotations {
   rows: DiffLineAnnotation<string>[];
   render: (row: DiffLineAnnotation<string>) => ReactNode;
   markers: LineMarker[];
   scrollTo: ChangedLine | null;
+  opensAtRow: boolean;
 }
 
 /** A mark on a line, at the end of its pane. */
