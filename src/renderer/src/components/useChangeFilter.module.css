@@ -61,6 +61,11 @@
   opacity: 1;
 }
 
+/* A place's own flag (a review's "Commented"): an icon, in the text's color. */
+.chip[data-tone='flag'] {
+  color: var(--text-secondary);
+}
+
 .chip[data-tone='added'] {
   color: var(--change-added);
 }

@@ -7,6 +7,7 @@ import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { fileRowKeys } from '../../components/fileRowKeys';
+import { ItemMark } from '../../components/ItemMark';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
@@ -30,7 +31,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
-import { EntryMarkContext } from './entryMark';
+import { EntryFlagContext } from './entryFlag';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -95,7 +96,22 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     setMetaShownFor(asset.path);
   };
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} /> });
+  // What a diff compares, by value: a branch diff passes a new target each render.
+  const targetKey = JSON.stringify(target);
+  const entryFlag = useContext(EntryFlagContext);
+  const flagMarkOf = useMemo(() => entryFlag?.markOf(target), [entryFlag, targetKey]);
+  const flag = useMemo(
+    () => (entryFlag?.filterLabel && flagMarkOf ? { icon: entryFlag.icon, label: entryFlag.filterLabel, holds: (entry: DiffEntry) => flagMarkOf(entry) !== null } : undefined),
+    [entryFlag, flagMarkOf],
+  );
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
+  const markOf = useMemo(() => {
+    if (!entryFlag || !flagMarkOf) return undefined;
+    return (entry: DiffEntry) => {
+      const label = flagMarkOf(entry);
+      return label === null ? null : <ItemMark icon={entryFlag.icon} label={label} />;
+    };
+  }, [entryFlag, flagMarkOf]);
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   const clearFilter = (): void => {
     filter.clear();
@@ -104,10 +120,6 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const content = useMemo(() => ({ sorted: shown }), [shown]);
   const { rows, tree, toggleCollapsed, folding } = useGroupedFileTree(content, entries, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS, selection.anchor);
   const workspaceRepository = usePlaceRepository();
-  // What a diff compares, by value: a branch diff passes a new target each render.
-  const targetKey = JSON.stringify(target);
-  const Mark = useContext(EntryMarkContext);
-  const markOf = useMemo(() => Mark && ((entry: DiffEntry) => <Mark target={target} entry={entry} />), [Mark, targetKey]);
   // A folder or a status group the keyboard (or a click) is on.
   const focusedFolder = focusedAsset ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
@@ -172,7 +184,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries, metaOf: pairs.metaOf, onMetaDiff: showMetaOf })
           }
           metaOf={pairs.metaOf}
-          markOf={markOf ?? undefined}
+          markOf={markOf}
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}

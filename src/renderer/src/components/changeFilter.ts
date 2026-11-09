@@ -6,6 +6,8 @@ export interface ChangeFilter {
   query: string;
   /** Empty means every status. */
   tones: ReadonlySet<StatusTone>;
+  /** Only the items the list's flag marks (`ListFlag`: a review's files with comments). */
+  onlyFlagged?: boolean;
 }
 
 // The order of the status chips, and of the groups and the sort by status: the one the Plastic desktop GUI lists
@@ -69,7 +71,15 @@ export function changeFilterPlaceholder(count: number | undefined): string {
   return count === undefined ? 'Filter files' : `Filter ${pluralize(count, 'file')}`;
 }
 
-/** Whether a change shows: its path holds every word typed, and one of its statuses is chosen, if any is. */
-export function matchesChangeFilter(path: string, statuses: readonly StatusTone[], { query, tones }: ChangeFilter): boolean {
-  return (tones.size === 0 || statuses.some((status) => tones.has(status))) && matchesWordFilter([path], query);
+/**
+ * Whether a change shows: its path holds every word typed, one of its statuses is chosen, if any is, and it's flagged
+ * (`flagged`), while only the flagged ones show.
+ */
+export function matchesChangeFilter(path: string, statuses: readonly StatusTone[], { query, tones, onlyFlagged = false }: ChangeFilter, flagged = false): boolean {
+  return (!onlyFlagged || flagged) && (tones.size === 0 || statuses.some((status) => tones.has(status))) && matchesWordFilter([path], query);
+}
+
+/** Whether the filter lets every change through: the list then stays the very same array. */
+export function filtersNothing({ query, tones, onlyFlagged = false }: ChangeFilter): boolean {
+  return query.trim() === '' && tones.size === 0 && !onlyFlagged;
 }

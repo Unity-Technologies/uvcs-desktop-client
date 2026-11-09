@@ -37,7 +37,7 @@ interface DiffEntryListProps {
   noMatches?: ReactNode;
   /** The Unity `.meta` each asset's row stands for too (`pairDiffMetas`): tagged "+ meta". */
   metaOf?: (entry: DiffEntry) => DiffEntry | undefined;
-  /** What the place puts by a file's status letter (`EntryMarkContext`): a review's comments. */
+  /** What the place puts by a file's status letter (`EntryFlagContext`): a review's comments. */
   markOf?: (entry: DiffEntry) => ReactNode;
 }
 
