@@ -1,26 +1,13 @@
-/* Inline code as the comment below draws it (`Markdown.module.css`). */
 .code {
   padding: 0 3px;
-  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   background: var(--bg-code);
-  color: var(--text-code);
   font-family: var(--font-mono);
   font-size: 0.92em;
 }
 
-/* A filter's match inside the code: in the text's color, as crimson on the match's yellow is too dark in the dark theme. */
-.code mark {
-  color: var(--text-primary);
-}
-
 .strike {
   color: var(--text-secondary);
-}
-
-/* Code struck through is as faded as the words around it. */
-.strike .code {
-  color: inherit;
 }
 
 /* A key (`<kbd>`), as a keycap: GitHub's way, in the app's tokens. */
