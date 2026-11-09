@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryDecision } from '@shared/domain/merge';
-import { applyToNextBox, applyToNextLabel, canKeepBothAs, changesDecisions, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
+import { applyToNextBox, applyToNextLabel, canKeepBothAs, changesDecisions, decidesNextToo, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
 
 const conflictAt = (path: string, itemId: number): DirectoryConflict => ({
   type: 'evilTwin',
@@ -146,5 +146,23 @@ describe('applyToNextBox', () => {
 
   it('is off and disabled while Keep both is picked: the name it gives belongs to one item', () => {
     expect(applyToNextBox(1, 'rename', true)).toEqual({ label: 'Do the same for the next conflict of this kind', checked: false, disabled: true });
+  });
+});
+
+describe('decidesNextToo', () => {
+  it('decides the next conflicts with the choice clicked when the user left the box checked', () => {
+    expect(decidesNextToo(2, 'source', true)).toBe(true);
+    expect(decidesNextToo(2, 'destination', false)).toBe(false);
+  });
+
+  it('still decides them after Keep both was picked and left: the box was off only while naming', () => {
+    // The box shows off while Keep both is picked (applyToNextBox), but the user never unchecked it.
+    expect(applyToNextBox(1, 'rename', true)?.checked).toBe(false);
+    expect(decidesNextToo(1, 'destination', true)).toBe(true);
+  });
+
+  it('never for Keep both, nor when none waits', () => {
+    expect(decidesNextToo(2, 'rename', true)).toBe(false);
+    expect(decidesNextToo(0, 'source', true)).toBe(false);
   });
 });
