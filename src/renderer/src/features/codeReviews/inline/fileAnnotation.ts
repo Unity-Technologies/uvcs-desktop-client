@@ -1,8 +1,6 @@
 import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
-import type { ReviewThread } from '../conversation/reviewThreads';
-import { appliedChangeset } from './commentContext';
 import type { EarlierThread, ShownFile } from './fileThreads';
 import type { ThreadFocus } from './reviewComments';
 
@@ -36,12 +34,4 @@ export function openedOnFocus(opened: readonly string[], lineKey: string | undef
 /** Whether the outdated threads above the code open: when one of them is gone to. */
 export function outdatedOpensFor(focus: ThreadFocus | null, outdated: readonly EarlierThread[]): boolean {
   return focus !== null && outdated.some((entry) => entry.thread.root.id === focus.threadId);
-}
-
-/**
- * Whether a thread in the code offers "See in context": one written on an earlier version of the file (`earlier`), but
- * not an applied change request, whose "Applied in" pill opens the same dialog: one way in per card.
- */
-export function offersContext(thread: Pick<ReviewThread, 'state'>, earlier: boolean): boolean {
-  return earlier && appliedChangeset(thread) === undefined;
 }

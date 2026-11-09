@@ -1,4 +1,4 @@
-import { ChevronRight, History } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -35,7 +35,7 @@ interface ReviewThreadCardProps {
 
 /**
  * A thread in the code (the Changes tab) rather than the conversation: its header names no file (it is at it), but
- * says when it was written on an earlier version, with a button showing it in context; its first comment's menu leads
+ * says when it was written on an earlier version, a tag that shows it as it was written; its first comment's menu leads
  * to the conversation.
  */
 export interface ThreadInCode {
@@ -44,7 +44,10 @@ export interface ThreadInCode {
   /** The earlier version's lines it was written on, for one outdated: they're no longer in the code. */
   snippet?: ReactNode;
   showInConversation: () => void;
-  /** Shows it in the diff it was written on, and what was done since (`openCommentContextDialog`): for one on an earlier version. */
+  /**
+   * What the "Earlier version" or "Outdated" tag opens: the diff it was written on, and what was done since
+   * (`openCommentContextDialog`, on "When commented"), as "Applied in" opens it on how it was applied.
+   */
   seeInContext?: () => void;
 }
 
@@ -149,16 +152,16 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
         </button>
       ))}
       {inCode && <span className={styles.kindLabel}>{threadKindName(root)}</span>}
-      {inCode?.earlier && (
-        <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
-          {inCode.earlier.label}
-        </span>
-      )}
-      {inCode?.seeInContext && (
-        <Button size="small" variant="ghost" icon={<History size={13} />} data-tip="The diff it was written on, and what was done since" onClick={inCode.seeInContext}>
-          See in context
-        </Button>
-      )}
+      {inCode?.earlier &&
+        (inCode.seeInContext ? (
+          <button type="button" className={styles.earlierTag} data-tip={inCode.earlier.tip} onClick={inCode.seeInContext}>
+            {inCode.earlier.label}
+          </button>
+        ) : (
+          <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
+            {inCode.earlier.label}
+          </span>
+        ))}
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (

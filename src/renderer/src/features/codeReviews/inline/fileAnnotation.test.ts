@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, hasComments, isCommentable, offersContext, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -57,16 +57,5 @@ describe('outdatedOpensFor', () => {
     expect(outdatedOpensFor({ threadId: 1, seq: 2 }, outdated)).toBe(true);
     expect(outdatedOpensFor({ threadId: 5, seq: 2 }, outdated)).toBe(false);
     expect(outdatedOpensFor(null, outdated)).toBe(false);
-  });
-});
-
-describe('offersContext', () => {
-  it('offers a thread written on an earlier version in context, and none on a version the diff shows', () => {
-    expect(offersContext(thread(1), true)).toBe(true);
-    expect(offersContext(thread(1), false)).toBe(false);
-  });
-
-  it('leaves an applied change request to its "Applied in" pill, which opens the same dialog: one way in per card', () => {
-    expect(offersContext(thread(1, { kind: 'changeRequest', appliedInChangeset: 15 }), true)).toBe(false);
   });
 });

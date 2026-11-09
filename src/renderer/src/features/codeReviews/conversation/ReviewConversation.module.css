@@ -615,6 +615,18 @@ button.pill:hover {
   white-space: nowrap;
 }
 
+/* "Outdated" opens the comment as it was written: a link as a whole, as "Applied in" is. */
+button.earlierTag {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.earlierTag:hover {
+  background: var(--bg-selected-strong);
+  color: var(--text-primary);
+}
+
 /* A card that goes to its thread from anywhere on it: the Changes tab's Comments panel. */
 .thread[data-opens],
 .thread[data-opens] button {

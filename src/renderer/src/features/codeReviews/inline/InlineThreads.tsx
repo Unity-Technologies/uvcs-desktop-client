@@ -5,7 +5,7 @@ import { IconButton } from '../../../ui/IconButton';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
 import type { ContextView } from './commentContext';
-import { offersContext, outdatedOpensFor } from './fileAnnotation';
+import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
@@ -30,7 +30,6 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
     <div className={styles.row}>
       <div className={styles.threads}>
         {line.threads.map(({ thread, earlier }) => {
-          const offered = offersContext(thread, earlier !== undefined) ? onSeeInContext : undefined;
           return (
         <ThreadInRow
           key={thread.root.id}
@@ -41,7 +40,7 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
           inCode={{
             earlier: earlier && earlierTagOf(thread, false),
             showInConversation: () => comments.showInConversation(thread.root.id),
-            seeInContext: offered && (() => offered(thread)),
+            seeInContext: earlier && onSeeInContext && (() => onSeeInContext(thread)),
           }}
         />
           );
@@ -89,9 +88,7 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
           {pluralize(outdated.length, 'outdated comment')}
         </button>
         {open &&
-          outdated.map(({ thread, revisionId }) => {
-            const offered = offersContext(thread, true) ? onSeeInContext : undefined;
-            return (
+          outdated.map(({ thread, revisionId }) => (
             <ThreadInRow
               key={thread.root.id}
               comments={comments}
@@ -102,11 +99,10 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
                 earlier: earlierTagOf(thread, true),
                 snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
                 showInConversation: () => comments.showInConversation(thread.root.id),
-                seeInContext: offered && (() => offered(thread)),
+                seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
               }}
             />
-            );
-          })}
+          ))}
       </div>
       {onClose && <CloseButton label="Hide the outdated comments" onClose={onClose} />}
     </div>

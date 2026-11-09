@@ -171,8 +171,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   official client's banner (Revision with comments, Last in branch, Diff with head): most comments still sit on code
   that didn't change, and those read best in place; the rest are what GitHub calls outdated, and its way of showing
   them is known.
-- **See in context**, a button on each thread on an earlier version (outdated, or tagged Earlier version) that isn't
-  applied, opens a dialog (`openCommentContextDialog`, opened through `useCommentContext`) with two views, each the file's diff with the
+- **See in context**: the tag of a thread on an earlier version (**Outdated**, or **Earlier version**) is a button that
+  opens a dialog (`openCommentContextDialog`, opened through `useCommentContext`) with two views, each the file's diff with the
   thread at its line (`commentContext`): **When commented**, the diff it was written on, as its author saw it (the
   older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's whole
   diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
@@ -181,8 +181,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
   newest version (its whole diff's, never a
   changeset's). Every **Applied in N** pill (the
-  code, the Comments panel, the conversation) opens it on How it was applied, and is the only way in on an applied
-  thread (`offersContext`): two buttons side by side opening one dialog read as two different things. Its **Open
+  code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
+  separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
+  something else. Its **Open
   changeset N** opens the changeset itself. When that changeset changed other files too, the dialog lists them all, as
   a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change types and tree, the commented
   file selected first; `listsAppliedFiles`), so the reviewer sees what else the fix did and which file the comment is
