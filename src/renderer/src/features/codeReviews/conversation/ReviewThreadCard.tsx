@@ -17,7 +17,7 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
+import { appliedPillTip, commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -31,7 +31,7 @@ interface ReviewThreadCardProps {
   inCode?: ThreadInCode;
   /** Gone to, the how-many-th time (`ThreadFocus.seq`): unfolded and lit for a moment, so the eye finds it. */
   highlight?: number;
-  /** What "Applied in" opens: how the change request was applied, in context; else the changeset that applied it. */
+  /** What "Applied" opens: how the change request was applied, in context; else the changeset that applied it. */
   onSeeApplied?: () => void;
 }
 
@@ -48,7 +48,7 @@ export interface ThreadInCode {
   showInConversation: () => void;
   /**
    * What the "Earlier version" or "Outdated" tag opens: the diff it was written on, and what was done since
-   * (`openCommentContextDialog`, on "When commented"), as "Applied in" opens it on how it was applied.
+   * (`openCommentContextDialog`, on "When commented"), as "Applied" opens it on how it was applied.
    */
   seeInContext?: () => void;
   /**
@@ -204,7 +204,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
 }
 
 /**
- * Where a thread stands, as an outlined pill. "Applied in 281299" is one link as a whole, showing how the change
+ * Where a thread stands, as an outlined pill. "Applied" is one link as a whole, showing how the change
  * request was applied, in context (`onSeeApplied`), else opening the changeset that applied it: a chip inside the pill
  * would be a frame in a frame.
  */
@@ -221,10 +221,10 @@ function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<Thre
       type="button"
       className={styles.pill}
       data-tone={state.tone}
-      data-tip={onSeeApplied ? 'See how it was applied' : `Open changeset ${appliedIn}`}
+      data-tip={appliedPillTip(appliedIn, onSeeApplied !== undefined)}
       onClick={onSeeApplied ?? (() => openChangesetDiff({ id: appliedIn }))}
     >
-      {state.label} {appliedIn}
+      {state.label}
     </button>
   );
 }

@@ -146,11 +146,12 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   replied to, folded and selected. Its
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
-  is **Open** until a changeset applies it (**Applied in** its changeset, the pill a link to it) or a reply discards it
+  is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its tooltip naming the changeset: "Applied in changeset 4: see
+  how it was applied", `appliedPillTip`) or a reply discards it
   (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
   way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
   (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. Where it stands is an outlined pill:
-  **Open** in the color of "Rework required", **Applied in** and **Answered** in the color of "Reviewed",
+  **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed",
   **Discarded** neutral.
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
@@ -196,7 +197,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
   newest version (its whole diff's, never a
   changeset's). A view waits for the diff it reads, says so when that read fails, and why it has nothing to compare
-  otherwise (`contextComparisonState`). Every **Applied in N** pill (the
+  otherwise (`contextComparisonState`). Every **Applied** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
   something else. Its **Open

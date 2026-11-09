@@ -34,7 +34,7 @@ export interface CommentInContext {
   repository: string;
   /** The file's diff it was opened from; none from the conversation or the Comments panel. */
   onScreen: OnScreen | null;
-  /** The view it opens on: what was done since, from a change request's "Applied in". */
+  /** The view it opens on: what was done since, from a change request's "Applied" pill. */
   startsOn?: ContextView;
   showInConversation: () => void;
 }

@@ -116,7 +116,7 @@ interface ThreadInRowProps {
   onSeeInContext?: SeeInContext;
 }
 
-/** A thread in the code; its "Applied in" shows how the change request was applied, in context. */
+/** A thread in the code; its "Applied" pill shows how the change request was applied, in context. */
 function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: ThreadInRowProps) {
   const highlight = focus?.threadId === thread.root.id ? focus.seq : undefined;
   const onSeeApplied = onSeeInContext && (() => onSeeInContext(thread, 'since'));

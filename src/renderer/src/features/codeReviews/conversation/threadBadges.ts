@@ -8,7 +8,10 @@ export interface ThreadBadges {
   kind?: 'Change request' | 'Question';
   /** Open takes the color of what's still asked; resolved (applied, answered) of what's done; discarded stays neutral. */
   state?: { label: string; tone: 'open' | 'resolved' | 'discarded' };
-  /** The changeset that applied a change request, in its pill, opening it: "Applied in cs:4". */
+  /**
+   * The changeset that applied a change request: its pill, "Applied", opens how it was applied, and its tooltip names
+   * the changeset (`appliedPillTip`).
+   */
   appliedIn?: number;
 }
 
@@ -22,12 +25,17 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
     case 'answered':
       return { kind, state: { label: 'Answered', tone: 'resolved' } };
     case 'applied':
-      return { kind, state: { label: 'Applied in', tone: 'resolved' }, appliedIn: state.changesetId };
+      return { kind, state: { label: 'Applied', tone: 'resolved' }, appliedIn: state.changesetId };
     case 'discarded':
       return { kind, state: { label: 'Discarded', tone: 'discarded' } };
     case 'none':
       return kind ? { kind } : {};
   }
+}
+
+/** What an Applied pill's tooltip says: the changeset that applied it, and what a click shows of it. */
+export function appliedPillTip(changesetId: number, seesHowApplied: boolean): string {
+  return `Applied in changeset ${changesetId}: ${seesHowApplied ? 'see how it was applied' : 'open it'}`;
 }
 
 /** What a reply's header says after its author's name: a discard says so. */
