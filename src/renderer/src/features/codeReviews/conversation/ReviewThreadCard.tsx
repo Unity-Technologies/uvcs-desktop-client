@@ -96,7 +96,7 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
     <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
-      <ThreadHeader reviewId={reviewId} thread={thread} folded onLocation={{ go: onOpen, tip: 'Show in the code' }} onSeeApplied={onSeeApplied} />
+      <ThreadHeader reviewId={reviewId} thread={thread} folded locationAsText onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} />
       </div>
@@ -113,14 +113,14 @@ interface ThreadHeaderProps {
   thread: ReviewThread;
   folded: boolean;
   inCode?: ThreadInCode;
-  /** Where its location leads, instead of the review's Changes tab at it (`commentLocationPage`). */
-  onLocation?: { go: () => void; tip: string };
+  /** Its location only names where it is: the card around it goes there (the Comments panel's), not a link of its own. */
+  locationAsText?: boolean;
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
   onSeeApplied?: () => void;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle, onSeeApplied }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onToggle, onSeeApplied }: ThreadHeaderProps) {
   const { root } = thread;
   const badges = threadBadges(thread);
   // In the code, the thread is at its line: its location would name where the user already is.
@@ -136,18 +136,15 @@ function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle, 
         </button>
       )}
       {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
-      {anchor && location && (
-        <button
-          type="button"
-          className={styles.location}
-          data-tip={onLocation?.tip ?? 'Show in Changes'}
-          onClick={() => (onLocation ? onLocation.go() : navigation.openPage(commentLocationPage(reviewId, { ...root, anchor })))}
-        >
-          <span className={styles.locationFolder}>{location.folder}</span>
-          <span className={styles.locationFile}>{location.file}</span>
-          <span className={styles.locationLine}>{location.line}</span>
+      {anchor && location && (locationAsText ? (
+        <span className={styles.location}>
+          <LocationParts location={location} />
+        </span>
+      ) : (
+        <button type="button" className={styles.location} data-link="" data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+          <LocationParts location={location} />
         </button>
-      )}
+      ))}
       {inCode && <span className={styles.kindLabel}>{threadKindName(root)}</span>}
       {inCode?.earlier && (
         <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
@@ -192,6 +189,16 @@ function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<Thre
     >
       {state.label} {appliedIn}
     </button>
+  );
+}
+
+function LocationParts({ location }: { location: NonNullable<ReturnType<typeof locationText>> }) {
+  return (
+    <>
+      <span className={styles.locationFolder}>{location.folder}</span>
+      <span className={styles.locationFile}>{location.file}</span>
+      <span className={styles.locationLine}>{location.line}</span>
+    </>
   );
 }
 
