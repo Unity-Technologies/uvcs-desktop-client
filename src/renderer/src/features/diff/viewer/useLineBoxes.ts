@@ -55,7 +55,16 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
     // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
     const resize = new ResizeObserver(() => void measure());
     resize.observe(container);
-    for (const content of container.children) resize.observe(content);
+    const observeContent = (): void => {
+      for (const content of container.children) resize.observe(content);
+    };
+    observeContent();
+    // Pierre's host is replaced when the diff is shown anew (another comparison method): observe the new one.
+    const hosts = new MutationObserver(() => {
+      observeContent();
+      measure();
+    });
+    hosts.observe(container, { childList: true });
     // Scrolling renders the rows coming into view a frame later: measure then too.
     let scrollFrame = 0;
     const measureAgain = (): void => {
@@ -68,6 +77,7 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       cancelAnimationFrame(frame);
       cancelAnimationFrame(scrollFrame);
       resize.disconnect();
+      hosts.disconnect();
       container.removeEventListener('scroll', measureAgain);
     };
   }, [containerRef, linesKey, layout]);
