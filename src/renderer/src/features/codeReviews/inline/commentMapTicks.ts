@@ -18,12 +18,13 @@ export function commentMapTicks(comments: Pick<FileComments, 'lines' | 'outdated
 }
 
 /**
- * What a tick says on hover, of the spots fused into it (`MapTickMark.keys`): one line's tip is its marker's
- * (`markerTip`), the outdated ones' theirs (`outdatedTip`); several spots preview their threads together as a marker
- * does a line's, in the tick's order, three at most and then how many more.
+ * What a tick says on hover, of the spots fused into it (`MapTickMark.keys`): the lines' threads previewed together as
+ * a marker does a line's (`markerTip`), in the tick's order, three at most and then how many more; then, when the
+ * outdated ones fused in too (their tick at the top, beside a comment on the first lines), theirs as their marker says
+ * them (`outdatedTip`), so they never read as if on that line. Nothing for a spot no longer there.
  */
 export function commentMapTip(comments: Pick<FileComments, 'lines' | 'outdated'>, keys: readonly string[]): string {
-  if (keys.length === 1 && keys[0] === OUTDATED_ROW) return outdatedTip({ threads: comments.outdated });
-  const threads = keys.flatMap((key): MarkedThreads['threads'] => (key === OUTDATED_ROW ? comments.outdated : (comments.lines.find((line) => line.key === key)?.threads ?? [])));
-  return markerTip({ threads });
+  const lineThreads = keys.flatMap((key): MarkedThreads['threads'] => comments.lines.find((line) => line.key === key)?.threads ?? []);
+  const parts = [lineThreads.length > 0 ? markerTip({ threads: lineThreads }) : null, keys.includes(OUTDATED_ROW) && comments.outdated.length > 0 ? outdatedTip({ threads: comments.outdated }) : null];
+  return parts.filter((part) => part !== null).join('\n\n');
 }
