@@ -20,7 +20,8 @@ const NO_REVISIONS: number[] = [];
 
 /**
  * A file of a review's diff with the review's comments in its code (`EntryAnnotatorContext`, given by its Changes tab):
- * each thread under its line, the outdated ones above the code, or a marker on each line while comments are hidden;
+ * each thread under its line, the outdated ones above the code; while comments are hidden, a marker on each line, and
+ * the outdated ones only when one of them is gone to;
  * and "Changes since this comment", which compares the version a thread was written on with the newest.
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
@@ -87,7 +88,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     }));
     const render = (row: DiffLineAnnotation<string>) =>
       renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onChangesSince: (revisionId) => setSince({ path: entry.path, revisionId }) });
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode), render, markers, scrollTo, opensAtRow };
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, scrollTo, opensAtRow };
   }, [comments, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
 
   const controls = showsCommentControls(fileComments, sinceRevision !== null) && (
@@ -112,7 +113,7 @@ interface RowContext {
   fileComments: FileComments;
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => string | undefined;
-  /** Folds a line opened from its marker back into it; none while comments show in the code. */
+  /** Folds a line opened from its marker (or the outdated threads gone to) back; none while comments show in the code. */
   onClose?: (key: string) => void;
   onChangesSince: (revisionId: number) => void;
 }
@@ -120,7 +121,16 @@ interface RowContext {
 function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
   const { comments, fileComments, focus } = context;
   if (row.metadata === OUTDATED_ROW) {
-    return <OutdatedThreads comments={comments} outdated={fileComments.outdated} focus={focus} textOf={context.textOf} onChangesSince={context.onChangesSince} />;
+    return (
+      <OutdatedThreads
+        comments={comments}
+        outdated={fileComments.outdated}
+        focus={focus}
+        textOf={context.textOf}
+        onClose={context.onClose && (() => context.onClose!(OUTDATED_ROW))}
+        onChangesSince={context.onChangesSince}
+      />
+    );
   }
   const line = fileComments.lines.find((candidate) => candidate.key === row.metadata);
   if (!line) return null;

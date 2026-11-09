@@ -185,12 +185,16 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
   the threads from the code: each line holding some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), in
   the Open color while anything there is open (`markerIsOpen`); a click opens that line's threads, an × folds them
-  back. The outdated ones stay above the code, folded to their one line: they have no line to mark.
+  back. The outdated ones hide too: they have no line to mark, so they show only when one of them is gone to (from
+  the panel or the conversation), with an × that hides them again (`annotationRowsOf`'s `opened`, `OUTDATED_ROW`).
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the conversation sums up a settled one
   (`ThreadSummaryCard`), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything
   is, `initialCommentsFilter`). A click goes to the thread: its file, its mode, scrolled to it and lit
-  (`ReviewComments.goToThread`, `ThreadFocus`).
+  (`ReviewComments.goToThread`, `ThreadFocus`). In the code, the thread gone to keeps its ring until another one is:
+  among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
+  conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
+  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`).
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `conversationAt`, a page of its own: Back returns to

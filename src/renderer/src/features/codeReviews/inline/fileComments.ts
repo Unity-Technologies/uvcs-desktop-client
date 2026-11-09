@@ -73,16 +73,37 @@ export const OUTDATED_ROW = 'outdated';
  * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
  * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
  * go after: the lines with a thread on a version shown first, then those placed once an earlier version is read, then
- * the outdated ones. Hidden (`inCode` false), the outdated ones come first, there before any line is opened, and the
- * lines follow in the order they were opened (`shownThreadRows`).
+ * the outdated ones. While comments are hidden (`opened` given), only what was opened shows, the outdated ones as a
+ * line (`OUTDATED_ROW`), in the order they were opened (`shownThreadRows`).
  */
-export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, inCode = true): DiffLineAnnotation<string>[] {
+export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, opened?: readonly string[]): DiffLineAnnotation<string>[] {
+  const outdatedRow: DiffLineAnnotation<string> | null = outdated.length === 0 ? null : { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };
+  if (opened) {
+    const rowOpened = (key: string): DiffLineAnnotation<string> | null => {
+      if (key === OUTDATED_ROW) return outdatedRow;
+      const line = shown.rows.find((candidate) => candidate.key === key);
+      return line ? rowOfLine(line) : null;
+    };
+    const rows = opened.map(rowOpened);
+    return rows.filter((row): row is DiffLineAnnotation<string> => row !== null);
+  }
   const onShownVersion = (line: LineThreads): boolean => line.threads.some((entry) => entry.earlier === undefined);
   const ordered = [...shown.rows.filter(onShownVersion), ...shown.rows.filter((line) => !onShownVersion(line))];
-  const rows = ordered.map((line): DiffLineAnnotation<string> => ({ side: line.side, lineNumber: line.line, metadata: line.key }));
-  if (outdated.length === 0) return rows;
-  const outdatedRow: DiffLineAnnotation<string> = { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };
-  return inCode ? [...rows, outdatedRow] : [outdatedRow, ...rows];
+  const rows = ordered.map(rowOfLine);
+  return outdatedRow ? [...rows, outdatedRow] : rows;
+}
+
+function rowOfLine(line: LineThreads): DiffLineAnnotation<string> {
+  return { side: line.side, lineNumber: line.line, metadata: line.key };
+}
+
+/** Where a thread gone to is in the file's diff: at its line, or above the code when outdated; none when not here. */
+export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, threadId: number, topSide: ThreadSide): (ChangedLine & { lineKey: string }) | null {
+  const line = lineOfThread(comments.lines, threadId);
+  if (line) return { side: line.side, lineNumber: line.line, lineKey: line.key };
+  // Above the code (`lineNumber: 0`): the diff scrolls to its top. Opened, while comments are hidden, as a line is.
+  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 0, lineKey: OUTDATED_ROW };
+  return null;
 }
 
 /**
@@ -93,13 +114,4 @@ export function holdsThread(comments: FileComments | null, threadId: number): bo
   if (!comments) return false;
   const isIt = (entry: EarlierThread): boolean => entry.thread.root.id === threadId;
   return lineOfThread(comments.lines, threadId) !== undefined || comments.outdated.some(isIt) || comments.reading.some(isIt);
-}
-
-/** Where a thread gone to is in the file's diff: at its line, or above the code when outdated; none when not here. */
-export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, threadId: number, topSide: ThreadSide): (ChangedLine & { lineKey?: string }) | null {
-  const line = lineOfThread(comments.lines, threadId);
-  if (line) return { side: line.side, lineNumber: line.line, lineKey: line.key };
-  // Above the code (`lineNumber: 0`): the diff scrolls to its top.
-  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 0 };
-  return null;
 }

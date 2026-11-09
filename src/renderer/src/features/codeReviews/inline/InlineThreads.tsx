@@ -43,11 +43,7 @@ export function InlineThreads({ comments, line, focus, onClose, onChangesSince }
           );
         })}
       </div>
-      {onClose && (
-        <span className={styles.close}>
-          <IconButton size="small" icon={<X size={13} />} label="Hide these comments" onClick={onClose} />
-        </span>
-      )}
+      {onClose && <CloseButton label="Hide these comments" onClose={onClose} />}
     </div>
   );
 }
@@ -57,6 +53,8 @@ interface OutdatedThreadsProps {
   outdated: readonly EarlierThread[];
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => string | undefined;
+  /** Hides them again, while comments are hidden in the code: they showed because one of them was gone to. */
+  onClose?: () => void;
   onChangesSince: (revisionId: number) => void;
 }
 
@@ -64,7 +62,7 @@ interface OutdatedThreadsProps {
  * Above the code, the threads written on an earlier version of the file whose lines changed since: folded to one line
  * that says how many, each with the lines it was written on when opened (`snippetOf`), as they're in the code no more.
  */
-export function OutdatedThreads({ comments, outdated, focus, textOf, onChangesSince }: OutdatedThreadsProps) {
+export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, onChangesSince }: OutdatedThreadsProps) {
   // The time an outdated thread was gone to, which opens them.
   const goneTo = outdatedOpensFor(focus, outdated) ? (focus?.seq ?? null) : null;
   const [open, setOpen] = useState(goneTo !== null);
@@ -102,7 +100,16 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onChangesSi
             />
           ))}
       </div>
+      {onClose && <CloseButton label="Hide the outdated comments" onClose={onClose} />}
     </div>
+  );
+}
+
+function CloseButton({ label, onClose }: { label: string; onClose: () => void }) {
+  return (
+    <span className={styles.close}>
+      <IconButton size="small" icon={<X size={13} />} label={label} onClick={onClose} />
+    </span>
   );
 }
 

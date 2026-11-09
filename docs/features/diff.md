@@ -836,7 +836,8 @@ docs/features/code-reviews.md "Comments in the code"):
   it with another older side (`AnnotatedEntry.original`) and add controls to its header. It may load on first use.
 - `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
   code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses
-  too), and a line to scroll to. Every row's and marker's line is unfolded from a folded unchanged region
+  too), and a line to scroll to; while the place goes to one of its rows (`opensAtRow`), the diff doesn't open at its
+  first change (`openingStep`'s `opensOnLines`), which would scroll past the row once placed. Every row's and marker's line is unfolded from a folded unchanged region
   (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
   replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
