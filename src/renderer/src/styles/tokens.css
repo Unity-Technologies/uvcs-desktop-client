@@ -217,9 +217,9 @@
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
   --bg-code: #f6f8fa;
-  /* Inline code in rich text (`Markdown`, a comment's title, the comment editor): Slack's crimson (#e01e5a), its hue kept
-     and darkened (lightened in the dark theme) just enough to read at 4.5:1 on every surface. */
-  --text-code: #dc1e59;
+  /* Inline code in rich text (`Markdown`, a comment's title, the comment editor): the crimson Slack draws it in. The
+     dark theme's is the same hue lightened just enough to read at 4.5:1 on every surface. */
+  --text-code: #c01444;
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
@@ -352,7 +352,7 @@
   --bg-segment-checked: #303844;
   --bg-match: rgba(210, 153, 34, 0.4);
   --bg-code: #0f141b;
-  --text-code: #e85482;
+  --text-code: #ed4f7b;
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
