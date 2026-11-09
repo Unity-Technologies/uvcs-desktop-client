@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
@@ -22,7 +22,8 @@ import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
-import { pairedFocus } from './diffFocus';
+import { entryAt, pairedFocus } from './diffFocus';
+import { DiffFocusRequestContext } from './diffFocusRequest';
 import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -114,6 +115,13 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     const initial = pairedFocus(pairs, initialPath).entry;
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focusedAsset, focusedFolder, firstKey]);
+
+  // The place asks for a file again (a review's Comments panel going to a thread): select it, where the diff has it.
+  const focusRequest = useContext(DiffFocusRequestContext);
+  useEffect(() => {
+    const requested = focusRequest && entryAt(entries, focusRequest.path);
+    if (requested) setSelection(singleSelection(diffEntryKey(requested)));
+  }, [focusRequest?.seq, reading]);
 
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
   const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);

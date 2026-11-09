@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useContext, useState, type ReactNode } from 'react';
 import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeDiffEntry, diffEntrySources, diffEntryStatus } from './diffEntrySources';
+import { EntryAnnotatorContext, type AnnotatedEntry } from './entryAnnotator';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
@@ -33,6 +34,7 @@ interface EntryDiffProps {
 export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, metaToggle, showsMeta = false }: EntryDiffProps) {
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
+  const Annotator = useContext(EntryAnnotatorContext);
 
   if (entry.itemType === 'directory') {
     return <EmptyState title={entry.path} description={`Directory · ${describeDiffEntry(entry)}`} action={metaToggle} />;
@@ -44,22 +46,29 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
   const reviewedRevision = showsMeta ? null : reviewedRevisionToCompare(reviewMarks, entry);
   const sinceReview = reviewedRevision !== null && sinceReviewPath === entry.path;
   const sources = diffEntrySources(entry);
-  return (
+  const viewer = ({ original, controls }: AnnotatedEntry) => (
     <FileDiffViewer
       place={place}
-      original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : sources.original}
+      original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : (original ?? sources.original)}
       modified={sources.modified}
       fileName={entry.path}
       title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
       identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
       compareControls={
-        (reviewedRevision !== null || metaToggle) && (
+        (reviewedRevision !== null || metaToggle || controls) && (
           <>
+            {controls}
             {reviewedRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />}
             {metaToggle}
           </>
         )
       }
     />
+  );
+  if (!Annotator) return viewer({});
+  return (
+    <Annotator target={target} entry={entry}>
+      {viewer}
+    </Annotator>
   );
 }

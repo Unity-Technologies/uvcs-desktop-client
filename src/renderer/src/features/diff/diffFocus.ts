@@ -7,7 +7,12 @@ import { assetOfMeta, type MetaPairs } from '../../lib/unityMetaPairs';
  */
 export function entryToFocus(entries: readonly DiffEntry[], focusPath?: string): DiffEntry | undefined {
   if (focusPath === undefined) return entries[0];
-  return entries.find((entry) => entry.path === focusPath) ?? entries.find((entry) => entry.oldPath === focusPath) ?? entries[0];
+  return entryAt(entries, focusPath) ?? entries[0];
+}
+
+/** The entry of a file by its path, or the path it moved from; none when the diff doesn't hold it. */
+export function entryAt(entries: readonly DiffEntry[], path: string): DiffEntry | undefined {
+  return entries.find((entry) => entry.path === path) ?? entries.find((entry) => entry.oldPath === path);
 }
 
 /** The row a diff opens on, and the asset whose `.meta` it shows instead (`diffedItem`), if any. */
