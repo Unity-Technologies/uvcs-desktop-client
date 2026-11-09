@@ -217,7 +217,7 @@
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
   --bg-code: #f6f8fa;
-  /* Inline code in rich text (`Markdown`, a comment's title, the comment editor): a crimson. The dark
+  /* Inline code in rich text (`Markdown`, the comment editor; never a one-line preview): a crimson. The dark
      theme's is the same hue lightened just enough to read at 4.5:1 on every surface. */
   --text-code: #c01444;
   --border-subtle: #eaeef2;
