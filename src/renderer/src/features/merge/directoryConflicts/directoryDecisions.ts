@@ -51,3 +51,38 @@ export function isDecidedAs(decisions: readonly DirectoryDecision[], conflict: D
   if (decided?.choice === 'rename' && resolution.choice === 'rename') return decided.newName === resolution.newName;
   return decided?.choice === resolution.choice;
 }
+
+/**
+ * The conflicts after `conflict` in the list (`ordered`) of the same kind, not decided yet: those "Do the same for the
+ * next conflicts of this kind" decides with it. The same kind offers the same choices, so each takes the decision.
+ */
+export function nextOfSameKind(
+  ordered: readonly DirectoryConflict[],
+  conflict: DirectoryConflict,
+  resolutions: ReadonlyMap<string, DirectoryConflictResolution>,
+): DirectoryConflict[] {
+  const identity = directoryConflictIdentity(conflict);
+  const index = ordered.findIndex((other) => directoryConflictIdentity(other) === identity);
+  if (index < 0) return [];
+  return ordered.slice(index + 1).filter((other) => other.type === conflict.type && !resolutions.has(directoryConflictIdentity(other)));
+}
+
+/**
+ * The page's decisions with `conflict` decided as `resolution`, then each of `next` decided the same way, in order.
+ * Keep both decides only `conflict`: the name it gives belongs to one item.
+ */
+export function withDecisionAndNext(
+  decisions: readonly DirectoryDecision[],
+  conflict: DirectoryConflict,
+  resolution: DirectoryConflictResolution,
+  next: readonly DirectoryConflict[],
+): DirectoryDecision[] {
+  const decided = withDecision(decisions, conflict, resolution);
+  if (resolution.choice === 'rename') return decided;
+  return next.reduce((all, other) => withDecision(all, other, resolution), decided);
+}
+
+/** The label of the box deciding the next conflicts of the same kind too: "Do the same for the next 3 conflicts of this kind". */
+export function applyToNextLabel(count: number): string {
+  return count === 1 ? 'Do the same for the next conflict of this kind' : `Do the same for the next ${count} conflicts of this kind`;
+}
