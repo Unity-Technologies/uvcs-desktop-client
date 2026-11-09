@@ -1,4 +1,5 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
+import { usePageShown } from '../../../app/navigation/pageShown';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -46,7 +47,8 @@ interface ResolveRunControlProps {
  */
 export function ResolveRunControl({ states, run, plans }: ResolveRunControlProps) {
   const offered = plans[0];
-  useShortcut(hotkey('resolveAllInTool'), () => offered && run.start(null), Boolean(offered));
+  const shown = usePageShown();
+  useShortcut(hotkey('resolveAllInTool'), () => offered && run.start(null), Boolean(offered) && shown);
   if (run.progress) return <RunStrip states={states} run={run} progress={run.progress} />;
   if (!offered) return null;
   return <RunButton plans={plans} run={run} />;
@@ -94,6 +96,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const words = runStripWords(progress.toolName, current?.openTool?.toolName);
 
   // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
+  const shown = usePageShown();
   const stopFromKeyboard = async (): Promise<void> => {
     if (isKeyboardTaken()) return;
     if (toolOpen && words.confirmsStop) {
@@ -108,7 +111,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   };
   // Off while a diff is expanded: in Incoming this bar is out of sight, and Esc collapses the diff instead.
   const stopKeyOn = useShortcutOnWhileExpanded('stopResolvingInTool');
-  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard(), stopKeyOn);
+  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard(), stopKeyOn && shown);
 
   if (progress.paused) {
     return (

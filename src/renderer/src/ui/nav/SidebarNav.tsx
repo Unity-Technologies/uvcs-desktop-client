@@ -66,7 +66,8 @@ export function NavItem(props: NavItemProps) {
       className={styles.item}
       data-active={active}
       data-dimmed={dimmed}
-      aria-current={active ? 'page' : undefined}
+      // Dimmed, a page shows over it: the page, or the entry leading to it, is the current one.
+      aria-current={active && !dimmed ? 'page' : undefined}
       data-tip={tip}
       data-tip-sub={dot}
       data-tip-shortcut={shortcut}
