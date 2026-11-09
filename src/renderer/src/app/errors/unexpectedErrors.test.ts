@@ -29,6 +29,11 @@ describe('describeWindowError', () => {
   it('leaves out what is no failure: a ResizeObserver running again on the next frame', () => {
     expect(describeWindowError(undefined, 'ResizeObserver loop completed with undelivered notifications.')).toBeNull();
   });
+
+  it("reads a window error whose error is null by its message, as Chromium reports a ResizeObserver's", () => {
+    expect(describeWindowError(null, 'ResizeObserver loop completed with undelivered notifications.')).toBeNull();
+    expect(describeWindowError(null, 'Script error.')).toEqual({ message: 'Script error.', details: 'Script error.' });
+  });
 });
 
 describe('unexpectedErrorIssueUrl', () => {
