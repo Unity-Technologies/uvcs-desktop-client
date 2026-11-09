@@ -4,7 +4,6 @@ import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
 import styles from './CodeReviewPage.module.css';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
-import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
@@ -16,11 +15,10 @@ import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
 import type { DiffTarget } from '@shared/domain/diff';
-import { commentLocationPage } from './conversation/threadBadges';
 import { useReviewThreads } from './conversation/useReviewThreads';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
-import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
+import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
 import { commentsPanelStartsHidden, commentsPanelThreads, diffWidthBesidePanel, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
@@ -73,16 +71,8 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
-  // A page of its own, so Back returns to the code at the thread, which this page is first set to.
-  const showInConversation = useCallback(
-    (threadId: number): void => {
-      const thread = threads?.find((candidate) => candidate.root.id === threadId);
-      if (thread && isLineThread(thread)) navigation.replacePage(commentLocationPage(review.id, thread.root));
-      navigation.openPage(conversationAt(review.id, threadId));
-    },
-    [review.id, threads],
-  );
-  const seeInContext = useCommentContext(review, showInConversation);
+  const showThreadInConversation = useCallback((threadId: number): void => showInConversation(review.id, threadId), [review.id]);
+  const seeInContext = useCommentContext(review);
   // The page moved to a thread while these changes show already (a comment's file gone to from the conversation): go
   // to it once the threads are read.
   const [shownPage, setShownPage] = useState(page);
@@ -107,8 +97,8 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
   useShortcut(hotkey('nextComment'), () => step(1), shown && listed.length > 0, { whileTyping: false });
   useShortcut(hotkey('previousComment'), () => step(-1), shown && listed.length > 0, { whileTyping: false });
   const comments = useMemo<ReviewComments>(
-    () => ({ review, threads, user, focus, goToThread, showInConversation, seeInContext }),
-    [review, threads, user, focus, showInConversation, seeInContext],
+    () => ({ review, threads, user, focus, goToThread, showInConversation: showThreadInConversation, seeInContext }),
+    [review, threads, user, focus, showThreadInConversation, seeInContext],
   );
 
   return (

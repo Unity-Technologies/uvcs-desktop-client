@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { navigation } from '../../../app/navigation/navigationStore';
+import { useEffect, useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -15,7 +14,6 @@ import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
 import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
-import { conversationAt } from '../inline/reviewComments';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
@@ -29,9 +27,8 @@ import styles from './ReviewConversation.module.css';
 export function ReviewConversationTab({ review, focusThread }: { review: CodeReview; focusThread?: number }) {
   const place = usePlace();
   const user = usePlaceUser();
-  // Already in the conversation: "Show in conversation" from the dialog scrolls to the thread on this page.
-  const showThreadHere = useCallback((threadId: number) => navigation.replacePage(conversationAt(review.id, threadId)), [review.id]);
-  const seeInContext = useCommentContext(review, showThreadHere);
+  // "Show in conversation" from the dialog moves this page to the thread, in place (`showInConversation`).
+  const seeInContext = useCommentContext(review);
   // "Applied" shows how the change request was applied, in context, as in the code.
   const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
     seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;

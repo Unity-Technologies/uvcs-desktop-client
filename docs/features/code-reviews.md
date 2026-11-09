@@ -274,7 +274,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   at its top.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
-  conversation** (the Conversation tab scrolled to it and lit, `conversationAt`, a page of its own: Back returns to
-  the code at the thread).
+  conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
+  as its tabs do; never stacked, both tabs staying mounted as they were left, so Back leaves the review).
 - A line a thread is on is never hidden in a folded unchanged region: the diff unfolds it (`DiffAnnotations`,
   docs/features/diff.md "Rows under lines").

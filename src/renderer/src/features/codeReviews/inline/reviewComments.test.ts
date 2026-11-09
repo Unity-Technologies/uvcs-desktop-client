@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { useNavigation } from '../../../app/navigation/navigationStore';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread } from './fileThreads';
-import { threadDiffRequest } from './reviewComments';
+import { conversationAt, showInConversation, threadDiffRequest } from './reviewComments';
 
 function thread(fields: Partial<ReviewComment> = {}): LineThread {
   const root: ReviewComment = {
@@ -33,5 +34,18 @@ describe('threadDiffRequest', () => {
   it('leaves the mode alone in a review with one: a changeset, a shelve', () => {
     expect(threadDiffRequest(review({ kind: 'changeset', changesetId: 12 }), thread({ changesetId: 12 }), 5)).toEqual({ path: 'src/Player.cs', seq: 5 });
     expect(threadDiffRequest(review({ kind: 'shelve', shelveId: 2 }), thread(), 6)).toEqual({ path: 'src/Player.cs', seq: 6 });
+  });
+});
+
+describe('showInConversation', () => {
+  beforeEach(() => useNavigation.setState({ view: 'codeReviews', pages: [] }));
+
+  it("moves the review's page to its conversation at the thread, in place: Back leaves the review", () => {
+    const changes = { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'src/Player.cs', focusThread: 7 } as const;
+    useNavigation.setState({ pages: [{ kind: 'codeReview', reviewId: 40 }, changes] });
+
+    showInConversation(41, 7);
+
+    expect(useNavigation.getState().pages).toEqual([{ kind: 'codeReview', reviewId: 40 }, conversationAt(41, 7)]);
   });
 });

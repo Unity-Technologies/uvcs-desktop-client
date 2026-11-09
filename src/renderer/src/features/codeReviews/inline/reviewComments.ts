@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import { navigation } from '../../../app/navigation/navigationStore';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { DiffFocusRequest } from '../../diff/diffFocusRequest';
 import type { ReviewThread } from '../conversation/reviewThreads';
@@ -35,6 +36,15 @@ export const ReviewCommentsContext = createContext<ReviewComments | null>(null);
 /** The review's conversation, scrolled to a thread and lighting it (Show in conversation, from the code). */
 export function conversationAt(reviewId: number, threadId: number): PageOf<'codeReview'> {
   return { kind: 'codeReview', reviewId, tab: 'conversation', focusThread: threadId };
+}
+
+/**
+ * Show in conversation, from the code or See in context: the review's page moves to its conversation at the thread, in
+ * place, as its tabs move. Never stacked: both tabs stay mounted and keep their state, so Back leaves the review (in a
+ * page window, closes it).
+ */
+export function showInConversation(reviewId: number, threadId: number): void {
+  navigation.replacePage(conversationAt(reviewId, threadId));
 }
 
 /**
