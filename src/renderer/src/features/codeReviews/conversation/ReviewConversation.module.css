@@ -791,25 +791,42 @@ button.earlierTag:hover {
   font-size: var(--text-xs);
 }
 
-/* Who started it gives way first; the line and the replies stay whole. */
+/*
+ * Cut short in turn in a narrow panel: who started it, then the replies, the line last (weights orders of magnitude
+ * apart, as `.locationFolder`'s).
+ */
+.rowAbout {
+  overflow: hidden;
+}
+
 .rowAbout .author {
   overflow: hidden;
   min-width: 0;
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 100000000;
 }
 
-.rowLine,
 .rowAbout .replyCount {
-  flex: none;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 10000;
+}
+
+.rowLine {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* "·" between who, where and how many replies, drawn rather than read. */
+/* "·" between who, where and how many replies: drawn, not read aloud. */
 .rowLine::before,
 .rowAbout .replyCount::before {
-  content: '·';
+  content: '·' / '';
   margin-right: 6px;
 }
 

@@ -148,7 +148,7 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
   const author = excerpt?.author ?? thread.root.author;
   return (
     <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
-      <ThreadKindIcon root={thread.root} />
+      {header.kindIcon && <ThreadKindIcon root={thread.root} />}
       <span className={styles.rowAbout}>
         <Avatar user={author} size={16} tip={null} />
         <span className={styles.author}>
