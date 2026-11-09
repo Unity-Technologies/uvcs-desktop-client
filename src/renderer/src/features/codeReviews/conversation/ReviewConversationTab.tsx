@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -10,7 +10,7 @@ import { CommentComposer } from './CommentComposer';
 import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
-import { ReviewThreadCard } from './ReviewThreadCard';
+import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
 import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type TimelineEntry } from './reviewThreads';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
@@ -22,12 +22,18 @@ import styles from './ReviewConversation.module.css';
  * replies among what the server noted (requests, statuses, renames), then a field to say something. Beside it, the
  * reviewers and what's still open.
  */
-export function ReviewConversationTab({ review }: { review: CodeReview }) {
+export function ReviewConversationTab({ review, focusThread }: { review: CodeReview; focusThread?: number }) {
   const place = usePlace();
   const user = usePlaceUser();
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
   const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
+
+  // Opened on a thread (Show in conversation, from the code): brought into view once read, and lit.
+  const read = conversation !== undefined;
+  useEffect(() => {
+    if (read && focusThread !== undefined) document.getElementById(threadElementId(focusThread))?.scrollIntoView({ block: 'center' });
+  }, [read, focusThread]);
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
 
@@ -50,7 +56,7 @@ export function ReviewConversationTab({ review }: { review: CodeReview }) {
                   <li key={entryKey(entry)}>
                     {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
                     {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                    {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} />}
+                    {entry.kind === 'thread' && <ReviewThreadCard review={review} thread={entry.thread} user={user} highlight={entry.thread.root.id === focusThread ? 1 : undefined} />}
                   </li>
                 ))}
               </ol>

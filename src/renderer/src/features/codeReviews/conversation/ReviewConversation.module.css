@@ -89,6 +89,17 @@
   font-size: var(--text-sm);
 }
 
+/* Who and when: a narrow card (a side of a split diff) wraps between these parts, never inside a name or a date. */
+.commentWho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+  min-width: 0;
+  min-height: 24px;
+  white-space: nowrap;
+}
+
 .author {
   color: var(--text-primary);
   font-weight: var(--weight-semibold);
@@ -545,3 +556,59 @@ button.pill:hover {
   opacity: 1;
 }
 
+
+/*
+ * A thread gone to, lit for a moment. Two animations of one look, alternating with each time it's gone to
+ * (`data-highlight` is 0 or 1), so going to it again lights it again.
+ */
+.thread[data-highlight='0'] {
+  animation: thread-lit-a 1.6s var(--ease-out);
+}
+
+.thread[data-highlight='1'] {
+  animation: thread-lit-b 1.6s var(--ease-out);
+}
+
+@keyframes thread-lit-a {
+  from {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+}
+
+@keyframes thread-lit-b {
+  from {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread[data-highlight] {
+    animation: none;
+    border-color: var(--accent);
+  }
+}
+
+/* In the code, what the thread is, where the conversation names its file. */
+.kindLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* Written on an earlier version of the file: said quietly, the tooltip telling which. */
+.earlierTag {
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* The thread the code shows, in the Changes tab's Comments panel. */
+.thread[data-current] {
+  border-color: var(--accent);
+}

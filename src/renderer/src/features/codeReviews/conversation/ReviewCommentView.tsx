@@ -26,16 +26,19 @@ interface ReviewCommentViewProps {
   action?: string;
   /** Whether its author wrote the review: marked Author, as who answers for the changes. */
   byReviewAuthor?: boolean;
+  /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
+  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation' | 'changesSince'>;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false }: ReviewCommentViewProps) {
+export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions }: ReviewCommentViewProps) {
   const place = usePlace();
   const [editing, setEditing] = useState(false);
   const menu = commentMenu(comment, thread, user, {
     edit: () => setEditing(true),
     remove: () => void deleteReviewComment(place, comment),
     copyText: () => copyToClipboard(comment.text, 'Comment'),
+    ...threadActions,
   });
 
   return (
@@ -43,15 +46,17 @@ export function ReviewCommentView({ comment, thread, user, action, byReviewAutho
       <Avatar user={comment.author} size={24} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>
-          <span className={styles.author}>{displayName(comment.author)}</span>
-          {action && <span className={styles.action}>{action}</span>}
-          <RelativeTime date={comment.date} />
-          {byReviewAuthor && <span className={styles.pill}>Author</span>}
-          {comment.editedDate && (
-            <span className={styles.edited} data-tip={`Edited ${formatDateTime(comment.editedDate)}`}>
-              edited
-            </span>
-          )}
+          <span className={styles.commentWho}>
+            <span className={styles.author}>{displayName(comment.author)}</span>
+            {action && <span className={styles.action}>{action}</span>}
+            <RelativeTime date={comment.date} />
+            {byReviewAuthor && <span className={styles.pill}>Author</span>}
+            {comment.editedDate && (
+              <span className={styles.edited} data-tip={`Edited ${formatDateTime(comment.editedDate)}`}>
+                edited
+              </span>
+            )}
+          </span>
           <span className={styles.commentMenu}>
             <ActionDropdownMenu entries={menu}>
               <IconButton size="small" icon={<MoreHorizontal size={14} />} label="Comment actions" />
