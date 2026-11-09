@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangedLine } from './changeBlocks';
 import type { ChangeMapLayout, LineBox } from './changeMarks';
-import { mapTickMarks, TICK_FUSE_GAP, TICK_HEIGHT, type MapTick } from './mapTicks';
+import { lowestTickTop, mapTickMarks, TICK_FUSE_GAP, TICK_HEIGHT, type MapTick } from './mapTicks';
 
 const ROW = 20;
 
@@ -63,5 +63,25 @@ describe('mapTickMarks', () => {
   it('marks nothing before the content or the track has a size', () => {
     expect(mapTickMarks([tick('additions', 5)], { ...layout(), contentHeight: 0 })).toEqual([]);
     expect(mapTickMarks([tick('additions', 5)], { ...layout(), trackHeight: 0 })).toEqual([]);
+  });
+});
+
+describe('lowestTickTop', () => {
+  // A review's order (`commentMapTicks`): the older side's lines, the newer side's, then the outdated ones above the code.
+  const reviewOrder = [tick('deletions', 300), tick('additions', 12), tick('additions', 0)];
+  const boxOf = ({ side, lineNumber }: ChangedLine): LineBox | undefined => (lineNumber < 1 ? undefined : { top: (lineNumber - 1) * ROW + (side === 'deletions' ? 5 : 0), height: ROW });
+
+  it('is where Pierre lays out the lowest tick, whatever order the place lists them in', () => {
+    expect(lowestTickTop(reviewOrder, boxOf)).toBe(299 * ROW + 5);
+  });
+
+  it('skips what is above the code, which has no line to measure', () => {
+    expect(lowestTickTop([tick('additions', 12), tick('additions', 0)], boxOf)).toBe(11 * ROW);
+  });
+
+  it('is none until Pierre can place a tick, or with no ticks', () => {
+    expect(lowestTickTop(reviewOrder, () => undefined)).toBeUndefined();
+    expect(lowestTickTop([tick('additions', 0)], boxOf)).toBeUndefined();
+    expect(lowestTickTop([], boxOf)).toBeUndefined();
   });
 });
