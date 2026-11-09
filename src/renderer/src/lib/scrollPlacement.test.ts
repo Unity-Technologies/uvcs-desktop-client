@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusScrollTop } from './scrollPlacement';
+import { focusScrollTop, listScrollTop } from './scrollPlacement';
 
 // A pane 600 px tall over 20 px lines: a third of the way down is 200 px.
 const PANE = 600;
@@ -28,5 +28,30 @@ describe('focusScrollTop', () => {
   it('stops at the end of a line near the end of the file, and never scrolls a short one', () => {
     expect(focusScrollTop({ top: 9800, bottom: 9990, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: 10_000 })).toBe(10_000 - PANE);
     expect(focusScrollTop({ top: 300, bottom: 500, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: 520 })).toBe(0);
+  });
+});
+
+describe('listScrollTop', () => {
+  const view = { scrollTop: 1000, height: 600, contentHeight: 5000 };
+
+  it("doesn't move the list when the card shows whole", () => {
+    expect(listScrollTop({ top: 1100, bottom: 1200 }, view)).toBeNull();
+  });
+
+  it('puts a card below the view a third of the way down', () => {
+    expect(listScrollTop({ top: 2000, bottom: 2080 }, view)).toBe(1800);
+  });
+
+  it('puts a card above the view a third of the way down too', () => {
+    expect(listScrollTop({ top: 400, bottom: 480 }, view)).toBe(200);
+  });
+
+  it('keeps a tall card whole, its top higher', () => {
+    expect(listScrollTop({ top: 2000, bottom: 2500 }, view)).toBe(1900);
+  });
+
+  it('stops at the start and the end of the list', () => {
+    expect(listScrollTop({ top: 100, bottom: 180 }, view)).toBe(0);
+    expect(listScrollTop({ top: 4900, bottom: 4980 }, view)).toBe(5000 - 600);
   });
 });
