@@ -80,8 +80,12 @@ const MARKER_PEOPLE = 3;
 export function markerLabel(line: Pick<LineThreads, 'threads' | 'line'>): string {
   const count = markerCommentCount(line);
   const what = count === 1 ? KIND_WORDS[line.threads[0]!.thread.root.kind] : `${count} comments`;
-  const people = [...new Set(commentsByDate(line).map((comment) => displayName(comment.author)))];
-  return `${what} on line ${line.line}, by ${listNames(people)}`;
+  return `${what} on line ${line.line}, by ${listNames(markerNames(line))}`;
+}
+
+/** Everyone who wrote in a marker's threads, replies too, by name, each once, as they first wrote: who its avatars show. */
+export function markerNames(line: MarkedThreads): string[] {
+  return [...new Set(commentsByDate(line).map((comment) => displayName(comment.author)))];
 }
 
 function commentsByDate(line: MarkedThreads): ReviewComment[] {

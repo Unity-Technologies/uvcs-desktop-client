@@ -238,9 +238,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
   avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
   threads, and going to a thread opens its line. The outdated ones hide too, and keep a marker of their own on the
-  code's first row (`outdatedMarkerOf`, `lineNumber: 0`), so hiding comments never leaves a file looking as if no one
-  commented on it: a clock mark, who wrote them and how many threads, as their strip counts them; its tooltip says
-  they're on lines changed since, then previews them as a line's does. A click shows every one it marks; one gone to
+  code's first row (`outdatedMarkerOf`, `lineNumber: 0`; none while that row isn't rendered, `topRowOf`), so hiding
+  comments never leaves a file looking as if no one commented on it: a clock, then who wrote and how many comments, as
+  a line's marker beside it counts them; its tooltip says they're outdated, then previews them as a line's does. A click shows every one it marks; one gone to
   (from the panel or the conversation) shows alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened
   ones share one row above the code, `annotationRowsOf`'s `opened`), and the marker counts the rest. Line 1's marker,
   on the same row, sits beside it (`markerSpots`). Each card opened so
@@ -251,31 +251,32 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
   details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
   hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
-  width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the changes first show, so a first comment
-  doesn't open it, and the user's own choice is kept for the next review: `commentsPanelStartsHidden`, the details
-  store's `startedHidden`, never saved), lists every thread on the code as the conversation sums up a settled one
-  (`ThreadSummaryCard`; its file and line only name where it goes, cut short in turn, the folder first, then the line,
-  the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening
-  on Open when anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was
-  said, replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs
-  to the files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search
-  finding nothing offers "Clear filters". While searching, a card shows the comment the words were found in, a reply
-  too, from a little before the match (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first
-  words, and the words are marked there, in who said it and in the file (`HighlightQuery`), so each card says why it's
-  listed. The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
-  selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`, `ThreadFocus`).
-  Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the previous and next (its
-  own row: in one with the name and Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden
-  (`steppedThread`: in the panel's order, across files and modes, stopping at either end; from a thread that just left
-  the list, settled under Open, on from where it sat). The card gone to comes into the panel's view, a third of the way
-  down, the list still when it shows whole (`listScrollTop`, gliding unless motion is reduced, N pressed again aiming
-  from where the last glide goes), and the focus a card held goes along to the current one, drawn without a ring: left
-  behind, the key would draw it on a comment no longer current. The panel's filter is kept by the Changes tab for that
-  (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the
-  thread gone to keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
-  diff opened to go to a thread (from the conversation, `commentLocationPage`) opens at it, not at its first change,
-  even before an earlier version is read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version
-  that can't be read (purged, or its read failed) is among the outdated ones, above the code, and opens there.
+  width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the
+  changes first show, so a first comment doesn't open it, and the user's own choice is kept for the next review:
+  `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code as the
+  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in turn,
+  the folder first, then the line, the file's name last, and whole in a tooltip), by file and line
+  (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything is, `initialCommentsFilter`). A row under
+  the header narrows it further: words found in what was said, replies too, who said it and the file
+  (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the files' filter), and a chip per kind,
+  its icon and how many Open or All lists (`threadKindCounts`); a search finding nothing offers "Clear filters". While
+  searching, a card shows the comment the words were found in, a reply too, from a little before the match
+  (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first words, and the words are marked
+  there, in who said it and in the file (`HighlightQuery`), so each card says why it's listed. The keys step through
+  what it lists. A click anywhere on a card goes to the thread (not the end of a drag selecting its text): its file, its
+  mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`, `ThreadFocus`). Under the filter row, where the one
+  gone to is ("3 of 12", `commentPosition`) and arrows to the previous and next (its own row: in one with the name and
+  Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's
+  order, across files and modes, stopping at either end; from a thread that just left the list, settled under Open, on
+  from where it sat). The card gone to comes into the panel's view, a third of the way down, the list still when it
+  shows whole (`listScrollTop`, gliding unless motion is reduced, N pressed again aiming from where the last glide
+  goes), and the focus a card held goes along to the current one, drawn without a ring: left behind, the key would draw
+  it on a comment no longer current. The panel's filter is kept by the Changes tab for that (`ReviewChangesTab`), and
+  stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the thread gone to keeps its ring
+  until another one is: among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread
+  (from the conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is
+  read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version that can't be read (purged, or its
+  read failed) is among the outdated ones, above the code, and opens there.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,

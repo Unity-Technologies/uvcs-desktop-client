@@ -10,8 +10,9 @@ export const COMMENTS_PANEL_KEY = 'reviewComments';
 export const COMMENTS_PANEL_WIDTH: DetailsWidthLimits = { initial: 340, min: 260, max: 560, restMin: 640 };
 
 /**
- * Starts the Comments panel hidden when it has nothing to list (`commentsPanelStartsHidden`), decided once the
- * conversation is first read (`codeThreads`, null until then); leaving the review forgets it.
+ * Starts the Comments panel hidden when it has nothing to list, or the code beside it would be too narrow to read, the
+ * diff's layout counted (`commentsPanelStartsHidden`), decided once the conversation is first read (`codeThreads`, null
+ * until then); leaving the review forgets it.
  */
 export function useCommentsPanelStart(codeThreads: number | null, tab: RefObject<HTMLElement | null>): void {
   const decided = useRef(false);

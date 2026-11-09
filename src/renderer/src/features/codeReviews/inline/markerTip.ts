@@ -13,8 +13,8 @@ const PREVIEW_CHARACTERS = 80;
 const SHORTEST_WORD_CUT = 60;
 
 /**
- * What a hidden comment's marker says on hover, as plain text: each thread of its line (or the outdated ones), its first words and then its
- * kind, where it stands, who started it and its replies ("Why not a while loop?" / "Question · Open · Borja · 1
+ * What a hidden comment's marker says on hover, as plain text: each thread of its line (or the outdated ones), its
+ * first words and then its kind, where it stands, who started it and its replies ("Why not a while loop?" / "Question · Open · Borja · 1
  * reply"); a blank line between threads, three at most and how many more. Not the line (the marker is on it), nor
  * only who wrote there (its avatars show that).
  */
