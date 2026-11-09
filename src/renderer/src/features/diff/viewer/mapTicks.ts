@@ -56,6 +56,22 @@ export function mapTickMarks(ticks: readonly MapTick[], layout: ChangeMapLayout)
   return marks;
 }
 
+/**
+ * Where Pierre lays out the lowest tick's line (`placesAgain`'s `lastTickTop`): it moves as Pierre measures the lines
+ * above it, so the ticks are placed again. Whatever order the place lists them in (a review's: the older side's lines,
+ * the newer side's, the outdated ones last), and never what's above the code, which has no line to measure. None until
+ * Pierre can place one.
+ */
+export function lowestTickTop(ticks: readonly MapTick[], boxOf: (line: ChangedLine) => { top: number } | undefined): number | undefined {
+  let lowest: number | undefined;
+  for (const tick of ticks) {
+    if (tick.lineNumber < 1) continue;
+    const top = boxOf(tick)?.top;
+    if (top !== undefined && (lowest === undefined || top > lowest)) lowest = top;
+  }
+  return lowest;
+}
+
 /** Where a spot starts in the scrolling content: its line's top, or the content's top for what's above the code. */
 function contentTop(tick: MapTick, layout: ChangeMapLayout): number {
   if (tick.lineNumber < 1) return 0;

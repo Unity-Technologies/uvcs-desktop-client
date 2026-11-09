@@ -162,7 +162,10 @@ export interface MarksPlacedFrom {
    * as Pierre measures the lines above it: its estimate of a line it hasn't rendered is one row, a wrapped one too.
    */
   lastChangeTop: number | undefined;
-  /** The same for the last tick: what Pierre measures above it moves it too, in a version shown alone with no change. */
+  /**
+   * The same for the lowest tick (`lowestTickTop`): what Pierre measures above it moves it too, in a version shown
+   * alone with no change.
+   */
   lastTickTop: number | undefined;
 }
 

@@ -2,7 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
 import { changeMarks, placesAgain, showsChangeMap, type ChangeMark, type MarksPlacedFrom } from './changeMarks';
-import { mapTickMarks, type MapTick, type MapTickMark } from './mapTicks';
+import { lowestTickTop, mapTickMarks, type MapTick, type MapTickMark } from './mapTicks';
 import { pierreChangeColors, sameChangeColors, type ChangeColors } from './pierreChangeColors';
 import { pierreShadowRoot } from './pierreDom';
 import { pierreLineBox } from './pierreLinePosition';
@@ -73,7 +73,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
         contentHeight: container.scrollHeight,
         viewHeight: container.clientHeight,
         lastChangeTop: regions.length > 0 ? boxOf(regions.at(-1)!.lines[0]!)?.top : undefined,
-        lastTickTop: ticks.length > 0 ? boxOf(ticks.at(-1)!)?.top : undefined,
+        lastTickTop: lowestTickTop(ticks, boxOf),
       };
       if (!placesAgain(placedFrom.current, from)) {
         setView((current) => (current && !sameChangeColors(current.colors, colors) ? { ...current, colors } : current));
