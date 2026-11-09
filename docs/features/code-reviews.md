@@ -192,7 +192,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the comment is on
   the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
   newest version (its whole diff's, never a
-  changeset's). Every **Applied in N** pill (the
+  changeset's). A view waits for the diff it reads, says so when that read fails, and why it has nothing to compare
+  otherwise (`contextComparisonState`). Every **Applied in N** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
   something else. Its **Open
@@ -236,7 +237,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the
   files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
   nothing offers "Clear filters". While searching, a card shows the comment the words were found in, a reply too, from
-  a little before the match (`matchExcerpt`), in place of its first words, and the words are marked there, in who said
+  a little before the match (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first words, and the words are marked there, in who said
   it and in the file (`HighlightQuery`), so each card says why it's listed. The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
   selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
   `ThreadFocus`). Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the
