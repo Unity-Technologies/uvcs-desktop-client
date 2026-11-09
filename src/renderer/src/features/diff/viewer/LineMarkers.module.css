@@ -1,0 +1,45 @@
+/* Centered on its line, its right edge at `left`: a small pill over the end of the code. */
+.marker {
+  position: absolute;
+  translate: -100% -50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.marker:hover {
+  border-color: var(--accent);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)) var(--bg-surface-raised);
+  color: var(--accent-text);
+}
+
+.marker:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+}
+
+/* Something on the line still waits for an answer: the color a review's Open pill has. */
+.marker[data-emphasized] {
+  border-color: color-mix(in srgb, var(--status-changed) 60%, transparent);
+  color: var(--status-changed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker {
+    animation: none;
+  }
+}

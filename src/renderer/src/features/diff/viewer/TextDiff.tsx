@@ -22,6 +22,8 @@ import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
+import { LineMarkers } from './LineMarkers';
+import { useDiffAnnotations } from './useDiffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useCodeMenu } from './useCodeMenu';
@@ -171,8 +173,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   shownRef.current = fileDiff;
   // The diff Pierre rendered, to unfold the region holding a line before scrolling to it.
   const renderedDiff = useRef<FileDiffInstance<unknown, unknown> | null>(null);
+  const revealAnnotated = useRef<() => void>(() => {});
   const onPostRender = useCallback((_element: unknown, instance: object) => {
     if (instance instanceof FileDiffInstance) renderedDiff.current = instance;
+    revealAnnotated.current();
     if (isReadyToEdit(instance, shownRef.current)) setReadyToEdit((ready: unknown) => (ready === shownRef.current ? ready : shownRef.current));
   }, []);
   // Going to a line (a link's, Go to line's) shows it first: with unchanged lines collapsed, its region is folded away
@@ -186,6 +190,9 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
+  // What the place adds under the lines (a review's comments), each row's line unfolded once rendered.
+  const { annotations, revealRows } = useDiffAnnotations({ containerRef: container, renderedDiff, hunks: diff.meta.hunks, shown: canHighlight, scrollTo: scrollToShownLine });
+  revealAnnotated.current = revealRows;
   // A workspace file's diff picks lines of its own, to discard them; any other diff selects them for links.
   const lineLinks = useLineLinks({
     path: fileName,
@@ -239,7 +246,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
     () => ({
-      ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }),
+      ...pierreDiffOptions<string>({ theme, layout, collapseUnchanged, wrapLines }),
       parseDiffOptions,
       tokenizeMaxLength,
       useTokenTransformer: editable,
@@ -326,7 +333,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
             ) : (
               <VirtualizerContext.Provider value={virtualizer}>
                 <WorkerPoolContext.Provider value={workers}>
-                  <FileDiff
+                  <FileDiff<string>
                     // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
                     // workers and virtualizer when it's created; typing doesn't start it anew.
                     key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
@@ -334,6 +341,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
                     renderGutterUtility={discard.renderGutterUtility}
+                    lineAnnotations={annotations?.rows}
+                    renderAnnotation={annotations?.render}
                     edit={edit}
                     onEditChange={(event) => onEdit?.(event.editor.getText())}
                     onEditComplete={() => 'reject'}
@@ -347,6 +356,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           <PaneScrollbars containerRef={container} />
           {discard.overlay}
           {lineTools.chip}
+          {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
         </div>
       </ActionContextMenu>
