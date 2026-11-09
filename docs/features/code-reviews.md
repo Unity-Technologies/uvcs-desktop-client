@@ -177,7 +177,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **Files with comments**: in the list of files, a comment icon by the status letter of each file holding threads in
   the diff shown, how many in its tooltip, and a **Commented** chip after the status chips showing only them
   (`reviewFileFlag`, `fileThreadCount`, through `EntryFlagContext`). It counts every thread, whatever the Comments
-  panel's Open/All shows, so the icon and the chip agree, and from the threads alone, as the list reads no file. See in
+  panel's Open/All shows, so the icon and the chip agree, and from the threads alone, as the list reads no file
+  (gathered by file once per diff: a list of thousands of files reads each thread a few times). See in
   context's list marks the commented file the same way, with no chip (`commentedFileFlag`).
 - **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
   (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
