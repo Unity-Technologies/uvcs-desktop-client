@@ -3,7 +3,7 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
-import { useDetailsPaneStore } from '../../components/detailsPaneStore';
+import { useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { commentLineText } from '../../lib/comments/commentText';
@@ -20,6 +20,8 @@ import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewCo
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 
 const COMMENTS_PANEL_KEY = 'reviewComments';
+/** Narrower than an object's details, and giving way first as the window narrows: the diff beside it is what's read. */
+const COMMENTS_PANEL_WIDTH: DetailsWidthLimits = { initial: 340, min: 260, max: 560, restMin: 640 };
 
 // It places comments by line diffs (Pierre's), which load with the diff viewer, on first use: not in the startup bundle.
 const ReviewFileAnnotator = lazyComponent(() => import('./inline/ReviewFileAnnotator').then((module) => module.ReviewFileAnnotator));
@@ -73,6 +75,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
         <DiffFocusRequestContext.Provider value={request}>
           <ListWithDetails
             detailsKey={COMMENTS_PANEL_KEY}
+            widthLimits={COMMENTS_PANEL_WIDTH}
             list={
               <DiffPage
                 page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
