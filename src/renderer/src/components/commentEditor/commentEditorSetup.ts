@@ -1,12 +1,11 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
-import { tags } from '@lezer/highlight';
 import { api } from '../../api/client';
 import { isMac } from '../../lib/platform';
 import { codeColors, codeTheme } from './codeColors';
-import { commentMarkdown } from './commentLanguage';
+import { commentMarkdown, commentMarkdownStyle } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
 import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
 import type { GroupKey } from './focusGroup';
@@ -48,19 +47,6 @@ export interface CommentEditorOptions {
   keys: { current: CommentEditorKeys };
 }
 
-/** Text the editor colors with the app's tokens (`LiveCommentEditor.module.css`): Markdown's own, around the caret. */
-const markdownStyle = HighlightStyle.define([
-  { tag: tags.heading1, class: 'cm-heading1' },
-  { tag: tags.heading2, class: 'cm-heading2' },
-  { tag: [tags.heading3, tags.heading4, tags.heading5, tags.heading6], class: 'cm-heading3' },
-  { tag: tags.strong, class: 'cm-strong' },
-  { tag: tags.emphasis, class: 'cm-emphasis' },
-  { tag: tags.strikethrough, class: 'cm-strikethrough' },
-  { tag: tags.monospace, class: 'cm-inlineCode' },
-  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator, tags.url], class: 'cm-markup' },
-  { tag: tags.quote, class: 'cm-quote' },
-]);
-
 /** The parts of the editor the field changes while it shows: its being read-only, the code's theme, its placeholder. */
 export const editable = new Compartment();
 export const theme = new Compartment();
@@ -83,7 +69,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
   return [
     history(),
     commentMarkdown(),
-    syntaxHighlighting(markdownStyle),
+    syntaxHighlighting(commentMarkdownStyle),
     typingAt,
     justPicked,
     suggestionCueField,

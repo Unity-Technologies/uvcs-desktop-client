@@ -130,6 +130,16 @@ does.
 | Every list (changesets, branches, labels, shelves, attributes, code reviews, History, Incoming, the changeset picker, the branch search, My shelves, a check-in's rejection) | The first line: inline formatting, compact chips, emoji, links as their text, images by their description (`CommentLine`); the filter's words marked |
 | What holds only text: the Branch Explorer's canvas, its tooltips, the palette's rows (reviews' titles too), notifications, the branch pill, the comparison title | Without marks (`commentLineText`, `commentText`): references as written, emoji as themselves; a line with nothing Markdown could read skips the parsing (the canvas asks for thousands) |
 
+Inline code in a comment shown whole (`Markdown`: threads, descriptions, release notes, the annotate card, the
+caption card) is crimson (`--text-code`) in a `--bg-code` pill with a `--border-default` border (`Markdown.module.css`).
+Code in a link takes the link's color, struck through the struck words' color; a code block keeps the text's color,
+no border. The editor draws inline code in the same crimson and pill but without the border on purpose: CodeMirror
+splits the code into a span per mark (the backticks the caret shows), and each span would get a box of its own.
+A one-line preview (`CommentLine`: every list, the Comments panel, pickers, titles) keeps inline code in the plain gray
+pill, no crimson, no border, on purpose: a preview is scanned, not read, its color already means status (Applied,
+Answered, the selection), and crimson pills in rows out-shouted it, added boxes and read as broken where an ellipsis
+cut them.
+
 The Branch Explorer's caption card lays its first line over the canvas's: the canvas draws its text (`summaryOf`), the
 card the same line as a row does (`CommentLine`), its references as chips. A long comment's card stops at the
 canvas's bottom (`captionCardMaxHeight`), above the status bar, and its body scrolls, the wheel over it its own and

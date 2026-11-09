@@ -60,7 +60,7 @@ w Assets/Scripts/LegacySwitch.cs "public class LegacySwitch { }"
 w README.md "# Code reviews"
 checkin "$(text initial 'Initial project')"
 
-cm mkbr main/task-2210 -c="Switching keeps pending changes" >/dev/null
+cm mkbr main/task-2210 -c="Switching keeps pending changes in \`SwitchFlow\`" >/dev/null
 cm switch main/task-2210 >/dev/null
 w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        var shelve = workspace.Shelve();
         workspace.Undo();
@@ -83,17 +83,17 @@ w Assets/Scripts/Retry.cs "public static class Retry
 }"
 # A long file, for comments gone to far down it and near its end (where the view stops scrolling).
 w Assets/Scripts/Commands.cs "$(echo 'public static class Commands'; echo '{'; for i in $(seq 1 796); do echo "    public static string Command$i => \"command $i\";"; done; echo '}')"
-checkin "$(text retry 'Retry reads better on several lines')"
+checkin "$(text retry '`Retry` reads better on several lines')"
 
 REVIEW=$(cm cr br:/main/task-2210 "Switch with changes" --users=me --format={id} \
   --descriptionfile="$(text description 'Switching with pending changes **never loses them**:
 
-1. Shelve the changes
+1. Shelve the changes (`ShelveChanges`)
 2. Undo them, switch, then bring them back
 
 Follows cs:'"$FIRST"'.')")
 
-GENERAL=$(on_review -commentsfile="$(text general 'Nice work. Could we add a test for a switch that **fails**?')")
+GENERAL=$(on_review -commentsfile="$(text general 'Nice work. Could we add a test for a switch that **fails**, where `Switch()` throws?')")
 cm cr comment reply "$GENERAL" -c="Yes, in the next changeset." >/dev/null
 
 APPLIED=$(on_review --path=/Assets/Scripts/SwitchFlow.cs --line=11 --type=Change -c="Undo before shelving fails: shelve first.")
@@ -136,7 +136,7 @@ w README.md "# Code reviews
 
 Switching keeps pending changes."
 checkin "$(text readme 'Explain switching')"
-cm cr "cs:$(changeset /main)" "Explain switching in the README" --users=me >/dev/null
+cm cr "cs:$(changeset /main)" "Explain switching in the \`README.md\`" --users=me >/dev/null
 w README.md "# Code reviews (draft)"
 cm shelveset create --all -c="Draft README" >/dev/null
 cm undo -r . >/dev/null

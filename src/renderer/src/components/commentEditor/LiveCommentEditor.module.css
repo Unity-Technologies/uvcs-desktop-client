@@ -146,11 +146,19 @@
   text-decoration: line-through;
 }
 
+/* Inline code in its color as a shown comment draws it (`Markdown.module.css`), but without its border: CodeMirror
+   splits the code into a span per mark (the backticks the caret shows), and each would get a box of its own. */
 .editor :global(.cm-inlineCode) {
   border-radius: var(--radius-sm);
   background: var(--bg-code);
+  color: var(--text-code);
   font-family: var(--font-mono);
   font-size: 0.92em;
+}
+
+/* Code struck through fades with its words, as a shown comment's does (`Markdown.module.css`'s `del code`). */
+.editor :global(.cm-strikethrough.cm-inlineCode) {
+  color: var(--text-secondary);
 }
 
 /* Markdown's own marks, where the caret shows them. */
