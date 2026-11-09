@@ -151,3 +151,12 @@ export function commentPosition(listed: readonly LineThread[], currentId: number
   const index = listed.findIndex((thread) => thread.root.id === currentId);
   return index === -1 ? pluralize(listed.length, 'comment') : `${index + 1} of ${listed.length}`;
 }
+
+/**
+ * Whether a review's Comments panel starts hidden as its changes first show: with no comments on its code it would
+ * only say so, beside a diff it narrows. Decided once, as the changes first show: a first comment doesn't open it.
+ * The user's own choice (`DetailsToggleButton`) is kept for the next review.
+ */
+export function commentsPanelStartsHidden({ codeThreads }: { codeThreads: number }): boolean {
+  return codeThreads === 0;
+}

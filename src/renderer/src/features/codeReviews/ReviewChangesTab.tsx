@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -20,7 +20,7 @@ import { reviewFileFlag } from './inline/reviewFileFlag';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
-import { commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
+import { commentsPanelStartsHidden, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 
@@ -61,6 +61,7 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
   const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all') : []), [threads]);
   const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
   const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search) : []), [threads, filter, search]);
+  usePanelStart(threads === undefined ? null : all.length);
 
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
@@ -124,5 +125,28 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
         </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
     </ReviewCommentsContext.Provider>
+  );
+}
+
+/**
+ * Starts the Comments panel hidden when it has nothing to list (`commentsPanelStartsHidden`), decided once the
+ * conversation is first read (`codeThreads`, null until then); leaving the review forgets it.
+ */
+function usePanelStart(codeThreads: number | null): void {
+  const decided = useRef(false);
+  const startHidden = useDetailsPaneStore((state) => state.startHidden);
+  const forgetStarted = useDetailsPaneStore((state) => state.forgetStarted);
+  // Before the frame paints: the panel never shows for a moment first.
+  useLayoutEffect(() => {
+    if (decided.current || codeThreads === null) return;
+    decided.current = true;
+    if (commentsPanelStartsHidden({ codeThreads })) startHidden(COMMENTS_PANEL_KEY);
+  }, [codeThreads, startHidden]);
+  useEffect(
+    () => () => {
+      decided.current = false;
+      forgetStarted(COMMENTS_PANEL_KEY);
+    },
+    [forgetStarted],
   );
 }

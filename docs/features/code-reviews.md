@@ -243,7 +243,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   width; an ×, not an icon of a comment struck through, which read less plainly. In a narrow card the header stays one
   line: the kind's name is cut short first, then the tag, the state and the × keeping their place.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
-  any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
+  any details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
+  hidden, decided as the changes first show, so a first comment doesn't open it, and the user's own choice is kept for
+  the next review: `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code as the
   conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in
   turn, the folder first, then the line, the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
   anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was said,
