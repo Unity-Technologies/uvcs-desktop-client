@@ -237,17 +237,21 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1 reply"),
   three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
   avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
-  threads, and going to a thread opens its line. The outdated ones hide too: they have no line to mark, so one shows
-  only when it is gone to (from the panel or the conversation), that one alone, as a line opens alone (`outdatedKey`,
-  `openedOutdated`; the opened ones share one row above the code, `annotationRowsOf`'s `opened`). Each card opened so
+  threads, and going to a thread opens its line. The outdated ones hide too, and keep a marker of their own on the
+  code's first row (`outdatedMarkerOf`, `lineNumber: 0`), so hiding comments never leaves a file looking as if no one
+  commented on it: a clock mark, who wrote them and how many threads, as their strip counts them; its tooltip says
+  they're on lines changed since, then previews them as a line's does. A click shows every one it marks; one gone to
+  (from the panel or the conversation) shows alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened
+  ones share one row above the code, `annotationRowsOf`'s `opened`), and the marker counts the rest. Line 1's marker,
+  on the same row, sits beside it (`markerSpots`). Each card opened so
   has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide this comment") that folds it back to its
   marker: in the header, not in a column beside the cards, which took their width; an ×, not an icon of a comment struck
   through, which read less plainly. In a narrow card the header stays one line: the kind's name is cut short first, then
   the tag, the state and the × keeping their place.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
   details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
-  hidden, and so it does where the diff beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
-  width less the files' and the panel's, `diffWidthBesidePanel`), decided as the changes first show, so a first comment
+  hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
+  width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the changes first show, so a first comment
   doesn't open it, and the user's own choice is kept for the next review: `commentsPanelStartsHidden`, the details
   store's `startedHidden`, never saved), lists every thread on the code as the conversation sums up a settled one
   (`ThreadSummaryCard`; its file and line only name where it goes, cut short in turn, the folder first, then the line,
