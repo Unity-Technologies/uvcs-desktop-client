@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
+import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, topRowSelector, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
 
 const range = (start: number, end: number, side: 'additions' | 'deletions' = 'additions') => ({ start, side, end, endSide: side });
 
@@ -28,6 +28,14 @@ describe('lineNumberCellSelector', () => {
     expect(lineNumberCellSelector({ side: 'deletions', lineNumber: 4 }, 'unified')).toBe('[data-column-number="4"][data-line-type="change-deletion"]');
     expect(lineNumberCellSelector({ side: 'additions', lineNumber: 4 }, 'unified')).toBe('[data-column-number="4"]:not([data-line-type="change-deletion"])');
     expect(lineNumberCellSelector({ side: 'additions', lineNumber: 4 }, 'file')).toBe('[data-column-number="4"]');
+  });
+});
+
+describe('topRowSelector', () => {
+  it("finds the first row of a side's pane side by side, else of the only pane: the code's top, whatever line it is", () => {
+    expect(topRowSelector('deletions', 'split')).toBe('[data-code][data-deletions] > [data-content] > :first-child');
+    expect(topRowSelector('additions', 'unified')).toBe('[data-code] > [data-content] > :first-child');
+    expect(topRowSelector('additions', 'file')).toBe('[data-code] > [data-content] > :first-child');
   });
 });
 
