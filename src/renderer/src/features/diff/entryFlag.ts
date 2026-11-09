@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { createContext } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { ListFlag } from '../../components/useChangeFilter';
 
 /**
  * What a place flags among a `DiffBrowser`'s files: a review its files with comments. Each flagged file's row shows
@@ -16,3 +17,11 @@ export interface EntryFlag {
 }
 
 export const EntryFlagContext = createContext<EntryFlag | null>(null);
+
+/**
+ * The list filter's chip for a place's flag on a diff (`markOf`, the flag's marks there): the files it flags are those
+ * with a mark. None where the place names no chip.
+ */
+export function entryFlagChip(flag: Pick<EntryFlag, 'icon' | 'filterLabel'>, markOf: (entry: DiffEntry) => string | null): ListFlag<DiffEntry> | undefined {
+  return flag.filterLabel ? { icon: flag.icon, label: flag.filterLabel, holds: (entry) => markOf(entry) !== null } : undefined;
+}

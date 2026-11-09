@@ -31,7 +31,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
-import { EntryFlagContext } from './entryFlag';
+import { entryFlagChip, EntryFlagContext } from './entryFlag';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -100,10 +100,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const targetKey = JSON.stringify(target);
   const entryFlag = useContext(EntryFlagContext);
   const flagMarkOf = useMemo(() => entryFlag?.markOf(target), [entryFlag, targetKey]);
-  const flag = useMemo(
-    () => (entryFlag?.filterLabel && flagMarkOf ? { icon: entryFlag.icon, label: entryFlag.filterLabel, holds: (entry: DiffEntry) => flagMarkOf(entry) !== null } : undefined),
-    [entryFlag, flagMarkOf],
-  );
+  const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
   const markOf = useMemo(() => {
     if (!entryFlag || !flagMarkOf) return undefined;
