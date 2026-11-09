@@ -2,16 +2,11 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { settleBeforeLeaving } from '../../app/navigation/leaveGuard';
 import { joinComment } from '../../lib/comment';
 import type { BulkPrivate } from './bulkPrivate';
-import { confirmBulkPrivateCheckin, confirmCheckinWithoutComment, confirmPulledIn } from './checkinConfirmations';
-import { checkinChanges, shelveChanges } from './checkinOperations';
+import { confirmCheckinWithoutComment, confirmPulledIn } from './checkinConfirmations';
+import { shelveChanges } from './checkinOperations';
 import { checkinPathsOf } from './checkinPaths';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
-import { successCardTellsCheckin } from './successMoment';
-
-/** Runs the check-in or shelve itself, once everything is confirmed: the panel shows it busy meanwhile. */
-export type WhileRunning = <T>(run: () => Promise<T>) => Promise<T>;
-
-const justRun: WhileRunning = (run) => run();
+import { checkinConfirmed, justRun, type WhileRunning } from './confirmedCheckin';
 
 /** How a check-in from the panel ended: a changeset, nothing (cancelled or failed), or the user wants to write a comment. */
 export type PanelCheckinOutcome = 'checkedIn' | 'notCheckedIn' | 'writeComment';
@@ -32,30 +27,15 @@ export interface PanelCheckin {
 
 /**
  * The check-in panel's check-in, with the draft's comment: asks about an empty comment (when the setting says to),
- * takes the files as they are on disk (unsaved edits are saved first, or dropped, or it waits), asks about a pile of
- * private files and about the changes a folder takes along unchecked (`checkinPathsOf`), then checks in. A changeset
- * clears the comment.
+ * then checks in as every check-in does (`checkinConfirmed`). A changeset clears the comment.
  */
 export async function checkinFromPanel(request: PanelCheckin, whileRunning: WhileRunning = justRun): Promise<PanelCheckinOutcome> {
-  const { workspacePath, included } = request;
+  const { workspacePath } = request;
   const comment = joinComment(checkinDraftOf(workspacePath));
   if (!comment.trim() && request.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) return 'writeComment';
-  if (!(await settleBeforeLeaving())) return 'notCheckedIn';
-  if (request.bulkPrivate && !(await confirmBulkPrivateCheckin(request.bulkPrivate))) return 'notCheckedIn';
-  const plan = checkinPathsOf(included, request.allChanges);
-  const { paths, addsPrivate, pulledIn } = plan;
-  if (pulledIn.length > 0 && !(await confirmPulledIn('checkin', plan))) return 'notCheckedIn';
-  const changes = [...included, ...pulledIn];
-  const checkedIn = await whileRunning(() =>
-    checkinChanges({
-      workspacePath,
-      changes,
-      paths,
-      addsPrivate,
-      comment,
-      updateFirst: request.behind,
-      quiet: successCardTellsCheckin(changes.length, request.allChanges.length),
-    }),
+  const checkedIn = await checkinConfirmed(
+    { workspacePath, changes: request.included, allChanges: request.allChanges, comment, bulkPrivate: request.bulkPrivate, updateFirst: request.behind },
+    whileRunning,
   );
   if (!checkedIn) return 'notCheckedIn';
   useCheckinDraftStore.getState().clearMessage(workspacePath);

@@ -3,7 +3,8 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { EMPTY_SELECTION } from '../../lib/selection';
-import { checkinFromPanel, shelveFromPanel, type PanelCheckin, type WhileRunning } from './submitCheckinPanel';
+import type { WhileRunning } from './confirmedCheckin';
+import { checkinFromPanel, shelveFromPanel, type PanelCheckin } from './submitCheckinPanel';
 
 interface CheckinPanelSubmit {
   /** A check-in or shelve is running: the panel's button spins and waits. */
