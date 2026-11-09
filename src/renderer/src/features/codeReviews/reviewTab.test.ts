@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mountedTabs, openingTab } from './reviewTab';
+import { conversationFocus, mountedTabs, openingTab } from './reviewTab';
 
 describe('openingTab', () => {
   it('opens on the conversation, or on the changes when a link names a file', () => {
@@ -23,5 +23,15 @@ describe('mountedTabs', () => {
   it('gives the same list back when the tab is already mounted, so nothing renders again for it', () => {
     const mounted = ['conversation'] as const;
     expect(mountedTabs(mounted, 'conversation')).toBe(mounted);
+  });
+});
+
+describe('conversationFocus', () => {
+  it("is the thread the page goes to in the conversation, never one it goes to in the changes", () => {
+    // A comment's file gone to from the conversation names its thread for the changes; the conversation, kept mounted
+    // and hidden, scrolled to it too, and going back to its tab found it moved.
+    expect(conversationFocus({ tab: 'conversation', focusThread: 47 })).toBe(47);
+    expect(conversationFocus({ tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
+    expect(conversationFocus({ focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
   });
 });
