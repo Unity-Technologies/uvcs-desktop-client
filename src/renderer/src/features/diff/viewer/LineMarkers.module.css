@@ -10,6 +10,8 @@
   min-width: 20px;
   /* Tighter on the left, where what a place draws may start with avatars (a review's comments). */
   padding: 0 6px 0 2px;
+  /* Avatars drawn in it (`AvatarStack`) are ringed apart in its own color. */
+  --avatar-ring: var(--bg-surface-raised);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
   background: var(--bg-surface-raised);
