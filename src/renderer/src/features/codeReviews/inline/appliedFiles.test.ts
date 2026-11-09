@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, commentedFileFlag, isCommentedEntry, listsAppliedFiles } from './appliedFiles';
+import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBodyOf, commentedFileFlag, isCommentedEntry, listsAppliedFiles } from './appliedFiles';
 import type { LineThread } from './fileThreads';
 
 function threadOn(fields: Partial<ReviewComment> = {}): LineThread {
@@ -69,6 +69,27 @@ describe('listsAppliedFiles', () => {
   it('lists nothing otherwise', () => {
     expect(listsAppliedFiles('none', 'since')).toBe(false);
     expect(listsAppliedFiles('none', 'commented')).toBe(false);
+  });
+});
+
+describe('contextBodyOf', () => {
+  it("lists the changeset's files under the thread when it applied it elsewhere, never the dead end that also is", () => {
+    expect(contextBodyOf('withoutComment', 'since', 'notInChangeset')).toBe('threadAboveFiles');
+  });
+
+  it('shows the thread alone when the changeset has no file to compare', () => {
+    expect(contextBodyOf('none', 'since', 'notInChangeset')).toBe('threadAlone');
+  });
+
+  it("lists the changeset's files in both views when it changed the commented file and others", () => {
+    expect(contextBodyOf('withComment', 'since', 'comparison')).toBe('files');
+    expect(contextBodyOf('withComment', 'commented', 'reading')).toBe('files');
+  });
+
+  it("shows the commented file's diff otherwise: when commented, or a fix of that file alone", () => {
+    expect(contextBodyOf('withoutComment', 'commented', 'comparison')).toBe('diff');
+    expect(contextBodyOf('none', 'since', 'comparison')).toBe('diff');
+    expect(contextBodyOf('none', 'commented', 'missing')).toBe('diff');
   });
 });
 

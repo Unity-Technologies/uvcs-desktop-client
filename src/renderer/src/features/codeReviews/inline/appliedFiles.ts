@@ -2,6 +2,7 @@ import { MessageSquare } from 'lucide-react';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { EntryFlag } from '../../diff/entryFlag';
 import { appliedChangeset, entryOfThread, type ContextView } from './commentContext';
+import type { ContextComparisonState } from './contextComparisonState';
 import type { LineThread } from './fileThreads';
 
 /**
@@ -27,6 +28,22 @@ export function appliedFilesOf(thread: LineThread, entries: readonly DiffEntry[]
 /** Whether a view lists the changeset's files (`appliedFilesOf`): its other files show in "How it was applied" alone. */
 export function listsAppliedFiles(files: AppliedFiles, view: ContextView): boolean {
   return files === 'withComment' || (files === 'withoutComment' && view === 'since');
+}
+
+/**
+ * What the dialog's body shows for a view, given what it shows of the changeset that applied the thread (`files`) and
+ * its comparison's state (`comparison`, `contextComparisonState`):
+ * - `threadAboveFiles`: the changeset's files, the thread above them, in How it was applied when that changeset didn't
+ *   change the commented file. It wins over `threadAlone`, which that case also is: else the view is a dead end.
+ * - `threadAlone`: the thread and one line saying why there's no diff (a changeset with no file to compare).
+ * - `files`: the changeset's files, the commented one with the thread at its line.
+ * - `diff`: the commented file's diff alone, or why it can't show.
+ */
+export type ContextBody = 'threadAboveFiles' | 'threadAlone' | 'files' | 'diff';
+
+export function contextBodyOf(files: AppliedFiles, view: ContextView, comparison: ContextComparisonState['kind']): ContextBody {
+  if (listsAppliedFiles(files, view)) return files === 'withoutComment' ? 'threadAboveFiles' : 'files';
+  return comparison === 'notInChangeset' ? 'threadAlone' : 'diff';
 }
 
 /**

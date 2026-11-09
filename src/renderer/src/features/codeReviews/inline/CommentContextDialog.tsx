@@ -18,7 +18,7 @@ import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
 import { useReviewThreads } from '../conversation/useReviewThreads';
 import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
-import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, listsAppliedFiles, type AppliedFiles } from './appliedFiles';
+import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBodyOf, type AppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
 import { ContextViewSwitch } from './ContextViewSwitch';
@@ -119,7 +119,7 @@ function ThreadDialog(props: ThreadDialogProps) {
   const { thread, view, onViewChange: setView, files, commentedSelected, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, onClose } = props;
   const state = useContextComparison(props);
   const notInChangeset = state.kind === 'notInChangeset';
-  const lists = appliedTarget !== null && listsAppliedFiles(files, view);
+  const body = contextBodyOf(files, view, state.kind);
   const heading = appliedFilesHeading(files, view, commentedSelected);
   return (
     <Dialog
@@ -147,17 +147,17 @@ function ThreadDialog(props: ThreadDialogProps) {
         </>
       }
     >
-      {lists && files === 'withoutComment' && applied.data && appliedTarget ? (
+      {body === 'threadAboveFiles' && applied.data && appliedTarget ? (
         // The changeset didn't change the commented file: its files, the thread above them, folded to its first words.
         <div className={styles.elsewhere}>
-          <div className={styles.thread}>
-            <ThreadCard {...props} folded />
+          <div className={styles.threadAbove}>
+            <ThreadCard {...props} unlit />
           </div>
           <div className={styles.files}>
             <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
           </div>
         </div>
-      ) : notInChangeset ? (
+      ) : body === 'threadAlone' && state.kind === 'notInChangeset' ? (
         // No box of code to fill: the thread, and why there's no diff, in what they take.
         <div className={styles.thread}>
           <p className={styles.note}>{state.text}</p>
@@ -165,7 +165,7 @@ function ThreadDialog(props: ThreadDialogProps) {
         </div>
       ) : (
         <div className={styles.body}>
-          {lists && applied.data && appliedTarget ? (
+          {body === 'files' && applied.data && appliedTarget ? (
             <div className={styles.files}>
               <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
             </div>
@@ -181,16 +181,17 @@ function ThreadDialog(props: ThreadDialogProps) {
 }
 
 /**
- * The thread alone, as the code shows it, its first comment's menu leading to the conversation: whole, or folded to its
- * first words (`folded`, above the changeset's files, where the code is what the user came to see).
+ * The thread alone, as the code shows it, its first comment's menu leading to the conversation: lit and whole, or not
+ * lit (`unlit`, above the changeset's files, where the code is what the user came to see), when an applied thread
+ * starts folded to its first words as settled ones do (`startsFolded`).
  */
-function ThreadCard({ review, thread, user, showInConversation, onClose, folded = false }: ViewProps & { folded?: boolean }) {
+function ThreadCard({ review, thread, user, showInConversation, onClose, unlit = false }: ViewProps & { unlit?: boolean }) {
   return (
     <ReviewThreadCard
       review={review}
       thread={thread}
       user={user}
-      highlight={folded ? undefined : 0}
+      highlight={unlit ? undefined : 0}
       inCode={{
         inContext: true,
         showInConversation: () => {
