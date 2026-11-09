@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangedLine } from './changeBlocks';
 import type { ChangeMapLayout, LineBox } from './changeMarks';
-import { lowestTickTop, mapTickMarks, TICK_FUSE_GAP, TICK_HEIGHT, type MapTick } from './mapTicks';
+import { lowestTickTop, mapTickMarks, shownMapTicks, TICK_FUSE_GAP, TICK_HEIGHT, type MapTick } from './mapTicks';
 
 const ROW = 20;
 
@@ -63,6 +63,23 @@ describe('mapTickMarks', () => {
   it('marks nothing before the content or the track has a size', () => {
     expect(mapTickMarks([tick('additions', 5)], { ...layout(), contentHeight: 0 })).toEqual([]);
     expect(mapTickMarks([tick('additions', 5)], { ...layout(), trackHeight: 0 })).toEqual([]);
+  });
+});
+
+describe('shownMapTicks', () => {
+  const ticks = [tick('additions', 12)];
+
+  it("draws the place's ticks in a diff", () => {
+    expect(shownMapTicks(ticks, false)).toBe(ticks);
+  });
+
+  it('draws none for a file typed into whole, which shows none of the rows they stand for', () => {
+    expect(shownMapTicks(ticks, true)).toEqual([]);
+  });
+
+  it('draws none where the place marks nothing, the same list each time so nothing is placed again', () => {
+    expect(shownMapTicks(undefined, false)).toEqual([]);
+    expect(shownMapTicks(undefined, false)).toBe(shownMapTicks(ticks, true));
   });
 });
 

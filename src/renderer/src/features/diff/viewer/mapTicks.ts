@@ -56,6 +56,17 @@ export function mapTickMarks(ticks: readonly MapTick[], layout: ChangeMapLayout)
   return marks;
 }
 
+const NO_TICKS: readonly MapTick[] = [];
+
+/**
+ * The ticks a text diff's change map draws of what its place marks (`DiffAnnotations.mapTicks`): none for a file typed
+ * into whole, which shows none of the place's rows, nor where the place marks nothing. The same empty list each time,
+ * so the map isn't placed again for it.
+ */
+export function shownMapTicks(placeTicks: readonly MapTick[] | undefined, wholeFile: boolean): readonly MapTick[] {
+  return wholeFile || !placeTicks ? NO_TICKS : placeTicks;
+}
+
 /**
  * Where Pierre lays out the lowest tick's line (`placesAgain`'s `lastTickTop`): it moves as Pierre measures the lines
  * above it, so the ticks are placed again. Whatever order the place lists them in (a review's: the older side's lines,
