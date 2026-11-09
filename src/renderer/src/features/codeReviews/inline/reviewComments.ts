@@ -58,3 +58,12 @@ export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: Li
   const written = writtenIn(review.target, thread);
   return { path, changesetId: written.kind === 'changeset' ? written.changesetId : null, seq };
 }
+
+/**
+ * What the review's diff is asked for to show a file, its name clicked in the Comments panel: in a branch's review, in
+ * the whole branch, which holds every file the review changed; a changeset's diff stepped to may not hold it, and the
+ * click would do nothing. A review of anything but a branch has one mode.
+ */
+export function fileDiffRequest(review: Pick<CodeReview, 'target'>, path: string, seq: number): DiffFocusRequest {
+  return review.target.kind === 'branch' ? { path, changesetId: null, seq } : { path, seq };
+}

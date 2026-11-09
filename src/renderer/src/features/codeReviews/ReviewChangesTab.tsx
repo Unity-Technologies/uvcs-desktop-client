@@ -18,7 +18,7 @@ import { useReviewThreads } from './conversation/useReviewThreads';
 import { commentsByFile, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
-import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
+import { fileDiffRequest, ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useReviewCommentsStore } from './inline/reviewCommentsStore';
 import { useCommentContext } from './inline/useCommentContext';
@@ -69,10 +69,9 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
-  // A file's name in the panel: its diff, in the mode the diff is in.
   const openFile = (path: string): void => {
     seq.current += 1;
-    setRequest({ path, seq: seq.current });
+    setRequest(fileDiffRequest(review, path, seq.current));
   };
 
   const showThreadInConversation = useCallback((threadId: number): void => showInConversation(review.id, threadId), [review.id]);
