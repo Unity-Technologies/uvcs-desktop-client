@@ -22,12 +22,38 @@
   background: var(--bg-surface);
 }
 
-/* A request marked applied in a changeset that didn't change its file: the thread, and one line saying so. */
-.thread {
+/*
+ * A request applied in other files than its own: the thread, folded to one line and no wider than it reads
+ * (`.threadAbove`), then the changeset's files filling the rest.
+ */
+.elsewhere {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 66vh;
+  min-height: 0;
+}
+
+/*
+ * The thread shown as a card of its own, no wider than it reads: alone with one line saying why there's no diff (a
+ * changeset with no file to compare), or above the changeset's files (`.threadAbove`).
+ */
+.thread,
+.threadAbove {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   max-width: 760px;
+}
+
+/*
+ * Unfolded, with replies or the reply box open, it takes at most 40% of the height, scrolling within it: the files keep
+ * the rest, and the dialog never scrolls as a whole.
+ */
+.threadAbove {
+  flex: none;
+  max-height: 40%;
+  overflow: auto;
 }
 
 .note {

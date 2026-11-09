@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Builds a repository whose code review holds every kind of comment `cm codereview comment` makes: a description, a
 # general comment and its reply, change requests on a line (pending, applied by a later changeset through the check-in
-# comment, applied by hand with `comment apply`, discarded), questions (answered and not), a plain comment on a line, a
-# comment on a deleted file, a comment filed under one changeset's diff, an edited comment, and comments on a revision
-# a later changeset replaced (the comments on an older revision): on lines it left alone, which the Changes tab shows at
-# their line in the newest one, and on a line it edited (an open question, the discarded request), outdated; and comments far down a long file (two
-# lines apart, which the diff's scrollbar ticks as one) and near its end. The
-# timeline gets a rename and a status change with a comment. Two more reviews have no comments: one of a changeset, one of a shelve.
+# comment, applied by one that changed other files only, applied by hand with `comment apply`, discarded), questions
+# (answered and not), a plain comment on a line, a comment on a deleted file, a comment filed under one changeset's
+# diff, an edited comment, and comments on a revision a later changeset replaced (the comments on an older revision): on
+# lines it left alone, which the Changes tab shows at their line in the newest one, and on a line it edited (an open
+# question, the discarded request), outdated; and comments far down a long file (two lines apart, which the diff's
+# scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Two more
+# reviews have no comments: one of a changeset, one of a shelve.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -102,6 +103,7 @@ on_review --path=/Assets/Scripts/SwitchFlow.cs --line=14 --type=Change -c="Log t
 DISCARDED=$(on_review --path=/Assets/Scripts/SwitchFlow.cs --line=13 --type=Change -c="Rename target to destination.")
 cm cr comment reply "$DISCARDED" --discard -c="Target is the word cm uses." >/dev/null
 BY_HAND=$(on_review --path=/Assets/Scripts/Retry.cs --line=5 --type=Change -c="Stop after the first success.")
+ELSEWHERE=$(on_review --path=/Assets/Scripts/Retry.cs --line=3 --type=Change -c="Add a test for Times.")
 ANSWERED=$(on_review --path=/Assets/Scripts/Retry.cs --line=3 --type=Question -c="Why not a while loop?")
 cm cr comment reply "$ANSWERED" -c="A for loop shows the count." >/dev/null
 on_review --path=/Assets/Scripts/SwitchFlow.cs --line=1 --type=Question -c="Is \`System\` still needed?" >/dev/null
@@ -133,6 +135,14 @@ w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        var shelve = workspace.Sh
         Log("Switched");')"
 checkin "$(text apply "Shelve before undoing [apply-change:${APPLIED:0:8}]")"
 cm cr comment apply "$BY_HAND" --changeset="cs:$(changeset /main/task-2210)" >/dev/null
+
+# A change request applied in other files than its own: the test it asked for, alone. See in context lists that
+# changeset's files, the request above them.
+w Assets/Tests/RetryTests.cs "public class RetryTests
+{
+    public void RunsTheActionTheTimesAsked() { }
+}"
+checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
 
 cm switch main >/dev/null
 w README.md "# Code reviews
