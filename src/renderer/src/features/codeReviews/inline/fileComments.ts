@@ -12,8 +12,6 @@ export interface FileComments {
   outdated: EarlierThread[];
   /** On an earlier version not read yet: placed at a line or outdated once every one is. */
   reading: EarlierThread[];
-  /** On an earlier version that can't be read (purged, or its read failed): it has no line to find. */
-  unreadable: EarlierThread[];
 }
 
 interface FileCommentsInput {
@@ -41,7 +39,7 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
     (text, line) => (lineIn === null ? null : lineIn(text, line)),
     (thread) => writtenIn(review, thread).kind === view.kind,
   );
-  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading, unreadable: placedEarlier.unreadable };
+  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading };
 }
 
 /**
@@ -126,5 +124,5 @@ export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, 
 export function holdsThread(comments: FileComments | null, threadId: number): boolean {
   if (!comments) return false;
   const isIt = (entry: EarlierThread): boolean => entry.thread.root.id === threadId;
-  return lineOfThread(comments.lines, threadId) !== undefined || [comments.outdated, comments.reading, comments.unreadable].some((entries) => entries.some(isIt));
+  return lineOfThread(comments.lines, threadId) !== undefined || comments.outdated.some(isIt) || comments.reading.some(isIt);
 }

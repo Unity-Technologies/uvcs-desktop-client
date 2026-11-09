@@ -25,7 +25,6 @@ import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
 import { LineMarkers } from './LineMarkers';
 import { useDiffAnnotations } from './useDiffAnnotations';
-import { markerRoomCss } from './diffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useCodeMenu } from './useCodeMenu';
@@ -267,7 +266,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, lineLinks.options, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
-  useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : '', markerRoomCss(annotations?.markers ?? [], layout)].join('\n'));
+  useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });

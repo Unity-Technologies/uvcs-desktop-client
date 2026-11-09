@@ -58,12 +58,12 @@ describe('fileCommentsOf', () => {
     expect(comments.reading.map((entry) => entry.thread.root.id).sort()).toEqual([2, 3]);
   });
 
-  it("places the earlier threads of the versions read when one can't be read, holding that one's still", () => {
+  it("places the earlier threads of the versions read when one's read fails, and shows that one's outdated, gone to there", () => {
     const twoVersions = threadsOf([onLine(1, 30, 2), onLine(2, 20, 4), onLine(3, 25, 1)]);
     const comments = fileCommentsOf({ threads: twoVersions, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => (revision === 25 ? null : TEXTS.get(revision)) });
     expect(comments.lines.map((line) => line.key)).toEqual(['additions:2', 'additions:5']);
-    expect(comments.unreadable.map((entry) => entry.thread.root.id)).toEqual([3]);
-    expect(holdsThread(comments, 3)).toBe(true);
+    expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([3]);
+    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0, lineKey: outdatedKey(3) });
   });
 
   it("tells every earlier thread outdated on a deleted file, which has no newer version", () => {

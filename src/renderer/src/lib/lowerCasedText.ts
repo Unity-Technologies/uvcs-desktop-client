@@ -16,6 +16,9 @@ export interface LowerCasedText {
  * only so. Otherwise character by character, keeping where each came from.
  */
 export function lowerCasedText(text: string): LowerCasedText {
+  // Whole, not letter by letter, whenever it can be: `toLowerCase` reads a letter in its word, and a Σ ending one
+  // becomes the final ς only so (alone it becomes σ). The words typed are lower-cased whole too (`queryWords`), so
+  // "ΟΔΟΣ" typed finds "ΟΔΟΣ" written. Letter by letter only when a letter grows, rare, where an index must be mapped.
   const whole = text.toLowerCase();
   if (whole.length === text.length) return { lower: whole, originalIndex: (index) => index, originalRange: (start, end) => [start, end] };
   let lower = '';

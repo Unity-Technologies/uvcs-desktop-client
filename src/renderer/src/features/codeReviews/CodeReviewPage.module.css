@@ -83,7 +83,7 @@
   min-height: 0;
 }
 
-/* The Changes tab's content, measured as it first shows (`usePanelStart`). */
+/* The Changes tab's content, measured as it first shows (`useCommentsPanelStart`). */
 .changesTab {
   display: flex;
   flex: 1;

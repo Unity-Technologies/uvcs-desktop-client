@@ -24,6 +24,7 @@ import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
+import { ViewShownContext } from '../../lib/viewShown';
 import { conversationFocus, mountedTabs, openingTab } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
@@ -76,13 +77,17 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
       {mounted.includes('conversation') && (
         <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={tab !== 'conversation'}>
-          <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
+          <ViewShownContext.Provider value={tab === 'conversation'}>
+            <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
+          </ViewShownContext.Provider>
         </div>
       )}
       {mounted.includes('changes') && (
         <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={tab !== 'changes'}>
           {diffTarget ? (
-            <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} shown={tab === 'changes'} />
+            <ViewShownContext.Provider value={tab === 'changes'}>
+              <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
+            </ViewShownContext.Provider>
           ) : (
             <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
           )}

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import { samePlace as isSamePlace, type Place } from '@shared/domain/place';
+import { navigatedSince, type WindowWhere } from '../../../app/navigation/navigatedSince';
+import { useNavigation } from '../../../app/navigation/navigationStore';
 import { useSession } from '../../../app/workspace/sessionStore';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
@@ -58,11 +60,16 @@ export type DialogProps = CommentInContext & { onClose: () => void };
 function CommentContextDialog(props: DialogProps) {
   const current = useSession((state) => state.place);
   const samePlace = current !== null && isSamePlace(current, props.place);
+  // Closes as the window goes elsewhere: what's opened from inside it (a file's history, Annotate) shows then, not
+  // behind the modal (`navigatedSince`).
+  const where: WindowWhere = { view: useNavigation((state) => state.view), top: useNavigation((state) => state.pages.at(-1)) };
+  const [opened] = useState(where);
+  const stays = samePlace && !navigatedSince(opened, where);
   const { onClose } = props;
   useEffect(() => {
-    if (!samePlace) onClose();
-  }, [samePlace, onClose]);
-  return samePlace ? <ThreadInContext {...props} /> : null;
+    if (!stays) onClose();
+  }, [stays, onClose]);
+  return stays ? <ThreadInContext {...props} /> : null;
 }
 
 /** The thread as the conversation has it now: a reply, an edit or a discard made here shows at once. */

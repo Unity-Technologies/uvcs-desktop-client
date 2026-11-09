@@ -102,8 +102,8 @@ describe('placeEarlier', () => {
   });
 
   it('keeps apart, as outdated, a thread whose line changed', () => {
-    const { outdated } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
-    expect(ids(outdated)).toEqual([2]);
+    const { outdated } = placeEarlier(earlier, () => OLD_TEXT, lineOf, writtenWhole);
+    expect(ids(outdated)).toEqual([2, 3]);
   });
 
   it("leaves a changeset's outdated thread to its changeset's diff", () => {
@@ -117,9 +117,9 @@ describe('placeEarlier', () => {
     expect(ids(reading).sort()).toEqual([1, 2, 3, 4]);
   });
 
-  it("places the others' threads when a version can't be read (purged), keeping that one's apart", () => {
-    const { placed, outdated, reading, unreadable } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
-    expect([ids(placed), ids(outdated), ids(reading), ids(unreadable)]).toEqual([[1], [2], [], [3]]);
+  it("places the others' threads when a version's read fails, showing that one's among the outdated: its line is known", () => {
+    const { placed, outdated, reading } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
+    expect([ids(placed), ids(outdated), ids(reading)]).toEqual([[1], [2, 3], []]);
   });
 });
 

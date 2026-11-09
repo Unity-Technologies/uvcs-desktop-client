@@ -1,5 +1,9 @@
+import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, toggledDetails, withDetailsShown, withDetailsToggled } from './detailsPaneStore';
+import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, toggledDetails, useDetailsPaneStore, withDetailsShown, withDetailsToggled } from './detailsPaneStore';
+
+/** The view that started without its details. */
+const TAB = {};
 
 describe('detailsWidthOf', () => {
   it("keeps each view's own width", () => {
@@ -25,14 +29,14 @@ describe('detailsHidden', () => {
   });
 
   it('hides details a view starts without, whatever the user left them as elsewhere (a review with no comments on its code)', () => {
-    expect(detailsHidden({ hidden: {}, startedHidden: { reviewComments: true } }, 'reviewComments')).toBe(true);
+    expect(detailsHidden({ hidden: {}, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toBe(true);
   });
 });
 
 describe('toggledDetails', () => {
   it("shows details a view started without, keeping the user's own choice: the next review starts as they left it", () => {
-    expect(toggledDetails({ hidden: {}, startedHidden: { reviewComments: true } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
-    expect(toggledDetails({ hidden: { reviewComments: true }, startedHidden: { reviewComments: true } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
+    expect(toggledDetails({ hidden: {}, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
+    expect(toggledDetails({ hidden: { reviewComments: true }, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
   });
 
   it('hides or shows them as the user chose otherwise', () => {
@@ -54,5 +58,22 @@ describe('withDetailsShown', () => {
   it("shows one view's details, leaving them shown when they were", () => {
     expect(withDetailsShown({ labels: true, branches: true }, 'branches')).toEqual({ labels: true });
     expect(withDetailsShown({ labels: true }, 'branches')).toEqual({ labels: true });
+  });
+});
+
+describe('a view started without its details', () => {
+  it("is forgotten only by the view that started it: one review's tab left keeps the next one's start", () => {
+    const store = useDetailsPaneStore.getState();
+    const leaving = {};
+    const arriving = {};
+    store.startHidden('reviewComments', leaving);
+    // The next review's tab starts before the one it replaces is cleaned up.
+    store.startHidden('reviewComments', arriving);
+    store.forgetStarted('reviewComments', leaving);
+
+    expect(detailsHidden(useDetailsPaneStore.getState(), 'reviewComments')).toBe(true);
+
+    store.forgetStarted('reviewComments', arriving);
+    expect(detailsHidden(useDetailsPaneStore.getState(), 'reviewComments')).toBe(false);
   });
 });

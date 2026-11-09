@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countedReads } from '@shared/testing/countedReads';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
@@ -29,6 +30,23 @@ describe('reviewFileFlag', () => {
     const markOf = reviewFileFlag(threads, BRANCH).markOf({ kind: 'changeset', changesetId: 8 });
     expect(markOf(entry('src/Player.cs'))).toBeNull();
     expect(markOf(entry('src/Enemy.cs'))).toBe('1 comment');
+  });
+
+  it('finds a moved file by the path it had when commented', () => {
+    const markOf = reviewFileFlag(threads, BRANCH).markOf({ kind: 'branch', branch: '/main/task' });
+    expect(markOf({ ...entry('src/Hero.cs'), oldPath: 'src/Player.cs' })).toBe('2 comments');
+  });
+
+  it('reads each thread a few times however many files the list marks, not once per file', () => {
+    // Thousands of files, hundreds of them commented: a big review's list marks every row.
+    const commented = Array.from({ length: 300 }, (_, index) => onLine(index + 1, `src/File${index}.cs`));
+    const { items, reads } = countedReads(threadsOf(commented));
+    const markOf = reviewFileFlag(items, BRANCH).markOf({ kind: 'branch', branch: '/main/task' });
+
+    const marks = Array.from({ length: 3000 }, (_, index) => markOf(entry(`src/File${index}.cs`)));
+
+    expect(marks.filter((mark) => mark !== null)).toHaveLength(300);
+    expect(reads()).toBeLessThan(20 * items.length);
   });
 
   it('offers a "Commented" chip', () => {

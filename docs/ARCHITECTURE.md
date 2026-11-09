@@ -1125,6 +1125,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`); the one
   exception is a diff shown in a dialog, whose step keys reach it, not the diff behind (`keysReach`, its dialog marked
   `STEP_FRAME`: docs/features/code-reviews.md "See in context").
+  A view kept mounted but hidden (a review's tab not picked) wraps itself in `ViewShownContext` set to false, and
+  `useShortcut` listens to none of its keys meanwhile (`shortcutListens`).
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
@@ -1164,11 +1166,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
   skip), and focus a closing menu hands back to its trigger (`trackPointerReturnFocus`, `data-pointer-return-focus`).
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
-  in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
-  `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
-  path first (`PathLabel`, `positionsInTrimmed`). Words are found in the lower-cased text and marked where they are in
-  the text itself (`lowerCasedText`): a letter may grow when lower-cased (a Turkish İ), moving what follows. Fuzzy finders (the palette, Go to file) pass the positions they
-  ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as
+  stored, `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the
+  whole path first (`PathLabel`, `positionsInTrimmed`). Words are found in the lower-cased text and marked where they
+  are in the text itself (`lowerCasedText`): a letter may grow when lower-cased (a Turkish İ), moving what follows.
+  Fuzzy finders (the palette, Go to file) pass the positions they ranked by (`fuzzyMatchPositions`). Text a row shows
+  but its filter doesn't look at is never marked.
   - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
     the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
     every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. Each
