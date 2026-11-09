@@ -149,7 +149,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
   is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its tooltip naming the changeset: "Applied in changeset 4: see
-  how it was applied", `appliedPillTip`) or a reply discards it
+  how it was applied", `appliedPillTip`; shown in how it was applied itself, it only names the changeset, as opening it
+  would go behind the dialog, whose footer opens it: `threadHeaderOf`'s `inContext`) or a reply discards it
   (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
   way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
   (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole (by keyboard, its fold toggle:

@@ -22,6 +22,11 @@ export interface ThreadHeaderInput {
   seesHowApplied: boolean;
   /** Whether "Answered" can show the reply that answered (the panel's card can't: it goes to the thread). */
   showsAnswer: boolean;
+  /**
+   * Shown in context (`CommentContextDialog`), which is how it was applied itself: "Applied" names its changeset and
+   * leads nowhere, as opening the changeset would go behind the dialog (its footer opens it, closing the dialog).
+   */
+  inContext: boolean;
 }
 
 /** The file and line a header names: a link to it in Changes, or, on a card that goes there itself, text. */
@@ -37,7 +42,7 @@ export interface HeaderLocation {
 }
 
 /** Where the thread stands, as a pill: "Answered" leads to the reply, "Applied" to how it was applied; the rest are words. */
-export type HeaderPill = NonNullable<ThreadBadges['state']> & ({ leadsTo: 'nothing' } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string });
+export type HeaderPill = NonNullable<ThreadBadges['state']> & ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string });
 
 /** What a thread's header shows, in its order; the card maps it to its controls. */
 export interface ThreadHeaderView {
@@ -58,7 +63,7 @@ export function hasThreadHeader(thread: ReviewThread): boolean {
   return thread.root.anchor.kind === 'line' || threadBadges(thread).kind !== undefined;
 }
 
-export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer }: ThreadHeaderInput): ThreadHeaderView {
+export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer, inContext }: ThreadHeaderInput): ThreadHeaderView {
   const badges = threadBadges(thread);
   const inCode = place === 'code';
   return {
@@ -69,7 +74,7 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     kindLabel: inCode ? threadKindName(thread.root) : null,
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    pill: pillOf(thread, badges, seesHowApplied, showsAnswer),
+    pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
 }
@@ -82,10 +87,11 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
   return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
-function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean): HeaderPill | null {
+function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {
   if (!badges.state) return null;
   const answer = showsAnswer ? answerOf(thread) : undefined;
   if (answer) return { ...badges.state, leadsTo: 'answer', tip: answer.tip };
+  if (badges.appliedIn !== undefined && inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
   if (badges.appliedIn !== undefined) return { ...badges.state, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
   return { ...badges.state, leadsTo: 'nothing' };
 }

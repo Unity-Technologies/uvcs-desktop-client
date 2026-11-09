@@ -167,6 +167,7 @@ function ThreadCard({ review, thread, user, showInConversation, onClose }: ViewP
       user={user}
       highlight={0}
       inCode={{
+        inContext: true,
         showInConversation: () => {
           onClose();
           showInConversation();

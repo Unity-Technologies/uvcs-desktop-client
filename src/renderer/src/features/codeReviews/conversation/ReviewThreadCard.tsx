@@ -47,6 +47,8 @@ export interface ThreadInCode {
   /** The earlier version's lines it was written on, for one outdated: they're no longer in the code. */
   snippet?: ReactNode;
   showInConversation: () => void;
+  /** Shown in context (`CommentContextDialog`): its "Applied" names the changeset the dialog shows, and opens nothing. */
+  inContext?: true;
   /**
    * What the "Earlier version" or "Outdated" tag opens: the diff it was written on, and what was done since
    * (`openCommentContextDialog`, on "When commented"), as "Applied" opens it on how it was applied.
@@ -167,6 +169,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     hides: inCode?.hide !== undefined,
     seesHowApplied: onSeeApplied !== undefined,
     showsAnswer: onSeeAnswer !== undefined,
+    inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
   const anchor = root.anchor.kind === 'line' ? root.anchor : null;
@@ -251,7 +254,7 @@ function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
     }
     case 'nothing':
       return (
-        <span className={styles.pill} data-tone={pill.tone}>
+        <span className={styles.pill} data-tone={pill.tone} data-tip={pill.tip}>
           {pill.label}
         </span>
       );
