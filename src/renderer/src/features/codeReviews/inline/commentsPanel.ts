@@ -1,6 +1,6 @@
 import { comparePaths } from '@shared/pathOrder';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { isLineThread, type LineThread } from './fileThreads';
+import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
 /** What the Comments panel lists: what's still open (change requests to apply, questions to answer), or every thread. */
 export type CommentsFilter = 'open' | 'all';
@@ -15,7 +15,7 @@ export function commentsPanelThreads(threads: readonly ReviewThread[], filter: C
 }
 
 function pathOf(thread: LineThread): string {
-  return thread.root.anchor.path.replace(/^\//, '');
+  return anchorPath(thread.root.anchor);
 }
 
 /** How many threads on lines of code each filter lists. */

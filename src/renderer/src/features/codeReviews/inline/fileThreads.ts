@@ -88,9 +88,14 @@ export function isLineThread(thread: ReviewThread): thread is LineThread {
   return thread.root.anchor.kind === 'line';
 }
 
+/** The path a comment names, without its leading slash, as a diff names its files (`DiffEntry.path`). */
+export function anchorPath(anchor: Pick<LineAnchor, 'path'>): string {
+  return anchor.path.replace(/^\//, '');
+}
+
 /** Whether a comment is on the file: by its path then, the one it had, or the one it moved from. */
 function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
-  const path = anchor.path.replace(/^\//, '');
+  const path = anchorPath(anchor);
   return path === file.path || path === file.oldPath;
 }
 
