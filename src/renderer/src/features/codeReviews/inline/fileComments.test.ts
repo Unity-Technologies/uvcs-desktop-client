@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, threadPlace, topSideOf, versionsToRead } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead } from './fileComments';
 import type { ShownFile } from './fileThreads';
 import { lineThreadsOf } from './threadRows';
 
@@ -89,9 +89,20 @@ describe('annotationRowsOf', () => {
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
     const metadataOf = (opened: string[]) => annotationRowsOf({ rows: lines }, outdated, 'additions', opened).map((row) => row.metadata);
     expect(metadataOf(['additions:9'])).toEqual(['additions:9']);
-    expect(metadataOf(['additions:9', OUTDATED_ROW])).toEqual(['additions:9', OUTDATED_ROW]);
-    expect(metadataOf([OUTDATED_ROW, 'additions:9'])).toEqual([OUTDATED_ROW, 'additions:9']);
-    expect(annotationRowsOf({ rows: [] }, [], 'additions', [OUTDATED_ROW])).toEqual([]);
+    expect(metadataOf(['additions:9', outdatedKey(2)])).toEqual(['additions:9', OUTDATED_ROW]);
+    expect(metadataOf([outdatedKey(2), 'additions:9'])).toEqual([OUTDATED_ROW, 'additions:9']);
+    expect(annotationRowsOf({ rows: [] }, [], 'additions', [outdatedKey(2)])).toEqual([]);
+  });
+
+  it('holds every outdated thread opened in one row above the code, where the first was opened', () => {
+    const [onShown, first, second] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3), onLine(3, 20, 5)]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const outdated = [
+      { thread: first as never, revisionId: 20 },
+      { thread: second as never, revisionId: 20 },
+    ];
+    const rows = annotationRowsOf({ rows: lines }, outdated, 'additions', [outdatedKey(3), 'additions:9', outdatedKey(2)]);
+    expect(rows.map((row) => row.metadata)).toEqual([OUTDATED_ROW, 'additions:9']);
   });
 
   it('puts the outdated threads above the code, on the side the file has', () => {
@@ -105,8 +116,18 @@ describe('threadPlace', () => {
 
   it("is a thread's line, or the top of the code for an outdated one (opened as a line is), or nothing for another file's", () => {
     expect(threadPlace(comments, 1, 'additions')).toEqual({ side: 'additions', lineNumber: 2, lineKey: 'additions:2' });
-    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0, lineKey: OUTDATED_ROW });
+    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0, lineKey: outdatedKey(3) });
     expect(threadPlace(comments, 99, 'additions')).toBeNull();
+  });
+});
+
+describe('openedOutdated', () => {
+  const [first, second, third] = threadsOf([onLine(2, 20, 3), onLine(3, 20, 5), onLine(4, 20, 7)]);
+  const outdated = [first, second, third].map((thread) => ({ thread: thread as never, revisionId: 20 }));
+
+  it('is, while comments are hidden, only the outdated threads gone to, in the order they were opened, not all of them', () => {
+    expect(openedOutdated(outdated, [outdatedKey(4), 'additions:9', outdatedKey(2)]).map((entry) => entry.thread.root.id)).toEqual([4, 2]);
+    expect(openedOutdated(outdated, ['additions:9'])).toEqual([]);
   });
 });
 
