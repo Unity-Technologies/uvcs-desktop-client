@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { prefersReducedMotion } from '../../../lib/reducedMotion';
+import { listScrollTop } from '../../../lib/scrollPlacement';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
@@ -153,7 +155,8 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
 }
 
 /**
- * Each time a comment is gone to (a card, the arrows, N), its card is scrolled into the list's view. The focus, when a
+ * Each time a comment is gone to (a card, the arrows, N), its card is brought into the list's view, a third of the way
+ * down (`listScrollTop`), gliding unless motion is reduced. The focus, when a
  * card before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
@@ -163,7 +166,7 @@ function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: 
     const list = listRef.current;
     if (!list || focusSeq === undefined) return;
     const card = list.querySelector('[data-current]');
-    card?.scrollIntoView({ block: 'nearest' });
+    if (card) bringIntoList(card);
     const focused = document.activeElement;
     if (!(focused instanceof HTMLElement) || !list.contains(focused) || card?.contains(focused)) return;
     const control = card?.querySelector<HTMLElement>('button');
@@ -172,6 +175,30 @@ function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: 
     if (control) control.focus(options);
     else focused.blur();
   }, [listRef, focusSeq]);
+}
+
+/** Where each list was last sent, while it glides there: N pressed again measures from it, not from mid-glide. */
+const aimedAt = new WeakMap<HTMLElement, number>();
+
+function bringIntoList(card: Element): void {
+  const scroller = scrollingParent(card);
+  if (!scroller) return;
+  const view = scroller.getBoundingClientRect();
+  const box = card.getBoundingClientRect();
+  const scrollTop = aimedAt.get(scroller) ?? scroller.scrollTop;
+  const top = box.top - view.top + scroller.scrollTop;
+  const to = listScrollTop({ top, bottom: top + box.height }, { scrollTop, height: scroller.clientHeight, contentHeight: scroller.scrollHeight });
+  if (to === null || Math.abs(to - scroller.scrollTop) < 1) return;
+  aimedAt.set(scroller, to);
+  scroller.addEventListener('scrollend', () => aimedAt.delete(scroller), { once: true });
+  scroller.scrollTo({ top: to, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
+
+function scrollingParent(element: Element): HTMLElement | null {
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    if (parent.scrollHeight > parent.clientHeight && /auto|scroll/.test(getComputedStyle(parent).overflowY)) return parent;
+  }
+  return null;
 }
 
 function Loading() {
