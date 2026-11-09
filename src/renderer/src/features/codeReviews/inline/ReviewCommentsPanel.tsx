@@ -69,31 +69,28 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
   useFollowedCard(listRef, comments.focus?.seq);
   return (
     <>
-      {/* One row: the panel's name, where the one gone to is and the arrows through them, what it lists, its ×. */}
       <header className={styles.header}>
         <h2 className={styles.title}>Comments</h2>
-        {listed.length > 0 && (
-          <>
-            <span className={styles.position}>{commentPosition(listed, current)}</span>
-            <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
-            <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
-          </>
-        )}
-        <span className={styles.headerEnd}>
-          <SegmentedControl<CommentsFilter>
-            label="Comments to list"
-            value={filter}
-            onChange={onFilterChange}
-            segments={[
-              { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
-              { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
-            ]}
-          />
-          {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
-          <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
-        </span>
+        <SegmentedControl<CommentsFilter>
+          label="Comments to list"
+          value={filter}
+          onChange={onFilterChange}
+          segments={[
+            { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
+            { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
+          ]}
+        />
+        {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
+        <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
       </header>
       {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter)} />}
+      {listed.length > 0 && (
+        <div className={styles.stepper}>
+          <span className={styles.position}>{commentPosition(listed, current)}</span>
+          <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
+          <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
+        </div>
+      )}
       {listed.length === 0 && isSearching(search) ? (
         <NoMatches noun="comments" onClear={() => onSearchChange(NO_COMMENTS_SEARCH)} />
       ) : listed.length === 0 ? (
