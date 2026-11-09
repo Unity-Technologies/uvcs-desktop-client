@@ -227,8 +227,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   line: the kind's name is cut short first, then the tag, the state and the × keeping their place.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
-  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, whole in a
-  tooltip when cut short), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
+  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in
+  turn, the folder first, then the line, the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
   anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was said,
   replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the
   files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding

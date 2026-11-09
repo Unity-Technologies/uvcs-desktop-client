@@ -43,12 +43,13 @@ describe('replyAction and threadKindName', () => {
 });
 
 describe('a comment on a line', () => {
-  it("reads as its file's path, as the diff names it, and its line", () => {
-    expect(locationText(ON_LINE)).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: ':11' });
+  it("reads as its file's path, as the diff names it; its line goes apart", () => {
+    expect(locationText(ON_LINE)).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs' });
+    expect(writtenLineText(ON_LINE)).toBe('line 11');
   });
 
   it('reads a file at the top of the repository with no folder', () => {
-    expect(locationText({ ...ON_LINE, path: '/README.md' })).toEqual({ folder: '', file: 'README.md', line: ':11' });
+    expect(locationText({ ...ON_LINE, path: '/README.md' })).toEqual({ folder: '', file: 'README.md' });
   });
 
   it('opens the review on its Changes tab at the thread, in its file', () => {

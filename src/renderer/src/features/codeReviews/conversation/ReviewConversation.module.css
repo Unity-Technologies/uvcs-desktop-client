@@ -225,12 +225,17 @@
 }
 
 /* The folder gives way first; then the file's name, its line staying whole. */
+/*
+ * Cut short in turn, never together: the folder, then the line (`writtenLine`), the file's name last. Flex shrinks
+ * them all at once, by these weights times their widths, and an ellipsis shows at a fraction of a pixel cut: weights
+ * this far apart leave the next one less than a layout unit until the one before has gone.
+ */
 .locationFolder {
   overflow: hidden;
   min-width: 0;
   color: var(--text-tertiary);
   text-overflow: ellipsis;
-  flex-shrink: 1000;
+  flex-shrink: 100000000;
 }
 
 /* A name too long for the band is cut short too, not run under the state pill beside it. */
@@ -239,11 +244,6 @@
   min-width: 0;
   color: var(--text-primary);
   text-overflow: ellipsis;
-}
-
-.locationLine {
-  flex: none;
-  color: var(--text-tertiary);
 }
 
 /* The file, a link to it in Changes at the comment: the hand and the underline over the whole path say so. */
@@ -260,12 +260,24 @@ button.location:hover .locationFile {
   text-decoration: underline;
 }
 
-/* "line 1962", after the file's link and not part of it: the band's gap sets it apart. */
+/*
+ * "line 1962", after the file and not part of its link: the band's gap sets it apart. In the file's font and size, so
+ * the two sit on one baseline. Cut short before the file's name, after its folder (`locationFolder`).
+ */
 .writtenLine {
-  flex: none;
+  flex-shrink: 10000;
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-tertiary);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Inside the Comments panel's location, after the file's name. */
+.location > .writtenLine {
+  margin-left: 6px;
 }
 
 .headerEnd {

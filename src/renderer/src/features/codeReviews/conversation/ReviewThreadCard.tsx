@@ -135,7 +135,7 @@ interface ThreadHeaderProps {
   thread: ReviewThread;
   folded: boolean;
   inCode?: ThreadInCode;
-  /** The card around it goes to the thread (the Comments panel's): its location only names where, line included. */
+  /** The card around it goes to the thread (the Comments panel's): its file only names where, not a link of its own. */
   cardOpens?: boolean;
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
@@ -160,20 +160,19 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
         )}
         {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
         {anchor && location && (cardOpens ? (
-          // The card goes to the thread: its location only names where. Cut short, it names the whole path in its tooltip.
-          <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
+          // The card goes to the thread: its file and line only name where, the line inside so that, cut short, the
+          // folder gives way first, then the line, the file's name last. The whole path and line in its tooltip.
+          <span className={styles.location} data-tip={`${location.folder}${location.file}, ${writtenLineText(anchor)}`} data-tip-overflow="">
             <LocationParts location={location} />
+            <WrittenLine anchor={anchor} />
           </span>
         ) : (
-          // The file, a link to it in Changes, opened at the comment.
           <>
+            {/* The file, a link to it in Changes, opened at the comment. */}
             <button type="button" className={styles.location} data-tip="Show in Changes" data-tip-sub={`${location.folder}${location.file}`} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
-              <LocationParts location={location} withLine={false} />
+              <LocationParts location={location} />
             </button>
-            {/* Apart from the link, as text: the line it was written on, which an outdated comment's no longer is. */}
-            <span className={styles.writtenLine} data-tip="The line it was written on">
-              {writtenLineText(anchor)}
-            </span>
+            <WrittenLine anchor={anchor} />
           </>
         ))}
         {inCode && (
@@ -230,7 +229,16 @@ function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<Thre
   );
 }
 
-function LocationParts({ location, withLine = true }: { location: NonNullable<ReturnType<typeof locationText>>; withLine?: boolean }) {
+/** Apart from the file, as text: the line it was written on, which an outdated comment's no longer is. */
+function WrittenLine({ anchor }: { anchor: Pick<Extract<ReviewThread['root']['anchor'], { kind: 'line' }>, 'line'> }) {
+  return (
+    <span className={styles.writtenLine} data-tip="The line it was written on">
+      {writtenLineText(anchor)}
+    </span>
+  );
+}
+
+function LocationParts({ location }: { location: NonNullable<ReturnType<typeof locationText>> }) {
   return (
     <>
       <span className={styles.locationFolder}>
@@ -239,7 +247,6 @@ function LocationParts({ location, withLine = true }: { location: NonNullable<Re
       <span className={styles.locationFile}>
         <Highlight text={location.file} />
       </span>
-      {withLine && <span className={styles.locationLine}>{location.line}</span>}
     </>
   );
 }

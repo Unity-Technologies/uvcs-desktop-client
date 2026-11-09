@@ -40,13 +40,13 @@ export function threadKindName(root: Pick<ReviewComment, 'kind'>): 'Change reque
 }
 
 /**
- * What the location of a comment on a line reads: its folder, which gives way first in a narrow card, its file's name,
- * whole, and the line.
+ * What the file of a comment on a line reads: its folder, which gives way first in a narrow card, and its name, whole.
+ * The line goes apart (`writtenLineText`).
  */
-export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>): { folder: string; file: string; line: string } {
+export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'path'>): { folder: string; file: string } {
   const path = anchor.path.replace(/^\//, '');
   const slash = path.lastIndexOf('/');
-  return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1), line: `:${anchor.line}` };
+  return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1) };
 }
 
 /** The line a comment was written on, as the conversation says it apart from its file's link: "line 42". */
