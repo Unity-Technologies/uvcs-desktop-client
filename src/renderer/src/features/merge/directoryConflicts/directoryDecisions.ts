@@ -86,3 +86,16 @@ export function withDecisionAndNext(
 export function applyToNextLabel(count: number): string {
   return count === 1 ? 'Do the same for the next conflict of this kind' : `Do the same for the next ${count} conflicts of this kind`;
 }
+
+/**
+ * Whether deciding `conflict` as `resolution`, with the `next` conflicts the same way, changes the page's decisions:
+ * not when it is decided so already and no next one goes with it (Keep both takes none).
+ */
+export function changesDecisions(
+  decisions: readonly DirectoryDecision[],
+  conflict: DirectoryConflict,
+  resolution: DirectoryConflictResolution,
+  next: readonly DirectoryConflict[],
+): boolean {
+  return !isDecidedAs(decisions, conflict, resolution) || (resolution.choice !== 'rename' && next.length > 0);
+}
