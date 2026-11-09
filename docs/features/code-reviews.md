@@ -228,7 +228,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was said,
   replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the
   files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
-  nothing offers "Clear filters". The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
+  nothing offers "Clear filters". While searching, a card shows the comment the words were found in, a reply too, from
+  a little before the match (`matchExcerpt`), in place of its first words, and the words are marked there, in who said
+  it and in the file (`HighlightQuery`), so each card says why it's listed. The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
   selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
   `ThreadFocus`). Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the
   previous and next (its own row: in one with the name and Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files

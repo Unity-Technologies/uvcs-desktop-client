@@ -1,5 +1,6 @@
 import { comparePaths } from '@shared/pathOrder';
-import { matchesWordFilter } from '../../../lib/matchesAllWords';
+import { commentText } from '../../../lib/comments/commentText';
+import { matchesWordFilter, queryWords } from '../../../lib/matchesAllWords';
 import { pluralize } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
 import type { ReviewThread } from '../conversation/reviewThreads';
@@ -35,6 +36,42 @@ export function matchesCommentsSearch(thread: LineThread, { query, kinds }: Comm
   if (kinds.size > 0 && !kinds.has(threadKindOf(thread))) return false;
   const comments = [thread.root, ...thread.replies];
   return matchesWordFilter([...comments.flatMap((comment) => [comment.text, comment.author, displayName(comment.author)]), anchorPath(thread.root.anchor)], query);
+}
+
+/** While searching, what a card says in place of its first words: who wrote the comment that matched, and its text from near the match. */
+export interface MatchExcerpt {
+  author: string;
+  text: string;
+}
+
+/** How much of the text before the first match the excerpt keeps, so the match reads in its sentence. */
+const EXCERPT_LEAD = 24;
+
+/**
+ * The comment of a thread the words typed were found in (the one holding most of them, the first of those), as one
+ * line of its plain text starting a little before the first word found (cut at a word, "…" before it): a card shows a
+ * thread's first words alone, and a match in a reply or further in would show nothing of why the card is listed. None
+ * without words, or when they were found only in who said it or the file, which the card shows already.
+ */
+export function matchExcerpt(thread: Pick<LineThread, 'root' | 'replies'>, query: string): MatchExcerpt | null {
+  const words = queryWords(query);
+  if (words.length === 0) return null;
+  let best: { author: string; text: string; found: number; at: number } | null = null;
+  for (const comment of [thread.root, ...thread.replies]) {
+    const text = commentText(comment.text).replace(/\s+/g, ' ').trim();
+    const lower = text.toLowerCase();
+    const positions = words.map((word) => lower.indexOf(word)).filter((at) => at !== -1);
+    if (positions.length > (best?.found ?? 0)) best = { author: comment.author, text, found: positions.length, at: Math.min(...positions) };
+  }
+  if (!best) return null;
+  return { author: best.author, text: excerptFrom(best.text, best.at) };
+}
+
+function excerptFrom(text: string, at: number): string {
+  if (at <= EXCERPT_LEAD) return text;
+  const space = text.indexOf(' ', at - EXCERPT_LEAD);
+  const start = space === -1 || space >= at ? at : space + 1;
+  return `…${text.slice(start)}`;
 }
 
 /** Whether the filter row narrows anything. */

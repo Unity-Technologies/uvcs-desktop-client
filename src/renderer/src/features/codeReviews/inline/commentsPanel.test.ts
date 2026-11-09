@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
+import type { LineThread } from './fileThreads';
 import {
   commentPosition,
   commentsPanelCounts,
@@ -8,6 +9,7 @@ import {
   emptyCommentsText,
   initialCommentsFilter,
   isSearching,
+  matchExcerpt,
   shownCommentsFilter,
   steppedThread,
   threadKindChipLabel,
@@ -81,6 +83,34 @@ describe('the filter row', () => {
     expect(isSearching({ query: ' ', kinds: new Set() })).toBe(false);
     expect(isSearching({ query: 'a', kinds: new Set() })).toBe(true);
     expect(isSearching({ query: '', kinds: new Set(['question']) })).toBe(true);
+  });
+});
+
+describe('matchExcerpt', () => {
+  const [thread] = threadsOf([
+    onLine(1, '/src/Player.cs', 1, { text: 'Fix the release notes:\n\n- They must say that a bare **--re-request** needs --all', author: 'miryam' }),
+    comment(2, { parentId: 1, kind: 'comment', text: 'Fixed in the releasenotes attribute', author: 'dani' }),
+  ]) as [LineThread];
+
+  it('shows the reply the words were found in, with who wrote it', () => {
+    expect(matchExcerpt(thread, 'attribute')).toEqual({ author: 'dani', text: '…in the releasenotes attribute' });
+  });
+
+  it('starts a little before a match far into a comment, at a word, as plain text', () => {
+    expect(matchExcerpt(thread, 'needs')).toEqual({ author: 'miryam', text: '…a bare --re-request needs --all' });
+  });
+
+  it('keeps a comment whose match is near its start whole', () => {
+    expect(matchExcerpt(thread, 'release')).toEqual({ author: 'miryam', text: 'Fix the release notes: • They must say that a bare --re-request needs --all' });
+  });
+
+  it('picks the comment holding most of the words', () => {
+    expect(matchExcerpt(thread, 'fixed attribute notes')?.author).toBe('dani');
+  });
+
+  it('is none without words, or when they were found only in who wrote it or the file', () => {
+    expect(matchExcerpt(thread, ' ')).toBeNull();
+    expect(matchExcerpt(thread, 'player')).toBeNull();
   });
 });
 

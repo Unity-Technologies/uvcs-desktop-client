@@ -10,6 +10,7 @@ import { CommentLine } from '../../../components/comments/CommentLine';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
+import { Highlight } from '../../../ui/Highlight';
 import { IconButton } from '../../../ui/IconButton';
 import { CommentComposer } from './CommentComposer';
 import { canDiscard } from './commentPermissions';
@@ -100,14 +101,24 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
  * A thread as the conversation shows a settled one: its header band, then who started it and their first words; a click
  * anywhere goes to it (the Changes tab's Comments panel, going to it in the code).
  */
-export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeApplied }: { reviewId: number; thread: ReviewThread; current: boolean; onOpen: () => void; onSeeApplied?: () => void }) {
+interface ThreadSummaryCardProps {
+  reviewId: number;
+  thread: ReviewThread;
+  current: boolean;
+  onOpen: () => void;
+  onSeeApplied?: () => void;
+  /** While the list is searched, the comment the words were found in, said in place of the thread's first words. */
+  excerpt?: { author: string; text: string } | null;
+}
+
+export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeApplied, excerpt }: ThreadSummaryCardProps) {
   return (
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
     <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
       <ThreadHeader reviewId={reviewId} thread={thread} folded locationAsText onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
-        <FoldedThread thread={thread} onOpen={onOpen} />
+        <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
       </div>
     </section>
   );
@@ -215,23 +226,30 @@ function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<Thre
 function LocationParts({ location }: { location: NonNullable<ReturnType<typeof locationText>> }) {
   return (
     <>
-      <span className={styles.locationFolder}>{location.folder}</span>
-      <span className={styles.locationFile}>{location.file}</span>
+      <span className={styles.locationFolder}>
+        <Highlight text={location.folder} />
+      </span>
+      <span className={styles.locationFile}>
+        <Highlight text={location.file} />
+      </span>
       <span className={styles.locationLine}>{location.line}</span>
     </>
   );
 }
 
-/** A settled thread folded: who started it and its first words, a click showing it whole. */
-function FoldedThread({ thread, onOpen }: { thread: ReviewThread; onOpen: () => void }) {
-  const { root } = thread;
+/**
+ * A settled thread folded: who started it and its first words, a click showing it whole. While a list is searched,
+ * the comment the words were found in instead (`excerpt`), the words marked (`HighlightQuery`), as every list marks them.
+ */
+function FoldedThread({ thread, onOpen, excerpt }: { thread: ReviewThread; onOpen: () => void; excerpt?: ThreadSummaryCardProps['excerpt'] }) {
+  const author = excerpt?.author ?? thread.root.author;
   return (
     <button type="button" className={styles.foldedLine} onClick={onOpen}>
-      <Avatar user={root.author} size={16} tip={null} />
-      <span className={styles.author}>{displayName(root.author)}</span>
-      <span className={styles.foldedText}>
-        <CommentLine comment={root.text} interactive={false} />
+      <Avatar user={author} size={16} tip={null} />
+      <span className={styles.author}>
+        <Highlight text={displayName(author)} />
       </span>
+      <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
     </button>
   );
 }

@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
+import { HighlightQuery } from '../../../ui/Highlight';
 import { NoMatches } from '../../../ui/NoMatches';
 import { SearchField } from '../../../ui/SearchField';
 import { ToggleChip } from '../../../ui/ToggleChip';
@@ -17,6 +18,7 @@ import {
   commentsPanelCounts,
   emptyCommentsText,
   isSearching,
+  matchExcerpt,
   NO_COMMENTS_SEARCH,
   steppedThread,
   THREAD_KINDS,
@@ -96,19 +98,22 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
       ) : listed.length === 0 ? (
         <EmptyState title={empty.title} description={empty.description} />
       ) : (
-        <ul ref={listRef} className={styles.list}>
-          {listed.map((thread) => (
-            <li key={thread.root.id}>
-              <ThreadSummaryCard
-                reviewId={comments.review.id}
-                thread={thread}
-                current={current === thread.root.id}
-                onOpen={() => comments.goToThread(thread)}
-                onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
-              />
-            </li>
-          ))}
-        </ul>
+        <HighlightQuery query={search.query}>
+          <ul ref={listRef} className={styles.list}>
+            {listed.map((thread) => (
+              <li key={thread.root.id}>
+                <ThreadSummaryCard
+                  reviewId={comments.review.id}
+                  thread={thread}
+                  current={current === thread.root.id}
+                  onOpen={() => comments.goToThread(thread)}
+                  onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                  excerpt={matchExcerpt(thread, search.query)}
+                />
+              </li>
+            ))}
+          </ul>
+        </HighlightQuery>
       )}
     </>
   );
