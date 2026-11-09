@@ -4,12 +4,14 @@ import { routeInPageWindow, type NavigationRequest } from '../pageWindow/pageWin
 import { usePageWindow } from '../pageWindow/pageWindowStore';
 import { afterLeaving } from './leaveGuard';
 import type { Page } from './pages';
+import { movesWithinTop } from './pageMoves';
 import { viewCommandId, type ViewId } from './views';
 
 interface NavigationStore {
   view: ViewId;
   pages: Page[];
   goToView: (view: ViewId) => void;
+  /** Stacks `page` over the one on top, or shows it in its place when it's a place in that page (`movesWithinTop`). */
   openPage: (page: Page) => void;
   /** Shows `page` in place of the one on top, as a page moving within itself does (a review's tab): Back skips it. */
   replacePage: (page: Page) => void;
@@ -27,7 +29,7 @@ export const useNavigation = create<NavigationStore>((set, get) => ({
   },
   openPage: (page) => {
     if (routed({ kind: 'openPage', page }, get().pages) === 'workspaceWindow') return void api.windows.openPageInWorkspaceWindow(page);
-    set((state) => ({ pages: [...state.pages, page] }));
+    set((state) => ({ pages: movesWithinTop(state.pages.at(-1), page) ? [...state.pages.slice(0, -1), page] : [...state.pages, page] }));
   },
   replacePage: (page) => set((state) => ({ pages: [...state.pages.slice(0, -1), page] })),
   goBack: () => {

@@ -138,7 +138,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   scrolling to each (`ReviewSideRail`).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
   deleted starts a thread of its own. One on a line shows its file first, the whole path a link to it in the
-  Changes tab, opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
+  Changes tab, on the same page as a tab moves (a place in the review on top replaces it, never stacks a second
+  page of it: `movesWithinTop`), opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
   `focusChangeset` for one written changeset by changeset; see "Comments in the code"), then, apart and as text, the
   line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that
   line, which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on
