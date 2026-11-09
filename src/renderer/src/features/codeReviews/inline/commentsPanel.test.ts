@@ -198,13 +198,20 @@ describe('shownCommentsFilter', () => {
 
 describe('commentsPanelStartsHidden', () => {
   it('starts hidden on a review with no comments on its code, which it would only say', () => {
-    expect(commentsPanelStartsHidden({ codeThreads: 0, diffWidth: 1200 })).toBe(true);
-    expect(commentsPanelStartsHidden({ codeThreads: 1, diffWidth: 1200 })).toBe(false);
+    expect(commentsPanelStartsHidden({ codeThreads: 0, diffWidth: 1200, layout: 'unified' })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 1, diffWidth: 1200, layout: 'unified' })).toBe(false);
   });
 
   it('starts hidden where the diff beside it would be too narrow to read, the markers on lines saying where comments are', () => {
-    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH - 1 })).toBe(true);
-    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH })).toBe(false);
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH - 1, layout: 'unified' })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: MIN_READABLE_DIFF_WIDTH, layout: 'unified' })).toBe(false);
+  });
+
+  it('side by side, counts the width each side has: two strips of code read no better than one', () => {
+    // A 1500 px window leaves the diff about 610 px beside the files and the panel: two sides of about 300.
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: 610, layout: 'split' })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: 2 * MIN_READABLE_DIFF_WIDTH - 1, layout: 'split' })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 3, diffWidth: 2 * MIN_READABLE_DIFF_WIDTH, layout: 'split' })).toBe(false);
   });
 });
 
