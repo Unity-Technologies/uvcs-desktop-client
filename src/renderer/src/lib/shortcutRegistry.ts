@@ -101,6 +101,9 @@ export const SHORTCUTS = {
   // As Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'.
   nextChangeset: { area: 'Diff', label: 'Next changeset of the branch', keys: ['alt+shift+down'] },
   previousChangeset: { area: 'Diff', label: 'Previous changeset of the branch', keys: ['alt+shift+up'] },
+  // In a review's Changes, in the order its Comments panel lists them, across files; N as in "next", where nothing takes it.
+  nextComment: { area: 'Diff', label: "Next comment on a review's code", keys: ['n'] },
+  previousComment: { area: 'Diff', label: "Previous comment on a review's code", keys: ['shift+n'] },
   discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'] },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'] },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'] },

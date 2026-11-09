@@ -1,4 +1,5 @@
 import { comparePaths } from '@shared/pathOrder';
+import { pluralize } from '../../../lib/text';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
@@ -33,4 +34,20 @@ export function initialCommentsFilter(threads: readonly ReviewThread[]): Comment
 export function emptyCommentsText(filter: CommentsFilter, counts: Record<CommentsFilter, number>): { title: string; description?: string } {
   if (counts.all === 0) return { title: 'No comments on the code yet' };
   return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : { title: 'No comments on the code yet' };
+}
+
+/**
+ * The comment after or before the one gone to (`direction` 1 or -1), in the order the panel lists them (`listed`,
+ * across files): from none, or one no longer listed, the first or the last; none past either end.
+ */
+export function steppedThread(listed: readonly LineThread[], currentId: number | undefined, direction: 1 | -1): LineThread | null {
+  const index = listed.findIndex((thread) => thread.root.id === currentId);
+  if (index === -1) return (direction === 1 ? listed[0] : listed.at(-1)) ?? null;
+  return listed[index + direction] ?? null;
+}
+
+/** Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is. */
+export function commentPosition(listed: readonly LineThread[], currentId: number | undefined): string {
+  const index = listed.findIndex((thread) => thread.root.id === currentId);
+  return index === -1 ? pluralize(listed.length, 'comment') : `${index + 1} of ${listed.length}`;
 }
