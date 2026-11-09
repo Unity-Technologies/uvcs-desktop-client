@@ -31,7 +31,7 @@ import { MergeItemList } from './MergeItemList';
 import { MergeOptionsMenu } from './MergeOptionsMenu';
 import { contributorDecisions, contributorOf, mergeOptionsOffered, type Contributor } from './mergeOptions';
 import { MergePanes } from './MergePanes';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, directoryConflictsInListOrder, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { pairMergeMetas } from './mergeMetaPairs';
 import { mergeItemTypes } from './mergeItemTypes';
@@ -89,6 +89,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const items = useMemo(() => buildMergeItems(plan, directory.decisions, conflictedFiles), [plan, directory.decisions, conflictedFiles]);
   // The list shows each Unity `.meta` change with its asset's; the progress and the merge itself count every item.
   const pairs = useMemo(() => pairMergeMetas(items), [items]);
+  const directoryConflicts = useMemo(() => directoryConflictsInListOrder(items), [items]);
   const progress = useMemo(() => mergeProgress(fileStates, directory.resolutions, directory.applying), [fileStates, directory.resolutions, directory.applying]);
   const latest = useRef({ items: pairs.shown, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
@@ -252,13 +253,14 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               item={diffed}
               compareControls={metaToggle}
               progress={progress}
+              directoryConflicts={directoryConflicts}
               plan={plan}
               labels={labels}
               request={request}
               toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecideFile={decide}
               onStartOverFile={reset}
-              onResolveDirectory={(conflict, resolution) => void directory.decide(conflict, resolution)}
+              onResolveDirectory={(conflict, resolution, next) => void directory.decide(conflict, resolution, next)}
             />
           </FileStepsContext.Provider>
         ) : selectedGroup ? (
