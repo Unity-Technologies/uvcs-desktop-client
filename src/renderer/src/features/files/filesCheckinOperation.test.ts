@@ -66,6 +66,15 @@ describe('checkinItems', () => {
     expect(steps.checkins).toEqual([expect.objectContaining({ quiet: true })]);
   });
 
+  it('tells by a toast a check-in of a private file Changes never listed, when another change stays pending', async () => {
+    const unlisted = change('build/notes.txt', ['private']);
+    steps.comments.push('Add notes');
+
+    await checkinItems(ws, [unlisted], [edited]);
+
+    expect(steps.checkins).toEqual([expect.objectContaining({ quiet: false })]);
+  });
+
   it('checks in nothing when the comment is cancelled', async () => {
     expect(await checkinItems(ws, [newFile], [newFile])).toBe(false);
     expect(steps.checkins).toEqual([]);
