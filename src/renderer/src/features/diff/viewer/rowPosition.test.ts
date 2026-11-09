@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
+import { FRAME_MARGIN, framedScrollTop, lineAboveRow, lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
 
 describe('topProbePoints', () => {
   const view = { left: 100, top: 50, width: 800, bottom: 1050 };
@@ -52,5 +52,66 @@ describe('scrollTopFor', () => {
 
   it('never scrolls above the top of the file', () => {
     expect(scrollTopFor(10, 25)).toBe(0);
+  });
+});
+
+describe('framedScrollTop', () => {
+  const view = { scrollTop: 0, height: 400 };
+
+  it('leaves the view where it is when the line and its row show whole, away from the edges', () => {
+    expect(framedScrollTop({ lineTop: 100, focusTop: 120, focusBottom: 300 }, view)).toBeNull();
+  });
+
+  it('puts a line out of view a third of the way down, its row under it', () => {
+    expect(framedScrollTop({ lineTop: 1200, focusTop: 1220, focusBottom: 1300, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(1000);
+  });
+
+  it('stops at the end of the content: a comment at the end of a long file', () => {
+    expect(framedScrollTop({ lineTop: 9800, focusTop: 9820, focusBottom: 9990, lineHeight: 20 }, { ...view, height: 600, contentHeight: 10_000 })).toBe(9400);
+  });
+
+  it('moves a row that ends past the view, or against its bottom edge, up into it', () => {
+    expect(framedScrollTop({ lineTop: 300, focusTop: 320, focusBottom: 410 }, view)).toBe(300 - 400 / 3);
+    expect(framedScrollTop({ lineTop: 300, focusTop: 320, focusBottom: 390 }, view)).toBe(300 - 400 / 3);
+  });
+
+  it('raises the line above a third down so a tall row ends inside the view', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1020, focusBottom: 1350 }, view)).toBe(1350 - 400);
+  });
+
+  it('shows the part gone to from its top when it is taller than the view', () => {
+    expect(framedScrollTop({ lineTop: 1000, focusTop: 1300, focusBottom: 2000 }, view)).toBe(1300 - FRAME_MARGIN);
+  });
+
+  it('never scrolls above the top of the content', () => {
+    expect(framedScrollTop({ lineTop: 0, focusTop: 0, focusBottom: 100 }, { scrollTop: 500, height: 400 })).toBe(0);
+  });
+});
+
+describe('lineAboveRow', () => {
+  it('reads the line from where the diff lays it out, apart from the row under it', () => {
+    expect(lineAboveRow(1020, { top: 1000, height: 20 })).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it("doesn't count the row as part of the line when the diff's line box holds it (side by side, the row's line pairs with the other side's)", () => {
+    // Line 2141 of a 10,000-line file, its 253 px card under it: Pierre's box spans the line and the card.
+    expect(lineAboveRow(42828, { top: 42808, height: 273 })).toEqual({ lineTop: 42808, lineHeight: 20 });
+  });
+
+  it('takes one line above the row before the diff has laid the line out', () => {
+    expect(lineAboveRow(1020, undefined)).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it("takes one line above the row when the diff's box is out of date and doesn't sit above it", () => {
+    expect(lineAboveRow(1020, { top: 1500, height: 20 })).toEqual({ lineTop: 1000, lineHeight: 20 });
+  });
+
+  it('frames a card on a line deep in a long file with the line a third down, its card whole below', () => {
+    const view = { scrollTop: 0, height: 622, contentHeight: 216919 };
+    const { lineTop, lineHeight } = lineAboveRow(42828, { top: 42808, height: 273 });
+    const to = framedScrollTop({ lineTop, lineHeight, focusTop: 42836, focusBottom: 43069 }, view);
+    expect(to).not.toBeNull();
+    expect(lineTop - to!).toBeGreaterThan(0);
+    expect(43069 - to!).toBeLessThanOrEqual(view.height);
   });
 });

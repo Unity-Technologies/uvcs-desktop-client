@@ -49,6 +49,27 @@ describe('navigation', () => {
     expect(useNavigation.getState().pages).toEqual([history]);
   });
 
+  it("goes to a place in the review on top within its page, as its tabs do: a comment's file in the conversation", () => {
+    // Opened as another page, it stacked "Code review 41 / Code review 41", and the review drew again, its
+    // conversation's scroll lost. One page in place keeps the stack's length, the page's key (`PageFrame`).
+    const conversation: Page = { kind: 'codeReview', reviewId: 41 };
+    const atComment: Page = { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 51 };
+    navigation.openPage(history);
+    navigation.openPage(conversation);
+    navigation.openPage(atComment);
+
+    expect(useNavigation.getState().pages).toEqual([history, atComment]);
+  });
+
+  it('opens another review over the one on top, Back returning to it', () => {
+    const review: Page = { kind: 'codeReview', reviewId: 41 };
+    const another: Page = { kind: 'codeReview', reviewId: 72 };
+    navigation.openPage(review);
+    navigation.openPage(another);
+
+    expect(useNavigation.getState().pages).toEqual([review, another]);
+  });
+
   it('opens a page shown in place when none is open', () => {
     navigation.replacePage(history);
 

@@ -1,0 +1,36 @@
+/*
+ * The diff fills the dialog: as tall as the window allows, scrolling on its own. It gives way (`min-height: 0`, a flex
+ * item of the dialog's body) where the dialog's header and footer leave it less than 66vh (a window of 800 px or
+ * less), so the dialog never scrolls as a whole around it.
+ */
+.body {
+  display: flex;
+  height: 66vh;
+  min-height: 0;
+}
+
+.diff,
+.files {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+/* A request marked applied in a changeset that didn't change its file: the thread, and one line saying so. */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 760px;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+}

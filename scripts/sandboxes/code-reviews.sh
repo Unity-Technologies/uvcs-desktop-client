@@ -2,9 +2,10 @@
 # Builds a repository whose code review holds every kind of comment `cm codereview comment` makes: a description, a
 # general comment and its reply, change requests on a line (pending, applied by a later changeset through the check-in
 # comment, applied by hand with `comment apply`, discarded), questions (answered and not), a plain comment on a line, a
-# comment on a deleted file, a comment filed under one changeset's diff, an edited comment, and a comment on a revision
-# a later changeset replaced (the comments on an older revision). The timeline gets a rename and a status change with
-# a comment. Two more reviews have no comments: one of a changeset, one of a shelve.
+# comment on a deleted file, a comment filed under one changeset's diff, an edited comment, and comments on a revision
+# a later changeset replaced (the comments on an older revision): on lines it left alone, which the Changes tab shows at
+# their line in the newest one, and on a line it edited (an open question, the discarded request), outdated; and comments far down a long file and near its end. The
+# timeline gets a rename and a status change with a comment. Two more reviews have no comments: one of a changeset, one of a shelve.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -80,6 +81,8 @@ w Assets/Scripts/Retry.cs "public static class Retry
         for (var i = 0; i < count; i++) action();
     }
 }"
+# A long file, for comments gone to far down it and near its end (where the view stops scrolling).
+w Assets/Scripts/Commands.cs "$(echo 'public static class Commands'; echo '{'; for i in $(seq 1 796); do echo "    public static string Command$i => \"command $i\";"; done; echo '}')"
 checkin "$(text retry 'Retry reads better on several lines')"
 
 REVIEW=$(cm cr br:/main/task-2210 "Switch with changes" --users=me --format={id} \
@@ -101,19 +104,28 @@ BY_HAND=$(on_review --path=/Assets/Scripts/Retry.cs --line=5 --type=Change -c="S
 ANSWERED=$(on_review --path=/Assets/Scripts/Retry.cs --line=3 --type=Question -c="Why not a while loop?")
 cm cr comment reply "$ANSWERED" -c="A for loop shows the count." >/dev/null
 on_review --path=/Assets/Scripts/SwitchFlow.cs --line=1 --type=Question -c="Is \`System\` still needed?" >/dev/null
+on_review --path=/Assets/Scripts/SwitchFlow.cs --line=13 --type=Question -c="Does Update keep the shelve if it fails?" >/dev/null
 EDITED=$(on_review --path=/Assets/Scripts/Retry.cs --line=1 --type=Comment -c="Static clas reads well.")
 sleep 1
 cm cr comment edit "$EDITED" -c="Static class reads well." >/dev/null
 on_review --path=/Assets/Scripts/LegacySwitch.cs --line=1 --type=Comment -c="Glad to see this one go." >/dev/null
+on_review --path=/Assets/Scripts/Commands.cs --line=400 --type=Change -c="Name it after what it does." >/dev/null
+on_review --path=/Assets/Scripts/Commands.cs --line=796 --type=Question -c="Is the last command still used?" >/dev/null
 on_review --path=/Assets/Scripts/SwitchFlow.cs --line=12 --changeset="cs:$FIRST" --type=Comment -c="In this changeset alone, the update comes last." >/dev/null
 
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
 
 # The change request applied by a check-in: its comment names it, and the revision its comment is on becomes an older one.
+# It edits line 13 too: the comments on it are outdated. It adds a test as well, which See in context lists beside the
+# comment as what else the fix changed.
+w Assets/Tests/SwitchFlowTests.cs "public class SwitchFlowTests
+{
+    public void ShelvesBeforeUndoing() { }
+}"
 w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        var shelve = workspace.Shelve();
         workspace.Undo();
-        workspace.Update(target);
+        workspace.Update(target, onFailure: () => workspace.Apply(shelve));
         workspace.Apply(shelve);
         Log("Switched");')"
 checkin "$(text apply "Shelve before undoing [apply-change:${APPLIED:0:8}]")"

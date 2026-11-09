@@ -24,7 +24,7 @@
   pointer-events: auto;
 }
 
-/* Each avatar is ringed apart from the one it overlaps in the surface's color. The slide rides `translate` and the
+/* Each avatar is ringed apart from the one it overlaps in the surface's color (`--avatar-ring` where it sits on another). The slide rides `translate` and the
    hovered avatar's growth `scale`, separate properties so the growth doesn't stretch the slide with it. Spreading
    staggers from the first avatar, folding back from the last; the delays are made of a duration token, so reduced
    motion (which zeroes them) makes both instant. */
@@ -35,7 +35,7 @@
   z-index: var(--layer);
   display: inline-flex;
   border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  box-shadow: 0 0 0 1.5px var(--avatar-ring, var(--bg-surface));
   translate: var(--rest-x);
   transition-property: translate, scale, box-shadow;
   transition-duration: var(--duration-slow), var(--duration-fast), var(--duration-normal);
@@ -46,7 +46,7 @@
 .stack:hover .item {
   translate: var(--spread-x);
   box-shadow:
-    0 0 0 1.5px var(--bg-surface),
+    0 0 0 1.5px var(--avatar-ring, var(--bg-surface)),
     var(--shadow-md);
   transition-delay: calc(var(--order) * var(--duration-instant) / 4), 0s, 0s;
 }
@@ -87,7 +87,7 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--bg-surface);
+  box-shadow: 0 0 0 1.5px var(--avatar-ring, var(--bg-surface));
   background: var(--badge-color);
   color: var(--text-inverse);
   opacity: 0;
@@ -102,4 +102,17 @@
   scale: 1;
   transition-duration: var(--duration-normal);
   transition-delay: calc(var(--order) * var(--duration-instant) / 4 + var(--duration-slow) * 0.6);
+}
+
+/* A still stack (`still`) rests as it is when hovered: no spread, no growth, no strip holding it open. */
+.stack[data-still]:hover::after {
+  pointer-events: none;
+}
+
+.stack[data-still]:hover .item,
+.stack[data-still]:hover .item:hover {
+  z-index: var(--layer);
+  translate: var(--rest-x);
+  scale: none;
+  box-shadow: 0 0 0 1.5px var(--avatar-ring, var(--bg-surface));
 }

@@ -13,7 +13,10 @@ export interface ChangeView {
   reveal: (change: ChangeRegion) => void;
   /** Brings a change into view as the diff opens, at once, without lighting or picking it. */
   show: (change: ChangeRegion) => void;
-  /** Whether the diff opened on a link's lines (`useLineLinks`' `focusLines`), scrolled to them (`scrollToLine`). */
+  /**
+   * Whether the diff opened on a link's lines (`useLineLinks`' `focusLines`) or a row its place goes to
+   * (`DiffAnnotations.opensAtRow`), scrolled to them rather than to its first change.
+   */
   opensOnLines: () => boolean;
   /** The line of the modified file at the top of the view (`blocks` are the diff's); none before the diff shows. */
   lineAtTop: (blocks: ChangeBlock[]) => number | null;

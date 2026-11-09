@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { Suspense, useContext, useState, type ReactNode } from 'react';
 import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeDiffEntry, diffEntrySources, diffEntryStatus } from './diffEntrySources';
+import { EntryAnnotatorContext, type AnnotatedEntry } from './entryAnnotator';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
@@ -33,6 +34,7 @@ interface EntryDiffProps {
 export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, metaToggle, showsMeta = false }: EntryDiffProps) {
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
+  const Annotator = useContext(EntryAnnotatorContext);
 
   if (entry.itemType === 'directory') {
     return <EmptyState title={entry.path} description={`Directory · ${describeDiffEntry(entry)}`} action={metaToggle} />;
@@ -41,25 +43,37 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
     return <XlinkDiff place={place} target={target} xlink={entry} entries={entries} onOpen={onOpen} />;
   }
 
-  const reviewedRevision = showsMeta ? null : reviewedRevisionToCompare(reviewMarks, entry);
-  const sinceReview = reviewedRevision !== null && sinceReviewPath === entry.path;
   const sources = diffEntrySources(entry);
+  const viewer = ({ controls, compared }: AnnotatedEntry) => {
+    const reviewedToOffer = showsMeta || compared ? null : reviewedRevisionToCompare(reviewMarks, entry);
+    const sinceReview = reviewedToOffer !== null && sinceReviewPath === entry.path;
+    return (
+      <FileDiffViewer
+        place={place}
+        original={compared?.original ?? (sinceReview ? { kind: 'revision', revision: { revisionId: reviewedToOffer, repository: entry.repository }, fileName: entry.path } : sources.original)}
+        modified={compared?.modified ?? sources.modified}
+        fileName={entry.path}
+        title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
+        identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
+        compareControls={
+          (reviewedToOffer !== null || metaToggle || controls) && (
+            <>
+              {controls}
+              {reviewedToOffer !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />}
+              {metaToggle}
+            </>
+          )
+        }
+      />
+    );
+  };
+  if (!Annotator) return viewer({});
+  // An annotator may load on first use (`lazyComponent`), as the viewer does: nothing shows meanwhile, as for the viewer.
   return (
-    <FileDiffViewer
-      place={place}
-      original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : sources.original}
-      modified={sources.modified}
-      fileName={entry.path}
-      title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
-      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
-      compareControls={
-        (reviewedRevision !== null || metaToggle) && (
-          <>
-            {reviewedRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />}
-            {metaToggle}
-          </>
-        )
-      }
-    />
+    <Suspense fallback={null}>
+      <Annotator target={target} entry={entry}>
+        {viewer}
+      </Annotator>
+    </Suspense>
   );
 }

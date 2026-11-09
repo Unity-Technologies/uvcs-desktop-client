@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, ownTone, statusTones, toneRank } from './changeFilter';
+import { changeFilterPlaceholder, countTones, filtersNothing, matchesChangeFilter, offeredTones, ownTone, statusTones, toneRank } from './changeFilter';
 
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
@@ -35,6 +35,29 @@ describe('matchesChangeFilter', () => {
     expect(matchesChangeFilter('a', movedAndChanged, { query: '', tones: new Set(['moved'] as const) })).toBe(true);
     expect(matchesChangeFilter('a', movedAndChanged, { query: '', tones: new Set(['added'] as const) })).toBe(false);
     expect(matchesChangeFilter('a', statusTones('moved', false), { query: '', tones: new Set(['changed'] as const) })).toBe(false);
+  });
+});
+
+describe('matchesChangeFilter with a flag', () => {
+  it('keeps only the flagged changes while asked, with the rest of the filter', () => {
+    const onlyFlagged = { query: '', tones: new Set<never>(), onlyFlagged: true };
+    expect(matchesChangeFilter('src/a.ts', ['added'], onlyFlagged, true)).toBe(true);
+    expect(matchesChangeFilter('src/a.ts', ['added'], onlyFlagged, false)).toBe(false);
+    expect(matchesChangeFilter('src/a.ts', ['added'], { ...onlyFlagged, query: 'lib' }, true)).toBe(false);
+    expect(matchesChangeFilter('src/a.ts', ['added'], { ...onlyFlagged, tones: new Set(['deleted'] as const) }, true)).toBe(false);
+  });
+
+  it('ignores the flag otherwise', () => {
+    expect(matchesChangeFilter('src/a.ts', ['added'], { query: '', tones: new Set() }, false)).toBe(true);
+  });
+});
+
+describe('filtersNothing', () => {
+  it('is true only with no words, no status and not only the flagged', () => {
+    expect(filtersNothing({ query: '  ', tones: new Set() })).toBe(true);
+    expect(filtersNothing({ query: 'a', tones: new Set() })).toBe(false);
+    expect(filtersNothing({ query: '', tones: new Set(['added'] as const) })).toBe(false);
+    expect(filtersNothing({ query: '', tones: new Set(), onlyFlagged: true })).toBe(false);
   });
 });
 

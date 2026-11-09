@@ -1,5 +1,7 @@
 import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
+import { displayName } from '../../../lib/userName';
+import { anchorPath } from '../inline/fileThreads';
 import type { ReviewThread } from './reviewThreads';
 
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
@@ -7,7 +9,10 @@ export interface ThreadBadges {
   kind?: 'Change request' | 'Question';
   /** Open takes the color of what's still asked; resolved (applied, answered) of what's done; discarded stays neutral. */
   state?: { label: string; tone: 'open' | 'resolved' | 'discarded' };
-  /** The changeset that applied a change request, in its pill, opening it: "Applied in cs:4". */
+  /**
+   * The changeset that applied a change request: its pill, "Applied", opens how it was applied, and its tooltip names
+   * the changeset (`appliedPillTip`).
+   */
   appliedIn?: number;
 }
 
@@ -21,7 +26,7 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
     case 'answered':
       return { kind, state: { label: 'Answered', tone: 'resolved' } };
     case 'applied':
-      return { kind, state: { label: 'Applied in', tone: 'resolved' }, appliedIn: state.changesetId };
+      return { kind, state: { label: 'Applied', tone: 'resolved' }, appliedIn: state.changesetId };
     case 'discarded':
       return { kind, state: { label: 'Discarded', tone: 'discarded' } };
     case 'none':
@@ -29,24 +34,43 @@ export function threadBadges({ root, state }: ReviewThread): ThreadBadges {
   }
 }
 
+/** What an Applied pill's tooltip says: the changeset that applied it, and what a click shows of it. */
+export function appliedPillTip(changesetId: number, seesHowApplied: boolean): string {
+  return `Applied in changeset ${changesetId}: ${seesHowApplied ? 'see how it was applied' : 'open it'}`;
+}
+
+/**
+ * The reply an Answered pill leads to: the first, as any reply answers a question (`threadState`), with the pill's
+ * tooltip naming who wrote it. None for a thread not answered.
+ */
+export function answerOf({ state, replies }: Pick<ReviewThread, 'state' | 'replies'>): { replyId: number; tip: string } | undefined {
+  const answer = state.kind === 'answered' ? replies[0] : undefined;
+  return answer && { replyId: answer.id, tip: `Answered by ${displayName(answer.author)}: see the answer` };
+}
+
 /** What a reply's header says after its author's name: a discard says so. */
 export function replyAction(reply: Pick<ReviewComment, 'kind'>): string | undefined {
   return reply.kind === 'discard' ? 'discarded it' : undefined;
 }
 
-/** What an open thread is in the list of what's still open: its icon and what a screen reader calls it. */
-export function openItemKind(root: Pick<ReviewComment, 'kind'>): 'Question' | 'Change request' {
-  return root.kind === 'question' ? 'Question' : 'Change request';
+/** What a thread on a line is, named: a change request, a question, or a plain comment. */
+export function threadKindName(root: Pick<ReviewComment, 'kind'>): 'Change request' | 'Question' | 'Comment' {
+  return root.kind === 'changeRequest' ? 'Change request' : root.kind === 'question' ? 'Question' : 'Comment';
 }
 
 /**
- * What the location of a comment on a line reads: its folder, which gives way first in a narrow card, its file's name,
- * whole, and the line.
+ * What the file of a comment on a line reads: its folder, which gives way first in a narrow card, and its name, whole.
+ * The line goes apart (`writtenLineText`).
  */
-export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>): { folder: string; file: string; line: string } {
-  const path = anchor.path.replace(/^\//, '');
+export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'path'>): { folder: string; file: string } {
+  const path = anchorPath(anchor);
   const slash = path.lastIndexOf('/');
-  return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1), line: `:${anchor.line}` };
+  return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1) };
+}
+
+/** The line a comment was written on, as the conversation says it apart from its file's link: "line 42". */
+export function writtenLineText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'line'>): string {
+  return `line ${anchor.line}`;
 }
 
 /**
@@ -64,14 +88,12 @@ export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string 
 }
 
 /**
- * The review on its Changes tab at a comment's file: the diff names files without the leading slash. Its line is
- * selected on the newer side when the comment was written in the whole review's diff; one written in a single
- * changeset's diff opens on its file only, as the whole diff's lines may not be that changeset's. A comment on an
- * older revision of the file, or on a file the review deletes, still opens at its line number in the newest version:
- * placing it exactly needs the diff's revisions, which the Changes tab reads.
+ * The review on its Changes tab at a thread: its file (the diff names files without the leading slash), in the mode it
+ * was written in (a branch's diff opens on the changeset of one written changeset by changeset), the diff scrolled to
+ * the thread wherever the file has it: at its line, or above the code when written on an earlier version whose line
+ * changed since.
  */
-export function commentLocationPage(reviewId: number, anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>, changesetId: number | undefined): PageOf<'codeReview'> {
-  const focusPath = anchor.path.replace(/^\//, '');
-  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath };
-  return changesetId === undefined ? { ...page, focusLines: { side: 'new', first: anchor.line, last: anchor.line } } : page;
+export function commentLocationPage(reviewId: number, root: Pick<ReviewComment, 'id' | 'changesetId'> & { anchor: Extract<ReviewCommentAnchor, { kind: 'line' }> }): PageOf<'codeReview'> {
+  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath: anchorPath(root.anchor), focusThread: root.id };
+  return root.changesetId === undefined ? page : { ...page, focusChangeset: root.changesetId };
 }

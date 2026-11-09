@@ -226,6 +226,9 @@ and many people use the same server. Every `cm` command other than local reads (
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
+  A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
+  while the list is stale (`changesetOnScreen`; a branch review's "Changeset by changeset" reads its list, not each
+  changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
@@ -1121,7 +1124,15 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
-  shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
+  shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`); the one
+  exception is a diff shown in a dialog, whose step keys reach it, not the diff behind (`keysReach`, its dialog marked
+  `STEP_FRAME`: docs/features/code-reviews.md "See in context").
+  Whatever keeps a view mounted but hidden wraps it in `ViewShownContext` set to false: the place's view under a page
+  (`PlaceLayout`, `viewLayerShown`), a merge set aside (`PlaceLayout`, `showsMerge`; its own controls also read
+  `PageShownContext`), a review's tab not picked (`CodeReviewPage`, `reviewTabShown`). Meanwhile
+  `useShortcut` listens to none of the keys inside it, so ⌘↩ under a merge page doesn't check in too. It covers
+  `useShortcut` only: commands registered with `useCommands` run from `CommandShortcuts` whatever is shown. The
+  window's own keys (Back, the app's commands and menu) are outside every hidden layer.
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
@@ -1161,10 +1172,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
   skip), and focus a closing menu hands back to its trigger (`trackPointerReturnFocus`, `data-pointer-return-focus`).
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
-  in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
-  `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
-  path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
-  ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as
+  stored, `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the
+  whole path first (`PathLabel`, `positionsInTrimmed`). Words are found in the lower-cased text and marked where they
+  are in the text itself (`lowerCasedText`): a letter may grow when lower-cased (a Turkish İ), moving what follows.
+  Fuzzy finders (the palette, Go to file) pass the positions they ranked by (`fuzzyMatchPositions`). Text a row shows
+  but its filter doesn't look at is never marked.
   - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
     the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
     every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. Each

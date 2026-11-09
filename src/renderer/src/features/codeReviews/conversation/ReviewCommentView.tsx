@@ -1,7 +1,7 @@
 import { MoreHorizontal } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
@@ -26,32 +26,43 @@ interface ReviewCommentViewProps {
   action?: string;
   /** Whether its author wrote the review: marked Author, as who answers for the changes. */
   byReviewAuthor?: boolean;
+  /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
+  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
+  /** Gone to, the how-many-th time (the reply an Answered pill leads to): scrolled to and lit for a moment. */
+  lit?: number;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false }: ReviewCommentViewProps) {
+export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit }: ReviewCommentViewProps) {
   const place = usePlace();
+  const element = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (lit !== undefined) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [lit]);
   const [editing, setEditing] = useState(false);
   const menu = commentMenu(comment, thread, user, {
     edit: () => setEditing(true),
     remove: () => void deleteReviewComment(place, comment),
     copyText: () => copyToClipboard(comment.text, 'Comment'),
+    ...threadActions,
   });
 
   return (
-    <article className={styles.comment} aria-label={`${displayName(comment.author)}'s comment`}>
+    <article ref={element} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>
       <Avatar user={comment.author} size={24} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>
-          <span className={styles.author}>{displayName(comment.author)}</span>
-          {action && <span className={styles.action}>{action}</span>}
-          <RelativeTime date={comment.date} />
-          {byReviewAuthor && <span className={styles.pill}>Author</span>}
-          {comment.editedDate && (
-            <span className={styles.edited} data-tip={`Edited ${formatDateTime(comment.editedDate)}`}>
-              edited
-            </span>
-          )}
+          <span className={styles.commentWho}>
+            <span className={styles.author}>{displayName(comment.author)}</span>
+            {action && <span className={styles.action}>{action}</span>}
+            <RelativeTime date={comment.date} />
+            {byReviewAuthor && <span className={styles.pill}>Author</span>}
+            {comment.editedDate && (
+              <span className={styles.edited} data-tip={`Edited ${formatDateTime(comment.editedDate)}`}>
+                edited
+              </span>
+            )}
+          </span>
           <span className={styles.commentMenu}>
             <ActionDropdownMenu entries={menu}>
               <IconButton size="small" icon={<MoreHorizontal size={14} />} label="Comment actions" />

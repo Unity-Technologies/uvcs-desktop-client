@@ -1,3 +1,4 @@
+import type { DiffFocusRequest } from './diffFocusRequest';
 import type { BranchStart } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
@@ -52,4 +53,23 @@ export function changesetFilterPlaceholder(count: number | undefined): string {
 export function branchStartOfChangesets(branch: string, changesets: readonly Changeset[] | undefined): BranchStart | null {
   const first = changesets?.at(-1);
   return first && first.branch === branch ? { firstChangeset: first.id, base: first.parent } : null;
+}
+
+/** How a branch's diff shows its changes: all at once, or one changeset at a time. */
+export type BranchDiffMode = 'wholeBranch' | 'byChangeset';
+
+/** A changeset a branch's diff is asked to show, the how-many-th time (`DiffFocusRequest.seq`). */
+export interface ChangesetToShow {
+  changesetId: number;
+  seq: number;
+}
+
+/**
+ * What a branch's diff switches to when its place asks for a file in a mode (`DiffFocusRequest`): the whole branch, or
+ * a changeset stepped to; nothing when the request leaves the mode as it is.
+ */
+export function branchDiffShownFor(request: Pick<DiffFocusRequest, 'changesetId' | 'seq'> | null): { mode: BranchDiffMode; changeset?: ChangesetToShow } | null {
+  if (!request || request.changesetId === undefined) return null;
+  if (request.changesetId === null) return { mode: 'wholeBranch' };
+  return { mode: 'byChangeset', changeset: { changesetId: request.changesetId, seq: request.seq } };
 }

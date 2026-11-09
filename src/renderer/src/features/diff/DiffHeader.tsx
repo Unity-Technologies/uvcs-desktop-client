@@ -13,7 +13,8 @@ export function DiffHeader({ description, toolbar }: DiffHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.description}>{description}</div>
-      {toolbar}
+      {/* Its switches sit together, apart from the description. */}
+      {toolbar && <div className={styles.toolbar}>{toolbar}</div>}
     </header>
   );
 }

@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { formatCount } from '../lib/text';
 import { FilterField } from '../ui/FilterField';
@@ -5,11 +6,11 @@ import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
 import type { FileListViewOffer } from './fileListViewMenuModel';
 import { FileListViewMenu } from './FileListViewMenu';
-import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, TONE_LABELS } from './changeFilter';
+import { changeFilterPlaceholder, countTones, filtersNothing, matchesChangeFilter, offeredTones, TONE_LABELS } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
-export interface ChangeFilterOptions {
+export interface ChangeFilterOptions<T> {
   /** The list a view or page works on (Changes, a diff's files): its field takes ⌘F as every view's filter does. */
   isViewFilter?: boolean;
   /** Words a chip as the list's groups do (Incoming's "Conflicts with your changes"). */
@@ -22,6 +23,15 @@ export interface ChangeFilterOptions {
   onChangelistsChange?: (on: boolean) => void;
   /** The items are still being read: the field doesn't count them yet, and waits for them to filter anything. */
   reading?: boolean;
+  /** A chip after the statuses' showing only the items a place flags (a review's "Commented" files). */
+  flag?: ListFlag<T>;
+}
+
+/** What the place flags in the list, for its chip: its icon, its name, and whether an item has it. */
+export interface ListFlag<T> {
+  icon: LucideIcon;
+  label: string;
+  holds: (item: T) => boolean;
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
@@ -46,24 +56,31 @@ export function useChangeFilter<T>(
   items: T[],
   pathOf: (item: T) => string,
   tonesOf: (item: T) => readonly StatusTone[],
-  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions, reading = false, viewOffer = BY_STATUS, onChangelistsChange }: ChangeFilterOptions = {},
+  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions, reading = false, viewOffer = BY_STATUS, onChangelistsChange, flag }: ChangeFilterOptions<T> = {},
 ): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
+  const [chosenFlag, setChosenFlag] = useState(false);
 
   const counts = useMemo(() => countTones(items.map(tonesOf)), [items, tonesOf]);
   const tones = useMemo(() => offeredTones(new Set(counts.keys())), [counts]);
   // A chip can go away while chosen (the last private file is added); never keep filtering by a hidden chip.
   const activeTones = useMemo(() => new Set([...chosenTones].filter((tone) => tones.includes(tone))), [chosenTones, tones]);
-  const visible = useMemo(
+  const holds = flag?.holds;
+  const flaggedCount = useMemo(() => (holds ? items.filter(holds).length : 0), [items, holds]);
+  // The chip goes with the flag (another diff, no review); never keep filtering by it then.
+  const onlyFlagged = chosenFlag && holds !== undefined;
+  const visible = useMemo(() => {
+    const filter = { query, tones: activeTones, onlyFlagged };
     // Nothing to filter by keeps the very list: what is worked out from it isn't worked out again.
-    () => (query.trim() === '' && activeTones.size === 0 ? items : items.filter((item) => matchesChangeFilter(pathOf(item), tonesOf(item), { query, tones: activeTones }))),
-    [items, pathOf, tonesOf, query, activeTones],
-  );
+    if (filtersNothing(filter)) return items;
+    return items.filter((item) => matchesChangeFilter(pathOf(item), tonesOf(item), filter, holds?.(item) ?? false));
+  }, [items, pathOf, tonesOf, query, activeTones, onlyFlagged, holds]);
 
   const clear = (): void => {
     setQuery('');
     setChosenTones(new Set());
+    setChosenFlag(false);
   };
 
   const toggle = (tone: StatusTone): void =>
@@ -94,6 +111,7 @@ export function useChangeFilter<T>(
           </Tooltip>
         );
       })}
+      {flag && <FlagChip flag={flag} count={flaggedCount} pressed={onlyFlagged} disabled={reading} onToggle={() => setChosenFlag(!chosenFlag)} />}
       <span className={styles.layout}>
         <FileListViewMenu offer={viewOffer} onChangelistsChange={onChangelistsChange} />
       </span>
@@ -102,4 +120,24 @@ export function useChangeFilter<T>(
   );
 
   return { visible, query, clear, bar };
+}
+
+interface FlagChipProps {
+  flag: Pick<ListFlag<unknown>, 'icon' | 'label'>;
+  count: number;
+  pressed: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}
+
+/** The flag's chip, beside the statuses' and alike: "Commented (3)" in its tooltip, faint while nothing is flagged. */
+function FlagChip({ flag: { icon: Icon, label }, count, pressed, disabled, onToggle }: FlagChipProps) {
+  const tip = count > 0 ? `${label} (${formatCount(count)})` : label;
+  return (
+    <Tooltip content={tip}>
+      <button type="button" className={styles.chip} data-tone="flag" data-empty={count === 0} aria-pressed={pressed} aria-label={tip} disabled={disabled} onClick={onToggle}>
+        <Icon size={12} aria-hidden />
+      </button>
+    </Tooltip>
+  );
 }

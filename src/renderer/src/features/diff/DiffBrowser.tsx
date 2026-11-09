@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
@@ -7,6 +7,7 @@ import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { fileRowKeys } from '../../components/fileRowKeys';
+import { ItemMark } from '../../components/ItemMark';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
@@ -22,13 +23,15 @@ import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
-import { pairedFocus } from './diffFocus';
+import { entryAt, pairedFocus } from './diffFocus';
+import { DiffFocusRequestContext } from './diffFocusRequest';
 import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
 import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
+import { entryFlagChip, EntryFlagContext } from './entryFlag';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -52,13 +55,18 @@ interface DiffBrowserProps {
   initialLines?: FocusedLines;
   /** Where the list and the diff are drawn: a `DiffBrowserLayout`'s, which stays as this is mounted for each target. */
   slots: DiffBrowserSlots;
+  /**
+   * Whether it names the file and lines shown, for "Copy link" and a new window (`publishShownDiffFile`, the lines'
+   * links): a page's diff does; one in a dialog over the page doesn't, or closing it would leave the page's unnamed.
+   */
+  publishes?: boolean;
 }
 
 /**
  * A list of changed files next to the diff of the selected one, in one layout from the first frame on: placeholder
  * rows while the files are read, and "No differences" beside an empty list.
  */
-export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines, slots }: DiffBrowserProps) {
+export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines, slots, publishes = true }: DiffBrowserProps) {
   const place = usePlace();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
@@ -88,7 +96,19 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     setMetaShownFor(asset.path);
   };
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} /> });
+  // What a diff compares, by value: a branch diff passes a new target each render.
+  const targetKey = JSON.stringify(target);
+  const entryFlag = useContext(EntryFlagContext);
+  const flagMarkOf = useMemo(() => entryFlag?.markOf(target), [entryFlag, targetKey]);
+  const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
+  const markOf = useMemo(() => {
+    if (!entryFlag || !flagMarkOf) return undefined;
+    return (entry: DiffEntry) => {
+      const label = flagMarkOf(entry);
+      return label === null ? null : <ItemMark icon={entryFlag.icon} label={label} />;
+    };
+  }, [entryFlag, flagMarkOf]);
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   const clearFilter = (): void => {
     filter.clear();
@@ -115,6 +135,13 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focusedAsset, focusedFolder, firstKey]);
 
+  // The place asks for a file again (a review's Comments panel going to a thread): select it, where the diff has it.
+  const focusRequest = useContext(DiffFocusRequestContext);
+  useEffect(() => {
+    const requested = focusRequest && entryAt(entries, focusRequest.path);
+    if (requested) setSelection(singleSelection(diffEntryKey(requested)));
+  }, [focusRequest?.seq, reading]);
+
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
   const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);
   const focusOnShown = linkFocusOn(linkFocus, focused);
@@ -123,21 +150,20 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // Keyed by the file shown, not `annotation` or `target`, which are new objects each render: the diff is mounted per
   // target (`TargetDiff`), so a file's path names its annotation.
   const lineLinks = useMemo<LineLinks>(
-    () => ({ focus: focusOnShown, publishes: true, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
-    [linkFocus, focused?.path, annotation === null],
+    () => ({ focus: focusOnShown, publishes, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
+    [linkFocus, focused?.path, annotation === null, publishes],
   );
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focusedAsset !== undefined, folderSelected: focusedFolder !== undefined });
   useCollapseWithHost(diffPaneDiffs(pane));
 
-  // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
-  // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
-  const targetKey = JSON.stringify(target);
+  // By what the target is (`targetKey`), not the object: a branch diff passes a new one each render, and leaving the
+  // file on screen (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
   useEffect(() => {
-    if (!focused) return;
+    if (!focused || !publishes) return;
     publishShownDiffFile({ target, path: focused.path });
     return () => publishShownDiffFile(null);
-  }, [targetKey, focused?.path]);
+  }, [targetKey, focused?.path, publishes]);
 
   return (
     <>
@@ -155,6 +181,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries, metaOf: pairs.metaOf, onMetaDiff: showMetaOf })
           }
           metaOf={pairs.metaOf}
+          markOf={markOf}
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}

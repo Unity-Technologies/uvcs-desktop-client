@@ -13,6 +13,14 @@ export function isModalDialogOpen(root: Root = document): boolean {
 }
 
 /**
+ * Whether keys pressed in the window reach an element: always while no dialog is open, and while one is, only what
+ * is inside it (a diff shown in a dialog steps through its changes; the one behind it waits).
+ */
+export function keysReach(element: Pick<Element, 'closest'> | null, root: Root = document): boolean {
+  return !isModalDialogOpen(root) || isInModalDialog(element);
+}
+
+/**
  * Whether a key pressed in the window may run one of its shortcuts: once per press (a held key doesn't run it again
  * and again), and never behind a modal dialog, whose keys are its own (⌘K would open a palette it can't type into).
  */

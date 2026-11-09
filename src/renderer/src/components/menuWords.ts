@@ -54,6 +54,7 @@ import {
   Lock,
   LockOpen,
   Merge,
+  MessageSquare,
   MessageSquareCode,
   MessageSquareText,
   Minus,
@@ -221,6 +222,8 @@ export const MENU_WORDS = {
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
   showInFiles: word('navigate', FolderTree, 'Show in Files'),
+  // A review's comment thread, in its code (`commentMenu`): where it sits among the rest.
+  showInConversation: word('navigate', MessageSquare, 'Show in conversation'),
   // Text (`codeMenu`): finding in it, a line of it, and what's selected compared with the clipboard.
   find: word('navigate', Search, 'Find'),
   replace: word('navigate', Replace, 'Replace'),

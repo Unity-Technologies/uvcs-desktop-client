@@ -18,6 +18,11 @@ interface DiffBrowserLayoutProps {
   aboveDiff?: ReactNode;
   /** The browser, once the slots are in the page: it draws into them (`createPortal`), and nothing here. */
   children?: (slots: DiffBrowserSlots) => ReactNode;
+  /**
+   * Whether its diff offers Expand Diff, the whole window for the diff: a page's does; one in a dialog doesn't, as the
+   * window isn't the dialog's to lay out (its files would also hide while the page's diff is expanded behind it).
+   */
+  expandable?: boolean;
 }
 
 /**
@@ -26,17 +31,20 @@ interface DiffBrowserLayoutProps {
  * dragged and what's above the files stay, so the changesets keep their focus, scroll and filter as they're stepped.
  * Only the diff's column holds what changes height from one target to the next (`aboveDiff`): the lists never move.
  */
-export function DiffBrowserLayout({ aboveFiles, aboveDiff, children }: DiffBrowserLayoutProps) {
+/** The list of files' width beside a diff, until it's dragged. */
+export const FILES_WIDTH = 340;
+
+export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true }: DiffBrowserLayoutProps) {
   const [files, setFiles] = useState<HTMLElement | null>(null);
   const [diff, setDiff] = useState<HTMLElement | null>(null);
-  const diffExpanded = useDiffExpanded();
+  const diffExpanded = useDiffExpanded() && expandable;
   const filesSlot = <div ref={setFiles} className={styles.slot} />;
   const diffSlot = <div ref={setDiff} className={styles.slot} />;
 
   return (
-    <ExpandableDiffContext.Provider value>
+    <ExpandableDiffContext.Provider value={expandable}>
       <SplitPane
-        initialSize={340}
+        initialSize={FILES_WIDTH}
         minSize={220}
         maxSize={640}
         // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.

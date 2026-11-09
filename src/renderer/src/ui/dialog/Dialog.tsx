@@ -16,9 +16,11 @@ interface DialogProps {
   onSubmit?: () => void;
   footer?: ReactNode;
   children?: ReactNode;
+  /** Marks on the dialog as a whole, for what reads where the focus is (a diff's `STEP_FRAME`, so its keys step it). */
+  marks?: Readonly<Record<`data-${string}`, string>>;
 }
 
-export function Dialog({ icon, title, description, headerAction, width, onClose, onSubmit, footer, children }: DialogProps) {
+export function Dialog({ icon, title, description, headerAction, width, onClose, onSubmit, footer, children, marks }: DialogProps) {
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     onSubmit?.();
@@ -32,6 +34,7 @@ export function Dialog({ icon, title, description, headerAction, width, onClose,
           className={styles.content}
           style={{ '--dialog-width': width && `${width}px` } as CSSProperties}
           aria-describedby={undefined}
+          {...marks}
           {...MODAL_DIALOG}
         >
           <form onSubmit={submit} style={{ display: 'contents' }}>

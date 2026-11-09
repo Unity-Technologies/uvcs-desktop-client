@@ -1,14 +1,15 @@
-import { CircleHelp, GitPullRequestArrow } from 'lucide-react';
-import { openItemKind } from './threadBadges';
+import { CircleHelp, GitPullRequestArrow, MessageSquare } from 'lucide-react';
+import { threadKindName } from './threadBadges';
 import type { ReviewThread } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
 
-const ICONS = { Question: CircleHelp, 'Change request': GitPullRequestArrow } as const;
+/** Each kind's icon, by its name (`threadKindName`): the thread's header and the Comments panel's kind chips. */
+export const THREAD_KIND_ICONS = { Question: CircleHelp, 'Change request': GitPullRequestArrow, Comment: MessageSquare } as const;
 
-/** A change request's or a question's icon, named for a screen reader and in its tooltip. */
+/** A thread's kind as an icon (a change request, a question, a plain comment), named for a screen reader and in its tooltip. */
 export function ThreadKindIcon({ root, size = 13 }: { root: ReviewThread['root']; size?: number }) {
-  const kind = openItemKind(root);
-  const Icon = ICONS[kind];
+  const kind = threadKindName(root);
+  const Icon = THREAD_KIND_ICONS[kind];
   return (
     <span role="img" aria-label={kind} data-tip={kind} className={styles.kindIcon}>
       <Icon size={size} aria-hidden />

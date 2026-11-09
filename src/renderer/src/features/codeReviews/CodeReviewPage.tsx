@@ -1,5 +1,5 @@
-import { commentLineText } from '../../lib/comments/commentText';
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps, ReviewTab } from '../../app/navigation/pages';
@@ -16,7 +16,6 @@ import { SkeletonBar } from '../../ui/Skeleton';
 import { tabId, tabPanelId, Tabs } from '../../ui/Tabs';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
-import { DiffPage } from '../diff/DiffPage';
 import { reviewPageMenu } from './codeReviewMenu';
 import { OwnReviewButton } from './OwnReviewButton';
 import { reviewedCodeAction } from './reviewedCode';
@@ -24,7 +23,9 @@ import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
-import { openingTab } from './reviewTab';
+import { ReviewChangesTab } from './ReviewChangesTab';
+import { ViewShownContext } from '../../lib/viewShown';
+import { conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
 
@@ -38,6 +39,9 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
   const diffExpanded = useDiffExpanded();
   const tab = openingTab(page);
+  const [mountedSoFar, setMounted] = useState<readonly ReviewTab[]>([tab]);
+  const mounted = mountedTabs(mountedSoFar, tab);
+  if (mounted !== mountedSoFar) setMounted(mounted);
 
   // Not in a list already read (opened from a branch chip, the palette, a link): the page's frame, its header a skeleton.
   if (isLoading) {
@@ -61,7 +65,8 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
             label="Code review"
             idPrefix={TABS_ID}
             value={tab}
-            onChange={(value) => navigation.replacePage({ ...page, tab: value })}
+            // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
+            onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusChangeset: undefined })}
             tabs={[
               { value: 'conversation', label: 'Conversation', icon: <MessageSquare size={14} />, count: review.commentCount },
               { value: 'changes', label: 'Changes', icon: <FileDiff size={14} /> },
@@ -69,15 +74,25 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           />
         </div>
       </Stowable>
-      <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, tab)} aria-labelledby={tabId(TABS_ID, tab)}>
-        {tab === 'conversation' ? (
-          <ReviewConversationTab review={review} />
-        ) : diffTarget ? (
-          <DiffPage page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }} />
-        ) : (
-          <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
-        )}
-      </div>
+      {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
+      {mounted.includes('conversation') && (
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
+          <ViewShownContext.Provider value={reviewTabShown(page, 'conversation')}>
+            <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
+          </ViewShownContext.Provider>
+        </div>
+      )}
+      {mounted.includes('changes') && (
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={!reviewTabShown(page, 'changes')}>
+          {diffTarget ? (
+            <ViewShownContext.Provider value={reviewTabShown(page, 'changes')}>
+              <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
+            </ViewShownContext.Provider>
+          ) : (
+            <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

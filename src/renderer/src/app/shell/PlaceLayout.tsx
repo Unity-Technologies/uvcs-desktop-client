@@ -16,6 +16,8 @@ import { useDiffExpansion } from './useDiffExpansion';
 import { useMainFocus } from './useMainFocus';
 import { usePlaceCommands } from './usePlaceCommands';
 import styles from './PlaceLayout.module.css';
+import { ViewShownContext } from '../../lib/viewShown';
+import { viewLayerShown } from './viewLayer';
 
 interface PlaceLayoutProps {
   /** The top bar: a workspace's branch, or the repository explored and the way to make it a workspace. */
@@ -73,14 +75,19 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
               <div ref={contentRef} className={styles.content} data-diff-expanded={diffExpanded || undefined}>
                 {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
                     each one arrives with the view transition. */}
-                <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
-                  <ActiveView key={view} />
+                <div key={view} className={styles.layer} hidden={!viewLayerShown(topPage)}>
+                  <ViewShownContext.Provider value={viewLayerShown(topPage)}>
+                    <ActiveView key={view} />
+                  </ViewShownContext.Provider>
                 </div>
-                {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it. */}
+                {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it; set aside, no
+                    shortcut inside it listens (`ViewShownContext`, read by `useShortcut`), its diffs' included. */}
                 {merge && (
                   <div key={`merge:${merge.id}`} className={styles.layer} hidden={!mergeShown}>
                     <PageShownContext.Provider value={mergeShown}>
-                      <PageFrame page={merge.page} />
+                      <ViewShownContext.Provider value={mergeShown}>
+                        <PageFrame page={merge.page} />
+                      </ViewShownContext.Provider>
                     </PageShownContext.Provider>
                   </div>
                 )}

@@ -11,6 +11,18 @@ function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment
 const reply = (id: number, parentId: number, fields: Partial<ReviewComment> = {}) => comment(id, { parentId, kind: 'comment', ...fields });
 
 describe('threadsOf', () => {
+  it('orders what was said in the same second by the order it was written, however cm lists it', () => {
+    // `cm find … order by date` lists comments made in one second in any order, and in another on the next read: the
+    // conversation's open questions swapped places as it was read again.
+    const second = '2026-11-09T12:04:22+01:00';
+    const threads = threadsOf([comment(54, { date: second }), comment(53, { date: second }), reply(56, 53, { date: second }), reply(55, 53, { date: second })]);
+
+    expect(threads.map(({ root, replies }) => [root.id, replies.map((answer) => answer.id)])).toEqual([
+      [53, [55, 56]],
+      [54, []],
+    ]);
+  });
+
   it('gathers each comment with its replies, oldest first', () => {
     const threads = threadsOf([comment(1), comment(2), reply(3, 1), reply(4, 1)]);
 
@@ -31,6 +43,12 @@ describe('threadsOf', () => {
 
   it("starts a thread with a reply whose comment is gone, so it isn't lost", () => {
     expect(threadsOf([reply(5, 99)]).map((thread) => thread.root.id)).toEqual([5]);
+  });
+
+  it('ends, losing nothing, on replies that answer each other, which only broken data holds', () => {
+    const threads = threadsOf([reply(1, 2), reply(2, 1), reply(3, 2)]);
+
+    expect(threads.flatMap(({ root, replies }) => [root.id, ...replies.map((answer) => answer.id)]).sort()).toEqual([1, 2, 3]);
   });
 
   it('keeps a change request open until a changeset applies it or a reply discards it', () => {

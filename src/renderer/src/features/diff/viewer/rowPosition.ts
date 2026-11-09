@@ -1,3 +1,4 @@
+import { focusScrollTop } from '../../../lib/scrollPlacement';
 import type { ChangedLine } from './changeBlocks';
 
 /** The first line in view, where its row starts from the top of the view (negative when partly scrolled past), and its height. */
@@ -46,4 +47,48 @@ export function lineOfRow(lineNumber: string | undefined, lineType: string | und
 /** The scroll position that puts a line laid out at `linePosition` at `offset` from the top of the view. */
 export function scrollTopFor(linePosition: number, offset: number): number {
   return Math.max(0, linePosition - offset);
+}
+
+/** A line's height before the diff has laid one out. */
+export const FALLBACK_LINE_HEIGHT = 20;
+
+/**
+ * Where the line a row sits under starts, and its height, from the row's top and the box the diff lays the line out
+ * in (`pierreLineBox`). That box can hold the row too: side by side, Pierre's line is the whole row across both
+ * sides, the card under it included (a 20 px line read as 273 px put a card in a long file out of view). So the line
+ * ends where its row starts. Without a box above the row (not laid out yet, or out of date), one line above it.
+ */
+export function lineAboveRow(rowTop: number, lineBox: { top: number; height: number } | undefined): { lineTop: number; lineHeight: number } {
+  if (!lineBox || lineBox.top >= rowTop) return { lineTop: rowTop - FALLBACK_LINE_HEIGHT, lineHeight: FALLBACK_LINE_HEIGHT };
+  return { lineTop: lineBox.top, lineHeight: Math.min(lineBox.height, rowTop - lineBox.top) };
+}
+
+/** A row under a line and the part of it gone to, from the top of the scrolled content. */
+export interface RowFrame {
+  /** Where the line the row is under starts: the row's own top for one above the code. */
+  lineTop: number;
+  /** The part of the row gone to (one thread of several under a line): the whole row when there's no such part. */
+  focusTop: number;
+  focusBottom: number;
+  /** The line's height, which the lines of context kept above it are counted in. */
+  lineHeight?: number;
+}
+
+/** Lines of context kept above a line gone to, however tall its card. */
+const CONTEXT_LINES = 3;
+
+/** Room kept between what's gone to and the edges of the view. */
+export const FRAME_MARGIN = 24;
+
+/**
+ * Where to scroll so a line and the row gone to under it read with context (`focusScrollTop`): the line a third of
+ * the way down, lines above it, its row below. Taller than the view, the part gone to shows from its top. None when it
+ * all shows already, away from the edges: the view doesn't move under the reader.
+ */
+export function framedScrollTop(frame: RowFrame, view: { scrollTop: number; height: number; contentHeight?: number }): number | null {
+  const { lineTop, focusTop, focusBottom, lineHeight = 0 } = frame;
+  const inView = lineTop >= view.scrollTop + FRAME_MARGIN && focusBottom <= view.scrollTop + view.height - FRAME_MARGIN;
+  if (inView) return null;
+  if (focusBottom - focusTop > view.height - FRAME_MARGIN) return Math.max(0, focusTop - FRAME_MARGIN);
+  return focusScrollTop({ top: lineTop, bottom: focusBottom, contextAbove: CONTEXT_LINES * lineHeight, viewHeight: view.height, contentHeight: view.contentHeight ?? Infinity });
 }

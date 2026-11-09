@@ -32,3 +32,15 @@ export async function readQuery(client: QueryClient, queryKey: QueryKey, options
   probe.hide();
   return probe;
 }
+
+/**
+ * A view showing a query for a moment, as a mounted `useQuery` would: it reads it if the query says so, the read
+ * awaited (no read, nothing to wait for), then stops showing it.
+ */
+export async function showOnce(client: QueryClient, options: QueryObserverOptions): Promise<void> {
+  const view = new QueryObserver(client, options);
+  const stop = view.subscribe(() => {});
+  // A view that reads starts its read as it subscribes: the query holds it until it's done.
+  await client.getQueryCache().find({ queryKey: options.queryKey, exact: true })?.promise?.catch(() => undefined);
+  stop();
+}

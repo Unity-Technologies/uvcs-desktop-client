@@ -20,8 +20,11 @@ import { linesLayoutOf } from './keptPlace';
 import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
+import { scrollToAnnotationRow } from './annotationRowScroll';
 import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
+import { LineMarkers } from './LineMarkers';
+import { useDiffAnnotations } from './useDiffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useCodeMenu } from './useCodeMenu';
@@ -171,21 +174,34 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   shownRef.current = fileDiff;
   // The diff Pierre rendered, to unfold the region holding a line before scrolling to it.
   const renderedDiff = useRef<FileDiffInstance<unknown, unknown> | null>(null);
+  const revealAnnotated = useRef<() => void>(() => {});
   const onPostRender = useCallback((_element: unknown, instance: object) => {
     if (instance instanceof FileDiffInstance) renderedDiff.current = instance;
+    revealAnnotated.current();
     if (isReadyToEdit(instance, shownRef.current)) setReadyToEdit((ready: unknown) => (ready === shownRef.current ? ready : shownRef.current));
   }, []);
   // Going to a line (a link's, Go to line's) shows it first: with unchanged lines collapsed, its region is folded away
   // and has no row to scroll to. Pierre's `revealLine` expands only that region, from its nearer end (`lineToReveal`).
-  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+  const revealFolded = (line: ChangedLine): void => {
     const newerLine = lineToReveal(latest.current.diff.meta.hunks, line.side, line.lineNumber);
     if (newerLine !== null) renderedDiff.current?.revealLine(newerLine);
+  };
+  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    revealFolded(line);
     return scrollToLine(element, line, virtualizer);
+  };
+  // A row a place adds under a line is gone to with its line, both shown whole (`scrollToAnnotationRow`).
+  const scrollToShownRow = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    revealFolded(line);
+    return scrollToAnnotationRow(element, line, virtualizer);
   };
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
+  // What the place adds under the lines (a review's comments), each row's line unfolded once rendered.
+  const { annotations, revealRows } = useDiffAnnotations({ containerRef: container, renderedDiff, hunks: diff.meta.hunks, shown: canHighlight, scrollTo: scrollToShownRow });
+  revealAnnotated.current = revealRows;
   // A workspace file's diff picks lines of its own, to discard them; any other diff selects them for links.
   const lineLinks = useLineLinks({
     path: fileName,
@@ -239,7 +255,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
     () => ({
-      ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }),
+      ...pierreDiffOptions<string>({ theme, layout, collapseUnchanged, wrapLines }),
       parseDiffOptions,
       tokenizeMaxLength,
       useTokenTransformer: editable,
@@ -254,7 +270,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const pointerFocus = usePointerFocusMark();
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
-  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
+  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined || annotations?.opensAtRow === true });
   // Where the changes are, marked in the diff's own scrollbar.
   const changeMap = useChangeMap({
     containerRef: container,
@@ -326,7 +342,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
             ) : (
               <VirtualizerContext.Provider value={virtualizer}>
                 <WorkerPoolContext.Provider value={workers}>
-                  <FileDiff
+                  <FileDiff<string>
                     // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
                     // workers and virtualizer when it's created; typing doesn't start it anew.
                     key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
@@ -334,6 +350,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
                     renderGutterUtility={discard.renderGutterUtility}
+                    lineAnnotations={annotations?.rows}
+                    renderAnnotation={annotations?.render}
                     edit={edit}
                     onEditChange={(event) => onEdit?.(event.editor.getText())}
                     onEditComplete={() => 'reject'}
@@ -347,6 +365,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           <PaneScrollbars containerRef={container} />
           {discard.overlay}
           {lineTools.chip}
+          {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
         </div>
       </ActionContextMenu>

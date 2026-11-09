@@ -9,11 +9,18 @@ interface CommentMenuActions {
   edit: () => void;
   remove: () => void;
   copyText: () => void;
+  /** Where the thread is in the conversation, from its code (the Changes tab). */
+  showInConversation?: () => void;
 }
 
-/** A comment's menu: its text to copy for anyone; edit and delete for its author, as `commentPermissions` allows. */
+/**
+ * A comment's menu: its text to copy for anyone; edit and delete for its author, as `commentPermissions` allows. A
+ * thread's first comment, shown in the code, leads to the thread in the conversation.
+ */
 export function commentMenu(comment: ReviewComment, thread: ReviewThread, user: string | undefined, actions: CommentMenuActions): MenuEntry[] {
+  const isRoot = comment.id === thread.root.id;
   return groupedMenu([
+    isRoot && actions.showInConversation && menuAction('showInConversation', actions.showInConversation),
     canEditComment(comment, user) && menuAction('editComment', actions.edit),
     menuAction('copyText', actions.copyText),
     canDeleteComment(comment, thread, user) && menuAction('delete', actions.remove),

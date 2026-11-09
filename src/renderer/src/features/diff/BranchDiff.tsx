@@ -1,5 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import type { MenuHost } from '../../components/menuWords';
@@ -11,15 +11,14 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { branchStartOfChangesets, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetStep, filterBranchChangesets, showsChangesetList, type BranchDiffMode, type ChangesetToShow } from './changesetByChangeset';
 import { BranchChangesetList } from './BranchChangesetList';
 import { BranchDescription } from './BranchDescription';
 import { branchChangesetPane } from './branchChangesetPane';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
+import { DiffFocusRequestContext } from './diffFocusRequest';
 import { DiffFrame } from './DiffFrame';
 import { TargetDiff } from './TargetDiff';
-
-type BranchDiffMode = 'wholeBranch' | 'byChangeset';
 
 interface BranchDiffProps {
   branch: string;
@@ -27,35 +26,60 @@ interface BranchDiffProps {
   /** The file to open on, in the whole branch and in each of its changesets. */
   focusPath?: string;
   focusLines?: FocusedLines;
+  /** Opens changeset by changeset, on this changeset (where a review's comment written there is). */
+  focusChangeset?: number;
+  /** After the diff's own controls in its header: the page's details toggle (a review's comments). */
+  detailsToggle?: ReactNode;
 }
 
 /** A branch's changes, either all at once or one changeset at a time. */
-export function BranchDiff({ branch, branchHead, focusPath, focusLines }: BranchDiffProps) {
-  const [mode, setMode] = useState<BranchDiffMode>('wholeBranch');
+export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusChangeset, detailsToggle }: BranchDiffProps) {
+  const [mode, setMode] = useState<BranchDiffMode>(focusChangeset === undefined ? 'wholeBranch' : 'byChangeset');
+  // The changeset asked for, again each time it's asked (`seq`): the user may have stepped elsewhere meanwhile.
+  const [stepTo, setStepTo] = useState<ChangesetToShow | undefined>(focusChangeset === undefined ? undefined : { changesetId: focusChangeset, seq: 0 });
+  // The place asks for a file in a mode (a review's comment, in the mode it was written in): switch to it.
+  const focusRequest = useContext(DiffFocusRequestContext);
+  useEffect(() => {
+    const shown = branchDiffShownFor(focusRequest);
+    if (!shown) return;
+    setMode(shown.mode);
+    if (shown.changeset) setStepTo(shown.changeset);
+  }, [focusRequest?.seq]);
   const modeToggle = (
-    <SegmentedControl<BranchDiffMode>
-      value={mode}
-      onChange={setMode}
-      segments={[
-        { value: 'wholeBranch', label: 'Whole branch' },
-        { value: 'byChangeset', label: 'Changeset by changeset' },
-      ]}
-    />
+    <>
+      <SegmentedControl<BranchDiffMode>
+        value={mode}
+        onChange={setMode}
+        segments={[
+          { value: 'wholeBranch', label: 'Whole branch' },
+          { value: 'byChangeset', label: 'Changeset by changeset' },
+        ]}
+      />
+      {detailsToggle}
+    </>
   );
 
   if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={modeToggle} focusPath={focusPath} focusLines={focusLines} />;
-  return <ChangesetByChangeset branch={branch} toolbar={modeToggle} focusPath={focusPath} />;
+  return <ChangesetByChangeset branch={branch} toolbar={modeToggle} focusPath={focusRequest?.path ?? focusPath} focusChangeset={stepTo} />;
 }
 
 /** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
 const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
 
-function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; toolbar: React.ReactNode; focusPath?: string }) {
+interface ChangesetByChangesetProps {
+  branch: string;
+  toolbar: ReactNode;
+  focusPath?: string;
+  /** The changeset to show, selected as it opens and each time it's asked for. */
+  focusChangeset?: ChangesetToShow;
+}
+
+function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset }: ChangesetByChangesetProps) {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filter = useMemo(() => ({ branch }), [branch]);
   const { data: changesets, error } = useChangesets(filter);
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useState<SelectionState>(() => (focusChangeset === undefined ? EMPTY_SELECTION : singleSelection(String(focusChangeset.changesetId))));
   const [query, setQuery] = useState('');
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const shown = useMemo(() => filterBranchChangesets(changesets ?? [], query), [changesets, query]);
@@ -74,6 +98,11 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   useEffect(() => {
     if (selectedId === null && firstId !== undefined) setSelection(singleSelection(String(firstId)));
   }, [selectedId, firstId]);
+  useEffect(() => {
+    if (focusChangeset === undefined) return;
+    setSelection(singleSelection(String(focusChangeset.changesetId)));
+    setRevealKey(String(focusChangeset.changesetId));
+  }, [focusChangeset?.changesetId, focusChangeset?.seq]);
 
   const stepsTo = (step: 1 | -1): number | null => (changesets ? changesetStep(changesets, shown, selectedId, step) : null);
   const stepTo = (step: 1 | -1): void => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { entryToFocus, pairedFocus } from './diffFocus';
+import { entryAt, entryToFocus, pairedFocus } from './diffFocus';
 import { pairDiffMetas } from './diffMetaPairs';
 
 const entry = (path: string, status: DiffEntry['status'] = 'changed', oldPath?: string): DiffEntry => ({
@@ -14,6 +14,13 @@ const entry = (path: string, status: DiffEntry['status'] = 'changed', oldPath?: 
 });
 
 const entries = [entry('a.ts'), entry('src/new.ts', 'moved', 'src/old.ts'), entry('b.ts', 'deleted')];
+
+describe('entryAt', () => {
+  it('finds a file by its path or the one it moved from, and nothing else', () => {
+    expect(entryAt(entries, 'src/old.ts')).toBe(entries[1]);
+    expect(entryAt(entries, 'missing.ts')).toBeUndefined();
+  });
+});
 
 describe('entryToFocus', () => {
   it('finds the file asked for', () => {

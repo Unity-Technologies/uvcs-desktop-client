@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, initials, userFilterTexts } from './userName';
+import { displayName, initials, sameUser, userFilterTexts } from './userName';
 
 describe('displayName', () => {
   it('reads an email as a name', () => {
@@ -43,6 +43,13 @@ describe('initials', () => {
   it('shows a question mark for an empty name', () => {
     expect(initials('')).toBe('?');
     expect(initials('@unity3d.com')).toBe('?');
+  });
+});
+
+describe('sameUser', () => {
+  it('knows a user whatever the case their name is written in', () => {
+    expect(sameUser('Ana@Acme.com', 'ana@acme.com')).toBe(true);
+    expect(sameUser('ana@acme.com', 'ana.b@acme.com')).toBe(false);
   });
 });
 

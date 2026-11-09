@@ -7,6 +7,7 @@ import { usePageWindow } from '../pageWindow/pageWindowStore';
 import { useSession } from '../workspace/sessionStore';
 import { afterLeaving } from './leaveGuard';
 import { isSameMerge, mergeAfterLeaving, mergeAwaiting, pagesWithoutMerge, showsMerge, type MergeInProgress } from './mergeInProgress';
+import { movesWithinTop } from './pageMoves';
 import type { Page, PageOf } from './pages';
 import { viewCommandId, type ViewId } from './views';
 
@@ -16,7 +17,10 @@ interface NavigationStore {
   /** The merge being worked on, shown or set aside (`MergeInProgress`). */
   merge: MergeInProgress | null;
   goToView: (view: ViewId) => void;
-  /** A merge may ask before it opens (`openOrReturnToMerge`): it resolves once it opened, or the user kept the one in progress. */
+  /**
+   * Stacks `page` over the one on top, or shows it in its place when it's a place in that page (`movesWithinTop`). A
+   * merge may ask before it opens (`openOrReturnToMerge`): it resolves once it opened, or the user kept the one in progress.
+   */
   openPage: (page: Page) => void | Promise<void>;
   /** Shows `page` in place of the one on top, as a page moving within itself does (a review's tab): Back skips it. */
   replacePage: (page: Page) => void;
@@ -46,7 +50,7 @@ export const useNavigation = create<NavigationStore>((set, get) => ({
   openPage: (page) => {
     if (routed({ kind: 'openPage', page }, get().pages) === 'workspaceWindow') return void api.windows.openPageInWorkspaceWindow(page);
     if (page.kind === 'merge') return openOrReturnToMerge(page);
-    set((state) => ({ pages: [...state.pages, page] }));
+    set((state) => ({ pages: movesWithinTop(state.pages.at(-1), page) ? [...state.pages.slice(0, -1), page] : [...state.pages, page] }));
   },
   replacePage: (page) => set((state) => ({ pages: [...state.pages.slice(0, -1), page] })),
   goBack: () => {

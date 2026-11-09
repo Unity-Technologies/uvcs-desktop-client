@@ -523,7 +523,7 @@ so: "Full screen" names the OS's.
   the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
 - **Every diff beside its files**: Changes, a diff page (changeset, branch, shelve, label, range), a code review,
   History, Incoming, a file's content in Files and Browse repository, and a page window, where it hides that page's
-  files. The merge page offers none, nor do Incoming's conflicts.
+  files. The merge page offers none, nor do Incoming's conflicts or a dialog's diff (See in context).
 - **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
   scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
   past its last change (`FileStepsContext`: Changes, Incoming, a diff page, a code review), it still does, so a whole
@@ -826,6 +826,46 @@ only the image), so its diff shows rendered or as text, with a "Code | Image" sw
 extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
 comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
 (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
+
+## Rows under lines
+
+A place showing a committed diff can add to each file's diff without the diff knowing what it adds (a review's comments,
+docs/features/code-reviews.md "Comments in the code"):
+
+- `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may add
+  controls to its header and compare other versions of the file than the entry's (`AnnotatedEntry.compared`: a
+  comment's own, in the changeset that applied it; "Since review" is then off). It may load on first use.
+- `EntryFlagContext`: what a place flags among a `DiffBrowser`'s files (`EntryFlag`): an icon by the status letter of
+  each flagged file's row (`ItemMark`, after the review mark, its words in the tooltip), and, where the place names
+  one (`filterLabel`), a chip after the status chips showing only those files (`useChangeFilter`'s `flag`,
+  `matchesChangeFilter`'s `onlyFlagged`): a review's files with comments, "Commented".
+- A `DiffBrowser` in a dialog (See in context's) names nothing for Copy link or a new window (`publishes={false}`: the
+  page behind keeps its file and lines named) and offers no Expand Diff (`DiffBrowserLayout`'s `expandable={false}`:
+  the window isn't the dialog's to lay out).
+- `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
+  code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses too;
+  `lineNumber: 0` marks the code's first row, whatever it is, never a row under a line, and nothing while the file's
+  top is scrolled out of what Pierre renders, `topRowOf`; markers on one row sit side by side, `markerSpots`;
+  it measures again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short
+  file when a row goes in above the code), and a line whose row to scroll to (`scrollToAnnotationRow`): the line and its
+  row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE` (one thread of several), read with context: the line a third
+  of the way down, its row below; a row taller than the room below scrolls on just enough to fit, keeping three lines
+  above the line; a line near the top stays at the top, one near the end stops at the end (`focusScrollTop` in
+  `lib/scrollPlacement`, through `framedScrollTop`; nothing moves when they already show, away from the edges). The line
+  ends where its row starts (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the
+  card under it included. A row the diff already shows is glided to (`scrollSmoothlyTo`); one not rendered yet is jumped
+  to where Pierre lays its line out, then set right as rows render and grow. While the place goes to one of its rows
+  (`opensAtRow`), the diff doesn't open at its first change (`openingStep`'s `opensOnLines`), which would scroll past
+  the row once placed. Every row's and marker's line is unfolded from a folded unchanged region (`linesToReveal`,
+  Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text replacing the plain
+  one), folding its regions again, and a line already shown unfolds nothing.
+- `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
+  diff switches to the mode and changeset asked for, `BranchDiff`).
+
+Rows are slotted into Pierre's shadow root, whose code inherits a monospace font and `pre` spacing: a row sets the
+app's own text back (`InlineThreads.module.css`). Pierre's React `FileDiff` keys each row's slot by its index in
+`lineAnnotations` (`renderDiffChildren`), so a row whose index changes is mounted anew, losing what it held (an open
+reply): a place lists rows that come later after the others (`annotationRowsOf`).
 
 ## Review marks
 

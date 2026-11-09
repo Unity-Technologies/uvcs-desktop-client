@@ -17,7 +17,8 @@ const BENIGN_WINDOW_ERRORS = [/^ResizeObserver loop/];
  * process describes its own (`describeUnexpectedError`); null for what is no failure of the app.
  */
 export function describeWindowError(reason: unknown, fallbackMessage = ''): UnexpectedError | null {
-  const message = reason instanceof Error ? reason.message || reason.name : reason === undefined ? fallbackMessage : String(reason);
+  // A window error with no error object carries its words in its message: Chromium's ResizeObserver error has `null`.
+  const message = reason instanceof Error ? reason.message || reason.name : reason === undefined || reason === null ? fallbackMessage : String(reason);
   if (BENIGN_WINDOW_ERRORS.some((benign) => benign.test(message))) return null;
   const details = reason instanceof Error ? (reason.stack ?? `${reason.name}: ${message}`) : message;
   return { message: message || 'Unknown error', details: details || 'Unknown error' };

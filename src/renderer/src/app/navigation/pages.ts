@@ -35,8 +35,13 @@ export type Page =
     }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
   | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
-  /** `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show. */
-  | { kind: 'codeReview'; reviewId: number; tab?: ReviewTab; focusPath?: string; focusLines?: FocusedLines }
+  /**
+   * `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show.
+   * `focusThread`: a comment thread (its first comment's id) to bring into view and mark, in the tab it opens on.
+   * `focusChangeset`: on a branch's review, its changes open changeset by changeset, on that changeset: where a
+   * comment written there is.
+   */
+  | { kind: 'codeReview'; reviewId: number; tab?: ReviewTab; focusPath?: string; focusLines?: FocusedLines; focusThread?: number; focusChangeset?: number }
   /** `focusPath` selects an item of the tree there (a repository path, as `DiffEntry.path`), `focusLines` its lines. */
   | { kind: 'browseRepository'; changesetId: number; focusPath?: string; focusLines?: FocusedLines };
 

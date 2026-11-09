@@ -83,6 +83,20 @@
   min-height: 0;
 }
 
+/* The Changes tab's content, measured as it first shows (`useCommentsPanelStart`). */
+.changesTab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The tab not shown, kept mounted. */
+.tabPanel[hidden] {
+  display: none;
+}
+
 /* The skeleton's rows, as tall as the title, the meta line and the actions they stand for. */
 .placeholderTitle {
   align-items: center;
@@ -93,6 +107,10 @@
   height: 22px;
 }
 
+
+.titleEnd {
+  white-space: nowrap;
+}
 
 .titleEdit {
   display: inline-flex;
