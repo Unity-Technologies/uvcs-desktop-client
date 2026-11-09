@@ -463,12 +463,14 @@ code (`lineNumber: 0`) at the track's very top. In the quiet `--text-tertiary` w
 Open color the line markers have (`--status-changed`, `LineMarker.emphasized`) where something waits for an answer; both
 read at 4.5:1 on the track, as text. Ticks closer than `TICK_HEIGHT` and `TICK_FUSE_GAP` (3 px) fuse into one, emphasized
 if any is, so what's drawn is bounded by the track. Its tooltip is the place's (`DiffAnnotations.mapTickTip`, given the
-spots fused into it). A press on it is a press on the track like any other: it scrolls there, never to the row.
+spots fused into it), asked once each time the ticks are placed, not as the thumb moves: a review's reads every thread's
+Markdown. A press on it is a press on the track like any other: it scrolls there, never to the row. The ticks drawn are
+`shownMapTicks`' (none for a file typed into whole).
 
 It shows only for a diff that scrolls with something to mark (`showsChangeMap`): changes between two versions, or the
 place's ticks. A version shown alone (an added or deleted file) is one change, the whole text, so it has a map only for
-its ticks (a file a review adds, commented on), with no block. Never for a file typed into whole (`TextDiff` passes it
-no ticks: it shows none of the place's rows), nor where the arrows don't step and no place adds rows (the merge page);
+its ticks (a file a review adds, commented on), with no block. Never for a file typed into whole (it shows none of the place's
+rows, so none of their ticks), nor where the arrows don't step and no place adds rows (the merge page);
 then the browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
 (`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top as
 it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls the
@@ -483,7 +485,8 @@ too faint over the marks in the dark theme; stronger on hover), and dragged with
 across the track's width on the thumb's rows takes it (`pressesThumb`), so the slim pill is as easy to grab as the track
 is wide. It moves on the scroll event itself (`useScrollTop`), with the content, not a frame behind. `useChangeMap`
 places the marks again (`placesAgain`) when the changes, the ticks, the layout or the sizes change, or as Pierre
-measures the lines above the last change or tick (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
+measures the lines above the last change or the lowest tick (`lowestTickTop`, whatever order the place lists them in;
+its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
 resize or as Pierre renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are
 read anew each time, so a theme switch recolors the map.
 
