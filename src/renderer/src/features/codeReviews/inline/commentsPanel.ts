@@ -129,8 +129,6 @@ export interface CommentsFileGroup {
   /** Where the file is, without the slashes around it: "src/client"; empty at the root. */
   folder: string;
   threads: LineThread[];
-  /** The digits of its longest line number: the room its rows give their lines, so their words start in one column. */
-  lineDigits: number;
 }
 
 /**
@@ -148,9 +146,8 @@ export function commentsByFile(listed: readonly LineThread[], order: CommentsOrd
       continue;
     }
     const { folder, file } = locationText(thread.root.anchor);
-    groups.push({ path, file, folder: folder.replace(/^\/+|\/+$/g, ''), threads: [thread], lineDigits: 0 });
+    groups.push({ path, file, folder: folder.replace(/^\/+|\/+$/g, ''), threads: [thread] });
   }
-  for (const group of groups) group.lineDigits = String(Math.max(...group.threads.map((thread) => thread.root.anchor.line))).length;
   return groups;
 }
 

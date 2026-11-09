@@ -259,9 +259,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   - **Code order**, the default: by file, as the diff lists them, then line, grouped under each file's name
     (`commentsByFile`), so a file with many comments is named once. The name stays at the top while its comments scroll
     (sticky), with its folder cut from the start (the folder nearest the file stays) and how many; a click on it shows the
-    file's diff in the mode the diff is in. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its line
-    in a column as wide as the file's longest line number (`lineDigits`), who started it, its replies and its state;
-    its kind's icon and first words under them. The one gone to has the accent bar on its left. Groups don't fold:
+    file's diff in the mode the diff is in. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its kind's icon
+    leading, as a bullet; who started it, "line N" and its replies, then its state; its first words under them, as wide
+    as the row. A line number in a column of its own read as an id, and the icon beside the words took their room. The one gone to has the accent bar on its left. Groups don't fold:
     the sticky names, Open/All and the kind chips already narrow a long list, and folded groups would raise what N does
     in one.
   - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old

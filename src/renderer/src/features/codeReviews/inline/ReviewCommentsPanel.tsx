@@ -127,7 +127,6 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
                         onOpen={() => comments.goToThread(thread)}
                         onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
                         excerpt={matchExcerpt(thread, search.query)}
-                        lineDigits={group.lineDigits}
                       />
                     </li>
                   ))}

@@ -83,11 +83,6 @@ describe('commentsByFile', () => {
     expect(commentsByFile(commentsPanelThreads(THREADS, 'all', undefined, 'oldest'), 'oldest')).toBeNull();
   });
 
-  it('gives each file\'s lines the room of its longest line number', () => {
-    const lines = threadsOf([onLine(1, '/a.cs', 9), onLine(2, '/a.cs', 1790), onLine(3, '/b.cs', 25)]);
-    expect(commentsByFile(commentsPanelThreads(lines, 'all'), 'code')?.map((group) => group.lineDigits)).toEqual([4, 2]);
-  });
-
   it('has no group with nothing listed', () => {
     expect(commentsByFile([], 'code')).toEqual([]);
   });
