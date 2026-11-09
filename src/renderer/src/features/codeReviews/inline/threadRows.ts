@@ -13,6 +13,11 @@ export interface LineThreads {
   threads: PlacedThread[];
 }
 
+/** What a marker is drawn from: threads folded away, a line's or the outdated ones above the code. */
+export interface MarkedThreads {
+  threads: readonly Pick<PlacedThread, 'thread'>[];
+}
+
 /** The placed threads by line, each line once, the older side's first and then by line, as the diff reads. */
 export function lineThreadsOf(placed: readonly PlacedThread[]): LineThreads[] {
   const byLine = new Map<string, LineThreads>();
@@ -53,17 +58,17 @@ export function lineOfThread(lines: readonly LineThreads[], commentId: number): 
 }
 
 /** The comments of a line's threads, oldest thread first: each first comment, then its replies. */
-function commentsOf(line: Pick<LineThreads, 'threads'>): ReviewComment[] {
+function commentsOf(line: MarkedThreads): ReviewComment[] {
   return line.threads.flatMap((entry) => [entry.thread.root, ...entry.thread.replies]);
 }
 
 /** How many comments a line's marker counts: every one on the line, replies too. */
-export function markerCommentCount(line: Pick<LineThreads, 'threads'>): number {
+export function markerCommentCount(line: MarkedThreads): number {
   return commentsOf(line).length;
 }
 
 /** The people a line's marker shows: who wrote there, each once, as they first wrote; the rest past `max` counted. */
-export function markerPeople(line: Pick<LineThreads, 'threads'>, max = MARKER_PEOPLE): { people: string[]; more: number } {
+export function markerPeople(line: MarkedThreads, max = MARKER_PEOPLE): { people: string[]; more: number } {
   const everyone = [...new Set(commentsByDate(line).map((comment) => comment.author))];
   return { people: everyone.slice(0, max), more: Math.max(0, everyone.length - max) };
 }
@@ -79,7 +84,7 @@ export function markerLabel(line: Pick<LineThreads, 'threads' | 'line'>): string
   return `${what} on line ${line.line}, by ${listNames(people)}`;
 }
 
-function commentsByDate(line: Pick<LineThreads, 'threads'>): ReviewComment[] {
+function commentsByDate(line: MarkedThreads): ReviewComment[] {
   return commentsOf(line).sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.id - b.id);
 }
 
@@ -92,7 +97,7 @@ const KIND_WORDS: Record<ReviewCommentKind, string> = {
 };
 
 /** A marker stands out while anything on its line is still open (a change request to apply, a question to answer). */
-export function markerIsOpen(line: Pick<LineThreads, 'threads'>): boolean {
+export function markerIsOpen(line: MarkedThreads): boolean {
   return line.threads.some((entry) => entry.thread.state.kind === 'open');
 }
 
