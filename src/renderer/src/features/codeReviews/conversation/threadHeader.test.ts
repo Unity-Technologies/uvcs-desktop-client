@@ -48,6 +48,12 @@ describe('threadHeaderOf', () => {
       expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, null, true]);
     });
 
+    it('says the line apart under the file\'s name, where the file names no line, and nowhere else', () => {
+      expect(headerOf(changeRequest, { place: 'fileGroup' }).line).toBe('line 11');
+      expect(headerOf(changeRequest, { place: 'panel' }).line).toBeNull();
+      expect(headerOf(changeRequest, { place: 'code' }).line).toBeNull();
+    });
+
     it('names its kind in the code instead of the file it is at, with its icon even for a plain comment', () => {
       const header = headerOf(plainOnLine, { place: 'code' });
       expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, 'Comment', true]);
