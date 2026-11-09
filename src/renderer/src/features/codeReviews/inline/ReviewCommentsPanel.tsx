@@ -90,8 +90,9 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
 }
 
 /**
- * Each time a comment is gone to (a card, the arrows, N), its card is scrolled into the list's view. A card clicked
- * before keeps the focus otherwise, and the key pressed then draws its focus ring on a comment no longer the current one.
+ * Each time a comment is gone to (a card, the arrows, N), its card is scrolled into the list's view. The focus, when a
+ * card before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
+ * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
 function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: number | undefined): void {
   // Before the paint: the ring the key drew on the card left never shows.
@@ -101,7 +102,12 @@ function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: 
     const card = list.querySelector('[data-current]');
     card?.scrollIntoView({ block: 'nearest' });
     const focused = document.activeElement;
-    if (focused instanceof HTMLElement && list.contains(focused) && !card?.contains(focused)) focused.blur();
+    if (!(focused instanceof HTMLElement) || !list.contains(focused) || card?.contains(focused)) return;
+    const control = card?.querySelector<HTMLElement>('button');
+    // `focusVisible` is Chromium's, not yet in TypeScript's DOM types.
+    const options: FocusOptions & { focusVisible?: boolean } = { preventScroll: true, focusVisible: false };
+    if (control) control.focus(options);
+    else focused.blur();
   }, [listRef, focusSeq]);
 }
 

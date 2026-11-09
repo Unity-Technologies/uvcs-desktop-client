@@ -202,15 +202,18 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   open (`markerIsOpen`); a click opens that line's threads, an × folds them back. The outdated ones hide too: they have no line to mark, so they show only when one of them is gone to (from
   the panel or the conversation), with an × that hides them again (`annotationRowsOf`'s `opened`, `OUTDATED_ROW`).
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
-  any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the conversation sums up a settled one
-  (`ThreadSummaryCard`), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything
-  is, `initialCommentsFilter`). A click anywhere on a card goes to the thread: its file, its mode, scrolled to it, whole, and lit
-  (`ReviewComments.goToThread`, `ThreadFocus`). Under its header, where the one gone to is ("3 of 12",
-  `commentPosition`) and arrows to the previous and next; **N** and **⇧N** do the same with the panel hidden
-  (`steppedThread`: in the panel's order, across files and modes, stopping at either end; from a thread that just
-  left the list, settled under Open, on from where it sat). The card gone to scrolls into the panel's view, and a card
-  clicked before gives up the focus, whose ring the key would draw on a comment no longer current. The panel's filter is kept by the Changes tab for that
-  (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the thread gone to keeps its ring until another one is:
+  any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
+  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, whole in a
+  tooltip when cut short), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
+  anything is, `initialCommentsFilter`). A click anywhere on a card goes to the thread (not the end of a drag
+  selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
+  `ThreadFocus`). Under its header, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the previous
+  and next; **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
+  and modes, stopping at either end; from a thread that just left the list, settled under Open, on from where it sat).
+  The card gone to scrolls into the panel's view, and the focus a card held goes along to the current one, drawn
+  without a ring: left behind, the key would draw it on a comment no longer current. The panel's filter is kept by the
+  Changes tab for that (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`).
+  In the code, the thread gone to keeps its ring until another one is:
   among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
   conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
   to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); a version that can't be read (purged) keeps the diff

@@ -841,7 +841,8 @@ docs/features/code-reviews.md "Comments in the code"):
   nothing moves when they already show, away from the edges). A row the diff already shows is glided to
   (`scrollSmoothlyTo`); one not rendered yet is jumped to where Pierre lays its line out, then set right as rows render
   and grow. While the place goes to one of its rows (`opensAtRow`), the diff doesn't open at its
-  first change (`openingStep`'s `opensOnLines`), which would scroll past the row once placed. Every row's and marker's line is unfolded from a folded unchanged region
+  first change (`openingStep`'s `opensOnLines`), which would scroll past the row once placed. Every row's and marker's
+  line is unfolded from a folded unchanged region
   (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
   replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
