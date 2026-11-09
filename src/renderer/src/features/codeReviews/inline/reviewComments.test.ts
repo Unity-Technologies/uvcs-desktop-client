@@ -4,7 +4,7 @@ import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread } from './fileThreads';
-import { conversationAt, fileDiffRequest, showInConversation, threadDiffRequest } from './reviewComments';
+import { conversationAt, showInConversation, threadDiffRequest } from './reviewComments';
 
 function thread(fields: Partial<ReviewComment> = {}): LineThread {
   const root: ReviewComment = {
@@ -34,17 +34,6 @@ describe('threadDiffRequest', () => {
   it('leaves the mode alone in a review with one: a changeset, a shelve', () => {
     expect(threadDiffRequest(review({ kind: 'changeset', changesetId: 12 }), thread({ changesetId: 12 }), 5)).toEqual({ path: 'src/Player.cs', seq: 5 });
     expect(threadDiffRequest(review({ kind: 'shelve', shelveId: 2 }), thread(), 6)).toEqual({ path: 'src/Player.cs', seq: 6 });
-  });
-});
-
-describe('fileDiffRequest', () => {
-  it("shows a file in a branch review's whole branch, which holds every file, whatever changeset is stepped to", () => {
-    expect(fileDiffRequest(review({ kind: 'branch', branch: '/main/task' }), 'src/Player.cs', 3)).toEqual({ path: 'src/Player.cs', changesetId: null, seq: 3 });
-  });
-
-  it('leaves the mode alone in a review with one: a changeset, a shelve', () => {
-    expect(fileDiffRequest(review({ kind: 'changeset', changesetId: 12 }), 'src/Player.cs', 4)).toEqual({ path: 'src/Player.cs', seq: 4 });
-    expect(fileDiffRequest(review({ kind: 'shelve', shelveId: 2 }), 'src/Player.cs', 5)).toEqual({ path: 'src/Player.cs', seq: 5 });
   });
 });
 

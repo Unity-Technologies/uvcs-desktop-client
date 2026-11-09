@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, X } from 'lucide-react';
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { listScrollTop } from '../../../lib/scrollPlacement';
@@ -19,8 +19,11 @@ import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import {
   commentPosition,
   commentsPanelCounts,
+  foldAllEntry,
+  toggledFold,
   type CommentsFileGroup,
   type CommentsOrder,
+  type FoldedFiles,
   emptyCommentsText,
   isSearching,
   matchExcerpt,
@@ -51,8 +54,9 @@ interface ReviewCommentsPanelProps {
   order: CommentsOrder;
   onOrderChange: (order: CommentsOrder) => void;
   groups: readonly CommentsFileGroup[] | null;
-  /** Shows a file's diff, its group's name clicked. */
-  onOpenFile: (path: string) => void;
+  /** The files folded under their names, kept by the Changes tab: going to a comment unfolds its file. */
+  folded: FoldedFiles;
+  onFoldedChange: (folded: FoldedFiles) => void;
   /** Every comment, in the order the panel lists them: where one that left the list sat. */
   all: readonly LineThread[];
   /** Goes to the comment after or before the one gone to (`steppedThread`). */
@@ -75,7 +79,7 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, onOpenFile, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, folded, onFoldedChange, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
   const counts = commentsPanelCounts(threads);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
@@ -102,7 +106,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current, groups)}</span>
-          <CommentsOrderMenu order={order} onChange={onOrderChange} />
+          <CommentsOrderMenu order={order} onChange={onOrderChange} foldAll={foldAllEntry(groups, folded)} onFold={onFoldedChange} />
           <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
         </div>
@@ -118,7 +122,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
           {groups ? (
             <div className={styles.groups}>
               {groups.map((group) => (
-                <FileGroup key={group.path} group={group} onOpenFile={() => onOpenFile(group.path)}>
+                <FileGroup key={group.path} group={group} folded={folded.has(group.path)} onToggle={() => onFoldedChange(toggledFold(folded, group.path))}>
                   {group.threads.map((thread) => (
                     <li key={thread.root.id}>
                       <ThreadSummaryRow
@@ -158,12 +162,13 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
 
 /**
  * A file's comments under its name, which stays at the top while they scroll: the name, its folder (cut from the
- * start, the folder nearest the file staying), and how many. The name shows the file's diff.
+ * start, the folder nearest the file staying), and how many. The name folds them away and back.
  */
-function FileGroup({ group, onOpenFile, children }: { group: CommentsFileGroup; onOpenFile: () => void; children: ReactNode }) {
+function FileGroup({ group, folded, onToggle, children }: { group: CommentsFileGroup; folded: boolean; onToggle: () => void; children: ReactNode }) {
   return (
     <section className={styles.group} aria-label={group.path}>
-      <button type="button" className={styles.groupHeader} data-tip="Show the file" data-tip-sub={group.path} onClick={onOpenFile}>
+      <button type="button" className={styles.groupHeader} aria-expanded={!folded} data-tip={group.path} data-tip-overflow="" onClick={onToggle}>
+        <ChevronRight size={14} className={styles.groupChevron} aria-hidden />
         <ItemIcon itemType="file" name={group.file} />
         <span className={styles.groupFile}>
           <Highlight text={group.file} />
@@ -178,7 +183,7 @@ function FileGroup({ group, onOpenFile, children }: { group: CommentsFileGroup; 
         )}
         <span className={styles.groupCount}>{group.threads.length}</span>
       </button>
-      <ul className={styles.groupRows}>{children}</ul>
+      {!folded && <ul className={styles.groupRows}>{children}</ul>}
     </section>
   );
 }

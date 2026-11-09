@@ -10,6 +10,10 @@ import {
   commentsPanelCounts,
   commentsByFile,
   commentsOrderTip,
+  foldAllEntry,
+  NO_FOLDED_FILES,
+  toggledFold,
+  unfoldedFor,
   knownCommentsOrder,
   commentsPanelThreads,
   emptyCommentsText,
@@ -94,6 +98,32 @@ describe('commentsByFile', () => {
 
   it('has no group with nothing listed', () => {
     expect(commentsByFile([], 'code')).toEqual([]);
+  });
+});
+
+describe('folding files', () => {
+  const groups = commentsByFile(commentsPanelThreads(THREADS, 'all'), 'code');
+
+  it('folds a file and unfolds it again, its name clicked', () => {
+    const folded = toggledFold(NO_FOLDED_FILES, 'src/b.cs');
+    expect([...folded]).toEqual(['src/b.cs']);
+    expect([...toggledFold(folded, 'src/b.cs')]).toEqual([]);
+  });
+
+  it('unfolds the file of a comment gone to, and changes nothing when it was open', () => {
+    const folded = new Set(['a.cs', 'src/b.cs']);
+    expect([...unfoldedFor(folded, 'src/b.cs')]).toEqual(['a.cs']);
+    expect(unfoldedFor(folded, 'c.cs')).toBe(folded);
+  });
+
+  it('collapses every file while any is open, and expands them all once none is', () => {
+    expect(foldAllEntry(groups, new Set(['a.cs']))).toEqual({ label: 'Collapse all', collapses: true, folded: new Set(['a.cs', 'src/b.cs']) });
+    expect(foldAllEntry(groups, new Set(['a.cs', 'src/b.cs']))).toEqual({ label: 'Expand all', collapses: false, folded: NO_FOLDED_FILES });
+  });
+
+  it('offers no folding in a time order, nor with nothing listed', () => {
+    expect(foldAllEntry(null, NO_FOLDED_FILES)).toBeNull();
+    expect(foldAllEntry([], NO_FOLDED_FILES)).toBeNull();
   });
 });
 

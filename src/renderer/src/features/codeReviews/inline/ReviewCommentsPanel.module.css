@@ -105,8 +105,21 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.groupHeader:hover .groupFile {
-  text-decoration: underline;
+.groupHeader:hover {
+  background: color-mix(in srgb, var(--bg-hover) 100%, var(--bg-subtle));
+}
+
+/* Its file's comments folded away (pointing right) or shown (down). */
+.groupChevron {
+  flex: none;
+  margin-left: -4px;
+  color: var(--text-tertiary);
+  transform: rotate(90deg);
+  transition: transform var(--duration-fast);
+}
+
+.groupHeader[aria-expanded='false'] .groupChevron {
+  transform: none;
 }
 
 .groupFile {

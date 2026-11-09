@@ -1,21 +1,29 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, ListOrdered } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronsDownUp, ChevronsUpDown, ListOrdered } from 'lucide-react';
 import type { Icon } from '../../../lib/actions';
 import { Button } from '../../../ui/Button';
 import { focusAfterMenu } from '../../../ui/menu/focusAfterMenu';
 import menuStyles from '../../../ui/menu/Menu.module.css';
 import { MenuChoice } from '../../../ui/menu/MenuChoice';
-import { COMMENTS_ORDERS, commentsOrderTip, type CommentsOrder } from './commentsPanel';
+import { COMMENTS_ORDERS, commentsOrderTip, type CommentsOrder, type FoldedFiles, type foldAllEntry } from './commentsPanel';
 import styles from './ReviewCommentsPanel.module.css';
 
 const ORDER_ICONS: Record<CommentsOrder, Icon> = { newest: ArrowDownWideNarrow, oldest: ArrowUpNarrowWide, code: ListOrdered };
 
 /**
  * How the Comments panel orders its comments, a small button by its arrows showing the order chosen: newest or oldest
- * first, or the code's order, grouped by file. Kept for every review (`useReviewCommentsStore`); as every view menu, a
+ * first, or the code's order, grouped by file, whose files it can collapse or expand all at once. Kept for every review (`useReviewCommentsStore`); as every view menu, a
  * choice applies with the menu open, the list behind it showing it.
  */
-export function CommentsOrderMenu({ order, onChange }: { order: CommentsOrder; onChange: (order: CommentsOrder) => void }) {
+interface CommentsOrderMenuProps {
+  order: CommentsOrder;
+  onChange: (order: CommentsOrder) => void;
+  /** Grouped by file: every file folded or unfolded at once (`foldAllEntry`). */
+  foldAll: ReturnType<typeof foldAllEntry>;
+  onFold: (folded: FoldedFiles) => void;
+}
+
+export function CommentsOrderMenu({ order, onChange, foldAll, onFold }: CommentsOrderMenuProps) {
   const OrderIcon = ORDER_ICONS[order];
   const { tip, sub } = commentsOrderTip(order);
   return (
@@ -30,6 +38,15 @@ export function CommentsOrderMenu({ order, onChange }: { order: CommentsOrder; o
               <MenuChoice key={value} value={value} icon={ORDER_ICONS[value]} label={label} checked={value === order} />
             ))}
           </DropdownMenu.RadioGroup>
+          {foldAll && (
+            <>
+              <DropdownMenu.Separator className={menuStyles.separator} />
+              <DropdownMenu.Item className={menuStyles.item} onSelect={() => onFold(foldAll.folded)}>
+                <span className={menuStyles.icon}>{foldAll.collapses ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}</span>
+                <span className={menuStyles.label}>{foldAll.label}</span>
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

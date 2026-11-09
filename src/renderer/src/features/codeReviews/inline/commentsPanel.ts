@@ -209,6 +209,36 @@ export function shownCommentsFilter(picked: CommentsFilter | null, openedOn: Com
   return picked ?? openedOn ?? 'all';
 }
 
+/** The files whose comments are folded under their names, by path; every file starts unfolded. */
+export type FoldedFiles = ReadonlySet<string>;
+
+export const NO_FOLDED_FILES: FoldedFiles = new Set();
+
+/** A file's name clicked: its comments folded, or unfolded again. */
+export function toggledFold(folded: FoldedFiles, path: string): FoldedFiles {
+  const next = new Set(folded);
+  if (!next.delete(path)) next.add(path);
+  return next;
+}
+
+/** A comment gone to (a click, the arrows, N) is never hidden: its file unfolds. The same set when it was open. */
+export function unfoldedFor(folded: FoldedFiles, path: string): FoldedFiles {
+  if (!folded.has(path)) return folded;
+  const next = new Set(folded);
+  next.delete(path);
+  return next;
+}
+
+/**
+ * The sort menu's entry folding every file at once: "Collapse all" while any is open, else "Expand all", and what it
+ * leaves folded. None in a time order, which has no files to fold.
+ */
+export function foldAllEntry(groups: readonly CommentsFileGroup[] | null, folded: FoldedFiles): { label: string; collapses: boolean; folded: FoldedFiles } | null {
+  if (!groups || groups.length === 0) return null;
+  const anyOpen = groups.some((group) => !folded.has(group.path));
+  return anyOpen ? { label: 'Collapse all', collapses: true, folded: new Set(groups.map((group) => group.path)) } : { label: 'Expand all', collapses: false, folded: NO_FOLDED_FILES };
+}
+
 /**
  * Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is; grouped by file,
  * in how many files too ("2 of 9 · 3 files").
