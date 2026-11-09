@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef } from 'react';
 import { windowShortcutMayRun } from './modalDialog';
 import { matchesShortcut } from './shortcuts';
 import { keyTakenByText } from './textEntry';
-import { shortcutListens, ViewShownContext } from './viewShown';
+import { ViewShownContext } from './viewShown';
 
 /**
  * Runs `handler` when `shortcut` is pressed anywhere in the window, unless `enabled` is false, a modal dialog is open,
@@ -14,7 +14,7 @@ export function useShortcut(shortcut: string | undefined, handler: () => void, e
   latestHandler.current = handler;
   const latestWhileTyping = useRef(whileTyping);
   latestWhileTyping.current = whileTyping;
-  const listens = shortcutListens(enabled, useContext(ViewShownContext));
+  const listens = enabled && useContext(ViewShownContext);
 
   useEffect(() => {
     if (!shortcut || !listens) return;

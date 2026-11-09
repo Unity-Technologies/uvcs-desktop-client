@@ -25,7 +25,7 @@ import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
 import { ViewShownContext } from '../../lib/viewShown';
-import { conversationFocus, mountedTabs, openingTab } from './reviewTab';
+import { conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
 
@@ -76,16 +76,16 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       </Stowable>
       {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
       {mounted.includes('conversation') && (
-        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={tab !== 'conversation'}>
-          <ViewShownContext.Provider value={tab === 'conversation'}>
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
+          <ViewShownContext.Provider value={reviewTabShown(page, 'conversation')}>
             <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
           </ViewShownContext.Provider>
         </div>
       )}
       {mounted.includes('changes') && (
-        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={tab !== 'changes'}>
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={!reviewTabShown(page, 'changes')}>
           {diffTarget ? (
-            <ViewShownContext.Provider value={tab === 'changes'}>
+            <ViewShownContext.Provider value={reviewTabShown(page, 'changes')}>
               <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
             </ViewShownContext.Provider>
           ) : (
