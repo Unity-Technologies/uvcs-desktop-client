@@ -229,17 +229,21 @@
   white-space: nowrap;
 }
 
-/* The folder gives way first; the file's name and line stay whole. */
+/* The folder gives way first; then the file's name, its line staying whole. */
 .locationFolder {
   overflow: hidden;
   min-width: 0;
   color: var(--text-tertiary);
   text-overflow: ellipsis;
+  flex-shrink: 1000;
 }
 
+/* A name too long for the band is cut short too, not run under the state pill beside it. */
 .locationFile {
-  flex: none;
+  overflow: hidden;
+  min-width: 0;
   color: var(--text-primary);
+  text-overflow: ellipsis;
 }
 
 .locationLine {
@@ -611,6 +615,15 @@ button.pill:hover {
 /* The thread the code shows, in the Changes tab's Comments panel. */
 .thread[data-current] {
   border-color: var(--accent);
+}
+
+/*
+ * In the code, the thread gone to keeps its ring until another is: among several alike (the outdated ones, stacked
+ * above the code), the eye finds it again after the light fades.
+ */
+.thread[data-in-code][data-highlight] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* In the code, a card is as wide as a side of the diff, which can be narrow: its band wraps rather than overflow. */
