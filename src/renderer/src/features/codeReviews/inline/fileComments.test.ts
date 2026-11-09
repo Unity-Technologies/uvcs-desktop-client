@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { annotationRowsOf, fileCommentsOf, OUTDATED_ROW, threadPlace } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead } from './fileComments';
 import type { ShownFile } from './fileThreads';
 import { lineThreadsOf } from './threadRows';
 
@@ -38,7 +38,6 @@ describe('fileCommentsOf', () => {
       ['additions:3', [2]],
     ]);
     expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([3]);
-    expect(comments.earlierRevisions).toEqual([20]);
   });
 
   it('shows an outdated thread in the view it was written in only', () => {
@@ -87,5 +86,34 @@ describe('threadPlace', () => {
     expect(threadPlace(comments, 1, 'additions')).toEqual({ side: 'additions', lineNumber: 2, lineKey: 'additions:2' });
     expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 1 });
     expect(threadPlace(comments, 99, 'additions')).toBeNull();
+  });
+});
+
+describe('versionsToRead', () => {
+  it('reads the earlier versions threads were written on, and the newer side to place them', () => {
+    const threads = threadsOf([onLine(1, 30, 2), onLine(2, 20, 2), onLine(3, 25, 1), onLine(4, 20, 9)]);
+    expect(versionsToRead({ threads, review: BRANCH, view: WHOLE, file: PLAYER })).toEqual([20, 25, 30]);
+  });
+
+  it('reads nothing when every thread is on a version shown, nor a newer side a deleted file lacks', () => {
+    expect(versionsToRead({ threads: threadsOf([onLine(1, 30, 2)]), review: BRANCH, view: WHOLE, file: PLAYER })).toEqual([]);
+    const deleted: ShownFile = { path: 'src/Player.cs', originalRevision: 25, modifiedRevision: -1 };
+    expect(versionsToRead({ threads: threadsOf([onLine(1, 20, 2)]), review: BRANCH, view: WHOLE, file: deleted })).toEqual([20]);
+  });
+});
+
+describe('topSideOf', () => {
+  it('is the newer side, or the older one of a deleted file', () => {
+    expect(topSideOf(PLAYER)).toBe('additions');
+    expect(topSideOf({ modifiedRevision: -1 })).toBe('deletions');
+  });
+});
+
+describe('showsCommentControls', () => {
+  it('shows them on a file with threads, or compared since one', () => {
+    expect(showsCommentControls(null, false)).toBe(false);
+    expect(showsCommentControls({ lines: [], outdated: [] }, false)).toBe(false);
+    expect(showsCommentControls({ lines: [], outdated: [] }, true)).toBe(true);
+    expect(showsCommentControls({ lines: [], outdated: [{ thread: threadsOf([onLine(1, 20, 1)])[0] as never, revisionId: 20 }] }, false)).toBe(true);
   });
 });

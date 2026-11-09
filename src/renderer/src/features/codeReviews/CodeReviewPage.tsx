@@ -1,4 +1,3 @@
-import { commentLineText } from '../../lib/comments/commentText';
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -16,7 +15,6 @@ import { SkeletonBar } from '../../ui/Skeleton';
 import { tabId, tabPanelId, Tabs } from '../../ui/Tabs';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
-import { DiffPage } from '../diff/DiffPage';
 import { reviewPageMenu } from './codeReviewMenu';
 import { OwnReviewButton } from './OwnReviewButton';
 import { reviewedCodeAction } from './reviewedCode';
@@ -24,6 +22,7 @@ import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
+import { ReviewChangesTab } from './ReviewChangesTab';
 import { openingTab } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
@@ -61,7 +60,8 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
             label="Code review"
             idPrefix={TABS_ID}
             value={tab}
-            onChange={(value) => navigation.replacePage({ ...page, tab: value })}
+            // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
+            onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusChangeset: undefined })}
             tabs={[
               { value: 'conversation', label: 'Conversation', icon: <MessageSquare size={14} />, count: review.commentCount },
               { value: 'changes', label: 'Changes', icon: <FileDiff size={14} /> },
@@ -71,9 +71,9 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       </Stowable>
       <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, tab)} aria-labelledby={tabId(TABS_ID, tab)}>
         {tab === 'conversation' ? (
-          <ReviewConversationTab review={review} />
+          <ReviewConversationTab review={review} focusThread={page.focusThread} />
         ) : diffTarget ? (
-          <DiffPage page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }} />
+          <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
         ) : (
           <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
         )}

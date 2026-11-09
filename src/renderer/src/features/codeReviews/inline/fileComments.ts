@@ -10,8 +10,6 @@ import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } f
 export interface FileComments {
   lines: LineThreads[];
   outdated: EarlierThread[];
-  /** The earlier versions to read to place the threads written on them, the newer side's text with them. */
-  earlierRevisions: number[];
 }
 
 interface FileCommentsInput {
@@ -37,7 +35,28 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
     (text, line) => (newer === null ? null : newerLineOf(text, newer!, line)),
     (thread) => writtenIn(review, thread).kind === view.kind,
   );
-  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, earlierRevisions: earlierRevisions(earlier) };
+  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated };
+}
+
+/**
+ * The versions of a file to read to place its threads (`useFileVersionTexts`): those written on an earlier version, and
+ * the newer side's text to find their lines in. None when every thread is on a version the diff shows.
+ */
+export function versionsToRead({ threads, review, view, file }: Omit<FileCommentsInput, 'textOf'>): number[] {
+  const { earlier } = threadsOfFile(threads, review, view, file);
+  const revisions = earlierRevisions(earlier);
+  if (revisions.length === 0 || file.modifiedRevision === -1 || revisions.includes(file.modifiedRevision)) return revisions;
+  return [...revisions, file.modifiedRevision];
+}
+
+/** The side a file's rows above its code go on: the one it has, the older for a deleted file. */
+export function topSideOf(file: Pick<ShownFile, 'modifiedRevision'>): ThreadSide {
+  return file.modifiedRevision === -1 ? 'deletions' : 'additions';
+}
+
+/** Whether a file's diff offers the comments' controls: it has threads, or is compared since one. */
+export function showsCommentControls(comments: Pick<FileComments, 'lines' | 'outdated'> | null, comparingSince: boolean): boolean {
+  return comparingSince || (comments !== null && (comments.lines.length > 0 || comments.outdated.length > 0));
 }
 
 /** The row above the code holding a file's outdated threads (`lineNumber: 0`). */

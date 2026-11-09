@@ -7,9 +7,10 @@ import { detailsHidden, useDetailsPaneStore } from './detailsPaneStore';
 
 /**
  * Hides a view's details panel, or shows it again: last in the header of every view with details (ARCHITECTURE.md
- * "List and details"), over the panel it folds. Its key is the view's `ListWithDetails` `detailsKey`.
+ * "List and details"), over the panel it folds. Its key is the view's `ListWithDetails` `detailsKey`; `noun` names what
+ * the panel holds where it isn't an object's details (a review's comments).
  */
-export function DetailsToggleButton({ detailsKey }: { detailsKey: string }) {
+export function DetailsToggleButton({ detailsKey, noun = 'details' }: { detailsKey: string; noun?: string }) {
   const hidden = useDetailsPaneStore((state) => detailsHidden(state, detailsKey));
   const toggleHidden = useDetailsPaneStore((state) => state.toggleHidden);
   const ref = useRef<HTMLButtonElement>(null);
@@ -18,7 +19,7 @@ export function DetailsToggleButton({ detailsKey }: { detailsKey: string }) {
     <IconButton
       ref={ref}
       icon={hidden ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
-      label={hidden ? 'Show details' : 'Hide details'}
+      label={hidden ? `Show ${noun}` : `Hide ${noun}`}
       shortcut={hotkey('toggleDetails')}
       onClick={() => toggleHidden(detailsKey)}
     />
