@@ -1,5 +1,6 @@
 import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
+import { anchorPath } from '../inline/fileThreads';
 import type { ReviewThread } from './reviewThreads';
 
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
@@ -44,7 +45,7 @@ export function threadKindName(root: Pick<ReviewComment, 'kind'>): 'Change reque
  * The line goes apart (`writtenLineText`).
  */
 export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'path'>): { folder: string; file: string } {
-  const path = anchor.path.replace(/^\//, '');
+  const path = anchorPath(anchor);
   const slash = path.lastIndexOf('/');
   return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1) };
 }
@@ -75,6 +76,6 @@ export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string 
  * changed since.
  */
 export function commentLocationPage(reviewId: number, root: Pick<ReviewComment, 'id' | 'changesetId'> & { anchor: Extract<ReviewCommentAnchor, { kind: 'line' }> }): PageOf<'codeReview'> {
-  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath: root.anchor.path.replace(/^\//, ''), focusThread: root.id };
+  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath: anchorPath(root.anchor), focusThread: root.id };
   return root.changesetId === undefined ? page : { ...page, focusChangeset: root.changesetId };
 }
