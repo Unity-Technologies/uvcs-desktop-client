@@ -348,6 +348,14 @@ and their decisions went to paths a decision had moved.
   typed: each decision makes `cm` calculate the merge again. Its name is one name, never a path, `.` or `..`
   (`isValidRenameName`, `canKeepBothAs`; the field says what is wrong: `renameNameProblem`); the main process refuses
   anything else (`assertDecisionValid`).
+- "Do the same for the next N conflicts of this kind" (`applyToNextBox`, `applyToNextLabel`) decides, with the
+  conflict, the undecided directory conflicts of the same type after it in the list (`nextOfSameKind`, over
+  `directoryConflictsInListOrder`): the same type offers the same choices, so each takes the decision. The box shows
+  only when one waits, starts unticked for each conflict, and is ticked before picking Keep yours or Keep incoming.
+  Keep both never carries over (the box is off and disabled while it's picked): its name belongs to one item. All
+  go in one request, the new decisions in list order after the others (`withDecisionAndNext`); the main process
+  applies them one `cm` call each, as any decisions, and drops one an earlier one took out of the merge. The official
+  client counts the other selected conflicts instead; the kind was chosen so the next ones never need a selection.
 - The page sends its decisions in the order they were made with the new one after them (`useDirectoryDecisions`,
   `applyDirectoryDecision`, `withDecision`), and the main process applies them (`DirectoryDecisions`): one `cm merge
   --resolveconflict --conflict=N` each, a quick read that never merges (no `--merge`: `cm` returns before merging and
