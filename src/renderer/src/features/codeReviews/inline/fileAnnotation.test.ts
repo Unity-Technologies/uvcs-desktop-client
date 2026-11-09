@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, hasComments, isCommentable, markerCount, offersContext, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, offersContext, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -48,13 +48,6 @@ describe('openedOnFocus', () => {
     expect(openedOnFocus(opened, 'additions:9', true)).toBe(opened);
     expect(openedOnFocus(opened, undefined, false)).toBe(opened);
     expect(openedOnFocus(opened, 'additions:2', false)).toBe(opened);
-  });
-});
-
-describe('markerCount', () => {
-  it('counts the threads of a line only when there are several', () => {
-    expect(markerCount({ threads: [{ thread: thread(1), side: 'additions', line: 1 }] })).toBeNull();
-    expect(markerCount({ threads: [1, 2].map((id) => ({ thread: thread(id), side: 'additions' as const, line: 1 })) })).toBe(2);
   });
 });
 

@@ -5,10 +5,11 @@
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 18px;
-  min-width: 18px;
-  padding: 0 5px;
+  gap: 4px;
+  height: 20px;
+  min-width: 20px;
+  /* Tighter on the left, where what a place draws may start with avatars (a review's comments). */
+  padding: 0 6px 0 2px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
   background: var(--bg-surface-raised);

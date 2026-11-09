@@ -2,18 +2,21 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import { MessageSquare, MessageSquareOff } from 'lucide-react';
 import { useContext, useMemo, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
+import { pluralize } from '../../../lib/text';
+import { displayName } from '../../../lib/userName';
+import { AvatarStack } from '../../../ui/AvatarStack';
 import { IconButton } from '../../../ui/IconButton';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, markerCount, openedOnFocus } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
-import { markerIsOpen, markerLabel, shownThreadRows } from './threadRows';
+import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads } from './threadRows';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
 const NO_REVISIONS: number[] = [];
@@ -75,12 +78,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       side: line.side,
       lineNumber: line.line,
       label: markerLabel(line),
-      content: (
-        <>
-          <MessageSquare size={11} aria-hidden />
-          {markerCount(line)}
-        </>
-      ),
+      content: <MarkerContent line={line} />,
       emphasized: markerIsOpen(line),
       onOpen: () => openLine(line.key),
     }));
@@ -90,14 +88,29 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, scrollTo, opensAtRow };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
 
-  // One label for a pressed toggle: its state is `aria-pressed`, and the icon.
+  // An action that says what it does, not a pressed state: "Comments in the code" didn't say which way it goes.
   const controls = hasComments(fileComments) && (
-    <IconButton icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />} label="Comments in the code" aria-pressed={inCode} onClick={() => setInCode(!inCode)} />
+    <IconButton
+      icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />}
+      label={inCode ? 'Hide comments in the code' : 'Show comments in the code'}
+      onClick={() => setInCode(!inCode)}
+    />
   );
   return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
 }
 
 const NO_KEYS: readonly string[] = [];
+
+/** A marker's content: who wrote on the line, and how many comments there are, as a pull request's do. */
+function MarkerContent({ line }: { line: LineThreads }) {
+  const { people, more } = markerPeople(line);
+  return (
+    <>
+      <AvatarStack avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
+      {markerCommentCount(line)}
+    </>
+  );
+}
 
 interface RowContext {
   comments: ReviewComments;

@@ -192,9 +192,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
-  the threads from the code: each line holding some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), in
-  the Open color while anything there is open (`markerIsOpen`); a click opens that line's threads, an × folds them
-  back. The outdated ones hide too: they have no line to mark, so they show only when one of them is gone to (from
+  the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
+  some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
+  there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
+  open (`markerIsOpen`); a click opens that line's threads, an × folds them back. The outdated ones hide too: they have no line to mark, so they show only when one of them is gone to (from
   the panel or the conversation), with an × that hides them again (`annotationRowsOf`'s `opened`, `OUTDATED_ROW`).
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the conversation sums up a settled one

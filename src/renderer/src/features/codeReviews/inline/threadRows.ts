@@ -1,4 +1,6 @@
-import type { ReviewCommentKind } from '@shared/domain/reviewConversation';
+import type { ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
+import { listNames } from '../../../lib/text';
+import { displayName } from '../../../lib/userName';
 import type { PlacedThread, ThreadSide } from './fileThreads';
 
 /** The threads at one line of one side of a diff: one row under the line, or one marker on it. */
@@ -50,11 +52,35 @@ export function lineOfThread(lines: readonly LineThreads[], commentId: number): 
   return lines.find((line) => line.threads.some((entry) => entry.thread.root.id === commentId));
 }
 
-/** What a marker says of a line's threads: one names its kind, several how many. */
+/** The comments of a line's threads, oldest thread first: each first comment, then its replies. */
+function commentsOf(line: Pick<LineThreads, 'threads'>): ReviewComment[] {
+  return line.threads.flatMap((entry) => [entry.thread.root, ...entry.thread.replies]);
+}
+
+/** How many comments a line's marker counts: every one on the line, replies too. */
+export function markerCommentCount(line: Pick<LineThreads, 'threads'>): number {
+  return commentsOf(line).length;
+}
+
+/** The people a line's marker shows: who wrote there, each once, as they first wrote; the rest past `max` counted. */
+export function markerPeople(line: Pick<LineThreads, 'threads'>, max = MARKER_PEOPLE): { people: string[]; more: number } {
+  const everyone = [...new Set(commentsByDate(line).map((comment) => comment.author))];
+  return { people: everyone.slice(0, max), more: Math.max(0, everyone.length - max) };
+}
+
+/** A marker shows this many people before it counts the rest. */
+const MARKER_PEOPLE = 3;
+
+/** What a marker says of a line: one comment names its kind, several how many, and who wrote them. */
 export function markerLabel(line: Pick<LineThreads, 'threads' | 'line'>): string {
-  const count = line.threads.length;
+  const count = markerCommentCount(line);
   const what = count === 1 ? KIND_WORDS[line.threads[0]!.thread.root.kind] : `${count} comments`;
-  return `${what} on line ${line.line}`;
+  const people = [...new Set(commentsByDate(line).map((comment) => displayName(comment.author)))];
+  return `${what} on line ${line.line}, by ${listNames(people)}`;
+}
+
+function commentsByDate(line: Pick<LineThreads, 'threads'>): ReviewComment[] {
+  return commentsOf(line).sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.id - b.id);
 }
 
 const KIND_WORDS: Record<ReviewCommentKind, string> = {

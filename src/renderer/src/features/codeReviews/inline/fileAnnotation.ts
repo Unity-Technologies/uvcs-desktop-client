@@ -2,7 +2,6 @@ import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
 import type { EarlierThread, PlacedThread, ShownFile } from './fileThreads';
-import type { LineThreads } from './threadRows';
 import type { ThreadFocus } from './reviewComments';
 
 /**
@@ -30,11 +29,6 @@ export function hasComments(comments: Pick<FileComments, 'lines' | 'outdated'> |
 export function openedOnFocus(opened: readonly string[], lineKey: string | undefined, inCode: boolean): readonly string[] {
   if (inCode || lineKey === undefined || opened.includes(lineKey)) return opened;
   return [...opened, lineKey];
-}
-
-/** What a line's marker counts: the threads on it, when more than one; one thread is just the mark. */
-export function markerCount(line: Pick<LineThreads, 'threads'>): number | null {
-  return line.threads.length > 1 ? line.threads.length : null;
 }
 
 /** Whether the outdated threads above the code open: when one of them is gone to. */

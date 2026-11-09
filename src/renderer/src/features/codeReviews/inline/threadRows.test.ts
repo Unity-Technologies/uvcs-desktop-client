@@ -66,7 +66,7 @@ describe('markerPeople', () => {
 
   it('shows who wrote on the line, each once, in the order they first wrote', () => {
     const line = { threads: [at('additions', 4, thread(1, {}, [reply(5, 'bob'), reply(6, 'ana')])), at('additions', 4, thread(2, { author: 'cy' }))] };
-    expect(markerPeople(line)).toEqual({ people: ['ana', 'bob', 'cy'], more: 0 });
+    expect(markerPeople(line)).toEqual({ people: ['ana', 'cy', 'bob'], more: 0 });
   });
 
   it('counts the rest past the few it shows', () => {
