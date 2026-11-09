@@ -22,6 +22,15 @@
   background: var(--bg-surface);
 }
 
+/* A request applied in other files than its own: the thread, as tall as it is, then the changeset's files filling the rest. */
+.elsewhere {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 66vh;
+  min-height: 0;
+}
+
 /* A request marked applied in a changeset that didn't change its file: the thread, and one line saying so. */
 .thread {
   display: flex;

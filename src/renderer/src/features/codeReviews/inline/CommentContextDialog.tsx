@@ -18,7 +18,7 @@ import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
 import { useReviewThreads } from '../conversation/useReviewThreads';
 import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
-import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
+import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, listsAppliedFiles, type AppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
 import { ContextViewSwitch } from './ContextViewSwitch';
@@ -77,7 +77,7 @@ function ThreadInContext(props: DialogProps) {
   const { review, threadId, startsOn = 'commented', onClose } = props;
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
-  const [commentShown, setCommentShown] = useState(true);
+  const [commentedSelected, setCommentedSelected] = useState(true);
   const threads = useReviewThreads(review.id, SHOWN_BY_THE_PAGE);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
@@ -94,38 +94,43 @@ function ThreadInContext(props: DialogProps) {
     );
   }
   const { thread } = live;
-  const lists = appliedTarget !== null && listsAppliedFiles(thread, applied.data);
-  const showsComment = !lists || commentShown;
-  return <ThreadDialog {...props} thread={thread} view={view} onViewChange={setView} lists={lists} showsComment={showsComment} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentShown} />;
+  const files = appliedFilesOf(thread, applied.data);
+  return <ThreadDialog {...props} thread={thread} view={view} onViewChange={setView} files={files} commentedSelected={commentedSelected} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentedSelected} />;
 }
 
 type ThreadDialogProps = DialogProps & {
   thread: LineThread;
   view: ContextView;
   onViewChange: (view: ContextView) => void;
-  lists: boolean;
-  showsComment: boolean;
+  /** What the dialog shows of the changeset that applied it (`appliedFilesOf`). */
+  files: AppliedFiles;
+  commentedSelected: boolean;
   appliedIn: number | undefined;
   applied: ReturnType<typeof useDiffEntries>;
   appliedTarget: DiffTarget | null;
   onCommentShown: (shown: boolean) => void;
 };
 
-/** The dialog for a thread there: its view of the file, or of the changeset's files, or the thread alone and why. */
+/**
+ * The dialog for a thread there: its view of the file, or of the changeset's files (the thread above them when the
+ * changeset applied it in other files), or the thread alone and why.
+ */
 function ThreadDialog(props: ThreadDialogProps) {
-  const { thread, view, onViewChange: setView, lists, showsComment, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, onClose } = props;
+  const { thread, view, onViewChange: setView, files, commentedSelected, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, onClose } = props;
   const state = useContextComparison(props);
   const notInChangeset = state.kind === 'notInChangeset';
+  const lists = appliedTarget !== null && listsAppliedFiles(files, view);
+  const heading = appliedFilesHeading(files, view, commentedSelected);
   return (
     <Dialog
       title={contextTitle(thread)}
-      description={showsComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread)}
+      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread, files)}
       width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
       // switch or the dialog itself after a click in the code.
       marks={STEP_FRAME}
-      headerAction={showsComment && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
+      headerAction={heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
       footer={
         <>
           {appliedIn !== undefined && (
@@ -142,7 +147,15 @@ function ThreadDialog(props: ThreadDialogProps) {
         </>
       }
     >
-      {notInChangeset ? (
+      {lists && files === 'withoutComment' && applied.data && appliedTarget ? (
+        // The changeset didn't change the commented file: its files, the thread above them, folded to its first words.
+        <div className={styles.elsewhere}>
+          <ThreadCard {...props} />
+          <div className={styles.files}>
+            <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
+          </div>
+        </div>
+      ) : notInChangeset ? (
         // No box of code to fill: the thread, and why there's no diff, in what they take.
         <div className={styles.thread}>
           <p className={styles.note}>{state.text}</p>

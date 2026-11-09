@@ -199,19 +199,23 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   whole diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since
   then, for a thread not applied), the version commented on, the thread on the left, against what the changeset that
   applied it did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the
-  comment is on the version it made; for a request marked applied in a changeset that didn't change its file, the thread
-  alone under one line saying so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
+  comment is on the version it made; for a request applied in a changeset that didn't change its file, that changeset's
+  files, below; for one marked applied in a changeset with no file to compare, the thread alone under one line saying
+  so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
   the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
   that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
   something else. Its **Open changeset N** opens the changeset itself. When that changeset changed other files too, the
   dialog lists them all, as a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change
-  types and tree, the commented file selected first; `listsAppliedFiles`), so the reviewer sees what else the fix did
-  and which file the comment is on. The commented file's diff is the comment's (an `EntryAnnotatorContext` comparing its
-  own versions, `AnnotatedEntry.compared`); the header's view switch shows only while it's selected. No list for a fix
-  of that file alone, nor for a request marked applied in a changeset that didn't change it (the comment would have no
-  file to sit on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open
+  types and tree, the commented file selected first; `appliedFilesOf`, `listsAppliedFiles`), so the reviewer sees what
+  else the fix did and which file the comment is on. The commented file's diff is the comment's (an
+  `EntryAnnotatorContext` comparing its own versions, `AnnotatedEntry.compared`); the header's view switch shows only
+  while it's selected (`appliedFilesHeading`). When that changeset didn't change the commented file at all (the request
+  applied elsewhere: a missing test added, a sibling fixed), How it was applied lists its files alone, the first
+  selected, the thread above them, folded to its first words, so the request and its fix read together; the subtitle
+  says the changeset applied it in other files, and the view switch stays, leading back to When commented. No list for
+  a fix of that file alone. The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open
   the changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog
   is as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. Its diff
   is 66vh tall, less where the window leaves the dialog less, so the dialog never scrolls as a whole (a window of
