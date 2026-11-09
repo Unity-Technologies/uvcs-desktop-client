@@ -21,7 +21,7 @@ const general = threadOf(comment(1));
 
 /** A header as the conversation shows it, unless the test says otherwise. */
 const headerOf = (thread: ReviewThread, input: Partial<ThreadHeaderInput> = {}) =>
-  threadHeaderOf({ thread, place: 'conversation', folded: false, foldable: false, hides: false, seesHowApplied: false, showsAnswer: true, ...input });
+  threadHeaderOf({ thread, place: 'conversation', folded: false, foldable: false, hides: false, seesHowApplied: false, showsAnswer: true, inContext: false, ...input });
 
 describe('hasThreadHeader', () => {
   it('gives a header to a thread on a line, a change request and a question, and none to a comment on the whole review', () => {
@@ -107,6 +107,10 @@ describe('threadHeaderOf', () => {
     it('leads an applied one to how it was applied, or to its changeset', () => {
       expect(headerOf(applied, { seesHowApplied: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'applied', changesetId: 281, tip: 'Applied in changeset 281: see how it was applied' });
       expect(headerOf(applied).pill).toMatchObject({ leadsTo: 'applied', tip: 'Applied in changeset 281: open it' });
+    });
+
+    it("names the changeset of an applied one shown in context and leads nowhere: the view is how it was applied, its changeset a button below", () => {
+      expect(headerOf(applied, { place: 'code', inContext: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'nothing', tip: 'Applied in changeset 281' });
     });
 
     it('says a discarded one was discarded, as words', () => {
