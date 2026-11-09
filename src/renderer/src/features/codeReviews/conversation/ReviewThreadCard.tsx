@@ -139,7 +139,8 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
       )}
       {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
       {anchor && location && (locationAsText ? (
-        <span className={styles.location}>
+        // Cut short in a narrow panel, it names the whole path in its tooltip.
+        <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
           <LocationParts location={location} />
         </span>
       ) : (
