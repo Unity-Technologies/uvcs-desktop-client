@@ -108,6 +108,7 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
                   <DiffPage
                     page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
                     focusChangeset={page.focusChangeset}
+                    pageAppliesShelve
                     detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
                   />
                 }

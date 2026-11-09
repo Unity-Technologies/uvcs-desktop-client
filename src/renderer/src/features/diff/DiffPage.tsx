@@ -9,16 +9,18 @@ interface DiffPageProps extends PageProps<'diff'> {
   focusChangeset?: number;
   /** Last in the diff's header: the toggle of the details panel of the page showing it (a review's comments). */
   detailsToggle?: ReactNode;
+  /** The page around it applies a shelve already (a code review's): the shelve's own Apply isn't offered again. */
+  pageAppliesShelve?: boolean;
 }
 
-export function DiffPage({ page, focusChangeset, detailsToggle }: DiffPageProps) {
+export function DiffPage({ page, focusChangeset, detailsToggle, pageAppliesShelve }: DiffPageProps) {
   const { target, focusPath, focusLines, branchHead, sideNames } = page;
   if (target.kind === 'branch') {
     return <BranchDiff branch={target.branch} branchHead={branchHead} focusPath={focusPath} focusLines={focusLines} focusChangeset={focusChangeset} detailsToggle={detailsToggle} />;
   }
   const toolbar = (target.kind === 'shelve' || detailsToggle) && (
     <>
-      {target.kind === 'shelve' && <ShelveDiffActions shelveId={target.shelveId} />}
+      {target.kind === 'shelve' && <ShelveDiffActions shelveId={target.shelveId} pageApplies={pageAppliesShelve} />}
       {detailsToggle}
     </>
   );

@@ -12,6 +12,8 @@ interface ShelveDiffMenuOptions {
   me: string | undefined;
   onApplied: () => void;
   onDeleted: () => void;
+  /** The page around the diff applies the shelve already (a code review's "Apply to workspace"): no second button. */
+  pageApplies?: boolean;
 }
 
 export interface ShelveDiffMenu {
@@ -27,8 +29,8 @@ export interface ShelveDiffMenu {
  * What a shelve's diff offers: someone else's shelve is only applied, never deleted or restored from here. Opening
  * its diff, here or in a new window, is the page's own (its breadcrumb moves it to a new window).
  */
-export function shelveDiffMenu(place: Place, shelve: Shelve, { records, me, onApplied, onDeleted }: ShelveDiffMenuOptions): ShelveDiffMenu {
+export function shelveDiffMenu(place: Place, shelve: Shelve, { records, me, onApplied, onDeleted, pageApplies = false }: ShelveDiffMenuOptions): ShelveDiffMenu {
   const { left, mine } = myShelves([shelve], records, { everyone: true, me })[0]!;
   const menu = shelveMenu(place, [shelve], { left, mine, onApplied, onDeleted });
-  return { appliesTo: workspacePathOf(place), left, menu: ['diff', 'diffInNewWindow', 'apply'].reduce(withoutAction, menu) };
+  return { appliesTo: pageApplies ? null : workspacePathOf(place), left, menu: ['diff', 'diffInNewWindow', 'apply'].reduce(withoutAction, menu) };
 }

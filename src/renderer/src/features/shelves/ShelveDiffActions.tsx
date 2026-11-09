@@ -15,7 +15,7 @@ import { applyShelve } from './shelveOperations';
  * leads to Changes once done. Only for a shelve a list already read, so opening the diff reads nothing more.
  * Someone else's is only applied: never deleted from here.
  */
-export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
+export function ShelveDiffActions({ shelveId, pageApplies = false }: { shelveId: number; pageApplies?: boolean }) {
   const place = usePlace();
   const { switchShelves } = useSettings();
   const me = usePlaceUser();
@@ -27,6 +27,7 @@ export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
     me,
     onApplied: () => navigation.goToView('changes'),
     onDeleted: () => navigation.goBack(),
+    pageApplies,
   });
   const apply = async (workspacePath: string, deleteShelve: boolean): Promise<void> => {
     if (await applyShelve(workspacePath, shelveId, deleteShelve)) navigation.goToView('changes');

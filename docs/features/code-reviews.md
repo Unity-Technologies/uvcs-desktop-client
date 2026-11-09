@@ -99,7 +99,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 ## The review's page
 
 - The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
-  server notes the rename), at its end the reviewed code to the workspace, **Your review** and the page's menu
+  server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one Apply its page offers: the
+  shelve's diff below drops its own, `pageApplies`), **Your review** and the page's menu
   (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays
   out of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation,
   not in the header. Then two tabs
