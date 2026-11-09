@@ -8,6 +8,8 @@ import {
   commentsPanelStartsHidden,
   commentPosition,
   commentsPanelCounts,
+  commentsByFile,
+  commentsOrderTip,
   commentsPanelThreads,
   emptyCommentsText,
   initialCommentsFilter,
@@ -43,6 +45,58 @@ describe('commentsPanelThreads', () => {
 
   it('lists only what is still open', () => {
     expect(commentsPanelThreads(THREADS, 'open').map((thread) => thread.root.id)).toEqual([2]);
+  });
+
+  // Thread 3 was answered last (reply 6), after 5 and 4 were written; 2 is the oldest.
+  it('lists newest first by the latest comment or reply in each thread, a reply bringing an old thread up', () => {
+    expect(commentsPanelThreads(THREADS, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([3, 5, 4, 2]);
+  });
+
+  it('lists oldest first by the same latest comment or reply', () => {
+    expect(commentsPanelThreads(THREADS, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([2, 4, 5, 3]);
+  });
+
+  it('lists threads that last moved at the same moment as they were started, in either direction', () => {
+    const date = '2026-11-06T10:00:00Z';
+    const sameTime = threadsOf([onLine(8, '/a.cs', 1, { date }), onLine(7, '/b.cs', 1, { date })]);
+    expect(commentsPanelThreads(sameTime, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([7, 8]);
+    expect(commentsPanelThreads(sameTime, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([7, 8]);
+  });
+});
+
+describe('commentsByFile', () => {
+  it('groups the code order under each file, named once, in the order listed', () => {
+    const groups = commentsByFile(commentsPanelThreads(THREADS, 'all'), 'code');
+    expect(groups?.map(({ path, folder, file, threads }) => ({ path, folder, file, ids: threads.map((thread) => thread.root.id) }))).toEqual([
+      { path: 'a.cs', folder: '', file: 'a.cs', ids: [4] },
+      { path: 'src/b.cs', folder: 'src', file: 'b.cs', ids: [3, 5, 2] },
+    ]);
+  });
+
+  it('names a deep folder without the slashes around it', () => {
+    const deep = threadsOf([onLine(1, '/01plastic/bin/client/localization/cm-help.en.txt', 1790)]);
+    expect(commentsByFile(commentsPanelThreads(deep, 'all'), 'code')?.[0]).toMatchObject({ folder: '01plastic/bin/client/localization', file: 'cm-help.en.txt' });
+  });
+
+  it('groups nothing in a time order, where one file\'s comments are apart', () => {
+    expect(commentsByFile(commentsPanelThreads(THREADS, 'all', undefined, 'newest'), 'newest')).toBeNull();
+    expect(commentsByFile(commentsPanelThreads(THREADS, 'all', undefined, 'oldest'), 'oldest')).toBeNull();
+  });
+
+  it('gives each file\'s lines the room of its longest line number', () => {
+    const lines = threadsOf([onLine(1, '/a.cs', 9), onLine(2, '/a.cs', 1790), onLine(3, '/b.cs', 25)]);
+    expect(commentsByFile(commentsPanelThreads(lines, 'all'), 'code')?.map((group) => group.lineDigits)).toEqual([4, 2]);
+  });
+
+  it('has no group with nothing listed', () => {
+    expect(commentsByFile([], 'code')).toEqual([]);
+  });
+});
+
+describe('commentsOrderTip', () => {
+  it('names the order chosen, and what it sorts by', () => {
+    expect(commentsOrderTip('code')).toEqual({ tip: 'Sort: Code order', sub: 'By file, then line' });
+    expect(commentsOrderTip('newest')).toEqual({ tip: 'Sort: Newest first', sub: 'By the latest comment or reply' });
   });
 });
 
@@ -185,6 +239,12 @@ describe('commentPosition', () => {
     expect(commentPosition(listed, listed[1]!.root.id)).toBe(`2 of ${listed.length}`);
     expect(commentPosition(listed, undefined)).toBe(`${listed.length} comments`);
     expect(commentPosition(listed.slice(0, 1), undefined)).toBe('1 comment');
+  });
+
+  it('says in how many files too, grouped by file', () => {
+    const groups = commentsByFile(listed, 'code');
+    expect(commentPosition(listed, listed[1]!.root.id, groups)).toBe(`2 of ${listed.length} · 2 files`);
+    expect(commentPosition(listed.slice(0, 1), undefined, groups?.slice(0, 1))).toBe('1 comment · 1 file');
   });
 });
 

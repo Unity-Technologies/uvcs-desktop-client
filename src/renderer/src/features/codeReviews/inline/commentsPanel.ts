@@ -6,6 +6,7 @@ import { pluralize } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
 import type { DiffLayout } from '../../diff/viewer/diffPreferencesStore';
 import type { ReviewThread } from '../conversation/reviewThreads';
+import { locationText } from '../conversation/threadBadges';
 import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
 /** What the Comments panel lists: what's still open (change requests to apply, questions to answer), or every thread. */
@@ -82,16 +83,75 @@ export function isSearching({ query, kinds }: CommentsSearch): boolean {
 }
 
 /**
- * The threads on lines of code the panel lists: by file, in the order the diff lists files, each file's by line, then
- * as they were started.
+ * How the panel orders comments: as the code reads (by file, in the order the diff lists files, each file's by line),
+ * grouped under their files; or by the latest comment or reply in each thread, newest or oldest first, one list.
  */
-export function commentsPanelThreads(threads: readonly ReviewThread[], filter: CommentsFilter, search: CommentsSearch = NO_COMMENTS_SEARCH): LineThread[] {
+export type CommentsOrder = 'code' | 'newest' | 'oldest';
+
+/** The orders, as the sort menu offers them. */
+export const COMMENTS_ORDERS: readonly { value: CommentsOrder; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'code', label: 'Code order' },
+];
+
+/** The sort button's tooltip: what it does, then the order chosen. */
+export function commentsOrderTip(order: CommentsOrder): { tip: string; sub: string } {
+  const sub = order === 'code' ? 'By file, then line' : 'By the latest comment or reply';
+  return { tip: `Sort: ${COMMENTS_ORDERS.find((option) => option.value === order)!.label}`, sub };
+}
+
+/**
+ * The threads on lines of code the panel lists, in the order chosen (`CommentsOrder`); in the same place or at the
+ * same moment, as they were started.
+ */
+export function commentsPanelThreads(threads: readonly ReviewThread[], filter: CommentsFilter, search: CommentsSearch = NO_COMMENTS_SEARCH, order: CommentsOrder = 'code'): LineThread[] {
   const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && (filter === 'all' || thread.state.kind === 'open') && matchesCommentsSearch(thread, search));
-  return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
+  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
+  const latest = new Map(listed.map((thread) => [thread.root.id, latestActivity(thread)]));
+  const direction = order === 'newest' ? -1 : 1;
+  return listed.sort((a, b) => direction * (latest.get(a.root.id)! - latest.get(b.root.id)!) || a.root.id - b.root.id);
+}
+
+/** When a thread last moved: its latest comment or reply, as a time to compare. */
+function latestActivity(thread: LineThread): number {
+  return Math.max(...[thread.root, ...thread.replies].map((comment) => Date.parse(comment.date)));
 }
 
 function pathOf(thread: LineThread): string {
   return anchorPath(thread.root.anchor);
+}
+
+/** A file's comments in the code order, under its name and folder. */
+export interface CommentsFileGroup {
+  path: string;
+  file: string;
+  /** Where the file is, without the slashes around it: "src/client"; empty at the root. */
+  folder: string;
+  threads: LineThread[];
+  /** The digits of its longest line number: the room its rows give their lines, so their words start in one column. */
+  lineDigits: number;
+}
+
+/**
+ * The comments listed, under their files, in the code order: each file named once, not on every comment. None in a
+ * time order, where comments of one file are apart.
+ */
+export function commentsByFile(listed: readonly LineThread[], order: CommentsOrder): CommentsFileGroup[] | null {
+  if (order !== 'code') return null;
+  const groups: CommentsFileGroup[] = [];
+  for (const thread of listed) {
+    const path = pathOf(thread);
+    const last = groups.at(-1);
+    if (last?.path === path) {
+      last.threads.push(thread);
+      continue;
+    }
+    const { folder, file } = locationText(thread.root.anchor);
+    groups.push({ path, file, folder: folder.replace(/^\/+|\/+$/g, ''), threads: [thread], lineDigits: 0 });
+  }
+  for (const group of groups) group.lineDigits = String(Math.max(...group.threads.map((thread) => thread.root.anchor.line))).length;
+  return groups;
 }
 
 /** How many threads on lines of code each filter lists. */
@@ -147,10 +207,14 @@ export function shownCommentsFilter(picked: CommentsFilter | null, openedOn: Com
   return picked ?? openedOn ?? 'all';
 }
 
-/** Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is. */
-export function commentPosition(listed: readonly LineThread[], currentId: number | undefined): string {
+/**
+ * Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is; grouped by file,
+ * in how many files too ("2 of 9 · 3 files").
+ */
+export function commentPosition(listed: readonly LineThread[], currentId: number | undefined, groups: readonly CommentsFileGroup[] | null = null): string {
   const index = listed.findIndex((thread) => thread.root.id === currentId);
-  return index === -1 ? pluralize(listed.length, 'comment') : `${index + 1} of ${listed.length}`;
+  const position = index === -1 ? pluralize(listed.length, 'comment') : `${index + 1} of ${listed.length}`;
+  return groups ? `${position} · ${pluralize(groups.length, 'file')}` : position;
 }
 
 /** Narrower than this, a diff's lines read as a strip of code: the Comments panel gives the room back. */
