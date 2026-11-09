@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Builds a repository whose code review holds every kind of comment `cm codereview comment` makes: a description, a
 # general comment and its reply, change requests on a line (pending, applied by a later changeset through the check-in
-# comment, applied by one that changed other files only, applied by hand with `comment apply`, discarded), questions (answered and not), a plain comment on a line, a
-# comment on a deleted file, a comment filed under one changeset's diff, an edited comment, and comments on a revision
-# a later changeset replaced (the comments on an older revision): on lines it left alone, which the Changes tab shows at
-# their line in the newest one, and on a line it edited (an open question, the discarded request), outdated; and comments far down a long file (two
-# lines apart, which the diff's scrollbar ticks as one) and near its end. The
-# timeline gets a rename and a status change with a comment. Two more reviews have no comments: one of a changeset, one of a shelve.
+# comment, applied by one that changed other files only, applied by hand with `comment apply`, discarded), questions
+# (answered and not), a plain comment on a line, a comment on a deleted file, a comment filed under one changeset's
+# diff, an edited comment, and comments on a revision a later changeset replaced (the comments on an older revision): on
+# lines it left alone, which the Changes tab shows at their line in the newest one, and on a line it edited (an open
+# question, the discarded request), outdated; and comments far down a long file (two lines apart, which the diff's
+# scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Two more
+# reviews have no comments: one of a changeset, one of a shelve.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
