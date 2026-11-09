@@ -45,7 +45,7 @@ export async function checkinConfirmed(request: ConfirmedCheckin, whileRunning: 
       addsPrivate: plan.addsPrivate,
       comment: request.comment,
       updateFirst: request.updateFirst,
-      quiet: successCardTellsCheckin(changes.length, request.allChanges.length),
+      quiet: successCardTellsCheckin(changes, request.allChanges),
     }),
   );
 }
