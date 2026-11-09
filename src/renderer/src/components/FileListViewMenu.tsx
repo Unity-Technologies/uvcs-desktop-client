@@ -1,10 +1,10 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, ClipboardList, Eye, List, ListTree } from 'lucide-react';
+import { ChevronDown, CircleDot, ClipboardList, Eye, List, ListTree } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 import type { Icon } from '../lib/actions';
 import { Button } from '../ui/Button';
 import { focusAfterMenu } from '../ui/menu/focusAfterMenu';
-import { keepMenuOpen, MenuChoice, MenuMark } from '../ui/menu/MenuChoice';
+import { keepMenuOpen, MenuChoice, MenuFoldAll, MenuMark } from '../ui/menu/MenuChoice';
 import menuStyles from '../ui/menu/Menu.module.css';
 import { fileListViewMenu, type FileListGrouping, type FileListViewOffer } from './fileListViewMenuModel';
 import { useFileListViewStore, type FileListLayout } from './fileListViewStore';
@@ -88,15 +88,7 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
               ))}
             </DropdownMenu.RadioGroup>
           </Section>
-          {folding && (
-            <>
-              <DropdownMenu.Separator className={menuStyles.separator} />
-              <DropdownMenu.Item className={menuStyles.item} onSelect={() => (folding.anyOpen ? folding.collapseAll() : folding.expandAll())}>
-                <span className={menuStyles.icon}>{folding.anyOpen ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}</span>
-                <span className={menuStyles.label}>{folding.anyOpen ? 'Collapse all' : 'Expand all'}</span>
-              </DropdownMenu.Item>
-            </>
-          )}
+          {folding && <MenuFoldAll collapses={folding.anyOpen} onSelect={() => (folding.anyOpen ? folding.collapseAll() : folding.expandAll())} />}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
