@@ -117,3 +117,12 @@ export function applyToNextBox(nextCount: number, picked: DirectoryConflictResol
   const keepingBoth = picked === 'rename';
   return { label: applyToNextLabel(nextCount), checked: checked && !keepingBoth, disabled: keepingBoth };
 }
+
+/**
+ * Whether clicking `choice` decides the `nextCount` conflicts waiting after this one too, with the box as the user
+ * left it (`checked`). Decided from the choice clicked, not the one shown picked: the box shows off while Keep both is
+ * picked (`applyToNextBox`), and the user who picks another choice next never unchecked it.
+ */
+export function decidesNextToo(nextCount: number, choice: DirectoryConflictResolution['choice'], checked: boolean): boolean {
+  return applyToNextBox(nextCount, choice, checked)?.checked ?? false;
+}

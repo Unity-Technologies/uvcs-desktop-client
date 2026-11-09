@@ -17,7 +17,7 @@ import { Spinner } from '../../../ui/Spinner';
 import { TextField } from '../../../ui/TextField';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import type { MergeLabels } from '../mergeDescription';
-import { applyToNextBox, canKeepBothAs, pickedChoice } from './directoryDecisions';
+import { applyToNextBox, canKeepBothAs, decidesNextToo, pickedChoice } from './directoryDecisions';
 import { comparedVersions, comparisonSegments, comparisonsOf, FIRST_COMPARISON, identicalNoteOf, type DirectoryConflictComparison } from './directoryConflictComparison';
 import { renameNameProblem } from './renameNameProblem';
 import { suggestRename } from './renameSuggestion';
@@ -59,7 +59,7 @@ export function DirectoryConflictPanel({ workspacePath, request, contributors, c
   const keepSide = (choice: 'source' | 'destination'): void => {
     if (locked) return;
     setNaming(false);
-    onResolve({ choice }, nextBox?.checked ?? false);
+    onResolve({ choice }, decidesNextToo(nextCount, choice, applyToNext));
   };
   const keepBoth = (event: FormEvent): void => {
     event.preventDefault();
