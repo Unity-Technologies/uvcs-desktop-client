@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { annotationRowsOf, fileCommentsOf, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead } from './fileComments';
 import type { ShownFile } from './fileThreads';
 import { lineThreadsOf } from './threadRows';
 
@@ -103,6 +103,17 @@ describe('threadPlace', () => {
     expect(threadPlace(comments, 1, 'additions')).toEqual({ side: 'additions', lineNumber: 2, lineKey: 'additions:2' });
     expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0 });
     expect(threadPlace(comments, 99, 'additions')).toBeNull();
+  });
+});
+
+describe('holdsThread', () => {
+  const threads = threadsOf([onLine(1, 30, 2), onLine(3, 20, 3), onLine(5, 20, 3, { anchor: { kind: 'line', revisionId: 40, itemId: 8, path: '/src/Enemy.cs', line: 1 } })]);
+
+  it('holds a thread at its line, outdated, or on an earlier version not read yet, so the diff opens at it rather than at its first change', () => {
+    const read = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });
+    const reading = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: PLAYER, textOf: () => undefined });
+    expect([holdsThread(read, 1), holdsThread(read, 3), holdsThread(reading, 3)]).toEqual([true, true, true]);
+    expect([holdsThread(read, 5), holdsThread(null, 1)]).toEqual([false, false]);
   });
 });
 
