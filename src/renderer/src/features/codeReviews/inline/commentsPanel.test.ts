@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { commentPosition, commentsPanelCounts, commentsPanelThreads, emptyCommentsText, initialCommentsFilter, steppedThread } from './commentsPanel';
+import { commentPosition, commentsPanelCounts, commentsPanelThreads, emptyCommentsText, initialCommentsFilter, shownCommentsFilter, steppedThread } from './commentsPanel';
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: '', kind: 'changeRequest', anchor: { kind: 'review' }, ...fields };
@@ -51,22 +51,29 @@ describe('emptyCommentsText', () => {
 describe('steppedThread', () => {
   const listed = commentsPanelThreads(THREADS, 'all');
   const ids = listed.map((thread) => thread.root.id);
+  const step = (current: number | undefined, direction: 1 | -1, among = listed) => steppedThread(among, listed, current, direction)?.root.id ?? null;
 
   it('goes to the next or previous comment in the order the panel lists them, across files', () => {
-    expect(steppedThread(listed, ids[0], 1)?.root.id).toBe(ids[1]);
-    expect(steppedThread(listed, ids[2], -1)?.root.id).toBe(ids[1]);
+    expect(step(ids[0], 1)).toBe(ids[1]);
+    expect(step(ids[2], -1)).toBe(ids[1]);
   });
 
-  it('starts at the first or the last when none is gone to yet, or the one gone to is no longer listed', () => {
-    expect(steppedThread(listed, undefined, 1)?.root.id).toBe(ids[0]);
-    expect(steppedThread(listed, undefined, -1)?.root.id).toBe(ids.at(-1));
-    expect(steppedThread(listed, 99, 1)?.root.id).toBe(ids[0]);
+  it('starts at the first or the last when none is gone to yet', () => {
+    expect(step(undefined, 1)).toBe(ids[0]);
+    expect(step(undefined, -1)).toBe(ids.at(-1));
+    expect(step(99, 1)).toBe(ids[0]);
+  });
+
+  it('goes on from where the one gone to sat once it left the list (settled under Open), not back to the first', () => {
+    const withoutSecond = listed.filter((thread) => thread.root.id !== ids[1]);
+    expect(step(ids[1], 1, withoutSecond)).toBe(ids[2]);
+    expect(step(ids[1], -1, withoutSecond)).toBe(ids[0]);
   });
 
   it('stops at either end, and has nowhere to go in an empty list', () => {
-    expect(steppedThread(listed, ids.at(-1), 1)).toBeNull();
-    expect(steppedThread(listed, ids[0], -1)).toBeNull();
-    expect(steppedThread([], undefined, 1)).toBeNull();
+    expect(step(ids.at(-1), 1)).toBeNull();
+    expect(step(ids[0], -1)).toBeNull();
+    expect(step(undefined, 1, [])).toBeNull();
   });
 });
 
@@ -77,5 +84,13 @@ describe('commentPosition', () => {
     expect(commentPosition(listed, listed[1]!.root.id)).toBe(`2 of ${listed.length}`);
     expect(commentPosition(listed, undefined)).toBe(`${listed.length} comments`);
     expect(commentPosition(listed.slice(0, 1), undefined)).toBe('1 comment');
+  });
+});
+
+describe('shownCommentsFilter', () => {
+  it('keeps the filter the panel opened on as threads settle, until one is picked', () => {
+    expect(shownCommentsFilter(null, 'open')).toBe('open');
+    expect(shownCommentsFilter('all', 'open')).toBe('all');
+    expect(shownCommentsFilter(null, null)).toBe('all');
   });
 });
