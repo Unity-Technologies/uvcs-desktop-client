@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conversationFocus, mountedTabs, openingTab } from './reviewTab';
+import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab } from './reviewTab';
 
 describe('openingTab', () => {
   it('opens on the conversation, or on the changes when a link names a file', () => {
@@ -33,5 +33,21 @@ describe('conversationFocus', () => {
     expect(conversationFocus({ tab: 'conversation', focusThread: 47 })).toBe(47);
     expect(conversationFocus({ tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
     expect(conversationFocus({ focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
+  });
+});
+
+describe('changesFocusAskedFor', () => {
+  it("is the thread a page moved to asks the changes for: a comment's file gone to from the conversation, on the page shown", () => {
+    // The page moves in place now (`movesWithinTop`): the changes, mounted already, went on showing the file they were on.
+    const shown = { tab: 'changes', focusPath: 'Assets/Commands.cs' } as const;
+    const moved = { tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 51 } as const;
+    expect(changesFocusAskedFor(shown, moved)).toBe(51);
+  });
+
+  it('asks nothing of a page unchanged, of a tab picked, or of a thread gone to in the conversation', () => {
+    const moved = { tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 51 } as const;
+    expect(changesFocusAskedFor(moved, moved)).toBeUndefined();
+    expect(changesFocusAskedFor(moved, { tab: 'changes' })).toBeUndefined();
+    expect(changesFocusAskedFor(moved, { tab: 'conversation', focusThread: 51 })).toBeUndefined();
   });
 });
