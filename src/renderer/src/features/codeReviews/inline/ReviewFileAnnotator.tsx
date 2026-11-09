@@ -1,7 +1,6 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { History, MessageSquare, MessageSquareOff } from 'lucide-react';
 import { useContext, useMemo, useState } from 'react';
-import { otherRepository } from '@shared/domain/repository';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
@@ -9,8 +8,9 @@ import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
+import { comparedFile, hasComments, isCommentable, markerCount, openedOnFocus } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
-import { reviewDiffViewOf, type ShownFile } from './fileThreads';
+import { reviewDiffViewOf } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { markerIsOpen, markerLabel, shownThreadRows } from './threadRows';
@@ -31,15 +31,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const setInCode = useReviewCommentsStore((state) => state.setInCode);
   // Per file: comparing since a comment, and the lines opened while comments are hidden, are ways to read one file.
   const [since, setSince] = useState<{ path: string; revisionId: number } | null>(null);
-  const [opened, setOpened] = useState<{ path: string; keys: ReadonlySet<string> }>({ path: entry.path, keys: new Set() });
+  const [opened, setOpened] = useState<{ path: string; keys: readonly string[] }>({ path: entry.path, keys: NO_KEYS });
   const sinceRevision = since?.path === entry.path ? since.revisionId : null;
   const openedKeys = opened.path === entry.path ? opened.keys : NO_KEYS;
 
-  // Items under an xlink are another repository's: the review can't comment on them.
-  const commentable = comments !== null && entry.itemType !== 'directory' && otherRepository(entry.repository, placeRepository) === undefined;
-  const file: ShownFile = { path: entry.path, oldPath: entry.oldPath, originalRevision: sinceRevision ?? entry.baseRevisionId, modifiedRevision: entry.revisionId };
+  const threads = comments && isCommentable(entry, placeRepository) ? comments.threads : undefined;
+  const file = comparedFile(entry, sinceRevision);
   const view = comments ? reviewDiffViewOf(comments.review.target, target) : null;
-  const threads = commentable ? comments.threads : undefined;
   const fileKey = JSON.stringify([view, file]);
   // The earlier versions threads were written on, and the newer side's text, only when there are such threads.
   const toRead = useMemo(() => (threads && comments && view ? versionsToRead({ threads, review: comments.review.target, view, file }) : NO_REVISIONS), [threads, fileKey]);
@@ -53,18 +51,24 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const topSide = topSideOf(file);
   const focus = comments?.focus ?? null;
   const focusPlace = focus && fileComments ? threadPlace(fileComments, focus.threadId, topSide) : null;
-  // Gone to while comments are hidden: its line opens.
+  // Gone to while comments are hidden: its line opens, once per time it's gone to.
   const [openedFor, setOpenedFor] = useState<number | null>(null);
-  if (focus && focusPlace?.lineKey && !inCode && openedFor !== focus.seq) {
+  if (focus && focusPlace && openedFor !== focus.seq) {
     setOpenedFor(focus.seq);
-    setOpened({ path: entry.path, keys: new Set([...openedKeys, focusPlace.lineKey]) });
+    const next = openedOnFocus(openedKeys, focusPlace.lineKey, inCode);
+    if (next !== openedKeys) setOpened({ path: entry.path, keys: next });
   }
+  // A new place to scroll to only when a thread is gone to: a refetch, a line opened or comments hidden scroll nothing.
+  const scrollTo = useMemo(
+    () => (focusPlace ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
+    [focus?.seq, focusPlace?.side, focusPlace?.lineNumber],
+  );
 
   const annotations = useMemo<DiffAnnotations | null>(() => {
-    if (!comments || !fileComments || (fileComments.lines.length === 0 && fileComments.outdated.length === 0)) return null;
+    if (!comments || !hasComments(fileComments)) return null;
     const shown = shownThreadRows(fileComments.lines, inCode, openedKeys);
-    const openLine = (key: string): void => setOpened({ path: entry.path, keys: new Set([...openedKeys, key]) });
-    const closeLine = (key: string): void => setOpened({ path: entry.path, keys: new Set([...openedKeys].filter((open) => open !== key)) });
+    const openLine = (key: string): void => setOpened({ path: entry.path, keys: [...openedKeys, key] });
+    const closeLine = (key: string): void => setOpened({ path: entry.path, keys: openedKeys.filter((open) => open !== key) });
     const markers = shown.markers.map((line): LineMarker => ({
       key: line.key,
       side: line.side,
@@ -73,22 +77,16 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       content: (
         <>
           <MessageSquare size={11} aria-hidden />
-          {line.threads.length > 1 && line.threads.length}
+          {markerCount(line)}
         </>
       ),
       emphasized: markerIsOpen(line),
       onOpen: () => openLine(line.key),
     }));
     const render = (row: DiffLineAnnotation<string>) =>
-      renderRow(row, { comments, fileComments, inCode, focus, textOf, onClose: inCode ? undefined : closeLine, onChangesSince: (revisionId) => setSince({ path: entry.path, revisionId }) });
-    return {
-      rows: annotationRowsOf(shown, fileComments.outdated, topSide),
-      render,
-      markers,
-      scrollTo: focusPlace ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null,
-    };
-    // A new place to scroll to only when a thread is gone to (`focus.seq`), not at every render.
-  }, [comments, fileComments, inCode, openedKeys, topSide, focus?.seq, focusPlace?.lineNumber, focusPlace?.side]);
+      renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onChangesSince: (revisionId) => setSince({ path: entry.path, revisionId }) });
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide), render, markers, scrollTo };
+  }, [comments, fileComments, inCode, openedKeys, topSide, scrollTo]);
 
   const controls = showsCommentControls(fileComments, sinceRevision !== null) && (
     <>
@@ -97,24 +95,19 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
           Since comment
         </Button>
       )}
-      <IconButton
-        icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />}
-        label={inCode ? 'Hide comments in the code' : 'Show comments in the code'}
-        aria-pressed={inCode}
-        onClick={() => setInCode(!inCode)}
-      />
+      {/* One label for a pressed toggle: its state is `aria-pressed`, and the icon. */}
+      <IconButton icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />} label="Comments in the code" aria-pressed={inCode} onClick={() => setInCode(!inCode)} />
     </>
   );
   const original = sinceRevision === null ? undefined : { kind: 'revision' as const, revision: { revisionId: sinceRevision, repository: entry.repository }, fileName: entry.path };
   return <DiffAnnotationsContext.Provider value={annotations}>{children({ original, controls })}</DiffAnnotationsContext.Provider>;
 }
 
-const NO_KEYS: ReadonlySet<string> = new Set();
+const NO_KEYS: readonly string[] = [];
 
 interface RowContext {
   comments: ReviewComments;
   fileComments: FileComments;
-  inCode: boolean;
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => string | undefined;
   /** Folds a line opened from its marker back into it; none while comments show in the code. */

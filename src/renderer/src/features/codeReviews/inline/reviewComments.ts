@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import type { PageOf } from '../../../app/navigation/pages';
 import type { DiffFocusRequest } from '../../diff/diffFocusRequest';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { writtenIn, type LineThread } from './fileThreads';
@@ -27,6 +28,11 @@ export interface ReviewComments {
 }
 
 export const ReviewCommentsContext = createContext<ReviewComments | null>(null);
+
+/** The review's conversation, scrolled to a thread and lighting it (Show in conversation, from the code). */
+export function conversationAt(reviewId: number, threadId: number): PageOf<'codeReview'> {
+  return { kind: 'codeReview', reviewId, tab: 'conversation', focusThread: threadId };
+}
 
 /**
  * What the review's diff is asked for to go to a thread: its file (without the leading slash, as the diff names

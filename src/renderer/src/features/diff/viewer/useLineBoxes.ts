@@ -16,7 +16,7 @@ const MAX_FRAMES = 60;
 /**
  * Where each of `lines` is drawn, by its key, to place something by it (a chip, a marker) in the container's scrolled
  * content: only the lines whose rows are rendered (a big file renders only the lines in view), measured again as the
- * view scrolls or resizes. `linesKey` names the lines, so a new array of the same lines measures nothing anew.
+ * view scrolls, or it or its content resizes. `linesKey` names the lines, so a new array of the same lines measures nothing anew.
  */
 export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines: readonly (ChangedLine & { key: string })[], linesKey: string, layout: CodeLayout): ReadonlyMap<string, LineBox> {
   const [boxes, setBoxes] = useState<ReadonlyMap<string, LineBox>>(NO_BOXES);
@@ -52,8 +52,10 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       if (!measure() && ++frames < MAX_FRAMES) frame = requestAnimationFrame(measureSoon);
     };
     measureSoon();
+    // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
     const resize = new ResizeObserver(() => void measure());
     resize.observe(container);
+    for (const content of container.children) resize.observe(content);
     // Scrolling renders the rows coming into view a frame later: measure then too.
     let scrollFrame = 0;
     const measureAgain = (): void => {

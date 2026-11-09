@@ -4,6 +4,7 @@ import { pluralize } from '../../../lib/text';
 import { IconButton } from '../../../ui/IconButton';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
+import { changesSinceRevision, outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
@@ -24,7 +25,10 @@ export function InlineThreads({ comments, line, focus, onClose, onChangesSince }
   return (
     <div className={styles.row}>
       <div className={styles.threads}>
-        {line.threads.map(({ thread, earlier }) => (
+        {line.threads.map((placed) => {
+          const { thread, earlier } = placed;
+          const sinceRevision = changesSinceRevision(placed);
+          return (
         <ThreadInRow
           key={thread.root.id}
           comments={comments}
@@ -33,10 +37,11 @@ export function InlineThreads({ comments, line, focus, onClose, onChangesSince }
           inCode={{
             earlier: earlier && earlierTagOf(thread, false),
             showInConversation: () => comments.showInConversation(thread.root.id),
-            changesSince: earlier && (() => onChangesSince(earlier.revisionId)),
+            changesSince: sinceRevision === undefined ? undefined : () => onChangesSince(sinceRevision),
           }}
         />
-        ))}
+          );
+        })}
       </div>
       {onClose && (
         <span className={styles.close}>
@@ -60,11 +65,12 @@ interface OutdatedThreadsProps {
  * that says how many, each with the lines it was written on when opened (`snippetOf`), as they're in the code no more.
  */
 export function OutdatedThreads({ comments, outdated, focus, textOf, onChangesSince }: OutdatedThreadsProps) {
-  const focusedHere = focus !== null && outdated.some((entry) => entry.thread.root.id === focus.threadId);
-  const [open, setOpen] = useState(focusedHere);
-  const [openedFor, setOpenedFor] = useState(focusedHere ? focus.seq : null);
-  if (focusedHere && openedFor !== focus.seq) {
-    setOpenedFor(focus.seq);
+  // The time an outdated thread was gone to, which opens them.
+  const goneTo = outdatedOpensFor(focus, outdated) ? (focus?.seq ?? null) : null;
+  const [open, setOpen] = useState(goneTo !== null);
+  const [openedFor, setOpenedFor] = useState(goneTo);
+  if (goneTo !== null && openedFor !== goneTo) {
+    setOpenedFor(goneTo);
     setOpen(true);
   }
   return (

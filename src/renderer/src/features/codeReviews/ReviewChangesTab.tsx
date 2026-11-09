@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -13,9 +13,10 @@ import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import type { DiffTarget } from '@shared/domain/diff';
 import { threadsOf } from './conversation/reviewThreads';
+import { commentLocationPage } from './conversation/threadBadges';
 import { useReviewConversation } from './conversation/useReviewConversation';
 import { isLineThread, type LineThread } from './inline/fileThreads';
-import { ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
+import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 
 const COMMENTS_PANEL_KEY = 'reviewComments';
@@ -32,7 +33,7 @@ interface ReviewChangesTabProps {
 /**
  * A review's changes with what was said on its code: each file's diff holds its threads (`ReviewFileAnnotator`), and
  * the Comments panel beside it lists them all, going to one in the mode it was written in. Opened on a thread
- * (`focusThread`, from the conversation or a link), it shows that thread.
+ * (`focusThread`, from the conversation), it shows that thread.
  */
 export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabProps) {
   const user = usePlaceUser();
@@ -49,16 +50,6 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
-  // A thread asked for by the page while the tab shows (a link to it): gone to as the panel goes to one.
-  const pageThread = page.focusThread;
-  const shownPageThread = useRef(pageThread);
-  useEffect(() => {
-    if (pageThread === shownPageThread.current || pageThread === undefined || !threads) return;
-    shownPageThread.current = pageThread;
-    const thread = threads.find((candidate) => candidate.root.id === pageThread);
-    if (thread && isLineThread(thread)) goToThread(thread);
-  }, [pageThread, threads]);
-
   const comments = useMemo<ReviewComments>(
     () => ({
       review,
@@ -66,7 +57,12 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
       user,
       focus,
       goToThread,
-      showInConversation: (threadId) => navigation.replacePage({ kind: 'codeReview', reviewId: review.id, tab: 'conversation', focusThread: threadId }),
+      // A page of its own, so Back returns to the code at the thread, which this page is first set to.
+      showInConversation: (threadId) => {
+        const thread = threads?.find((candidate) => candidate.root.id === threadId);
+        if (thread && isLineThread(thread)) navigation.replacePage(commentLocationPage(review.id, thread.root));
+        navigation.openPage(conversationAt(review.id, threadId));
+      },
     }),
     [review, threads, user, focus],
   );
@@ -81,7 +77,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
               <DiffPage
                 page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
                 focusChangeset={page.focusChangeset}
-                detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="comments" />}
+                detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
               />
             }
             details={<ReviewCommentsPanel comments={comments} onClose={() => toggleDetails(COMMENTS_PANEL_KEY)} />}

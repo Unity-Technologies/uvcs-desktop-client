@@ -3,7 +3,8 @@ import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { earlierRevisions, placeEarlier, threadsOfFile, writtenIn, type EarlierThread, type ReviewDiffView, type ShownFile, type ThreadSide } from './fileThreads';
-import { newerLineOf } from './newerLine';
+import { newerLineFinder } from './newerLine';
+import { hasComments } from './fileAnnotation';
 import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } from './threadRows';
 
 /** A file's threads as its diff shows them: by line, and those outdated, apart above the code. */
@@ -29,10 +30,11 @@ interface FileCommentsInput {
 export function fileCommentsOf({ threads, review, view, file, textOf }: FileCommentsInput): FileComments {
   const { placed, earlier } = threadsOfFile(threads, review, view, file);
   const newer = file.modifiedRevision === -1 ? null : textOf(file.modifiedRevision);
+  const lineIn = typeof newer === 'string' ? newerLineFinder(newer) : null;
   const placedEarlier = placeEarlier(
     earlier,
     (revisionId) => (newer === undefined ? undefined : textOf(revisionId)),
-    (text, line) => (newer === null ? null : newerLineOf(text, newer!, line)),
+    (text, line) => (lineIn === null ? null : lineIn(text, line)),
     (thread) => writtenIn(review, thread).kind === view.kind,
   );
   return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated };
@@ -56,7 +58,7 @@ export function topSideOf(file: Pick<ShownFile, 'modifiedRevision'>): ThreadSide
 
 /** Whether a file's diff offers the comments' controls: it has threads, or is compared since one. */
 export function showsCommentControls(comments: Pick<FileComments, 'lines' | 'outdated'> | null, comparingSince: boolean): boolean {
-  return comparingSince || (comments !== null && (comments.lines.length > 0 || comments.outdated.length > 0));
+  return comparingSince || hasComments(comments);
 }
 
 /** The row above the code holding a file's outdated threads (`lineNumber: 0`). */
@@ -65,10 +67,17 @@ export const OUTDATED_ROW = 'outdated';
 /**
  * Pierre's rows for a file's threads: each line's shown, named by its key (`LineThreads.key`), and the outdated ones
  * above the code, on the side the file has (a deleted file has only its older one).
+ *
+ * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
+ * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
+ * go after: the lines with a thread on a version shown first, then those placed once an earlier version is read, then
+ * the outdated ones; hidden, the lines in the order they were opened (`shownThreadRows`).
  */
 export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide): DiffLineAnnotation<string>[] {
-  const rows = shown.rows.map((line): DiffLineAnnotation<string> => ({ side: line.side, lineNumber: line.line, metadata: line.key }));
-  return outdated.length > 0 ? [{ side: topSide, lineNumber: 0, metadata: OUTDATED_ROW }, ...rows] : rows;
+  const onShownVersion = (line: LineThreads): boolean => line.threads.some((entry) => entry.earlier === undefined);
+  const ordered = [...shown.rows.filter(onShownVersion), ...shown.rows.filter((line) => !onShownVersion(line))];
+  const rows = ordered.map((line): DiffLineAnnotation<string> => ({ side: line.side, lineNumber: line.line, metadata: line.key }));
+  return outdated.length > 0 ? [...rows, { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW }] : rows;
 }
 
 /** Where a thread gone to is in the file's diff: at its line, or above the code when outdated; none when not here. */

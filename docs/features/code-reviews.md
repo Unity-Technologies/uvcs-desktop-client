@@ -173,24 +173,27 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   them is known.
 - **Changes since this comment** (a thread's menu, for one on an earlier version) compares the version it was written
   on with the newest: its threads sit on the left at their very lines, and the right shows what was done since. "Since
-  comment" in the file's header goes back (`ReviewFileAnnotator`).
+  comment" in the file's header goes back (`ReviewFileAnnotator`). Meanwhile "Since review" (docs/features/diff.md
+  "Review marks") isn't offered: one older side at a time.
 - **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
   review's "Whole branch" or one changeset of "Changeset by changeset" (`reviewDiffViewOf`). Going to one opens that
   mode and changeset (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
-  only the threads written in it; the whole branch's also shows those written changeset by changeset where their
-  line is still there, so an open change request never hides behind the mode it was written in. A review of a
+  only the threads written in it; the whole branch's also shows those written changeset by changeset that are on a
+  revision it shows, or whose line is still there in the newest one (an outdated one is left to its changeset's diff),
+  so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
   the threads from the code: each line holding some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), in
   the Open color while anything there is open (`markerIsOpen`); a click opens that line's threads, an × folds them
-  back.
-- **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by its header button like any
-  details panel, `DetailsToggleButton`), lists every thread on the code as the conversation sums up a settled one
+  back. The outdated ones stay above the code, folded to their one line: they have no line to mark.
+- **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
+  any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the conversation sums up a settled one
   (`ThreadSummaryCard`), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything
   is, `initialCommentsFilter`). A click goes to the thread: its file, its mode, scrolled to it and lit
   (`ReviewComments.goToThread`, `ThreadFocus`).
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
-  conversation** (the Conversation tab scrolled to it and lit, `focusThread`) and Changes since this comment.
+  conversation** (the Conversation tab scrolled to it and lit, `conversationAt`, a page of its own: Back returns to
+  the code at the thread) and Changes since this comment.
 - A line a thread is on is never hidden in a folded unchanged region: the diff unfolds it (`DiffAnnotations`,
   docs/features/diff.md "Rows under lines").

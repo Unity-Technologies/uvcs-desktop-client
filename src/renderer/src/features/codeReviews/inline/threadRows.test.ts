@@ -39,13 +39,17 @@ describe('shownThreadRows', () => {
   const lines = lineThreadsOf([at('additions', 2, thread(1)), at('additions', 9, thread(2))]);
 
   it('shows every row with comments in the code, and no markers', () => {
-    expect(shownThreadRows(lines, true, new Set())).toEqual({ rows: lines, markers: [] });
+    expect(shownThreadRows(lines, true, [])).toEqual({ rows: lines, markers: [] });
   });
 
   it('hidden, marks each line and shows only the rows opened', () => {
-    const { rows, markers } = shownThreadRows(lines, false, new Set(['additions:9']));
+    const { rows, markers } = shownThreadRows(lines, false, ['additions:9']);
     expect(rows.map((line) => line.key)).toEqual(['additions:9']);
     expect(markers.map((line) => line.key)).toEqual(['additions:2']);
+  });
+
+  it('hidden, keeps the rows in the order their lines were opened', () => {
+    expect(shownThreadRows(lines, false, ['additions:9', 'additions:2']).rows.map((line) => line.key)).toEqual(['additions:9', 'additions:2']);
   });
 });
 

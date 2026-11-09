@@ -843,7 +843,9 @@ docs/features/code-reviews.md "Comments in the code"):
   diff switches to the mode and changeset asked for, `BranchDiff`).
 
 Rows are slotted into Pierre's shadow root, whose code inherits a monospace font and `pre` spacing: a row sets the
-app's own text back (`InlineThreads.module.css`).
+app's own text back (`InlineThreads.module.css`). Pierre's React `FileDiff` keys each row's slot by its index in
+`lineAnnotations` (`renderDiffChildren`), so a row whose index changes is mounted anew, losing what it held (an open
+reply): a place lists rows that come later after the others (`annotationRowsOf`).
 
 ## Review marks
 

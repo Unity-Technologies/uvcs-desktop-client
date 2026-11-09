@@ -7,9 +7,35 @@ import { lineDiff } from '../../diff/viewer/lineDiff';
  * is past the earlier version's end. Line ends don't count: a file that only went from LF to CRLF keeps its comments.
  */
 export function newerLineOf(earlier: string, newer: string, line: number): number | null {
-  if (line < 1) return null;
+  return newerLineFinder(newer)(earlier, line);
+}
+
+/** An earlier version's line diff against the newer one: its hunks, and how many lines the earlier version has. */
+export interface VersionDiff {
+  hunks: readonly Pick<Hunk, 'deletionStart' | 'additionStart' | 'hunkContent'>[];
+  earlierLineCount: number;
+}
+
+function versionDiff(earlier: string, newer: string): VersionDiff {
   const { meta } = lineDiff(earlier, newer, 'ignoreEol');
-  return newerLineIn(meta.hunks, line, meta.deletionLines.length);
+  return { hunks: meta.hunks, earlierLineCount: meta.deletionLines.length };
+}
+
+/**
+ * `newerLineOf` for many lines of a few earlier versions into one newer version: each earlier version is diffed once,
+ * however many threads were written on it (a whole-file diff each, on the renderer's thread).
+ */
+export function newerLineFinder(newer: string, diffOf: (earlier: string, newer: string) => VersionDiff = versionDiff): (earlier: string, line: number) => number | null {
+  const diffs = new Map<string, VersionDiff>();
+  return (earlier, line) => {
+    if (line < 1) return null;
+    let diff = diffs.get(earlier);
+    if (!diff) {
+      diff = diffOf(earlier, newer);
+      diffs.set(earlier, diff);
+    }
+    return newerLineIn(diff.hunks, line, diff.earlierLineCount);
+  };
 }
 
 /** `newerLineOf` over the hunks of a line diff, `earlierLineCount` the earlier version's lines. */

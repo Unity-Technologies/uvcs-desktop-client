@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -114,5 +114,17 @@ describe('branchStartOfChangesets', () => {
   // The list keeps the previous branch's changesets while the next branch's are read.
   it("isn't known from another branch's changesets", () => {
     expect(branchStartOfChangesets('/main/other', branch)).toBeNull();
+  });
+});
+
+describe('branchDiffShownFor', () => {
+  it('switches to the changeset asked for, the how-many-th time it is asked, or to the whole branch', () => {
+    expect(branchDiffShownFor({ changesetId: 5, seq: 3 })).toEqual({ mode: 'byChangeset', changeset: { changesetId: 5, seq: 3 } });
+    expect(branchDiffShownFor({ changesetId: null, seq: 4 })).toEqual({ mode: 'wholeBranch' });
+  });
+
+  it('leaves the mode as it is when the request names none, or there is none', () => {
+    expect(branchDiffShownFor({ seq: 4 })).toBeNull();
+    expect(branchDiffShownFor(null)).toBeNull();
   });
 });

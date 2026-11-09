@@ -73,6 +73,16 @@ describe('annotationRowsOf', () => {
     expect(annotationRowsOf({ rows }, [], 'additions')).toEqual([{ side: 'additions', lineNumber: 2, metadata: 'additions:2' }]);
   });
 
+  it("lists the lines placed once an earlier version is read after the others, and the outdated ones last: Pierre keys rows by their place", () => {
+    const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
+    const lines = lineThreadsOf([
+      { thread: onEarlier as never, side: 'additions', line: 4, earlier: { thread: onEarlier as never, revisionId: 20 } },
+      { thread: onShown as never, side: 'additions', line: 9 },
+    ]);
+    const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
+    expect(annotationRowsOf({ rows: lines }, outdated, 'additions').map((row) => row.metadata)).toEqual(['additions:9', 'additions:4', OUTDATED_ROW]);
+  });
+
   it('puts the outdated threads above the code, on the side the file has', () => {
     const outdated = [{ thread: thread as never, revisionId: 20 }];
     expect(annotationRowsOf({ rows: [] }, outdated, 'deletions')).toEqual([{ side: 'deletions', lineNumber: 0, metadata: OUTDATED_ROW }]);

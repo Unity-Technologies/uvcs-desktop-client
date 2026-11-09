@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newerLineOf } from './newerLine';
+import { newerLineFinder, newerLineOf, type VersionDiff } from './newerLine';
 
 const lines = (...texts: string[]): string => texts.map((text) => `${text}\n`).join('');
 const TEN = Array.from({ length: 10 }, (_, index) => `line ${index + 1}`);
@@ -58,5 +58,18 @@ describe('newerLineOf', () => {
   it('keeps a line of text in any script', () => {
     const earlier = lines('名前', 'ñandú', '🎮 game');
     expect(newerLineOf(earlier, lines('añadido', '名前', 'ñandú', '🎮 game'), 3)).toBe(4);
+  });
+});
+
+describe('newerLineFinder', () => {
+  it('diffs each earlier version once, however many of its lines are followed', () => {
+    let diffs = 0;
+    const counted = (earlier: string): VersionDiff => {
+      diffs += 1;
+      return { hunks: [], earlierLineCount: earlier.split('\n').length - 1 };
+    };
+    const find = newerLineFinder(lines(...TEN), counted);
+    expect([find(lines(...TEN), 1), find(lines(...TEN), 4), find(lines(...TEN.slice(1)), 2)]).toEqual([1, 4, 2]);
+    expect(diffs).toBe(2);
   });
 });

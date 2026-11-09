@@ -36,11 +36,13 @@ export interface ShownThreadRows {
 
 /**
  * With comments in the code, every line's threads show under it. Hidden, the code reads uninterrupted: each line with
- * threads has a marker, and only the lines opened from one (or the thread gone to) show theirs.
+ * threads has a marker, and only the lines opened from one (or the thread gone to) show theirs, in the order they were
+ * opened (see `annotationRowsOf` for why the order matters).
  */
-export function shownThreadRows(lines: readonly LineThreads[], inCode: boolean, opened: ReadonlySet<string>): ShownThreadRows {
+export function shownThreadRows(lines: readonly LineThreads[], inCode: boolean, opened: readonly string[]): ShownThreadRows {
   if (inCode) return { rows: [...lines], markers: [] };
-  return { rows: lines.filter((line) => opened.has(line.key)), markers: lines.filter((line) => !opened.has(line.key)) };
+  const rows = opened.map((key) => lines.find((line) => line.key === key)).filter((line): line is LineThreads => line !== undefined);
+  return { rows, markers: lines.filter((line) => !opened.includes(line.key)) };
 }
 
 /** The line holding a thread, to scroll to it; none when the file shows it at no line. */

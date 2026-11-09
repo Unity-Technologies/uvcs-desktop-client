@@ -41,7 +41,7 @@ function PanelBody({ comments, threads, onClose }: { comments: ReviewComments; t
           ]}
         />
         {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
-        <IconButton size="small" icon={<X size={14} />} label="Hide comments" onClick={onClose} />
+        <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
       </header>
       {listed.length === 0 ? (
         <EmptyState title={empty.title} description={empty.description} />
