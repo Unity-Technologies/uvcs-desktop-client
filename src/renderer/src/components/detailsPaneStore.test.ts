@@ -1,5 +1,5 @@
 import '../testing/fakeWindow';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, toggledDetails, useDetailsPaneStore, withDetailsShown, withDetailsToggled } from './detailsPaneStore';
 
 /** The view that started without its details. */
@@ -62,6 +62,9 @@ describe('withDetailsShown', () => {
 });
 
 describe('a view started without its details', () => {
+  // The store is the module's: each test starts with no view started hidden.
+  beforeEach(() => useDetailsPaneStore.setState({ startedHidden: {} }));
+
   it("is forgotten only by the view that started it: one review's tab left keeps the next one's start", () => {
     const store = useDetailsPaneStore.getState();
     const leaving = {};
