@@ -1,4 +1,4 @@
-import { FileDiff, FilePlus, GitCommitHorizontal, FolderPlus, FolderTree, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
+import { FileDiff, FilePlus, FolderPlus, FolderTree, GitCommitHorizontal, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
