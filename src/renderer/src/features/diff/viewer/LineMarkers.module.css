@@ -29,6 +29,11 @@
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
+/* A mark drawn first (the clock of a review's outdated comments) needs the room on the left that avatars don't. */
+.marker > svg:first-child {
+  margin-left: 3px;
+}
+
 .marker:hover {
   border-color: var(--accent);
   background: linear-gradient(var(--accent-soft), var(--accent-soft)) var(--bg-surface-raised);
