@@ -111,9 +111,15 @@ describe('placeEarlier', () => {
     expect(ids([...placed, ...outdated])).not.toContain(4);
   });
 
-  it('waits for the versions not read yet', () => {
-    const { reading } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : undefined), lineOf, writtenWhole);
-    expect(ids(reading)).toEqual([3]);
+  it('holds every earlier thread while any version is still read, so none moves once placed', () => {
+    const { placed, outdated, reading } = placeEarlier(earlier, (revision) => (revision === 25 ? OLD_TEXT : undefined), lineOf, writtenWhole);
+    expect([ids(placed), ids(outdated)]).toEqual([[], []]);
+    expect(ids(reading).sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("places the others' threads when a version can't be read (purged), keeping that one's apart", () => {
+    const { placed, outdated, reading, unreadable } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
+    expect([ids(placed), ids(outdated), ids(reading), ids(unreadable)]).toEqual([[1], [2], [], [3]]);
   });
 });
 
