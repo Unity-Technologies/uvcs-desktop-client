@@ -835,6 +835,8 @@ docs/features/code-reviews.md "Comments in the code"):
 - `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may add
   controls to its header and compare other versions of the file than the entry's (`AnnotatedEntry.compared`: a
   comment's own, in the changeset that applied it; "Since review" is then off). It may load on first use.
+- `EntryMarkContext`: a component a place puts by the status letter of each file's row in a `DiffBrowser`'s list
+  (`ItemMark`, after the review mark): a review's comment icon.
 - A `DiffBrowser` in a dialog (See in context's) names nothing for Copy link or a new window (`publishes={false}`: the
   page behind keeps its file and lines named) and offers no Expand Diff (`DiffBrowserLayout`'s `expandable={false}`:
   the window isn't the dialog's to lay out).

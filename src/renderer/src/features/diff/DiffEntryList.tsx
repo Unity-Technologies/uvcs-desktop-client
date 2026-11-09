@@ -37,12 +37,14 @@ interface DiffEntryListProps {
   noMatches?: ReactNode;
   /** The Unity `.meta` each asset's row stands for too (`pairDiffMetas`): tagged "+ meta". */
   metaOf?: (entry: DiffEntry) => DiffEntry | undefined;
+  /** What the place puts by a file's status letter (`EntryMarkContext`): a review's comments. */
+  markOf?: (entry: DiffEntry) => ReactNode;
 }
 
 export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 /** The files of a diff, as a list or a tree: filterable, and in review mode marked as they are reviewed, a folder at a time too. */
-export function DiffEntryList({ rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches, metaOf = () => undefined }: DiffEntryListProps) {
+export function DiffEntryList({ rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, review, loading, noMatches, metaOf = () => undefined, markOf }: DiffEntryListProps) {
   const { on, statusOf, toggle } = review;
 
   const renderItem = (row: DiffEntryRowItem, level: number) => {
@@ -52,7 +54,13 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, folding, query, fil
       return <DiffEntryRow row={row} level={level} tree={tree} extras={toggleFolder} faded={status === 'reviewed'} hasMeta={row.item !== undefined && metaOf(row.item) !== undefined} />;
     }
     const status = on ? statusOf(row.item) : null;
-    return <DiffEntryRow row={row} level={level} tree={tree} extras={status && <ReviewToggle status={status} onToggle={() => toggle([row.item])} />} faded={status === 'reviewed'} hasMeta={metaOf(row.item) !== undefined} />;
+    const extras = (
+      <>
+        {status && <ReviewToggle status={status} onToggle={() => toggle([row.item])} />}
+        {markOf?.(row.item)}
+      </>
+    );
+    return <DiffEntryRow row={row} level={level} tree={tree} extras={extras} faded={status === 'reviewed'} hasMeta={metaOf(row.item) !== undefined} />;
   };
 
   const onItemsKeyDown = (event: KeyboardEvent, selected: DiffEntry[], moveBy: (step: number) => void, focusedIndex: number): boolean => {

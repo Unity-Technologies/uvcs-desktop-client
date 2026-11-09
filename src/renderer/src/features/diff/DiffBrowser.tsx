@@ -30,6 +30,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
+import { EntryMarkContext } from './entryMark';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -103,6 +104,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const content = useMemo(() => ({ sorted: shown }), [shown]);
   const { rows, tree, toggleCollapsed, folding } = useGroupedFileTree(content, entries, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS, selection.anchor);
   const workspaceRepository = usePlaceRepository();
+  // What a diff compares, by value: a branch diff passes a new target each render.
+  const targetKey = JSON.stringify(target);
+  const Mark = useContext(EntryMarkContext);
+  const markOf = useMemo(() => Mark && ((entry: DiffEntry) => <Mark target={target} entry={entry} />), [Mark, targetKey]);
   // A folder or a status group the keyboard (or a click) is on.
   const focusedFolder = focusedAsset ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
@@ -143,9 +148,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focusedAsset !== undefined, folderSelected: focusedFolder !== undefined });
   useCollapseWithHost(diffPaneDiffs(pane));
 
-  // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
-  // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
-  const targetKey = JSON.stringify(target);
+  // By what the target is (`targetKey`), not the object: a branch diff passes a new one each render, and leaving the
+  // file on screen (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
   useEffect(() => {
     if (!focused || !publishes) return;
     publishShownDiffFile({ target, path: focused.path });
@@ -168,6 +172,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries, metaOf: pairs.metaOf, onMetaDiff: showMetaOf })
           }
           metaOf={pairs.metaOf}
+          markOf={markOf ?? undefined}
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}
