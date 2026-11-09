@@ -1125,8 +1125,11 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`); the one
   exception is a diff shown in a dialog, whose step keys reach it, not the diff behind (`keysReach`, its dialog marked
   `STEP_FRAME`: docs/features/code-reviews.md "See in context").
-  A view kept mounted but hidden (a review's tab not picked) wraps itself in `ViewShownContext` set to false, and
-  `useShortcut` listens to none of its keys meanwhile (`shortcutListens`).
+  Whatever keeps a view mounted but hidden wraps it in `ViewShownContext` set to false: the place's view under a page
+  (`PlaceLayout`, `viewLayerShown`), a review's tab not picked (`CodeReviewPage`, `reviewTabShown`). Meanwhile
+  `useShortcut` listens to none of the keys inside it, so ⌘↩ under a merge page doesn't check in too. It covers
+  `useShortcut` only: commands registered with `useCommands` run from `CommandShortcuts` whatever is shown. The
+  window's own keys (Back, the app's commands and menu) are outside every hidden layer.
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match

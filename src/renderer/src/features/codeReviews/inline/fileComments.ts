@@ -83,8 +83,9 @@ export function openedOutdated(outdated: readonly EarlierThread[], opened: reado
  * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
  * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
  * go after: the lines with a thread on a version shown first, then those placed once the earlier versions are read (all
- * at once, `placeEarlier`), then the outdated ones. While comments are hidden (`opened` given), only what was opened shows, in the order it was
- * opened (`shownThreadRows`): the outdated threads opened (`outdatedKey`) in one row, where the first was.
+ * at once, `placeEarlier`), then the outdated ones. While comments are hidden (`opened` given), only what was opened
+ * shows, in the order it was opened (`shownThreadRows`): the outdated threads opened (`outdatedKey`) in one row, where
+ * the first was.
  */
 export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, opened?: readonly string[]): DiffLineAnnotation<string>[] {
   const outdatedRow: DiffLineAnnotation<string> | null = outdated.length === 0 ? null : { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };

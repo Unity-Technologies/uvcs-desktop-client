@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab } from './reviewTab';
+import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
+
+describe('reviewTabShown', () => {
+  it('shows the tab the page opens on and hides the other, which keeps its keys off', () => {
+    expect([reviewTabShown({}, 'conversation'), reviewTabShown({}, 'changes')]).toEqual([true, false]);
+    expect([reviewTabShown({ focusPath: 'src/a.cs' }, 'conversation'), reviewTabShown({ focusPath: 'src/a.cs' }, 'changes')]).toEqual([false, true]);
+  });
+});
 
 describe('openingTab', () => {
   it('opens on the conversation, or on the changes when a link names a file', () => {

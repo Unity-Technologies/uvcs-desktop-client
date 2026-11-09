@@ -34,3 +34,11 @@ export function changesFocusAskedFor(
 ): number | undefined {
   return next !== shown && openingTab(next) === 'changes' ? next.focusThread : undefined;
 }
+
+/**
+ * Whether a review's tab shows on its page (`openingTab`). The other stays mounted, hidden (`mountedTabs`): its keys
+ * off meanwhile (`ViewShownContext`), so N in the conversation doesn't step through the Changes tab's comments.
+ */
+export function reviewTabShown(page: Pick<PageOf<'codeReview'>, 'tab' | 'focusPath'>, tab: ReviewTab): boolean {
+  return openingTab(page) === tab;
+}

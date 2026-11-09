@@ -110,8 +110,8 @@ export type VersionText = string | null | undefined;
  * when it is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
  * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
  * before another version arrives would be moved by it. One whose version's read failed is outdated, its line known
- * though not its text, and holds none of the others. A thread written changeset by changeset, in the whole review's diff, shows only where its
- * line is still there: its own place is its changeset's diff.
+ * though not its text, and holds none of the others. A thread written changeset by changeset, in the whole review's
+ * diff, shows only where its line is still there: its own place is its changeset's diff.
  */
 export function placeEarlier(
   earlier: readonly EarlierThread[],
