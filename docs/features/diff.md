@@ -523,7 +523,7 @@ so: "Full screen" names the OS's.
   the palette (`view.expandDiff`, `useDiffExpansion`). Its tooltip says how to leave before the mode starts.
 - **Every diff beside its files**: Changes, a diff page (changeset, branch, shelve, label, range), a code review,
   History, Incoming, a file's content in Files and Browse repository, and a page window, where it hides that page's
-  files. The merge page offers none, nor do Incoming's conflicts.
+  files. The merge page offers none, nor do Incoming's conflicts or a dialog's diff (See in context).
 - **The files stay mounted**, out of sight (`SplitPane`'s `stowed`, `Stowable`, `DetailsPanel`'s `changesOnly`): their
   scroll, selection and filters come back as left, and nothing is read again. Where the diff steps on to the next file
   past its last change (`FileStepsContext`: Changes, Incoming, a diff page, a code review), it still does, so a whole
@@ -833,7 +833,11 @@ A place showing a committed diff can add to each file's diff without the diff kn
 docs/features/code-reviews.md "Comments in the code"):
 
 - `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may add
-  controls to its header (`AnnotatedEntry`). It may load on first use.
+  controls to its header and compare other versions of the file than the entry's (`AnnotatedEntry.compared`: a
+  comment's own, in the changeset that applied it; "Since review" is then off). It may load on first use.
+- A `DiffBrowser` in a dialog (See in context's) names nothing for Copy link or a new window (`publishes={false}`: the
+  page behind keeps its file and lines named) and offers no Expand Diff (`DiffBrowserLayout`'s `expandable={false}`:
+  the window isn't the dialog's to lay out).
 - `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
   code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses
   too), and a line whose row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked

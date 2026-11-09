@@ -1,4 +1,5 @@
 import { createContext, type ComponentType, type ReactNode } from 'react';
+import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 
 /**
@@ -8,6 +9,11 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 export interface AnnotatedEntry {
   /** Beside the diff's controls, after them. */
   controls?: ReactNode;
+  /**
+   * What the diff compares instead of the entry's two revisions: a review comment's own versions, in the changeset that
+   * applied it ("See in context"). "Since review" is then off: it compares the entry's.
+   */
+  compared?: { original: ContentSource; modified: ContentSource };
 }
 
 export interface EntryAnnotatorProps {

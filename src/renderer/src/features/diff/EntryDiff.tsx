@@ -44,14 +44,14 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
   }
 
   const sources = diffEntrySources(entry);
-  const viewer = ({ controls }: AnnotatedEntry) => {
-    const reviewedToOffer = showsMeta ? null : reviewedRevisionToCompare(reviewMarks, entry);
+  const viewer = ({ controls, compared }: AnnotatedEntry) => {
+    const reviewedToOffer = showsMeta || compared ? null : reviewedRevisionToCompare(reviewMarks, entry);
     const sinceReview = reviewedToOffer !== null && sinceReviewPath === entry.path;
     return (
       <FileDiffViewer
         place={place}
-        original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedToOffer, repository: entry.repository }, fileName: entry.path } : sources.original}
-        modified={sources.modified}
+        original={compared?.original ?? (sinceReview ? { kind: 'revision', revision: { revisionId: reviewedToOffer, repository: entry.repository }, fileName: entry.path } : sources.original)}
+        modified={compared?.modified ?? sources.modified}
         fileName={entry.path}
         title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
         identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}

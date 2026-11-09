@@ -53,13 +53,18 @@ interface DiffBrowserProps {
   initialLines?: FocusedLines;
   /** Where the list and the diff are drawn: a `DiffBrowserLayout`'s, which stays as this is mounted for each target. */
   slots: DiffBrowserSlots;
+  /**
+   * Whether it names the file and lines shown, for "Copy link" and a new window (`publishShownDiffFile`, the lines'
+   * links): a page's diff does; one in a dialog over the page doesn't, or closing it would leave the page's unnamed.
+   */
+  publishes?: boolean;
 }
 
 /**
  * A list of changed files next to the diff of the selected one, in one layout from the first frame on: placeholder
  * rows while the files are read, and "No differences" beside an empty list.
  */
-export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines, slots }: DiffBrowserProps) {
+export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines, slots, publishes = true }: DiffBrowserProps) {
   const place = usePlace();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
@@ -131,8 +136,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // Keyed by the file shown, not `annotation` or `target`, which are new objects each render: the diff is mounted per
   // target (`TargetDiff`), so a file's path names its annotation.
   const lineLinks = useMemo<LineLinks>(
-    () => ({ focus: focusOnShown, publishes: true, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
-    [linkFocus, focused?.path, annotation === null],
+    () => ({ focus: focusOnShown, publishes, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
+    [linkFocus, focused?.path, annotation === null, publishes],
   );
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focusedAsset !== undefined, folderSelected: focusedFolder !== undefined });
@@ -142,10 +147,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
   const targetKey = JSON.stringify(target);
   useEffect(() => {
-    if (!focused) return;
+    if (!focused || !publishes) return;
     publishShownDiffFile({ target, path: focused.path });
     return () => publishShownDiffFile(null);
-  }, [targetKey, focused?.path]);
+  }, [targetKey, focused?.path, publishes]);
 
   return (
     <>
