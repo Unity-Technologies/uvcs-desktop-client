@@ -1,7 +1,9 @@
 import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
-import type { EarlierThread, ShownFile } from './fileThreads';
+import type { CodeReviewTarget } from '@shared/domain/codeReview';
+import type { ReviewThread } from '../conversation/reviewThreads';
+import { threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
 import type { ThreadFocus } from './reviewComments';
 
 /**
@@ -15,6 +17,16 @@ export function isCommentable(entry: Pick<DiffEntry, 'itemType' | 'repository'>,
 /** The file as its diff shows it: the entry's path and revisions. */
 export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): ShownFile {
   return { path: entry.path, oldPath: entry.oldPath, originalRevision: entry.baseRevisionId, modifiedRevision: entry.revisionId };
+}
+
+/**
+ * How many threads a file of the review's diff holds in `view` (`threadsOfFile`), for its row's mark in the list. Read
+ * from the threads alone, as the list reads no file: an outdated one written changeset by changeset counts in the whole
+ * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
+ */
+export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {
+  const { placed, earlier } = threadsOfFile(threads, review, view, comparedFile(entry));
+  return placed.length + earlier.length;
 }
 
 /** Whether a file shows anything of its threads: some at their lines, or outdated ones. */

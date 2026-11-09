@@ -1,10 +1,13 @@
+import { MessageSquare } from 'lucide-react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import { ItemMark } from '../../../components/ItemMark';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { DiffBrowser } from '../../diff/DiffBrowser';
 import { DiffBrowserLayout } from '../../diff/DiffBrowserLayout';
 import { EntryAnnotatorContext, type EntryAnnotatorProps } from '../../diff/entryAnnotator';
+import { EntryMarkContext, type EntryMarkProps } from '../../diff/entryMark';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { isCommentedEntry } from './appliedFiles';
 import { anchorPath } from './fileThreads';
@@ -35,12 +38,20 @@ export function AppliedChangesetFiles(props: AppliedFilesProps) {
   return (
     <CommentInFiles.Provider value={props}>
       <EntryAnnotatorContext.Provider value={CommentedFile}>
-        <DiffBrowserLayout expandable={false}>
-          {(slots) => <DiffBrowser target={target} entries={listed} initialPath={anchorPath(thread.root.anchor)} slots={slots} publishes={false} />}
-        </DiffBrowserLayout>
+        <EntryMarkContext.Provider value={CommentedFileMark}>
+          <DiffBrowserLayout expandable={false}>
+            {(slots) => <DiffBrowser target={target} entries={listed} initialPath={anchorPath(thread.root.anchor)} slots={slots} publishes={false} />}
+          </DiffBrowserLayout>
+        </EntryMarkContext.Provider>
       </EntryAnnotatorContext.Provider>
     </CommentInFiles.Provider>
   );
+}
+
+/** By the commented file's status letter, a comment icon: which of the changeset's files the comment is on. */
+function CommentedFileMark({ entry }: EntryMarkProps) {
+  const props = useContext(CommentInFiles);
+  return props && isCommentedEntry(entry, props.thread) ? <ItemMark icon={MessageSquare} label="The comment is on this file" /> : null;
 }
 
 /** Each file's diff of the changeset: the commented one shows the comment's view of it (the header's switch picks which). */

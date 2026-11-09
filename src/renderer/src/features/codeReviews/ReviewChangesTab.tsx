@@ -11,11 +11,13 @@ import { lazyComponent } from '../../lib/lazyComponent';
 import { DiffFocusRequestContext, type DiffFocusRequest } from '../diff/diffFocusRequest';
 import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
+import { EntryMarkContext } from '../diff/entryMark';
 import type { DiffTarget } from '@shared/domain/diff';
 import { threadsOf } from './conversation/reviewThreads';
 import { commentLocationPage } from './conversation/threadBadges';
 import { useReviewConversation } from './conversation/useReviewConversation';
 import { isLineThread, type LineThread } from './inline/fileThreads';
+import { ReviewFileMark } from './inline/ReviewFileMark';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
@@ -89,30 +91,32 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   return (
     <ReviewCommentsContext.Provider value={comments}>
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
-        <DiffFocusRequestContext.Provider value={request}>
-          <ListWithDetails
-            detailsKey={COMMENTS_PANEL_KEY}
-            widthLimits={COMMENTS_PANEL_WIDTH}
-            list={
-              <DiffPage
-                page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
-                focusChangeset={page.focusChangeset}
-                detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
-              />
-            }
-            details={
-              <ReviewCommentsPanel
-                comments={comments}
-                filter={filter}
-                onFilterChange={setFilter}
-                listed={listed}
-                all={all}
-                onStep={step}
-                onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}
-              />
-            }
-          />
-        </DiffFocusRequestContext.Provider>
+        <EntryMarkContext.Provider value={ReviewFileMark}>
+          <DiffFocusRequestContext.Provider value={request}>
+            <ListWithDetails
+              detailsKey={COMMENTS_PANEL_KEY}
+              widthLimits={COMMENTS_PANEL_WIDTH}
+              list={
+                <DiffPage
+                  page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
+                  focusChangeset={page.focusChangeset}
+                  detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
+                />
+              }
+              details={
+                <ReviewCommentsPanel
+                  comments={comments}
+                  filter={filter}
+                  onFilterChange={setFilter}
+                  listed={listed}
+                  all={all}
+                  onStep={step}
+                  onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}
+                />
+              }
+            />
+          </DiffFocusRequestContext.Provider>
+        </EntryMarkContext.Provider>
       </EntryAnnotatorContext.Provider>
     </ReviewCommentsContext.Provider>
   );

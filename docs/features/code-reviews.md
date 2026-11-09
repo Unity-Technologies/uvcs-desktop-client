@@ -159,6 +159,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 The Changes tab (`ReviewChangesTab`) shows what was said on the code where it was said, from the conversation already
 read (`useReviewConversation`): no other `cm` read, but the earlier versions of a file below.
 
+- **Files with comments**: in the list of files, a comment icon by the status letter of each file holding threads in
+  the diff shown, how many in its tooltip (`ReviewFileMark`, `fileThreadCount`, through `EntryMarkContext`). It counts
+  from the threads alone, as the list reads no file. See in context's list marks the commented file the same way.
 - **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
   (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
   diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which

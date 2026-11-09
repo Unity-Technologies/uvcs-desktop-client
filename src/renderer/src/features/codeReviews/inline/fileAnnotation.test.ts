@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -57,5 +57,39 @@ describe('outdatedOpensFor', () => {
     expect(outdatedOpensFor({ threadId: 1, seq: 2 }, outdated)).toBe(true);
     expect(outdatedOpensFor({ threadId: 5, seq: 2 }, outdated)).toBe(false);
     expect(outdatedOpensFor(null, outdated)).toBe(false);
+  });
+});
+
+describe('fileThreadCount', () => {
+  const BRANCH = { kind: 'branch', branch: '/main/task' } as const;
+  const onPlayer = (id: number, revisionId: number, extra: Partial<ReviewComment> = {}): ReviewComment => ({
+    id,
+    guid: `g${id}`,
+    author: 'ana',
+    date: '2026-11-06T10:00:00Z',
+    text: '',
+    kind: 'changeRequest',
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 3 },
+    ...extra,
+  });
+  const threads = threadsOf([
+    onPlayer(1, 30),
+    onPlayer(2, 20),
+    onPlayer(3, 10, { changesetId: 8 }),
+    { ...onPlayer(4, 30), anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', line: 1 } },
+    { ...onPlayer(5, 30), anchor: { kind: 'review' } },
+  ]);
+
+  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written changeset by changeset", () => {
+    expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, ENTRY)).toBe(3);
+  });
+
+  it("counts only those written in a changeset in that changeset's diff", () => {
+    expect(fileThreadCount(threads, BRANCH, { kind: 'changeset', changesetId: 8 }, ENTRY)).toBe(1);
+  });
+
+  it('counts none on a file without threads, by its path or the one it moved from', () => {
+    expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
+    expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
   });
 });
