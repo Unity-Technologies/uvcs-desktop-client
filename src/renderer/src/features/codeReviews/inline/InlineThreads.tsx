@@ -5,7 +5,7 @@ import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThrea
 import { earlierTagOf } from './earlierTag';
 import type { ContextView } from './commentContext';
 import { outdatedOpensFor } from './fileAnnotation';
-import type { EarlierThread, LineThread } from './fileThreads';
+import type { EarlierThread, LineThread, VersionText } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
 import { hideLabel, type LineThreads } from './threadRows';
@@ -52,7 +52,7 @@ interface OutdatedThreadsProps {
   /** The file's outdated threads; while comments are hidden, only those gone to (`openedOutdated`). */
   outdated: readonly EarlierThread[];
   focus: ReviewComments['focus'];
-  textOf: (revisionId: number) => string | undefined;
+  textOf: (revisionId: number) => VersionText;
   /** Folds one gone to back, while comments are hidden: they show then without the strip that folds them all. */
   onHide?: (thread: LineThread) => void;
   onSeeInContext?: SeeInContext;
@@ -124,8 +124,8 @@ function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: Thread
 }
 
 /** The lines an outdated thread was written on, the one it's on marked. */
-function Snippet({ text, line }: { text: string | undefined; line: number }) {
-  const lines = text === undefined ? [] : snippetOf(text, line);
+function Snippet({ text, line }: { text: VersionText; line: number }) {
+  const lines = typeof text === 'string' ? snippetOf(text, line) : [];
   if (lines.length === 0) return null;
   return (
     <pre className={styles.snippet} aria-label={`Line ${line} as it was`}>

@@ -97,12 +97,12 @@ describe('placeEarlier', () => {
   const writtenWhole = (thread: LineThread): boolean => thread.root.changesetId === undefined;
 
   it('places a thread whose line is unchanged since at its line now, saying where it was written', () => {
-    const { placed } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : undefined), lineOf, writtenWhole);
+    const { placed } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
     expect(placed.map(({ thread, side, line, earlier: from }) => [thread.root.id, side, line, from?.revisionId])).toEqual([[1, 'additions', 7, 20]]);
   });
 
   it('keeps apart, as outdated, a thread whose line changed', () => {
-    const { outdated } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : undefined), lineOf, writtenWhole);
+    const { outdated } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
     expect(ids(outdated)).toEqual([2]);
   });
 

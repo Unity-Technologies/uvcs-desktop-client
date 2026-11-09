@@ -176,7 +176,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which
   `cm` comments on its last revision), under that line on the left. On an earlier version of the file (the reviewer
   commented at cs:8, the author checked in cs:9 and cs:10), that version and the newer side are read
-  (`versionsToRead`, `useFileVersionTexts`: one immutable read each, only for a file shown that has such threads), and
+  (`versionsToRead`, `useFileVersionTexts`: one immutable read each, only for a file shown that has such threads; the
+  file's threads on earlier versions wait until every one is read or has failed, so a row placed never moves for
+  another arriving, Pierre keeping rows by their place, `placeEarlier`; one that can't be read, purged, stays apart,
+  `unreadable`, holding none of the others), and
   the line is followed into the newest version (`newerLineOf`, a line diff ignoring line ends): unchanged, the thread
   sits at its line there, tagged **Earlier version**; changed or gone, it is **outdated**, gathered above the code
   ("2 outdated comments", folded), each with the lines it was written on (`snippetOf`) (`earlierTagOf`). Why not the
