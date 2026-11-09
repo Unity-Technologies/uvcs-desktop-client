@@ -74,6 +74,18 @@ export interface RowFrame {
   lineHeight?: number;
 }
 
+/**
+ * A row and the part of it gone to, from where they are in the scrolled content: under a line, the line framed with
+ * it (`lineAboveRow`). Above the code (`aboveCode`: the comments stacked over the first line, an outdated one among
+ * them), there's no line to keep in view, only the part gone to: framed by the row's own top, one card further down
+ * the stack would stay where it is, cut at the view's bottom.
+ */
+export function rowFrameOf({ rowTop, focusTop, focusBottom, aboveCode, lineBox }: { rowTop: number; focusTop: number; focusBottom: number; aboveCode: boolean; lineBox: { top: number; height: number } | undefined }): RowFrame {
+  if (aboveCode) return { lineTop: focusTop, focusTop, focusBottom, lineHeight: 0 };
+  const { lineTop, lineHeight } = lineAboveRow(rowTop, lineBox);
+  return { lineTop, focusTop, focusBottom, lineHeight };
+}
+
 /** Lines of context kept above a line gone to, however tall its card. */
 const CONTEXT_LINES = 3;
 
