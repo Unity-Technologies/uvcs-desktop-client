@@ -226,7 +226,11 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
   some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
   there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
-  open (`markerIsOpen`); a click opens that line's threads, and going to a thread opens its line. The outdated ones
+  open (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
+  characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1
+  reply"), three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which
+  its avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that
+  line's threads, and going to a thread opens its line. The outdated ones
   hide too: they have no line to mark, so one shows only when it is gone to (from the panel or the conversation), that
   one alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened ones share one row above the code,
   `annotationRowsOf`'s `opened`). Each card opened so has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide
