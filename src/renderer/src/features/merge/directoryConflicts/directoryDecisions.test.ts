@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryDecision } from '@shared/domain/merge';
-import { applyToNextLabel, canKeepBothAs, changesDecisions, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
+import { applyToNextBox, applyToNextLabel, canKeepBothAs, changesDecisions, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
 
 const conflictAt = (path: string, itemId: number): DirectoryConflict => ({
   type: 'evilTwin',
@@ -131,5 +131,20 @@ describe('changesDecisions', () => {
   it('ignores the next ones for Keep both, which decides only its own conflict', () => {
     const asMain = { choice: 'rename', newName: 'assets-main' } as const;
     expect(changesDecisions([{ conflict: assets, resolution: asMain }], assets, asMain, [shared])).toBe(false);
+  });
+});
+
+describe('applyToNextBox', () => {
+  it('is not offered when no next conflict of the kind waits', () => {
+    expect(applyToNextBox(0, 'source', true)).toBeUndefined();
+  });
+
+  it('offers the next conflicts with the choice the user is making, as the user left it', () => {
+    expect(applyToNextBox(2, undefined, false)).toEqual({ label: 'Do the same for the next 2 conflicts of this kind', checked: false, disabled: false });
+    expect(applyToNextBox(2, 'destination', true)).toEqual({ label: 'Do the same for the next 2 conflicts of this kind', checked: true, disabled: false });
+  });
+
+  it('is off and disabled while Keep both is picked: the name it gives belongs to one item', () => {
+    expect(applyToNextBox(1, 'rename', true)).toEqual({ label: 'Do the same for the next conflict of this kind', checked: false, disabled: true });
   });
 });
