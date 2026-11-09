@@ -9,8 +9,7 @@ import { changesDecisions, resolutionsByConflict } from './directoryDecisions';
  * The merge page's directory decisions, applied as the user makes them, as the official client does: each one is sent
  * with those before it (`applyDirectoryDecision`), and with the next conflicts of its kind when the user asks, and the
  * merge `cm` calculates again on them becomes the page's plan, where a decision may have moved, removed or added file
- * conflicts and changes. One is applied at a time. The main
- * process keeps them, named by the page, until it closes.
+ * conflicts and changes. One is applied at a time. The main process keeps them, named by the page, until it closes.
  */
 export function useDirectoryDecisions(workspacePath: string, request: MergeRequest, initialPlan: MergePlan) {
   const [decisionsId] = useState(() => crypto.randomUUID());
