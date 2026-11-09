@@ -3,7 +3,8 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { DiffFocusRequest } from '../../diff/diffFocusRequest';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { writtenIn, type LineThread } from './fileThreads';
+import { anchorPath, writtenIn, type LineThread } from './fileThreads';
+import type { ContextRequest } from './useCommentContext';
 
 /** A thread gone to in the Changes tab, again each time (`seq`): the file's diff scrolls to it and marks it. */
 export interface ThreadFocus {
@@ -25,6 +26,8 @@ export interface ReviewComments {
   goToThread: (thread: LineThread) => void;
   /** Shows a thread in the Conversation tab, among the rest. */
   showInConversation: (threadId: number) => void;
+  /** Shows a thread in context (`useCommentContext`); none until the place's repository is known. */
+  seeInContext?: (thread: LineThread, request?: ContextRequest) => void;
 }
 
 export const ReviewCommentsContext = createContext<ReviewComments | null>(null);
@@ -40,7 +43,7 @@ export function conversationAt(reviewId: number, threadId: number): PageOf<'code
  * branch (`null`); a review of anything but a branch has one mode.
  */
 export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: LineThread, seq: number): DiffFocusRequest {
-  const path = thread.root.anchor.path.replace(/^\//, '');
+  const path = anchorPath(thread.root.anchor);
   if (review.target.kind !== 'branch') return { path, seq };
   const written = writtenIn(review.target, thread);
   return { path, changesetId: written.kind === 'changeset' ? written.changesetId : null, seq };

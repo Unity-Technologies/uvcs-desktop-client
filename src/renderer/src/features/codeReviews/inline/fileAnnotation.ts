@@ -1,7 +1,7 @@
 import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
-import type { EarlierThread, ShownFile } from './fileThreads';
+import type { EarlierThread, PlacedThread, ShownFile } from './fileThreads';
 import type { LineThreads } from './threadRows';
 import type { ThreadFocus } from './reviewComments';
 
@@ -40,4 +40,9 @@ export function markerCount(line: Pick<LineThreads, 'threads'>): number | null {
 /** Whether the outdated threads above the code open: when one of them is gone to. */
 export function outdatedOpensFor(focus: ThreadFocus | null, outdated: readonly EarlierThread[]): boolean {
   return focus !== null && outdated.some((entry) => entry.thread.root.id === focus.threadId);
+}
+
+/** Whether a thread in the code offers to be seen in context: one written on an earlier version of the file. */
+export function offersContext(placed: Pick<PlacedThread, 'earlier'>): boolean {
+  return placed.earlier !== undefined;
 }

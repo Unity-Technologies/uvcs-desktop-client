@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -18,6 +18,7 @@ import { useReviewConversation } from './conversation/useReviewConversation';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
+import { useCommentContext } from './inline/useCommentContext';
 
 const COMMENTS_PANEL_KEY = 'reviewComments';
 /** Narrower than an object's details, and giving way first as the window narrows: the diff beside it is what's read. */
@@ -52,21 +53,19 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
+  // A page of its own, so Back returns to the code at the thread, which this page is first set to.
+  const showInConversation = useCallback(
+    (threadId: number): void => {
+      const thread = threads?.find((candidate) => candidate.root.id === threadId);
+      if (thread && isLineThread(thread)) navigation.replacePage(commentLocationPage(review.id, thread.root));
+      navigation.openPage(conversationAt(review.id, threadId));
+    },
+    [review.id, threads],
+  );
+  const seeInContext = useCommentContext(review, showInConversation);
   const comments = useMemo<ReviewComments>(
-    () => ({
-      review,
-      threads,
-      user,
-      focus,
-      goToThread,
-      // A page of its own, so Back returns to the code at the thread, which this page is first set to.
-      showInConversation: (threadId) => {
-        const thread = threads?.find((candidate) => candidate.root.id === threadId);
-        if (thread && isLineThread(thread)) navigation.replacePage(commentLocationPage(review.id, thread.root));
-        navigation.openPage(conversationAt(review.id, threadId));
-      },
-    }),
-    [review, threads, user, focus],
+    () => ({ review, threads, user, focus, goToThread, showInConversation, seeInContext }),
+    [review, threads, user, focus, showInConversation, seeInContext],
   );
 
   return (

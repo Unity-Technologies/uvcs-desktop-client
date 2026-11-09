@@ -7,9 +7,9 @@ import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { openCommentContextDialog } from './CommentContextDialog';
 import { comparedFile, hasComments, isCommentable, markerCount, openedOnFocus } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
+import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
@@ -22,7 +22,7 @@ const NO_REVISIONS: number[] = [];
  * A file of a review's diff with the review's comments in its code (`EntryAnnotatorContext`, given by its Changes tab):
  * each thread under its line, the outdated ones above the code; while comments are hidden, a marker on each line, and
  * the outdated ones only when one of them is gone to. One on an earlier version is seen in context in a dialog
- * (`openCommentContextDialog`), which leaves this diff as it is.
+ * (`ReviewComments.seeInContext`), which leaves this diff as it is.
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);
@@ -84,8 +84,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       emphasized: markerIsOpen(line),
       onOpen: () => openLine(line.key),
     }));
-    const onSeeInContext = (thread: LineThread): void =>
-      openCommentContextDialog({ review: comments.review, thread, user: comments.user, shown: entry, view, showInConversation: () => comments.showInConversation(thread.root.id) });
+    const { seeInContext } = comments;
+    const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onSeeInContext });
     return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, scrollTo, opensAtRow };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
@@ -106,7 +106,8 @@ interface RowContext {
   textOf: (revisionId: number) => string | undefined;
   /** Folds a line opened from its marker (or the outdated threads gone to) back; none while comments show in the code. */
   onClose?: (key: string) => void;
-  onSeeInContext: (thread: LineThread) => void;
+  /** Shows a thread in context, on a view; none until the place's repository is known. */
+  onSeeInContext?: (thread: LineThread, startsOn?: ContextView) => void;
 }
 
 function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {

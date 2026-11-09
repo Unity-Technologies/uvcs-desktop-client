@@ -4,7 +4,8 @@ import { pluralize } from '../../../lib/text';
 import { IconButton } from '../../../ui/IconButton';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
-import { outdatedOpensFor } from './fileAnnotation';
+import type { ContextView } from './commentContext';
+import { offersContext, outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
@@ -17,8 +18,11 @@ interface InlineThreadsProps {
   focus: ReviewComments['focus'];
   /** Folds the line back into its marker, while comments are hidden in the code. */
   onClose?: () => void;
-  onSeeInContext: (thread: LineThread) => void;
+  onSeeInContext?: SeeInContext;
 }
+
+/** Shows a thread in context, on a view (`ReviewComments.seeInContext`). */
+type SeeInContext = (thread: LineThread, startsOn?: ContextView) => void;
 
 /** The threads at a line, under it: each as the conversation shows it, without the file it's at. */
 export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }: InlineThreadsProps) {
@@ -27,16 +31,18 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
       <div className={styles.threads}>
         {line.threads.map((placed) => {
           const { thread, earlier } = placed;
+          const offered = offersContext(placed) ? onSeeInContext : undefined;
           return (
         <ThreadInRow
           key={thread.root.id}
           comments={comments}
           thread={thread}
           focus={focus}
+          onSeeInContext={onSeeInContext}
           inCode={{
             earlier: earlier && earlierTagOf(thread, false),
             showInConversation: () => comments.showInConversation(thread.root.id),
-            seeInContext: earlier && (() => onSeeInContext(thread)),
+            seeInContext: offered && (() => offered(thread)),
           }}
         />
           );
@@ -54,7 +60,7 @@ interface OutdatedThreadsProps {
   textOf: (revisionId: number) => string | undefined;
   /** Hides them again, while comments are hidden in the code: they showed because one of them was gone to. */
   onClose?: () => void;
-  onSeeInContext: (thread: LineThread) => void;
+  onSeeInContext?: SeeInContext;
 }
 
 /**
@@ -90,11 +96,12 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
               comments={comments}
               thread={thread}
               focus={focus}
+              onSeeInContext={onSeeInContext}
               inCode={{
                 earlier: earlierTagOf(thread, true),
                 snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
                 showInConversation: () => comments.showInConversation(thread.root.id),
-                seeInContext: () => onSeeInContext(thread),
+                seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
               }}
             />
           ))}
@@ -112,9 +119,19 @@ function CloseButton({ label, onClose }: { label: string; onClose: () => void })
   );
 }
 
-function ThreadInRow({ comments, thread, focus, inCode }: { comments: ReviewComments; thread: LineThread; focus: ReviewComments['focus']; inCode: ThreadInCode }) {
+interface ThreadInRowProps {
+  comments: ReviewComments;
+  thread: LineThread;
+  focus: ReviewComments['focus'];
+  inCode: ThreadInCode;
+  onSeeInContext?: SeeInContext;
+}
+
+/** A thread in the code; its "Applied in" shows how the change request was applied, in context. */
+function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: ThreadInRowProps) {
   const highlight = focus?.threadId === thread.root.id ? focus.seq : undefined;
-  return <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} />;
+  const onSeeApplied = onSeeInContext && (() => onSeeInContext(thread, 'since'));
+  return <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} onSeeApplied={onSeeApplied} />;
 }
 
 /** The lines an outdated thread was written on, the one it's on marked. */

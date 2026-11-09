@@ -28,6 +28,8 @@ interface ReviewThreadCardProps {
   inCode?: ThreadInCode;
   /** Gone to, the how-many-th time (`ThreadFocus.seq`): unfolded and lit for a moment, so the eye finds it. */
   highlight?: number;
+  /** What "Applied in" opens: how the change request was applied, in context; else the changeset that applied it. */
+  onSeeApplied?: () => void;
 }
 
 /**
@@ -53,7 +55,7 @@ type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
  * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
  * its first words (`startsFolded`); a click shows it whole.
  */
-export function ReviewThreadCard({ review, thread, user, inCode, highlight }: ReviewThreadCardProps) {
+export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSeeApplied }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
   const [shownHighlight, setShownHighlight] = useState(highlight);
   const badges = threadBadges(thread);
@@ -74,7 +76,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight }: Re
       data-highlight={highlight === undefined ? undefined : highlight % 2}
       id={inCode ? undefined : threadElementId(thread.root.id)}
     >
-      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
+      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
       {inCode?.snippet}
       <div className={styles.threadBody}>
         {folded ? <FoldedThread thread={thread} onOpen={() => setFolded(false)} /> : <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} />}
@@ -87,10 +89,10 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight }: Re
  * A thread as the conversation shows a settled one: its header band, then who started it and their first words; a click
  * anywhere goes to it (the Changes tab's Comments panel, going to it in the code).
  */
-export function ThreadSummaryCard({ reviewId, thread, current, onOpen }: { reviewId: number; thread: ReviewThread; current: boolean; onOpen: () => void }) {
+export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeApplied }: { reviewId: number; thread: ReviewThread; current: boolean; onOpen: () => void; onSeeApplied?: () => void }) {
   return (
     <section className={styles.thread} data-folded="true" data-current={current || undefined}>
-      <ThreadHeader reviewId={reviewId} thread={thread} folded onLocation={{ go: onOpen, tip: 'Show in the code' }} />
+      <ThreadHeader reviewId={reviewId} thread={thread} folded onLocation={{ go: onOpen, tip: 'Show in the code' }} onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} />
       </div>
@@ -107,9 +109,10 @@ interface ThreadHeaderProps {
   onLocation?: { go: () => void; tip: string };
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
+  onSeeApplied?: () => void;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle, onSeeApplied }: ThreadHeaderProps) {
   const { root } = thread;
   const badges = threadBadges(thread);
   // In the code, the thread is at its line: its location would name where the user already is.
@@ -151,7 +154,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle }
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
-          <StatePill state={badges.state} appliedIn={badges.appliedIn} />
+          <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
         )}
       </span>
     </div>
@@ -159,10 +162,11 @@ function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle }
 }
 
 /**
- * Where a thread stands, as an outlined pill. "Applied in 281299" is one link as a whole, opening the changeset that
- * applied it: a chip inside the pill would be a frame in a frame.
+ * Where a thread stands, as an outlined pill. "Applied in 281299" is one link as a whole, showing how the change
+ * request was applied, in context (`onSeeApplied`), else opening the changeset that applied it: a chip inside the pill
+ * would be a frame in a frame.
  */
-function StatePill({ state, appliedIn }: { state: NonNullable<ThreadBadges['state']>; appliedIn: number | undefined }) {
+function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<ThreadBadges['state']>; appliedIn: number | undefined; onSeeApplied?: () => void }) {
   if (appliedIn === undefined) {
     return (
       <span className={styles.pill} data-tone={state.tone}>
@@ -171,7 +175,13 @@ function StatePill({ state, appliedIn }: { state: NonNullable<ThreadBadges['stat
     );
   }
   return (
-    <button type="button" className={styles.pill} data-tone={state.tone} data-tip={`Open changeset ${appliedIn}`} onClick={() => openChangesetDiff({ id: appliedIn })}>
+    <button
+      type="button"
+      className={styles.pill}
+      data-tone={state.tone}
+      data-tip={onSeeApplied ? 'See how it was applied' : `Open changeset ${appliedIn}`}
+      onClick={onSeeApplied ?? (() => openChangesetDiff({ id: appliedIn }))}
+    >
       {state.label} {appliedIn}
     </button>
   );
