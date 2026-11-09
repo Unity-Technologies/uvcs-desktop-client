@@ -24,4 +24,12 @@ describe('commentMenu', () => {
 
     expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['copyText', 'separator', 'editComment']);
   });
+
+  it("leads from a thread's first comment in the code to the conversation and to what changed since it", () => {
+    const [thread] = threadsOf([comment(1), comment(2, { parentId: 1, author: 'bob' })]);
+    const inCode = { ...noop, showInConversation: () => {}, changesSince: () => {} };
+
+    expect(ids(commentMenu(thread!.root, thread!, 'bob', inCode))).toEqual(['showInConversation', 'changesSinceComment', 'separator', 'copyText']);
+    expect(ids(commentMenu(thread!.replies[0]!, thread!, 'bob', inCode))).toEqual(['copyText', 'separator', 'editComment', 'separator', 'delete']);
+  });
 });
