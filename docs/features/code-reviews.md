@@ -253,19 +253,33 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
   width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the
   changes first show, so a first comment doesn't open it, and the user's own choice is kept for the next review:
-  `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code as the
-  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in turn,
-  the folder first, then the line, the file's name last, and whole in a tooltip), by file and line
-  (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything is, `initialCommentsFilter`). A row under
+  `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code,
+  **Open** or **All**, in the order a small sort button by its arrows chooses (`CommentsOrderMenu`, `CommentsOrder`,
+  kept for every review in `useReviewCommentsStore.panelOrder`; `commentsPanelThreads`):
+  - **Code order**, the default: by file, as the diff lists them, then line, grouped under each file's name
+    (`commentsByFile`), so a file with many comments is named once. The name stays at the top while its comments scroll
+    (sticky), with its folder cut from the start (the folder nearest the file stays) and how many; a click on it shows the
+    file's diff in the mode the diff is in. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its line
+    in a column as wide as the file's longest line number (`lineDigits`), who started it, its replies and its state;
+    its kind's icon and first words under them. The one gone to has the accent bar on its left. Groups don't fold:
+    the sticky names, Open/All and the kind chips already narrow a long list, and folded groups would raise what N does
+    in one.
+  - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old
+    thread up; one list, as the conversation sums up a settled thread (`ThreadSummaryCard`; its file and line only name
+    where it goes, cut short in turn, the folder first, then the line, the file's name last, and whole in a tooltip).
+    Grouping by file would cut the time order apart, so a time order never groups, and grouping is not a choice of its
+    own.
+
+  It opens on Open when anything is open (`initialCommentsFilter`). A row under
   the header narrows it further: words found in what was said, replies too, who said it and the file
   (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the files' filter), and a chip per kind,
   its icon and how many Open or All lists (`threadKindCounts`); a search finding nothing offers "Clear filters". While
   searching, a card shows the comment the words were found in, a reply too, from a little before the match
   (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first words, and the words are marked
   there, in who said it and in the file (`HighlightQuery`), so each card says why it's listed. The keys step through
-  what it lists. A click anywhere on a card goes to the thread (not the end of a drag selecting its text): its file, its
+  what it lists, in the order shown. A click anywhere on a card goes to the thread (not the end of a drag selecting its text): its file, its
   mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`, `ThreadFocus`). Under the filter row, where the one
-  gone to is ("3 of 12", `commentPosition`) and arrows to the previous and next (its own row: in one with the name and
+  gone to is ("3 of 12", and "· 4 files" when grouped, `commentPosition`) and arrows to the previous and next (its own row: in one with the name and
   Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's
   order, across files and modes, stopping at either end; from a thread that just left the list, settled under Open, on
   from where it sat). The card gone to comes into the panel's view, a third of the way down, the list still when it
