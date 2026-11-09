@@ -30,6 +30,7 @@ const TEXT = [
   '--syntax-variable',
   '--syntax-string',
   '--syntax-keyword',
+  '--text-code',
 ];
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed', '--permission-allowed', '--permission-denied'];
