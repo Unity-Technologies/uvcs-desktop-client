@@ -13,9 +13,8 @@ import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
 import type { DiffTarget } from '@shared/domain/diff';
-import { threadsOf } from './conversation/reviewThreads';
 import { commentLocationPage } from './conversation/threadBadges';
-import { useReviewConversation } from './conversation/useReviewConversation';
+import { useReviewThreads } from './conversation/useReviewThreads';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
@@ -48,8 +47,7 @@ interface ReviewChangesTabProps {
 export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChangesTabProps) {
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
-  const { data: conversation } = useReviewConversation(review.id);
-  const threads = useMemo(() => conversation && threadsOf(conversation.comments), [conversation]);
+  const threads = useReviewThreads(review.id);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
   const [request, setRequest] = useState<DiffFocusRequest | null>(null);

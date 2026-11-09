@@ -1,5 +1,5 @@
 import type { ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
-import { displayName } from '../../../lib/userName';
+import { displayName, sameUser } from '../../../lib/userName';
 
 /** The icon an event shows: what happened, a status in its own color. */
 export type ReviewEventIcon = 'reviewRequested' | 'reviewRequestedAgain' | 'reviewerRemoved' | 'renamed' | 'Under review' | 'Reviewed' | 'Rework required';
@@ -38,7 +38,7 @@ export function isShownEvent(event: ReviewEvent): event is ReviewEvent & Exclude
  * themselves reads so: "added themselves as a reviewer", "left the reviewers".
  */
 function reviewEventText(change: ShownChange): string {
-  const isAuthor = (name: string): boolean => change.author !== undefined && name.toLowerCase() === change.author.toLowerCase();
+  const isAuthor = (name: string): boolean => change.author !== undefined && sameUser(name, change.author);
   const named = (name: string): string => (isAuthor(name) ? 'themselves' : displayName(name));
   switch (change.kind) {
     case 'reviewRequested':

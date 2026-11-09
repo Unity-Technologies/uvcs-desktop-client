@@ -42,6 +42,11 @@ export function renameReviewArgs(reviewId: number, title: string, at: CmPlace): 
   return ['codereview', '-e', String(reviewId), `--title=${title}`, ...at.repositoryOption];
 }
 
+/** `cm codereview -d`: every review named, in one command. */
+export function deleteReviewsArgs(reviewIds: readonly number[], at: CmPlace): string[] {
+  return ['codereview', '-d', ...reviewIds.map(String), ...at.repositoryOption];
+}
+
 const STATUS_OPTIONS: Record<CodeReviewStatus, string> = {
   'Under review': '--under-review',
   Reviewed: '--reviewed',

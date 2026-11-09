@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
-import { EmptyState } from '../../../ui/EmptyState';
-import { CenteredSpinner } from '../../../ui/Spinner';
 import { DiffBrowser } from '../../diff/DiffBrowser';
 import { DiffBrowserLayout } from '../../diff/DiffBrowserLayout';
 import { EntryAnnotatorContext, type EntryAnnotatorProps } from '../../diff/entryAnnotator';
@@ -10,6 +8,7 @@ import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { commentedFileFlag, isCommentedEntry } from './appliedFiles';
 import { anchorPath } from './fileThreads';
 import type { ViewProps } from './CommentContextDialog';
+import { ContextViewPending } from './ContextViewPending';
 import { useContextComparison } from './useContextComparison';
 import { useThreadRow } from './useThreadRow';
 
@@ -61,11 +60,11 @@ function CommentView({ children, ...props }: AppliedFilesProps & Pick<EntryAnnot
     return () => onCommentShown(false);
   }, [onCommentShown]);
   const state = useContextComparison(props);
-  const comparison = state.kind === 'comparison' ? state.comparison : null;
-  const annotations = useThreadRow({ ...props, comparison });
-  if (state.kind === 'reading') return <CenteredSpinner />;
-  if (state.kind === 'error') return <EmptyState title="Couldn't load this diff" description={state.message} />;
-  if (state.kind === 'missing' || !comparison || !annotations) return <EmptyState title={state.kind === 'missing' ? state.text : ''} />;
+  const annotations = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
+  if (state.kind !== 'comparison') return <ContextViewPending state={state} />;
+  // None only without a comparison.
+  if (!annotations) return null;
+  const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
       {children({ compared: { original: comparison.original, modified: comparison.modified } })}

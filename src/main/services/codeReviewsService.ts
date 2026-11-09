@@ -3,7 +3,7 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { addReviewersArgs, createReviewArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
+import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
@@ -106,7 +106,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
 
     async remove(place, reviewIds) {
       const at = cmPlace(place);
-      await cm.query(['codereview', '-d', ...reviewIds.map(String), ...at.repositoryOption], at.options);
+      await cm.query(deleteReviewsArgs(reviewIds, at), at.options);
     },
   };
 }

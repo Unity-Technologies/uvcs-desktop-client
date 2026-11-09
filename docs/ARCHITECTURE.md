@@ -1163,7 +1163,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
-  path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
+  path first (`PathLabel`, `positionsInTrimmed`). Words are found in the lower-cased text and marked where they are in
+  the text itself (`lowerCasedText`): a letter may grow when lower-cased (a Turkish İ), moving what follows. Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
   - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
     the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and

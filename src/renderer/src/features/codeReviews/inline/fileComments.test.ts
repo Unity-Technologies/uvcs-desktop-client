@@ -51,6 +51,21 @@ describe('fileCommentsOf', () => {
     expect(comments.outdated).toEqual([]);
   });
 
+  it('places no earlier thread while another earlier version is read: the rows Pierre keys by place never shift', () => {
+    const twoVersions = threadsOf([onLine(1, 30, 2), onLine(2, 20, 4), onLine(3, 25, 1)]);
+    const comments = fileCommentsOf({ threads: twoVersions, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => (revision === 25 ? undefined : TEXTS.get(revision)) });
+    expect(comments.lines.map((line) => line.key)).toEqual(['additions:2']);
+    expect(comments.reading.map((entry) => entry.thread.root.id).sort()).toEqual([2, 3]);
+  });
+
+  it("places the earlier threads of the versions read when one can't be read, holding that one's still", () => {
+    const twoVersions = threadsOf([onLine(1, 30, 2), onLine(2, 20, 4), onLine(3, 25, 1)]);
+    const comments = fileCommentsOf({ threads: twoVersions, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => (revision === 25 ? null : TEXTS.get(revision)) });
+    expect(comments.lines.map((line) => line.key)).toEqual(['additions:2', 'additions:5']);
+    expect(comments.unreadable.map((entry) => entry.thread.root.id)).toEqual([3]);
+    expect(holdsThread(comments, 3)).toBe(true);
+  });
+
   it("tells every earlier thread outdated on a deleted file, which has no newer version", () => {
     const deleted: ShownFile = { path: 'src/Player.cs', originalRevision: 25, modifiedRevision: -1 };
     const comments = fileCommentsOf({ threads: threadsOf([onLine(1, 20, 1)]), review: BRANCH, view: WHOLE, file: deleted, textOf: (revision) => TEXTS.get(revision) });

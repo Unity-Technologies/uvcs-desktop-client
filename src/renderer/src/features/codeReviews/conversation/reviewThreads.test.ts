@@ -33,6 +33,12 @@ describe('threadsOf', () => {
     expect(threadsOf([reply(5, 99)]).map((thread) => thread.root.id)).toEqual([5]);
   });
 
+  it('ends, losing nothing, on replies that answer each other, which only broken data holds', () => {
+    const threads = threadsOf([reply(1, 2), reply(2, 1), reply(3, 2)]);
+
+    expect(threads.flatMap(({ root, replies }) => [root.id, ...replies.map((answer) => answer.id)]).sort()).toEqual([1, 2, 3]);
+  });
+
   it('keeps a change request open until a changeset applies it or a reply discards it', () => {
     const [open, applied, discarded] = threadsOf([
       comment(1, { kind: 'changeRequest', anchor: ON_LINE }),
