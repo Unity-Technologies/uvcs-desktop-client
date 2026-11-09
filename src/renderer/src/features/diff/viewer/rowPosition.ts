@@ -63,9 +63,9 @@ export function lineAboveRow(rowTop: number, lineBox: { top: number; height: num
   return { lineTop: lineBox.top, lineHeight: Math.min(lineBox.height, rowTop - lineBox.top) };
 }
 
-/** A row under a line and the part of it gone to, from the top of the scrolled content. */
+/** A row under a line, or above the code, and the part of it gone to, from the top of the scrolled content. */
 export interface RowFrame {
-  /** Where the line the row is under starts: the row's own top for one above the code. */
+  /** Where the line the row is under starts; for a row above the code, the top of its part gone to (`rowFrameOf`). */
   lineTop: number;
   /** The part of the row gone to (one thread of several under a line): the whole row when there's no such part. */
   focusTop: number;
