@@ -2,6 +2,7 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type ChangeRegion } from './changeBlocks';
+import type { MapTick } from './mapTicks';
 import { changeKindOf, changeMarkLabel, changeMarks, FUSE_GAP, FUSE_LINES, MIN_MARK_HEIGHT, placesAgain, scrollTopForTrackPoint, showsChangeMap, type ChangeMapLayout, type LineBox, type MarksPlacedFrom } from './changeMarks';
 
 const ROW = 20;
@@ -21,7 +22,7 @@ function rowsLayout(rows: number, trackHeight: number, boxOf: (line: ChangedLine
 }
 
 describe('showsChangeMap', () => {
-  const tall = { contentHeight: 4000, viewHeight: 500 };
+  const tall = { contentHeight: 4000, viewHeight: 500, ticks: 0 };
 
   it('shows for a diff of two versions with changes that scrolls', () => {
     expect(showsChangeMap({ changes: 3, bothSides: true, ...tall })).toBe(true);
@@ -36,12 +37,24 @@ describe('showsChangeMap', () => {
   });
 
   it('hides when the diff fits without scrolling', () => {
-    expect(showsChangeMap({ changes: 3, bothSides: true, contentHeight: 500, viewHeight: 500 })).toBe(false);
-    expect(showsChangeMap({ changes: 3, bothSides: true, contentHeight: 501, viewHeight: 500 })).toBe(false);
+    expect(showsChangeMap({ changes: 3, bothSides: true, ticks: 0, contentHeight: 500, viewHeight: 500 })).toBe(false);
+    expect(showsChangeMap({ changes: 3, bothSides: true, ticks: 0, contentHeight: 501, viewHeight: 500 })).toBe(false);
   });
 
   it('hides before the view has a size', () => {
-    expect(showsChangeMap({ changes: 3, bothSides: true, contentHeight: 4000, viewHeight: 0 })).toBe(false);
+    expect(showsChangeMap({ changes: 3, bothSides: true, ticks: 0, contentHeight: 4000, viewHeight: 0 })).toBe(false);
+  });
+
+  it("shows for a place's ticks (a review's comments) with no change to mark", () => {
+    expect(showsChangeMap({ ...tall, changes: 0, bothSides: true, ticks: 2 })).toBe(true);
+  });
+
+  it('shows for a version shown alone with ticks: an added or deleted file commented on in a review', () => {
+    expect(showsChangeMap({ ...tall, changes: 1, bothSides: false, ticks: 1 })).toBe(true);
+  });
+
+  it("hides with ticks when the diff fits without scrolling", () => {
+    expect(showsChangeMap({ changes: 1, bothSides: false, ticks: 3, contentHeight: 500, viewHeight: 500 })).toBe(false);
   });
 });
 
@@ -231,7 +244,8 @@ describe('changeMarkLabel', () => {
 
 describe('placesAgain', () => {
   const regions = [region(0, added(10))];
-  const placed: MarksPlacedFrom = { regions, bothSides: true, layoutKey: 'split:true:false', contentHeight: 4000, viewHeight: 500, lastChangeTop: 180 };
+  const ticks: MapTick[] = [{ key: 'additions:30', side: 'additions', lineNumber: 30, emphasized: true }];
+  const placed: MarksPlacedFrom = { regions, bothSides: true, ticks, layoutKey: 'split:true:false', contentHeight: 4000, viewHeight: 500, lastChangeTop: 180, lastTickTop: 580 };
 
   it('places the marks when none were placed yet', () => {
     expect(placesAgain(null, placed)).toBe(true);
@@ -262,5 +276,14 @@ describe('placesAgain', () => {
     const byShare = { ...placed, lastChangeTop: undefined };
     expect(placesAgain(byShare, placed)).toBe(true);
     expect(placesAgain(placed, { ...placed, lastChangeTop: 240 })).toBe(true);
+  });
+
+  it("places them again for other ticks: a comment added, resolved or placed once its version is read", () => {
+    expect(placesAgain(placed, { ...placed, ticks: [...ticks] })).toBe(true);
+  });
+
+  it('places them again as Pierre measures the lines above the last tick, a version shown alone having no change to watch', () => {
+    expect(placesAgain({ ...placed, lastTickTop: undefined }, placed)).toBe(true);
+    expect(placesAgain(placed, { ...placed, lastTickTop: 640 })).toBe(true);
   });
 });

@@ -45,6 +45,7 @@ import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
 import type { ChangeNavigation } from './useChangeNavigation';
 import { useChangeMap } from './useChangeMap';
+import type { MapTick } from './mapTicks';
 import { useChangeView } from './useChangeView';
 import { useKeptPlace } from './useKeptPlace';
 import type { DiscardRequest } from './useLineDiscarding';
@@ -58,6 +59,7 @@ import styles from './TextDiff.module.css';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
 const NO_CHANGES: ChangeNavigation['regions'] = [];
+const NO_TICKS: readonly MapTick[] = [];
 
 /** What the change map takes of the navigation through the diff's changes. */
 export type ChangeSteps = Pick<ChangeNavigation, 'regions' | 'count'>;
@@ -271,13 +273,15 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
   useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined || annotations?.opensAtRow === true });
-  // Where the changes are, marked in the diff's own scrollbar.
+  // Where the changes are, and the place's spots (a review's comments), marked in the diff's own scrollbar.
   const changeMap = useChangeMap({
     containerRef: container,
     virtualizer,
     regions: changes?.regions ?? NO_CHANGES,
     lineCounts: { deletions: diff.meta.deletionLines.length, additions: diff.meta.additionLines.length },
     bothSides: followsLayout(sides, wholeFile),
+    // The file typed into whole shows none of the place's rows: nor its ticks.
+    ticks: wholeFile ? NO_TICKS : (annotations?.mapTicks ?? NO_TICKS),
     layoutKey: `${shownLayout.layout}:${collapseUnchanged}:${wrapLines}`,
   });
   const isTyping = (): boolean => isTypingIn(container.current);
@@ -333,7 +337,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onFocus={pointerFocus.onFocus}
           onBlur={pointerFocus.onBlur}
         >
-          {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} containerRef={container} />}
+          {changeMap && <ChangeMap view={changeMap} count={changes?.count ?? 0} tickTip={annotations?.mapTickTip} containerRef={container} />}
           <EditProvider createEditor={createEditor}>
             {wholeFile ? (
               <VirtualizerContext.Provider value={virtualizer}>

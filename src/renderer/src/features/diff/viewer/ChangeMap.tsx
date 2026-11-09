@@ -11,6 +11,8 @@ interface ChangeMapProps {
   view: ChangeMapView;
   /** How many changes the diff has, for the marks' tooltips ("Change 3 of 12"). */
   count: number;
+  /** What a tick's spots hold, on hover (`DiffAnnotations.mapTickTip`); none where the place marks none. */
+  tickTip?: (keys: readonly string[]) => string;
   /** The diff's scrolling element, which this scrolls. */
   containerRef: RefObject<HTMLElement | null>;
 }
@@ -22,7 +24,9 @@ interface Drag {
 
 /**
  * The change map: the diff's own vertical scrollbar while it has changes to show, with the changes marked in its track
- * (a block per change, close ones fused into a band) and its thumb drawn over them, translucent. Dragging the thumb
+ * (a block per change, close ones fused into a band), the place's ticks over them (a review's comments: a thin line
+ * across the track), and its thumb drawn over both, translucent. A press on a tick is a press on the track like any
+ * other. Dragging the thumb
  * scrolls the diff, and a press anywhere across the track's width on the thumb's rows takes it (`pressesThumb`), so the
  * slim thumb is as easy to grab as the track is wide. A press anywhere else in the track, on a block or not, scrolls
  * smoothly to center that point (`scrollTopForTrackPoint`; far away, it jumps and glides only the end:
@@ -33,7 +37,7 @@ interface Drag {
  * over it scrolls the diff as anywhere else. A press on it takes no focus, and it's no press in the diff: the caret
  * typing in the diff stays where it was, and the lines aren't picked.
  */
-export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
+export function ChangeMap({ view, count, tickTip, containerRef }: ChangeMapProps) {
   const scrollTop = useScrollTop(containerRef);
   const geometry = { contentHeight: view.contentHeight, viewHeight: view.viewHeight, trackHeight: view.trackHeight };
   const thumb = thumbOf({ ...geometry, scrollTop });
@@ -77,6 +81,9 @@ export function ChangeMap({ view, count, containerRef }: ChangeMapProps) {
     >
       {view.marks.map((mark) => (
         <div key={mark.first} className={styles.mark} style={{ top: mark.top, height: mark.height }} data-kind={mark.kind} data-tip={changeMarkLabel(mark, count)} />
+      ))}
+      {view.ticks.map((tick) => (
+        <div key={tick.keys[0]} className={styles.tick} style={{ top: tick.top }} data-emphasized={tick.emphasized ? '' : undefined} data-tip={tickTip?.(tick.keys)} />
       ))}
       <div className={styles.thumb} style={{ top: thumb.top, height: thumb.height }} data-dragging={dragging ? '' : undefined} />
     </div>
