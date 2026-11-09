@@ -2,7 +2,7 @@ import { listNames, pluralize } from '../../../lib/text';
 import { outdatedKey } from './fileComments';
 import type { EarlierThread } from './fileThreads';
 import { markerTip } from './markerTip';
-import { markerCommentCount, markerIsOpen, markerNames } from './threadRows';
+import { markerCommentCount, markerIsOpen, markerNames, type MarkedThreads } from './threadRows';
 
 /** The marker a file's outdated threads leave on the code's first row while comments are hidden. */
 export interface OutdatedMarker {
@@ -29,8 +29,13 @@ export function outdatedMarkerOf(outdated: readonly EarlierThread[], opened: rea
   return {
     threads: folded,
     label: `${pluralize(markerCommentCount(marked), 'outdated comment')}, by ${listNames(markerNames(marked))}`,
-    tip: `Outdated: on lines changed since\n\n${markerTip(marked)}`,
+    tip: outdatedTip(marked),
     emphasized: markerIsOpen(marked),
     opens: [...opened, ...folded.map((entry) => outdatedKey(entry.thread.root.id))],
   };
+}
+
+/** What outdated threads say on hover, their marker's and their tick's in the change map: what outdated means, then each. */
+export function outdatedTip(outdated: MarkedThreads): string {
+  return `Outdated: on lines changed since\n\n${markerTip(outdated)}`;
 }
