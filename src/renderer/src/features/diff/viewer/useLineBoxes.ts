@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type { ChangedLine } from './changeBlocks';
-import { lineNumberCellSelector, topRowSelector, type CodeLayout } from './lineActions';
+import { lineNumberCellSelector, paneContentSelector, topRowOf, type CodeLayout } from './lineActions';
 import { paneRect, pierreShadowRoot } from './pierreDom';
 
 /** Where a line is, in the container's scrolled content: its row's top and bottom, and its pane's right edge. */
@@ -38,7 +38,7 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       const next = new Map<string, LineBox>();
       for (const line of lines) {
         // Above the code (`lineNumber: 0`): its first row, whichever it is.
-        const cell = root?.querySelector(line.lineNumber < 1 ? topRowSelector(line.side, layout) : lineNumberCellSelector(line, layout));
+        const cell = line.lineNumber < 1 ? topRowIn(root, line, layout) : root?.querySelector(lineNumberCellSelector(line, layout));
         const pane = cell?.closest('[data-code]');
         if (!cell || !pane) continue;
         const rect = cell.getBoundingClientRect();
@@ -90,6 +90,14 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
 }
 
 const NO_BOXES: ReadonlyMap<string, LineBox> = new Map();
+
+/** The first row of a side's code (`topRowOf`), while the file's top is rendered: Pierre's buffer stands for what isn't. */
+function topRowIn(root: ShadowRoot | null, { side }: ChangedLine, layout: CodeLayout): Element | null {
+  const content = root?.querySelector(paneContentSelector(side, layout));
+  if (!root || !content) return null;
+  const virtualizedAbove = root.querySelector('[data-virtualizer-buffer="before"]') !== null;
+  return topRowOf(content.children, (row) => row.hasAttribute('data-line-annotation'), virtualizedAbove);
+}
 
 function sameBoxes(a: ReadonlyMap<string, LineBox>, b: ReadonlyMap<string, LineBox>): boolean {
   if (a.size !== b.size) return false;

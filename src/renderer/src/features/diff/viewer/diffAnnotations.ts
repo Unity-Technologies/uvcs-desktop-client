@@ -10,7 +10,7 @@ import type { LineBox } from './useLineBoxes';
  * - `rows`: Pierre's line annotations, each a row under its line drawn by `render` (`lineNumber: 0` is above the file's
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
  * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it; `lineNumber: 0`, on the
- *   code's first row, for the rows above the code;
+ *   code's first row, for the rows above the code (none while that row isn't rendered);
  * - `scrollTo`: the line whose row to bring into view, line and row whole and high in the view, once each time it's a
  *   new object (the thread a link or a list went to); `lineNumber: 0`, the rows above the code;
  * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
@@ -24,7 +24,7 @@ export interface DiffAnnotations {
   opensAtRow: boolean;
 }
 
-/** A mark on a line, at the end of its pane; `lineNumber: 0`, on the first row (`topRowSelector`), for what's above the code. */
+/** A mark on a line, at the end of its pane; `lineNumber: 0`, on the code's first row (`topRowOf`), for what's above it. */
 export interface LineMarker extends ChangedLine {
   key: string;
   /** What it marks, as a screen reader says it. */
@@ -83,22 +83,21 @@ export interface MarkerSpot<M> {
 }
 
 /**
- * The spots of the markers whose lines are rendered (`useLineBoxes`), in the markers' order: markers on the same row of
- * the same pane share one, so none covers another (the one above the code, on the first row, and line 1's), the one
- * above the code first. Rows a fraction of a pixel apart are the same row.
+ * The spots of the markers whose lines are rendered (`useLineBoxes`): markers on the same row of the same pane share
+ * one, so none covers another (the one above the code, on the first row, and line 1's), in line order, the one above
+ * the code first. Rows less than a pixel apart are the same row.
  */
 export function markerSpots<M extends Pick<LineMarker, 'key' | 'lineNumber'>>(markers: readonly M[], boxes: ReadonlyMap<string, LineBox>): MarkerSpot<M>[] {
-  const spots = new Map<string, MarkerSpot<M>>();
+  const spots: MarkerSpot<M>[] = [];
   for (const marker of markers) {
     const box = boxes.get(marker.key);
     if (!box) continue;
     const top = (box.top + box.bottom) / 2;
     const left = markerLeft(box.paneRight);
-    const at = `${Math.round(top)}:${Math.round(left)}`;
-    const spot = spots.get(at) ?? { key: marker.key, top, left, markers: [] };
-    spot.markers.push(marker);
-    spots.set(at, spot);
+    const spot = spots.find((other) => Math.abs(other.top - top) < 1 && Math.abs(other.left - left) < 1);
+    if (spot) spot.markers.push(marker);
+    else spots.push({ key: marker.key, top, left, markers: [marker] });
   }
-  for (const spot of spots.values()) spot.markers.sort((a, b) => a.lineNumber - b.lineNumber);
-  return [...spots.values()];
+  for (const spot of spots) spot.markers.sort((a, b) => a.lineNumber - b.lineNumber);
+  return spots;
 }

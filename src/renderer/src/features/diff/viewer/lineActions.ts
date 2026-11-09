@@ -31,13 +31,22 @@ export function lineNumberCellSelector({ side, lineNumber }: ChangedLine, layout
   return cell;
 }
 
-/**
- * The first row of a pane's code, whatever it is (a line, or the bar of unchanged lines folded): where what's above
- * the code is marked (`LineMarker` at `lineNumber: 0`). Side by side, the side's pane; else the only one.
- */
-export function topRowSelector(side: DiffSide, layout: CodeLayout): string {
+/** A pane's rows of code and what's under its lines, side by side the side's pane, else the only one. */
+export function paneContentSelector(side: DiffSide, layout: CodeLayout): string {
   const pane = layout === 'split' ? `[data-code][data-${side}]` : '[data-code]';
-  return `${pane} > [data-content] > :first-child`;
+  return `${pane} > [data-content]`;
+}
+
+/**
+ * The code's first row in a pane's rows, whatever it is (a line, or the bar of unchanged lines folded): where what's
+ * above the code is marked (`LineMarker` at `lineNumber: 0`). Not a row under a line (`isAnnotation`: the outdated
+ * comments opened above the code come first), and none while the file's top isn't rendered (`virtualizedAbove`: a long
+ * file scrolled down renders only the lines in view, so its first row is a line far down). Reads only up to it.
+ */
+export function topRowOf<R>(rows: Iterable<R>, isAnnotation: (row: R) => boolean, virtualizedAbove: boolean): R | null {
+  if (virtualizedAbove) return null;
+  for (const row of rows) if (!isAnnotation(row)) return row;
+  return null;
 }
 
 /** What a pointer's row says about its line: its number (cell or code), its type, and the pane it's in side by side. */
