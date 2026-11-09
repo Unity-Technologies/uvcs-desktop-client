@@ -71,10 +71,6 @@
   display: contents;
 }
 
-.unchecked {
-  visibility: hidden;
-}
-
 .orderMenu {
   min-width: 170px;
 }
