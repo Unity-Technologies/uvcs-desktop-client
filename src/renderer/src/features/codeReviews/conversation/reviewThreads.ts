@@ -41,7 +41,11 @@ export function threadsOf(comments: readonly ReviewComment[]): ReviewThread[] {
   for (const comment of comments) {
     const root = rootOf(comment);
     if (root === comment) roots.push(comment);
-    else replies.set(root.id, [...(replies.get(root.id) ?? []), comment]);
+    else {
+      const answers = replies.get(root.id);
+      if (answers) answers.push(comment);
+      else replies.set(root.id, [comment]);
+    }
   }
   return roots.map((root) => {
     const answers = replies.get(root.id) ?? [];
