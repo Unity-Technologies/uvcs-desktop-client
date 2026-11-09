@@ -15,11 +15,12 @@ import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
 import { useReviewThreads } from './conversation/useReviewThreads';
-import { commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
+import { commentsByFile, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
+import { useReviewCommentsStore } from './inline/reviewCommentsStore';
 import { useCommentContext } from './inline/useCommentContext';
 import { changesFocusAskedFor } from './reviewTab';
 import { COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH, useCommentsPanelStart } from './useCommentsPanelStart';
@@ -53,15 +54,21 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const [openedOn, setOpenedOn] = useState<CommentsFilter | null>(null);
   if (threads && openedOn === null) setOpenedOn(initialCommentsFilter(threads));
   const filter = shownCommentsFilter(pickedFilter, openedOn);
-  const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all') : []), [threads]);
+  const order = useReviewCommentsStore((state) => state.panelOrder);
+  const setOrder = useReviewCommentsStore((state) => state.setPanelOrder);
+  const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all', NO_COMMENTS_SEARCH, order) : []), [threads, order]);
   const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
-  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search) : []), [threads, filter, search]);
+  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search, order) : []), [threads, filter, search, order]);
+  const groups = useMemo(() => commentsByFile(listed, order), [listed, order]);
+  // Kept here, as the filter is: N unfolds the file of the comment it goes to with the panel hidden too.
+  const [folded, setFolded] = useState<FoldedFiles>(NO_FOLDED_FILES);
   const tab = useRef<HTMLDivElement>(null);
   useCommentsPanelStart(threads === undefined ? null : all.length, tab);
 
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
     setFocus({ threadId: thread.root.id, seq: seq.current });
+    setFolded((current) => unfoldedFor(current, thread));
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
@@ -120,6 +127,11 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                     search={search}
                     onSearchChange={setSearch}
                     listed={listed}
+                    order={order}
+                    onOrderChange={setOrder}
+                    groups={groups}
+                    folded={folded}
+                    onFoldedChange={setFolded}
                     all={all}
                     onStep={step}
                     onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}

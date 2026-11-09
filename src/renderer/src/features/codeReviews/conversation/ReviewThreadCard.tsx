@@ -138,6 +138,41 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
   );
 }
 
+/**
+ * A thread under its file's name in the Comments panel (`CommentsFileGroup`): its kind's icon leading it, as a list's
+ * bullet; who started it, the line it was written on and its replies, then where it stands; its first words under them,
+ * the row's whole width. As a card, anywhere on it goes to the thread, and its words are the way there by keyboard.
+ */
+export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerpt }: Omit<ThreadSummaryCardProps, 'reviewId'>) {
+  const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
+  const author = excerpt?.author ?? thread.root.author;
+  return (
+    <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+      {header.kindIcon && <ThreadKindIcon root={thread.root} />}
+      <span className={styles.rowAbout}>
+        <Avatar user={author} size={16} tip={null} />
+        <span className={styles.author}>
+          <Highlight text={displayName(author)} />
+        </span>
+        {header.line && (
+          <span className={styles.rowLine} data-tip="The line it was written on">
+            {header.line}
+          </span>
+        )}
+        {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
+      </span>
+      {header.pill && (
+        <span className={styles.rowState}>
+          <StatePill pill={header.pill} onSeeApplied={onSeeApplied} />
+        </span>
+      )}
+      <button type="button" className={styles.rowText} onClick={onOpen}>
+        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+      </button>
+    </section>
+  );
+}
+
 /** A click on the card itself, not on a control inside it, nor the end of a drag selecting its text to copy. */
 function clickedOutsideControls(event: MouseEvent): boolean {
   if (window.getSelection()?.isCollapsed === false) return false;

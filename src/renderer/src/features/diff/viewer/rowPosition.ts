@@ -63,15 +63,27 @@ export function lineAboveRow(rowTop: number, lineBox: { top: number; height: num
   return { lineTop: lineBox.top, lineHeight: Math.min(lineBox.height, rowTop - lineBox.top) };
 }
 
-/** A row under a line and the part of it gone to, from the top of the scrolled content. */
+/** A row under a line, or above the code, and the part of it gone to, from the top of the scrolled content. */
 export interface RowFrame {
-  /** Where the line the row is under starts: the row's own top for one above the code. */
+  /** Where the line the row is under starts; for a row above the code, the top of its part gone to (`rowFrameOf`). */
   lineTop: number;
   /** The part of the row gone to (one thread of several under a line): the whole row when there's no such part. */
   focusTop: number;
   focusBottom: number;
   /** The line's height, which the lines of context kept above it are counted in. */
   lineHeight?: number;
+}
+
+/**
+ * A row and the part of it gone to, from where they are in the scrolled content: under a line, the line framed with
+ * it (`lineAboveRow`). Above the code (`aboveCode`: the comments stacked over the first line, an outdated one among
+ * them), there's no line to keep in view, only the part gone to: framed by the row's own top, one card further down
+ * the stack would stay where it is, cut at the view's bottom.
+ */
+export function rowFrameOf({ rowTop, focusTop, focusBottom, aboveCode, lineBox }: { rowTop: number; focusTop: number; focusBottom: number; aboveCode: boolean; lineBox: { top: number; height: number } | undefined }): RowFrame {
+  if (aboveCode) return { lineTop: focusTop, focusTop, focusBottom, lineHeight: 0 };
+  const { lineTop, lineHeight } = lineAboveRow(rowTop, lineBox);
+  return { lineTop, focusTop, focusBottom, lineHeight };
 }
 
 /** Lines of context kept above a line gone to, however tall its card. */

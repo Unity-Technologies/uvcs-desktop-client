@@ -747,3 +747,103 @@ button.earlierTag:hover {
   text-overflow: ellipsis;
 }
 
+
+/*
+ * A thread under its file's name in the Comments panel: its kind's icon leading, as a bullet; who started it, its line
+ * and replies, then where it stands; its first words under them, as wide as the row.
+ */
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  align-items: center;
+  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) - 2px);
+  /* The current one's bar, drawn in its room so the row doesn't move when it shows. */
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.row button {
+  cursor: pointer;
+}
+
+.row:hover:not([data-current]) {
+  background: var(--bg-hover);
+}
+
+/* The thread the code shows: a bar on its left, as the diff marks what it shows. */
+.row[data-current] {
+  border-left-color: var(--accent);
+  background: var(--bg-selected);
+}
+
+.row:has(.pill[data-tone='open']) .kindIcon {
+  color: var(--status-changed);
+}
+
+/*
+ * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ */
+.rowAbout {
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.rowAbout .author {
+  overflow: hidden;
+  min-width: 0;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 100000000;
+}
+
+.rowAbout .replyCount {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 10000;
+}
+
+.rowLine {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "·" between who, where and how many replies: drawn, not read aloud. */
+.rowLine::before,
+.rowAbout .replyCount::before {
+  content: '·' / '';
+  margin-right: 6px;
+}
+
+.rowState {
+  display: flex;
+}
+
+/* Its first words, under who started it and as wide as the rest of the row: the way to the thread by keyboard. */
+.rowText {
+  display: flex;
+  grid-column: 2 / 4;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.rowText:hover .foldedText {
+  color: var(--text-primary);
+}

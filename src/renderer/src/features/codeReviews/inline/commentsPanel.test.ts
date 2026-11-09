@@ -8,6 +8,15 @@ import {
   commentsPanelStartsHidden,
   commentPosition,
   commentsPanelCounts,
+  commentsByFile,
+  commentsOrderTip,
+  foldAllEntry,
+  NO_COMMENTS_SEARCH,
+  shownFolds,
+  NO_FOLDED_FILES,
+  toggledFold,
+  unfoldedFor,
+  knownCommentsOrder,
   commentsPanelThreads,
   emptyCommentsText,
   initialCommentsFilter,
@@ -43,6 +52,109 @@ describe('commentsPanelThreads', () => {
 
   it('lists only what is still open', () => {
     expect(commentsPanelThreads(THREADS, 'open').map((thread) => thread.root.id)).toEqual([2]);
+  });
+
+  // Thread 3 was answered last (reply 6), after 5 and 4 were written; 2 is the oldest.
+  it('lists newest first by the latest comment or reply in each thread, a reply bringing an old thread up', () => {
+    expect(commentsPanelThreads(THREADS, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([3, 5, 4, 2]);
+  });
+
+  it('lists oldest first by the same latest comment or reply', () => {
+    expect(commentsPanelThreads(THREADS, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([2, 4, 5, 3]);
+  });
+
+  it('orders by when, not by which was written first: a thread started later can have moved earlier', () => {
+    const early = '2026-11-06T09:00:00Z';
+    const late = '2026-11-06T11:00:00Z';
+    const byDate = threadsOf([onLine(1, '/a.cs', 1, { date: late }), onLine(2, '/a.cs', 2, { date: early })]);
+    expect(commentsPanelThreads(byDate, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([1, 2]);
+    expect(commentsPanelThreads(byDate, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([2, 1]);
+  });
+
+  it('lists threads that last moved at the same moment as they were started, in either direction', () => {
+    const date = '2026-11-06T10:00:00Z';
+    const sameTime = threadsOf([onLine(8, '/a.cs', 1, { date }), onLine(7, '/b.cs', 1, { date })]);
+    expect(commentsPanelThreads(sameTime, 'all', undefined, 'newest').map((thread) => thread.root.id)).toEqual([7, 8]);
+    expect(commentsPanelThreads(sameTime, 'all', undefined, 'oldest').map((thread) => thread.root.id)).toEqual([7, 8]);
+  });
+});
+
+describe('commentsByFile', () => {
+  it('groups the code order under each file, named once, in the order listed', () => {
+    const groups = commentsByFile(commentsPanelThreads(THREADS, 'all'), 'code');
+    expect(groups?.map(({ path, folder, file, threads }) => ({ path, folder, file, ids: threads.map((thread) => thread.root.id) }))).toEqual([
+      { path: 'a.cs', folder: '', file: 'a.cs', ids: [4] },
+      { path: 'src/b.cs', folder: 'src', file: 'b.cs', ids: [3, 5, 2] },
+    ]);
+  });
+
+  it('names a deep folder without the slashes around it', () => {
+    const deep = threadsOf([onLine(1, '/01plastic/bin/client/localization/cm-help.en.txt', 1790)]);
+    expect(commentsByFile(commentsPanelThreads(deep, 'all'), 'code')?.[0]).toMatchObject({ folder: '01plastic/bin/client/localization', file: 'cm-help.en.txt' });
+  });
+
+  it('groups nothing in a time order, where one file\'s comments are apart', () => {
+    expect(commentsByFile(commentsPanelThreads(THREADS, 'all', undefined, 'newest'), 'newest')).toBeNull();
+    expect(commentsByFile(commentsPanelThreads(THREADS, 'all', undefined, 'oldest'), 'oldest')).toBeNull();
+  });
+
+  it('has no group with nothing listed', () => {
+    expect(commentsByFile([], 'code')).toEqual([]);
+  });
+});
+
+describe('folding files', () => {
+  const groups = commentsByFile(commentsPanelThreads(THREADS, 'all'), 'code');
+
+  it('folds a file and unfolds it again, its name clicked', () => {
+    const folded = toggledFold(NO_FOLDED_FILES, 'src/b.cs');
+    expect([...folded]).toEqual(['src/b.cs']);
+    expect([...toggledFold(folded, 'src/b.cs')]).toEqual([]);
+  });
+
+  it('unfolds the file a comment gone to is grouped under, and changes nothing when it was open', () => {
+    const [onA, onB] = groups!;
+    const folded = new Set([onA!.path, onB!.path]);
+    expect([...unfoldedFor(folded, onB!.threads[0]!)]).toEqual([onA!.path]);
+    expect(unfoldedFor(new Set([onA!.path]), onB!.threads[0]!)).toEqual(new Set([onA!.path]));
+    const open = new Set<string>();
+    expect(unfoldedFor(open, onA!.threads[0]!)).toBe(open);
+  });
+
+  it('shows every file unfolded while searching, so a match in a folded one shows why it is listed', () => {
+    const folded = new Set(['a.cs']);
+    expect(shownFolds(folded, { query: 'shelve', kinds: new Set() })).toEqual(NO_FOLDED_FILES);
+    expect(shownFolds(folded, { query: '', kinds: new Set(['question']) })).toEqual(NO_FOLDED_FILES);
+    expect(shownFolds(folded, NO_COMMENTS_SEARCH)).toBe(folded);
+  });
+
+  it('keeps folded what the filter hides now, collapsing all', () => {
+    expect(foldAllEntry(groups, new Set(['gone.cs']))?.folded).toEqual(new Set(['gone.cs', 'a.cs', 'src/b.cs']));
+  });
+
+  it('collapses every file while any is open, and expands them all once none is', () => {
+    expect(foldAllEntry(groups, new Set(['a.cs']))).toEqual({ label: 'Collapse all', collapses: true, folded: new Set(['a.cs', 'src/b.cs']) });
+    expect(foldAllEntry(groups, new Set(['a.cs', 'src/b.cs']))).toEqual({ label: 'Expand all', collapses: false, folded: NO_FOLDED_FILES });
+  });
+
+  it('offers no folding in a time order, nor with nothing listed', () => {
+    expect(foldAllEntry(null, NO_FOLDED_FILES)).toBeNull();
+    expect(foldAllEntry([], NO_FOLDED_FILES)).toBeNull();
+  });
+});
+
+describe('knownCommentsOrder', () => {
+  it('keeps an order this version knows, and falls back to the code order for any other', () => {
+    expect(knownCommentsOrder('newest')).toBe('newest');
+    expect(knownCommentsOrder('byAuthor')).toBe('code');
+    expect(knownCommentsOrder(undefined)).toBe('code');
+  });
+});
+
+describe('commentsOrderTip', () => {
+  it('names the order chosen, and what it sorts by', () => {
+    expect(commentsOrderTip('code')).toEqual({ tip: 'Sort: Code order', sub: 'By file, then line' });
+    expect(commentsOrderTip('newest')).toEqual({ tip: 'Sort: Newest first', sub: 'By the latest comment or reply' });
   });
 });
 
@@ -185,6 +297,12 @@ describe('commentPosition', () => {
     expect(commentPosition(listed, listed[1]!.root.id)).toBe(`2 of ${listed.length}`);
     expect(commentPosition(listed, undefined)).toBe(`${listed.length} comments`);
     expect(commentPosition(listed.slice(0, 1), undefined)).toBe('1 comment');
+  });
+
+  it('says in how many files too, grouped by file', () => {
+    const groups = commentsByFile(listed, 'code');
+    expect(commentPosition(listed, listed[1]!.root.id, groups)).toBe(`2 of ${listed.length} · 2 files`);
+    expect(commentPosition(listed.slice(0, 1), undefined, groups?.slice(0, 1))).toBe('1 comment · 1 file');
   });
 });
 

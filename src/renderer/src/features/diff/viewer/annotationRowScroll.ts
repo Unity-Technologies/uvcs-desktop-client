@@ -3,7 +3,7 @@ import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangedLine } from './changeBlocks';
 import { ROW_FOCUS_ATTRIBUTE } from './diffAnnotations';
 import { pierreLineBox } from './pierreLinePosition';
-import { framedScrollTop, lineAboveRow, scrollTopFor, type RowFrame } from './rowPosition';
+import { framedScrollTop, rowFrameOf, scrollTopFor, type RowFrame } from './rowPosition';
 import { scrollSmoothlyTo } from './smoothScrollPlan';
 
 /** Frames to wait for the diff to render the row: it may only just have loaded, or render only the lines in view. */
@@ -25,7 +25,7 @@ export function scrollToAnnotationRow(container: HTMLElement, line: ChangedLine,
   let aimedAt: number | null = null;
   let glides: boolean | undefined;
   const attempt = (): void => {
-    const rowFrame = rowFrameOf(container, line, virtualizer);
+    const rowFrame = measuredRowFrame(container, line, virtualizer);
     if (rowFrame) {
       // Rendered the first time it's looked for: the diff was showing it already, and the reader sees it move there.
       glides ??= true;
@@ -49,16 +49,21 @@ export function scrollToAnnotationRow(container: HTMLElement, line: ChangedLine,
 }
 
 /** Where the row and its line are in the scrolled content, once the row is rendered. */
-function rowFrameOf(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer): RowFrame | null {
+function measuredRowFrame(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer): RowFrame | null {
   const row = container.querySelector(`[slot="${getLineAnnotationName(line)}"]`);
   const rowBox = row?.getBoundingClientRect();
   // A row whose line isn't rendered has no slot to show in, and no box.
   if (!row || !rowBox || rowBox.height === 0) return null;
   const focusBox = (row.querySelector(`[${ROW_FOCUS_ATTRIBUTE}]`) ?? row).getBoundingClientRect();
   const offset = container.scrollTop - container.getBoundingClientRect().top;
-  const rowTop = rowBox.top + offset;
-  const { lineTop, lineHeight } = line.lineNumber < 1 ? { lineTop: rowTop, lineHeight: 0 } : lineAboveRow(rowTop, lineBox(container, line, virtualizer));
-  return { lineTop, focusTop: focusBox.top + offset, focusBottom: focusBox.bottom + offset, lineHeight };
+  const aboveCode = line.lineNumber < 1;
+  return rowFrameOf({
+    rowTop: rowBox.top + offset,
+    focusTop: focusBox.top + offset,
+    focusBottom: focusBox.bottom + offset,
+    aboveCode,
+    lineBox: aboveCode ? undefined : lineBox(container, line, virtualizer),
+  });
 }
 
 /** Scrolls to where Pierre lays the line out, so its row renders; the rows above the code are at the diff's top. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_MARGIN, framedScrollTop, lineAboveRow, lineOfRow, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
+import { FRAME_MARGIN, framedScrollTop, lineAboveRow, lineOfRow, rowFrameOf, scrollTopFor, TOP_PROBE_REACH, topProbePoints } from './rowPosition';
 
 describe('topProbePoints', () => {
   const view = { left: 100, top: 50, width: 800, bottom: 1050 };
@@ -113,5 +113,24 @@ describe('lineAboveRow', () => {
     expect(to).not.toBeNull();
     expect(lineTop - to!).toBeGreaterThan(0);
     expect(43069 - to!).toBeLessThanOrEqual(view.height);
+  });
+});
+
+describe('rowFrameOf', () => {
+  const view = { scrollTop: 0, height: 600, contentHeight: 5000 };
+
+  // The stack of comments above the code starts at the diff's top; the third card in it is cut at the view's bottom.
+  it('brings a card further down the comments above the code into view, a third of the way down', () => {
+    const frame = rowFrameOf({ rowTop: 0, focusTop: 560, focusBottom: 760, aboveCode: true, lineBox: undefined });
+    expect(framedScrollTop(frame, view)).toBe(560 - 600 / 3);
+  });
+
+  it('leaves the view still when that card shows whole already', () => {
+    const frame = rowFrameOf({ rowTop: 0, focusTop: 100, focusBottom: 300, aboveCode: true, lineBox: undefined });
+    expect(framedScrollTop(frame, view)).toBeNull();
+  });
+
+  it('frames a row under a line with its line', () => {
+    expect(rowFrameOf({ rowTop: 220, focusTop: 230, focusBottom: 400, aboveCode: false, lineBox: { top: 200, height: 20 } })).toEqual({ lineTop: 200, focusTop: 230, focusBottom: 400, lineHeight: 20 });
   });
 });

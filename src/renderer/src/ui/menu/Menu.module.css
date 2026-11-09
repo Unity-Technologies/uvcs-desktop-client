@@ -108,6 +108,11 @@
   margin-left: var(--space-4);
 }
 
+/* The room of the check, where a choice isn't the one made (`MenuMark`). */
+.noMark {
+  width: 14px;
+}
+
 .separator {
   height: 1px;
   margin: var(--space-1) var(--space-2);
