@@ -1,4 +1,4 @@
-import { useContext, useState, type ReactNode } from 'react';
+import { Suspense, useContext, useState, type ReactNode } from 'react';
 import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
@@ -66,9 +66,12 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
     />
   );
   if (!Annotator) return viewer({});
+  // An annotator may load on first use (`lazyComponent`), as the viewer does: nothing shows meanwhile, as for the viewer.
   return (
-    <Annotator target={target} entry={entry}>
-      {viewer}
-    </Annotator>
+    <Suspense fallback={null}>
+      <Annotator target={target} entry={entry}>
+        {viewer}
+      </Annotator>
+    </Suspense>
   );
 }
