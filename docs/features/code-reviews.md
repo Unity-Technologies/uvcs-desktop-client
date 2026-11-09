@@ -233,8 +233,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
   the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
-  some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), in a strip past the code of the panes holding
-  markers, so a marker never draws over the code (`markerRoomCss`, `MARKER_ROOM`), showing who wrote there and how many comments
+  some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
   there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
   open (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
   characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1
