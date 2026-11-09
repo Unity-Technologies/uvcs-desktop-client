@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread, PlacedThread, ThreadSide } from './fileThreads';
-import { lineOfThread, lineThreadsOf, markerIsOpen, markerLabel, shownThreadRows } from './threadRows';
+import { lineOfThread, lineThreadsOf, markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows } from './threadRows';
 
 function thread(id: number, fields: Partial<ReviewComment> = {}, replies: ReviewComment[] = []): LineThread {
   const root: ReviewComment = {
@@ -61,10 +61,31 @@ describe('lineOfThread', () => {
   });
 });
 
+describe('markerPeople', () => {
+  const reply = (id: number, author: string): ReviewComment => ({ ...thread(id).root, id, guid: `r${id}`, author, kind: 'comment', parentId: 1 });
+
+  it('shows who wrote on the line, each once, in the order they first wrote', () => {
+    const line = { threads: [at('additions', 4, thread(1, {}, [reply(5, 'bob'), reply(6, 'ana')])), at('additions', 4, thread(2, { author: 'cy' }))] };
+    expect(markerPeople(line)).toEqual({ people: ['ana', 'bob', 'cy'], more: 0 });
+  });
+
+  it('counts the rest past the few it shows', () => {
+    const line = { threads: ['ana', 'bob', 'cy', 'dee', 'eve'].map((author, index) => at('additions', 4, thread(index + 1, { author }))) };
+    expect(markerPeople(line, 3)).toEqual({ people: ['ana', 'bob', 'cy'], more: 2 });
+  });
+});
+
+describe('markerCommentCount', () => {
+  it('counts every comment on the line, replies too', () => {
+    const replyOf = (id: number): ReviewComment => ({ ...thread(id).root, id, guid: `r${id}`, kind: 'comment', parentId: 1 });
+    expect(markerCommentCount({ threads: [at('additions', 4, thread(1, {}, [replyOf(5), replyOf(6)])), at('additions', 4, thread(2))] })).toBe(4);
+  });
+});
+
 describe('markerLabel', () => {
-  it("names one thread's kind, or how many there are", () => {
-    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1, { kind: 'question' }))] })).toBe('Question on line 4');
-    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1)), at('additions', 4, thread(2))] })).toBe('2 comments on line 4');
+  it("names one comment's kind, else how many there are, and who wrote them", () => {
+    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1, { kind: 'question' }))] })).toBe('Question on line 4, by Ana');
+    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1)), at('additions', 4, thread(2, { author: 'bob' }))] })).toBe('2 comments on line 4, by Ana and Bob');
   });
 });
 
