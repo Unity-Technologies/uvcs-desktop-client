@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentLocationPage, locationText, openItemKind, replyAction, repliesText, startsFolded, threadBadges } from './threadBadges';
+import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges, threadKindName } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -29,15 +29,16 @@ describe('threadBadges', () => {
   });
 });
 
-describe('replyAction and openItemKind', () => {
+describe('replyAction and threadKindName', () => {
   it('says a discarding reply discarded it, and nothing of another', () => {
     expect(replyAction({ kind: 'discard' })).toBe('discarded it');
     expect(replyAction({ kind: 'comment' })).toBeUndefined();
   });
 
-  it('calls an open thread a question or a change request', () => {
-    expect(openItemKind({ kind: 'question' })).toBe('Question');
-    expect(openItemKind({ kind: 'changeRequest' })).toBe('Change request');
+  it('names a thread a change request, a question or a comment', () => {
+    expect(threadKindName({ kind: 'question' })).toBe('Question');
+    expect(threadKindName({ kind: 'changeRequest' })).toBe('Change request');
+    expect(threadKindName({ kind: 'comment' })).toBe('Comment');
   });
 });
 
@@ -50,18 +51,19 @@ describe('a comment on a line', () => {
     expect(locationText({ ...ON_LINE, path: '/README.md' })).toEqual({ folder: '', file: 'README.md', line: ':11' });
   });
 
-  it('opens the review on its Changes tab at that file and line', () => {
-    expect(commentLocationPage(41, ON_LINE, undefined)).toEqual({
+  it('opens the review on its Changes tab at the thread, in its file', () => {
+    expect(commentLocationPage(41, { id: 7, anchor: ON_LINE })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs', focusThread: 7 });
+  });
+
+  it('opens one written changeset by changeset on that changeset', () => {
+    expect(commentLocationPage(41, { id: 7, anchor: ON_LINE, changesetId: 2 })).toEqual({
       kind: 'codeReview',
       reviewId: 41,
       tab: 'changes',
       focusPath: 'Assets/Scripts/SwitchFlow.cs',
-      focusLines: { side: 'new', first: 11, last: 11 },
+      focusThread: 7,
+      focusChangeset: 2,
     });
-  });
-
-  it("opens one written in a single changeset's diff on its file only, whose lines the whole diff may not share", () => {
-    expect(commentLocationPage(41, ON_LINE, 2)).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs' });
   });
 });
 

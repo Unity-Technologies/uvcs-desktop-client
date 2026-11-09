@@ -34,9 +34,9 @@ export function replyAction(reply: Pick<ReviewComment, 'kind'>): string | undefi
   return reply.kind === 'discard' ? 'discarded it' : undefined;
 }
 
-/** What an open thread is in the list of what's still open: its icon and what a screen reader calls it. */
-export function openItemKind(root: Pick<ReviewComment, 'kind'>): 'Question' | 'Change request' {
-  return root.kind === 'question' ? 'Question' : 'Change request';
+/** What a thread on a line is, named: a change request, a question, or a plain comment. */
+export function threadKindName(root: Pick<ReviewComment, 'kind'>): 'Change request' | 'Question' | 'Comment' {
+  return root.kind === 'changeRequest' ? 'Change request' : root.kind === 'question' ? 'Question' : 'Comment';
 }
 
 /**
@@ -64,14 +64,12 @@ export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string 
 }
 
 /**
- * The review on its Changes tab at a comment's file: the diff names files without the leading slash. Its line is
- * selected on the newer side when the comment was written in the whole review's diff; one written in a single
- * changeset's diff opens on its file only, as the whole diff's lines may not be that changeset's. A comment on an
- * older revision of the file, or on a file the review deletes, still opens at its line number in the newest version:
- * placing it exactly needs the diff's revisions, which the Changes tab reads.
+ * The review on its Changes tab at a thread: its file (the diff names files without the leading slash), in the mode it
+ * was written in (a branch's diff opens on the changeset of one written changeset by changeset), the diff scrolled to
+ * the thread wherever the file has it: at its line, or above the code when written on an earlier version whose line
+ * changed since.
  */
-export function commentLocationPage(reviewId: number, anchor: Extract<ReviewCommentAnchor, { kind: 'line' }>, changesetId: number | undefined): PageOf<'codeReview'> {
-  const focusPath = anchor.path.replace(/^\//, '');
-  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath };
-  return changesetId === undefined ? { ...page, focusLines: { side: 'new', first: anchor.line, last: anchor.line } } : page;
+export function commentLocationPage(reviewId: number, root: Pick<ReviewComment, 'id' | 'changesetId'> & { anchor: Extract<ReviewCommentAnchor, { kind: 'line' }> }): PageOf<'codeReview'> {
+  const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath: root.anchor.path.replace(/^\//, ''), focusThread: root.id };
+  return root.changesetId === undefined ? page : { ...page, focusChangeset: root.changesetId };
 }
