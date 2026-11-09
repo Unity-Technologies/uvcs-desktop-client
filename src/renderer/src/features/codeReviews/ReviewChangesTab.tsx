@@ -1,33 +1,29 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { changesFocusAskedFor } from './reviewTab';
-import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
-import styles from './CodeReviewPage.module.css';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import type { DiffTarget } from '@shared/domain/diff';
 import { usePlaceUser } from '../../app/account/accounts';
 import type { PageOf } from '../../app/navigation/pages';
-import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { commentLineText } from '../../lib/comments/commentText';
 import { lazyComponent } from '../../lib/lazyComponent';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { useShortcut } from '../../lib/useShortcut';
 import { DiffFocusRequestContext, type DiffFocusRequest } from '../diff/diffFocusRequest';
 import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
-import type { DiffTarget } from '@shared/domain/diff';
 import { useReviewThreads } from './conversation/useReviewThreads';
+import { commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
-import { commentsPanelStartsHidden, commentsPanelThreads, diffWidthBesidePanel, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
-import { hotkey } from '../../lib/shortcutRegistry';
-import { useShortcut } from '../../lib/useShortcut';
-
-const COMMENTS_PANEL_KEY = 'reviewComments';
-/** Narrower than an object's details, and giving way first as the window narrows: the diff beside it is what's read. */
-const COMMENTS_PANEL_WIDTH: DetailsWidthLimits = { initial: 340, min: 260, max: 560, restMin: 640 };
+import { changesFocusAskedFor } from './reviewTab';
+import { COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH, useCommentsPanelStart } from './useCommentsPanelStart';
+import styles from './CodeReviewPage.module.css';
 
 // It places comments by line diffs (Pierre's), which load with the diff viewer, on first use: not in the startup bundle.
 const ReviewFileAnnotator = lazyComponent(() => import('./inline/ReviewFileAnnotator').then((module) => module.ReviewFileAnnotator));
@@ -61,7 +57,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
   const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search) : []), [threads, filter, search]);
   const tab = useRef<HTMLDivElement>(null);
-  usePanelStart(threads === undefined ? null : all.length, tab);
+  useCommentsPanelStart(threads === undefined ? null : all.length, tab);
 
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
@@ -135,32 +131,5 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
         </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
     </ReviewCommentsContext.Provider>
-  );
-}
-
-/**
- * Starts the Comments panel hidden when it has nothing to list (`commentsPanelStartsHidden`), decided once the
- * conversation is first read (`codeThreads`, null until then); leaving the review forgets it.
- */
-function usePanelStart(codeThreads: number | null, tab: RefObject<HTMLElement | null>): void {
-  const decided = useRef(false);
-  // This tab's own start: another review's tab, replacing it, starts before this one is cleaned up.
-  const [owner] = useState(() => ({}));
-  const startHidden = useDetailsPaneStore((state) => state.startHidden);
-  const forgetStarted = useDetailsPaneStore((state) => state.forgetStarted);
-  // Before the frame paints: the panel never shows for a moment first.
-  useLayoutEffect(() => {
-    if (decided.current || codeThreads === null) return;
-    decided.current = true;
-    const panelWidth = detailsWidthOf(useDetailsPaneStore.getState(), COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
-    const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: FILES_WIDTH, panelWidth });
-    if (commentsPanelStartsHidden({ codeThreads, diffWidth })) startHidden(COMMENTS_PANEL_KEY, owner);
-  }, [codeThreads, startHidden, tab, owner]);
-  useEffect(
-    () => () => {
-      decided.current = false;
-      forgetStarted(COMMENTS_PANEL_KEY, owner);
-    },
-    [forgetStarted, owner],
   );
 }
