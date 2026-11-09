@@ -204,11 +204,12 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the conversation sums up a settled one
   (`ThreadSummaryCard`), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything
-  is, `initialCommentsFilter`). A click goes to the thread: its file, its mode, scrolled to it and lit
+  is, `initialCommentsFilter`). A click anywhere on a card goes to the thread: its file, its mode, scrolled to it, whole, and lit
   (`ReviewComments.goToThread`, `ThreadFocus`). Under its header, where the one gone to is ("3 of 12",
   `commentPosition`) and arrows to the previous and next; **N** and **⇧N** do the same with the panel hidden
   (`steppedThread`: in the panel's order, across files and modes, stopping at either end; from a thread that just
-  left the list, settled under Open, on from where it sat). The panel's filter is kept by the Changes tab for that
+  left the list, settled under Open, on from where it sat). The card gone to scrolls into the panel's view, and a card
+  clicked before gives up the focus, whose ring the key would draw on a comment no longer current. The panel's filter is kept by the Changes tab for that
   (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the thread gone to keeps its ring until another one is:
   among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
   conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read

@@ -3,7 +3,7 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState, type ReactNode } from 'react';
+import { useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
@@ -93,13 +93,19 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
  */
 export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeApplied }: { reviewId: number; thread: ReviewThread; current: boolean; onOpen: () => void; onSeeApplied?: () => void }) {
   return (
-    <section className={styles.thread} data-folded="true" data-current={current || undefined}>
+    // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
+    // The buttons inside stay the way there by keyboard.
+    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
       <ThreadHeader reviewId={reviewId} thread={thread} folded onLocation={{ go: onOpen, tip: 'Show in the code' }} onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} />
       </div>
     </section>
   );
+}
+
+function clickedOutsideControls(event: MouseEvent): boolean {
+  return event.target instanceof Element && event.target.closest('button, a, input, textarea') === null;
 }
 
 interface ThreadHeaderProps {

@@ -612,6 +612,15 @@ button.pill:hover {
   white-space: nowrap;
 }
 
+/* A card that goes to its thread from anywhere on it: the Changes tab's Comments panel. */
+.thread[data-opens] {
+  cursor: pointer;
+}
+
+.thread[data-opens]:hover:not([data-current]) {
+  border-color: var(--border-strong);
+}
+
 /* The thread the code shows, in the Changes tab's Comments panel. */
 .thread[data-current] {
   border-color: var(--accent);
