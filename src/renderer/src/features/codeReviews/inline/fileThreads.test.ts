@@ -102,8 +102,8 @@ describe('placeEarlier', () => {
   });
 
   it('keeps apart, as outdated, a thread whose line changed', () => {
-    const { outdated } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
-    expect(ids(outdated)).toEqual([2]);
+    const { outdated } = placeEarlier(earlier, () => OLD_TEXT, lineOf, writtenWhole);
+    expect(ids(outdated)).toEqual([2, 3]);
   });
 
   it("leaves a changeset's outdated thread to its changeset's diff", () => {

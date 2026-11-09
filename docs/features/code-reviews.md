@@ -186,8 +186,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   commented at cs:8, the author checked in cs:9 and cs:10), that version and the newer side are read
   (`versionsToRead`, `useFileVersionTexts`: one immutable read each, only for a file shown that has such threads; the
   file's threads on earlier versions wait until every one is read or has failed, so a row placed never moves for
-  another arriving, Pierre keeping rows by their place, `placeEarlier`; one that can't be read, purged, stays apart,
-  `unreadable`, holding none of the others), and
+  another arriving, Pierre keeping rows by their place, `placeEarlier`; one whose read failed holds none of the
+  others, and its threads are outdated, their line known though not their text; a purged one reads as empty), and
   the line is followed into the newest version (`newerLineOf`, a line diff ignoring line ends): unchanged, the thread
   sits at its line there, tagged **Earlier version**; changed or gone, it is **outdated**, gathered above the code
   ("2 outdated comments", folded), each with the lines it was written on (`snippetOf`) (`earlierTagOf`). Why not the
@@ -270,8 +270,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   In the code, the thread gone to keeps its ring until another one is:
   among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
   conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
-  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); a version that can't be read (purged) keeps the diff
-  at its top.
+  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version that can't be read (purged, or its read
+  failed) is among the outdated ones, above the code, and opens there.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,

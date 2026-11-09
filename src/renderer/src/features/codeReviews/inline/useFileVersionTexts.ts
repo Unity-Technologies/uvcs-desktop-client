@@ -7,8 +7,8 @@ import type { VersionText } from './fileThreads';
  * The texts of some revisions of a file, by revision: the versions a review's threads were written on, and the newer
  * side's, to place those threads where their lines are now (`fileCommentsOf`). Each is read once and kept as every
  * revision is (`contentQuery`): the newer side's is the diff's own read, shared. None is read for a file whose threads
- * are all on the versions shown (`revisions` empty), the common case. A version whose read failed (purged) is `null`,
- * told apart from one still read (`VersionText`), so it holds no other version's threads.
+ * are all on the versions shown (`revisions` empty), the common case. A version whose read failed is `null`, told
+ * apart from one still read (`VersionText`), so it holds no other version's threads; a purged one reads as empty.
  */
 export function useFileVersionTexts(place: Place, repository: string, fileName: string, revisions: readonly number[]): (revisionId: number) => VersionText {
   const results = useQueries({
