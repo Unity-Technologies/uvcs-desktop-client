@@ -1,6 +1,6 @@
 import type { CodeReviewer, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 import type { LucideIcon } from 'lucide-react';
-import { displayName } from '../../lib/userName';
+import { displayName, sameUser } from '../../lib/userName';
 import { isGroup, reviewerLabel, type ReviewerGroups } from './reviewerGroups';
 import { REVIEW_STATUS_COLORS, REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import type { StackedAvatar } from '../../ui/AvatarStack';
@@ -75,8 +75,7 @@ export function isReviewer(review: Pick<CodeReviewSummary, 'reviewers'>, user: s
 }
 
 function reviewerNamed(review: Pick<CodeReviewSummary, 'reviewers'>, user: string | undefined): CodeReviewer | undefined {
-  const name = user?.toLowerCase();
-  return name ? review.reviewers.find((reviewer) => reviewer.name.toLowerCase() === name) : undefined;
+  return user ? review.reviewers.find((reviewer) => sameUser(reviewer.name, user)) : undefined;
 }
 
 /** The status `user` gave the review as one of its reviewers; none when they aren't one. */
@@ -119,10 +118,10 @@ export function offeredReviewers({ users, groups }: ServerMembers, reviewers: re
  * Not the user themselves: they set their own status with Your review.
  */
 export function canReRequest(reviewer: CodeReviewer, user: string | undefined): boolean {
-  return reviewer.status !== 'Under review' && reviewer.name.toLowerCase() !== user?.toLowerCase();
+  return reviewer.status !== 'Under review' && !(user !== undefined && sameUser(reviewer.name, user));
 }
 
 /** Whether `user` is the review's author: as a reviewer (they may review their own changes too), or a comment's. */
 export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, user: string): boolean {
-  return user.toLowerCase() === review.owner.toLowerCase();
+  return sameUser(user, review.owner);
 }

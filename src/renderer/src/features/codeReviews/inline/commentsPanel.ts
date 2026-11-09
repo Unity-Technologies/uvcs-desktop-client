@@ -1,5 +1,6 @@
 import { comparePaths } from '@shared/pathOrder';
 import { commentText } from '../../../lib/comments/commentText';
+import { lowerCasedText } from '../../../lib/lowerCasedText';
 import { matchesWordFilter, queryWords } from '../../../lib/matchesAllWords';
 import { pluralize } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
@@ -59,9 +60,9 @@ export function matchExcerpt(thread: Pick<LineThread, 'root' | 'replies'>, query
   let best: { author: string; text: string; found: number; at: number } | null = null;
   for (const comment of [thread.root, ...thread.replies]) {
     const text = commentText(comment.text).replace(/\s+/g, ' ').trim();
-    const lower = text.toLowerCase();
+    const { lower, originalIndex } = lowerCasedText(text);
     const positions = words.map((word) => lower.indexOf(word)).filter((at) => at !== -1);
-    if (positions.length > (best?.found ?? 0)) best = { author: comment.author, text, found: positions.length, at: Math.min(...positions) };
+    if (positions.length > (best?.found ?? 0)) best = { author: comment.author, text, found: positions.length, at: originalIndex(Math.min(...positions)) };
   }
   if (!best) return null;
   return { author: best.author, text: excerptFrom(best.text, best.at) };

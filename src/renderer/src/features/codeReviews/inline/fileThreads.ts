@@ -99,32 +99,38 @@ function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
   return path === file.path || path === file.oldPath;
 }
 
+/** A version's text: read, still being read (`undefined`), or not to be read at all (`null`: purged, or its read failed). */
+export type VersionText = string | null | undefined;
+
 /**
  * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on the newer side
- * when it is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. A thread whose
- * version isn't read yet waits. A thread written changeset by changeset, in the whole review's diff, shows only where its
+ * when it is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
+ * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
+ * before another version arrives would be moved by it. One whose version can't be read stays apart (`unreadable`),
+ * and holds none of the others. A thread written changeset by changeset, in the whole review's diff, shows only where its
  * line is still there: its own place is its changeset's diff.
  */
 export function placeEarlier(
   earlier: readonly EarlierThread[],
-  textOf: (revisionId: number) => string | undefined,
+  textOf: (revisionId: number) => VersionText,
   lineOf: (earlierText: string, line: number) => number | null,
   showsWhenOutdated: (thread: LineThread) => boolean,
-): { placed: PlacedThread[]; outdated: EarlierThread[]; reading: EarlierThread[] } {
+): { placed: PlacedThread[]; outdated: EarlierThread[]; reading: EarlierThread[]; unreadable: EarlierThread[] } {
   const placed: PlacedThread[] = [];
   const outdated: EarlierThread[] = [];
-  const reading: EarlierThread[] = [];
+  const unreadable: EarlierThread[] = [];
+  if (earlier.some((entry) => textOf(entry.revisionId) === undefined)) return { placed, outdated, reading: [...earlier], unreadable };
   for (const entry of earlier) {
     const text = textOf(entry.revisionId);
-    if (text === undefined) {
-      reading.push(entry);
+    if (typeof text !== 'string') {
+      unreadable.push(entry);
       continue;
     }
     const line = lineOf(text, entry.thread.root.anchor.line);
     if (line !== null) placed.push({ thread: entry.thread, side: 'additions', line, earlier: entry });
     else if (showsWhenOutdated(entry.thread)) outdated.push(entry);
   }
-  return { placed, outdated, reading };
+  return { placed, outdated, reading: [], unreadable };
 }
 
 /** The earlier versions to read to place the threads on them, each once. */

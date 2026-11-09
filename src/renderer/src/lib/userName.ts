@@ -18,6 +18,11 @@ export function initials(user: string): string {
   return letters.join('').toUpperCase() || '?';
 }
 
+/** Whether two names are the same user: `cm` and the server match a user's name whatever its case. */
+export function sameUser(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 /** What a filter matches a user by: the name shown (which `UserLabel` highlights), and the user as stored. */
 export function userFilterTexts(user: string): string[] {
   return [displayName(user), user];

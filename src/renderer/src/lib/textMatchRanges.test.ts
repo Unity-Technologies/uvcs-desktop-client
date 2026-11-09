@@ -14,6 +14,20 @@ describe('wordMatchRanges', () => {
     expect(wordMatchRanges('abcd', 'abc bcd')).toEqual([[0, 4]]);
   });
 
+  it('marks the word itself after a letter that grows when lower-cased, as a Turkish İ does', () => {
+    const text = 'İZMİR or Ankara';
+    const [[start, end]] = wordMatchRanges(text, 'ankara') as [[number, number]];
+
+    expect(text.slice(start, end)).toBe('Ankara');
+  });
+
+  it('marks a word holding such a letter whole', () => {
+    const text = 'from İzmir on';
+    const [[start, end]] = wordMatchRanges(text, 'İzmir') as [[number, number]];
+
+    expect(text.slice(start, end)).toBe('İzmir');
+  });
+
   it('matches nothing for a blank query', () => {
     expect(wordMatchRanges('text', '  ')).toEqual([]);
   });

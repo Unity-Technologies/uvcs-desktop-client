@@ -2,7 +2,7 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { earlierRevisions, placeEarlier, threadsOfFile, writtenIn, type EarlierThread, type ReviewDiffView, type ShownFile, type ThreadSide } from './fileThreads';
+import { earlierRevisions, placeEarlier, threadsOfFile, writtenIn, type EarlierThread, type ReviewDiffView, type ShownFile, type ThreadSide, type VersionText } from './fileThreads';
 import { newerLineFinder } from './newerLine';
 import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } from './threadRows';
 
@@ -10,8 +10,10 @@ import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } f
 export interface FileComments {
   lines: LineThreads[];
   outdated: EarlierThread[];
-  /** On an earlier version not read yet: placed at a line or outdated once it is. */
+  /** On an earlier version not read yet: placed at a line or outdated once every one is. */
   reading: EarlierThread[];
+  /** On an earlier version that can't be read (purged, or its read failed): it has no line to find. */
+  unreadable: EarlierThread[];
 }
 
 interface FileCommentsInput {
@@ -20,13 +22,14 @@ interface FileCommentsInput {
   view: ReviewDiffView;
   file: ShownFile;
   /** An earlier version's text once read, the newer side's (`file.modifiedRevision`) among them. */
-  textOf: (revisionId: number) => string | undefined;
+  textOf: (revisionId: number) => VersionText;
 }
 
 /**
  * Where a file's threads show (`threadsOfFile`, `placeEarlier`): those on a version the diff shows at their line, those
- * on an earlier one at their line now when it's unchanged since, the rest outdated. Until the earlier versions are read,
- * their threads wait (none shows outdated only to move a moment later).
+ * on an earlier one at their line now when it's unchanged since, the rest outdated. Until the earlier versions are read
+ * or fail, their threads wait (none shows outdated, or at a line, only to move a moment later); a newer side that
+ * can't be read leaves them all outdated.
  */
 export function fileCommentsOf({ threads, review, view, file, textOf }: FileCommentsInput): FileComments {
   const { placed, earlier } = threadsOfFile(threads, review, view, file);
@@ -38,7 +41,7 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
     (text, line) => (lineIn === null ? null : lineIn(text, line)),
     (thread) => writtenIn(review, thread).kind === view.kind,
   );
-  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading };
+  return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading, unreadable: placedEarlier.unreadable };
 }
 
 /**
@@ -81,8 +84,8 @@ export function openedOutdated(outdated: readonly EarlierThread[], opened: reado
  *
  * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
  * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
- * go after: the lines with a thread on a version shown first, then those placed once an earlier version is read, then
- * the outdated ones. While comments are hidden (`opened` given), only what was opened shows, in the order it was
+ * go after: the lines with a thread on a version shown first, then those placed once the earlier versions are read (all
+ * at once, `placeEarlier`), then the outdated ones. While comments are hidden (`opened` given), only what was opened shows, in the order it was
  * opened (`shownThreadRows`): the outdated threads opened (`outdatedKey`) in one row, where the first was.
  */
 export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, opened?: readonly string[]): DiffLineAnnotation<string>[] {
@@ -123,5 +126,5 @@ export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, 
 export function holdsThread(comments: FileComments | null, threadId: number): boolean {
   if (!comments) return false;
   const isIt = (entry: EarlierThread): boolean => entry.thread.root.id === threadId;
-  return lineOfThread(comments.lines, threadId) !== undefined || comments.outdated.some(isIt) || comments.reading.some(isIt);
+  return lineOfThread(comments.lines, threadId) !== undefined || [comments.outdated, comments.reading, comments.unreadable].some((entries) => entries.some(isIt));
 }

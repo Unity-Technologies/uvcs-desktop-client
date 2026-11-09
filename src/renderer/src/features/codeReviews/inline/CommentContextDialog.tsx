@@ -13,13 +13,13 @@ import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
-import { threadsOf } from '../conversation/reviewThreads';
-import { useReviewConversation } from '../conversation/useReviewConversation';
+import { useReviewThreads } from '../conversation/useReviewThreads';
 import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
 import { ContextViewSwitch } from './ContextViewSwitch';
 import type { LineThread } from './fileThreads';
+import { ContextViewPending } from './ContextViewPending';
 import { useContextComparison } from './useContextComparison';
 import { useThreadRow } from './useThreadRow';
 import styles from './CommentContextDialog.module.css';
@@ -69,8 +69,7 @@ function ThreadInContext(props: DialogProps) {
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
   const [commentShown, setCommentShown] = useState(true);
-  const { data: conversation } = useReviewConversation(review.id);
-  const threads = useMemo(() => conversation && threadsOf(conversation.comments), [conversation]);
+  const threads = useReviewThreads(review.id);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
   // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.
@@ -142,11 +141,11 @@ export type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
 /** One view of the commented file alone: its two versions, the thread under its line, scrolled to it. */
 function ViewDiff(props: ViewProps) {
   const state = useContextComparison(props);
-  const comparison = state.kind === 'comparison' ? state.comparison : null;
-  const annotations = useThreadRow({ ...props, comparison });
-  if (state.kind === 'error') return <EmptyState title="Couldn't load this diff" description={state.message} />;
-  if (state.kind === 'reading') return <CenteredSpinner />;
-  if (state.kind === 'missing' || !comparison || !annotations) return <EmptyState title={state.kind === 'missing' ? state.text : ''} />;
+  const annotations = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
+  if (state.kind !== 'comparison') return <ContextViewPending state={state} />;
+  // None only without a comparison.
+  if (!annotations) return null;
+  const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
       <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} />

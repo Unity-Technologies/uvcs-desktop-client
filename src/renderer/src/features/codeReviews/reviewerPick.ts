@@ -3,6 +3,7 @@ import type { MemberKind, MemberRef } from '@shared/domain/member';
 import { isGroup, reviewerRef, type NamedReviewer, type ReviewerGroups } from './reviewerGroups';
 import { offeredReviewers, type ServerMembers } from './reviewers';
 import type { ReviewersRead } from './reviewersRead';
+import { sameUser } from '../../lib/userName';
 
 /**
  * The reviewer picker's state while it's open: the reviewers as it opened, and who is checked. What it changes is
@@ -46,12 +47,12 @@ export const READING_REVIEWERS = 'Reading the reviewers…';
 
 /** Whether `name` is checked, whatever its case. */
 export function isPicked(pick: ReviewerPick, name: string): boolean {
-  return pick.picked.some((member) => sameName(member.name, name));
+  return pick.picked.some((member) => sameUser(member.name, name));
 }
 
 /** Checks `member`, or unchecks them when checked. */
 export function togglePicked(pick: ReviewerPick, member: MemberRef): ReviewerPick {
-  const picked = isPicked(pick, member.name) ? pick.picked.filter((each) => !sameName(each.name, member.name)) : [...pick.picked, member];
+  const picked = isPicked(pick, member.name) ? pick.picked.filter((each) => !sameUser(each.name, member.name)) : [...pick.picked, member];
   return { ...pick, picked };
 }
 
@@ -77,12 +78,12 @@ export function changesReviewers({ add, remove }: ReviewerChanges): boolean {
  */
 export function pickedKind(pick: ReviewerPick, name: string, groups: ReviewerGroups): MemberKind {
   const reviewer = openedReviewer(pick, name);
-  const checked = reviewer ? undefined : pick.picked.find((member) => sameName(member.name, name));
+  const checked = reviewer ? undefined : pick.picked.find((member) => sameUser(member.name, name));
   return checked?.kind ?? (isGroup(reviewer ?? { name }, groups) ? 'group' : 'user');
 }
 
 function openedReviewer(pick: ReviewerPick, name: string): NamedReviewer | undefined {
-  return pick.onOpen.find((each) => sameName(each.name, name));
+  return pick.onOpen.find((each) => sameUser(each.name, name));
 }
 
 /**
@@ -109,8 +110,4 @@ export function pickerEmptyText({ listFailed, loading, search }: PickerListing):
   if (loading) return 'Reading the users and groups…';
   if (listFailed && !search.trim()) return 'Type a name.';
   return `No one matches “${search.trim()}”`;
-}
-
-function sameName(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
 }

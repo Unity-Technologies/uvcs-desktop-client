@@ -1,15 +1,19 @@
+import { lowerCasedText } from './lowerCasedText';
 import { queryWords } from './matchesAllWords';
 
 /** A `[start, end)` slice of a text to highlight. */
 export type TextRange = readonly [start: number, end: number];
 
-/** Every case-insensitive occurrence of each word of `query` in `text`, sorted and merged. For substring filters. */
+/**
+ * Every case-insensitive occurrence of each word of `query` in `text`, sorted and merged. For substring filters. Found
+ * in the lower-cased text, marked in the text itself (`lowerCasedText`).
+ */
 export function wordMatchRanges(text: string, query: string): TextRange[] {
-  const haystack = text.toLowerCase();
+  const { lower, originalRange } = lowerCasedText(text);
   const ranges: [number, number][] = [];
   for (const word of queryWords(query)) {
-    for (let found = haystack.indexOf(word); found !== -1; found = haystack.indexOf(word, found + word.length)) {
-      ranges.push([found, found + word.length]);
+    for (let found = lower.indexOf(word); found !== -1; found = lower.indexOf(word, found + word.length)) {
+      ranges.push(originalRange(found, found + word.length));
     }
   }
   return mergeRanges(ranges);

@@ -104,6 +104,18 @@ describe('matchExcerpt', () => {
     expect(matchExcerpt(thread, 'release')).toEqual({ author: 'miryam', text: 'Fix the release notes: • They must say that a bare --re-request needs --all' });
   });
 
+  it('starts at the match in a text whose letters grow when lower-cased, as a Turkish İ does', () => {
+    const [turkish] = threadsOf([onLine(1, '/src/City.cs', 1, { text: 'İSTANBUL İZMİR İÇEL İNEBOLU İĞDIR names the cities; rename them' })]) as [LineThread];
+
+    expect(matchExcerpt(turkish, 'rename')).toEqual({ author: 'ana', text: '…names the cities; rename them' });
+  });
+
+  it('finds a word as it is typed in any script, a Greek one ending in Σ too', () => {
+    const [greek] = threadsOf([onLine(1, '/src/Street.cs', 1, { text: 'ΟΔΟΣ is the street' })]) as [LineThread];
+
+    expect(matchExcerpt(greek, 'ΟΔΟΣ')).toEqual({ author: 'ana', text: 'ΟΔΟΣ is the street' });
+  });
+
   it('picks the comment holding most of the words', () => {
     expect(matchExcerpt(thread, 'fixed attribute notes')?.author).toBe('dani');
   });

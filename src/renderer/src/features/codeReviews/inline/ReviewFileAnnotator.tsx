@@ -13,7 +13,7 @@ import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
-import { reviewDiffViewOf, type LineThread } from './fileThreads';
+import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads } from './threadRows';
@@ -44,7 +44,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // The earlier versions threads were written on, and the newer side's text, only when there are such threads.
   const toRead = useMemo(() => (threads && comments && view ? versionsToRead({ threads, review: comments.review.target, view, file }) : NO_REVISIONS), [threads, fileKey]);
   const textOf = useFileVersionTexts(place, entry.repository, entry.path, toRead);
-  const readKey = toRead.map((revision) => `${revision}:${textOf(revision) === undefined ? 0 : 1}`).join(',');
+  const readKey = toRead.map((revision) => `${revision}:${readStateOf(textOf(revision))}`).join(',');
   const fileComments = useMemo(
     () => (threads && comments && view ? fileCommentsOf({ threads, review: comments.review.target, view, file, textOf }) : null),
     [threads, fileKey, readKey],
@@ -101,6 +101,11 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
 
 const NO_KEYS: readonly string[] = [];
 
+/** What changes the file's comments as its versions arrive: each version read, still read, or failed. */
+function readStateOf(text: VersionText): string {
+  return text === undefined ? 'reading' : text === null ? 'failed' : 'read';
+}
+
 /** A marker's content: who wrote on the line, and how many comments there are, as a pull request's do. */
 function MarkerContent({ line }: { line: LineThreads }) {
   const { people, more } = markerPeople(line);
@@ -117,7 +122,7 @@ interface RowContext {
   comments: ReviewComments;
   fileComments: FileComments;
   focus: ReviewComments['focus'];
-  textOf: (revisionId: number) => string | undefined;
+  textOf: (revisionId: number) => VersionText;
   /** What was opened while comments are hidden (lines, outdated threads); none while they show in the code. */
   opened?: readonly string[];
   /** Folds a line opened from its marker (or an outdated thread gone to) back; none while comments show in the code. */
