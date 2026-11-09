@@ -843,20 +843,20 @@ docs/features/code-reviews.md "Comments in the code"):
   page behind keeps its file and lines named) and offers no Expand Diff (`DiffBrowserLayout`'s `expandable={false}`:
   the window isn't the dialog's to lay out).
 - `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
-  code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses
-  too; it measures again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a
-  short file when a row goes in above the code), and a line whose row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked
-  `ROW_FOCUS_ATTRIBUTE` (one thread of several), read with context: the line a third of the way down, its row below; a
-  row taller than the room below scrolls on just enough to fit, keeping three lines above the line; a line near the
-  top stays at the top, one near the end stops at the end (`focusScrollTop` in `lib/scrollPlacement`, through
-  `framedScrollTop`; nothing moves when they already show, away from the edges). The line ends where its row starts
-  (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the card under it included. A row the diff already shows is glided to
-  (`scrollSmoothlyTo`); one not rendered yet is jumped to where Pierre lays its line out, then set right as rows render
-  and grow. While the place goes to one of its rows (`opensAtRow`), the diff doesn't open at its
-  first change (`openingStep`'s `opensOnLines`), which would scroll past the row once placed. Every row's and marker's
-  line is unfolded from a folded unchanged region
-  (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
-  replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
+  code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses too;
+  it measures again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short
+  file when a row goes in above the code), and a line whose row to scroll to (`scrollToAnnotationRow`): the line and its
+  row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE` (one thread of several), read with context: the line a third
+  of the way down, its row below; a row taller than the room below scrolls on just enough to fit, keeping three lines
+  above the line; a line near the top stays at the top, one near the end stops at the end (`focusScrollTop` in
+  `lib/scrollPlacement`, through `framedScrollTop`; nothing moves when they already show, away from the edges). The line
+  ends where its row starts (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the
+  card under it included. A row the diff already shows is glided to (`scrollSmoothlyTo`); one not rendered yet is jumped
+  to where Pierre lays its line out, then set right as rows render and grow. While the place goes to one of its rows
+  (`opensAtRow`), the diff doesn't open at its first change (`openingStep`'s `opensOnLines`), which would scroll past
+  the row once placed. Every row's and marker's line is unfolded from a folded unchanged region (`linesToReveal`,
+  Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text replacing the plain
+  one), folding its regions again, and a line already shown unfolds nothing.
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 

@@ -99,14 +99,13 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 ## The review's page
 
 - The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
-  server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one Apply its page offers: the
-  shelve's diff below drops its own, `pageApplies`), **Your review** and the page's menu
-  (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays
-  out of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation,
-  not in the header. Then two tabs
-  (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the
-  tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a file (`focusPath`,
-  a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
+  server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one
+  Apply its page offers: the shelve's diff below drops its own, `pageApplies`), **Your review** and the page's menu
+  (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays out
+  of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation, not in
+  the header. Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed
+  diff. The page names the tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a
+  file (`focusPath`, a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
   (`navigation.replacePage`), so Back leaves the review, and the page's link follows it: the review alone on its
   conversation, the review and its file on its changes (`pageLinkTarget`). Each tab shown so far stays mounted, the
   other hidden (`mountedTabs`), so going back to one finds it as it was left: its scroll, the threads unfolded, a reply
@@ -137,29 +136,27 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open, a click
   scrolling to each (`ReviewSideRail`).
-- A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
-  deleted starts a thread of its own. One on a line shows its file first, the whole path a link to it in the
-  Changes tab, on the same page as a tab moves (a place in the review on top replaces it, never stacks a second
-  page of it: `movesWithinTop`), opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
+- A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client deleted
+  starts a thread of its own. One on a line shows its file first, the whole path a link to it in the Changes tab, on the
+  same page as a tab moves (a place in the review on top replaces it, never stacks a second page of it:
+  `movesWithinTop`), opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
   `focusChangeset` for one written changeset by changeset; see "Comments in the code"), then, apart and as text, the
-  line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that
-  line, which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on
-  every card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read,
-  replied to, folded and selected. Its
-  header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
-  (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
-  is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its tooltip naming the changeset: "Applied in changeset 4: see
-  how it was applied", `appliedPillTip`; shown in how it was applied itself, it only names the changeset, as opening it
-  would go behind the dialog, whose footer opens it: `threadHeaderOf`'s `inContext`) or a reply discards it
-  (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
-  way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
-  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole (by keyboard, its fold toggle:
-  the folded line is the pointer's way only, so it isn't a second tab stop). **Answered** is a link as **Applied** is,
-  in the conversation and in the code (not the Comments panel's cards, which go to the thread): it shows the thread
-  whole, scrolled to the reply that answered it, the first, lit for a moment ("Answered by Borja: see the answer",
-  `answerOf`). Where it stands is an outlined pill:
-  **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed",
-  **Discarded** neutral.
+  line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that line,
+  which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on every
+  card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read, replied
+  to, folded and selected. Its header is one quiet line: its kind's icon, its folder (giving way first in a narrow
+  card), file and line (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones:
+  a change request is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its
+  tooltip naming the changeset: "Applied in changeset 4: see how it was applied", `appliedPillTip`; shown in how it was
+  applied itself, it only names the changeset, as opening it would go behind the dialog, whose footer opens it:
+  `threadHeaderOf`'s `inContext`) or a reply discards it (**Discarded**); a question is **Open** until anyone replies
+  (**Answered**: any reply answers it, there's no other way to resolve one). Other comments are never open. A settled
+  thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
+  click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
+  tab stop). **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
+  cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
+  a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill: **Open** in the color
+  of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral.
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
   reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
@@ -196,36 +193,35 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   that didn't change, and those read best in place; the rest are what GitHub calls outdated, and its way of showing
   them is known.
 - **See in context**: the tag of a thread on an earlier version (**Outdated**, or **Earlier version**) is a button that
-  opens a dialog (`openCommentContextDialog`, opened through `useCommentContext`) with two views, each the file's diff with the
-  thread at its line (`commentContext`): **When commented**, the diff it was written on, as its author saw it (the
-  older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's whole
-  diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
-  for a thread not applied), the version commented on, the thread on the left, against what the changeset that applied it
-  did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the comment is on
-  the version it made; for a request marked applied in a changeset that didn't change its file, the thread alone under one line saying so,
-  the subtitle saying it was marked applied there, not applied: `notInChangeset`), or the review's
-  newest version (its whole diff's, never a
-  changeset's). A view waits for the diff it reads, says so when that read fails, and why it has nothing to compare
-  otherwise (`contextComparisonState`). Every **Applied** pill (the
+  opens a dialog (`openCommentContextDialog`, opened through `useCommentContext`) with two views, each the file's diff
+  with the thread at its line (`commentContext`): **When commented**, the diff it was written on, as its author saw it
+  (the older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's
+  whole diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since
+  then, for a thread not applied), the version commented on, the thread on the left, against what the changeset that
+  applied it did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the
+  comment is on the version it made; for a request marked applied in a changeset that didn't change its file, the thread
+  alone under one line saying so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
+  the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
+  that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
-  something else. Its **Open
-  changeset N** opens the changeset itself. When that changeset changed other files too, the dialog lists them all, as
-  a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change types and tree, the commented
-  file selected first; `listsAppliedFiles`), so the reviewer sees what else the fix did and which file the comment is
-  on. The commented file's diff is the comment's (an `EntryAnnotatorContext` comparing its own versions,
-  `AnnotatedEntry.compared`); the header's view switch shows only while it's selected. No list for a fix of that file
-  alone, nor for a request marked applied in a changeset that didn't change it (the comment would have no file to sit
-  on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open the
-  changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog is
-  as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. Its diff is 66vh tall, less where the window leaves the dialog less, so the dialog
-  never scrolls as a whole (a window of 1000×800 or 900×700). It shows the thread as the conversation has it now
-  (`liveThreadOf`: a reply made in it shows, a thread deleted is gone; the page's own read, never read again as it
-  opens: `SHOWN_BY_THE_PAGE`), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked
-  `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and closes if the window goes to another place, view or page: what
-  its files' menus and lines open (History, Annotate) then shows, not behind it (`navigatedSince`). A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
-  "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment" chip to go back,
-  "Since review" off meanwhile), and the state it left was hard to read.
+  something else. Its **Open changeset N** opens the changeset itself. When that changeset changed other files too, the
+  dialog lists them all, as a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change
+  types and tree, the commented file selected first; `listsAppliedFiles`), so the reviewer sees what else the fix did
+  and which file the comment is on. The commented file's diff is the comment's (an `EntryAnnotatorContext` comparing its
+  own versions, `AnnotatedEntry.compared`); the header's view switch shows only while it's selected. No list for a fix
+  of that file alone, nor for a request marked applied in a changeset that didn't change it (the comment would have no
+  file to sit on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open
+  the changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog
+  is as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. Its diff
+  is 66vh tall, less where the window leaves the dialog less, so the dialog never scrolls as a whole (a window of
+  1000×800 or 900×700). It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
+  thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
+  while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
+  closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
+  then shows, not behind it (`navigatedSince`). A dialog rather than a mode of the file's diff, so the review's diff
+  stays as it was: "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment"
+  chip to go back, "Since review" off meanwhile), and the state it left was hard to read.
 - **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
   review's "Whole branch" or one changeset of "Changeset by changeset" (`reviewDiffViewOf`). Going to one opens that
   mode and changeset (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
@@ -233,46 +229,49 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   revision it shows, or whose line is still there in the newest one (an outdated one is left to its changeset's diff),
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
-- **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
-  the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
-  some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
-  there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
-  open (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
-  characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1
-  reply"), three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which
-  its avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that
-  line's threads, and going to a thread opens its line. The outdated ones
-  hide too: they have no line to mark, so one shows only when it is gone to (from the panel or the conversation), that
-  one alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened ones share one row above the code,
-  `annotationRowsOf`'s `opened`). Each card opened so has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide
-  this comment") that folds it back to its marker: in the header, not in a column beside the cards, which took their
-  width; an ×, not an icon of a comment struck through, which read less plainly. In a narrow card the header stays one
-  line: the kind's name is cut short first, then the tag, the state and the × keeping their place.
-- **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
-  any details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
+- **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides the
+  threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding some
+  keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments there are,
+  as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is open
+  (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
+  characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1 reply"),
+  three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
+  avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
+  threads, and going to a thread opens its line. The outdated ones hide too: they have no line to mark, so one shows
+  only when it is gone to (from the panel or the conversation), that one alone, as a line opens alone (`outdatedKey`,
+  `openedOutdated`; the opened ones share one row above the code, `annotationRowsOf`'s `opened`). Each card opened so
+  has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide this comment") that folds it back to its
+  marker: in the header, not in a column beside the cards, which took their width; an ×, not an icon of a comment struck
+  through, which read less plainly. In a narrow card the header stays one line: the kind's name is cut short first, then
+  the tag, the state and the × keeping their place.
+- **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
+  details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
   hidden, and so it does where the diff beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
-  width less the files' and the panel's, `diffWidthBesidePanel`), decided as the changes first show, so a first comment doesn't open it, and the user's own choice is kept for
-  the next review: `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code as the
-  conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in
-  turn, the folder first, then the line, the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
-  anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was said,
-  replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs to the
-  files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
-  nothing offers "Clear filters". While searching, a card shows the comment the words were found in, a reply too, from
-  a little before the match (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first words, and the words are marked there, in who said
-  it and in the file (`HighlightQuery`), so each card says why it's listed. The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
-  selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
-  `ThreadFocus`). Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the
-  previous and next (its own row: in one with the name and Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
-  and modes, stopping at either end; from a thread that just left the list, settled under Open, on from where it sat).
-  The card gone to comes into the panel's view, a third of the way down, the list still when it shows whole (`listScrollTop`, gliding unless motion is reduced, N pressed again aiming from where the last glide goes), and the focus a card held goes along to the current one, drawn
-  without a ring: left behind, the key would draw it on a comment no longer current. The panel's filter is kept by the
-  Changes tab for that (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`).
-  In the code, the thread gone to keeps its ring until another one is:
-  among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
-  conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
-  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version that can't be read (purged, or its read
-  failed) is among the outdated ones, above the code, and opens there.
+  width less the files' and the panel's, `diffWidthBesidePanel`), decided as the changes first show, so a first comment
+  doesn't open it, and the user's own choice is kept for the next review: `commentsPanelStartsHidden`, the details
+  store's `startedHidden`, never saved), lists every thread on the code as the conversation sums up a settled one
+  (`ThreadSummaryCard`; its file and line only name where it goes, cut short in turn, the folder first, then the line,
+  the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening
+  on Open when anything is, `initialCommentsFilter`). A row under the header narrows it further: words found in what was
+  said, replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the view's ⌘F belongs
+  to the files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search
+  finding nothing offers "Clear filters". While searching, a card shows the comment the words were found in, a reply
+  too, from a little before the match (`matchExcerpt`, found as the marks are: `lowerCasedText`), in place of its first
+  words, and the words are marked there, in who said it and in the file (`HighlightQuery`), so each card says why it's
+  listed. The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
+  selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`, `ThreadFocus`).
+  Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the previous and next (its
+  own row: in one with the name and Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden
+  (`steppedThread`: in the panel's order, across files and modes, stopping at either end; from a thread that just left
+  the list, settled under Open, on from where it sat). The card gone to comes into the panel's view, a third of the way
+  down, the list still when it shows whole (`listScrollTop`, gliding unless motion is reduced, N pressed again aiming
+  from where the last glide goes), and the focus a card held goes along to the current one, drawn without a ring: left
+  behind, the key would draw it on a comment no longer current. The panel's filter is kept by the Changes tab for that
+  (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the
+  thread gone to keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
+  diff opened to go to a thread (from the conversation, `commentLocationPage`) opens at it, not at its first change,
+  even before an earlier version is read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version
+  that can't be read (purged, or its read failed) is among the outdated ones, above the code, and opens there.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
