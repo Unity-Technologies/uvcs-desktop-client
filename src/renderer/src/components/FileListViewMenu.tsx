@@ -1,9 +1,10 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, ClipboardList, Eye, List, ListTree } from 'lucide-react';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleDot, ClipboardList, Eye, List, ListTree } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 import type { Icon } from '../lib/actions';
 import { Button } from '../ui/Button';
 import { focusAfterMenu } from '../ui/menu/focusAfterMenu';
+import { keepMenuOpen, MenuChoice, MenuMark } from '../ui/menu/MenuChoice';
 import menuStyles from '../ui/menu/Menu.module.css';
 import { fileListViewMenu, type FileListGrouping, type FileListViewOffer } from './fileListViewMenuModel';
 import { useFileListViewStore, type FileListLayout } from './fileListViewStore';
@@ -54,7 +55,7 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
           <Section title="Layout">
             <DropdownMenu.RadioGroup value={menu.layout} onValueChange={(layout) => view.setLayout(layout as FileListLayout)}>
               {menu.layouts.map((layout) => (
-                <Choice key={layout.value} value={layout.value} icon={LAYOUT_ICONS[layout.value]} label={layout.label} checked={layout.value === menu.layout} />
+                <MenuChoice key={layout.value} value={layout.value} icon={LAYOUT_ICONS[layout.value]} label={layout.label} checked={layout.value === menu.layout} />
               ))}
             </DropdownMenu.RadioGroup>
           </Section>
@@ -68,13 +69,13 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
                     className={menuStyles.item}
                     checked={grouping.on}
                     onCheckedChange={(on) => setGrouping(grouping.value, on)}
-                    onSelect={keepOpen}
+                    onSelect={keepMenuOpen}
                   >
                     <span className={menuStyles.icon}>
                       <GroupingIcon size={14} />
                     </span>
                     <span className={menuStyles.label}>{grouping.label}</span>
-                    <Mark shown={grouping.on} />
+                    <MenuMark shown={grouping.on} />
                   </DropdownMenu.CheckboxItem>
                 );
               })}
@@ -83,7 +84,7 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
           <Section title="Sort by">
             <DropdownMenu.RadioGroup value={menu.sort} onValueChange={(sort) => view.setSort(sort as typeof menu.sort)}>
               {menu.sorts.map((sort) => (
-                <Choice key={sort.value} value={sort.value} label={sort.label} checked={sort.value === menu.sort} />
+                <MenuChoice key={sort.value} value={sort.value} label={sort.label} checked={sort.value === menu.sort} />
               ))}
             </DropdownMenu.RadioGroup>
           </Section>
@@ -102,9 +103,6 @@ export function FileListViewMenu({ offer, onChangelistsChange }: FileListViewMen
   );
 }
 
-/** A choice applies with the menu open, so the list behind it shows the outcome. */
-const keepOpen = (event: Event): void => event.preventDefault();
-
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <DropdownMenu.Group className={styles.section}>
@@ -112,20 +110,4 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       {children}
     </DropdownMenu.Group>
   );
-}
-
-function Choice({ value, icon: ChoiceIcon, label, checked }: { value: string; icon?: Icon; label: string; checked: boolean }) {
-  return (
-    <DropdownMenu.RadioItem className={menuStyles.item} value={value} onSelect={keepOpen}>
-      {/* Always there, empty for a sort, so every label of the menu starts in the same column. */}
-      <span className={menuStyles.icon}>{ChoiceIcon && <ChoiceIcon size={14} />}</span>
-      <span className={menuStyles.label}>{label}</span>
-      <Mark shown={checked} />
-    </DropdownMenu.RadioItem>
-  );
-}
-
-/** The choice made, after its label, as every menu marks it. */
-function Mark({ shown }: { shown: boolean }) {
-  return <span className={menuStyles.check}>{shown ? <Check size={14} /> : <span className={styles.noMark} />}</span>;
 }

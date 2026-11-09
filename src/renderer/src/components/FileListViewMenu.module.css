@@ -25,8 +25,3 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
 }
-
-/* The room of the check, so every label of a section ends in the same place. */
-.noMark {
-  width: 14px;
-}
