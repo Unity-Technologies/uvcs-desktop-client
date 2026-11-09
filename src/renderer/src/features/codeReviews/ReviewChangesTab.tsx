@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { changesFocusAskedFor } from './reviewTab';
 import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
 import styles from './CodeReviewPage.module.css';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -82,6 +83,21 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
     [review.id, threads],
   );
   const seeInContext = useCommentContext(review, showInConversation);
+  // The page moved to a thread while these changes show already (a comment's file gone to from the conversation): go
+  // to it once the threads are read.
+  const [shownPage, setShownPage] = useState(page);
+  const [asked, setAsked] = useState<number | undefined>(undefined);
+  if (shownPage !== page) {
+    setShownPage(page);
+    const threadId = changesFocusAskedFor(shownPage, page);
+    if (threadId !== undefined) setAsked(threadId);
+  }
+  useEffect(() => {
+    if (asked === undefined || !threads) return;
+    const thread = threads.find((candidate) => candidate.root.id === asked);
+    setAsked(undefined);
+    if (thread && isLineThread(thread)) goToThread(thread);
+  }, [asked, threads]);
   const fileFlag = useMemo(() => (threads ? reviewFileFlag(threads, review.target) : null), [threads, review.target]);
   const step = (direction: 1 | -1): void => {
     const next = steppedThread(listed, all, focus?.threadId, direction);
