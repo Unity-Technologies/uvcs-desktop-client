@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { changeMarkLabel, scrollTopForTrackPoint } from './changeMarks';
+import { TICK_HEIGHT } from './mapTicks';
 import { pressesThumb, scrollTopAfterDrag, thumbOf } from './diffScrollbar';
 import { scrollSmoothlyTo } from './smoothScrollPlan';
 import type { ChangeMapView } from './useChangeMap';
@@ -85,11 +86,16 @@ export function ChangeMap({ view, count, tickTip, containerRef }: ChangeMapProps
         <div key={mark.first} className={styles.mark} style={{ top: mark.top, height: mark.height }} data-kind={mark.kind} data-tip={changeMarkLabel(mark, count)} />
       ))}
       {view.ticks.map((tick, index) => (
-        <div key={tick.keys[0]} className={styles.tick} style={{ top: tick.top }} data-emphasized={tick.emphasized ? '' : undefined} data-tip={tickTips[index]} />
+        <div key={tick.keys[0]} className={styles.tick} style={tickStyle(tick.top)} data-emphasized={tick.emphasized ? '' : undefined} data-tip={tickTips[index]} />
       ))}
       <div className={styles.thumb} style={{ top: thumb.top, height: thumb.height }} data-dragging={dragging ? '' : undefined} />
     </div>
   );
+}
+
+/** Where a tick is, and how tall it's drawn (`TICK_HEIGHT`, which places and fuses the ticks too). */
+function tickStyle(top: number): CSSProperties {
+  return { top, '--tick-height': `${TICK_HEIGHT}px` } as CSSProperties;
 }
 
 /** The changed rows' tints and their changed words' color, for the marks (`ChangeMap.module.css`). */
