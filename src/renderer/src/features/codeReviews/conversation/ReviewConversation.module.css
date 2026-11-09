@@ -612,3 +612,10 @@ button.pill:hover {
 .thread[data-current] {
   border-color: var(--accent);
 }
+
+/* In the code, a card is as wide as a side of the diff, which can be narrow: its band wraps rather than overflow. */
+.thread[data-in-code] .threadHeader {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  padding-block: var(--space-1);
+}

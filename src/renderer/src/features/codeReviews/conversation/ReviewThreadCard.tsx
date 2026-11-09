@@ -66,7 +66,13 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight }: Re
   const threadActions = inCode && { showInConversation: inCode.showInConversation, changesSince: inCode.changesSince };
 
   return (
-    <section className={styles.thread} data-folded={folded} data-highlight={highlight === undefined ? undefined : highlight % 2} id={inCode ? undefined : threadElementId(thread.root.id)}>
+    <section
+      className={styles.thread}
+      data-folded={folded}
+      data-in-code={inCode ? '' : undefined}
+      data-highlight={highlight === undefined ? undefined : highlight % 2}
+      id={inCode ? undefined : threadElementId(thread.root.id)}
+    >
       {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
       {inCode?.snippet}
       <div className={styles.threadBody}>
