@@ -81,10 +81,21 @@ describe('commentMapTip', () => {
     expect(commentMapTip(comments, [OUTDATED_ROW])).toBe('Outdated: on lines changed since\n\nStill needed?\nQuestion · Open · Borja');
   });
 
-  it("previews the threads of spots fused into one tick together, in the tick's order, three at most and then how many more", () => {
+  it("previews the threads of lines fused into one tick together, in the tick's order, three at most and then how many more", () => {
     expect(commentMapTip(comments, ['additions:12', 'additions:14'])).toBe('Why not a while loop?\nQuestion · Answered · Borja · 1 reply\n\nReads well.\nComment · Ana Garcia');
-    expect(commentMapTip(comments, [OUTDATED_ROW, 'additions:12', 'additions:14', 'additions:16', 'additions:18'])).toBe(
-      'Still needed?\nQuestion · Open · Borja\n\nWhy not a while loop?\nQuestion · Answered · Borja · 1 reply\n\nReads well.\nComment · Ana Garcia\n\n+2 more',
+    expect(commentMapTip(comments, ['additions:12', 'additions:14', 'additions:16', 'additions:18'])).toBe(
+      'Why not a while loop?\nQuestion · Answered · Borja · 1 reply\n\nReads well.\nComment · Ana Garcia\n\nAnd here?\nQuestion · Open · Borja\n\n+1 more',
     );
+  });
+
+  it('keeps saying the outdated ones are outdated when their tick fuses with a line near the top, after that line', () => {
+    const outdatedPart = 'Outdated: on lines changed since\n\nStill needed?\nQuestion · Open · Borja';
+    expect(commentMapTip(comments, ['additions:12', OUTDATED_ROW])).toBe(`Why not a while loop?\nQuestion · Answered · Borja · 1 reply\n\n${outdatedPart}`);
+    // Above the code, the outdated tick is placed first when the line's tick is lower: the tip reads the same.
+    expect(commentMapTip(comments, [OUTDATED_ROW, 'additions:12'])).toBe(`Why not a while loop?\nQuestion · Answered · Borja · 1 reply\n\n${outdatedPart}`);
+  });
+
+  it('says nothing of a spot no longer there', () => {
+    expect(commentMapTip(comments, ['additions:99'])).toBe('');
   });
 });
