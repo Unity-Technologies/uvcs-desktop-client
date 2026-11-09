@@ -3,6 +3,7 @@ import type { RepositoryVersion } from '@shared/domain/content';
 import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflict, type DirectoryConflictResolution, type MergePlan, type MergeRequest } from '@shared/domain/merge';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PageOf } from '../../app/navigation/pages';
+import { navigation } from '../../app/navigation/navigationStore';
 import { changedFileMenu, type ChangedFile } from '../../components/changedFileMenu';
 import { menuAction } from '../../components/menuWords';
 import type { MenuEntry } from '../../lib/actions';
@@ -21,23 +22,36 @@ export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWork
   /** What a repository path of the merge is (`mergeItemTypes`): a folder has nothing to open. */
   itemTypeOf: (path: string) => ItemType;
   resolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution) => void;
+  /** The Unity `.meta` each listed change stands for too (`pairMergeMetas`): one asset's menu opens its diff and history. */
+  metaOf?: (item: MergeItem) => MergeItem | undefined;
+  /** Shows a `.meta`'s change ("Open .meta diff"), where the page can show one. */
+  onMetaDiff?: (meta: MergeItem) => void;
 }
 
 /**
  * The menu of what the merge page lists: the menu of any list of changed files (`changedFileMenu`: history, annotate,
  * open or save the incoming version, Copy), with what a merge adds on top: the conflicting files' entries, the same
- * as Incoming's (`conflictMenuEntries`), and a directory conflict's panel choices. Nothing is read to build it.
+ * as Incoming's (`conflictMenuEntries`), a directory conflict's panel choices, and an asset's `.meta` diff and history.
+ * Nothing is read to build it.
  */
 export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
   const conflicts = items.flatMap((item) => (item.kind === 'fileConflict' ? [fileStateOf(item, context.progress)] : []));
+  const meta = single && context.metaOf?.(single);
   const added: GroupedEntry[] = [
+    ...(meta ? metaMenuEntries(meta, context.onMetaDiff) : []),
     ...conflictMenuEntries(conflicts, { ...context, yoursInWorkspace: !context.request.destinationBranch }),
     ...(single?.kind === 'directoryConflict' ? directoryConflictEntries(single, context) : []),
   ];
   const files = items.map((item) => changedFileOf(item, context));
   const menu = changedFileMenu(workspacePlace(context.workspacePath), single ? files : files.map((file) => ({ ...file, history: null, annotation: null, version: null })), added);
   return withConflictOpening(menu, conflicts);
+}
+
+/** "Open .meta diff", where the page can show it, and "View .meta history" for an asset's `.meta`. */
+function metaMenuEntries(meta: MergeItem, onMetaDiff: ((meta: MergeItem) => void) | undefined): GroupedEntry[] {
+  const history = menuAction('metaHistory', () => navigation.openPage({ kind: 'history', path: meta.path }));
+  return onMetaDiff ? [menuAction('metaDiff', () => onMetaDiff(meta)), history] : [history];
 }
 
 /**

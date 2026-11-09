@@ -41,7 +41,7 @@ Go to file is the one way to find a file.
 A file's history (`features/history`) reads like the other lists beside a file: its revisions and moves
 on the left (`HistoryList`, two lines a row: avatar and comment, then cs:N · branch · author · date; moves in
 italics; the workspace's revision with the house, which `cm ls` reads from the workspace alongside `cm history`),
-as wide as it was left (`detailsWidthStore`, `historyList`), and the selected one on the right: a header of its
+as wide as it was left (`detailsPaneStore`, `historyList`), and the selected one on the right: a header of its
 changeset (`RevisionHeader`: comment, author · date · cs:N to copy · branch chip, Changeset diff, Show in Branch
 Explorer, the row's menu behind "More actions") over one pane (`RevisionPane`) that shows it as a Diff against the revision it was
 made from (`parentRevision`) or annotated, switched with "Diff | Annotate" (⇧⌘T), remembered (`revisionView`).

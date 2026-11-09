@@ -7,6 +7,8 @@ export const DOCUMENTATION_URL = 'https://docs.unity.com/en-us/unity-version-con
 
 /** Where a problem is reported: a new issue in the app's repository. */
 export const ISSUES_URL = `${REPOSITORY_URL}/issues/new`;
+/** Every release with its notes, newest first. */
+export const RELEASES_URL = `${REPOSITORY_URL}/releases`;
 /** Help ▸ Report an Issue and Request a Feature: the repository's issue forms, empty. */
 export const BUG_REPORT_URL = issueFormUrl(ISSUES_URL, BUG_REPORT_FORM.template);
 export const FEATURE_REQUEST_URL = issueFormUrl(ISSUES_URL, FEATURE_REQUEST_FORM.template);
@@ -21,5 +23,6 @@ export function appInfo(): AppInfo {
     arch: process.arch,
     documentationUrl: DOCUMENTATION_URL,
     issuesUrl: ISSUES_URL,
+    releasesUrl: RELEASES_URL,
   };
 }

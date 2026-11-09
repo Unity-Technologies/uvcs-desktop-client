@@ -19,5 +19,10 @@ export function branchesQuery({ since, people, showHidden }: BranchesQueryFilter
 
 /** The branches by the people picked (`isPicked`) whose name, comment or creator has every word typed. */
 export function filterBranches(branches: Branch[], search: string, isPicked: (owner: string) => boolean): Branch[] {
-  return branches.filter((branch) => isPicked(branch.owner) && matchesWordFilter([branch.name, branch.comment, ...userFilterTexts(branch.owner)], search));
+  return branches.filter((branch) => isPicked(branch.owner) && matchesWordFilter(branchFilterTexts(branch), search));
+}
+
+/** What a branch's row shows, which the Branches view's filter looks through, and the `br:` suggestions too. */
+export function branchFilterTexts(branch: Pick<Branch, 'name' | 'comment' | 'owner'>): string[] {
+  return [branch.name, branch.comment, ...userFilterTexts(branch.owner)];
 }

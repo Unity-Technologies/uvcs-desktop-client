@@ -1,11 +1,14 @@
 import { formatShortcut } from '../lib/shortcuts';
 import styles from './Kbd.module.css';
 
-/** Renders a shortcut such as `mod+shift+k` as platform-specific key caps. */
-export function Kbd({ keys }: { keys: string }) {
+/**
+ * Renders a shortcut such as `mod+shift+k` as platform-specific key caps; `typed` shows text typed as written
+ * instead (`cs:`), a cap of its own.
+ */
+export function Kbd({ keys, typed = false }: { keys: string; typed?: boolean }) {
   return (
     <span className={styles.kbd}>
-      {formatShortcut(keys).map((key) => (
+      {(typed ? [keys] : formatShortcut(keys)).map((key) => (
         <kbd key={key}>{key}</kbd>
       ))}
     </span>

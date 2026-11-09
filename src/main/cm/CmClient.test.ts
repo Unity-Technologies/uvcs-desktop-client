@@ -32,8 +32,11 @@ interface ProcessRun {
 
 type Answer = (options?: CmProcessOptions) => CmResult;
 
+/** `done`, as a process prints it or, when it's a `cm shell` of its own (it reads a command line), with its result line. */
+const doneAnswer: Answer = (options) => ({ output: options?.input ? 'done\nCommandResult 0\n' : 'done\n', exitCode: 0 });
+
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = doneAnswer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const shellReadings: (OutputReading | undefined)[] = [];
@@ -243,6 +246,15 @@ describe('CmClient routing', () => {
     expect(processes).toMatchObject([{ args: ['version'], options: { cwd: homedir() } }]);
   });
 
+  it('runs an operation in a cm shell of its own on macOS too, which ends with it', async () => {
+    const { cm, processes } = fakeClient({ platform: 'darwin', answer: () => ({ output: 'CHANGESET cs:42@game@local\nCommandResult 0\n', exitCode: 0 }) });
+
+    const output = await cm.execute(['checkin', join(WORKSPACE, 'a.cs')], { cwd: WORKSPACE });
+
+    expect(processes).toMatchObject([{ args: SHELL_ARGS, options: { input: `checkin ${join(WORKSPACE, 'a.cs')}\nexit\n` } }]);
+    expect(output).toBe('CHANGESET cs:42@game@local\n');
+  });
+
   it('hands the process the cancellation signal, its kill signal and the output line listener', async () => {
     const { cm, processes } = fakeClient();
     const signal = new AbortController().signal;
@@ -250,7 +262,9 @@ describe('CmClient routing', () => {
 
     await cm.execute(['update'], { cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine });
 
-    expect(processes[0]?.options).toEqual({ cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine, reading: { text: textLimitOf('operation') } });
+    expect(processes[0]?.options).toEqual({ cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine: expect.any(Function), reading: { text: textLimitOf('operation') }, input: 'update\nexit\n' });
+    processes[0]?.options.onOutputLine?.('Downloading');
+    expect(onOutputLine).toHaveBeenCalledWith('Downloading');
   });
 });
 
@@ -462,7 +476,8 @@ describe('CmClient arguments', () => {
 describe('CmClient failures', () => {
   it('fails with a CmError naming the command, its exit code, its output and its log entry', async () => {
     const output = 'Searching for changed items...\nError: The branch br:/main/task1 does not exist.\n';
-    const { cm, logged } = fakeClient({ answer: () => ({ output, exitCode: 1 }) });
+    // A switch runs in a cm shell of its own, which prints the command's result after its output.
+    const { cm, logged } = fakeClient({ answer: () => ({ output: `${output}CommandResult 1\n`, exitCode: 0 }) });
 
     const error = await failureOf(cm.query(['switch', 'br:/main/task1'], { cwd: WORKSPACE }));
 
@@ -526,6 +541,20 @@ describe('CmClient commands that end without an exit code', () => {
     await expect(cm.execute(['update'], { signal: cancelled.signal })).rejects.toThrow('aborted');
 
     expect(logged).toEqual([]);
+  });
+
+  it('logs a command that gave up waiting, which is a failure to point at, not a cancellation', async () => {
+    const timer = new AbortController();
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        timer.abort(new DOMException('No answer in time', 'TimeoutError'));
+        throw new Error('The operation was aborted');
+      },
+    });
+
+    await expect(cm.execute(['update'], { signal: timer.signal })).rejects.toThrow('aborted');
+
+    expect(logged).toMatchObject([{ commandLine: 'cm update', exitCode: -1 }]);
   });
 
   it('logs a pooled command its session stopped', async () => {

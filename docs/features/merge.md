@@ -173,7 +173,8 @@ panel's choices, Keep both under the name it was given, else the one the panel s
 ("Directory conflicts" below). A directory conflict holding another directory conflict (a folder added on both sides, a file
 in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
-(ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
+(ARCHITECTURE.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
+is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
 with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
 conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
@@ -301,6 +302,38 @@ file behind the selection follows it deferred, so arrowing never waits for a fil
 the hand editor follow the diffs' size rule (`syntaxHighlighting`), and Base (when big) and the hand editor render
 only the lines in view.
 
+### Merge options
+
+The header's "Merge options" button (`MergeOptionsMenu`) opens a popover with what the merge offers
+(`mergeOptionsOffered`); a merge offering nothing (a shelve with no conflicting files) shows no button. The button is
+marked while any option differs from the default, and in a narrow header (under 960px, a container query) shows only its icon.
+It sits after the button that resolves files one by one in a merge tool, which comes and goes as the contributor
+changes: before it, the button and its open popover would move each time.
+
+- **Conflicting files**: "Merge both", "Keep yours" / "Keep incoming" ("Keep destination" / "Keep source" into a
+  branch: `contributorSegments`). Shown only when files conflict. It isn't sent to `cm`: it decides every conflicting
+  file as its own "Keep" would (`contributorDecisions`, applied through `useFileConflicts`'s `decide` and `reset`), and
+  "Merge both" starts the files the user decided over. The segment selected is what the files' decisions amount to
+  (`contributorOf`), none when they differ; files open in a merge tool are left out, the tool settles them.
+- **Ignore merge tracking**: applies changes again even if they were merged before (`MergeRequest.ignoreMergeTracking`,
+  `cm merge --forced`). Only cherry picks and subtractive merges, of one changeset or a range, offer it
+  (`offersIgnoreMergeTracking`): `cm` refuses `--forced` on a regular merge. A cherry pick with nothing to merge offers
+  "Merge them again" (`offersMergingAgain`), which turns it on.
+- **Common ancestor**: calculated, or a changeset chosen with the changeset picker (`MergeRequest.ancestorSpec`,
+  `--strategy=manual --ancestor=cs:N`; `--ancestor` alone would cherry pick the interval from it instead). Only a
+  regular merge offers it (`offersCommonAncestor`): a cherry pick, a subtractive merge and a range take theirs from the
+  changesets they name, and a shelve's is its base.
+
+Both request options are in `mergeSourceArgs`, so the preview and the merge get them, and in the plan's query key, so
+changing one previews the merge again (`MergePage` holds the request) and starts the file decisions, the comment and
+the choices over, since the files to merge can change. Only the options the merge offers reach `cm` or count as set
+(`appliedMergeOptions`). A preview that fails with options offers "Merge
+without options" (`hasMergeOptions`, `withoutMergeOptions`), and so does one with nothing to merge, as a chosen
+ancestor can leave (`nothingToMergeAction`). Options last only for the merge on the page.
+
+The official clients also offer manual conflict resolution, which opens the merge tool on every file. It isn't here:
+the app never opens a tool by itself, and every file already offers "Resolve in" its tool.
+
 ### Directory conflicts
 
 A directory conflict is applied as soon as it's decided, as the official client does, so the page always shows the
@@ -392,21 +425,22 @@ away; its shortcuts and Back wait until it shows again (`usePageShown`). The sid
 ### Stepping through conflicts
 
 A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
-with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at the end of its
-view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
-segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
-top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
-end marker). Every conflict shown is one still to decide: resolving one with its header's choices (`resolve` in
-`ConflictHunks`) takes it out of the text and the count, and the next move goes on to the one that took its place, or
-back to the one before it (`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the
-view is scrolled more than a few rows away, however it scrolls (the shorter text pulling it back at the end of the file
-doesn't count), or the conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the
-version to keep is one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views
-that are diffs (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file
-whose last conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", until the
-user leaves the file: the next move goes straight on to the next file that waits instead of through the changes the
-merge makes (`justDecided`, `LoadedFileDiff`'s `stepsThroughChanges`). Started over, the file opens on its conflicts
-again (`rememberConflicts`).
+with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and its arrows at the end of its view bar, "2
+of 3" before them while a conflict is current, as a diff's (`ConflictNavigator`, on `useStepNavigation`). The keys work
+from anywhere in the file's panel, its views' segments included (`STEP_FRAME`), from the list and with nothing focused.
+A conflict moved to comes a few rows from the top unless it's all in view, and lights up (`useConflictView`: Pierre
+draws each one from its actions row down to its end marker). Every conflict shown is one still to decide: resolving one
+with its header's choices (`resolve` in `ConflictHunks`) takes it out of the text and the count, and the next move goes
+on to the one that took its place, or back to the one before it (`ConflictPlace`: the screen can't tell, with every
+conflict in view). That holds until the view is scrolled more than a few rows away, however it scrolls (the shorter text
+pulling it back at the end of the file doesn't count), or the conflicts change otherwise (started over, saved by a merge
+tool). A binary waiting for the version to keep is one conflict; a file that couldn't be read has none, and its arrows
+still go on. The arrows stay while the file shows, disabled once there is nowhere to go (no conflict left, no file
+waiting around it): they never come and go. The views that are diffs (Changes, Yours, Incoming) keep their own arrows
+through their changes, and the base none. But a file whose last conflict is resolved while it shows keeps the conflict
+arrows over its Changes, with no label, until the user leaves the file: the next move goes straight on to the next file
+that waits instead of through the changes the merge makes (`justDecided`, `LoadedFileDiff`'s `stepsThroughChanges`).
+Started over, the file opens on its conflicts again (`rememberConflicts`).
 
 Past the last or first conflict, the arrows go on to the next file's first conflict or the previous file's last, as
 the list shows them, but only to the files still waiting for the user: those decided or merged automatically are
@@ -425,9 +459,10 @@ link with `limit 1`). Both open the merge page with the task (`openTaskMerge`, t
 does "Merge to another branch on the server…" on a task branch. The page then:
 
 - starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`);
-- offers, under the comment, "Mark the code review as reviewed (“<title>”)" when the branch has a review not reviewed
-  yet (its status beside it, a click opens it; the review comes from the list the branch chips share,
-  `useReviewsByBranch`), and "Hide the branch afterwards" (`TaskMergeOptions`);
+- offers, under the comment, "Mark your review as reviewed (“<title>”)" when the branch has a review the user is a
+  reviewer of and hasn't marked reviewed yet (`canMarkReviewed`; its status beside it, a click opens it; the review
+  comes from the list the branch chips share, `useReviewsByBranch`), and "Hide the branch afterwards"
+  (`TaskMergeOptions`). Only a reviewer gives a status (docs/features/code-reviews.md);
 - once merged, does what was picked and remembers where the task landed (`finishMergedTask`), so Changes shows the
   finished task: where it went, "Switch to <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge
   that finishes it after its destination moved carries the choices made.

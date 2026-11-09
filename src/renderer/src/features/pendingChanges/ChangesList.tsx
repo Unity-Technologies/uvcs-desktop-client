@@ -13,7 +13,7 @@ import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded }
 import { indexChangeRows, perRow } from './changeRowIndex';
 import { candidatesUnderRow, checkStateOver, spaceToggle } from './changeRowChecks';
 import type { ShownChecks } from './checkinSelection';
-import { changeTreeArrowRows, rowIndent, treeLevel } from './changeRowLevels';
+import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, rowLevel, treeLevel, type RowLevels } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -32,6 +32,8 @@ const LETTER_STEPS: Record<string, number> = { j: 1, k: -1 };
 
 interface ChangesListProps {
   rows: ChangeRow[];
+  /** How the rows sit (`rowLevelsOf`): their indents and indent guides. */
+  levels: RowLevels;
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   /** The checks of the changes shown (`shownChecksOf`): how a row asks whether a change is checked, and how many are. */
@@ -44,14 +46,20 @@ interface ChangesListProps {
   /** Dropping changes on a changelist, its header or any row in it; rows only take drops when this is set. */
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
-  changelistMenu: (changelist: Changelist) => MenuEntry[];
+  /** A changelist header's menu, and its "…": null for the default changelist. */
+  changelistMenu: (changelist: Changelist | null) => MenuEntry[];
+  /** Whether a changelist's header shows its "…" (`changelistHasMenu`). */
+  hasChangelistMenu: (changelist: Changelist | null) => boolean;
   /** The row's check and R on the selection; outside review mode, no checks or "changed since review" dots, and R turns it on. */
   review: ListReview<PendingChange>;
   locks: PendingLocks;
+  /** The Unity `.meta` each asset's row stands for too (`pairPendingMetas`): the row says so. */
+  metaOf: (change: PendingChange) => PendingChange | undefined;
 }
 
 export function ChangesList({
   rows,
+  levels,
   selection,
   onSelectionChange,
   shownChecks,
@@ -61,8 +69,10 @@ export function ChangesList({
   onMoveToChangelist,
   contextMenu,
   changelistMenu,
+  hasChangelistMenu,
   review,
   locks,
+  metaOf,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   // The keyboard moves through every row (`rowKeys`), folders and changelists too, so ← and → can close and open them.
@@ -72,7 +82,6 @@ export function ChangesList({
   // list (the diff going on to the next file) moves it too.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKeyOf(focusedKey, selection, (key) => rowIndexes.has(key));
-  const grouped = useMemo(() => rows.some((row) => row.type === 'group'), [rows]);
   // Files that just appeared among the changes (saved, created) fade in once.
   const [arrivals] = useState(() => new Arrivals(ARRIVAL_WINDOW_MS));
   const arrived = arrivals.update(orderedKeys, performance.now());
@@ -85,7 +94,7 @@ export function ChangesList({
   const candidatesOf = useMemo(() => perRow(candidatesUnderRow), [rows]);
   const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), shownChecks.isChosen, { candidates: shownChecks.candidates.length, checked: shownChecks.checked })), [candidatesOf, shownChecks]);
   const reviewStatusOf = useMemo(() => perRow((row) => (review.on ? rowReviewStatus(row, review.statusOf) : null)), [rows, review.on, review.statusOf]);
-  const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.items, review.statusOf) : null)), [rows, review.on, review.statusOf]);
+  const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.held, review.statusOf) : null)), [rows, review.on, review.statusOf]);
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -121,8 +130,14 @@ export function ChangesList({
   const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.item);
   const menuEntries = (): MenuEntry[] => {
     const target = menuTargetOf(menuRow.current);
-    if (target === null) return contextMenu(selectedChanges());
-    return Array.isArray(target) ? contextMenu(target) : changelistMenu(target);
+    switch (target.kind) {
+      case 'selection':
+        return contextMenu(selectedChanges());
+      case 'changes':
+        return contextMenu(target.changes);
+      case 'changelist':
+        return changelistMenu(target.changelist);
+    }
   };
   const { dragProps, dropProps, listDropProps, isInDropTarget } = useChangelistDrop({ rows, selection, onSelectionChange, selectedChanges, onMoveToChangelist });
 
@@ -224,7 +239,7 @@ export function ChangesList({
                 key={row.key}
                 id={`${rowIdPrefix}-${item.index}`}
                 role={isTree ? 'treeitem' : 'option'}
-                aria-level={isTree ? treeLevel(row, grouped) : undefined}
+                aria-level={isTree ? treeLevel(row, levels) : undefined}
                 aria-expanded={row.type === 'file' ? undefined : !row.collapsed}
                 aria-selected={selection.selected.has(row.key)}
                 className={styles.row}
@@ -235,7 +250,7 @@ export function ChangesList({
                 data-focused={row.key === focused}
                 data-arrived={arrived.has(row.key) || undefined}
                 data-drop-target={isInDropTarget(row)}
-                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
+                style={guideStyle(row, levels, item.start)}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'file' && onOpen(row.item)}
@@ -244,7 +259,7 @@ export function ChangesList({
                 {...dropProps(row)}
               >
                 {row.type === 'group' ? (
-                  <GroupRowContent row={row} checkState={checkStateOf(row)} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} />
+                  <GroupRowContent row={row} checkState={checkStateOf(row)} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} hasChangelistMenu={hasChangelistMenu} />
                 ) : (
                   <ItemRowContent
                     row={row}
@@ -252,6 +267,7 @@ export function ChangesList({
                     reviewStatus={reviewStatusOf(row)}
                     reviewPartial={reviewPartialOf(row)}
                     lock={row.type === 'file' ? locks.get(row.item.path) : undefined}
+                    hasMeta={row.item !== undefined && metaOf(row.item) !== undefined}
                     actions={rowActions}
                   />
                 )}
@@ -264,8 +280,13 @@ export function ChangesList({
   );
 }
 
+/** Where a row sits, how far in it starts, and the indent guides it draws (`ChangesList.module.css`). */
+function guideStyle(row: ChangeRow, levels: RowLevels, top: number): CSSProperties {
+  return { top, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, levels)}px`, '--guide-levels': rowLevel(row, levels), '--level-indent': `${LEVEL_INDENT}px` } as CSSProperties;
+}
+
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
 function rowReviewStatus(row: ChangeRow, statusOf: ReviewStatusOf<PendingChange>): ReviewStatus | null {
   if (row.type === 'file') return statusOf(row.item);
-  return row.type === 'folder' ? groupReviewStatus(row.items, statusOf) : null;
+  return row.type === 'folder' ? groupReviewStatus(row.held, statusOf) : null;
 }

@@ -1,4 +1,5 @@
-import { collapseTreeRows, layoutPathList, layoutPathTree, rowsHolding, type PathTreeRow, type TreeFolderRow } from './pathTree';
+import { wholeList, type ItemRange } from './itemRange';
+import { collapseTreeRows, layoutPathItems, rowsHolding, type ItemOrder, type PathTreeRow, type TreeFolderRow } from './pathTree';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /**
@@ -10,8 +11,10 @@ export interface TreeGroupRow<T, G> {
   key: string;
   label: string;
   group: G;
-  /** Every item in the group, in order. */
-  items: T[];
+  /** Every item in the group, in order: the group's own list (`TreeGroup.sorted`). */
+  held: ItemRange<T>;
+  /** How many groups hold it: 0 for a top group, 1 for one inside it (a changelist's changes of one status). */
+  depth: number;
   collapsed: boolean;
 }
 
@@ -24,21 +27,33 @@ export interface TreeGroup<T, G> {
   label: string;
   group: G;
   /** The group's items, sorted by `comparePaths` (`@shared/pathOrder`). */
-  sorted: T[];
+  sorted: readonly T[];
+  /**
+   * The groups its items fall in, laid out in its place (a changelist's changes by status): every group of a list
+   * has them or none does, so every item sits as many groups in.
+   */
+  subgroups?: readonly TreeGroup<T, G>[];
 }
 
 /**
- * The rows of a list grouped into `groups`: each group's header, then its items as a list or a tree. Every row, as if
- * nothing was collapsed: closing a group or a folder only leaves rows out (`collapseGroupedTreeRows`).
+ * The rows of a list grouped into `groups`: each group's header, then its subgroups or its items as a list or a tree,
+ * in `order` (`layoutPathItems`). Every row, as if nothing was collapsed: closing a group or a folder only leaves rows
+ * out (`collapseGroupedTreeRows`).
  */
-export function layoutGroupedTree<T extends { path: string }, G>(groups: readonly TreeGroup<T, G>[], keyOf: (item: T) => string, tree: boolean): GroupedTreeRow<T, G>[] {
+export function layoutGroupedTree<T extends { path: string }, G>(groups: readonly TreeGroup<T, G>[], keyOf: (item: T) => string, tree: boolean, order?: ItemOrder<T>): GroupedTreeRow<T, G>[] {
   const rows: GroupedTreeRow<T, G>[] = [];
-  for (const { key, label, group, sorted } of groups) {
-    rows.push({ type: 'group', key, label, group, items: sorted, collapsed: false });
-    const laidOut = tree ? layoutPathTree({ sorted, keyOf, folderScope: key }) : layoutPathList(sorted, keyOf);
-    // One at a time: spreading 100,000 rows into `push` passes more arguments than a call takes.
-    for (const row of laidOut) rows.push(row);
-  }
+  const layOut = (inGroups: readonly TreeGroup<T, G>[], depth: number): void => {
+    for (const { key, label, group, sorted, subgroups } of inGroups) {
+      rows.push({ type: 'group', key, label, group, held: wholeList(sorted), depth, collapsed: false });
+      if (subgroups) {
+        layOut(subgroups, depth + 1);
+        continue;
+      }
+      // One at a time: spreading 100,000 rows into `push` passes more arguments than a call takes.
+      for (const row of layoutPathItems(sorted, keyOf, { tree, folderScope: key, order })) rows.push(row);
+    }
+  };
+  layOut(groups, 0);
   return rows;
 }
 
@@ -47,27 +62,44 @@ export function isHeaderRow<T, G>(row: GroupedTreeRow<T, G>): row is TreeGroupRo
   return row.type !== 'file';
 }
 
-/** Whether the rows are grouped: groups, when there are any, lead them. */
-export function isGroupedList<T, G>(rows: readonly GroupedTreeRow<T, G>[]): boolean {
-  return rows[0]?.type === 'group';
+/**
+ * How many groups each item of the list sits in: 0 without groups, 2 for changelists holding status groups. Groups
+ * lead the rows, and a group's first subgroup comes right after it unless it is closed, so only the rows up to the
+ * first that isn't a group are read: a list of 100,000 rows asks it on every render.
+ */
+export function groupLevelsOf<T, G>(rows: readonly GroupedTreeRow<T, G>[]): number {
+  let levels = 0;
+  for (const row of rows) {
+    if (row.type !== 'group') break;
+    levels = Math.max(levels, row.depth + 1);
+  }
+  return levels;
+}
+
+/**
+ * Whether the rows leave a column for the chevrons of the groups and folders: in a tree, or once grouped, a file starts
+ * past it, so what a group or folder holds starts under its name, not under its chevron. Only a flat list without
+ * groups has none: its rows stay flush.
+ */
+export function hasChevronColumn(groupLevels: number, tree: boolean): boolean {
+  return tree || groupLevels > 0;
 }
 
 /** How many levels in a row sits: groups at the top, then what they hold, folder by folder (a row's `depth`). */
-export function groupedRowLevel<T, G>(row: GroupedTreeRow<T, G>, grouped: boolean): number {
-  if (row.type === 'group') return 0;
-  return row.depth + (grouped ? 1 : 0);
+export function groupedRowLevel<T, G>(row: GroupedTreeRow<T, G>, groupLevels: number): number {
+  return row.type === 'group' ? row.depth : row.depth + groupLevels;
 }
 
 /** The rows laid out by `layoutGroupedTree` (or `layoutPathTree`) but for what closed groups and folders hold. */
 export function collapseGroupedTreeRows<T, G>(rows: GroupedTreeRow<T, G>[], collapsed: ReadonlySet<string>): GroupedTreeRow<T, G>[] {
-  const grouped = isGroupedList(rows);
-  return collapseTreeRows(rows, collapsed, (row) => groupedRowLevel(row, grouped));
+  const groupLevels = groupLevelsOf(rows);
+  return collapseTreeRows(rows, collapsed, (row) => groupedRowLevel(row, groupLevels));
 }
 
 /** The rows as ← and → see them (`treeArrowMove`): groups and folders open and close. */
 export function groupedTreeArrowRows<T, G>(rows: readonly GroupedTreeRow<T, G>[]): TreeArrowRow[] {
-  const grouped = isGroupedList(rows);
-  return rows.map((row) => ({ depth: groupedRowLevel(row, grouped), isFolder: row.type !== 'file', isExpanded: row.type !== 'file' && !row.collapsed }));
+  const groupLevels = groupLevelsOf(rows);
+  return rows.map((row) => ({ depth: groupedRowLevel(row, groupLevels), isFolder: row.type !== 'file', isExpanded: row.type !== 'file' && !row.collapsed }));
 }
 
 /** What a key does on the row at `index`: ← and → as in any tree (`treeArrowMove`), Enter opens or closes a group or a folder. */
@@ -79,6 +111,6 @@ export function groupedTreeKeyMove<T, G>(rows: readonly GroupedTreeRow<T, G>[], 
 
 /** The folders, then the group, holding the row keyed `key`, as `rowsHolding` finds them: opening them shows it. */
 export function groupedRowsHolding<T, G>(rows: readonly GroupedTreeRow<T, G>[], key: string): string[] {
-  const grouped = isGroupedList(rows);
-  return rowsHolding(rows, key, (row) => groupedRowLevel(row, grouped));
+  const groupLevels = groupLevelsOf(rows);
+  return rowsHolding(rows, key, (row) => groupedRowLevel(row, groupLevels));
 }

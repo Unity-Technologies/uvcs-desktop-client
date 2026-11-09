@@ -1,9 +1,9 @@
 import { FileDiff, GitCommitVertical, House, Tag } from 'lucide-react';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { DetailsHeading } from '../../components/DetailsHeading';
+import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
+import { placeId } from '@shared/domain/place';
 import { MAX_LABEL_CHIPS } from '../../components/LabelChips';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
@@ -17,7 +17,7 @@ import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
-import { changesetDiffPage, openChangesetDiff, saveChangesetComment } from './changesetOperations';
+import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
 interface ChangesetDetailsProps {
@@ -35,13 +35,12 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
   const { data: workspace } = useWorkspaceInfo();
   const changesetLabels = useLabelsByChangeset().get(changeset.id) ?? [];
   const place = usePlace();
-  useShowInFollowingWindow(changesetDiffPage(changeset));
 
   return (
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind="Changeset"
-      heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(place, changeset, comment)} />}
+      heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(place, changeset, comment)} draftKey={commentDraftKey(placeId(place), 'changeset', changeset.id)} />}
       author={{ user: changeset.owner, date: changeset.date }}
       meta={[
         <DetailsCopyable key="id" text={spec.changeset(changeset.id)} what={copiedWhat('Changeset', 'spec')} />,

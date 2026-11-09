@@ -10,6 +10,8 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
 import { openRevisionEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { openRevision, saveRevisionAs } from '../history/revisionOperations';
 
 /**
@@ -30,6 +32,7 @@ export function revisionMenu(place: Place, changesetId: number, repository: stri
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
     ...(file ? openRevisionEntries((editorId) => openRevision(place, revisionRef(file), file.name, editorId)) : []),
     file && menuAction('saveAs', () => void saveRevisionAs(place, revisionRef(file), file.name)),
+    toolsSubmenu(place, items.filter((item) => item.itemType !== 'directory').map((item) => toolSubject.revision(revisionRef(item), item.name))),
     copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), link: singleLink, spec: singleSpec }, { count: items.length }),
   ]);
 }

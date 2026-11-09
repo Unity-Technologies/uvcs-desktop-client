@@ -13,3 +13,8 @@ export function usePeopleSeen<Row>(list: string, rows: readonly Row[] | undefine
   const place = placeId(usePlace());
   return useMemo(() => peopleSeen.remember(place, list, (rows ?? []).map(ownerOf)), [place, list, rows, ownerOf]);
 }
+
+/** Everyone the place's lists have shown this session, for what offers people without listing them (`@` in a comment). */
+export function peopleSeenIn(place: string): string[] {
+  return peopleSeen.everyone(place);
+}

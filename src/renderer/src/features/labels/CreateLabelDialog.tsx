@@ -4,9 +4,11 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { TextArea, TextField } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { TextField } from '../../ui/TextField';
 import { validateLabelName } from './labelNames';
 import { createLabel, offersSwitchToNewLabel } from './createLabel';
+import { storedComment } from '../../lib/comment';
 
 /**
  * Opens the "new label" dialog. Pass `changesetId` to label a specific changeset (e.g. from the changesets view);
@@ -28,7 +30,7 @@ function CreateLabelDialog({ place, changesetId, onClose }: { place: Place; chan
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    await createLabel(place, { name: trimmed, changesetId, comment }, { switchAfter, onCreated: onClose });
+    await createLabel(place, { name: trimmed, changesetId, comment: storedComment(comment) }, { switchAfter, onCreated: onClose });
     setCreating(false);
   };
 
@@ -48,7 +50,7 @@ function CreateLabelDialog({ place, changesetId, onClose }: { place: Place; chan
       }
     >
       <TextField label="Name" value={name} placeholder="v1.2.0" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
-      <TextArea label="Comment" value={comment} placeholder="Release notes, milestone…" onChange={(event) => setComment(event.target.value)} />
+      <CommentArea label="Comment" value={comment} placeholder="Release notes, milestone…" onChange={setComment} />
       {offersSwitchToNewLabel(place) && <Checkbox label="Switch the workspace to the new label" checked={switchAfter} onChange={setSwitchAfter} />}
     </Dialog>
   );

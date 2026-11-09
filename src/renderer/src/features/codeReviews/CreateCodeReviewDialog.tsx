@@ -8,10 +8,14 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { oneLineText } from '../../components/commentEditor/commentFieldText';
 import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
 import { branchSuggestions } from './branchSuggestions';
+import { typedReviewers } from './reviewerGroups';
+import { useReviewerGroups } from './useReviewerGroups';
 import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from './reviewDraft';
 
 /**
@@ -35,8 +39,9 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
   const [targetKind, setTargetKind] = useState<ReviewTargetKind>(initialTarget.kind);
   const [target, setTarget] = useState(initialTarget.value);
   const [title, setTitle] = useState(initialTarget.title ?? '');
-  const [assignee, setAssignee] = useState('');
+  const [reviewers, setReviewers] = useState('');
   const [creating, setCreating] = useState(false);
+  const groups = useReviewerGroups();
 
   // Only the best few of the tens of thousands a repository may hold: suggesting every one made the field slow to
   // open and to type in.
@@ -50,7 +55,7 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
     const reviewId = await runAction(
       place,
       "Couldn't create the code review",
-      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
+      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), reviewers: typedReviewers(reviewers, groups) }),
       isAffectedByCodeReviews,
     );
     setCreating(false);
@@ -109,13 +114,14 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
           onChange={(event) => setTarget(event.target.value)}
         />
       )}
-      <TextField label="Title" placeholder="What should be reviewed?" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus />
+      {/* A title is one line: Enter creates the review, as the field it replaced did. */}
+      <CommentArea singleLine label="Title" placeholder="What should be reviewed?" value={title} onChange={(text) => setTitle(oneLineText(text))} autoFocus />
       <TextField
-        label="Reviewer"
-        placeholder="jane.doe@example.com"
-        hint="Optional. You can assign it later."
-        value={assignee}
-        onChange={(event) => setAssignee(event.target.value)}
+        label="Reviewers"
+        placeholder="jane.doe@example.com, john.doe@example.com"
+        hint="Optional. You can add them later."
+        value={reviewers}
+        onChange={(event) => setReviewers(event.target.value)}
       />
     </Dialog>
   );

@@ -1,4 +1,5 @@
 import '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { describe, expect, it, vi } from 'vitest';
 import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 
@@ -11,20 +12,28 @@ import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
+import { countedReads } from '@shared/testing/countedReads';
+import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
 import {
   lacksServerMatch,
   MAX_PER_SECTION,
+  paletteBranches,
   paletteGroups,
+  reviewNumberToLookUp,
   searchesServerFor,
+  UNLIKELY_CHANGESET_QUALITY,
   type CachedLists,
   type ChangesetSearch,
+  type DescribedList,
   type IndexedList,
   type PaletteGroupsInput,
   type ServerMatches,
 } from './paletteGroups';
-import type { PaletteScope } from './paletteScope';
-import type { SearchGroup } from './searchResults';
+import { parseScope, type PaletteScope } from './paletteScope';
+import { palettePeople } from './personResults';
+import { indexPeople } from '../../lib/peopleIndex';
+import { rankGroups, type SearchGroup } from './searchResults';
 
 const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
   id,
@@ -40,20 +49,26 @@ const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
 const label = (id: number, name: string): Label => ({ id, name, changeset: 1, branch: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', repository: 'repo@server' });
 const changeset = (id: number, comment: string): Changeset => ({ id, comment, guid: `cs-${id}`, branch: '/main', owner: 'ana', date: '2026-01-01T00:00:00Z', parent: id - 1, repository: 'repo@server' });
 const shelve = (id: number, comment: string): Shelve => ({ id, comment, guid: `sh-${id}`, owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
-const review = (id: number, title: string): CodeReviewSummary => ({ id, title, status: 'Under review', owner: 'ana', assignee: '', date: '2026-01-01T00:00:00Z' });
+const review = (id: number, title: string): CodeReviewSummary => codeReviewSummary({ id, title, owner: 'ana', date: '2026-01-01T00:00:00Z' });
 const change = (path: string): PendingChange => ({ path, kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' });
 
 function indexed<T>(items: T[], nameOf: (item: T) => string): IndexedList<T> {
   return { items, index: createFuzzyIndex(items.map(nameOf)) };
 }
-const branches = (...items: Branch[]) => indexed(items, (item) => item.name);
-const labels = (...items: Label[]) => indexed(items, (item) => item.name);
+function described<T extends { name: string; comment: string }>(items: T[]): DescribedList<T> {
+  return { ...indexed(items, (item) => item.name), words: createWordFilterIndex(items.map((item) => [item.name, item.comment])) };
+}
+const branches = (...items: Branch[]) => described(items);
+const labels = (...items: Label[]) => described(items);
 const files = (...paths: string[]) => indexed(paths.map((path) => ({ path, isDirectory: false })), (entry) => entry.path);
 
 interface Search {
+  /** What is typed in the palette, prefix and all: read as the palette reads it (`parseScope`), for the scope and the term. */
+  typed?: string;
   term?: string;
   scope?: PaletteScope;
   currentBranch?: string;
+  me?: string;
   lists?: Partial<CachedLists>;
   server?: Partial<ServerMatches>;
   changesetSearch?: Partial<ChangesetSearch>;
@@ -61,8 +76,14 @@ interface Search {
 }
 
 /** The palette's groups for what is typed; the server answered for the same term unless told otherwise. */
-function groupsFor({ term = '', scope = 'all', currentBranch, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
-  const context: ResultContext = { place, term, currentBranch, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
+function groupsFor({ typed, ...search }: Search): SearchGroup[] {
+  if (typed === undefined) return groupsForTerm(search);
+  const { scope, text } = parseScope(typed);
+  return groupsForTerm({ ...search, scope, term: text });
+}
+
+function groupsForTerm({ term = '', scope = 'all', currentBranch, me, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
+  const context: ResultContext = { place, term, currentBranch, me, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
   const input: PaletteGroupsInput = {
     scope,
     context,
@@ -101,11 +122,12 @@ describe('paletteGroups without a search', () => {
     ]);
   });
 
-  it('lists labels only when asked for them (@)', () => {
-    const lists = { labels: labels(label(1, 'v1')), branches: branches(branch(1, '/main')) };
+  it('lists labels and code reviews only when asked for them (lb:, cr:)', () => {
+    const lists = { labels: labels(label(1, 'v1')), branches: branches(branch(1, '/main')), codeReviews: [review(5, 'Review login')] };
 
     expect(sections(groupsFor({ lists }))).toEqual(['branches']);
-    expect(sections(groupsFor({ lists, scope: 'refs' }))).toEqual(['branches', 'labels']);
+    expect(sections(groupsFor({ lists, scope: 'labels' }))).toEqual(['labels']);
+    expect(labelsIn(groupsFor({ lists, scope: 'codeReviews' }), 'codeReviews')).toEqual(['Review login']);
   });
 
   it('caps each section at MAX_PER_SECTION rows', () => {
@@ -161,10 +183,208 @@ describe('paletteGroups with a search', () => {
     ]);
   });
 
-  it('matches changesets and shelves by their spec too', () => {
-    const groups = groupsFor({ term: 'sh:4', lists: { shelves: [shelve(3, 'Three'), shelve(4, 'Four')] } });
+  it('opens the shelve `sh:` names by its number first, as a full match, before the others holding the number', () => {
+    const shelves = [shelve(40, 'Forty'), shelve(14, 'Fourteen'), shelve(7, '4K textures'), shelve(4, 'Four')];
+    const results = groupsFor({ typed: 'sh:4', lists: { shelves } }).find((group) => group.section === 'shelves')!.results;
 
-    expect(labelsIn(groups, 'shelves')).toEqual(['Four']);
+    expect(results.map((result) => [result.label, result.quality])).toEqual([
+      ['Four', 1],
+      ['Forty', expect.any(Number)],
+      ['Fourteen', expect.any(Number)],
+      ['4K textures', expect.any(Number)],
+    ]);
+    expect(results.slice(1).every((result) => result.quality! < 1)).toBe(true);
+  });
+
+  it('opens the code review `cr:` names by its number first, though its title holds no such number', () => {
+    const reviews = [review(3110, 'Review 311 fixes'), review(311, 'Login screen')];
+    const results = groupsFor({ typed: 'cr:311', lists: { codeReviews: reviews } }).find((group) => group.section === 'codeReviews')!.results;
+
+    expect(results.map((result) => [result.label, result.quality])).toEqual([
+      ['Login screen', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+  });
+
+  it("reads a number after another kind's prefix as that kind's only", () => {
+    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4K textures')], codeReviews: [review(4, 'Login screen')] };
+
+    expect(labelsIn(groupsFor({ typed: 'sh:4', lists }), 'codeReviews')).toEqual([]);
+    expect(labelsIn(groupsFor({ typed: 'cr:5', lists }), 'codeReviews')).toEqual(['Code review 5']);
+  });
+
+  it('opens a shelve or code review by its number when the lists read hold none by it, older than they reach', () => {
+    const shelves = groupsFor({ typed: 'sh:4', lists: { shelves: [shelve(40, 'Forty'), shelve(14, 'Fourteen')] } }).find((group) => group.section === 'shelves')!.results;
+    const reviews = groupsFor({ typed: 'cr:311', lists: { codeReviews: [review(3110, 'Review 311 fixes')] } }).find((group) => group.section === 'codeReviews')!.results;
+
+    expect(shelves.map((result) => [result.label, result.quality])).toEqual([
+      ['Shelve 4', 1],
+      ['Forty', expect.any(Number)],
+      ['Fourteen', expect.any(Number)],
+    ]);
+    expect(reviews.map((result) => [result.label, result.quality])).toEqual([
+      ['Code review 311', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+  });
+
+  it('reads the number as `cm` reads a spec, leading zeros and all, and only a number alone', () => {
+    const lists = { shelves: [shelve(4, 'Four'), shelve(7, '4 textures')] };
+
+    expect(labelsIn(groupsFor({ typed: 'sh:004', lists }), 'shelves')[0]).toBe('Four');
+    expect(labelsIn(groupsFor({ typed: 'sh:4 textures', lists }), 'shelves')).toEqual(['4 textures']);
+  });
+});
+
+describe('paletteGroups finding branches and labels by their description', () => {
+  const withComment = (id: number, name: string, comment: string): Branch => ({ ...branch(id, name), comment });
+  const branchesFound = (term: string, ...items: Branch[]) => labelsIn(groupsFor({ term, lists: { branches: branches(...items) } }), 'branches');
+
+  it('finds a branch by a word of its description', () => {
+    expect(branchesFound('batch', withComment(1, '/main/scm1042', 'Resolve owner names in one batch'), withComment(2, '/main/other', 'Unrelated'))).toEqual([
+      '/main/scm1042',
+    ]);
+  });
+
+  it('finds a branch by several words, in any order, each in its name or its description', () => {
+    const resolve = withComment(1, '/main/scm1042', 'Resolve owner names in one batch');
+    const other = withComment(2, '/main/scm2000', 'Resolve paths');
+
+    expect(branchesFound('names resolve', resolve, other)).toEqual(['/main/scm1042']);
+    expect(branchesFound('scm1042 batch', resolve, other)).toEqual(['/main/scm1042']);
+  });
+
+  it('finds a branch by punctuation typed as it is written', () => {
+    expect(branchesFound('[CLI] cm ls', withComment(1, '/main/scm1042', '[CLI]: cm ls: resolve owner names in one batch'))).toEqual(['/main/scm1042']);
+  });
+
+  it('finds a branch whatever the case typed or written', () => {
+    expect(branchesFound('RESOLVE Owner', withComment(1, '/main/scm1042', 'resolve OWNER names'))).toEqual(['/main/scm1042']);
+  });
+
+  it('lists the branches found by name first, then those found by their description, each once', () => {
+    const byDescription = withComment(1, '/main/scm1042', 'Faster checkin');
+    const byName = withComment(2, '/main/checkin', '');
+    const byBoth = withComment(3, '/main/checkin-ui', 'Checkin dialog');
+    const groups = rankGroups(groupsFor({ term: 'checkin', lists: { branches: branches(byDescription, byName, byBoth) } }));
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/checkin', '/main/checkin-ui', '/main/scm1042']);
+  });
+
+  it('shows a branch found by its description with a code review titled the same', () => {
+    const term = '[CLI] cm ls';
+    const title = '[CLI]: cm ls: resolve owner names in one batch';
+    const groups = rankGroups(
+      groupsFor({ term, lists: { branches: branches(withComment(1, '/main/scm1042', title)), codeReviews: [review(5, title)] } }),
+    );
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/scm1042']);
+    expect(labelsIn(groups, 'codeReviews')).toEqual([title]);
+  });
+
+  it('caps the section at MAX_PER_SECTION rows, name and description hits together', () => {
+    const many = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id, `/main/fix-${id}`, `fix ${id}`));
+    const onlyDescribed = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id + 100, `/main/task-${id}`, 'fix'));
+
+    expect(branchesFound('fix', ...many, ...onlyDescribed)).toHaveLength(MAX_PER_SECTION);
+  });
+
+  it('keeps room for a description that holds the words typed over names that only hold their letters, scattered', () => {
+    const scattered = Array.from({ length: MAX_PER_SECTION }, (_, id) => withComment(id, `/main/axbxc${id}`, ''));
+    const results = branchesFound('abc', ...scattered, withComment(100, '/main/task', 'Rename abc'));
+
+    expect(results).toHaveLength(MAX_PER_SECTION);
+    expect(results[0]).toBe('/main/task');
+  });
+
+  it('reads only the rows it shows of 20,000 branches all holding the word typed, on each keystroke', () => {
+    const { items, reads } = countedReads(Array.from({ length: 20_000 }, (_, id) => withComment(id, `/main/task${id}`, 'Fix the build')));
+    const list = branches(...items);
+    const readsToIndex = reads();
+    for (const term of ['b', 'bu', 'bui', 'build']) groupsFor({ term, lists: { branches: list } });
+
+    // Each of the at most MAX_PER_SECTION rows a keystroke shows is read for its result (name, owner, date...).
+    expect((reads() - readsToIndex) / 4).toBeLessThan(MAX_PER_SECTION * 20);
+  });
+
+  it('finds an older branch whose description holds what was typed as typed past many newer ones holding its words apart', () => {
+    const newer = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id, `/main/task-${id}`, 'Resolve the names'));
+    const older = withComment(100, '/main/old', 'Resolve names in one batch');
+
+    expect(branchesFound('resolve names', ...newer, older)[0]).toBe('/main/old');
+  });
+
+  it('ranks a description holding what was typed after a name holding it in its folders, which it would otherwise beat', () => {
+    const byDescription = withComment(1, '/main/other', 'Batch the owner lookups');
+    const inFolders = withComment(2, '/main/batch/task1', '');
+    const groups = rankGroups(groupsFor({ term: 'batch', lists: { branches: branches(byDescription, inFolders) } }));
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/batch/task1', '/main/other']);
+  });
+
+  it('ranks a description holding the words typed apart before a name holding their letters scattered', () => {
+    const byDescription = withComment(1, '/main/other', 'Batch the owner lookups');
+    const scattered = withComment(2, '/main/bxaxtxcxh', '');
+    const groups = rankGroups(groupsFor({ term: 'batch owner', lists: { branches: branches(scattered, byDescription) } }));
+
+    expect(labelsIn(groups, 'branches')[0]).toBe('/main/other');
+  });
+
+  it('shows who made it and when on a branch whose name holds the words typed in another order, with a description or not', () => {
+    // "fix crash" isn't in "crash-fix" letter by letter, so only the words find it.
+    for (const comment of ['', 'Unrelated']) {
+      const [result] = groupsFor({ term: 'fix crash', lists: { branches: branches(withComment(1, '/main/crash-fix', comment)) } })[0]!.results;
+      expect(result).toMatchObject({ label: '/main/crash-fix', detail: expect.stringMatching(/^Ana · /), labelMatches: [6, 7, 8, 9, 10, 12, 13, 14] });
+    }
+  });
+
+  it('finds a label by its description too', () => {
+    const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
+
+    expect(labelsIn(groups, 'labels')).toEqual(['v1.0']);
+  });
+});
+
+describe('paletteGroups finding hidden branches', () => {
+  const hidden = (id: number, name: string, comment = ''): Branch => ({ ...branch(id, name), comment, isHidden: true });
+  const visible = (id: number, name: string, comment = ''): Branch => ({ ...branch(id, name), comment });
+  const branchResults = (search: Search) => groupsFor(search).find((group) => group.section === 'branches')?.results ?? [];
+  const resolved = hidden(9, '/main/scm1042', 'Resolve owner names in one batch');
+
+  it('finds a hidden branch by its name, its number and its description, marked hidden', () => {
+    for (const term of ['scm1042', '1042', 'owner names']) {
+      const [result] = branchResults({ term, lists: { branches: branches(...paletteBranches([visible(1, '/main/other')], [resolved])) } });
+      expect(result).toMatchObject({ label: '/main/scm1042', isHidden: true });
+    }
+  });
+
+  it('marks only the hidden ones', () => {
+    const results = branchResults({ term: 'task', lists: { branches: branches(...paletteBranches([visible(1, '/main/task')], [])) } });
+
+    expect(results.map((result) => result.isHidden ?? false)).toEqual([false]);
+  });
+
+  it('ranks a hidden branch after a visible one of equal match, by name or by description', () => {
+    const byName = branches(...paletteBranches([visible(1, '/main/a/fix')], [hidden(2, '/main/b/fix')]));
+    const byNameHiddenFirst = branches(hidden(2, '/main/b/fix'), visible(1, '/main/a/fix'));
+    const byDescription = branches(hidden(3, '/main/x', 'Batch the lookups'), visible(4, '/main/y', 'Batch the lookups'));
+
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists: { branches: byName } })), 'branches')).toEqual(['/main/a/fix', '/main/b/fix']);
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists: { branches: byNameHiddenFirst } })), 'branches')).toEqual(['/main/a/fix', '/main/b/fix']);
+    expect(labelsIn(rankGroups(groupsFor({ term: 'batch', lists: { branches: byDescription } })), 'branches')).toEqual(['/main/y', '/main/x']);
+  });
+
+  it('ranks a hidden branch that matches better before a visible one that matches less well', () => {
+    const lists = { branches: branches(visible(1, '/main/fix-later'), hidden(2, '/main/fix')) };
+
+    expect(labelsIn(rankGroups(groupsFor({ term: 'fix', lists })), 'branches')).toEqual(['/main/fix', '/main/fix-later']);
+  });
+
+  it('finds the current branch while it is hidden, marked current and hidden, and lists it first without a search', () => {
+    const lists = { branches: branches(...paletteBranches([visible(1, '/main/newer')], [resolved])) };
+
+    expect(branchResults({ term: '1042', currentBranch: '/main/scm1042', lists })[0]).toMatchObject({ isCurrent: true, isHidden: true });
+    expect(branchResults({ currentBranch: '/main/scm1042', lists })[0]).toMatchObject({ label: '/main/scm1042', isCurrent: true, isHidden: true });
   });
 });
 
@@ -172,8 +392,8 @@ describe('paletteGroups for a changeset number', () => {
   it('opens a recent changeset typed by number (123 or cs:123) with its comment, first and as a full match', () => {
     const lists = { changesets: [changeset(1234, 'Recent work'), changeset(12345, 'Mentions 1234')] };
 
-    for (const term of ['1234', 'cs:1234', 'CS:1234']) {
-      const results = groupsFor({ term, lists }).find((group) => group.section === 'changesets')!.results;
+    for (const typed of ['1234', 'cs:1234', 'CS:1234']) {
+      const results = groupsFor({ typed, lists }).find((group) => group.section === 'changesets')!.results;
       expect(results.map((result) => [result.label, result.quality])).toEqual([
         ['Recent work', 1],
         ['Mentions 1234', expect.any(Number)],
@@ -183,6 +403,86 @@ describe('paletteGroups for a changeset number', () => {
 
   it('opens an older changeset by number alone, and offers no search of every comment', () => {
     expect(labelsIn(groupsFor({ term: '77', lists: { changesets: [] } }), 'changesets')).toEqual(['Changeset 77']);
+  });
+});
+
+describe('paletteGroups for a number alone', () => {
+  const resultsIn = (groups: SearchGroup[], section: string) => groups.find((group) => group.section === section)?.results ?? [];
+  const firstRowOf = (groups: SearchGroup[]) => rankGroups(groups)[0]?.results[0]?.label;
+
+  it('names the code review with that number among the newest read, first in its section and as a full match', () => {
+    const groups = groupsFor({ typed: '311', lists: { codeReviews: [review(3110, 'Review 311 fixes'), review(311, 'Login screen')] } });
+
+    expect(resultsIn(groups, 'codeReviews').map((result) => [result.label, result.quality])).toEqual([
+      ['Login screen', 1],
+      ['Review 311 fixes', expect.any(Number)],
+    ]);
+    expect(labelsIn(groups, 'changesets')).toEqual(['Changeset 311']);
+  });
+
+  it('names an older review once the server found it by its number, for the term typed now', () => {
+    const groups = groupsFor({ typed: '31392466', lists: { codeReviews: [] }, server: { reviewNumbered: [review(31392466, 'Update report dialog')] } });
+
+    expect(resultsIn(groups, 'codeReviews').map((result) => [result.label, result.quality])).toEqual([['Update report dialog', 1]]);
+    expect(labelsIn(groupsFor({ typed: '31392466', lists: { codeReviews: [] }, server: { term: '3139246', reviewNumbered: [review(3139246, 'Older')] } }), 'codeReviews')).toEqual([]);
+  });
+
+  it("offers no review for a number no review has, nor while the server hasn't answered: no row that opens to an error", () => {
+    expect(sections(groupsFor({ typed: '77', lists: { codeReviews: [] }, server: { reviewNumbered: [] } }))).not.toContain('codeReviews');
+    expect(sections(groupsFor({ typed: '77', lists: { codeReviews: [] } }))).not.toContain('codeReviews');
+  });
+
+  it('shows its title after `cr:` once the server found it, its number alone until then, and nothing once none has it', () => {
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] }, server: { reviewNumbered: [review(900, 'Old login')] } }), 'codeReviews')).toEqual(['Old login']);
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] } }), 'codeReviews')).toEqual(['Code review 900']);
+    expect(labelsIn(groupsFor({ typed: 'cr:900', lists: { codeReviews: [] }, server: { reviewNumbered: [] } }), 'codeReviews')).toEqual([]);
+  });
+
+  it('names the shelve with that number among those read first, and none it has not read', () => {
+    const shelves = [shelve(40, 'Forty'), shelve(4, 'Four')];
+
+    expect(resultsIn(groupsFor({ typed: '4', lists: { shelves } }), 'shelves').map((result) => [result.label, result.quality])).toEqual([
+      ['Four', 1],
+      ['Forty', expect.any(Number)],
+    ]);
+    expect(labelsIn(groupsFor({ typed: '5', lists: { shelves } }), 'shelves')).toEqual([]);
+  });
+
+  it('puts the changeset first when the number is a recent changeset, or one older than the newest read', () => {
+    const codeReviews = [review(120, 'Login screen')];
+
+    expect(firstRowOf(groupsFor({ typed: '120', lists: { changesets: [changeset(120, 'Recent work')], codeReviews } }))).toBe('Recent work');
+    expect(firstRowOf(groupsFor({ typed: '120', lists: { changesets: [changeset(500, 'Newest')], codeReviews } }))).toBe('Changeset 120');
+  });
+
+  it('puts the review or shelve first when the number is past the newest changeset read, the changeset still offered', () => {
+    const lists = { changesets: [changeset(281411, 'Newest')], codeReviews: [review(31392466, 'Update report dialog')] };
+    const groups = groupsFor({ typed: '31392466', lists });
+
+    expect(firstRowOf(groups)).toBe('Update report dialog');
+    expect(resultsIn(groups, 'changesets').map((result) => [result.label, result.quality])).toEqual([['Changeset 31392466', UNLIKELY_CHANGESET_QUALITY]]);
+    expect(firstRowOf(groupsFor({ typed: '290000', lists: { ...lists, shelves: [shelve(290000, 'Shelved')] } }))).toBe('Shelved');
+  });
+
+  it('keeps a changeset asked for with `cs:` a full match, and names no review or shelve by it', () => {
+    const groups = groupsFor({ typed: 'cs:400', lists: { changesets: [changeset(300, 'Newest')], codeReviews: [review(400, 'Login')], shelves: [shelve(400, 'Shelved')] } });
+
+    expect(groups.map((group) => [group.section, group.results.map((result) => [result.label, result.quality])])).toEqual([['changesets', [['Changeset 400', 1]]]]);
+  });
+});
+
+describe('reviewNumberToLookUp', () => {
+  it('asks the server about a number alone or after `cr:` that the newest reviews read lack', () => {
+    expect(reviewNumberToLookUp('311', 'all', [])).toBe(311);
+    expect(reviewNumberToLookUp('311', 'codeReviews', undefined)).toBe(311);
+  });
+
+  it('asks nothing for a review read, another kind, or text', () => {
+    expect(reviewNumberToLookUp('311', 'all', [{ id: 311 }])).toBeUndefined();
+    expect(reviewNumberToLookUp('311', 'changesets', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('311 login', 'all', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('cs:311', 'all', [])).toBeUndefined();
+    expect(reviewNumberToLookUp('1000000000000000000000000', 'all', [])).toBeUndefined();
   });
 });
 
@@ -277,5 +577,25 @@ describe('lacksServerMatch', () => {
   it('decides nothing until both lists are read', () => {
     expect(lacksServerMatch(undefined, [{ id: 1 }])).toBe(false);
     expect(lacksServerMatch([{ id: 1 }], undefined)).toBe(false);
+  });
+});
+
+describe('paletteGroups: people', () => {
+  const people = indexPeople(palettePeople(['ana.diaz', 'tom', 'anabel.ruiz', 'bob'], [], 'tom'));
+
+  it('lists who `@` offers, the user first, and no one in any other scope', () => {
+    expect(labelsIn(groupsFor({ scope: 'people', me: 'tom', lists: { people } }), 'people')).toEqual(['Tom', 'Ana Diaz', 'Anabel Ruiz', 'Bob']);
+    expect(sections(groupsFor({ term: 'ana', lists: { people } }))).not.toContain('people');
+    expect(sections(groupsFor({ lists: { people } }))).not.toContain('people');
+  });
+
+  it('finds people by the name shown and as stored, the name typed first', () => {
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ana', lists: { people } }), 'people')).toEqual(['Ana Diaz', 'Anabel Ruiz']);
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ruiz', lists: { people } }), 'people')).toEqual(['Anabel Ruiz']);
+    expect(labelsIn(groupsFor({ scope: 'people', term: 'ana.diaz', lists: { people } }), 'people')).toEqual(['Ana Diaz']);
+  });
+
+  it('shows nothing while the people are unread', () => {
+    expect(groupsFor({ scope: 'people' })).toEqual([]);
   });
 });

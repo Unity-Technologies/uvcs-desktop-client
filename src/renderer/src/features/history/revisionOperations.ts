@@ -39,20 +39,38 @@ export async function saveVersionAs(place: Place, version: RepositoryVersion, fi
   }
 }
 
+/** What a revert says about itself beyond the file and the changeset. */
+export interface RevertOptions {
+  /**
+   * The changeset whose change to the file this takes back, named in the confirmation too (a changeset's diff), as its
+   * parent's number alone leaves the user to work out which change goes.
+   */
+  undoing?: number;
+  /**
+   * The Unity `.meta` listed with the file (`pairUnityMetas`), reverted to the same changeset with it: an asset and its
+   * meta change together, and one taken back alone leaves the project's references out of step.
+   */
+  metaPath?: string;
+}
+
 /**
- * Loads an old revision's content into the workspace; the result shows up as a pending change. `undoing`: the changeset
- * whose change to the file this takes back, named in the confirmation too (a changeset's diff), as its parent's number
- * alone leaves the user to work out which change goes. `cm revert` checks the
+ * Loads an old revision's content into the workspace; the result shows up as a pending change. `cm revert` checks the
  * file out, which may take its lock, so it refreshes what a checkout does.
  */
-export async function revertItemTo(workspacePath: string, path: string, changesetId: number, undoing?: number): Promise<void> {
+export async function revertItemTo(workspacePath: string, path: string, changesetId: number, { undoing, metaPath }: RevertOptions = {}): Promise<void> {
+  const named = metaPath === undefined ? path : `${path} and its .meta`;
   const confirmed = await confirm({
-    title: `Revert ${path} to changeset ${changesetId}${undoing === undefined ? '' : `, before changeset ${undoing}`}?`,
+    title: `Revert ${named} to changeset ${changesetId}${undoing === undefined ? '' : `, before changeset ${undoing}`}?`,
     message: 'The file will be checked out with the content it had in that changeset. Review and check it in from Changes.',
     confirmLabel: 'Revert file',
   });
   if (!confirmed) return;
 
-  const reverted = await runVoidAction(workspacePlace(workspacePath), "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId), isAffectedByPendingChangeEdit);
-  if (reverted) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
+  const reverted = await runVoidAction(
+    workspacePlace(workspacePath),
+    "Couldn't revert the file",
+    () => api.history.revertTo(workspacePath, metaPath === undefined ? [path] : [path, metaPath], changesetId),
+    isAffectedByPendingChangeEdit,
+  );
+  if (reverted) toast.success(`Reverted ${named}`, `Content from changeset ${changesetId} is now a pending change.`);
 }

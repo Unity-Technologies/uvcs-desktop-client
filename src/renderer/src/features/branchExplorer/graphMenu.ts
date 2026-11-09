@@ -2,14 +2,17 @@ import type { Place } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
-import { menuAction, type MenuHost } from '../../components/menuWords';
+import { menuAction, menuSubmenu, type MenuHost } from '../../components/menuWords';
 import { branchMenu } from '../branches/branchMenu';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { codeReviewMenu } from '../codeReviews/codeReviewMenu';
 import { labelMenu } from '../labels/labelMenu';
 import type { GraphTarget } from './canvas/graphTargets';
+import { branchPositionEntries, type BranchPositions } from './branchPosition';
 import { graphActions } from './graphActions';
-import { labelInfo } from './model/graphLabels';
+import { isSelected, type GraphSelection, type GraphSelections } from './graphSelection';
+import { branchStartInGraph } from './model/branchStartInGraph';
+import { labelInfo, selectedLabel } from './model/graphLabels';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
 interface GraphMenuContext {
@@ -23,6 +26,10 @@ interface GraphMenuContext {
   goToChangeset: (id: number) => void;
   showRelatedTo: (branch: string) => void;
   revealCreatedBranch: (name: string) => void;
+  /** Everything selected: a right-click on one of several gives the menu for all of them. */
+  selections: GraphSelections;
+  /** The branches moved in the repository shown: a branch's Position submenu moves it. */
+  positions: BranchPositions | null;
 }
 
 /**
@@ -31,6 +38,7 @@ interface GraphMenuContext {
  */
 export function graphMenu(target: GraphTarget | null, context: GraphMenuContext): MenuEntry[] {
   const host: MenuHost = { inBranchExplorer: true, onBranchCreated: context.revealCreatedBranch };
+  if (context.selections.length > 1 && isSelected(context.selections, target)) return selectionMenu(context.selections, context, host);
   switch (target?.kind) {
     case 'changeset':
       return graphChangesetMenu(target.id, context, host);
@@ -69,16 +77,42 @@ function graphCodeReviewMenu(review: CodeReviewSummary, { place, layout, current
 function graphChangesetMenu(id: number, { place, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   if (!changeset) return [];
-  const menu = changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
+  const branchStartOf = (branch: string) => branchStartInGraph(layout, branch);
+  const menu = changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository, branchStartOf }, [changeset], host);
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 
-function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
+function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository, goToChangeset, showRelatedTo, positions }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { branch, baseChangeset } = lane;
   const menu = branchMenu(place, [{ ...branch, repository }], currentBranch, host);
   return withEntries(menu, [
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),
     menuAction('related', () => showRelatedTo(branch.name)),
+    menuSubmenu('position', branchPositionEntries(layout, [lane], positions)),
   ]);
+}
+
+/**
+ * The lists' menus for every object selected, which offer what applies to several (a diff of two changesets or two
+ * labels, hiding or deleting branches), and Position for branches, which moves them together; the graph's ways around
+ * one object (its parent, head, base) aren't for several.
+ */
+function selectionMenu(selections: GraphSelections, context: GraphMenuContext, host: MenuHost): MenuEntry[] {
+  const { place, layout, currentBranch, loadedChangeset, repository } = context;
+  const lead = selections.at(-1)!;
+  if (lead.kind === 'branch') {
+    const lanes = selections.flatMap((selection) => (selection.kind === 'branch' ? present(layout.lanesByBranch.get(selection.name)) : []));
+    const branches = lanes.map(({ branch }) => ({ ...branch, repository }));
+    return withEntries(branchMenu(place, branches, currentBranch, host), [menuSubmenu('position', branchPositionEntries(layout, lanes, context.positions))]);
+  }
+  if (lead.kind === 'changeset' && lead.label !== undefined) {
+    return labelMenu(place, selections.flatMap((selection) => present(selectedLabel(layout, selection, repository ?? ''))), host);
+  }
+  const changesets = selections.flatMap((selection: GraphSelection) => (selection.kind === 'changeset' ? present(layout.nodes.get(selection.id)?.changeset) : []));
+  return changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository }, changesets, host);
+}
+
+function present<T>(value: T | undefined): T[] {
+  return value === undefined ? [] : [value];
 }

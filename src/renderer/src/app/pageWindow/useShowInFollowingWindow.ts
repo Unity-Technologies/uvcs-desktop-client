@@ -10,17 +10,18 @@ import { pageSeed } from './pageSeeds';
 import { usePageWindow } from './pageWindowStore';
 
 /**
- * What a details panel shows, as the page of its changes: while a page window follows this window's selection
- * ("Follow selection"), it shows that page once the selection settles there. Nothing crosses to the main process
- * while no page window follows.
+ * What a view's selection shows, as the page of its changes: while a page window follows this window's selection
+ * ("Follow selection"), it shows that page once the selection settles there. Called by the view, not its details
+ * panel, so it follows while the details are hidden too. Nothing crosses to the main process while no page window
+ * follows, or nothing is selected.
  */
-export function useShowInFollowingWindow(page: Page): void {
+export function useShowInFollowingWindow(page: Page | null): void {
   const followed = usePageWindow((state) => state.followed);
   const place = usePlace();
-  const key = pageKey(page);
+  const key = page && pageKey(page);
   useEffect(() => {
-    if (followed) void api.windows.selectionShown(page, pageSeed(place, page));
-    // Keyed by what the page shows: a details panel builds its page anew at every render.
+    if (followed && page) void api.windows.selectionShown(page, pageSeed(place, page));
+    // Keyed by what the page shows: a view builds its page anew at every render.
   }, [followed, key, place]);
 }
 

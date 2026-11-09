@@ -3,6 +3,11 @@ export const MODAL_DIALOG = { 'data-modal-dialog': '' } as const;
 
 type Root = Pick<ParentNode, 'querySelector'>;
 
+/** Whether an element is inside one of the app's modal dialogs. */
+export function isInModalDialog(element: Pick<Element, 'closest'> | null): boolean {
+  return element?.closest('[data-modal-dialog]') != null;
+}
+
 export function isModalDialogOpen(root: Root = document): boolean {
   return root.querySelector('[data-modal-dialog]') !== null;
 }

@@ -1,5 +1,6 @@
 import type { FileDiffOptions, FileOptions } from '@pierre/diffs/react';
 import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import { pierreThemeName } from '../../../lib/codeTheme';
 import type { DiffLayout } from './diffPreferencesStore';
 
 /**
@@ -20,10 +21,6 @@ interface DiffAppearance {
   layout: DiffLayout;
   collapseUnchanged: boolean;
   wrapLines: boolean;
-}
-
-export function pierreThemeName(theme: ResolvedTheme): 'pierre-light' | 'pierre-dark' {
-  return theme === 'dark' ? 'pierre-dark' : 'pierre-light';
 }
 
 export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<LAnnotation, undefined> {

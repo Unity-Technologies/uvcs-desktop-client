@@ -1,5 +1,6 @@
 import { Files, Folder } from 'lucide-react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { rangeLength } from '../../lib/itemRange';
 import { formatCount, pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { FileStepsContext, type FileSteps } from '../diff/viewer/fileSteps';
@@ -13,6 +14,8 @@ interface ChangeSelectionPaneProps {
   selectedCount: number;
   /** The change the diff shows: it follows the selection once it settles. */
   diffChange: PendingChange | undefined;
+  /** The Unity `.meta` listed with that change, whose diff it can show instead. */
+  diffMeta: PendingChange | undefined;
   /** The folder or changelist the selection is on, when it is on no change. */
   focusedFolder: Exclude<ChangeRow, { type: 'file' }> | undefined;
   fileSteps: FileSteps;
@@ -20,14 +23,14 @@ interface ChangeSelectionPaneProps {
 }
 
 /** Beside the list of changes: the diff of the change selected, or what the selection holds instead. */
-export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, focusedFolder, fileSteps, reviewMarks }: ChangeSelectionPaneProps) {
+export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, diffMeta, focusedFolder, fileSteps, reviewMarks }: ChangeSelectionPaneProps) {
   if (selectedCount > 1) {
     return <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />;
   }
   if (diffChange) {
     return (
       <FileStepsContext.Provider value={fileSteps}>
-        <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={reviewMarks.get(diffChange.path)} />
+        <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} meta={diffMeta} reviewMark={reviewMarks.get(diffChange.path)} />
       </FileStepsContext.Provider>
     );
   }
@@ -36,7 +39,7 @@ export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, 
       <EmptyState
         icon={<Folder size={24} />}
         title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path}
-        description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`}
+        description={`${pluralize(rangeLength(focusedFolder.held), 'change')}. Select a file to see its diff.`}
       />
     );
   }

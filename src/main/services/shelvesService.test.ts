@@ -1,12 +1,14 @@
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { FOUND_SHELVES } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
-import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import type { SwitchContext } from './ServiceContext';
 import { createShelvesService } from './shelvesService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
@@ -33,5 +35,37 @@ describe('shelves', () => {
     await service.list(repositoryPlace('game@local'), { owners: ['me'] });
 
     expect(fake.commands.map(({ args, options }) => [args[2], options])).toEqual([["where owner = 'me' on repository 'game@local'", { outsideWorkspaces: true }]]);
+  });
+
+  it("replaces a shelve's comment with one quick command on the changeset below zero it is, the comment in a file deleted afterwards", async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const fake = fakeCmClient({ 'changeset editcomment': answer });
+    const service = createShelvesService(serviceContext(fake.cm), {} as SwitchContext);
+
+    await service.editComment(workspacePlace(WORKSPACE), 12, 'Spike the "new" HUD\r\nWith the radar');
+
+    expect(fake.commands).toMatchObject([{ via: 'query', args: ['changeset', 'editcomment', 'cs:-12', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } }]);
+    expect(seen.content).toBe('Spike the "new" HUD\r\nWith the radar');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it('clears a comment with an empty file, and names the repository outside every workspace', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const fake = fakeCmClient({ 'changeset editcomment': answer });
+    const service = createShelvesService(serviceContext(fake.cm), {} as SwitchContext);
+
+    await service.editComment(repositoryPlace('game@local'), 12, '');
+
+    expect(fake.commands).toMatchObject([{ args: ['changeset', 'editcomment', 'cs:-12@game@local', `-commentsfile=${seen.file}`], options: { outsideWorkspaces: true } }]);
+    expect(seen.content).toBe('');
+  });
+
+  it("deletes the comment file when cm can't find the shelve", async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', cmFails("Changeset -99 doesn't exist in repository game@local."));
+    const fake = fakeCmClient({ 'changeset editcomment': answer });
+    const service = createShelvesService(serviceContext(fake.cm), {} as SwitchContext);
+
+    await expect(service.editComment(workspacePlace(WORKSPACE), 99, 'Gone')).rejects.toThrow("doesn't exist");
+    expect(existsSync(seen.file)).toBe(false);
   });
 });

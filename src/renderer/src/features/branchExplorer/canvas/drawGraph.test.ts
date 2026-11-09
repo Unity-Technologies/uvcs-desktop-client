@@ -1,13 +1,16 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { codeReviewSummary } from '../../../testing/codeReviewSummary';
 import { AVATAR_COLORS } from '../../../lib/avatarColors';
-import { largeHistory } from '../model/graphFixtures';
+import { largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
+import { NO_RULE_COLORS } from '../model/ruleColors';
 import { searchGraph, searchHighlight } from '../model/searchGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { columnX, rowY } from './geometry';
+import { BAND_HEIGHT, columnX, rowY } from './geometry';
 import type { GraphPalette } from './graphPalette';
+import { DEFAULT_GRAPH_VIEW_OPTIONS, type GraphViewOptions } from './graphViewOptions';
 import { centerOn } from './viewport';
 
 // Some authors have a picture, the others their initials.
@@ -25,9 +28,11 @@ interface Placed {
   transform: number[];
 }
 
-/** A 2D context that records what is placed where, and the transforms. Everything else does nothing. */
-function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][] } {
+/** A 2D context that records what is placed where, the transforms, and how often it strokes and fills with each ink. Everything else does nothing. */
+function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Map<unknown, number> } {
   const placed: Placed[] = [];
+  const inks = new Map<unknown, number>();
+  const use = (ink: unknown) => inks.set(ink, (inks.get(ink) ?? 0) + 1);
   const transforms: number[][] = [];
   const saved: number[][] = [];
   let transform = [1, 0, 0, 1, 0, 0];
@@ -36,6 +41,8 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
     save: () => saved.push(transform),
     restore: () => (transform = saved.pop() ?? transform),
     measureText: (text: string) => ({ width: text.length * 6 }),
+    stroke: () => use(state.strokeStyle),
+    fill: () => use(state.fillStyle),
   };
   const state: Record<string | symbol, unknown> = { font: '10px sans-serif', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000' };
   const ctx = new Proxy(state, {
@@ -49,7 +56,7 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
       return true;
     },
   });
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms, inks };
 }
 
 const INK = '#888888';
@@ -69,9 +76,12 @@ const palette: GraphPalette = {
   headerText: { name: { saturation: '70%', contrast: 6.3 }, comment: { saturation: '30%', contrast: 4.7 } },
   accentContrast: INK,
   accentSoft: INK,
+  accentWash: INK,
   searchHit: INK,
   labelBackground: INK,
   labelText: INK,
+  labelMark: INK,
+  badgeShadow: INK,
   mergeLinks: { interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
   reviewStatus: { 'Under review': INK, Reviewed: INK, 'Rework required': INK },
   avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, INK])) as GraphPalette['avatars'],
@@ -89,6 +99,8 @@ const palette: GraphPalette = {
     ruler: FONT,
   },
   captionFontSize: 12,
+  branchHues: true,
+  ruleColors: NO_RULE_COLORS,
 };
 
 const PIXEL_RATIO = 2;
@@ -111,10 +123,12 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     viewport: centerOn({ zoom: ZOOM, panX: 0, panY: 0 }, columnX(focus.column), rowY(focus.row), size),
     size,
     palette,
-    options: { showComments: false, showAvatars: true },
+    options: { ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false },
     selectedChangeset: focus.changeset.id,
     selectedBranch: lane.branch.name,
     selectedPending: false,
+    selectedChangesets: new Set([focus.changeset.id]),
+    selectedBranches: new Set([lane.branch.name]),
     hoveredChangeset: focus.changeset.id,
     hoveredBranch: lane.branch.name,
     hoveredReview: null,
@@ -126,7 +140,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     search,
     searchQuery,
     searchPing: 0.3,
-    reviews: new Map([[lane.branch.id, { id: 1, title: 'Review', status: 'Reviewed', owner: 'jane', assignee: '', date: '' }]]),
+    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane' })]]),
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),
@@ -179,5 +193,115 @@ describe('drawGraph far into a huge history', () => {
       const expected = { x: PIXEL_RATIO * (columnX(node.column) * ZOOM + panX), y: PIXEL_RATIO * (rowY(node.row) * ZOOM + panY) };
       expect(centers.some(({ x, y }) => Math.abs(x - expected.x) < 1e-6 && Math.abs(y - expected.y) < 1e-6)).toBe(true);
     }
+  });
+});
+
+/**
+ * The small sample history at full size, centered, nothing selected: every display option has something to draw.
+ * Comments are off (their captions measure fonts on a real canvas), as `drawFar` has them.
+ */
+function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<GraphScene> = {}): ReturnType<typeof recordingContext> & { drawn: DrawnTargets } {
+  const layout = layoutGraph(sampleHistory());
+  const recording = recordingContext();
+  const middle = layout.nodesByColumn[Math.floor(layout.nodesByColumn.length / 2)]!;
+  const scene: GraphScene = {
+    layout,
+    viewport: centerOn({ zoom: 1, panX: 0, panY: 0 }, columnX(middle.column), rowY(middle.row), size),
+    size,
+    palette,
+    options: { ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false, ...options },
+    selectedChangeset: null,
+    selectedBranch: null,
+    selectedPending: false,
+    selectedChangesets: new Set(),
+    selectedBranches: new Set(),
+    hoveredChangeset: null,
+    hoveredBranch: null,
+    hoveredReview: null,
+    hoveredPending: false,
+    homeChangeset: null,
+    pendingChangeCount: 0,
+    currentBranch: null,
+    highlightedAuthors: null,
+    search: null,
+    searchQuery: '',
+    searchPing: 0,
+    reviews: new Map(),
+    ...selection,
+  };
+  const drawn: DrawnTargets = {
+    reviewChips: new DrawnBoxes(),
+    branchHeaders: new DrawnBoxes(),
+    cutBranchNames: new DrawnBoxes(),
+    cutBranchComments: new DrawnBoxes(),
+    captions: new DrawnBoxes(),
+  };
+  drawGraph(recording.ctx, scene, PIXEL_RATIO, drawn);
+  return { ...recording, drawn };
+}
+
+const callsTo = (placed: Placed[], name: string) => placed.filter((call) => call.name === name);
+const textsOf = (placed: Placed[]) => callsTo(placed, 'fillText').map(({ args }) => args[0]);
+
+describe('drawGraph draws only what its display options ask for', () => {
+  it('draws branches as bands, or as lines without them', () => {
+    const bands = (placed: Placed[]) => callsTo(placed, 'roundRect').filter(({ args }) => args[3] === BAND_HEIGHT);
+    const withBands = drawSample().placed;
+    const withoutBands = drawSample({ showBranches: false }).placed;
+    expect(bands(withBands).length).toBeGreaterThan(0);
+    expect(bands(withoutBands)).toEqual([]);
+    expect(callsTo(withoutBands, 'lineTo').length).toBeGreaterThan(callsTo(withBands, 'lineTo').length);
+  });
+
+  it('draws where a branch starts only when asked', () => {
+    expect(callsTo(drawSample().placed, 'arcTo').length).toBeGreaterThan(0);
+    expect(callsTo(drawSample({ showBranchStartLinks: false }).placed, 'arcTo')).toEqual([]);
+  });
+
+  it('draws merge links only when asked', () => {
+    expect(callsTo(drawSample().placed, 'bezierCurveTo').length).toBeGreaterThan(0);
+    expect(callsTo(drawSample({ showMergeLinks: false }).placed, 'bezierCurveTo')).toEqual([]);
+  });
+
+  it('draws labels only when asked', () => {
+    expect(textsOf(drawSample().placed)).toContain('v1');
+    expect(textsOf(drawSample({ showLabels: false }).placed)).not.toContain('v1');
+  });
+
+  it('names a branch by its last part without full names, and keeps the full name for its tooltip', () => {
+    expect(textsOf(drawSample().placed)).toContain('/main/a');
+    const { placed, drawn } = drawSample({ fullBranchNames: false });
+    expect(textsOf(placed)).toContain('a');
+    expect(textsOf(placed)).not.toContain('/main/a');
+    expect(drawn.cutBranchNames.find((lane) => lane.branch.name === '/main/a')).not.toBeNull();
+  });
+});
+
+describe('drawGraph draws a selection the same however many things it holds', () => {
+  const SELECTION_RING = '#0969da';
+  const SELECTION_SOFT = 'rgba(9, 105, 218, 0.12)';
+  const selectionPalette: GraphPalette = { ...palette, accent: SELECTION_RING, accentSoft: SELECTION_SOFT };
+  /**
+   * The inks drawing a selection uses more than the graph drawn with nothing selected. Counted, not just seen: /main
+   * is drawn in the accent too, so the ring's ink is already there with nothing selected.
+   */
+  const inksOfSelection = (selection: Partial<GraphScene>) => {
+    const unselected = drawSample({}, { palette: selectionPalette }).inks;
+    return [...drawSample({}, { palette: selectionPalette, ...selection }).inks]
+      .filter(([ink, uses]) => uses > (unselected.get(ink) ?? 0))
+      .map(([ink]) => ink)
+      .sort();
+  };
+
+  it('draws several branches in the selection color, as it draws one', () => {
+    const one = inksOfSelection({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(inksOfSelection({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']) })).toEqual(one);
+  });
+
+  it('draws several changesets in the selection color, as it draws one', () => {
+    const one = inksOfSelection({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
+    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(inksOfSelection({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]) })).toEqual(one);
   });
 });

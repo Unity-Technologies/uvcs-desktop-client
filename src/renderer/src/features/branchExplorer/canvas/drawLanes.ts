@@ -18,7 +18,10 @@ const BAND_BORDER_WIDTH = 1;
 /** What of a band past the screen edges is still drawn: more than its rounded end with the selection around it. */
 const VIEW_MARGIN = BAND_HEIGHT + SELECTION_HALO;
 
-/** Branch bands, and the elbow each branch draws from its base changeset on the parent's band. */
+/**
+ * Branch bands, and the elbow each branch draws from its base changeset on the parent's band. With bands turned off
+ * (`detail.bands`), a branch is a line through its changesets; without branch starts (`detail.branchStarts`), no elbow.
+ */
 export function drawLanes(draw: DrawContext): void {
   const { scene, visible } = draw;
   for (const lane of lanesAcross(scene.layout, visible.left - VIEW_MARGIN, visible.right + VIEW_MARGIN)) {
@@ -29,7 +32,7 @@ export function drawLanes(draw: DrawContext): void {
     if (!crossesView(bounds, visible, VIEW_MARGIN)) continue;
 
     const color = branchColor(scene.palette, lane.branch.name);
-    if (base) drawBranchStart(draw, lane, base, shape, color);
+    if (base && draw.detail.branchStarts) drawBranchStart(draw, lane, base, shape, color);
     drawBand(draw, lane, shape, color);
   }
 }
@@ -38,7 +41,7 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
   const { ctx, scene, visible } = draw;
   const name = lane.branch.name;
   const isCurrent = scene.currentBranch === name;
-  const isSelected = scene.selectedBranch === name;
+  const isSelected = scene.selectedBranches.has(name);
   const isHovered = scene.hoveredBranch === name;
   // While a search picks changesets out, the bands recede, unless they hold a hit.
   const recedes = scene.search !== null && !scene.search.litBranches.has(name);
@@ -54,15 +57,19 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
     roundRect(draw, left, top, width, BAND_HEIGHT, radius, SELECTION_HALO);
     ctx.fill();
   }
-  roundRect(draw, left, top, width, BAND_HEIGHT, radius, 0);
-  ctx.fillStyle = color;
-  ctx.globalAlpha = (scene.palette.isDark ? 0.1 : 0.06) + (isCurrent ? 0.03 : 0) + (isHovered ? 0.04 : 0);
-  if (recedes) ctx.globalAlpha *= 0.5;
-  ctx.fill();
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = (isHovered ? 0.5 : 0.3) * (recedes ? 0.4 : 1);
-  ctx.lineWidth = BAND_BORDER_WIDTH;
-  ctx.stroke();
+  if (draw.detail.bands) {
+    roundRect(draw, left, top, width, BAND_HEIGHT, radius, 0);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = (scene.palette.isDark ? 0.1 : 0.06) + (isCurrent ? 0.03 : 0) + (isHovered ? 0.04 : 0);
+    if (recedes) ctx.globalAlpha *= 0.5;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = (isHovered ? 0.5 : 0.3) * (recedes ? 0.4 : 1);
+    ctx.lineWidth = BAND_BORDER_WIDTH;
+    ctx.stroke();
+  } else {
+    drawBranchLine(draw, shape.y, left, left + width, color, recedes ? STRUCTURE_DIMMED_ALPHA : isHovered ? 1 : BRANCH_LINE_ALPHA);
+  }
   if (isSelected) {
     ctx.globalAlpha = 1;
     ctx.strokeStyle = scene.palette.accent;
@@ -71,6 +78,21 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** Without bands, a branch is a line through its changesets, drawn like the elbow that leads into it. */
+const BRANCH_LINE_ALPHA = 0.8;
+const BRANCH_LINE_WIDTH = 2;
+
+function drawBranchLine({ ctx, pen }: DrawContext, y: number, left: number, right: number, color: string, alpha: number): void {
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = BRANCH_LINE_WIDTH;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  pen.moveTo(left, y);
+  pen.lineTo(right, y);
+  ctx.stroke();
 }
 
 function roundRect({ ctx, pen }: DrawContext, left: number, top: number, width: number, height: number, radius: number, grow: number): void {
@@ -85,8 +107,8 @@ function drawBranchStart({ ctx, pen, scene }: DrawContext, lane: Lane, base: { x
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.globalAlpha = recedes ? STRUCTURE_DIMMED_ALPHA : 0.8;
-  ctx.lineWidth = 2;
+  ctx.globalAlpha = recedes ? STRUCTURE_DIMMED_ALPHA : BRANCH_LINE_ALPHA;
+  ctx.lineWidth = BRANCH_LINE_WIDTH;
   ctx.lineCap = 'round';
   ctx.beginPath();
   pen.moveTo(base.x, base.y + NODE_RADIUS);

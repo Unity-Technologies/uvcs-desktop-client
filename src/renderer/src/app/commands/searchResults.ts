@@ -22,6 +22,8 @@ export interface SearchResult {
   status?: { tone: StatusTone; title: string };
   /** The branch the workspace is on. */
   isCurrent?: boolean;
+  /** A hidden branch, which its row says, as the Branches view's details do. */
+  isHidden?: boolean;
   /** Everything else that can be done with it (Tab), the same menu it has in its own view. */
   menu?: () => MenuEntry[];
   run: () => void;
@@ -63,7 +65,7 @@ export function collapseGroups(groups: SearchGroup[], expanded: ReadonlySet<Sect
 /** The row that expands a collapsed section, in the heading's words: "1 more branch", "3 more pending changes". */
 export function moreLabel({ heading, more }: Pick<ShownGroup, 'heading' | 'more'>): string {
   const plural = heading.toLowerCase();
-  const singular = plural.endsWith('ches') ? plural.slice(0, -2) : plural.slice(0, -1);
+  const singular = plural === 'people' ? 'person' : plural.endsWith('ches') ? plural.slice(0, -2) : plural.slice(0, -1);
   return pluralize(more, `more ${singular}`, `more ${plural}`);
 }
 

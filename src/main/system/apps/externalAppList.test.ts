@@ -61,4 +61,30 @@ describe('externalAppList', () => {
     const onWindows = externalAppList(sources({ where: windows, installed: NO_INSTALLED_APPS, custom: [{ id: 'custom:3', name: 'Cmd', executable: 'C:\\tools\\edit.cmd' }] }));
     expect(onWindows.launchers.get('custom:3')!('C:\\wk\\a.cs')).toMatchObject({ command: 'cmd.exe', verbatim: true });
   });
+
+  describe('a program the user added that the app finds itself', () => {
+    it('shows once, as the app found, and its id still opens it and picks it', () => {
+      const custom = [{ id: 'custom:1', name: 'Code', executable: '/Applications/Visual Studio Code.app/' }];
+      const { apps, launchers } = externalAppList(sources({ custom, editorPreference: 'custom:1' }));
+      expect(apps.editors.map(({ id }) => id)).toEqual(['vscode', 'rider']);
+      expect(apps.editorId).toBe('vscode');
+      expect(launchers.get('custom:1')!('/wk/a.cs')).toEqual(launchers.get('vscode')!('/wk/a.cs'));
+    });
+
+    it("is a program inside the app's macOS bundle", () => {
+      const custom = [{ id: 'custom:1', name: 'Code', executable: '/Applications/Visual Studio Code.app/Contents/MacOS/Electron' }];
+      expect(externalAppList(sources({ custom })).apps.editors.map(({ id }) => id)).toEqual(['vscode', 'rider']);
+    });
+
+    it("is the same path in any case and separator on Windows", () => {
+      const fs = fakeFileSystem(['C:\\Users\\me\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe']);
+      const custom = [{ id: 'custom:1', name: 'Code', executable: 'c:/users/me/appdata/local/programs/microsoft vs code/code.exe' }];
+      expect(externalAppList(sources({ where: windows, installed: NO_INSTALLED_APPS, fs, custom })).apps.editors.map(({ id }) => id)).toEqual(['vscode']);
+    });
+
+    it('is another program when only its name starts alike', () => {
+      const custom = [{ id: 'custom:1', name: 'Code', executable: '/Applications/Visual Studio Code Insiders.app' }];
+      expect(externalAppList(sources({ custom })).apps.editors.map(({ id }) => id)).toEqual(['vscode', 'rider', 'custom:1']);
+    });
+  });
 });

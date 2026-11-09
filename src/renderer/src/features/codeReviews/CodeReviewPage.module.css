@@ -10,14 +10,26 @@
   flex: none;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5) var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-4) var(--space-5) var(--space-2);
 }
 
 .titleRow {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.titleRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The header's actions stay at the title's end, on its first line however long it wraps. */
+.headerActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .title {
@@ -52,38 +64,19 @@
   color: var(--text-tertiary);
 }
 
-.unassigned {
-  color: var(--text-tertiary);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.spacer {
-  flex: 1;
-}
-
-/* In a narrow window the switch's words give way after the hint, cut with an ellipsis: Assign and Delete stay in view. */
+/* In a narrow window the switch's words give way first, cut with an ellipsis: the user's review stays in view. */
 .reviewedCode {
   min-width: 0;
+  max-width: 220px;
 }
 
-.hint {
-  /* Gives way first, far before the buttons. */
-  flex-shrink: 1000;
-  overflow: hidden;
-  min-width: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.tabs {
+  flex: none;
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.changes {
+.tabPanel {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -100,6 +93,81 @@
   height: 22px;
 }
 
-.placeholderActions {
-  height: 28px;
+
+.titleEdit {
+  display: inline-flex;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.title:hover .titleEdit,
+.titleEdit:focus-within {
+  opacity: 1;
+}
+
+.titleEditor {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.titleField {
+  flex: 1;
+  min-width: 0;
+  padding: 4px var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.titleField:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.ownReview {
+  flex: none;
+}
+
+/* "Your review": the three statuses, then what the user says about it. */
+.ownReviewForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.statuses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.formTitle {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.statusChoice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+}
+
+.joining {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }

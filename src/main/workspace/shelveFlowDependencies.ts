@@ -2,7 +2,7 @@ import type { CmClient } from '../cm/CmClient';
 import type { LeftChangesFinder } from './leftChanges';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 
-/** What every flow that shelves changes out of the workspace (switch, shelve away, update) works with. */
+/** What every flow that shelves changes out of the workspace (switch, shelve away, update, loading an xlink) works with. */
 export interface ShelveFlowDependencies {
   cm: CmClient;
   records: SwitchShelveRecords;

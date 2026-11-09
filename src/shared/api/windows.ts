@@ -27,8 +27,9 @@ export interface WindowsApi {
    * Pastes the clipboard where the calling window's focus is, as Edit ▸ Paste does (`webContents.paste`): the page gets
    * a real paste event, which Pierre's editor spreads across its carets in the file's line breaks. A page can't paste
    * by itself: Chromium refuses `document.execCommand('paste')`. Only the clipboard's text reaches the page, as a paste.
+   * `plainText`: as Paste and Match Style does (`webContents.pasteAndMatchStyle`), a comment's ⇧⌘V.
    */
-  pasteClipboard(): Promise<void>;
+  pasteClipboard(options?: { plainText?: boolean }): Promise<void>;
   /** Opens a page of the place in a window of its own, belonging to this window: it closes with it. */
   openPage(opening: PageWindowOpening): Promise<void>;
   /**

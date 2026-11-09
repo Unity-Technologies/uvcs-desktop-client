@@ -7,6 +7,8 @@ import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { showInLocks } from '../locks/showInLocks';
 import { itemPathPermissionsUnavailable, openItemPathPermissions } from '../permissions/openPermissions';
@@ -29,8 +31,8 @@ import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { listedItems } from './directoryListing';
-import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, type XlinkSurroundings } from './xlinkItem';
-import { createXlink, editXlink } from '../xlinks/xlinkOperations';
+import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, unloadedXlinkOf, type XlinkSurroundings } from './xlinkItem';
+import { createXlink, editXlink, loadXlinkFiles } from '../xlinks/xlinkOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
@@ -91,6 +93,8 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
   const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
+  const unloadedXlink =
+    single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
@@ -100,6 +104,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
+    unloadedXlink && menuAction('loadXlink', () => void loadXlinkFiles(workspacePath, unloadedXlink.path)),
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
@@ -108,6 +113,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
+    toolsSubmenu(workspacePlace(workspacePath), items.map((item) => toolSubject.item(absolutePath(workspacePath, item.path)))),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
     itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),

@@ -2,11 +2,13 @@ import type { ReactNode } from 'react';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { FileTreeCell } from '../../components/FileTreeCell';
 import { FileTreeList } from '../../components/FileTreeList';
+import type { FileTreeFolding } from '../../components/fileTreeFolding';
+import { MetaTag } from '../../components/MetaTag';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
-import type { PathTreeRow } from '../../lib/pathTree';
+import { folderItemCount, type PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
@@ -20,6 +22,8 @@ interface MergeItemListProps {
   progress: MergeProgress;
   tree: boolean;
   toggleCollapsed: (key: string) => void;
+  /** Closing or opening every group and folder, from the view menu. */
+  folding: FileTreeFolding | null;
   /** What each repository path of the merge is, for its icon (`mergeItemTypes`). */
   typeOf: (path: string) => ItemType;
   labels: MergeLabels;
@@ -28,24 +32,26 @@ interface MergeItemListProps {
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   contextMenu: (items: MergeItem[]) => MenuEntry[];
+  /** The Unity `.meta` a listed change stands for too (`pairMergeMetas`): its row is tagged "+ meta". */
+  metaOf: (item: MergeItem) => MergeItem | undefined;
   /** While the filters hide every item: `NoMatches`. */
   noMatches?: ReactNode;
 }
 
 /** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
-export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, noMatches }: MergeItemListProps) {
+export function MergeItemList({ rows, progress, tree, toggleCollapsed, folding, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, noMatches }: MergeItemListProps) {
 
   const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
     if (row.type === 'folder') {
       return (
         <FileTreeCell depth={level} tree={tree} folder>
-          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={row.items.length - (row.item ? 1 : 0)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
+          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={folderItemCount(row)} extras={row.item && <MergeItemMarks item={row.item} progress={progress} labels={labels} />} />
         </FileTreeCell>
       );
     }
     return (
       <FileTreeCell depth={level} tree={tree} folder={false}>
-        <MergeItemRow item={row.item} progress={progress} labels={labels} typeOf={typeOf} nameOnly={row.depth > 0} />
+        <MergeItemRow item={row.item} progress={progress} labels={labels} typeOf={typeOf} nameOnly={row.depth > 0} hasMeta={metaOf(row.item) !== undefined} />
       </FileTreeCell>
     );
   };
@@ -55,6 +61,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       rows={rows}
       tree={tree}
       toggleCollapsed={toggleCollapsed}
+      folding={folding}
       renderItem={renderItem}
       groupTip={(group) => MERGE_GROUP_TIPS[group]}
       groupProgress={(group, items) => mergeGroupProgress(group, items, progress)}
@@ -70,7 +77,21 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
 }
 
 /** Every item as in any list of changed files: what the merge does to it as its letter, where its conflict stands before. */
-function MergeItemRow({ item, progress, labels, typeOf, nameOnly }: { item: MergeItem; progress: MergeProgress; labels: MergeLabels; typeOf: (path: string) => ItemType; nameOnly: boolean }) {
+function MergeItemRow({
+  item,
+  progress,
+  labels,
+  typeOf,
+  nameOnly,
+  hasMeta,
+}: {
+  item: MergeItem;
+  progress: MergeProgress;
+  labels: MergeLabels;
+  typeOf: (path: string) => ItemType;
+  nameOnly: boolean;
+  hasMeta: boolean;
+}) {
   switch (item.kind) {
     case 'directoryConflict': {
       const { conflict } = item;
@@ -102,6 +123,7 @@ function MergeItemRow({ item, progress, labels, typeOf, nameOnly }: { item: Merg
           itemType={typeOf(item.change.path)}
           oldPath={item.change.oldPath && item.change.oldPath.replace(/^\//, '')}
           status={{ tone: changeTone(item.change), label: describeChange(item.change, labels) }}
+          extras={hasMeta ? <MetaTag /> : undefined}
         />
       );
   }

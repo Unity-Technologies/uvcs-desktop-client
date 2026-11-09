@@ -55,4 +55,9 @@ describe('collectResolutions', () => {
     const moved: MergePlan = { ...plan, directoryConflicts: [], fileConflicts: [{ ...autoConflict, path: '/moved/auto.txt' }] };
     expect(collectResolutions({ plan: moved, fileStates: [automatic] })?.files).toEqual({ '/moved/auto.txt': { choice: 'text', text: 'merged' } });
   });
+
+  it('stores the comment without the space a picked suggestion leaves after it', () => {
+    const undecided: MergePlan = { ...plan, directoryConflicts: [], fileConflicts: [autoConflict] };
+    expect(collectResolutions({ plan: undecided, fileStates: [automatic], comment: 'Merge br:/main/task ' })?.comment).toBe('Merge br:/main/task');
+  });
 });

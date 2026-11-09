@@ -1,4 +1,5 @@
-import { EVERYONE, isBitsEmpty, OWNER, type AclLevel, type MemberRef, type ObjectPermissions } from '@shared/domain/permissions';
+import type { MemberRef } from '@shared/domain/member';
+import { EVERYONE, isBitsEmpty, OWNER, type AclLevel, type ObjectPermissions } from '@shared/domain/permissions';
 import { naturalCompare } from '../../lib/naturalCompare';
 import { levelsAbove, readOwnBits } from './aclResolution';
 import { draftBits, sameBits, type PermissionsDraft } from './permissionsDraft';

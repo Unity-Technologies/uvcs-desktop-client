@@ -1,0 +1,27 @@
+import type { TrackerChoice } from './trackerChoices';
+import styles from './TrackerLogo.module.css';
+
+/**
+ * Jira's mark, as Atlassian's logo library draws it (atlassian.design/foundations/logos), unchanged, in white on its
+ * blue tile.
+ */
+const JIRA_MARK =
+  'M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z';
+
+/** GitHub's mark, as github.com/logos gives it, unchanged, in one color: the text's, so it reads in both themes. */
+const GITHUB_MARK =
+  'M12.5.75C6.146.75 1 5.896 1 12.25c0 5.089 3.292 9.387 7.863 10.91.575.101.79-.244.79-.546 0-.273-.014-1.178-.014-2.142-2.889.532-3.636-.704-3.866-1.35-.13-.331-.69-1.352-1.18-1.625-.402-.216-.977-.748-.014-.762.906-.014 1.553.834 1.769 1.179 1.035 1.74 2.688 1.25 3.349.948.1-.747.402-1.25.733-1.538-2.559-.287-5.232-1.279-5.232-5.678 0-1.25.445-2.285 1.178-3.09-.115-.288-.517-1.467.115-3.048 0 0 .963-.302 3.163 1.179.92-.259 1.897-.388 2.875-.388.977 0 1.955.13 2.875.388 2.2-1.495 3.162-1.179 3.162-1.179.633 1.581.23 2.76.115 3.048.733.805 1.179 1.825 1.179 3.09 0 4.413-2.688 5.39-5.247 5.678.417.36.776 1.05.776 2.128 0 1.538-.014 2.774-.014 3.162 0 .302.216.662.79.547C20.709 21.637 24 17.324 24 12.25 24 5.896 18.854.75 12.5.75Z';
+
+/**
+ * A tracker's own logo, so people find theirs at a glance (Add a sign-in's menu, Connect, the connected card, the sign-ins): each as its
+ * brand gives it, unmodified, with room around it. Both sit in a tile of the same size, so a list of them lines up.
+ */
+export function TrackerLogo({ choice, size = 30 }: { choice: TrackerChoice; size?: number }) {
+  return (
+    <span className={styles.logo} data-choice={choice} style={{ width: size, height: size }} aria-hidden>
+      <svg viewBox="0 0 24 24" width={Math.round(size * 0.56)} height={Math.round(size * 0.56)}>
+        <path d={choice === 'jira' ? JIRA_MARK : GITHUB_MARK} />
+      </svg>
+    </span>
+  );
+}

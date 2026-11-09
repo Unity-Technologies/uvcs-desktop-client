@@ -45,12 +45,23 @@
   --pane-toolbar-height: 38px;
   /* How thick the app's scrollbars are (global.css), on every OS: styled, they take room instead of overlaying. */
   --scrollbar-size: 10px;
+  /* How wide a text diff's own vertical scrollbar is while it marks the changes in its track (`ChangeMap`): as wide as
+     the app's at rest, wider under the pointer so its marks and thumb are easy to take. */
+  --diff-scrollbar-size: var(--scrollbar-size);
+  --diff-scrollbar-size-hovered: calc(var(--scrollbar-size) + 6px);
+  /* Its thumb, drawn over the marks: the app's hovered thumb color (global.css's --border-strong), translucent so the
+     marks show through, close to the app's resting thumb over an empty track, and stronger hovered or dragged. The
+     app's resting --border-default was too faint over the marks in the dark theme. */
+  --diff-scrollbar-thumb: color-mix(in srgb, var(--border-strong) 55%, transparent);
+  --diff-scrollbar-thumb-hover: color-mix(in srgb, var(--border-strong) 75%, transparent);
 
   /* Motion. Everything that appears eases out (fast start, soft landing); what moves between two places eases in
      and out. Durations drop to zero under prefers-reduced-motion (global.css), so animations built on them are
      instant there; loops such as spinners and skeleton pulses opt out on their own. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  /* What springs into place, just past it and back (a stack of avatars spreading). */
+  --ease-spring: cubic-bezier(0.32, 1.45, 0.36, 1);
   --duration-instant: 80ms;
   --duration-fast: 120ms;
   --duration-normal: 200ms;
@@ -110,6 +121,11 @@
   --project-teal: #12a594;
   --project-indigo: #3e63dd;
   --project-violet: #6e56cf;
+
+  /* Issue trackers' own marks (`TrackerLogo`), as their brands draw them in both themes: Jira's white mark on its
+     blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
+  --brand-jira-tile: #1868db;
+  --brand-jira-mark: #ffffff;
 }
 
 :root,
@@ -121,6 +137,8 @@
   /* A hovered primary button: --accent-hover where that keeps its label at 4.5:1. */
   --accent-fill-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
+  /* The faintest accent fill: what the Branch Explorer's Timeline frame tints. */
+  --accent-wash: rgba(9, 105, 218, 0.05);
   --accent-text: #0969da;
   /* Text and icons on an --accent or --danger fill. */
   --accent-contrast: #ffffff;
@@ -138,6 +156,25 @@
   --status-moved: #0e7c86;
   --status-private: #6e7781;
   --status-conflict: #cf222e;
+
+  /* An issue's status category, the same four for every tracker (`IssueStatusCategory`): a dot beside its key. Each
+     theme's own colors, through the tokens they name. */
+  --issue-todo: var(--status-private);
+  --issue-in-progress: var(--focus-color);
+  --issue-done: var(--status-added);
+  --issue-canceled: var(--status-private);
+
+  /* How a connection stands (a status pill, a proof's check, a callout): fine, needs the user, or failing. Text tokens
+     read at 4.5:1; each `-soft` is the tint behind them, each `-border` its hairline. */
+  --positive-text: #1a7f37;
+  --positive-soft: rgba(26, 127, 55, 0.09);
+  --positive-border: rgba(26, 127, 55, 0.28);
+  --caution-text: #9a6700;
+  --caution-soft: rgba(154, 103, 0, 0.09);
+  --caution-border: rgba(154, 103, 0, 0.3);
+  --danger-text: #cf222e;
+  --danger-soft: rgba(207, 34, 46, 0.07);
+  --danger-border: rgba(207, 34, 46, 0.28);
 
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
@@ -183,10 +220,18 @@
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
+  /* The indent guides of a tree of files: a hairline under each chevron. */
+  --tree-guide: var(--border-subtle);
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;
   --text-inverse: #ffffff;
+  /* Code colored by kind (the command log's command lines, `commandLineTokens`): GitHub's code colors. */
+  --syntax-command: #8250df;
+  --syntax-option: #0550ae;
+  --syntax-variable: #953800;
+  --syntax-string: #0a3069;
+  --syntax-keyword: #cf222e;
   --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
   --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.12), 0 1px 3px rgba(31, 35, 40, 0.06);
   --shadow-lg: 0 12px 40px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
@@ -197,6 +242,10 @@
   --overlay: rgba(31, 35, 40, 0.3);
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
+  /* A label drawn as a mark rather than text (the Timeline's ticks): the label color, at 3:1 on --bg-subtle. */
+  --label-mark: #b07d00;
+  /* Under a small badge drawn over a canvas (the Timeline's home): 0 1px 3px. */
+  --badge-shadow: rgba(0, 0, 0, 0.18);
   --search-highlight: #d4a72c;
   /* Avatars of people, workspaces and repositories: a white initial on one of these solid fills (`AVATAR_COLORS`, one per
      `STABLE_HUES` hue, in their order), each tuned on its own so all weigh the same (white at about 4.8:1) and a notch short of full saturation, so they
@@ -242,6 +291,7 @@
   --accent-hover: #388bfd;
   --accent-fill-hover: #1b63d4;
   --accent-soft: rgba(56, 139, 253, 0.15);
+  --accent-wash: rgba(68, 147, 248, 0.07);
   --accent-text: #4493f8;
   --accent-contrast: #ffffff;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
@@ -255,6 +305,16 @@
   --status-moved: #39c5cf;
   --status-private: #8b949e;
   --status-conflict: #f85149;
+
+  --positive-text: #3fb950;
+  --positive-soft: rgba(63, 185, 80, 0.12);
+  --positive-border: rgba(63, 185, 80, 0.32);
+  --caution-text: #d29922;
+  --caution-soft: rgba(210, 153, 34, 0.12);
+  --caution-border: rgba(210, 153, 34, 0.34);
+  --danger-text: #f85149;
+  --danger-soft: rgba(248, 81, 73, 0.1);
+  --danger-border: rgba(248, 81, 73, 0.32);
 
   --change-added: #3fb950;
   --change-changed: #58a6ff;
@@ -292,10 +352,17 @@
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
+  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
+  --tree-guide: var(--border-default);
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;
   --text-inverse: #0d1117;
+  --syntax-command: #d2a8ff;
+  --syntax-option: #79c0ff;
+  --syntax-variable: #ffa657;
+  --syntax-string: #a5d6ff;
+  --syntax-keyword: #ff7b72;
   --shadow-sm: 0 1px 0 rgba(1, 4, 9, 0.3);
   --shadow-md: 0 6px 20px rgba(1, 4, 9, 0.5), 0 1px 3px rgba(1, 4, 9, 0.35);
   --shadow-lg: 0 16px 48px rgba(1, 4, 9, 0.65), 0 2px 8px rgba(1, 4, 9, 0.4);
@@ -306,6 +373,8 @@
   --overlay: rgba(1, 4, 9, 0.6);
   --label-bg: rgba(210, 153, 34, 0.16);
   --label-text: #e3b341;
+  --label-mark: #d29922;
+  --badge-shadow: rgba(0, 0, 0, 0.4);
   --search-highlight: #e3b341;
   /* A touch lighter and softer, as far as white at 4.5:1 allows (about 4.7:1), so they stand off the dark rows without glowing. */
   --avatar-blue: #3976b9;

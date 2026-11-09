@@ -39,7 +39,7 @@ export async function restoreLeftChanges(workspacePath: string, left: LeftChange
 }
 
 function restoredMessage(left: LeftChanges, count: number, sourceName: string): string {
-  return left.reason === 'update' ? `Restored ${pluralize(count, 'change')} you put aside` : `Restored ${pluralize(count, 'change')} you left on ${branchLabel(sourceName)}`;
+  return left.reason !== 'switch' ? `Restored ${pluralize(count, 'change')} you put aside` : `Restored ${pluralize(count, 'change')} you left on ${branchLabel(sourceName)}`;
 }
 
 export function reviewLeftChanges(left: LeftChanges): void {

@@ -1,5 +1,10 @@
-import '../../testing/fakeWindow';
+import { fakeApi } from '../../testing/fakeWindow';
+import { answerConfirms } from '../../testing/fakeDialogs';
+import { whereTheWindowIs } from '../../testing/operationOutcome';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 const ran = vi.hoisted(() => [] as string[]);
 vi.mock('../branches/branchOperations', async (importOriginal) => ({
@@ -19,10 +24,12 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
-import { codeReviewMenu } from './codeReviewMenu';
+import { navigation } from '../../app/navigation/navigationStore';
+import { codeReviewPage } from './codeReviewOperations';
+import { codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
 
 const ws = '/ws';
-const summary: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
+const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
 const reviewOf = (target: CodeReviewTarget): CodeReview => ({ ...summary, target });
 const onBranch = (name: string): WorkspaceSelector => ({ kind: 'branch', name });
 
@@ -102,5 +109,28 @@ describe('getting the reviewed code into the workspace', () => {
   it('comes right after the ways to open the review, here or in a new window, as what the review does to the workspace', () => {
     const menu = codeReviewMenu(workspacePlace(ws), [reviewOf({ kind: 'branch', branch: '/main/task' })], onBranch('/main'));
     expect(actions(menu).map((entry) => entry.id).slice(0, 3)).toEqual(['openReview', 'reviewInNewWindow', 'switch']);
+  });
+});
+
+describe("a review's page menu", () => {
+  it('leaves the page of a review it deleted, and stays on one it kept', async () => {
+    fakeApi.answer('codeReviews.remove', () => undefined);
+    const deleteEntry = () => actions(reviewPageMenu(workspacePlace(ws), summary)).find((entry) => entry.id === 'delete')!;
+    navigation.openPage(codeReviewPage(summary));
+
+    answerConfirms(false);
+    await deleteEntry().run();
+    expect(whereTheWindowIs().pages).toEqual([codeReviewPage(summary)]);
+
+    answerConfirms(true);
+    await deleteEntry().run();
+    expect(whereTheWindowIs().pages).toEqual([]);
+  });
+
+  it("offers only what the page doesn't show: a new window, Copy and Delete", () => {
+    const ids = reviewPageMenu(workspacePlace(ws), summary)
+      .filter((entry) => entry !== SEPARATOR)
+      .map((entry) => entry.id);
+    expect(ids).toEqual(['reviewInNewWindow', 'copy', 'delete']);
   });
 });

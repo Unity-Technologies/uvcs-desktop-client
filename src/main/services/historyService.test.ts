@@ -177,9 +177,23 @@ describe('revert', () => {
   it('reverts the file to its version in a changeset with one quick command', async () => {
     const { service, commands } = history({ revert: '' });
 
-    await service.revertTo(WORKSPACE, 'README.md', 4);
+    await service.revertTo(WORKSPACE, ['README.md'], 4);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['revert', `${README}#cs:4`], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('reverts an asset and its Unity .meta with one command', async () => {
+    const { service, commands } = history({ revert: '' });
+
+    await service.revertTo(WORKSPACE, ['Assets/a.png', 'Assets/a.png.meta'], 4);
+
+    expect(commands).toMatchObject([
+      {
+        via: 'query',
+        args: ['revert', `${join(WORKSPACE, 'Assets', 'a.png')}#cs:4`, `${join(WORKSPACE, 'Assets', 'a.png.meta')}#cs:4`],
+        options: { cwd: WORKSPACE },
+      },
+    ]);
   });
 });
 

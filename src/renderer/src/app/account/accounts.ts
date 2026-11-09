@@ -6,7 +6,7 @@ import { describeServer } from '../../lib/servers';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
-import { usePlaceServer } from '../workspace/useWorkspace';
+import { usePlaceServer, useWindowServer } from '../workspace/useWorkspace';
 import { accountForServer } from './serverAccount';
 
 /** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
@@ -36,12 +36,24 @@ export function usePlaceUser(): string | undefined {
   return useServerAccount(usePlaceServer())?.user;
 }
 
+/** Who you are on the server of the window's place, or none in a window with no place (Settings opened from Home). */
+export function useWindowUser(): string | undefined {
+  return useServerAccount(useWindowServer())?.user;
+}
+
 /** Who you are on `server`, like `useServerAccount`, for code outside components (from the same cached queries). */
 export async function readServerUser(server: string): Promise<string> {
   const accounts = await queryClient.fetchQuery(accountsQuery);
   const account = accountForServer(accounts, server);
   if (account) return account.user;
   return queryClient.fetchQuery(defaultUserQuery);
+}
+
+/** Who you are on `server` if the window read it already (its accounts, or the default user), without reading it. */
+export function cachedServerUser(server: string): string | undefined {
+  const accounts = queryClient.getQueryData(accountsQuery.queryKey);
+  const account = accounts && accountForServer(accounts, server);
+  return account ? account.user : queryClient.getQueryData(defaultUserQuery.queryKey);
 }
 
 export async function removeAccount(account: Account): Promise<void> {

@@ -3,10 +3,12 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
+import { FileListViewMenu } from '../../components/FileListViewMenu';
+import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
+import { itemsIn } from '../../lib/itemRange';
 import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
@@ -17,7 +19,8 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { listedEntries } from '../diff/listedEntries';
-import { diffEntryTones } from '../diff/diffEntrySources';
+import { pairDiffMetas } from '../diff/diffMetaPairs';
+import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
@@ -36,6 +39,9 @@ interface ChangedFilesSectionProps {
   onOpen: (focusPath: string) => void;
 }
 
+/** A details panel's short list is never grouped: its view menu offers the layout and the order. */
+const NO_GROUPINGS: FileListViewOffer = { statusGroups: false };
+
 /**
  * The changes pane of a details panel: what a changeset, branch, label, shelve or code review changed.
  * Selecting an object never runs `cm diff` (it is heavy on big changes and servers): the list loads when asked
@@ -48,14 +54,19 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const workspaceRepository = usePlaceRepository();
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
   const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
-  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
-  const entries = useMemo(() => diffEntries && listedEntries(diffEntries), [diffEntries]);
-  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
-  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`));
+  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files, and
+  // a Unity asset's `.meta` on its asset's row (`pairDiffMetas`).
+  const pairs = useMemo(() => diffEntries && pairDiffMetas(listedEntries(diffEntries)), [diffEntries]);
+  const entries = pairs?.shown;
+  const metaOf = (entry: DiffEntry) => pairs?.metaOf(entry);
+  // "Open .meta diff" opens the diff on the meta, which shows it on its asset's row (`pairedFocus`).
+  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones, { viewOffer: NO_GROUPINGS });
+  const { rows, tree, toggleCollapsed } = useFileTree(visible, entries ?? NO_ENTRIES, diffEntryKey, folderListScope(placeId(place), `details:${JSON.stringify(target)}`), DIFF_ENTRY_FACTS);
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
   const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
   const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
+  const menuOptions = { review, workspaceRepository, diffEntries, metaOf, onMetaDiff: (meta: DiffEntry) => onOpen(meta.path) };
   const view = changedFilesView({ listedCount: entries?.length, matchingCount: visible.length, requested, failed: Boolean(error), collapsed });
 
   const onListKeyDown = (event: KeyboardEvent): void => {
@@ -79,7 +90,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
     // No "Open diff" here: the panel's primary action at the top opens it.
     <DetailsChangesPane
       title={view.title}
-      action={view.layoutMenu && <FileListLayoutMenu />}
+      action={view.layoutMenu && <FileListViewMenu offer={NO_GROUPINGS} />}
       expanded={view.expanded}
       disclosure={view.collapsible ? { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) } : undefined}
     >
@@ -107,15 +118,15 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, row.items, { review, workspaceRepository, diffEntries })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, itemsIn(row.held), menuOptions)}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>
                 </ActionContextMenu>
               ) : (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, [row.item], { review, workspaceRepository, diffEntries })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(place, target, [row.item], menuOptions)}>
                   <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
-                    <DiffEntryRow row={row} tree={tree} />
+                    <DiffEntryRow row={row} tree={tree} hasMeta={metaOf(row.item) !== undefined} />
                   </button>
                 </ActionContextMenu>
               ),

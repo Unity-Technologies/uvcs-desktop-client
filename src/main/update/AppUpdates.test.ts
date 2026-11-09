@@ -303,14 +303,15 @@ describe('the notes of the update found', () => {
       { version: '1.2.0', note: '<p>Shelves</p>' },
       { version: '1.1.1', note: '<p>A fix</p>' },
     ];
-    const feed = fakeFeed([{ isUpdateAvailable: true, updateInfo: { version: '1.2.0', files, releaseNotes } }]);
+    const releaseDate = '2026-10-29T15:48:48.093Z';
+    const feed = fakeFeed([{ isUpdateAvailable: true, updateInfo: { version: '1.2.0', files, releaseNotes, releaseDate } }]);
     const { updates: app } = updates(feed);
 
     await app.check();
 
     expect(feed.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(app.releaseNotes()).toEqual([
-      { version: '1.2.0', html: '<p>Shelves</p>' },
+      { version: '1.2.0', html: '<p>Shelves</p>', releaseDate },
       { version: '1.1.1', html: '<p>A fix</p>' },
     ]);
   });

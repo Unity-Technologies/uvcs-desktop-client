@@ -7,13 +7,14 @@ import type { PageOf } from '../../app/navigation/pages';
 import { runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import { askForComment } from '../../components/EditCommentDialog';
 import { branchLabel } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { readStartOutcome, type BranchDiffBase } from './branchDiffUpTo';
 import { pickChangeset } from './ChangesetPickerDialog';
-import { askForChangesetComment } from './EditCommentDialog';
 
 /** The diff of what a changeset changed. */
 export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
@@ -33,6 +34,35 @@ export function openRangeDiff(first: Pick<Changeset, 'id'>, second: Pick<Changes
 export function rangeDiffPage(from: number, to: number, focusPath?: string): PageOf<'diff'> {
   const [older, newer] = from <= to ? [from, to] : [to, from];
   return { kind: 'diff', title: `Changesets ${older} → ${newer}`, target: { kind: 'range', fromSpec: `cs:${older}`, toSpec: `cs:${newer}` }, focusPath };
+}
+
+/**
+ * The branch's work up to a changeset: from where the branch starts (`base`) to the changeset, so what the branch
+ * merged from its parent after it (a "rebase") doesn't show. A range diff, titled as the branch's.
+ */
+export function branchDiffUpToPage(changeset: Pick<Changeset, 'id' | 'branch'>, base: number): PageOf<'diff'> {
+  return {
+    kind: 'diff',
+    title: `Branch ${branchLabel(changeset.branch)} up to changeset ${changeset.id}`,
+    target: { kind: 'range', fromSpec: `cs:${base}`, toSpec: `cs:${changeset.id}` },
+  };
+}
+
+/** Opens the branch diff up to `changeset`, reading where its branch starts first when the menu didn't know it. */
+export async function openBranchDiffUpTo(place: Place, changeset: Pick<Changeset, 'id' | 'branch'>, known: Exclude<BranchDiffBase, { kind: 'none' }>): Promise<void> {
+  const base = known.kind === 'from' ? known.base : await readBranchBase(place, changeset.branch);
+  if (base !== undefined) navigation.openPage(branchDiffUpToPage(changeset, base));
+}
+
+async function readBranchBase(place: Place, branch: string): Promise<number | undefined> {
+  const failure = `Couldn't find where ${branchLabel(branch)} starts`;
+  const start = await runRead(failure, () => api.changesets.branchStart(place, branch));
+  if (start === undefined) return undefined;
+  const outcome = readStartOutcome(start);
+  if (outcome.kind === 'from') return outcome.base;
+  if (outcome.kind === 'root') toast.info(`${branchLabel(branch)} starts from no other branch`);
+  else toast.error(failure);
+  return undefined;
 }
 
 export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {
@@ -58,7 +88,7 @@ export function switchToChangeset(workspacePath: string, changeset: Pick<Changes
 }
 
 export async function editChangesetComment(place: Place, changeset: Pick<Changeset, 'id' | 'comment'>): Promise<void> {
-  const comment = await askForChangesetComment(changeset.id, changeset.comment);
+  const comment = await askForComment(`changeset ${changeset.id}`, changeset.comment);
   if (comment !== undefined) await saveChangesetComment(place, changeset, comment);
 }
 

@@ -1,5 +1,6 @@
 import { isMac } from '../../lib/platform';
-import { isModPressed } from '../../lib/shortcuts';
+import { isModPressed, matchesShortcut, type PressedKey } from '../../lib/shortcuts';
+import { SHORTCUTS, shortcutKeys, type ShortcutDefinition } from '../../lib/shortcutRegistry';
 
 /** Keys that edit the text whatever the modifiers: ⌘⌫ deletes to the start of the line, ⌥⌫ and Ctrl+Backspace a word. */
 const EDITING_KEYS = new Set(['Backspace', 'Delete']);
@@ -23,4 +24,16 @@ export function belongsToField(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'c
 /** Whether a key copies text selected on the page (⌘C, Ctrl+C), which no command takes: the page's copy runs. */
 export function copiesSelectedText(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'>, selectedText: string, mac = isMac): boolean {
   return selectedText !== '' && isModPressed(event, mac) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'c';
+}
+
+/**
+ * Whether a window's shortcut gives way to a focused comment field (`inCommentField`): when one of the field's own keys
+ * (`scope: 'commentField'`) matches, ⇧⌘U making a link there rather than updating the workspace. Elsewhere the
+ * window's key runs; ⌘K, no field's key, opens the palette from a field too.
+ */
+export function yieldsToCommentField(event: PressedKey, inCommentField: boolean, mac = isMac): boolean {
+  if (!inCommentField) return false;
+  return Object.values(SHORTCUTS).some(
+    (shortcut: ShortcutDefinition) => shortcut.scope === 'commentField' && shortcutKeys(shortcut, mac).some((key) => matchesShortcut(event, key, mac)),
+  );
 }

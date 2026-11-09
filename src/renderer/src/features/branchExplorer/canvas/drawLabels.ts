@@ -2,6 +2,7 @@ import { GHOST_ALPHA, type DrawContext } from './drawContext';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
 import { textWidth } from './fitText';
 import { columnX } from './geometry';
+import { labelInks } from './graphPalette';
 import { LABEL_HEIGHT, labelChips, labelWidth } from './labelPlacement';
 
 const CHIP_RADIUS = 4;
@@ -36,19 +37,20 @@ export function drawLabels(draw: DrawContext): void {
       if (hit) drawRectGlow(draw, left, top, width, LABEL_HEIGHT, CHIP_RADIUS, current);
 
       const ink = search && !hit ? GHOST_ALPHA : 1;
+      const colors = labelInks(palette, names);
       ctx.globalAlpha = 1;
       ctx.beginPath();
       pen.roundRect(left, top, width, LABEL_HEIGHT, CHIP_RADIUS);
       ctx.fillStyle = palette.surfaceRaised;
       ctx.fill();
       ctx.globalAlpha = ink;
-      ctx.fillStyle = palette.labelBackground;
+      ctx.fillStyle = colors.background;
       ctx.fill();
-      ctx.strokeStyle = palette.labelText;
+      ctx.strokeStyle = colors.text;
       ctx.globalAlpha = ink * 0.5;
       ctx.stroke();
       ctx.globalAlpha = ink;
-      ctx.fillStyle = palette.labelText;
+      ctx.fillStyle = colors.text;
       pen.fillText(text, x, top + LABEL_HEIGHT / 2 + 0.5);
       if (current) drawRectCorona(draw, left, top, width, LABEL_HEIGHT, CHIP_RADIUS);
     }

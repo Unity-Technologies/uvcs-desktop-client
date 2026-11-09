@@ -29,7 +29,7 @@ interface PaletteRowProps {
   onMenuClosed: () => void;
 }
 
-/** One result: its icon, the highlighted label with a dimmed detail after it, a status or "current" pill, and its actions (Tab). */
+/** One result: its icon, the highlighted label with a dimmed detail after it, a status, "current" or "hidden" pill, and its actions (Tab). */
 export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun, onRunInNewWindow, onLeave, onMenuClosed }: PaletteRowProps) {
   const Icon = result.icon;
   const actionsRef = useRef<HTMLButtonElement>(null);
@@ -72,6 +72,11 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
         )}
       </span>
       {result.isCurrent && <span className={styles.current}>current</span>}
+      {result.isHidden && (
+        <span className={styles.hidden} data-tip="Hidden branch">
+          hidden
+        </span>
+      )}
       {result.status && <StatusBadge tone={result.status.tone} title={result.status.title} />}
       {result.shortcut && <Kbd keys={result.shortcut} />}
       {showsActions && (

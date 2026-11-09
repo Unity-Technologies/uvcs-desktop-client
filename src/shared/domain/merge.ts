@@ -13,6 +13,16 @@ export interface MergeRequest {
   destinationBranch?: string;
   /** A shelve applied to the workspace and deleted once merged ("Apply and delete"). */
   deleteShelve?: boolean;
+  /**
+   * Merge the changes again even where merge tracking says they're already merged (`--forced`): only a cherry pick or a
+   * subtractive merge (`offersIgnoreMergeTracking`).
+   */
+  ignoreMergeTracking?: boolean;
+  /**
+   * The common ancestor the user chose instead of the one `cm` calculates, as a changeset spec (`cs:5`): only a regular
+   * merge (`offersCommonAncestor`).
+   */
+  ancestorSpec?: string;
 }
 
 export interface MergeContributor {

@@ -8,7 +8,7 @@
   padding: 0 var(--space-2);
 }
 
-/* The List/Tree switch, set apart from the status chips. */
+/* The view menu, set apart from the status chips. */
 .layout {
   display: flex;
   flex: none;

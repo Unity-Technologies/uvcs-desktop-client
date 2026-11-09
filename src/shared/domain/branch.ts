@@ -12,6 +12,16 @@ export interface Branch {
   isHidden?: boolean;
 }
 
+/**
+ * Where a branch starts: its first changeset, and that changeset's parent on the parent branch (`base`), the changeset
+ * the branch was created from. Merging the parent into the branch (a "rebase") doesn't move it. `base` is -1 for the
+ * first changeset of a repository, on /main.
+ */
+export interface BranchStart {
+  firstChangeset: number;
+  base: number;
+}
+
 export interface CreateBranchRequest {
   /** Full name of the new branch: `/main/feature` for a child branch, `/feature` for a top-level one. */
   name: string;

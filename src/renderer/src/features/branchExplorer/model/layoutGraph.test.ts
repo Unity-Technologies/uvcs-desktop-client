@@ -3,7 +3,7 @@ import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { branch, changeset, largeHistory, sampleHistory } from './graphFixtures';
-import { layoutGraph, layoutKeeping } from './layoutGraph';
+import { layoutGraph, layoutKeeping, type GraphLayout } from './layoutGraph';
 
 describe('layoutGraph', () => {
   it('gives every changeset its own column, in id order', () => {
@@ -99,13 +99,76 @@ describe('layoutGraph rows', () => {
   });
 });
 
+describe('layoutGraph with moved branches', () => {
+  /** sampleHistory with real ids: /main 1 (row 0), /main/a 2 (row 1), /main/b 3 (row 2); /main/a/fix 4 below /main/a. */
+  function withIds(): BranchExplorerData {
+    const data = sampleHistory();
+    return {
+      ...data,
+      branches: [...data.branches, branch('/main/a/fix', '/main/a', 9)].map((each, index) => ({ ...each, id: index + 1 })),
+      changesets: [...data.changesets, changeset(8, '/main/a/fix', 4), changeset(9, '/main/a/fix', 8)],
+    };
+  }
+  const rowsOf = (layout: GraphLayout): Record<string, number> => Object.fromEntries(layout.lanes.map((lane) => [lane.branch.name, lane.row]));
+
+  it('puts a moved branch on its row, and the branches it overlaps below it', () => {
+    expect(rowsOf(layoutGraph(withIds()))).toEqual({ '/main': 0, '/main/a': 1, '/main/a/fix': 2, '/main/b': 3 });
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 3, row: 1 }]))).toEqual({ '/main': 0, '/main/b': 1, '/main/a': 2, '/main/a/fix': 3 });
+  });
+
+  it("takes a moved branch's children along, below it", () => {
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 2, row: 0 }]))).toEqual({ '/main/a': 0, '/main': 1, '/main/a/fix': 2, '/main/b': 3 });
+  });
+
+  it('lets the branch moved last win a row two moved branches want', () => {
+    const pins = [{ branch: 3, row: 1 }, { branch: 2, row: 1 }];
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, pins))).toMatchObject({ '/main/a': 1, '/main/b': 2 });
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, [...pins].reverse()))).toMatchObject({ '/main/b': 1, '/main/a': 2 });
+  });
+
+  it('closes the rows nothing is drawn on', () => {
+    const layout = layoutGraph(withIds(), undefined, null, [{ branch: 3, row: 9 }]);
+    expect(rowsOf(layout)).toEqual({ '/main': 0, '/main/a': 1, '/main/a/fix': 2, '/main/b': 3 });
+    expect(layout.rowCount).toBe(4);
+  });
+
+  it('lets a moved child sit above its parent', () => {
+    expect(rowsOf(layoutGraph(withIds(), undefined, null, [{ branch: 4, row: 0 }]))).toMatchObject({ '/main/a/fix': 0 });
+  });
+
+  it('reads a row as a row of the branches drawn: with fewer drawn, a move to the bottom still lands at the bottom', () => {
+    // A move to the bottom asks for the row past the last one drawn when it was made (`movedBranch`); with a filter
+    // hiding a branch, the same pin lands below the rows left.
+    const data = withIds();
+    const fewer = { ...data, branches: data.branches.filter((each) => each.name !== '/main/b'), changesets: data.changesets.filter((each) => each.branch !== '/main/b') };
+    const layout = layoutGraph(fewer, undefined, null, [{ branch: 2, row: 4 }]);
+    expect(rowsOf(layout)).toMatchObject({ '/main': 0, '/main/a': 1, '/main/a/fix': 2 });
+    expect(layout.rowCount).toBe(3);
+  });
+
+  it('ignores the moves of branches the graph does not draw', () => {
+    expect(layoutGraph(withIds(), undefined, null, [{ branch: 99, row: 0 }]).lanes).toEqual(layoutGraph(withIds()).lanes);
+  });
+
+  it('keeps the moves when laying out one more changeset kept', () => {
+    const data = largeHistory(300, 60);
+    const keep = new Set([40]);
+    const pins = [{ branch: 30, row: 0 }];
+    const base = { keep, pending: null, pins, layout: layoutGraph(data, { keep }, null, pins) };
+    const collapsed = base.layout.nodesByColumn.find((node) => node.collapsed !== null)!.collapsed![0]!.id;
+    const kept = layoutKeeping(data, base, collapsed);
+    expect(kept).not.toBe(base.layout);
+    expect(kept.lanes).toEqual(layoutGraph(data, { keep: new Set([40, collapsed]) }, null, pins).lanes);
+  });
+});
+
 describe('layoutKeeping', () => {
   it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
     // Every 3rd changeset of a history of 600: each check lays the whole history out, so a longer one made this test
     // take up to 5 s on CI's runners without checking more kinds of changeset.
     const data = largeHistory(600, 120);
     const keep = new Set([40, 41]);
-    const base = { keep, pending: null, layout: layoutGraph(data, { keep }) };
+    const base = { keep, pending: null, pins: [], layout: layoutGraph(data, { keep }) };
     let reused = 0;
     for (let id = 0; id < 600; id += 3) {
       const layout = layoutKeeping(data, base, id);
@@ -161,7 +224,7 @@ describe('layoutGraph with pending changes', () => {
 
   it('keeps it while "Only relevant changesets" keeps the selection', () => {
     const data = sampleHistory();
-    const base = { keep: new Set([5]), pending: pending('/main/a', 5), layout: layoutGraph(data, { keep: new Set([5]) }, pending('/main/a', 5)) };
+    const base = { keep: new Set([5]), pending: pending('/main/a', 5), pins: [], layout: layoutGraph(data, { keep: new Set([5]) }, pending('/main/a', 5)) };
     expect(layoutKeeping(data, base, 4).pending).toMatchObject({ parent: 5, row: 1 });
   });
 });

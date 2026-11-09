@@ -17,9 +17,19 @@ describe('reverting a file to a revision', () => {
     await revertItemTo(ws, 'src/a.ts', 41);
 
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert src/a.ts to changeset 41?' }]);
-    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, 'src/a.ts', 41]]);
+    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, ['src/a.ts'], 41]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Reverted src/a.ts', detail: 'Content from changeset 41 is now a pending change.' }]);
     expect(refreshed()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
+  });
+
+  it("takes an asset's Unity .meta along, after one confirmation that names it", async () => {
+    fakeApi.answer('history.revertTo', () => undefined);
+
+    await revertItemTo(ws, 'Assets/a.png', 41, { metaPath: 'Assets/a.png.meta' });
+
+    expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert Assets/a.png and its .meta to changeset 41?' }]);
+    expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, ['Assets/a.png', 'Assets/a.png.meta'], 41]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Reverted Assets/a.png and its .meta', detail: 'Content from changeset 41 is now a pending change.' }]);
   });
 
   it('reverts nothing unless confirmed', async () => {

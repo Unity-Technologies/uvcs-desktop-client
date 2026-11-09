@@ -22,13 +22,21 @@ const OBJECT_WORDS: ReadonlySet<string> = new Set(['changesets', 'branches', 'la
  */
 const LEGACY_SPEC_LINK = /^(?:show|diff)(?:changeset|branch)=(.+)$/i;
 
+/** The schemes of the links the app opens itself: its own, and the official client's (`plastic://`). */
+const APP_LINK_SCHEME = /^(?:uvcs|plastic):\/\//i;
+
+/** Whether a text is written as one of the app's links, read or not: what opens through the app, not the browser. */
+export function isAppLink(text: string): boolean {
+  return APP_LINK_SCHEME.test(text);
+}
+
 /**
  * Reads a `uvcs://` link (docs/features/deep-links.md), and the official client's `plastic://` ones, whose shapes it
  * reads under either scheme ("Older links"). `formatLink` writes what this reads back.
  */
 export function parseLink(text: string): LinkReading {
   const written = text.trim().replace(/^<(.*)>$/s, '$1');
-  const scheme = /^(?:uvcs|plastic):\/\//i.exec(written);
+  const scheme = APP_LINK_SCHEME.exec(written);
   if (!scheme) return { problem: { kind: 'notALink' } };
   if (written.length > MAX_LINK_LENGTH) return malformed('It is too long to be a link.');
   // Quotes and line breaks would end a `cm shell` argument, and no link writes them: they come from a pasted text.

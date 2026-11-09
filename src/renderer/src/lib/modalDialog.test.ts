@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isModalDialogOpen, windowShortcutMayRun } from './modalDialog';
+import { isInModalDialog, isModalDialogOpen, windowShortcutMayRun } from './modalDialog';
 
 /** A document holding the elements matching the given selectors. */
 const documentWith = (...present: string[]) => ({ querySelector: (selector: string) => (present.includes(selector) ? ({} as Element) : null) });
@@ -19,5 +19,15 @@ describe('windowShortcutMayRun', () => {
   it('leaves the keys to a modal dialog while one is open', () => {
     expect(isModalDialogOpen(dialog)).toBe(true);
     expect(windowShortcutMayRun({ repeat: false }, dialog)).toBe(false);
+  });
+});
+
+describe('isInModalDialog', () => {
+  it('tells an element inside one of the app’s dialogs', () => {
+    const within = { closest: (selector: string) => (selector === '[data-modal-dialog]' ? ({} as Element) : null) };
+    const outside = { closest: () => null };
+    expect(isInModalDialog(within)).toBe(true);
+    expect(isInModalDialog(outside)).toBe(false);
+    expect(isInModalDialog(null)).toBe(false);
   });
 });

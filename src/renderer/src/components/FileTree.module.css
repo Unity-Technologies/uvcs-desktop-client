@@ -9,6 +9,20 @@
   padding-left: calc(var(--tree-depth, 0) * var(--tree-indent));
 }
 
+/* The indent guides: a hairline down from the chevron of each group and folder holding the row, one per level, at
+   the middle of the 15px chevron. Drawn over the whole row (`DataTable`'s, which is positioned; nothing between it and
+   the cell is), from where the cell's content starts (`--space-3`, the table cell's padding). */
+.cell[data-guides]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--space-3) + 7px);
+  pointer-events: none;
+  width: calc(var(--tree-depth, 0) * var(--tree-indent));
+  background: repeating-linear-gradient(to right, var(--tree-guide) 0 1px, transparent 1px var(--tree-indent));
+}
+
 /* In a tree, files leave the room of the chevron their sibling folders have, so every icon of a level lines up. */
 .cell[data-chevron-room] {
   padding-left: calc((var(--tree-depth, 0) + 1) * var(--tree-indent));

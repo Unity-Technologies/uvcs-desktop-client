@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { HighlightQuery } from '../../ui/Highlight';
+import { SectionTitle } from '../../ui/SectionTitle';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import type { WorkspaceEntry } from './recentWorkspaces';
 import { firstMatch, searchedSections } from './searchedSections';
@@ -66,10 +67,9 @@ export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>
         {shown.map((section) => (
           <section key={section.id} className={styles.section} aria-label={section.title}>
             {section.title && (
-              <h2 className={styles.sectionTitle}>
+              <SectionTitle className={styles.sectionTitle} count={section.entries.length > 0 ? section.entries.length : undefined}>
                 {section.title}
-                {section.entries.length > 0 && <span className={styles.sectionCount}>{section.entries.length}</span>}
-              </h2>
+              </SectionTitle>
             )}
             {section.entries.length === 0
               ? section.empty

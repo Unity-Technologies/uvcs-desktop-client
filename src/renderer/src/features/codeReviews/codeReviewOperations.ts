@@ -1,54 +1,112 @@
 import { serverOfRepository } from '@shared/domain/permissions';
 import type { Place } from '@shared/domain/place';
 import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { readServerUser } from '../../app/account/accounts';
+import { cachedServerUser, readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
-import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
-import { needsReviewerForStatus } from './reviewStatus';
+import { pickReviewers } from './ReviewersDialog';
+import type { ReviewerChanges } from './reviewerPick';
+import { changesOwnStatus, isReviewer } from './reviewers';
 
-/** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
-export async function setReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
-  let assignee: string | undefined;
-  if (needsReviewerForStatus(review)) {
-    assignee = await prompt({
-      title: `Mark as “${status}”`,
-      label: 'Reviewer',
-      initialValue: await suggestedReviewer(place),
-      acceptInitialValue: true,
-      description: 'A review needs a reviewer before its status can change.',
-      confirmLabel: 'Assign and mark',
-    });
-    if (assignee === undefined) return;
-  }
-  await runAction(place, "Couldn't change the review status", () => api.codeReviews.update(place, review.id, { status, assignee }), isAffectedByCodeReviews);
+/** How the user's own status is set: who they are when already known, what they say, whether they agreed to join. */
+export interface OwnStatusOptions {
+  /** Who the user is, when the caller knows already; otherwise read from the place's server. */
+  user?: string;
+  /** What they say about it, sent with the status. */
+  comment?: string;
+  /** The user was told already that they'll be added as a reviewer (the page's popover says so): no question asked. */
+  joiningAgreed?: boolean;
 }
 
-/** Whoever changes the status is likely the one reviewing: you on the place's server, if already known or quick to read. */
-async function suggestedReviewer(place: Place): Promise<string | undefined> {
-  const server =
-    place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
+/**
+ * Sets the user's own status on a review, with what they say about it, unless it's the one they gave already and they
+ * say nothing; resolves to whether it's set (false when the server refused it or the user said no), so what they
+ * wrote is kept to try again. Only reviewers give one, so a user known not to be one yet is asked to join first (unless they agreed
+ * already): both happen at once. A user not known (their account still being read) sets it as they are: the server
+ * takes it from a reviewer or a member of a reviewer group, and says why not to anyone else.
+ */
+export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary, status: CodeReviewStatus, options: OwnStatusOptions = {}): Promise<boolean> {
+  const user = options.user ?? (await placeUser(place));
+  const comment = options.comment?.trim() ? options.comment : undefined;
+  // What they say is worth sending even with the status they gave already: it's a note on the review.
+  if (!changesOwnStatus(review, user, status) && !comment) return true;
+  const joining = user !== undefined && !isReviewer(review, user) ? user : undefined;
+  if (joining && !options.joiningAgreed) {
+    const confirmed = await confirm({
+      title: `Mark as “${status}”`,
+      message: "You aren't one of its reviewers yet. You'll be added as one.",
+      confirmLabel: 'Add me and mark',
+    });
+    if (!confirmed) return false;
+  }
+  return runVoidAction(
+    place,
+    "Couldn't change your review status",
+    async () => {
+      if (joining) await api.codeReviews.addReviewers(place, review.id, [{ name: joining, kind: 'user' }]);
+      await api.codeReviews.setOwnStatus(place, review.id, status, ...(comment ? [comment] : []));
+    },
+    isAffectedByCodeReviews,
+  );
+}
+
+/** Who the user is on the place's server, if already known or quick to read. */
+async function placeUser(place: Place): Promise<string | undefined> {
+  const server = placeServer(place);
   return server ? readServerUser(server).catch(() => undefined) : undefined;
 }
 
-export async function reassignReview(place: Place, review: CodeReviewSummary): Promise<void> {
-  const assignee = await prompt({
-    title: 'Assign review',
-    label: 'Reviewer',
-    initialValue: review.assignee,
-    description: 'The user who should review these changes.',
-    confirmLabel: 'Assign',
-  });
-  if (assignee === undefined) return;
-  await runAction(place, "Couldn't assign the review", () => api.codeReviews.update(place, review.id, { assignee }), isAffectedByCodeReviews);
+/** Who the user is on the place's server, if the window read it already: for menus, which are built at once. */
+export function cachedPlaceUser(place: Place): string | undefined {
+  const server = placeServer(place);
+  return server ? cachedServerUser(server) : undefined;
+}
+
+function placeServer(place: Place): string | undefined {
+  return place.kind === 'repository' ? serverOfRepository(place.repository) : queryClient.getQueryData<WorkspaceInfo>(queryKeys.inPlace(place, 'info'))?.server;
+}
+
+/** Picks the review's reviewers in a dialog, as the page's picker does, and applies what changed. */
+export async function chooseReviewers(place: Place, review: CodeReviewSummary): Promise<void> {
+  const changes = await pickReviewers(review);
+  if (changes) await changeReviewers(place, review, changes);
+}
+
+/** Adds and removes reviewers as the reviewer picker left them: one command for those added, one for those removed. */
+export async function changeReviewers(place: Place, review: Pick<CodeReviewSummary, 'id'>, { add, remove }: ReviewerChanges): Promise<void> {
+  if (add.length === 0 && remove.length === 0) return;
+  await runAction(
+    place,
+    "Couldn't change the reviewers",
+    async () => {
+      if (add.length > 0) await api.codeReviews.addReviewers(place, review.id, add);
+      if (remove.length > 0) await api.codeReviews.removeReviewers(place, review.id, remove);
+    },
+    isAffectedByCodeReviews,
+  );
+}
+
+export async function removeReviewer(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: MemberRef): Promise<void> {
+  await runAction(place, "Couldn't remove the reviewer", () => api.codeReviews.removeReviewers(place, review.id, [reviewer]), isAffectedByCodeReviews);
+}
+
+/** Asks a reviewer, a user or a group, to review it again: their status goes back to "Under review". */
+export async function reRequestReview(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: MemberRef): Promise<void> {
+  await runAction(place, "Couldn't ask for a review again", () => api.codeReviews.reRequestReview(place, review.id, [reviewer]), isAffectedByCodeReviews);
+}
+
+/** Gives the review a new title; resolves to whether it did. */
+export function renameReview(place: Place, reviewId: number, title: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't rename the review", () => api.codeReviews.rename(place, reviewId, title), isAffectedByCodeReviews);
 }
 
 /** Resolves to true when the reviews were deleted. */

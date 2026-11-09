@@ -1,9 +1,10 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { OWN_PROCESS_READ_TIMEOUT_MS } from './oneObjectRead';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
-import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { FOUND_BRANCH_STARTS, FOUND_CHANGESETS } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
@@ -98,6 +99,31 @@ describe('changesets', () => {
     await expect(service.get(IN_WORKSPACE, 7)).rejects.toThrow('Changeset 7 was not found.');
   });
 
+  // The branch diff up to a changeset starts where the branch does, whatever it merged from its parent since.
+  it("reads where a branch starts with one quick cm find of its first changeset, asking hidden branches' too", async () => {
+    const { service, commands } = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS, { changesetid: 9, parent: 8 }) });
+
+    const start = await service.branchStart(IN_WORKSPACE, '/main/task');
+
+    expect(commands).toMatchObject([
+      {
+        via: 'query',
+        args: findQueryArgs(FOUND_BRANCH_STARTS, "where ignorehidden = 'true' and branch = '/main/task' order by changesetid asc limit 1"),
+        options: { cwd: WORKSPACE },
+        readsRecords: true,
+      },
+    ]);
+    expect(start).toEqual({ firstChangeset: 9, base: 8 });
+  });
+
+  it('reads no start for a branch with no changesets, and /main\'s as the root\'s', async () => {
+    const empty = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS) });
+    const main = changesets({ 'find changeset': recordsOutput(FOUND_BRANCH_STARTS, { changesetid: 0, parent: -1 }) });
+
+    expect(await empty.service.branchStart(IN_WORKSPACE, '/main/empty')).toBeNull();
+    expect(await main.service.branchStart(IN_WORKSPACE, '/main')).toEqual({ firstChangeset: 0, base: -1 });
+  });
+
   it('edits the comment, moves and deletes a changeset with one quick command each', async () => {
     const { service, commands } = changesets({ changeset: '' });
 
@@ -117,6 +143,46 @@ describe('changesets of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
   const OUTSIDE = { outsideWorkspaces: true };
 
+  it("finds another repository's changeset for a comment's chip with one find: quick on the place's server, in a process of its own on another", async () => {
+    const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });
+    const service = createChangesetsService(serviceContext(cm));
+
+    expect(await service.find(repositoryPlace('lib@acme@cloud'), 4)).toMatchObject({ id: 4 });
+    await service.find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+
+    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([
+      ['query', "where changesetid = 4 on repository 'lib@acme@cloud'"],
+      ['execute', "where changesetid = 4 on repository 'game@far.example.com:8087'"],
+    ]);
+  });
+
+  it('gives up on another server that never answers after `OWN_PROCESS_READ_TIMEOUT_MS`, killing the process outright', async () => {
+    vi.useFakeTimers();
+    try {
+      // A host that never answers: the read waits on its signal, as a process left running does.
+      const { cm, commands } = fakeCmClient({
+        'find changeset': ({ options }) => new Promise((_, reject) => options.signal?.addEventListener('abort', () => reject(new Error('Killed')))),
+      });
+      const read = createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+      const failed = expect(read).rejects.toThrow('Killed');
+      const { signal, killSignal } = commands[0]!.options;
+      expect(killSignal).toBe('SIGKILL');
+      vi.advanceTimersByTime(OWN_PROCESS_READ_TIMEOUT_MS - 1);
+      expect(signal?.aborted).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(signal?.aborted).toBe(true);
+      expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('finds no changeset by a number the repository has none of, as an answer, not a failure', async () => {
+    const { cm } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
+    expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('art@acme@cloud'), 1201)).toBeNull();
+  });
+
   it('lists and reads them naming the repository, an xlinked one when asked, outside every workspace', async () => {
     const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(7)) });
     const service = createChangesetsService(serviceContext(cm));
@@ -124,11 +190,13 @@ describe('changesets of a repository explored without a workspace', () => {
     await service.list(ON_REPOSITORY, { branch: '/main/task1', limit: 100 });
     await service.get(ON_REPOSITORY, 7);
     await service.get(ON_REPOSITORY, 7, 'lib@local');
+    await service.branchStart(ON_REPOSITORY, '/main/task1');
 
     expect(commands.map(({ args, options }) => [args[2], options])).toEqual([
       ["where ignorehidden = 'true' and branch = '/main/task1' order by changesetid desc limit 100 on repository 'game@local'", OUTSIDE],
       ["where changesetid = 7 on repository 'game@local'", OUTSIDE],
       ["where changesetid = 7 on repository 'lib@local'", OUTSIDE],
+      ["where ignorehidden = 'true' and branch = '/main/task1' order by changesetid asc limit 1 on repository 'game@local'", OUTSIDE],
     ]);
   });
 

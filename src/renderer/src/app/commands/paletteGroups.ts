@@ -9,17 +9,23 @@ import { workspacePathOf } from '@shared/domain/place';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import type { FuzzyIndex } from '../../lib/fuzzyIndex';
 import { matchesAllWords } from '../../lib/matchesAllWords';
+import type { WordFilterIndex } from '../../lib/wordFilterIndex';
 import {
   branchResult,
   changesetResult,
   codeReviewResult,
   exactChangesetResult,
+  exactCodeReviewResult,
+  exactShelveResult,
   fileResult,
   labelResult,
   shelveResult,
+  type ObjectMatch,
   type ResultContext,
 } from './objectResults';
+import { rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { isInScope, type PaletteScope } from './paletteScope';
+import { personResult } from './personResults';
 import type { SearchGroup, SearchResult } from './searchResults';
 
 /** Rows a section can show once expanded; each section shows fewer until then (see `collapseGroups`). */
@@ -51,18 +57,36 @@ export interface IndexedList<T> {
   index: FuzzyIndex;
 }
 
+/**
+ * A cached list whose rows are found by their description too: the words of each row's name and description
+ * (`createWordFilterIndex`), as its own view's filter finds them, built once per list.
+ */
+export interface DescribedList<T> extends IndexedList<T> {
+  words: WordFilterIndex;
+}
+
+/**
+ * Every branch the palette searches: the visible ones (the list the switcher and the Branches view share), then the
+ * hidden ones, read apart (`onlyHidden`), which the user may be on.
+ */
+export function paletteBranches(visible: readonly Branch[], hidden: readonly Branch[]): Branch[] {
+  return [...visible, ...hidden];
+}
+
 /** The lists read once and kept, which answer every keystroke. Undefined while still loading. */
 export interface CachedLists {
   files?: IndexedList<WorkspacePathEntry>;
   /** The pending changes that could be checked in, in the order Changes shows them. */
   changes: readonly PendingChange[];
-  branches?: IndexedList<Branch>;
-  labels?: IndexedList<Label>;
+  branches?: DescribedList<Branch>;
+  labels?: DescribedList<Label>;
   changesets?: readonly Changeset[];
   shelves?: readonly Shelve[];
   codeReviews?: readonly CodeReviewSummary[];
   /** GUIDs (lowercase) of the branches switched to lately, most recent first. */
   recentBranchGuids: readonly string[];
+  /** Who `@` offers (`palettePeople`, `indexPeople`); read only once asked for. */
+  people?: CandidateIndex<string>;
 }
 
 /** What the server found for `term` (the term as typing last paused), to add what the cached lists miss. */
@@ -72,6 +96,11 @@ export interface ServerMatches {
   labels?: readonly Label[];
   shelves?: readonly Shelve[];
   codeReviews?: readonly CodeReviewSummary[];
+  /**
+   * The review whose number the term is, as the server found it (`reviewNumberToLookUp`): empty when there is none.
+   * Undefined until asked, and when nothing asks (a term that isn't a number, a review the newest ones read hold).
+   */
+  reviewNumbered?: readonly CodeReviewSummary[];
 }
 
 /** The on-demand search of every changeset's comment. */
@@ -96,12 +125,19 @@ export interface PaletteGroupsInput {
 
 /**
  * The palette's object sections, in the scope: without a search, what is at hand (pending changes, the current, recent
- * and newest branches, the latest changesets and shelves; labels only when asked for with `@`); with one, the cached
+ * and newest branches, the latest changesets and shelves; labels, code reviews and people only when asked for with
+ * `lb:`, `cr:` and `@`); with one, the cached
  * lists' matches followed by the few the server found that they miss. Empty sections are left out.
  */
 export function paletteGroups(input: PaletteGroupsInput): SearchGroup[] {
-  const groups = input.context.term ? searchGroups(input) : listGroups(input);
+  const groups = [...(input.context.term ? searchGroups(input) : listGroups(input)), peopleGroup(input)];
   return groups.filter((group) => group.results.length > 0 && isInScope(group.section, input.scope));
+}
+
+/** People, only when asked for (`@`): in any search, a name typed would list everyone who shares a word of it. */
+function peopleGroup({ scope, context, lists }: PaletteGroupsInput): SearchGroup {
+  const people = scope === 'people' && lists.people ? rankCandidates(lists.people, context.term, MAX_PER_SECTION) : [];
+  return { section: 'people', heading: 'People', results: people.map((person) => personResult(person, context.me)) };
 }
 
 function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[] {
@@ -109,11 +145,11 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
   const branches = byRecency(lists.branches?.items ?? [], context.currentBranch, lists.recentBranchGuids);
   return [
     { section: 'branches', heading: 'Branches', results: firstOnes(branches).map((branch) => branchResult(branch, context)) },
-    // Labels pile up by the thousand; without a search they only show when asked for (`@`).
+    // Labels pile up by the thousand; without a search they only show when asked for (`lb:`).
     {
       section: 'labels',
       heading: 'Labels',
-      results: scope === 'refs' ? firstOnes(lists.labels?.items ?? []).map((label) => labelResult(label, context)) : [],
+      results: scope === 'labels' ? firstOnes(lists.labels?.items ?? []).map((label) => labelResult(label, context)) : [],
     },
     {
       section: 'files',
@@ -129,6 +165,12 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
       section: 'shelves',
       heading: 'Shelves',
       results: firstOnes([...(lists.shelves ?? [])].sort((a, b) => b.id - a.id)).map((shelve) => shelveResult(shelve, context)),
+    },
+    // Reviews are what a branch is waiting on, not what is at hand: the newest show when asked for (`cr:`).
+    {
+      section: 'codeReviews',
+      heading: 'Code reviews',
+      results: scope === 'codeReviews' ? firstOnes(lists.codeReviews ?? []).map((review) => codeReviewResult(review, context)) : [],
     },
   ];
 }
@@ -146,13 +188,20 @@ function byRecency(branches: readonly Branch[], currentBranch: string | undefine
     .map(({ branch }) => branch);
 }
 
-function searchGroups({ context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
+function searchGroups({ scope, context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
   const { term } = context;
+  const shelveId = typedObjectNumber(term, scope, 'shelves');
+  const reviewId = typedObjectNumber(term, scope, 'codeReviews');
   const workspacePath = workspacePathOf(context.place);
   // A changeset typed (`1234` or `cs:1234`) opens it, whether or not it is recent.
   const changesetNumber = typedChangesetNumber(term);
+  const answered = <T,>(found: readonly T[] | undefined) => (server.term === term ? found : undefined);
   const withServerMatches = <T,>(local: SearchResult[], found: readonly T[] | undefined, textOf: (item: T) => string, toResult: (item: T) => SearchResult) =>
-    addServerMatches(local, server.term === term ? found : undefined, term, textOf, toResult);
+    addServerMatches(local, answered(found), term, textOf, toResult);
+  // Only a number after its prefix opens what may not exist; a number alone names a shelve or review once it's known.
+  // After `cr:` the number opens until the server answered that no review has it.
+  const openShelveByNumber = scope === 'shelves' ? exactShelveResult : undefined;
+  const openReviewByNumber = scope === 'codeReviews' && answered(server.reviewNumbered) === undefined ? exactCodeReviewResult : undefined;
 
   const recentChangesetResults = firstOnes(
     (lists.changesets ?? []).filter(
@@ -166,7 +215,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'branches',
       heading: 'Branches',
       results: withServerMatches(
-        ranked(lists.branches, term).map((branch) => branchResult(branch, context)),
+        byNameThenDescription(lists.branches, term, (branch, match) => branchResult(branch, context, match)),
         server.branches,
         (branch) => branch.name,
         (branch) => branchResult(branch, context, 'words'),
@@ -176,7 +225,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'labels',
       heading: 'Labels',
       results: withServerMatches(
-        ranked(lists.labels, term).map((label) => labelResult(label, context)),
+        byNameThenDescription(lists.labels, term, (label, match) => labelResult(label, context, match)),
         server.labels,
         (label) => label.name,
         (label) => labelResult(label, context, 'words'),
@@ -186,7 +235,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'changesets',
       heading: 'Changesets',
       results: [
-        ...(changesetNumber !== undefined ? [exactChangeset(changesetNumber, lists.changesets, context)] : []),
+        ...(changesetNumber !== undefined ? [exactChangeset(changesetNumber, lists.changesets, context, scope)] : []),
         ...recentChangesetResults,
         ...searchAllChangesets(term, changesetSearch, recentChangesetResults, context),
       ],
@@ -194,26 +243,80 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
     {
       section: 'shelves',
       heading: 'Shelves',
-      results: withServerMatches(
-        firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
-          shelveResult(shelve, context),
-        ),
-        server.shelves,
-        (shelve) => shelve.comment,
+      results: namedFirst(
+        shelveId,
+        lists.shelves,
         (shelve) => shelveResult(shelve, context),
+        openShelveByNumber,
+        withServerMatches(
+          firstOnes((lists.shelves ?? []).filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))).map((shelve) =>
+            shelveResult(shelve, context),
+          ),
+          server.shelves,
+          (shelve) => shelve.comment,
+          (shelve) => shelveResult(shelve, context),
+        ),
       ),
     },
     {
       section: 'codeReviews',
       heading: 'Code reviews',
-      results: withServerMatches(
-        firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
-        server.codeReviews,
-        (review) => review.title,
+      results: namedFirst(
+        reviewId,
+        [...(lists.codeReviews ?? []), ...(answered(server.reviewNumbered) ?? [])],
         (review) => codeReviewResult(review, context),
+        openReviewByNumber,
+        withServerMatches(
+          firstOnes((lists.codeReviews ?? []).filter((review) => matchesAllWords(review.title, term))).map((review) => codeReviewResult(review, context)),
+          server.codeReviews,
+          (review) => review.title,
+          (review) => codeReviewResult(review, context),
+        ),
       ),
     },
   ];
+}
+
+/**
+ * The shelve or code review number a search names: a number alone (`1234`, a changeset's too), or one after the
+ * section's own prefix (`sh:4`, `cr:311`), as the spec does in a comment. Undefined for anything else, and in another
+ * section's scope (`cs:1234`).
+ */
+function typedObjectNumber(term: string, scope: PaletteScope, section: 'shelves' | 'codeReviews'): number | undefined {
+  const number = /^\d+$/.test(term) ? Number(term) : undefined;
+  return isInScope(section, scope) && number !== undefined && Number.isSafeInteger(number) ? number : undefined;
+}
+
+/**
+ * The code review number to ask the server about (`cm find review "where id = N"`, `ServerMatches.reviewNumbered`):
+ * one typed (`typedObjectNumber`) that the newest reviews read don't hold. A number alone shows its review only once
+ * it is known to exist, never as a row that opens to an error; review numbers are object ids, so on a large
+ * repository they are far past every changeset's. A changeset's number typed costs this lookup too: nothing read rules
+ * a review out (an old review's id can be a recent changeset's number, and one past the newest review read may have
+ * been created since), and it is one indexed find, once typing pauses.
+ */
+export function reviewNumberToLookUp(term: string, scope: PaletteScope, newest: readonly { id: number }[] | undefined): number | undefined {
+  const id = typedObjectNumber(term, scope, 'codeReviews');
+  return id !== undefined && !newest?.some((review) => review.id === id) ? id : undefined;
+}
+
+/**
+ * The object the search names by its id (`id`; undefined for none) first, as a full match, then the other matches
+ * without it, as a changeset typed by number opens (`exactChangeset`): with its row when a list read holds it, else
+ * by its number alone (`byNumber`), an older one the list doesn't reach, read only once it's picked. Without
+ * `byNumber` (a number typed alone), only an object read is named.
+ */
+function namedFirst<T extends { id: number }>(
+  id: number | undefined,
+  read: readonly T[] | undefined,
+  toResult: (item: T) => SearchResult,
+  byNumber: ((id: number) => SearchResult) | undefined,
+  matches: SearchResult[],
+): SearchResult[] {
+  if (id === undefined) return matches;
+  const named = read?.find((item) => item.id === id);
+  const exact = named ? { ...toResult(named), quality: 1 } : byNumber?.(id);
+  return exact ? [exact, ...matches.filter((result) => result.id !== exact.id)] : matches;
 }
 
 function firstOnes<T>(items: readonly T[]): T[] {
@@ -222,6 +325,22 @@ function firstOnes<T>(items: readonly T[]): T[] {
 
 function ranked<T>(list: IndexedList<T> | undefined, term: string): T[] {
   return list ? list.index.rank(term, MAX_PER_SECTION).map((index) => list.items[index]!) : [];
+}
+
+/**
+ * The rows whose name matches fuzzily and those whose name and description hold every word typed (a description
+ * says what a branch is for, which its name often doesn't), the best `MAX_PER_SECTION` of both: a description
+ * ranks below the same match in a name (`branchResult`), and a name found first keeps its place on a tie, but a
+ * description holding the words typed beats a name holding only their letters, scattered.
+ */
+function byNameThenDescription<T>(list: DescribedList<T> | undefined, term: string, toResult: (item: T, match: ObjectMatch) => SearchResult): SearchResult[] {
+  if (!list) return [];
+  const byName = list.index.rank(term, MAX_PER_SECTION);
+  const shown = new Set(byName);
+  const byDescription = list.words.matching(term, MAX_PER_SECTION, (row) => shown.has(row));
+  const results = [...byName.map((row) => toResult(list.items[row]!, 'fuzzy')), ...byDescription.map((row) => toResult(list.items[row]!, 'description'))];
+  // `sort` is stable: equal matches keep the order above, names first.
+  return results.sort((a, b) => (b.quality ?? 0) - (a.quality ?? 0)).slice(0, MAX_PER_SECTION);
 }
 
 /**
@@ -244,10 +363,23 @@ function addServerMatches<T>(
   return [...local, ...extras.slice(0, MAX_SERVER_EXTRAS)];
 }
 
-/** A recent changeset shows with its comment; an older one is opened by number alone. */
-function exactChangeset(id: number, recent: readonly Changeset[] | undefined, context: ResultContext): SearchResult {
+/**
+ * How well a number alone matches a changeset past the newest one read, which likely names none (one created since
+ * would be just past it): below the shelve or code review the same number names, which then comes first, yet close
+ * enough to the best to stay (`rankGroups`).
+ */
+export const UNLIKELY_CHANGESET_QUALITY = 0.9;
+
+/**
+ * A recent changeset shows with its comment; an older one is opened by number alone. A number alone past the newest
+ * changeset read ranks below a full match (`UNLIKELY_CHANGESET_QUALITY`); after `cs:` it's what was asked for.
+ */
+function exactChangeset(id: number, recent: readonly Changeset[] | undefined, context: ResultContext, scope: PaletteScope): SearchResult {
   const changeset = recent?.find((candidate) => candidate.id === id);
-  return changeset ? { ...changesetResult(changeset, context), quality: 1 } : exactChangesetResult(id);
+  if (changeset) return { ...changesetResult(changeset, context), quality: 1 };
+  const newest = recent?.reduce((highest, candidate) => Math.max(highest, candidate.id), -1) ?? -1;
+  const unlikely = scope === 'all' && newest >= 0 && id > newest;
+  return { ...exactChangesetResult(id), quality: unlikely ? UNLIKELY_CHANGESET_QUALITY : 1 };
 }
 
 /** The row offering to search every changeset's comment, then telling how that search goes, then what it found. */

@@ -1,12 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { navigation } from '../../app/navigation/navigationStore';
+import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
-import { sincePresetOf, type SincePreset } from '../../lib/sincePresets';
+import type { SincePreset } from '../../lib/sincePresets';
+import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf, type GraphViewOptions } from './canvas/graphViewOptions';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
+import type { ExplorerRule } from './model/explorerRules';
 import type { RevealTarget } from './model/revealTarget';
+import { pinsOf, withPins, type BranchPins, type PinsByRepository } from './model/branchRows';
+import { isOnIn, withOnIn, type OffByRepository } from './model/offByRepository';
+import { appliedRulesOf, rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
+import { appliedUserColorsOf, DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
 
-interface BranchExplorerPreferences {
+/** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
+export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
+
+/** The display options (`GraphViewOptions`) are remembered with the filters; a new one shows until turned off. */
+export interface BranchExplorerPreferences extends GraphViewOptions {
   dateRange: SincePreset;
   hideMergedBranches: boolean;
   showHiddenBranches: boolean;
@@ -18,13 +31,35 @@ interface BranchExplorerPreferences {
   people: PeoplePick;
   /** Only the changesets that shape the diagram; the linear runs between them collapse into "+N" nodes. */
   structureOnly: boolean;
-  showComments: boolean;
-  showAvatars: boolean;
-  detailsOpen: boolean;
+  /** The Timeline over the graph (`GraphTimeline`): hidden until the user shows it, then remembered. */
+  showTimeline: boolean;
+  /**
+   * The advanced filters and formats (`ExplorerRule`) of each repository, by its spec: their conditions name that
+   * repository's branches and people, so another one starts with none.
+   */
+  rulesByRepository: RulesByRepository;
+  /** The repositories whose rules are turned off (`withOnIn`). */
+  rulesOff: OffByRepository;
+  /** The changeset colors by user, the same in every repository. */
+  userColors: UserColors;
+  /** The repositories whose changeset colors are turned off (`withOnIn`). */
+  userColorsOff: OffByRepository;
+  /**
+   * The branches the user moved to other rows (`BranchPin`) in each repository, by its spec: a pin names a branch by
+   * its id, which only means something in its own repository.
+   */
+  pinsByRepository: PinsByRepository;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
-  set: (changes: Partial<Omit<BranchExplorerPreferences, 'set'>>) => void;
+  set: (changes: Partial<Omit<BranchExplorerPreferences, BranchExplorerActions>>) => void;
+  setRules: (repository: string, rules: ExplorerRule[]) => void;
+  setRulesOn: (repository: string, on: boolean) => void;
+  setUserColorsOn: (repository: string, on: boolean) => void;
+  setPins: (repository: string, pins: BranchPins) => void;
 }
+
+/** The store's actions, which aren't remembered. */
+export type BranchExplorerActions = 'set' | 'setRules' | 'setRulesOn' | 'setUserColorsOn' | 'setPins';
 
 export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
   persist(
@@ -36,21 +71,30 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       visibleBranches: null,
       people: EVERYONE,
       structureOnly: false,
-      showComments: true,
-      showAvatars: true,
-      detailsOpen: true,
+      showTimeline: false,
+      ...DEFAULT_GRAPH_VIEW_OPTIONS,
+      rulesByRepository: {},
+      rulesOff: {},
+      userColors: DEFAULT_USER_COLORS,
+      userColorsOff: {},
+      pinsByRepository: {},
       revealRequest: null,
       set,
+      setRules: (repository, rules) => set(({ rulesByRepository }) => ({ rulesByRepository: withRules(rulesByRepository, repository, rules) })),
+      setRulesOn: (repository, on) => set(({ rulesOff }) => ({ rulesOff: withOnIn(rulesOff, repository, on) })),
+      setUserColorsOn: (repository, on) => set(({ userColorsOff }) => ({ userColorsOff: withOnIn(userColorsOff, repository, on) })),
+      setPins: (repository, pins) => set(({ pinsByRepository }) => ({ pinsByRepository: withPins(pinsByRepository, repository, pins) })),
     }),
     {
       name: 'branch-explorer-preferences',
-      version: 1,
-      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
-      // Before every view shared the time presets, the Branch Explorer had date ranges of its own.
-      migrate: (persisted) => {
-        const old = (persisted ?? {}) as Partial<BranchExplorerPreferences>;
-        return { ...old, dateRange: sincePresetOf(old.dateRange) ?? 'lastMonth', people: EVERYONE } as BranchExplorerPreferences;
+      version: 2,
+      partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, setRules: _setRules, setRulesOn: _setRulesOn, setUserColorsOn: _setUserColorsOn, setPins: _setPins, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
+      migrate: (persisted, version) => {
+        // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
+        useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
+        return migrateBranchExplorerPreferences(persisted, version) as BranchExplorerPreferences;
       },
+      merge: rememberedPreferences,
     },
   ),
 );
@@ -59,4 +103,39 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
 export function showInBranchExplorer(target: RevealTarget): void {
   useBranchExplorerPreferences.getState().set({ revealRequest: target });
   navigation.goToView('branchExplorer');
+}
+
+/** The advanced filters and formats of `repository` (none while it isn't known yet), the same array until they change. */
+export function useExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+  return useBranchExplorerPreferences((state) => rulesOf(state.rulesByRepository, repository));
+}
+
+/** Whether the rules of `repository` apply. */
+export function useExplorerRulesOn(repository: string | undefined): boolean {
+  return useBranchExplorerPreferences((state) => isOnIn(state.rulesOff, repository));
+}
+
+/** The rules the graph applies in `repository`: none while they're turned off. */
+export function useAppliedExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+  return useBranchExplorerPreferences((state) => appliedRulesOf(state.rulesByRepository, state.rulesOff, repository));
+}
+
+/** Whether the changeset colors apply in `repository`. */
+export function useUserColorsOn(repository: string | undefined): boolean {
+  return useBranchExplorerPreferences((state) => isOnIn(state.userColorsOff, repository));
+}
+
+/** The changeset colors the graph applies in `repository`: none while they're turned off there. */
+export function useAppliedUserColors(repository: string | undefined): UserColors {
+  return useBranchExplorerPreferences((state) => appliedUserColorsOf(state.userColors, state.userColorsOff, repository));
+}
+
+/** The branches moved in `repository` (none while it isn't known yet), the same array until they change. */
+export function useBranchPins(repository: string | undefined): BranchPins {
+  return useBranchExplorerPreferences((state) => pinsOf(state.pinsByRepository, repository));
+}
+
+/** The display options alone, the same object until one of them changes. */
+export function useGraphViewOptions(): GraphViewOptions {
+  return useBranchExplorerPreferences(useShallow(graphViewOptionsOf));
 }

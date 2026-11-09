@@ -35,8 +35,8 @@ export function plantPageSeed(place: Place, seed: PageSeed): void {
 }
 
 /**
- * Kept while the window lives: nothing observes them, and a shelve's page reads its row at every render
- * (`cachedShelve`), so the usual collection of unused queries would take its header and actions after five minutes.
+ * Kept while the window lives: nothing observes them, and a shelve's page reads its row from them (`useCachedShelve`),
+ * so the usual collection of unused queries would take its header and actions after five minutes.
  * They are a row each.
  */
 function plant(handedOver: readonly unknown[], id: number, rows: unknown[], options: { updatedAt: number }): void {

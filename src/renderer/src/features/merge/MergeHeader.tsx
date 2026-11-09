@@ -4,6 +4,8 @@ import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
 import { usePageShown } from '../../app/navigation/pageShown';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
+import { CommentField } from '../../components/commentEditor/CommentField';
+import { oneLineText } from '../../components/commentEditor/commentFieldText';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { pluralizeAtLeast } from '../../lib/text';
@@ -36,6 +38,11 @@ interface MergeHeaderProps {
    * way, which takes the status's place.
    */
   run?: { control: ReactNode; running: boolean };
+  /**
+   * How the merge is calculated and who contributes to its conflicting files (`MergeOptionsMenu`), after the run control: that
+   * one comes and goes, and the options' popover, anchored to its button, would jump with it.
+   */
+  mergeOptions?: ReactNode;
   /** What else the merge does once it's in, under the comment (finishing a task: `TaskMergeOptions`). */
   options?: ReactNode;
   /** Another way to the same end, before the merge button (a task's conflicts: `ResolveInWorkspaceMenu`). */
@@ -56,6 +63,7 @@ export function MergeHeader({
   merging,
   onMerge,
   run,
+  mergeOptions,
   options,
   alternative,
   mergeButtonRef,
@@ -94,17 +102,20 @@ export function MergeHeader({
           </span>
         )}
         {run?.control}
+        {mergeOptions}
         {!intoServerBranch && mergeButton}
       </div>
 
       {intoServerBranch && (
         <div className={styles.row}>
-          <input
+          <CommentField
+            singleLine
             className={styles.comment}
             value={comment}
-            onChange={(event) => onCommentChange(event.target.value)}
+            // One line, as the field it replaced: pasted lines join. ⌘↵ merges (`hotkey('merge')`).
+            onChange={(text) => onCommentChange(oneLineText(text))}
             placeholder="Changeset comment"
-            aria-label="Changeset comment"
+            label="Changeset comment"
             // Written once the plan is in: the session starts it from the plan's default comment.
             disabled={!plan}
           />

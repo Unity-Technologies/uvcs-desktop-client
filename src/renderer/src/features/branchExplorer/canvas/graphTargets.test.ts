@@ -37,6 +37,12 @@ describe('hitTest', () => {
     expect(target).toMatchObject({ kind: 'label', label: { name: 'v1' }, more: [] });
   });
 
+  it('passes over a label tag while labels are hidden', () => {
+    const node = layout.nodes.get(6)!;
+    const target = hitTest(layout, { x: columnX(node.column), y: labelChips(layout, node)[0]!.top + 5 }, null, { labels: false });
+    expect(target).not.toMatchObject({ kind: 'label' });
+  });
+
   it('finds a long label over the columns next to its changeset', () => {
     const labels = [{ name: 'release-candidate-2026-09-long', changeset: 6, owner: '', date: '', comment: '' }];
     const labeled = layoutGraph({ ...sampleHistory(), labels });
@@ -59,6 +65,14 @@ describe('hitTest', () => {
     const to = nodePoint(layout, 6)!;
     const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     expect(hitTest(layout, middle)).toMatchObject({ kind: 'mergeLink' });
+  });
+
+  it('passes over merge links, pending ones included, while they are hidden', () => {
+    const from = nodePoint(layout, 5)!;
+    const to = nodePoint(layout, 6)!;
+    expect(hitTest(layout, { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }, null, { mergeLinks: false })).not.toMatchObject({ kind: 'mergeLink' });
+    const onPending = pointOnCurve(linkCurve(nodePoint(withPending, 7)!, pendingPoint(withPending)!), 0.5);
+    expect(hitTest(withPending, onPending, null, { mergeLinks: false })).not.toMatchObject({ kind: 'pendingMergeLink' });
   });
 
   it('finds a long, flat merge link anywhere along it, and zoomed out within the same screen distance', () => {
@@ -84,6 +98,15 @@ describe('hitTest', () => {
     const a = nodePoint(layout, 2)!;
     const b = nodePoint(layout, 4)!;
     expect(hitTest(layout, { x: (a.x + b.x) / 2, y: a.y })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+  });
+
+  it('finds a branch drawn as a line, without its band, only near its line', () => {
+    const a = nodePoint(layout, 2)!;
+    const b = nodePoint(layout, 4)!;
+    const offLine = { x: (a.x + b.x) / 2, y: a.y + 10 };
+    expect(hitTest(layout, offLine)).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+    expect(hitTest(layout, offLine, null, { bands: false })).toBeNull();
+    expect(hitTest(layout, { ...offLine, y: a.y + 3 }, null, { bands: false })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
   });
 
   it('finds a branch from its header card where it was drawn, pinned to the edge or not', () => {

@@ -1,9 +1,11 @@
 import type { BranchExplorerApi } from '@shared/api/branchExplorer';
-import type { BranchExplorerQuery } from '@shared/domain/branchExplorer';
+import type { BranchExplorerQuery, RuleMatch, RuleQuery } from '@shared/domain/branchExplorer';
 import type { Place } from '@shared/domain/place';
 import { branchExplorerFinds } from '../cm/branchExplorerFinds';
+import { CmError } from '../cm/CmError';
 import { cmPlace } from '../cm/cmPlace';
 import { graphBranch, graphChangeset, graphLabel, graphMergeLink } from '../cm/branchExplorerRecords';
+import { matchedObject, ruleMatchFind } from '../cm/ruleMatchFind';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 import { relevantBranches } from './relevantBranches';
 
@@ -30,5 +32,25 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     return { branches: relevantBranches(branches, changesets, query.sinceDate), changesets, mergeLinks, labels };
   }
 
-  return { load };
+  /**
+   * One `cm find` per rule, all at once: a rule's condition is the user's own, so `cm` may refuse it, and that rule
+   * alone answers the error while the others still apply. The finds have no date range or `limit`, since a rule must
+   * hold for every branch, changeset or label the graph may draw; each prints one field per object it matched
+   * (`ruleMatchFind`), read as records as they arrive, and runs again only on a rule change or a refresh.
+   */
+  async function matchRules(place: Place, queries: readonly RuleQuery[]): Promise<RuleMatch[]> {
+    const { repository, options } = cmPlace(place);
+    return Promise.all(
+      queries.map(async (query): Promise<RuleMatch> => {
+        try {
+          return { matched: await cm.queryRecords(ruleMatchFind(query, repository), matchedObject, options) };
+        } catch (error) {
+          if (error instanceof CmError) return { error: error.message };
+          throw error;
+        }
+      }),
+    );
+  }
+
+  return { load, matchRules };
 }

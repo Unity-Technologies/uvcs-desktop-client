@@ -27,6 +27,11 @@
   border-left: 1px solid var(--border-subtle);
 }
 
+/* No sidebar to set it apart from while a diff is expanded: the line would only rule the window's edge. */
+.content[data-diff-expanded] {
+  border-left: none;
+}
+
 .layer {
   display: flex;
   flex: 1;

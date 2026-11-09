@@ -1,6 +1,22 @@
+import type { MemberKind, MemberRef } from './member';
+
 export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework required'] as const;
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
+
+/**
+ * A user or group asked to review, with the status they gave it (`cm codereview review`). The review's own status
+ * follows from theirs (the server's rule): Rework required when anyone asks for it, Reviewed once everyone has.
+ */
+export interface CodeReviewer {
+  name: string;
+  status: CodeReviewStatus;
+  /**
+   * A user or a group, where it was read from the review alone (`cm codereview reviewer list`, `CodeReviewsApi.reviewers`).
+   * A list of reviews doesn't know it: `cm find review` prints the names only.
+   */
+  kind?: MemberKind;
+}
 
 export type CodeReviewTarget =
   | { kind: 'branch'; branch: string }
@@ -19,8 +35,14 @@ export interface CodeReviewSummary {
   title: string;
   status: CodeReviewStatus;
   owner: string;
-  assignee: string;
+  reviewers: CodeReviewer[];
   date: string;
+  /** When anyone last did something on it: a comment, a status, a rename. */
+  lastActivity: string;
+  /** Comments, questions, change requests and their replies. */
+  commentCount: number;
+  /** Change requests not applied or discarded yet, and questions nobody answered. */
+  openIssueCount: number;
   /** Object id of the reviewed branch; none for other targets. */
   targetBranchId?: number;
   /** The reviewed changeset or shelve; a branch only once its name is read (`CodeReview`). */
@@ -33,23 +55,34 @@ export interface CodeReview extends CodeReviewSummary {
 }
 
 export interface CodeReviewFilter {
+  /** Only the review with this number: the palette's lookup of a number typed. */
+  id?: number;
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
-  /** Only reviews the user is asked to review. */
-  assignedToMe?: boolean;
+  /** Only reviews the user is one of the reviewers of. */
+  reviewerIsMe?: boolean;
   status?: CodeReviewStatus;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;
   /** Only reviews whose title contains it. */
   text?: string;
+  /**
+   * The newest ones up to this many; none reads every review the other fields keep, as the Code reviews view does
+   * (a large repository holds thousands: its time range bounds them).
+   */
+  limit?: number;
 }
 
-/** Repositories can hold thousands of reviews; lists show the newest ones up to this many. */
-export const MAX_LISTED_CODE_REVIEWS = 300;
+/**
+ * The newest reviews the palette and the branch chips read (`reviewSummariesQuery`): enough for the reviews in flight,
+ * read rarely; an older one is found by its title or number (`usePaletteServerSearch`).
+ */
+export const NEWEST_CODE_REVIEWS = 300;
 
 export interface CreateCodeReviewRequest {
   /** `br:/main/task`, `cs:12` or `sh:3`. */
   targetSpec: string;
   title: string;
-  assignee?: string;
+  /** The users and groups asked to review it. */
+  reviewers?: MemberRef[];
 }

@@ -3,9 +3,9 @@ import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, isEveryone, MAX_PICKED_PEOPLE, MINE, offeredPeople, onlyPerson, togglePerson, withMine, type PeoplePick } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
 import { displayName, userFilterTexts } from '../../lib/userName';
-import { Avatar } from '../../ui/Avatar';
 import { FilterChecklist } from '../../ui/FilterChecklist';
 import { Highlight } from '../../ui/Highlight';
+import { PersonRow } from './PersonRow';
 import styles from './PeopleFilter.module.css';
 
 /** The rows that aren't people by name; no user name holds a control character. */
@@ -58,29 +58,9 @@ export function PeoplePicker({ value, onChange, people, me }: PeoplePickerProps)
         row === EVERYONE_ROW ? (
           <span className={styles.everyone}>Everyone</span>
         ) : row === ME_ROW ? (
-          <>
-            {me && <Avatar user={me} size={18} tip={null} />}
-            <span className={styles.name}>
-              <Highlight text="You" />
-            </span>
-            {me && (
-              <span className={styles.stored}>
-                <Highlight text={displayName(me)} />
-              </span>
-            )}
-          </>
+          me ? <PersonRow user={me} name="You" /> : <Highlight text="You" />
         ) : (
-          <>
-            <Avatar user={row} size={18} tip={null} />
-            <span className={styles.name}>
-              <Highlight text={displayName(row)} />
-            </span>
-            {displayName(row).toLowerCase() !== row.toLowerCase() && (
-              <span className={styles.stored}>
-                <Highlight text={row} />
-              </span>
-            )}
-          </>
+          <PersonRow user={row} />
         )
       }
       summary={

@@ -39,7 +39,7 @@ function moment() {
 }
 
 /** What an update changes: the workspace and what it has loaded, never the labels, shelves, attributes, reviews or left changes. */
-const REFRESHED_BY_UPDATE: WorkspaceArea[] = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review'];
+const REFRESHED_BY_UPDATE: WorkspaceArea[] = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review', 'workingObjectComment'];
 
 beforeEach(() => useSuccessMomentStore.setState({ moments: {} }));
 

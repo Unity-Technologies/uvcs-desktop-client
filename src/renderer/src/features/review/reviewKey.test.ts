@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KeyboardEvent } from 'react';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { wholeList } from '../../lib/itemRange';
 import { isReviewKey, stepToNextReviewable, toggleReviewedFromKey } from './reviewKey';
 import type { ReviewStatus } from './reviewStatus';
 import type { ListReview } from './useReviewMode';
@@ -8,8 +9,8 @@ import type { ListReview } from './useReviewMode';
 type Row = GroupedTreeRow<string, unknown>;
 
 const file = (path: string): Row => ({ type: 'file', key: path, item: path, depth: 0 });
-const folder = (path: string, items: string[], collapsed = false): Row => ({ type: 'folder', key: path, path, name: path, depth: 0, items, collapsed });
-const group = (label: string, items: string[], collapsed = false): Row => ({ type: 'group', key: label, label, group: label, items, collapsed });
+const folder = (path: string, items: string[], collapsed = false): Row => ({ type: 'folder', key: path, path, name: path, depth: 0, held: wholeList(items), collapsed });
+const group = (label: string, items: string[], collapsed = false): Row => ({ type: 'group', key: label, label, group: label, held: wholeList(items), depth: 0, collapsed });
 
 /**
  * A list of files with their marks, shown one row each unless `rows` says otherwise; directories (null) have nothing

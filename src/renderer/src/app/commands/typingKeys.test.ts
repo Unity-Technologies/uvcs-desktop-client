@@ -1,6 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { belongsToField, copiesSelectedText } from './typingKeys';
+import { belongsToField, copiesSelectedText, yieldsToCommentField } from './typingKeys';
 
 const key = (key: string, modifiers: { metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean } = {}) => ({
   key,
@@ -56,5 +56,29 @@ describe('copiesSelectedText', () => {
     expect(copiesSelectedText(copy(true), '', true)).toBe(false);
     expect(copiesSelectedText({ ...copy(true), shiftKey: true }, 'cs:42', true)).toBe(false);
     expect(copiesSelectedText({ ...copy(true), key: 'x' }, 'cs:42', true)).toBe(false);
+  });
+});
+
+describe('yieldsToCommentField', () => {
+  const shiftCmd = (letter: string) => ({ key: letter, code: `Key${letter.toUpperCase()}`, metaKey: true, ctrlKey: false, altKey: false, shiftKey: true });
+
+  it('leaves ⇧⌘U to a focused comment field, which makes a link: it never updates the workspace by surprise', () => {
+    expect(yieldsToCommentField(shiftCmd('u'), true, true)).toBe(true);
+    expect(yieldsToCommentField(shiftCmd('c'), true, true)).toBe(true);
+  });
+
+  it('runs the window’s ⇧⌘U (Update workspace) and ⇧⌘C (Copy link) everywhere else', () => {
+    expect(yieldsToCommentField(shiftCmd('u'), false, true)).toBe(false);
+    expect(yieldsToCommentField(shiftCmd('c'), false, true)).toBe(false);
+  });
+
+  it('runs ⌘K, the command palette, from a comment field too', () => {
+    expect(yieldsToCommentField({ key: 'k', code: 'KeyK', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, true, true)).toBe(false);
+  });
+
+  it('does the same off macOS with Ctrl', () => {
+    const ctrlShift = { key: 'U', code: 'KeyU', metaKey: false, ctrlKey: true, altKey: false, shiftKey: true };
+    expect(yieldsToCommentField(ctrlShift, true, false)).toBe(true);
+    expect(yieldsToCommentField(ctrlShift, false, false)).toBe(false);
   });
 });

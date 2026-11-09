@@ -8,6 +8,8 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, type MenuHost } from '../../components/menuWords';
+import { toolsSubmenu } from '../../components/tools/toolsMenu';
+import { toolSubject } from '../../components/tools/toolSubjects';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
@@ -59,6 +61,7 @@ export function labelMenu(place: Place, labels: LabelInfo[], host: MenuHost = {}
     single &&
       !host.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
+    toolsSubmenu(place, labels.map(toolSubject.label)),
     single && copySubmenu('Label', labelCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameLabel(place, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(place, 'label', single)),

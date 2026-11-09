@@ -11,7 +11,8 @@ interface Segment<Value extends string> {
 }
 
 interface SegmentedControlProps<Value extends string> {
-  value: Value;
+  /** The checked segment; none until one is picked (the first one is then the Tab stop, as in a native radio group). */
+  value: Value | undefined;
   segments: Segment<Value>[];
   onChange: (value: Value) => void;
   /** Fills the width it is given, sharing it equally between the segments. */
@@ -37,13 +38,13 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
 
   return (
     <div ref={controlRef} className={styles.control} role="radiogroup" aria-label={label} data-stretch={stretch} onKeyDown={pickWithArrows}>
-      {segments.map((segment) => (
+      {segments.map((segment, index) => (
         <button
           key={segment.value}
           type="button"
           role="radio"
           aria-checked={segment.value === value}
-          tabIndex={segment.value === value ? 0 : -1}
+          tabIndex={segment.value === value || (value === undefined && index === 0) ? 0 : -1}
           data-value={segment.value}
           data-tip={segment.title}
           data-tip-shortcut={segment.shortcut}

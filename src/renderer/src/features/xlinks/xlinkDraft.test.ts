@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { XlinkTarget } from '@shared/domain/explorer';
 import {
+  checkinCommentOf,
   draftOf,
   newXlinkOf,
   pointOf,
@@ -67,6 +68,22 @@ describe('A new xlink', () => {
       folder: '/',
       rules: [{ from: '/main/task', to: '/main/dev' }],
     });
+  });
+
+  it('says it is checked in as it is created, which its button names', () => {
+    expect(xlinkDialogFields(CREATE, filled())).toMatchObject({
+      title: 'New xlink',
+      description: 'A folder in /code showing another repository. It’s checked in as it’s created, so its files show at once.',
+      saveLabel: 'Create and check in',
+    });
+  });
+
+  it('is checked in with the comment typed, or one naming it once it has a name', () => {
+    expect(xlinkDialogFields(CREATE, draftOf(CREATE)).commentPlaceholder).toBe('Add xlink');
+    expect(xlinkDialogFields(CREATE, filled()).commentPlaceholder).toBe('Add xlink code/lib');
+    expect(checkinCommentOf('code', filled({ comment: '  ' }))).toBe('Add xlink code/lib');
+    expect(checkinCommentOf('', filled())).toBe('Add xlink lib');
+    expect(checkinCommentOf('code', filled({ comment: ' The physics engine\n' }))).toBe('The physics engine');
   });
 
   it('is created at the root, read-only, with the folder of its repository and no rules', () => {

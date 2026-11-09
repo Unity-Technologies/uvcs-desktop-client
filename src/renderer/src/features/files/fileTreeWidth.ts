@@ -1,4 +1,4 @@
-import type { DetailsWidthLimits } from '../../components/detailsWidthStore';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
 
 /**
  * A file tree keeps its width and the selected file's diff takes the rest: a diff needs the room more than names. On a

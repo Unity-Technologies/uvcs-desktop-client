@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { MemberRef } from '@shared/domain/permissions';
+import type { MemberRef } from '@shared/domain/member';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';

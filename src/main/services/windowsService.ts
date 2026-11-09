@@ -23,7 +23,11 @@ export function createWindowsService({ windows, handedOverDiffs }: ServiceContex
       const window = caller && BrowserWindow.fromWebContents(caller);
       if (window) popUpAppMenu(window, position);
     },
-    pasteClipboard: async () => webContents.fromId(callerId())?.paste(),
+    pasteClipboard: async (options) => {
+      const contents = webContents.fromId(callerId());
+      if (options?.plainText) contents?.pasteAndMatchStyle();
+      else contents?.paste();
+    },
     openPage: async ({ place, page, diff, seed }) => {
       if (diff) handedOverDiffs.hand(place, diff.target, diff.entries);
       windows.openPage(callerId(), { place, page, seed });

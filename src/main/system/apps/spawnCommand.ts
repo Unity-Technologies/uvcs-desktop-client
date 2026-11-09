@@ -2,7 +2,9 @@
  * Windows runs `.cmd` launchers (VS Code's `code.cmd`, JetBrains Toolbox scripts) only through `cmd.exe`, which reads
  * the whole line: every argument is quoted, which keeps `&`, `^`, `|`, `<` and `>` literal (a user folder named
  * `R&D`), and loses the only characters cmd still reads inside quotes: `"`, and `%` and `!` that could name a
- * variable. Arguments are the app's temp paths (whose names it makes of letters, digits and `_ .-`) and version names.
+ * variable. An editor's arguments are the app's temp paths (whose names it makes of letters, digits and `_ .-`) and
+ * version names; a tool's are what the user typed and the objects' names, which lose those characters too
+ * (docs/features/tools.md).
  * Backslashes ending an argument are doubled, or the program would read the closing quote as a quote in it.
  */
 export function spawnCommand(platform: NodeJS.Platform, executable: string, args: string[]): { command: string; commandArgs: string[]; verbatim: boolean } {

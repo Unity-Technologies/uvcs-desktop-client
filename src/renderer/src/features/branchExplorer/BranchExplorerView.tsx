@@ -1,7 +1,9 @@
 import { GitGraph } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import type { BranchExplorerData } from '@shared/domain/branchExplorer';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
@@ -14,21 +16,38 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { useBranchExplorerPreferences } from './branchExplorerStore';
-import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
+import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useAppliedUserColors, useBranchExplorerPreferences, useBranchPins, useGraphViewOptions } from './branchExplorerStore';
+import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
+import { followedPage } from './followedPage';
 import { GraphDetails } from './details/GraphDetails';
+import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
+import { branchPositionsOf } from './branchPosition';
 import { graphMenu } from './graphMenu';
-import { selectionFor, type GraphSelection } from './graphSelection';
+import {
+  leadOf,
+  NOTHING_SELECTED,
+  selectedOnGesture,
+  selectionsLaidOut,
+  selectionFor,
+  selectionHighlights,
+  severalSelected,
+  type GraphSelection,
+  type GraphSelections,
+  type SelectGesture,
+} from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
+import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
+import { NO_RULE_COLORS, ruleColors as ruleColorsOf } from './model/ruleColors';
+import { changesetUserHues, historyAuthors, withUserColors } from './model/userColors';
 import { describeSelection } from './model/describeSelection';
 import { homeTarget } from './model/homeTarget';
 import { pendingBranchOf } from './model/pendingChangeset';
@@ -41,6 +60,10 @@ import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
+import { useRuleMatches } from './useRuleMatches';
+import { shareOwners } from './timeline/shareOwners';
+import { TimelineToggleButton } from './timeline/TimelineToggleButton';
+import { useTimelineSlideIn } from './timeline/useTimelineSlideIn';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
@@ -51,13 +74,29 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showTimeline } = preferences;
+  const viewOptions = useGraphViewOptions();
+  const rules = useAppliedExplorerRules(placeRepository);
+  const userColors = useAppliedUserColors(placeRepository);
+  const pins = useBranchPins(placeRepository);
+  const positions = branchPositionsOf(placeRepository, pins, useBranchExplorerPreferences.getState().setPins);
+  const ruleMatches = useRuleMatches(rules);
+  const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const [selection, setSelection] = useState<GraphSelection | null>(null);
+  const [selections, setSelectionsState] = useState<GraphSelections>(NOTHING_SELECTED);
+  // A right-click selects, then asks for the menu in the same event: the menu reads the selection before React renders.
+  const selectionsRef = useRef<GraphSelections>(NOTHING_SELECTED);
+  const setSelections = useCallback((next: GraphSelections) => {
+    selectionsRef.current = next;
+    setSelectionsState(next);
+  }, []);
+  /** The keyboard, the details, the following window and going to an object work on one: the last one picked. */
+  const selection = leadOf(selections);
+  const setSelection = useCallback((next: GraphSelection | null) => setSelections(next ? [next] : NOTHING_SELECTED), [setSelections]);
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   /** How far the last focus reached; the next one starts there. */
   const [focusHops, setFocusHops] = useState(1);
@@ -81,9 +120,26 @@ export function BranchExplorerView() {
     expanded,
     search: search.shown,
     selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
+    rules,
+    matches: ruleMatches,
+    pins,
   });
+  useEffect(() => {
+    if (!layout) return;
+    const laidOut = selectionsLaidOut(selectionsRef.current, layout);
+    if (laidOut !== selectionsRef.current) setSelections(laidOut);
+  }, [layout, setSelections]);
 
-  const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
+  const formatColors = useMemo(
+    () => (data ? rememberedPerHistory(data, 'ruleColors', [rules, ruleMatches, currentBranch], () => ruleColorsOf(data, rules, ruleMatches, currentBranch)) : NO_RULE_COLORS),
+    [data, rules, ruleMatches, currentBranch],
+  );
+  // A format rule's color wins over the color given to the changeset's author (`withUserColors`).
+  const ruleColors = useMemo(
+    () => (data ? withUserColors(formatColors, rememberedPerHistory(data, 'userHues', [userColors], () => changesetUserHues(data, userColors))) : formatColors),
+    [data, formatColors, userColors],
+  );
+  const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => historyAuthors(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
   const { data: reviews } = useReviewsByBranch(data !== undefined);
@@ -95,20 +151,28 @@ export function BranchExplorerView() {
   const activeHit = searchHits[search.activeHitIndex] ?? null;
   const highlights = useMemo<GraphHighlights>(
     () => ({
-      selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
-      selectedBranch: selection?.kind === 'branch' ? selection.name : null,
-      selectedPending: selection?.kind === 'pending',
+      ...selectionHighlights(selections),
       homeChangeset,
       pendingChangeCount,
       currentBranch,
       highlightedAuthors,
       search: searchLit && { ...searchLit, active: activeHit },
       searchQuery: search.shown.trim(),
-      options: { showComments, showAvatars },
+      options: viewOptions,
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, showComments, showAvatars, reviews],
+    [selections, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
   );
+  const timelineShare = useMemo(() => shareOwners(people, me), [people, me]);
+  const { slideIn: timelineSlidesIn, slidIn: timelineSlidIn } = useTimelineSlideIn(showTimeline);
+  const timeline = useMemo<TimelineInputs | null>(
+    () =>
+      showTimeline
+        ? { owners: timelineShare.owners, shareWord: timelineShare.word, searchHits: search.shown.trim() ? searchHits : [], slideIn: timelineSlidesIn, onSlidIn: timelineSlidIn }
+        : null,
+    [showTimeline, timelineShare, search.shown, searchHits, timelineSlidesIn, timelineSlidIn],
+  );
+  useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
   const goToChangeset = useCallback((id: number) => {
     setSelection({ kind: 'changeset', id });
@@ -183,12 +247,14 @@ export function BranchExplorerView() {
       goToChangeset,
       showRelatedTo: (name) => focusOn(name, focusHops),
       revealCreatedBranch,
+      selections: selectionsRef.current,
+      positions,
     });
 
-  const select = (target: GraphTarget | null): void => {
+  const select = (target: GraphTarget | null, gesture: SelectGesture): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
-    else setSelection(selectionFor(target));
+    else setSelections(selectedOnGesture(selectionsRef.current, target, gesture));
   };
 
   const activate = (target: GraphTarget): void => {
@@ -199,6 +265,7 @@ export function BranchExplorerView() {
     handleGraphKey(event, {
       layout,
       selection,
+      selections: selectionsRef.current,
       select: setSelection,
       homeChangeset,
       repository,
@@ -208,13 +275,15 @@ export function BranchExplorerView() {
       find,
       fit,
       zoomBy,
-      toggleDetails: () => preferences.set({ detailsOpen: !detailsOpen }),
+      toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY),
       exitFocus: () => setFocus(null),
+      positions,
     });
 
   const header = (
     <ViewHeader
       title="Branch Explorer"
+      detailsToggle={<DetailsToggleButton detailsKey={BRANCH_EXPLORER_DETAILS_KEY} />}
       subtitle={layout && filtered && `${pluralize(filtered.changesets.length, 'changeset')} · ${pluralize(layout.lanes.length, 'branch', 'branches')}`}
       actions={
         <>
@@ -227,6 +296,7 @@ export function BranchExplorerView() {
             onLeave={() => canvasRef.current?.focus()}
           />
           <ViewRefreshButton fetching={isFetching} />
+          <TimelineToggleButton />
         </>
       }
     >
@@ -249,7 +319,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails widthKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY} list={<GraphSkeleton timeline={showTimeline} />} details={null} />
         </div>
       </>
     );
@@ -262,8 +332,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
           />
@@ -278,8 +347,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
             details={emptyRange}
@@ -294,25 +362,28 @@ export function BranchExplorerView() {
       {header}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
-          {describeSelection(layout, selection, homeChangeset)}
+          {severalSelected(selections)?.summary ?? describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails widthKey="branchExplorer"
-          hideDetails={!detailsOpen}
+        <ListWithDetails
+          detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
           list={
             <GraphCanvas
               ref={canvasRef}
               layout={layout}
               highlights={highlights}
+              ruleColors={ruleColors}
               onSelect={select}
               onActivate={activate}
               contextMenu={menuFor}
+              timeline={timeline}
             >
-              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} onOpenOptions={openBranchExplorerOptionsDialog} />
             </GraphCanvas>
           }
           details={
             <GraphDetails
               selection={selection}
+              several={severalSelected(selections)}
               layout={layout}
               pendingChangeCount={pendingChangeCount}
               menuFor={menuFor}
@@ -324,10 +395,4 @@ export function BranchExplorerView() {
       </div>
     </>
   );
-}
-
-function authorsOf(data: BranchExplorerData): string[] {
-  const authors = new Set<string>();
-  for (const changeset of data.changesets) authors.add(changeset.owner);
-  return [...authors];
 }

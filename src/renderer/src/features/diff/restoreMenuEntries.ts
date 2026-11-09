@@ -4,6 +4,7 @@ import { inPlaceRepository } from '@shared/domain/repository';
 import { menuAction } from '../../components/menuWords';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { fileNameOf, pluralize } from '../../lib/text';
+import { withMetas } from '../../lib/unityMetaPairs';
 import { restoreDeletedItems, restoreDeletedItemTo } from './restoreDeleted';
 
 /**
@@ -21,12 +22,23 @@ export function deletedItemRestores(selected: DiffEntry[], diffEntries: DiffEntr
 
 /**
  * The menu entries that bring deleted items of a diff back as pending changes: where they were, or one of them
- * anywhere in the workspace ("Restore to…"). None for anything else a diff lists.
+ * anywhere in the workspace ("Restore to…"). The Unity `.meta` listed with each (`metaOf`, `pairDiffMetas`) comes
+ * back with it, which leaves "Restore to…" out: an asset taken elsewhere without its meta would lose it. None for
+ * anything else a diff lists.
  */
-export function restoreMenuEntries(workspacePath: string, selected: DiffEntry[], diffEntries: DiffEntry[], workspaceRepository: string | undefined): GroupedEntry[] {
-  const restores = deletedItemRestores(selected, diffEntries, workspaceRepository);
-  if (!restores) return [];
-  const restore = menuAction('restore', () => void restoreDeletedItems(workspacePath, restores), { label: restoreLabel(restores, selected) });
+export function restoreMenuEntries(
+  workspacePath: string,
+  selected: DiffEntry[],
+  diffEntries: DiffEntry[],
+  workspaceRepository: string | undefined,
+  metaOf: (entry: DiffEntry) => DiffEntry | undefined = () => undefined,
+): GroupedEntry[] {
+  const assetRestores = deletedItemRestores(selected, diffEntries, workspaceRepository);
+  if (!assetRestores) return [];
+  // A meta that can't be restored (not deleted here) leaves the asset to come back alone.
+  const restores = deletedItemRestores(withMetas(selected, metaOf), diffEntries, workspaceRepository) ?? assetRestores;
+  const withItsMeta = assetRestores.length === 1 && restores.length > 1 ? ' and its .meta' : '';
+  const restore = menuAction('restore', () => void restoreDeletedItems(workspacePath, restores), { label: `${restoreLabel(assetRestores, selected)}${withItsMeta}` });
   if (restores.length > 1) return [restore];
   return [restore, menuAction('restoreTo', () => void restoreDeletedItemTo(workspacePath, restores[0]!))];
 }

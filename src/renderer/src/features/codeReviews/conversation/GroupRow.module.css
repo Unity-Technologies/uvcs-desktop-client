@@ -1,0 +1,12 @@
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Where a person's row shows their name as stored, the same quiet text says it is a group. */
+.kind {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

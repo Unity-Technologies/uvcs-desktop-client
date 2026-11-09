@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, folderItemCount, itemsUnderRows, layoutPathItems, layoutPathList, orderTreeRows, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow, type TreeFolderRow } from './pathTree';
+import { layoutPathTree } from './pathTreeLayout';
 
 interface Item {
   path: string;
@@ -10,94 +10,47 @@ interface Item {
 const keyOf = (item: Item): string => item.path;
 const sortedItems = (paths: string[]): Item[] => paths.map((path) => ({ path })).sort((a, b) => comparePaths(a.path, b.path));
 const tree = (paths: string[]): PathTreeRow<Item>[] => layoutPathTree({ sorted: sortedItems(paths), keyOf, folderScope: 'all' });
-const shape = (rows: PathTreeRow<Item>[]) => rows.map((row) => [row.type === 'folder' ? `${row.name}/` : row.key, row.depth]);
-
-describe('layoutPathTree', () => {
-  it('gives folders whose names read the same (v01 and v1) a row each, with their own files', () => {
-    expect(shape(tree(['Levels/v01/a.txt', 'Levels/v1/b.txt', 'Levels/v01/c.txt']))).toEqual([
-      ['Levels/', 0],
-      ['v01/', 1],
-      ['Levels/v01/a.txt', 2],
-      ['Levels/v01/c.txt', 2],
-      ['v1/', 1],
-      ['Levels/v1/b.txt', 2],
-    ]);
-  });
-
-  it('puts each folder before what it holds, one level deeper', () => {
-    expect(shape(tree(['src/lib/c.ts', 'src/b.ts', 'z.ts']))).toEqual([
-      ['src/', 0],
-      ['src/b.ts', 1],
-      ['lib/', 1],
-      ['src/lib/c.ts', 2],
-      ['z.ts', 0],
-    ]);
-  });
-
-  it('shows folders that only hold the next one as one row, named by their path', () => {
-    expect(shape(tree(['deep/very/long/a.ts', 'deep/very/other/b.ts']))).toEqual([
-      ['deep/very/', 0],
-      ['long/', 1],
-      ['deep/very/long/a.ts', 2],
-      ['other/', 1],
-      ['deep/very/other/b.ts', 2],
-    ]);
-  });
-
-  it('shows a folder that is an item itself as its folder row, holding its own item and those in it', () => {
-    const rows = tree(['assets', 'assets/a.png', 'assets/b.png']);
-    expect(shape(rows)).toEqual([
-      ['assets/', 0],
-      ['assets/a.png', 1],
-      ['assets/b.png', 1],
-    ]);
-    expect(rows[0]).toMatchObject({ item: { path: 'assets' }, items: [{ path: 'assets' }, { path: 'assets/a.png' }, { path: 'assets/b.png' }] });
-  });
-
-  it('ends a row of folders at a folder that is an item itself, so it keeps its status', () => {
-    expect(shape(tree(['a/new', 'a/new/x/f.ts']))).toEqual([
-      ['a/new/', 0],
-      ['x/', 1],
-      ['a/new/x/f.ts', 2],
-    ]);
-  });
-
-  it('keeps a folder that is an item but holds none a row of an item', () => {
-    expect(tree(['empty'])).toEqual([{ type: 'file', key: 'empty', item: { path: 'empty' }, depth: 0 }]);
-  });
-
-  it('gives each folder every item in it, at every level', () => {
-    const rows = tree(['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts', 'src-old.ts']);
-    expect(rows.flatMap((row) => (row.type === 'folder' ? [[row.path, row.items.map(keyOf)]] : []))).toEqual([
-      ['src', ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts']],
-      ['src/lib', ['src/lib/b.ts', 'src/lib/deep/c.ts']],
-      ['src/lib/deep', ['src/lib/deep/c.ts']],
-    ]);
-  });
-
-  it("keys folder rows by the tree's scope, so two trees on one list never share a key", () => {
-    const rows = layoutPathTree({ sorted: sortedItems(['src/a.ts']), keyOf, folderScope: 'changelist:UI' });
-    expect(rows[0]!.key).toBe('folder:changelist:UI:src');
-  });
-
-  // How the work grows is the test below; 100,000 items on top of it took up to 2 s on CI's runners.
-  it('lays out 20,000 items, every item once', () => {
-    const paths = Array.from({ length: 20_000 }, (_, index) => `src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`);
-    expect(tree(paths).filter((row) => row.type === 'file')).toHaveLength(20_000);
-  });
-
-  it('lays out in n·log n work: twice the items, about twice the reads', () => {
-    const many = (count: number) =>
-      sortedItems(Array.from({ length: count }, (_, index) => (index % 2 ? `src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs` : `flat/asset${index}.txt`)));
-    expect(readGrowthWhenDoubled(5_000, many, (sorted) => layoutPathTree({ sorted, keyOf, folderScope: 'all' }))).toBeLessThan(2.5);
-  });
-});
 
 describe('layoutPathList', () => {
   it('keeps every item at the top level, in the order given', () => {
     expect(layoutPathList(sortedItems(['b/x.ts', 'a.ts']), keyOf).map((row) => [row.key, row.depth])).toEqual([
       ['a.ts', 0],
       ['b/x.ts', 0],
+    ]);
+  });
+});
+
+describe('layoutPathItems', () => {
+  // By the file's name, last letter first: an order the path order never gives.
+  const byLastLetter = { compare: (a: { path: string }, b: { path: string }): number => a.path.at(-1)!.localeCompare(b.path.at(-1)!) };
+  const keys = (rows: PathTreeRow<{ path: string }>[]) => rows.map((row) => (row.type === 'folder' ? `${row.path}/` : row.key));
+
+  it('keeps the path order without an order to follow', () => {
+    const sorted = sortedItems(['a/c.ts', 'b.tsx']);
+    expect(keys(layoutPathItems(sorted, keyOf, { tree: false, folderScope: 'all' }))).toEqual(['a/c.ts', 'b.tsx']);
+    expect(keys(layoutPathItems(sorted, keyOf, { tree: true, folderScope: 'all' }))).toEqual(['a/', 'a/c.ts', 'b.tsx']);
+  });
+
+  it('sorts every item of a list, keeping the path order between items the order ties', () => {
+    const rows = layoutPathItems(sortedItems(['z/q.tsx', 'a/b.ts', 'm.tsx', 'c.ts']), keyOf, { tree: false, folderScope: 'all', order: byLastLetter });
+    expect(keys(rows)).toEqual(['a/b.ts', 'c.ts', 'm.tsx', 'z/q.tsx']);
+  });
+
+  it("sorts each folder's files in a tree, after its folders", () => {
+    const rows = layoutPathItems(sortedItems(['src/b.tsx', 'src/a.ts', 'src/lib/z.ts', 'readme.ts', 'app.tsx']), keyOf, { tree: true, folderScope: 'all', order: byLastLetter });
+    expect(keys(rows)).toEqual(['src/', 'src/lib/', 'src/lib/z.ts', 'src/a.ts', 'src/b.tsx', 'readme.ts', 'app.tsx']);
+  });
+});
+
+describe('orderTreeRows', () => {
+  it('keeps a folder that is an item itself with what it holds', () => {
+    const rows = layoutPathTree({ sorted: sortedItems(['new', 'new/b.ts', 'new/a.ts', 'top.ts']), keyOf, folderScope: 'all' });
+    const ordered = orderTreeRows(rows, { compare: (a, b) => b.path.localeCompare(a.path) });
+    expect(ordered.map((row) => [row.type, row.type === 'folder' ? row.path : row.key, row.depth])).toEqual([
+      ['folder', 'new', 0],
+      ['file', 'new/b.ts', 1],
+      ['file', 'new/a.ts', 1],
+      ['file', 'top.ts', 0],
     ]);
   });
 });
@@ -196,5 +149,17 @@ describe('rowsHolding', () => {
   it('names none for a row at the top, or one not laid out', () => {
     expect(rowsHolding(rows, 'z.ts', levelOf)).toEqual([]);
     expect(rowsHolding(rows, 'gone.ts', levelOf)).toEqual([]);
+  });
+});
+
+describe('folderItemCount', () => {
+  const folderCounts = (paths: string[]): number[] =>
+    layoutPathTree({ sorted: paths.map((path) => ({ path })), keyOf: (item) => item.path, folderScope: 'test' })
+      .filter((row): row is TreeFolderRow<{ path: string }> => row.type === 'folder')
+      .map(folderItemCount);
+
+  it('counts what a folder holds, but for the folder itself when it is an item (an added folder)', () => {
+    expect(folderCounts(['assets', 'assets/a.png', 'assets/b.png'])).toEqual([2]);
+    expect(folderCounts(['src/a.ts', 'src/b.ts'])).toEqual([2]);
   });
 });

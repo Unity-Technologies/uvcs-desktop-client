@@ -1,8 +1,8 @@
 {
   "package": "@pierre/highlights",
-  "version": "0.2.0",
-  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.1/skills/highlights",
-  "commit": "cbc028ca863d6e662706dba87b50df3eeaebbfa7",
+  "version": "0.3.0",
+  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.2/skills/highlights",
+  "commit": "9cb6e068780ac24904d5328ce2843cdc770a6cf0",
   "installedWith": "with the pierre-diffs skill: see its pierre-version.json",
   "localChanges": [
     "Folder and SKILL.md name: pierre-highlights instead of highlights",

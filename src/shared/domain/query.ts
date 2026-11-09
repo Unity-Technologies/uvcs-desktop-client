@@ -9,6 +9,8 @@ export interface QueryFilter {
   owners?: readonly string[];
   branch?: string;
   includeHidden?: boolean;
+  /** Only the hidden branches (`hidden = 'true'`), which `cm find branch` leaves out unless asked: a few at most. */
+  onlyHidden?: boolean;
   limit?: number;
   /**
    * Only objects whose name (branches, labels), comment (changesets, shelves) or title (code reviews) contains its words,

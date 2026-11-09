@@ -6,10 +6,12 @@ import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { viewChangesAction } from '../../app/navigation/viewChangesAction';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByShelveApplied, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
+import { isAffectedByShelveApplied, isAffectedByShelveComment, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
+import { askForComment } from '../../components/EditCommentDialog';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
+import { writeListedShelveComment } from './cachedShelve';
 import { appliedShelveMessage, setAsideComment } from './shelveMessages';
 
 /**
@@ -76,6 +78,23 @@ export function shelveDiffPage(shelve: Pick<Shelve, 'id'>, focusPath?: string): 
 
 export function showShelveChanges(shelve: Pick<Shelve, 'id'>, focusPath?: string): void {
   navigation.openPage(shelveDiffPage(shelve, focusPath));
+}
+
+export async function editShelveComment(place: Place, shelve: Pick<Shelve, 'id' | 'comment'>): Promise<void> {
+  const comment = await askForComment(`shelve ${shelve.id}`, shelve.comment);
+  if (comment !== undefined) await saveShelveComment(place, shelve, comment);
+}
+
+/**
+ * Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. The lists already read take
+ * the comment before they're marked stale, so a page showing the shelve from them shows it at once.
+ */
+export function saveShelveComment(place: Place, shelve: Pick<Shelve, 'id'>, comment: string): Promise<boolean> {
+  const save = async (): Promise<void> => {
+    await api.shelves.editComment(place, shelve.id, comment);
+    writeListedShelveComment(place, shelve.id, comment);
+  };
+  return runVoidAction(place, "Couldn't update the comment", save, isAffectedByShelveComment);
 }
 
 export async function deleteShelve(place: Place, shelveId: number): Promise<boolean> {

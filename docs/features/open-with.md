@@ -42,6 +42,11 @@ OS where an app is installed rather than guessing paths:
   `.exe` is there: `.cmd` launchers go through `cmd.exe`, `spawnCommand`, which drops `%` and `!` from arguments);
   Linux runs the desktop entry's command line with its file codes filled (`execArgsFor`). The user adds any program or
   macOS app ("Choose another app…", in the menus and Settings: `customEditors`); picking one already added reuses it.
+  One the app finds at the same place (the same program, any case and separator on Windows, or a program inside the
+  bundle found on macOS: `isSameProgram`) shows once, as the app found; a Linux app, found by its desktop entry, never
+  matches a program picked; its id still opens it and still picks it as the editor
+  (`externalAppList`). The official client's "Open with" programs become such apps on the first run
+  (docs/features/tools.md "From the official client").
 - **Terminals** (`KNOWN_TERMINALS`, one finder per OS): each is told the folder its own way and started in it. macOS:
   Terminal, iTerm, Ghostty, Warp, Hyper, PowerShell by `open -a`; WezTerm, kitty and Alacritty by their own program in
   the bundle. Windows: Windows Terminal (`wt.exe -d .`), PowerShell 7, Windows PowerShell and Command Prompt through cmd's

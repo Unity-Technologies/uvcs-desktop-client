@@ -1,7 +1,7 @@
 import { getOrCreateWorkerPoolSingleton, type WorkerPoolManager } from '@pierre/diffs/worker';
 import { useEffect } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
-import { pierreThemeName } from './pierreOptions';
+import { pierreThemeName } from '../../../lib/codeTheme';
 
 /**
  * Pierre's worker, which highlights a big text off the main thread while it shows as plain text, when `enabled`.

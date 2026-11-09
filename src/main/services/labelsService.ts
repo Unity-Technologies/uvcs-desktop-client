@@ -6,6 +6,7 @@ import { FOUND_LABELS } from '../cm/foundObjects';
 import { layoutReader } from '../cm/formatRecords';
 import { labelCommentArgs } from '../cm/labelCommentArgs';
 import { withTempFile } from '../files/tempFile';
+import { readOneObject } from './oneObjectRead';
 import type { ServiceContext } from './ServiceContext';
 
 export function createLabelsService({ cm }: ServiceContext): LabelsApi {
@@ -15,9 +16,10 @@ export function createLabelsService({ cm }: ServiceContext): LabelsApi {
       return cm.queryRecords(findArgs(FOUND_LABELS, filter, 'date desc', [], at.repository), layoutReader(FOUND_LABELS), at.options);
     },
 
-    async get(place, name) {
+    async get(place, name, read = {}) {
       const at = cmPlace(place);
-      const labels = await cm.queryRecords(findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository), layoutReader(FOUND_LABELS), at.options);
+      const args = findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository);
+      const labels = await readOneObject(cm, args, layoutReader(FOUND_LABELS), at.options, read);
       return labels.find((label) => label.name === name) ?? null;
     },
 

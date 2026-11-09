@@ -1,6 +1,13 @@
 import '../../testing/fakeWindow';
-import { describe, expect, it } from 'vitest';
-import { keyboardMergeSource } from './graphKeyboard';
+import type { KeyboardEvent } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { graphActions } from './graphActions';
+import { isMac } from '../../lib/platform';
+import { handleGraphKey, keyboardMergeSource, keyboardMoveLanes, type GraphKeyboard } from './graphKeyboard';
+import type { GraphSelection, GraphSelections } from './graphSelection';
+import type { BranchPins } from './model/branchRows';
+import { branch, changeset, sampleHistory } from './model/graphFixtures';
+import { layoutGraph } from './model/layoutGraph';
 
 describe('keyboardMergeSource', () => {
   it('merges the changeset or branch selected into the workspace', () => {
@@ -13,5 +20,104 @@ describe('keyboardMergeSource', () => {
   it('merges nothing in a repository explored without a workspace: there is none to merge into', () => {
     expect(keyboardMergeSource({ kind: 'changeset', id: 7 }, false)).toBeNull();
     expect(keyboardMergeSource({ kind: 'branch', name: '/main/task' }, false)).toBeNull();
+  });
+});
+
+function keyPressed(key: string): KeyboardEvent {
+  const code = key.length === 1 ? `Key${key.toUpperCase()}` : key;
+  const nativeEvent = { key, code, shiftKey: false, altKey: false, ctrlKey: false, metaKey: false };
+  return { key, nativeEvent, target: {}, currentTarget: { contains: () => true }, preventDefault: () => {} } as unknown as KeyboardEvent;
+}
+
+function keyboardOn(selection: GraphSelection, selected: (GraphSelection | null)[]): GraphKeyboard {
+  return {
+    layout: layoutGraph(sampleHistory()),
+    selection,
+    selections: [selection],
+    select: (next) => selected.push(next),
+    homeChangeset: 6,
+    repository: 'game@local',
+    inWorkspace: true,
+    canvas: { current: null },
+    goHome: () => {},
+    find: () => {},
+    fit: () => {},
+    zoomBy: () => {},
+    toggleDetails: () => {},
+    exitFocus: () => {},
+    positions: null,
+  };
+}
+
+describe('the keys that act on one object', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', class {}));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('select the lead alone, then act on it: M merges the lead', () => {
+    const merge = vi.spyOn(graphActions, 'merge').mockImplementation(() => {});
+    const selected: (GraphSelection | null)[] = [];
+    handleGraphKey(keyPressed('m'), keyboardOn({ kind: 'branch', name: '/main/a' }, selected));
+    expect(selected).toEqual([{ kind: 'branch', name: '/main/a' }]);
+    expect(merge).toHaveBeenCalledWith('merge', 'br:/main/a');
+  });
+
+  it('Enter diffs the lead', () => {
+    const diff = vi.spyOn(graphActions, 'diffChangeset').mockImplementation(() => {});
+    const selected: (GraphSelection | null)[] = [];
+    handleGraphKey(keyPressed('Enter'), keyboardOn({ kind: 'changeset', id: 4 }, selected));
+    expect(selected).toEqual([{ kind: 'changeset', id: 4 }]);
+    expect(diff).toHaveBeenCalledWith(4);
+  });
+});
+
+describe('the keys that move branches', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', class {}));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('move every branch selected together: ⌘⇧↑ or Ctrl+Shift+↑ takes them all to the top, in their order', () => {
+    const history = { ...sampleHistory(), branches: sampleHistory().branches.map((each, index) => ({ ...each, id: index + 1 })) };
+    const layout = layoutGraph(history);
+    const saved: BranchPins[] = [];
+    const selections: GraphSelections = [{ kind: 'branch', name: '/main/b' }, { kind: 'branch', name: '/main/a' }];
+    const keyboard: GraphKeyboard = {
+      ...keyboardOn(selections[1]!, []),
+      layout,
+      selections,
+      positions: { pins: [], setPins: (pins) => saved.push(pins) },
+    };
+    const event = keyPressed('ArrowUp');
+    Object.assign(event.nativeEvent, { shiftKey: true, metaKey: isMac, ctrlKey: !isMac });
+    handleGraphKey(event, keyboard);
+    expect(saved).toHaveLength(1);
+    const after = layoutGraph(history, undefined, null, saved[0]);
+    const row = (name: string) => after.lanesByBranch.get(name)!.row;
+    expect(Math.max(row('/main/a'), row('/main/b'))).toBeLessThan(row('/main'));
+  });
+});
+
+describe('keyboardMoveLanes', () => {
+  const layout = layoutGraph({
+    branches: [branch('/main', '', 1), branch('/main/task', '/main', 2), branch('/main/other', '/main', 3)].map((each, index) => ({ ...each, id: index + 1 })),
+    changesets: [changeset(0, '/main', -1), changeset(1, '/main/task', 0), changeset(2, '/main/task', 1), changeset(3, '/main/other', 0)],
+    mergeLinks: [],
+    labels: [],
+  });
+  const names = (selections: GraphSelections) => keyboardMoveLanes(layout, selections).map((lane) => lane.branch.name);
+
+  it('moves the branch selected, or the branch of the changeset selected', () => {
+    expect(names([{ kind: 'branch', name: '/main/task' }])).toEqual(['/main/task']);
+    expect(names([{ kind: 'changeset', id: 1 }])).toEqual(['/main/task']);
+  });
+
+  it('moves every branch selected, each once', () => {
+    expect(names([{ kind: 'changeset', id: 1 }, { kind: 'changeset', id: 2 }, { kind: 'branch', name: '/main/other' }])).toEqual(['/main/task', '/main/other']);
+  });
+
+  it('moves nothing with nothing on a drawn branch selected, so the key is left to the rest of the window', () => {
+    expect(names([])).toEqual([]);
+    expect(names([{ kind: 'branch', name: '/main/gone' }, { kind: 'changeset', id: 99 }])).toEqual([]);
   });
 });

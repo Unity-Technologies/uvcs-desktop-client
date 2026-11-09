@@ -1,4 +1,4 @@
-import { formatCount, pluralize } from '../../../lib/text';
+import { formatCount } from '../../../lib/text';
 import type { ChangeBlock, ChangeRegion, DiffSide } from './changeBlocks';
 import type { Arrival } from './fileSteps';
 
@@ -88,10 +88,9 @@ export function currentAfterChange(current: number | null, before: readonly unkn
 }
 
 /**
- * "3 of 12" once a change (or a conflict: `noun`) was moved to, "12 changes" before, "No changes" in a file only
- * stepped past.
+ * "3 of 12" while a change (or a conflict) is current, and nothing otherwise: one form only. How many there are is the
+ * line counts' and the arrows' tips' to say, and that there are none, the diff's own (identical, binary).
  */
-export function positionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>, noun: string): string {
-  if (count === 0) return `No ${noun}s`;
-  return current === null ? pluralize(count, noun) : `${formatCount(current + 1)} of ${formatCount(count)}`;
+export function positionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>): string {
+  return current === null || count === 0 ? '' : `${formatCount(current + 1)} of ${formatCount(count)}`;
 }

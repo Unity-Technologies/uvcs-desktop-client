@@ -1,3 +1,4 @@
+import type { MemberRef } from '@shared/domain/member';
 import {
   EVERYONE,
   isBitsEmpty,
@@ -6,7 +7,6 @@ import {
   PERMISSION_NAMES,
   permissionSpec,
   type AclBits,
-  type MemberRef,
   type PermissionChanges,
   type PermissionName,
   type PermissionTarget,

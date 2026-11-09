@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { workspacePlace } from '@shared/domain/place';
 import type { MergeChange, MergeContributors, MergeRequest } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
@@ -14,10 +15,12 @@ interface MergeChangePreviewProps {
   change: MergeChange;
   contributors: MergeContributors | undefined;
   labels: MergeLabels;
+  /** Buttons beside the diff's own, e.g. the `.meta` toggle of an asset listed with its meta. */
+  compareControls?: ReactNode;
 }
 
 /** What a cleanly-applying change will do: the version before against the version it leads to. */
-export function MergeChangePreview({ workspacePath, request, change, contributors, labels }: MergeChangePreviewProps) {
+export function MergeChangePreview({ workspacePath, request, change, contributors, labels, compareControls }: MergeChangePreviewProps) {
   const preview = changePreviewOf(change, contributors, request);
   if (preview.kind === 'permissionsOnly') return <EmptyState title={change.path} description="Only the file permissions will change." />;
   if (preview.kind === 'noVersions') return <EmptyState title={change.path} description={describeChange(change, labels)} />;
@@ -29,6 +32,7 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
       original={original}
       modified={modified}
       fileName={change.path}
+      compareControls={compareControls}
       title={
         <span className={styles.title}>
           <DiffFileTitle

@@ -1,0 +1,12 @@
+/* A steady height: the dialog doesn't shrink and grow as the search leaves fewer rows. */
+.picker {
+  display: flex;
+  flex-direction: column;
+  height: 360px;
+  margin: calc(-1 * var(--space-2)) 0;
+}
+
+.reading {
+  margin: var(--space-3) var(--space-2);
+  color: var(--text-tertiary);
+}

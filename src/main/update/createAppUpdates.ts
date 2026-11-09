@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { app, net, shell } from 'electron';
 import { sendEvent } from '../ipc/sendEvent';
@@ -5,6 +6,7 @@ import { AppUpdates, type AppUpdatesDependencies, type UpdateFeed } from './AppU
 import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
+import { previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
 import { releaseFileUrl } from './releaseFeed';
 import { removeLeftoverStagingUserId, withoutStagingUserId } from './withoutStagingUserId';
 
@@ -15,10 +17,13 @@ type AroundInstalling = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFi
 export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates {
   removeLeftoverStagingUserId(app.getPath('userData')).catch((error: unknown) => console.warn('[updates] The old staging user id stays:', error));
 
+  // Development only: an unpackaged app has no feed, unless a file describes an update to preview (`PREVIEW_UPDATE_VARIABLE`).
+  const previewFile = previewUpdateFile(app.isPackaged, process.env);
+
   return new AppUpdates({
-    loadFeed: loadAutoUpdater,
-    packaged: app.isPackaged,
-    needsManualInstall: async () => process.platform === 'darwin' && needsManualInstall(process.execPath),
+    loadFeed: previewFile ? async () => previewUpdateFeed(previewUpdateOf(JSON.parse(await readFile(previewFile, 'utf8')))) : loadAutoUpdater,
+    packaged: app.isPackaged || previewFile !== undefined,
+    needsManualInstall: async () => !previewFile && process.platform === 'darwin' && needsManualInstall(process.execPath),
     installerOf: (files) => installerAsset(files, process.arch, app.runningUnderARM64Translation),
     downloadInstaller: async (file, version, onProgress) => {
       // In Downloads, where the user finds it again if they close the disk image before installing.
@@ -33,6 +38,8 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
       app.quit();
     },
     ...aroundInstalling,
+    // A preview never installs: quitting afterwards must not reopen the windows as a restart to install would.
+    beforeRestart: previewFile ? () => undefined : aroundInstalling.beforeRestart,
     push: (status) => sendEvent('updateStatusChanged', status),
     logFailure: (text) => console.warn(text),
   });

@@ -1,0 +1,16 @@
+.reviewers {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  margin-left: var(--space-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nobody {
+  color: var(--text-tertiary);
+}

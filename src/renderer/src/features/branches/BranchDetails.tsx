@@ -3,10 +3,10 @@ import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { DetailsHeading } from '../../components/DetailsHeading';
+import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
+import { placeId } from '@shared/domain/place';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import { branchWorkedOn } from '../../components/workingObject';
 import type { MenuEntry } from '../../lib/actions';
@@ -18,7 +18,7 @@ import type { Property } from '../../ui/PropertyList';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { BranchChip } from './BranchChip';
-import { branchDiffPage, diffBranch, saveBranchComment } from './branchOperations';
+import { diffBranch, saveBranchComment } from './branchOperations';
 import { editsBranchComments } from './editsBranchComments';
 
 interface BranchDetailsProps {
@@ -36,13 +36,12 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
   const { data: cmVersion } = useQuery(cmVersionQuery);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
-  useShowInFollowingWindow(branchDiffPage(branch));
 
   return (
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} />}
+      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
       author={{ user: branch.owner, date: branch.date }}
       meta={[
         branch.parent && (

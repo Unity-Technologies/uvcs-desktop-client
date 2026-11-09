@@ -1,8 +1,8 @@
 import { Archive, FileDiff } from 'lucide-react';
 import { Fragment } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -10,16 +10,17 @@ import { Button } from '../../ui/Button';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { shelveDiffPage, showShelveChanges } from './shelveOperations';
+import { editsShelveComment } from './editsShelveComment';
+import { saveShelveComment, showShelveChanges } from './shelveOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
-export function ShelveDetails({ shelve, menu }: { shelve: Shelve; menu: MenuEntry[] }) {
-  useShowInFollowingWindow(shelveDiffPage(shelve));
+export function ShelveDetails({ place, shelve, menu }: { place: Place; shelve: Shelve; menu: MenuEntry[] }) {
+  const saveComment = editsShelveComment(shelve) ? (comment: string) => saveShelveComment(place, shelve, comment) : undefined;
   return (
     <DetailsPanel
       icon={<Archive />}
       kind="Shelve"
-      heading={<DetailsHeading comment={shelve.comment} />}
+      heading={<DetailsHeading comment={shelve.comment} onSave={saveComment} />}
       author={{ user: shelve.owner, date: shelve.date }}
       meta={[
         <DetailsCopyable key="id" text={spec.shelve(shelve.id)} what={copiedWhat('Shelve', 'spec')} />,

@@ -36,7 +36,7 @@ export function CommandPalette() {
 /**
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
- * the best matches come first. `>`, `@`, `/` and `#` narrow the search; a pasted link opens it. Enter opens a result (a workspace in a new
+ * the best matches come first. A prefix narrows the search to one section (`SCOPE_PREFIXES`); a pasted link opens it. Enter opens a result (a workspace in a new
  * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
@@ -101,7 +101,11 @@ function OpenPalette({ close }: { close: () => void }) {
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
     if (event.target !== inputRef.current) return event.preventDefault();
-    if (event.key === 'Escape') close();
+    // Taken: the palette closes before the key reaches the window, where Esc would also collapse an expanded diff.
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+    }
     if (event.key === 'Enter' && ranInNewWindow(selectedResult, event)) return;
     // Tab never leaves the palette: it opens the selected result's actions, when it has some.
     if (event.key === 'Tab' || isRowMenuKey(event)) {
@@ -126,7 +130,7 @@ function OpenPalette({ close }: { close: () => void }) {
           <Cmdk.Input
             ref={inputRef}
             className={styles.input}
-            placeholder="Search files, branches, labels, changesets, commands…"
+            placeholder="Search everything"
             value={query}
             onValueChange={(value) => {
               setQuery(value);
@@ -166,7 +170,7 @@ function OpenPalette({ close }: { close: () => void }) {
             ))}
           </Cmdk.List>
         </HighlightQuery>
-        <PaletteFooter inWorkspace={workspacePath !== null} />
+        <PaletteFooter place={place} />
       </Cmdk>
     </div>
   );

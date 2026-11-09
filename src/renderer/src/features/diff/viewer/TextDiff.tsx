@@ -3,10 +3,12 @@ import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } f
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { shownText } from '../../../lib/lineBreaks';
+import { useExpandedDiffFocus } from '../../../components/useExpandedDiffFocus';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
+import { ChangeMap } from './ChangeMap';
 import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
@@ -30,13 +32,16 @@ import { PaneScrollbars } from './PaneScrollbars';
 import { isTypingIn, modifiedTextPositionAt } from './pierreDom';
 import { isReadyToEdit } from './pierreEditorReady';
 import { installPierreLineComparison } from './pierreLineComparison';
-import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
+import { pierreThemeName } from '../../../lib/codeTheme';
+import { pierreDiffOptions, pierreFileOptions } from './pierreOptions';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { installPierreSessionEndRefresh } from './pierreSessionEndRefresh';
 import { caretLineCss, followsLayout, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
+import type { ChangeNavigation } from './useChangeNavigation';
+import { useChangeMap } from './useChangeMap';
 import { useChangeView } from './useChangeView';
 import { useKeptPlace } from './useKeptPlace';
 import type { DiscardRequest } from './useLineDiscarding';
@@ -49,6 +54,10 @@ import { useWordMarksRefresh } from './useWordMarksRefresh';
 import styles from './TextDiff.module.css';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
+const NO_CHANGES: ChangeNavigation['regions'] = [];
+
+/** What the change map takes of the navigation through the diff's changes. */
+export type ChangeSteps = Pick<ChangeNavigation, 'regions' | 'count'>;
 
 // Typing re-diffs the text in Pierre: under the comparison method, like the diff it starts from.
 installPierreLineComparison();
@@ -96,6 +105,8 @@ interface TextDiffProps {
   onUndoDiscard?: () => void;
   /** Receives the diff's side of moving from change to change (`useChangeNavigation`). */
   changeViewRef?: RefObject<ChangeView | null>;
+  /** The changes stepped through (`useChangeNavigation`), which the change map marks in the diff's scrollbar. */
+  changes?: ChangeSteps;
   /** The diff scrolled. */
   onViewScroll?: () => void;
   /** A line is too long to draw unwrapped (`hasLineTooLongToDraw`): lines wrap whatever the preference. */
@@ -115,7 +126,7 @@ const SHADOW_CSS = [
 ].join('\n');
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll, wrapsLongLines = false }: TextDiffProps) {
+export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, changes, onViewScroll, wrapsLongLines = false }: TextDiffProps) {
   const theme = useResolvedTheme();
   const preferences = useDiffPreferences();
   const { layout } = preferences;
@@ -244,7 +255,17 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // Switching how the lines are laid out keeps the line at the top where it was.
   useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
   useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
+  // Where the changes are, marked in the diff's own scrollbar.
+  const changeMap = useChangeMap({
+    containerRef: container,
+    virtualizer,
+    regions: changes?.regions ?? NO_CHANGES,
+    lineCounts: { deletions: diff.meta.deletionLines.length, additions: diff.meta.additionLines.length },
+    bothSides: followsLayout(sides, wholeFile),
+    layoutKey: `${shownLayout.layout}:${collapseUnchanged}:${wrapLines}`,
+  });
   const isTyping = (): boolean => isTypingIn(container.current);
+  const expandedFocus = useExpandedDiffFocus();
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
     const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
@@ -277,8 +298,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           ref={setContainer}
           className={styles.diff}
           tabIndex={0}
+          {...expandedFocus}
           role="region"
           aria-label={`Diff of ${fileName}`}
+          data-change-map={changeMap ? '' : undefined}
           onKeyDownCapture={onKeyDownCapture}
           onKeyDown={onKeyDown}
           onPointerDown={discard.onPointerDown}
@@ -294,6 +317,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onFocus={pointerFocus.onFocus}
           onBlur={pointerFocus.onBlur}
         >
+          {changeMap && changes && <ChangeMap view={changeMap} count={changes.count} containerRef={container} />}
           <EditProvider createEditor={createEditor}>
             {wholeFile ? (
               <VirtualizerContext.Provider value={virtualizer}>

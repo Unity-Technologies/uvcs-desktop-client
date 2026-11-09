@@ -38,7 +38,16 @@ export function externalAppList(sources: ExternalAppSources): ExternalAppList {
     const found = findEditor(editor, where, installed, fs);
     return found ? [app(editor.id, editor.name, 'known', found.location, editor.opensFolders, found.launch)] : [];
   });
-  const custom = sources.custom.map((editor) => app(editor.id, editor.name, 'custom', editor.executable, true, customLauncher(editor.executable, where.platform)));
+  // A program the user added that the app finds itself (imported from the official client, or picked again) shows
+  // once, as the app found; its id still opens it, and still picks it as the editor.
+  const sameAs = new Map<string, string>();
+  const custom = sources.custom.flatMap((editor) => {
+    const found = known.find((knownApp) => isSameProgram(editor.executable, knownApp.location, where.platform));
+    if (!found) return [app(editor.id, editor.name, 'custom', editor.executable, true, customLauncher(editor.executable, where.platform))];
+    sameAs.set(editor.id, found.id);
+    launchers.set(editor.id, launchers.get(found.id)!);
+    return [];
+  });
   const terminals = (sources.terminals ?? KNOWN_TERMINALS)
     .filter((terminal) => terminal.platform === where.platform)
     .flatMap((terminal) => {
@@ -52,7 +61,10 @@ export function externalAppList(sources: ExternalAppSources): ExternalAppList {
     apps: {
       editors,
       terminals,
-      editorId: sources.editorPreference === SYSTEM_APP ? null : (chosen(sources.editorPreference, editors.map((editor) => editor.id)) ?? known[0]?.id ?? custom[0]?.id ?? null),
+      editorId:
+        sources.editorPreference === SYSTEM_APP
+          ? null
+          : (chosen(sameAs.get(sources.editorPreference) ?? sources.editorPreference, editors.map((editor) => editor.id)) ?? known[0]?.id ?? custom[0]?.id ?? null),
       terminalId: chosen(sources.terminalPreference, terminalIds) ?? automaticTerminal(terminalIds, where.platform, where.env),
     },
     launchers,
@@ -62,6 +74,20 @@ export function externalAppList(sources: ExternalAppSources): ExternalAppList {
 /** The user's pick while it's on offer; a pick that's gone falls back to the automatic one. */
 function chosen(preference: string, ids: string[]): string | undefined {
   return preference !== AUTO_APP && ids.includes(preference) ? preference : undefined;
+}
+
+/**
+ * Whether a program the user added is one found: the same path (any case and separator on Windows), or on macOS a
+ * program inside the bundle found.
+ */
+function isSameProgram(program: string, location: string, platform: NodeJS.Platform): boolean {
+  const trimmed = (path: string) => path.replace(/[\\/]+$/, '');
+  if (platform === 'win32') {
+    const windowsPath = (path: string) => trimmed(path).replace(/\//g, '\\').toLowerCase();
+    return windowsPath(program) === windowsPath(location);
+  }
+  const [picked, found] = [trimmed(program), trimmed(location)];
+  return picked === found || (platform === 'darwin' && found.endsWith('.app') && picked.startsWith(`${found}/`));
 }
 
 /** A macOS app bundle the user picked opens the path as Finder would; any other program gets it as its argument. */

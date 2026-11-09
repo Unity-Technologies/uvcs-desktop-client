@@ -3,6 +3,8 @@ import { placeId } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { selectedFileDiffs } from '../../components/diffExpansion';
+import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
@@ -30,8 +32,8 @@ interface RepositoryTreeProps {
   opening: BrowseOpening;
   /** Filters the open folders' rows. */
   filter: string;
-  /** Where the tree's width is kept, one per place it shows in. */
-  widthKey: string;
+  /** Where the tree's width and whether its details are hidden are kept, one per place it shows in. */
+  detailsKey: string;
   /** The item selected now, for the link its host copies (Browse repository's page). */
   onShownItem?: (path: string | null) => void;
   /** Whose folders open stay open: this changeset's by default; a branch's in Files, so a new head keeps them. */
@@ -50,7 +52,7 @@ interface RepositoryTreeProps {
  * the Files view of a repository explored without a workspace (`RepositoryFilesView`). Folders are listed as they
  * open, each once (`cm ls` of that folder at the changeset).
  */
-export function RepositoryTree({ changesetId, opening, filter, widthKey, onShownItem, treeId: ownTreeId, linkOrigin, onGoToFile }: RepositoryTreeProps) {
+export function RepositoryTree({ changesetId, opening, filter, detailsKey, onShownItem, treeId: ownTreeId, linkOrigin, onGoToFile }: RepositoryTreeProps) {
   const place = usePlace();
   const repository = usePlaceRepository();
   const treeId = ownTreeId ?? `${placeId(place)}#cs:${changesetId}`;
@@ -69,6 +71,8 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  // Expanded, the file's diff in the details ends with the file: deleted, or the selection cleared by a refresh.
+  useCollapseWithHost(selectedFileDiffs({ read: !isLoadingRoot, selected: selection.anchor !== null, itemType: focused?.itemType }));
   const itemLinks = useFilesItemLinks(linkOrigin, focused);
   const lineLinks = useMemo<LineLinks>(() => (linkOrigin ? { ...itemLinks, focus: linkFocus } : { focus: linkFocus, publishes: true }), [linkOrigin, itemLinks, linkFocus]);
   useEffect(() => onShownItem?.(focused?.path ?? null), [focused?.path]);
@@ -79,13 +83,14 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
   };
 
   if (error) return <EmptyState title="Couldn't browse the repository" description={error.message} />;
-  if (isLoadingRoot) return <RepositoryTreeSkeleton widthKey={widthKey} />;
+  if (isLoadingRoot) return <RepositoryTreeSkeleton detailsKey={detailsKey} />;
 
   return (
     <ListWithDetails
-      widthKey={widthKey}
+      detailsKey={detailsKey}
       widthLimits={FILE_TREE_WIDTH}
       sized="list"
+      diffInDetails
       list={
           <HighlightQuery query={shownFilter}>
             <FileTreeTable
@@ -121,6 +126,6 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
 }
 
 /** The tree's own header over placeholder rows, and the details' placeholder, while its root is read: the layout never changes shape. */
-export function RepositoryTreeSkeleton({ widthKey }: { widthKey: string }) {
-  return <ListWithDetails widthKey={widthKey} widthLimits={FILE_TREE_WIDTH} sized="list" list={<FileTreeSkeleton />} details={<DetailsPanelSkeleton />} />;
+export function RepositoryTreeSkeleton({ detailsKey }: { detailsKey: string }) {
+  return <ListWithDetails detailsKey={detailsKey} widthLimits={FILE_TREE_WIDTH} sized="list" list={<FileTreeSkeleton />} details={<DetailsPanelSkeleton />} />;
 }

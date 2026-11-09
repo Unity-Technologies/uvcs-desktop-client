@@ -65,10 +65,9 @@ function serverHost(server: string): string {
 
 /**
  * The page where the server's lock rules are edited (which files lock on checkout, and the branches they don't lock
- * on), as the official client opens it (OpenConfigureLockRulesPage): the organization's page in the Unity Cloud
- * dashboard, or an on-premises server's web admin. No `cm` command reads or writes lock rules, so the app offers the
- * page rather than a dialog of its own. Null where there are none to edit: the local server, which only this
- * computer uses.
+ * on), as the official client opens it: the organization's page in the Unity Cloud dashboard, or an on-premises
+ * server's web admin. No `cm` command reads or writes lock rules, so the app offers the page rather than a dialog of
+ * its own. Null where there are none to edit: the local server, which only this computer uses.
  */
 export function lockRulesUrl(server: string, account?: Account): string | null {
   if (server === 'local') return null;

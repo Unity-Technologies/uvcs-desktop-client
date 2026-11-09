@@ -28,8 +28,38 @@ describe('processCommand', () => {
     const update = ['update', '--forcedetailedprogress', '--dontmerge'];
     expect(processCommand(update, 'win32')).toEqual({ args: ['shell', '--encoding=utf-8'], input: 'update --forcedetailedprogress --dontmerge\nexit\n' });
     expect(processCommand(['diff', 'cs:4', '--format={path}'], 'win32').input).toBe('diff cs:4 --format={path}\nexit\n');
-    expect(processCommand(update, 'linux')).toEqual({ args: update });
-    expect(processCommand(update, 'darwin')).toEqual({ args: update });
+  });
+
+  it('on every OS, runs an operation in a cm shell of its own, which ends with it', () => {
+    const operations = [
+      ['update', '--forcedetailedprogress', '--dontmerge'],
+      ['checkin', '/wk/a.cs', '-commentsfile=/tmp/c.txt', '--machinereadable'],
+      ['undo', '/wk/a.cs'],
+      ['undo', '-r', '/wk'],
+      ['switch', 'br:/main/task', '--forcedetailedprogress'],
+      ['merge', 'br:/main/task', '--merge', '--machinereadable'],
+      ['shelveset', 'create', '/wk/a.cs', '--all', '-commentsfile=/tmp/c.txt'],
+      ['sync', 'game@local', 'git', 'https://example.com/game.git'],
+      ['push', 'br:/main@game@local', 'game@cloud'],
+    ];
+    for (const platform of ['darwin', 'linux', 'win32'] as const) {
+      for (const args of operations) {
+        expect(processCommand(args, platform)).toEqual({ args: ['shell', '--encoding=utf-8'], input: `${toShellCommandLine(args)}\nexit\n` });
+      }
+    }
+  });
+
+  // A merge's preview (`--machinereadable` without `--merge`) changes nothing: it is a read.
+  it('on macOS and Linux, starts reads as they are', () => {
+    for (const args of [['status', '--xml'], ['cat', 'revid:3', '--file=/t/a'], ['version'], ['checkconnection', 'local:8087'], ['merge', 'br:/main/task', '--machinereadable']]) {
+      expect(processCommand(args, 'darwin')).toEqual({ args });
+      expect(processCommand(args, 'linux')).toEqual({ args });
+    }
+  });
+
+  it('starts an operation whose arguments a shell line cannot hold as it is', () => {
+    const args = ['checkin', '/wk/say "hi".txt', '-commentsfile=/tmp/c.txt'];
+    expect(processCommand(args, 'linux')).toEqual({ args });
   });
 
   // `cm ls` applies `--encoding` to `--xml` only: its records come in UTF-8 only from a `cm shell`.

@@ -1,3 +1,4 @@
+import { Markdown } from '../../components/Markdown';
 import * as Popover from '@radix-ui/react-popover';
 import { FileDiff, GalleryHorizontalEnd, History } from 'lucide-react';
 import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
@@ -76,7 +77,7 @@ export function AnnotationCard({ changeset, anchor, open, pinned, onOpenChange, 
               </div>
               <span className={styles.changeset}>cs:{changeset.changesetId}</span>
             </div>
-            <p className={`${styles.comment} selectable`}>{changeset.comment.trim() || <span className={styles.noComment}>No comment</span>}</p>
+            <div className={`${styles.comment} selectable`}>{changeset.comment.trim() ? <Markdown text={changeset.comment} comment /> : <span className={styles.noComment}>No comment</span>}</div>
             <div className={styles.branch}>
               {changeset.branch}
               {changeset.isMerge && <span className={styles.merge}> · by a merge</span>}

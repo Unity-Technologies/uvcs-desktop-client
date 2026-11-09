@@ -1,0 +1,6 @@
+.icon {
+  composes: statusColor from './reviewStatusColors.module.css';
+  display: inline-flex;
+  flex: none;
+  color: var(--review-status-color);
+}

@@ -18,6 +18,7 @@ import {
   isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
+  isAffectedByShelveComment,
   isAffectedByShelving,
   isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
@@ -154,6 +155,14 @@ describe('refresh scopes', () => {
     expect(isAffectedByChangesetComment(key('pendingChanges'))).toBe(false);
   });
 
+  it("refreshes only what shows a shelve's comment when one is edited", () => {
+    expect(isAffectedByShelveComment(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveComment(key('workingObjectComment', 'shelve', '3'))).toBe(true);
+    expect(isAffectedByShelveComment(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+    expect(isAffectedByShelveComment(key('changesets', 'list', {}))).toBe(false);
+    expect(isAffectedByShelveComment(key('pendingChanges'))).toBe(false);
+  });
+
   it('refreshes what shows changesets, the branch lists and incoming, not the workspace, when a changeset moves or goes', () => {
     expect(isAffectedByChangesetMove(key('branchExplorer', {}))).toBe(true);
     expect(isAffectedByChangesetMove(key('branches', {}))).toBe(true);
@@ -164,6 +173,8 @@ describe('refresh scopes', () => {
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted, hidden or described', () => {
     expect(isAffectedByBranchList(key('branches', {}))).toBe(true);
+    // The palette's own copy of the hidden ones.
+    expect(isAffectedByBranchList(key('branches', { onlyHidden: true }))).toBe(true);
     expect(isAffectedByBranchList(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
     expect(isAffectedByBranchList(key('pendingChanges'))).toBe(false);
     expect(isAffectedByBranchList(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);

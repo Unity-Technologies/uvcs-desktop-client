@@ -5,15 +5,18 @@ import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
 import { loadWindowBounds } from './savedWindowBounds';
-import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
+import { closeEvent, fakeElectron, type FakeWindow } from './testing/fakeElectron';
 
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
+/** What each `close` listener `keepWindowBoundsSaved` registered saw: whether the close was held back already. */
+const boundsSavedOnClose = vi.hoisted(() => [] as boolean[]);
+
 vi.mock('./savedWindowBounds', () => ({
   loadWindowBounds: vi.fn(() => ({ bounds: null, maximized: false })),
   cascadedWindowBounds: () => ({ bounds: null, maximized: false }),
   // Fitting to the displays is `restoreWindowBounds`'s, tested on its own: here the saved bounds come back as they were.
   reopenedWindowBounds: ({ maximized, ...bounds }: SavedWindowBounds) => ({ bounds, maximized }),
-  keepWindowBoundsSaved: () => {},
+  keepWindowBoundsSaved: (window: FakeWindow) => window.on('close', (event: { defaultPrevented: boolean }) => boundsSavedOnClose.push(event.defaultPrevented)),
 }));
 
 /** The window `createMainWindow` made. */
@@ -22,7 +25,10 @@ function open(): FakeWindow {
   return fakeElectron.windows().at(-1)!;
 }
 
-beforeEach(() => fakeElectron.reset());
+beforeEach(() => {
+  fakeElectron.reset();
+  boundsSavedOnClose.length = 0;
+});
 
 const PLATFORM = process.platform;
 
@@ -34,6 +40,13 @@ function runOn(platform: NodeJS.Platform): void {
 afterEach(() => runOn(PLATFORM));
 
 describe('createMainWindow', () => {
+  it("lets the close request hold a close back before the window's other close listeners hear it", () => {
+    createMainWindow(memorySettings(), { onCloseRequested: (_windowId, event) => event.preventDefault() });
+
+    fakeElectron.windows().at(-1)!.emit('close', closeEvent());
+    expect(boundsSavedOnClose).toEqual([true]);
+  });
+
   it('keeps the page untrusted: isolated from the preload, sandboxed, and without Node', () => {
     const { webPreferences } = open().options;
 

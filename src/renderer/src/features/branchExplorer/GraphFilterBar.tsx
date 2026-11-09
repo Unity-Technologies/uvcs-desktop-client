@@ -7,7 +7,9 @@ import { FilterBar } from '../../ui/FilterBar';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { MenuChip } from '../../ui/ToggleChip';
 import { BranchFilterPopover } from './BranchFilterPopover';
+import { openBranchExplorerOptionsDialog } from './BranchExplorerOptionsDialog';
 import { FocusChip } from './FocusChip';
+import { timelineToggle } from './timeline/timelineToggle';
 import type { GraphFocus } from './model/filterGraph';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
@@ -42,10 +44,16 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
       icon: check(preferences.structureOnly),
       run: () => set({ structureOnly: !preferences.structureOnly }),
     },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      icon: check(preferences.showTimeline),
+      shortcut: hotkey('graphTimeline'),
+      // The one toggle the header button, the palette and the shortcut run too.
+      run: () => set({ showTimeline: timelineToggle(preferences.showTimeline, true).show }),
+    },
     SEPARATOR,
-    { id: 'comments', label: 'Show comments', icon: check(preferences.showComments), run: () => set({ showComments: !preferences.showComments }) },
-    { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
-    { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), shortcut: hotkey('graphDetails'), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
+    { id: 'displayOptions', label: 'Display options…', run: openBranchExplorerOptionsDialog },
     SEPARATOR,
     { id: 'zoomIn', label: 'Zoom in', shortcut: hotkey('graphZoomIn'), run: () => onZoom(ZOOM_STEP) },
     { id: 'zoomOut', label: 'Zoom out', shortcut: hotkey('graphZoomOut'), run: () => onZoom(1 / ZOOM_STEP) },

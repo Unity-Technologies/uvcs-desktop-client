@@ -1,4 +1,5 @@
 import { FolderX, PictureInPicture2 } from 'lucide-react';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { CloseMergeButton } from '../../features/merge/CloseMergeButton';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
@@ -11,6 +12,7 @@ import { usePlace } from '../workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
 import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
+import { Stowable } from '../../ui/Stowable';
 import { isMovablePage } from '../pageWindow/movablePages';
 import { movePageToNewWindow } from '../pageWindow/openInNewWindow';
 import { CopyLinkButton } from '../links/CopyLinkButton';
@@ -22,26 +24,29 @@ export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
   const place = usePlace();
   const previous = pages.at(-2);
+  const diffExpanded = useDiffExpanded();
   const shown = usePageShown();
   useShortcut(hotkey('back'), goBack, shown);
   useBackButtons(goBack, shown);
 
   return (
     <div className={styles.frame}>
-      <div className={styles.breadcrumb}>
-        <Breadcrumb back={{ label: previous ? pageTitle(previous) : viewDefinition(view).label, onClick: goBack }} current={pageTitle(page)} />
-        <CopyLinkButton className={styles.copyLink} page={page} />
-        {isMovablePage(page) && (
-          <IconButton
-            className={styles.newWindow}
-            size="small"
-            icon={<PictureInPicture2 size={14} />}
-            label="Open in new window"
-            onClick={() => movePageToNewWindow(page)}
-          />
-        )}
-        {page.kind === 'merge' && <CloseMergeButton className={styles.closeMerge} />}
-      </div>
+      <Stowable stowed={diffExpanded}>
+        <div className={styles.breadcrumb}>
+          <Breadcrumb back={{ label: previous ? pageTitle(previous) : viewDefinition(view).label, onClick: goBack }} current={pageTitle(page)} />
+          <CopyLinkButton className={styles.copyLink} page={page} />
+          {isMovablePage(page) && (
+            <IconButton
+              className={styles.newWindow}
+              size="small"
+              icon={<PictureInPicture2 size={14} />}
+              label="Open in new window"
+              onClick={() => movePageToNewWindow(page)}
+            />
+          )}
+          {page.kind === 'merge' && <CloseMergeButton className={styles.closeMerge} />}
+        </div>
+      </Stowable>
       <div className={styles.content}>
         {showsPage(place, page) ? (
           <PageContent page={page} />

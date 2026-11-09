@@ -1,5 +1,5 @@
 import { RotateCcw } from 'lucide-react';
-import type { MemberRef } from '@shared/domain/permissions';
+import type { MemberRef } from '@shared/domain/member';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { MemberIcon } from './MemberIcon';

@@ -305,3 +305,31 @@ describe('mergeItemMenu', () => {
     expect(decide.mock.calls.map(([key]) => key)).toEqual(['/b.ts']);
   });
 });
+
+describe('mergeItemMenu with a Unity asset listed with its .meta', () => {
+  const asset = change('changed', 'Assets/Hero.png');
+  const meta = change('changed', 'Assets/Hero.png.meta');
+  const metaOf = (item: MergeItem) => (item === asset.item ? meta.item : undefined);
+
+  it("opens the asset's .meta diff and history", () => {
+    const onMetaDiff = vi.fn();
+    const menu = menuOf([asset], { metaOf, onMetaDiff });
+    expect(ids(menu)).toEqual(expect.arrayContaining(['metaDiff', 'metaHistory']));
+    (entry(menu, 'metaDiff') as Action).run();
+    expect(onMetaDiff).toHaveBeenCalledWith(meta.item);
+  });
+
+  it("opens the .meta's history where the page can't show its diff", () => {
+    const menu = menuOf([asset], { metaOf });
+    expect(ids(menu)).toContain('metaHistory');
+    expect(ids(menu)).not.toContain('metaDiff');
+  });
+
+  it('offers nothing of a .meta for several items, or a file listed without one', () => {
+    for (const listed of [[asset, change('changed', 'Assets/Other.png')], [change('changed', 'Assets/Other.png')]]) {
+      const menu = menuOf(listed, { metaOf, onMetaDiff: vi.fn() });
+      expect(ids(menu)).not.toContain('metaDiff');
+      expect(ids(menu)).not.toContain('metaHistory');
+    }
+  });
+});

@@ -1,4 +1,5 @@
-/* As wide as its text: ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. */
+/* "3 of 12", right before the arrows with no room reserved, so nothing floats between them: it grows leftward, and
+   tabular figures keep "3 of 12" to "4 of 12" still. Empty, it takes no room at all. */
 .position {
   flex: none;
   color: var(--text-secondary);
@@ -7,4 +8,8 @@
   white-space: nowrap;
   cursor: default;
   user-select: none;
+}
+
+.position:not(:empty) {
+  margin-right: var(--space-1);
 }

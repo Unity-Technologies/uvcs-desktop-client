@@ -45,6 +45,13 @@ export function usePlaceServer(): string | undefined {
   return serverOfPlace(place, useWorkspaceInfoOf(workspacePathOf(place)).data);
 }
 
+/** The server of the window's place, or none in a window with no place (Home), where `usePlaceServer` can't be used. */
+export function useWindowServer(): string | undefined {
+  const place = useSession((state) => state.place);
+  const info = useWorkspaceInfoOf(place ? workspacePathOf(place) : null).data;
+  return place ? serverOfPlace(place, info) : undefined;
+}
+
 export function workspaceInfoQuery(workspacePath: string) {
   return queryOptions({ queryKey: queryKeys.inWorkspace(workspacePath, 'info'), queryFn: () => api.workspaces.info(workspacePath) });
 }

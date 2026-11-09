@@ -17,6 +17,26 @@ const RECENT_CHANGESETS_CACHE_TIME = 30 * 60_000;
 const RECENT_CHANGESETS_FILTER: QueryFilter = { limit: RECENT_CHANGESETS };
 
 /**
+ * How many of the newest changesets a comment's suggestions read when the palette's list isn't cached: a `cs:` answers
+ * in under a second on a repository of 280,000 (one `cm find … limit 50`). A number past them is looked up, and words
+ * are searched in them all ("Search all changesets").
+ */
+export const SUGGESTED_CHANGESETS = 50;
+
+const SUGGESTED_CHANGESETS_FILTER: QueryFilter = { limit: SUGGESTED_CHANGESETS };
+
+/** The few newest changesets a comment's suggestions read (`SUGGESTED_CHANGESETS`), kept as the palette's list is. */
+export function suggestedChangesetsQuery(place: Place) {
+  return {
+    queryKey: queryKeys.inPlace(place, 'changesets', SUGGESTED_CHANGESETS_FILTER),
+    queryFn: () => api.changesets.list(place, SUGGESTED_CHANGESETS_FILTER),
+    ...SLOW_CHANGING_QUERY,
+    staleTime: RECENT_CHANGESETS_STALE_TIME,
+    gcTime: RECENT_CHANGESETS_CACHE_TIME,
+  };
+}
+
+/**
  * The newest changesets: one query, and one cache entry, shared by the palette and the changeset picker. A heavy read
  * (`SLOW_CHANGING_QUERY`): focus never reads it again, only a minute's staleness once a reader shows.
  */

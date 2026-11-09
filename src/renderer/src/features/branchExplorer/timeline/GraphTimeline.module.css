@@ -1,0 +1,48 @@
+/* The strip over the date ruler, as wide as the graph's pane; `TIMELINE_HEIGHT` tall (set by `GraphTimeline`). */
+.timeline {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Only once the user shows it: a view opening with it shown has it in place from its first frame. */
+.timeline[data-slide-in='true'] {
+  animation: slide-in var(--duration-normal) var(--ease-out);
+}
+
+.timeline[data-cursor='pointer'] {
+  cursor: pointer;
+}
+
+.timeline[data-cursor='grab'] {
+  cursor: grab;
+}
+
+.timeline[data-cursor='ew-resize'] {
+  cursor: ew-resize;
+}
+
+/* Last, over what the pointer is on: what the drag does (`TimelinePress`). */
+.timeline[data-dragging='pan'] {
+  cursor: grabbing;
+}
+
+.timeline[data-dragging='zoom'],
+.timeline[data-dragging='scrub'] {
+  cursor: ew-resize;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* It slides in from nothing, pushing the graph down (no motion under prefers-reduced-motion: the tokens' durations are zero). */
+@keyframes slide-in {
+  from {
+    height: 0;
+  }
+}

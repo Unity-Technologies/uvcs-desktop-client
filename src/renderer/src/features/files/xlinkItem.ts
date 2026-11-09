@@ -68,3 +68,19 @@ export function newXlinkDirectoryOf(item: Pick<TreeItem, 'path' | 'itemType' | '
 export function editableXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate'>>(item: Item, where: Pick<XlinkSurroundings, 'underXlink'>): (Item & { xlink: XlinkTarget }) | null {
   return item.xlink && !item.isPrivate && !where.underXlink ? (item as Item & { xlink: XlinkTarget }) : null;
 }
+
+/**
+ * The item as a checked-in xlink whose files aren't loaded: its folder listed, and empty. `cm` fills an xlink's folder
+ * only once it is checked in and the folder updated (docs/features/xlinks.md): one checked in from Changes, or whose
+ * files didn't load as it was created, stays empty until "Load its files". Not while it is added, as nothing can load
+ * it yet; nor before its folder is listed, as an unread listing tells nothing. An xlink to an empty folder of its
+ * repository is offered it too: loading it again changes nothing.
+ */
+export function unloadedXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate'>>(
+  item: Item,
+  where: Pick<XlinkSurroundings, 'underXlink'>,
+  { added, listedItems }: { added: boolean; listedItems: readonly unknown[] | undefined },
+): (Item & { xlink: XlinkTarget }) | null {
+  const xlink = editableXlinkOf(item, where);
+  return xlink && !added && listedItems?.length === 0 ? xlink : null;
+}

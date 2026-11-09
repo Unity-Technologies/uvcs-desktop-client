@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { app, BrowserWindow, type WebContents } from 'electron';
+import { app, BrowserWindow, type Event, type WebContents } from 'electron';
 import type { PageSeed, PageWindowOpening, PageWindowPage } from '@shared/domain/pageWindow';
 import { repositoryPlace, samePlace, workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
@@ -22,6 +22,16 @@ interface WorkspaceWindowsOptions {
   onRepositoryLeft: (repository: string) => void;
   /** The last open window is closing, still open (`Quitting.lastWindowClosing`). */
   onLastWindowClosing: () => void;
+  /**
+   * A window was asked to close, before anything else hears it (`createMainWindow` registers it first): it may hold the close back (`event.preventDefault()`),
+   * as `ClosingWithWrites` does while its operation runs.
+   */
+  onCloseRequested: (windowId: number, event: Event) => void;
+  /**
+   * A page window shows a place its workspace window left: the app closes it, never asking, and never while an operation
+   * it started runs (`ClosingWithWrites.closeLeftBehind`).
+   */
+  closeLeftBehind: (windowId: number) => void;
 }
 
 /** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
@@ -62,7 +72,7 @@ export class WorkspaceWindows {
     const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
     // Its page starts on a workspace when its folder is there; for a missing one, the page's own check explains it.
     const startsOn = place && (place.kind === 'repository' || existsSync(place.workspacePath)) ? place : undefined;
-    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, ...reopening });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, onCloseRequested: this.options.onCloseRequested, ...reopening });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     // A page loaded again (a reload) starts not knowing a page window follows it: it's told, or it would stop showing it.
@@ -82,8 +92,8 @@ export class WorkspaceWindows {
     });
     // The event comes before the window takes the new title.
     window.on('page-title-updated', () => setImmediate(changed));
-    window.on('close', () => {
-      if (this.all().length === 1) this.options.onLastWindowClosing();
+    window.on('close', (event) => {
+      if (!event.defaultPrevented && this.all().length === 1) this.options.onLastWindowClosing();
     });
     window.on('closed', () => {
       this.requested.delete(viewer);
@@ -110,7 +120,7 @@ export class WorkspaceWindows {
     if (!owner) return undefined;
     const lastPageWindow = this.pageWindowsOf(ownerId).at(-1);
     const cascadeFrom = lastPageWindow ?? (this.options.settings.get().pageWindowBounds ? undefined : owner);
-    const window = createMainWindow(this.options.settings, { cascadeFrom, place, page, seed });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place, page, seed, onCloseRequested: this.options.onCloseRequested });
     const viewer = window.webContents.id;
     this.pages.add(viewer, ownerId, place);
     askBeforeUnloading(window);
@@ -129,6 +139,15 @@ export class WorkspaceWindows {
     });
     changed();
     return window;
+  }
+
+  /**
+   * The windows that close with the window (`BrowserWindow.id`): itself and, for a workspace window, its page windows.
+   */
+  closingWith(windowId: number): number[] {
+    const window = BrowserWindow.fromId(windowId);
+    if (!window) return [windowId];
+    return [windowId, ...this.pageWindowsOf(window.webContents.id).map((pageWindow) => pageWindow.id)];
   }
 
   /** The page windows of a workspace window, in the order they opened. */
@@ -185,7 +204,10 @@ export class WorkspaceWindows {
 
   /** The page windows of the place a window left close. */
   private placeShown(viewer: number, place: Place | undefined): void {
-    for (const pageWindow of this.pages.leftBehindBy(viewer, place)) this.byViewer(pageWindow)?.close();
+    for (const pageWindow of this.pages.leftBehindBy(viewer, place)) {
+      const window = this.byViewer(pageWindow);
+      if (window) this.options.closeLeftBehind(window.id);
+    }
   }
 
   /** A page window starts or stops following its workspace window's selection; both hear it, and the one it took it from. */

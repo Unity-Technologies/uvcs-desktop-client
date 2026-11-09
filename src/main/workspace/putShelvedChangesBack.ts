@@ -48,6 +48,21 @@ export async function putBackAfterFailure(
   }
 }
 
+/**
+ * The error of a step that failed once the changes were shelved and undone (updating, loading an xlink's files):
+ * `failure`, then whether the changes were put back (`putBackAfterFailure`) or where they wait.
+ */
+export async function changesPutBackError(
+  deps: Pick<ShelveFlowDependencies, 'cm' | 'leftChanges'>,
+  workspacePath: string,
+  record: SwitchShelveRecord,
+  failure: string,
+  context: OperationContext,
+): Promise<Error> {
+  if (await putBackAfterFailure(deps, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
+  return new Error(`${failure}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
+}
+
 /** What went wrong, without its final period, for the sentence that goes on to say where the changes are. */
 export function failureReason(cause: unknown): string {
   return (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');

@@ -1,4 +1,4 @@
-import { splitComment } from '../../../lib/comment';
+import { commentLineText } from '../../../lib/comments/commentText';
 import { fitPath, trimToFit } from '../../../lib/trimToFit';
 
 const MAX_CACHED = 5000;
@@ -10,6 +10,16 @@ const cache = new Map<string, string>();
  */
 export function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
   return cached(`${ctx.font}|${Math.round(maxWidth)}|${text}`, () => trimToFit(text, maxWidth, (part) => ctx.measureText(part).width));
+}
+
+/**
+ * The branch name the graph shows: the whole name, or only its leaf (`task-12` for `/main/sprint/task-12`) while the
+ * Full branch names option is off. `/main` and other top-level branches keep their slash.
+ */
+export function shownBranchName(name: string, full: boolean): string {
+  if (full) return name;
+  const leafStart = name.lastIndexOf('/') + 1;
+  return leafStart <= 1 ? name : name.slice(leafStart);
 }
 
 /**
@@ -48,13 +58,13 @@ function cached(key: string, fit: () => string): string {
 
 const summaries = new Map<string, string>();
 
-/** A comment's summary, its first line with text (`splitComment`). Asked for on every frame, so remembered. */
+/** A comment's summary, its first line with text and without Markdown marks (`commentLineText`). Asked for on every frame, so remembered. */
 export function summaryOf(comment: string): string {
   if (!comment) return '';
   let summary = summaries.get(comment);
   if (summary === undefined) {
     if (summaries.size > MAX_CACHED) summaries.clear();
-    summaries.set(comment, (summary = splitComment(comment).summary));
+    summaries.set(comment, (summary = commentLineText(comment)));
   }
   return summary;
 }

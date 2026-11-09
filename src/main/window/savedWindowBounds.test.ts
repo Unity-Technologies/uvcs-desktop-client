@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { memorySettings } from '../settings/testing/memorySettings';
+import { closeEvent } from './testing/fakeElectron';
 import { loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 
 vi.mock('electron', () => ({
@@ -52,8 +53,18 @@ describe('keepWindowBoundsSaved', () => {
     window.maximized = true;
     window.emit('maximize');
 
-    window.emit('close');
+    window.emit('close', closeEvent());
     expect(settings.get().windowBounds).toEqual({ x: 100, y: 100, width: 1200, height: 800, maximized: true });
+  });
+
+  it('saves nothing when the close is held back: the window stays open', () => {
+    const { settings, window } = watched();
+    const update = vi.spyOn(settings, 'update');
+    const held = closeEvent();
+    held.preventDefault();
+
+    window.emit('close', held);
+    expect(update).not.toHaveBeenCalled();
   });
 });
 

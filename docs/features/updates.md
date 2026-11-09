@@ -79,40 +79,112 @@ one shows again. A check the window asked for answers in one toast, "Checking…
 
 ## What's New
 
+What users read there is written with each change: every pull request's body has a `## Release note` section, one
+note (`### New:`, `Improved:` or `Fixed:`, a title, then a short Markdown description) or `None:` and why users have
+nothing to read. The `release-notes` skill (`.claude/skills/release-notes`) says how to write one: for users, not
+reviewers, in the app's words. The Release note workflow (`.github/workflows/release-note.yml`) reads the section with
+`readReleaseNote` (`scripts/build/releaseNote.ts`) on every change to the pull request and fails it when it can't. It
+also fails a picture or video after the closing line or in "Fixed issues", where `gh --attach` appends a file the body
+doesn't reference, and a picture of a local file never uploaded (`misplacedPicture`, through `checkPullRequestBody`).
+It checks where pictures are, never whether there is one: the skill decides that. The Release workflow reads merged
+bodies with `readReleaseNote` alone. Dependabot's pull requests are left out. It runs apart from CI so that editing
+the description checks the note again without building on every OS.
+
+The Release workflow joins those notes into the release's description (`releaseNotesMarkdown`,
+`scripts/build/releaseNotes.ts`): `## New`, `## Improved` and `## Fixed`, each note an `###` title and its
+description, in the order the pull requests merged, then `## Other changes` listing by title the pull requests without
+a note it can read (those merged before notes were asked for), and the "**Full Changelog**" link. Notes that say
+`None:` and Dependabot's pull requests are left out. GitHub renders that Markdown on the releases page, and the app
+reads it from the feed for What's New.
+
 Each release's notes are its description on GitHub. electron-updater reads them from the releases feed with the check
 that finds an update (`fullChangelog`, set in `createAppUpdates`: every release between the running version and the
 update, not just the latest), so they cost no request of their own. `AppUpdates` keeps them (`releaseNotesOf` leaves
 out releases with none) and the renderer asks for them once per version (`updates.releaseNotes`,
-`releaseNotesQuery`).
+`releaseNotesQuery`). The update's own release carries the date it was released (`ReleaseNotes.releaseDate`, from
+electron-updater's `UpdateInfo.releaseDate`, which its `latest*.yml` holds); the feed dates no other release, and none
+is asked for.
 
 While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
-(`ReleaseNotesDialog`) with each release's notes, newest first, headed by version when the update skips a few
-(`releaseNotesSections`), and the install button once the update is ready. With no notes, there is no button. GitHub's
-generated notes open with a "What's Changed" heading, which the title already says, so it is left out; their closing
-"**Full Changelog**" link becomes a quiet "Full changelog" line under the release (`changelogUrl`). While About or What's
-New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
+(`ReleaseNotesDialog`) that reads like a product's release notes. With nothing to show there is no button
+(`hasWhatsNew`, `useHasWhatsNew`, which ask the dialog's own `releaseSections`): GitHub's notes can hold only their
+"Full Changelog" line or new contributors, both left out. Should the dialog still open without anything, it says so
+in one quiet line, "All releases" still in its footer (`whatsNewBody`'s `empty`). While About or What's New is open
+the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
 
-GitHub sends the notes as HTML. `releaseNotesFromHtml` reads it into the tree `MarkdownBlocks` renders, so no HTML
-from the feed ever reaches the page: headings, paragraphs, lists (nested ones join their parent), quotes, code,
-emphasis and `http(s)` links, which open in the browser; a nested list stays under its item (`MarkdownListItem.sublist`); images, scripts, styles and any other address are left out.
-Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
-markup from the network.
+- **Header**: the app's mark, "What's new in <version>", and under it the version running (`appInfoQuery`) and the
+  day the update was released (`whatsNewSubtitle`).
+- **Notes** (`whatsNewRelease`): a release written as the Release workflow writes it has groups under level-2
+  headings named exactly New, Improved, Fixed and Other changes (`NOTE_KIND_LABELS`); each note in them is a level-3
+  heading, its title, and everything up to the next h2 or h3 is its description, rendered as full Markdown: smaller
+  headings (a step below the note's title), pictures, tables, code and lists. A list in a group is a note per item;
+  an unknown group is one other change titled by its heading; what comes before the first group is the release's
+  introduction. GitHub's generated notes ("What's Changed", the releases already published) read as other changes, a
+  note per pull request, its title without the "by @user in #12" it ends with (`withoutAuthorTail`); their "New
+  Contributors" are left out. Notes written any other way show as plain Markdown (`WhatsNewRelease.plain`). The
+  closing "**Full Changelog**" line is left out: the footer links to every release instead.
+- **Filter** (`filterSegments`): the app's segmented control (`SegmentedControl`), as its other views pick what they
+  show: All and each kind the notes hold, with how many notes each has across every release the update spans, shown
+  only when the notes hold more than one kind. A kind with no notes has no segment.
+- **Releases** (`releaseSections`): the update's own release is open under the title; each older one is a row ("0.2.3
+  · 6 notes") the user unfolds (`toggledRelease`). A release with nothing to show is left out; when that's the
+  update's own, the first release shown opens in its place, named by its row. Each group is titled as the app titles
+  a section (`SectionTitle`, as Home's "Recent"): its name, small and uppercase, and how many notes it holds; no color
+  of its own. A
+  filter shows its kind from every release at once, each older release named by its row (no longer a toggle), so
+  "Fixed" lists every fix since the running version; releases with none of that kind are left out, and so is what a
+  release says outside its notes. Going back to All keeps the releases the user had unfolded.
+- **Footer**: "All releases", the repository's releases page (`AppInfo.releasesUrl`), and "Later" with the install
+  button once the update is ready (`installLabel`), or just "Close".
+
+GitHub sends the notes as HTML. `releaseNotesOutline` reads it into the tree `MarkdownBlocks` renders, so no HTML
+from the feed ever reaches the page, cut at its h2 and h3 headings (a heading in GitHub's `markdown-heading` box
+too): cutting the HTML rather than the blocks keeps a description's h4 to h6 inside its note, as `MarkdownBlock` reads
+h3 to h6 as one level. It keeps headings, paragraphs, lists (a nested list stays under its item,
+`MarkdownListItem.sublist`), quotes, code, tables (GitHub's `<markdown-accessiblity-table>` box and its columns'
+`align`), emphasis, `http(s)` links, which open in the browser, and `http(s)` pictures. A picture in a link comes out
+beside it, after the link's text (a link inside a link isn't HTML), so the link GitHub wraps each picture in reads as
+the picture alone. Scripts, styles, attributes other than the few it reads, and links and pictures to any other
+address are left out. The feed gives a picture uploaded to GitHub as a `private-user-images.githubusercontent.com`
+address whose token expires five minutes after the feed is read, long before What's New opens, so it is read as the
+attachment's lasting address, `https://github.com/user-attachments/assets/<id>` (`lastingPictureUrl`).
+
+What's New shows the pictures themselves (`MarkdownBlocks` with `images="inline"`, `InlinePicture`): as wide as the
+note and 360 pixels tall at most, never larger than they are, at their own proportions, framed by a subtle border. A
+click on one shown smaller than it is (`pictureEnlarges`, measured again as the window resizes: `usePictureEnlarges`)
+shows it larger over the dialog, as large as the window allows (`PictureViewer`): a click, Esc or its close button
+returns, and "Open in Browser" shows it at full size there. How to take a picture that reads at that size, cropped to
+what it shows: the `release-notes` skill, "Pictures and GIFs" (a GIF plays in place, as a picture). While one loads it
+holds a quiet place of a stable height; one that can't load falls back to the chip comments show
+(`inlinePictureView`), so its description and link stay. Comments keep their chips (`CommentImage`, fetched only on
+hover): anyone may link anything there. Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the
+renderer is untrusted and must never run markup from the network.
+
+**Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
+(`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
+file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
+renders (`gh api repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`,
+or `gh api markdown -f mode=gfm -F text=@notes.md` for notes not published yet). Start it with `npm run app:debug`; the
+update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
 
 
-- The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
-  version: it bumps the last release tag's version, commits it on top of main and pushes only the tag `v<version>`
-  (main is protected, so the bump never lands there and main's `package.json` keeps an older version), opens a draft
-  release with generated notes, and builds every OS's installers onto it (`npm run release`). Linux builds in it;
-  macOS and Windows build and sign in a private repository, [uvcs-desktop-client-release-signing](https://github.com/Unity-Technologies/uvcs-desktop-client-release-signing), whose Sign workflow
-  (`sign-release.yml`) the Release run starts for the tag and waits for (its `sign` job, through `SIGNING_REPO_TOKEN`,
-  which may only start and read that repository's workflows). Unity's signing certificates are in Azure Key Vault,
-  which accepts only Unity's networks, and Unity's runners that reach it may serve only private repositories (SSDLC),
-  which this one isn't. The Sign workflow builds this repository's tag with this repository's config and sign hook, and
-  uploads to the same draft; its README lists its secrets. This repository holds no signing secret. The draft's description
-  is what What's New shows: edit it before publishing. Its notes start from the last release tag (`--notes-start-tag`):
-  left to choose, GitHub starts from the newest tag in the new tag's history, and no release tag is there (its bump
-  commit never reaches main), so the notes would repeat every earlier release's changes. Publishing the draft makes the
-  update reach every running app within the hour. Never bump the version by hand.
+- The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns
+  the version: it bumps the last release tag's version, commits it on top of main and pushes only the tag
+  `v<version>` (main is protected, so the bump never lands there and main's `package.json` keeps an older version),
+  opens a draft release with the pull requests' release notes (see "What's New"), and builds every OS's installers
+  onto it (`npm run release`). Linux builds in it; macOS and Windows build and sign in a private repository,
+  [uvcs-desktop-client-release-signing](https://github.com/Unity-Technologies/uvcs-desktop-client-release-signing),
+  whose Sign workflow (`sign-release.yml`) the Release run starts for the tag and waits for (its `sign` job, through
+  `SIGNING_REPO_TOKEN`, which may only start and read that repository's workflows). Unity's signing certificates are
+  in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it may serve only private
+  repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag with this repository's
+  config and sign hook, and uploads to the same draft; its README lists its secrets. This repository holds no
+  signing secret. The draft's description is what What's New shows: edit it before publishing. Its pull requests are
+  those whose merge commits ("Merge pull request #N from <owner>/…", which needs the merge method and its default
+  message) are on main since the last release tag, not GitHub's pick: GitHub starts from the newest tag in the new
+  tag's history, and no release tag is there (its bump commit never reaches main), so the notes would repeat every
+  earlier release's changes. Publishing the draft makes the update reach every running app within the hour. Never
+  bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs. The macOS targets name no architecture, so a run builds
@@ -196,11 +268,12 @@ markup from the network.
 
 A pull request joins main through GitHub's merge queue (`gh pr merge --auto --merge`, or "Merge when ready"): once
 its own CI passes, the queue builds a merge commit of main, the pull requests queued ahead of it and this one, runs the
-required checks (the four `ci.yml` jobs) on it, and merges it only if they pass; if they fail, the pull request leaves
+required checks (the four `ci.yml` jobs, and the Release note check, which skips itself there: it read the pull
+request's note already) on it, and merges it only if they pass; if they fail, the pull request leaves
 the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
 twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
-CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger, without
-which nothing merges.
+CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger of both workflows,
+without which nothing merges.
 
 `.github/workflows/ci.yml` runs on every push to main, every pull request and every merge-queue entry: the tests and the build on macOS
 arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the

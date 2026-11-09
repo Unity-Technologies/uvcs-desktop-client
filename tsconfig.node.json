@@ -4,6 +4,7 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "lib": ["ES2023"],
+    "allowImportingTsExtensions": true,
     "paths": { "@shared/*": ["./src/shared/*"] }
   }
 }

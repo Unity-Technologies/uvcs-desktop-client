@@ -3,6 +3,8 @@ import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { FOUND_SHELVES } from '../cm/foundObjects';
 import { layoutReader } from '../cm/formatRecords';
+import { shelveCommentArgs } from '../cm/shelveCommentArgs';
+import { withTempFile } from '../files/tempFile';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createShelvesService({ cm, operations }: ServiceContext, { leftChanges }: SwitchContext): ShelvesApi {
@@ -15,6 +17,14 @@ export function createShelvesService({ cm, operations }: ServiceContext, { leftC
 
     apply: (workspacePath, shelveId, deleteShelve, operationId) =>
       operations.run(operationId, (context) => leftChanges.apply(workspacePath, shelveId, deleteShelve, context)),
+
+    // A quick write, run in a pooled `cm shell`: the comment goes in a file, which a shell line can carry.
+    editComment(place, shelveId, comment) {
+      const at = cmPlace(place);
+      return withTempFile(comment, async (commentsFile) => {
+        await cm.query(shelveCommentArgs(shelveId, commentsFile, at), at.options);
+      });
+    },
 
     delete: (place, shelveId) => leftChanges.discard(place, [shelveId]),
   };

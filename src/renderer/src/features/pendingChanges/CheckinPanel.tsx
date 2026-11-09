@@ -1,7 +1,11 @@
 import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
-import { splitComment } from '../../lib/comment';
+import { CommentField } from '../../components/commentEditor/CommentField';
+import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
+import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
+import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
+import { recentCommentPick, withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
@@ -13,6 +17,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
+import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
@@ -22,7 +27,7 @@ const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {
   /** The summary field, for the view to put the caret in. */
-  summaryRef: RefObject<HTMLInputElement | null>;
+  summaryRef: RefObject<CommentFieldHandle | null>;
   /** Whose draft comment the fields show and edit. */
   workspacePath: string;
   /** How many changes the list holds, private ones too (the header counts only what checks in); undefined until read. */
@@ -43,8 +48,8 @@ interface CheckinPanelProps {
   behindCount: number;
   /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
   behindDescription: string | null;
-  /** The changelist whose files alone are checked ("Check in this changelist"), or null. */
-  preparedChangelist: string | null;
+  /** Says which changelist's files alone are checked ("Check in this changelist"): "Changelist ui"; or null. */
+  preparedChangelistNote: string | null;
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
   recentComments: string[];
@@ -69,7 +74,7 @@ export function CheckinPanel({
   merging,
   behindCount,
   behindDescription,
-  preparedChangelist,
+  preparedChangelistNote,
   allReviewed,
   recentComments,
   mode,
@@ -82,6 +87,9 @@ export function CheckinPanel({
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
   const { summary, description } = useCheckinMessage(workspacePath);
+  const descriptionRef = useRef<CommentFieldHandle>(null);
+  // The field a recent comment picked puts the caret in, once its menu closes.
+  const caretAfterPick = useRef<'summary' | 'description' | null>(null);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
@@ -112,7 +120,8 @@ export function CheckinPanel({
       setKeepShelved(false);
     }
   };
-  useShortcut(hotkey('checkin'), () => void act(), canAct);
+  // Never out of sight behind an expanded diff: it gives the window back first (`runWhileDiffExpanded`).
+  useShortcut(hotkey('checkin'), () => runWhileDiffExpanded('checkin', () => void act()), canAct);
 
   // The panel stays on screen while nothing is pending, where the mode caret is disabled: it goes back to checking in.
   useEffect(() => {
@@ -124,35 +133,56 @@ export function CheckinPanel({
   return (
     <div className={styles.panel}>
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
-      <div className={styles.summaryField}>
-        <input
-          ref={summaryRef}
-          className={styles.summary}
-          placeholder={shelving ? 'Shelve summary' : 'Summary'}
-          value={summary}
-          onChange={(event) => onMessageChange({ summary: event.target.value })}
-          spellCheck
+      {/* Focus mode opens the summary and the description together (`focusModeFields('checkin')`). */}
+      <CommentFocusGroup>
+        <div className={styles.summaryField}>
+          <CommentField
+            ref={summaryRef}
+            groupField="summary"
+            singleLine
+            className={styles.summary}
+            label={shelving ? 'Shelve summary' : 'Summary'}
+            placeholder={shelving ? 'Shelve summary' : 'Summary'}
+            value={summary}
+            // Pasted lines go on in the description, as the title takes one line.
+            onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
+            onEnter={() => descriptionRef.current?.focus()}
+          />
+          {recentComments.length > 0 && (
+            <ActionDropdownMenu
+              entries={recentComments.map((recent, index) => ({
+                id: `recent.${index}`,
+                label: recent.split('\n')[0]!,
+                run: () => {
+                  const pick = recentCommentPick(recent);
+                  onMessageChange(pick.parts);
+                  caretAfterPick.current = pick.caretIn;
+                },
+              }))}
+              // The caret goes to the text picked, not back to the button.
+              onCloseAutoFocus={(event) => {
+                const field = caretAfterPick.current;
+                caretAfterPick.current = null;
+                if (!field) return;
+                event.preventDefault();
+                (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
+              }}
+            >
+              <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
+            </ActionDropdownMenu>
+          )}
+        </div>
+        <CommentField
+          ref={descriptionRef}
+          groupField="description"
+          className={styles.description}
+          label="Description"
+          placeholder={DESCRIPTION_PLACEHOLDER}
+          style={{ height: descriptionHeight }}
+          value={description}
+          onChange={(text) => onMessageChange({ description: text })}
         />
-        {recentComments.length > 0 && (
-          <ActionDropdownMenu
-            entries={recentComments.map((recent, index) => ({
-              id: `recent.${index}`,
-              label: recent.split('\n')[0]!,
-              run: () => onMessageChange(splitComment(recent)),
-            }))}
-          >
-            <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
-          </ActionDropdownMenu>
-        )}
-      </div>
-      <textarea
-        className={styles.description}
-        placeholder="Description (optional)"
-        style={{ height: descriptionHeight }}
-        value={description}
-        onChange={(event) => onMessageChange({ description: event.target.value })}
-        spellCheck
-      />
+      </CommentFocusGroup>
       {shelving && (
         <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
           <Checkbox checked={keepShelved} onChange={setKeepShelved} label="Keep the changes here" />
@@ -176,9 +206,9 @@ export function CheckinPanel({
         <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(listedCount, busy)} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
-      {preparedChangelist !== null && (
+      {preparedChangelistNote !== null && (
         <div className={styles.prepared} data-tip="Only its files are checked, until they are checked in or shelved">
-          Changelist {preparedChangelist}
+          {preparedChangelistNote}
         </div>
       )}
     </div>

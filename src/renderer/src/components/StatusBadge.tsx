@@ -24,6 +24,15 @@ export function StatusBadge({ tone, title, letter, move }: { tone: StatusTone; t
   );
 }
 
+/** A status's badge as the header of its group of files (`statusGroupsOf`): what it is, its label beside it says. */
+export function StatusGroupBadge({ tone }: { tone: StatusTone }) {
+  return (
+    <span className={styles.badge} data-tone={tone} aria-hidden>
+      <StatusLetter letter={STATUS_LETTERS[tone]} />
+    </span>
+  );
+}
+
 /** A status letter trimmed to its cap height, so it sits in the optical center of whatever box holds it. */
 export function StatusLetter({ letter }: { letter: string }) {
   return <span className={styles.letter}>{letter}</span>;

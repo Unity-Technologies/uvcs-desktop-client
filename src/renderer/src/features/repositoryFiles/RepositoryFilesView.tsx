@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
 import { placeId } from '@shared/domain/place';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
@@ -10,6 +11,8 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { Stowable } from '../../ui/Stowable';
+import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { useBranch } from '../branches/useBranches';
 import { browseOpening } from '../browseRepository/browseOpening';
 import { RepositoryTree, RepositoryTreeSkeleton } from '../browseRepository/RepositoryTree';
@@ -21,7 +24,7 @@ import { useGoToFileCommand } from './useGoToFileCommand';
 import { useRepositoryFilesStore } from './repositoryFilesStore';
 import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './repositoryFilesBody';
 
-const WIDTH_KEY = 'repositoryFilesTree';
+const DETAILS_KEY = 'repositoryFilesTree';
 
 /**
  * Files in a repository explored without a workspace (docs/features/explore-repository.md "Files"): the latest tree of
@@ -37,6 +40,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const branchRead = useBranch(filesBranchToRead(chosen));
   const body = repositoryFilesBodyOf({ data: branchRead.data, error: branchRead.error }, chosen);
   const [filter, setFilter] = useState('');
+  const diffExpanded = useDiffExpanded();
   const [shownPath, setShownPath] = useState<string | null>(null);
   // A reveal opens the tree anew on its path: the tree reads where it opens only as it mounts.
   const [reveals, setReveals] = useState(0);
@@ -65,6 +69,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const header = (
     <ViewHeader
       title="Files"
+      detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}
       subtitle={shown ? filesBranchCaption(shown) : undefined}
       actions={
         <>
@@ -82,10 +87,10 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
 
   return (
     <>
-      {header}
+      <Stowable stowed={diffExpanded}>{header}</Stowable>
       {body.kind === 'error' && <EmptyState title="Couldn't read the branch" description={body.message} />}
       {body.kind === 'pickBranch' && <EmptyState title="No /main branch" description="Pick the branch whose latest files to show." />}
-      {(body.kind === 'loading' || body.kind === 'chosenGone') && <RepositoryTreeSkeleton widthKey={WIDTH_KEY} />}
+      {(body.kind === 'loading' || body.kind === 'chosenGone') && <RepositoryTreeSkeleton detailsKey={DETAILS_KEY} />}
       {body.kind === 'tree' && (
         <RepositoryTree
           // A branch's latest tree is another changeset's: its tree starts anew, on the item selected before.
@@ -94,7 +99,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
           treeId={`${placeId(place)}#branch:${body.branch.guid}`}
           opening={browseOpening({ focusPath: shownPath ?? undefined })}
           filter={filter}
-          widthKey={WIDTH_KEY}
+          detailsKey={DETAILS_KEY}
           onShownItem={setShownPath}
           linkOrigin={linkOrigin}
           onGoToFile={openGoToFile}

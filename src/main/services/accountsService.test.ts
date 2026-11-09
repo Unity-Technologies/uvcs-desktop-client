@@ -14,6 +14,13 @@ describe('accounts', () => {
     expect(fake.commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
   });
 
+  it('keeps a wildcard profile (`*@cloud`), which signs in to every cloud organization', async () => {
+    const fake = fakeCmClient({ 'profile list': [formatOutput(['*@cloud_ana', '*@cloud', 'ana', 'SSOWorkingMode']), formatOutput(['build_ana', 'build.example.com:8087', 'ana', 'LDAPWorkingMode'])].join('') });
+    const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
+
+    expect((await service.list()).map((account) => account.server)).toEqual(['*@cloud', 'build.example.com:8087']);
+  });
+
   it('lists the profiles again after removing one, never sharing a read that started before the removal', async () => {
     let profiles = formatOutput(['acme@cloud_ana', 'acme@cloud', 'ana', 'SSOWorkingMode']);
     let finishFirstRead = (): void => {};

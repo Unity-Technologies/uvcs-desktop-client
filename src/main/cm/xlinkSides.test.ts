@@ -18,15 +18,16 @@ describe('The sides of a diff an xlink is read at', () => {
     expect(before?.kind === 'parentOf' && before.findArgs.filter((arg) => arg.startsWith('--format'))).toEqual([expect.not.stringMatching(/comment|owner|date|guid/)]);
   });
 
-  it("reads a branch at its head and where it started: the parent of its first changeset", () => {
+  // A hidden branch's changesets are left out of `cm find changeset` unless `ignorehidden` brings them in.
+  it("reads a branch at its head and where it started: the parent of its first changeset, the branch hidden or not", () => {
     expect(xlinkAfterPoint({ kind: 'branch', branch: '/main/task1' })).toEqual({ kind: 'point', spec: 'br:/main/task1' });
     const before = xlinkBeforePoint({ kind: 'branch', branch: '/main/task1' });
-    expect(before?.kind === 'parentOf' && before.findArgs[2]).toBe("where branch = '/main/task1' order by changesetid asc limit 1");
+    expect(before?.kind === 'parentOf' && before.findArgs[2]).toBe("where ignorehidden = 'true' and branch = '/main/task1' order by changesetid asc limit 1");
   });
 
   it("names the repository on the find of the side before, where no workspace tells cm which: last, after the limit", () => {
     const branch = xlinkBeforePoint({ kind: 'branch', branch: '/main/task1' }, 'game@local');
-    expect(branch?.kind === 'parentOf' && branch.findArgs[2]).toBe("where branch = '/main/task1' order by changesetid asc limit 1 on repository 'game@local'");
+    expect(branch?.kind === 'parentOf' && branch.findArgs[2]).toBe("where ignorehidden = 'true' and branch = '/main/task1' order by changesetid asc limit 1 on repository 'game@local'");
     const changeset = xlinkBeforePoint({ kind: 'changeset', changesetId: 37 }, 'game@local');
     expect(changeset?.kind === 'parentOf' && changeset.findArgs[2]).toBe("where changesetid = 37 on repository 'game@local'");
   });

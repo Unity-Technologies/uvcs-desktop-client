@@ -64,7 +64,8 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
  * The single entry point to the `cm` CLI.
  * Quick commands reuse pooled `cm shell` sessions: a warm one answers in a few ms, where starting a `cm` process costs
  * 100-150 ms before the command even runs. Commands that may run long, stream progress or can be cancelled run as
- * dedicated processes, so they never hold a pooled session that reads are waiting for.
+ * dedicated processes, so they never hold a pooled session that reads are waiting for; an operation's is a `cm shell`
+ * of its own, which exits after it (`processCommand`).
  */
 export class CmClient {
   private cmPath: string;
@@ -99,6 +100,15 @@ export class CmClient {
     this.shellPool.disposeAll();
     this.cmPath = cmPath;
     this.shellPool = this.runners.createShellPool(cmPath);
+  }
+
+  /**
+   * Logs what isn't a command of `cm`'s beside them, numbered with them, to the same listeners: an issue tracker's
+   * request (docs/features/issue-trackers.md, "The HTTP client").
+   */
+  logEntry(entry: Omit<CommandLogEntry, 'id'>): void {
+    const logged = { ...entry, id: this.nextCommandId++ };
+    this.logListeners.forEach((listener) => listener(logged));
   }
 
   onCommandLogged(listener: CommandLogListener): () => void {
@@ -256,8 +266,8 @@ export class CmClient {
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch((error: unknown) => {
-      // A command its caller cancelled is no failure to log.
-      if (options.signal?.aborted) throw error;
+      // A command its caller cancelled is no failure to log; one that gave up waiting (a timeout's abort) is.
+      if (options.signal?.aborted && !gaveUpWaiting(options.signal)) throw error;
       const entry = log(endedWithoutExitCode(error));
       throw error instanceof CmOutputTooLargeError ? stoppedFailure(error, entry) : error;
     });
@@ -266,7 +276,7 @@ export class CmClient {
     return result.output;
   }
 
-  /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
+  /** A process of its own: `cm` as it is, or a `cm shell` of its own for an operation or a command line too long to start one with (`processCommand`). */
   private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions, reading: OutputReading): Promise<CmResult> {
     const { args: started, input } = processCommand(args, this.platform);
     const { runProcess } = this.runners;
@@ -320,4 +330,9 @@ function failure(result: CmResult, entry: CommandLogEntry): CmError {
     output: entry.output,
     logEntryId: entry.id,
   });
+}
+
+/** Whether a signal aborted because its time ran out (`AbortSignal.timeout`, `readOneObject`), not by its caller. */
+function gaveUpWaiting(signal: AbortSignal): boolean {
+  return signal.reason instanceof DOMException && signal.reason.name === 'TimeoutError';
 }

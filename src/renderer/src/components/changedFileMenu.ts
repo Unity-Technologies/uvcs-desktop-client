@@ -9,6 +9,8 @@ import { fileNameOf } from '../lib/text';
 import { copySubmenu, type CopyTexts } from './copyMenu';
 import { openRevisionEntries } from './externalApps/openWithMenu';
 import { menuAction } from './menuWords';
+import { toolsSubmenu } from './tools/toolsMenu';
+import { toolSubject } from './tools/toolSubjects';
 
 /** A changed file as its menu needs it, wherever a list of changed files shows it: a diff, Incoming, a merge. */
 export interface ChangedFile {
@@ -38,6 +40,7 @@ export function changedFileMenu(place: Place, files: ChangedFile[], added: (Grou
     single?.annotation && menuAction('annotate', () => navigation.openPage(single.annotation!)),
     ...(version ? openRevisionEntries((editorId) => openVersion(place, version, fileNameOf(single.path), editorId)) : []),
     version && menuAction('saveAs', () => void saveVersionAs(place, version, fileNameOf(single!.path))),
+    toolsSubmenu(place, files.flatMap((file) => (file.version ? [toolSubject.version(file.version, fileNameOf(file.path))] : []))),
     copySubmenu('', { path: files.map((file) => file.path).join('\n'), link: single?.link }, { count: files.length }),
     ...added,
   ]);

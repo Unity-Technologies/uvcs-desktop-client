@@ -43,7 +43,7 @@ const ids = (menu: MenuEntry[]) => entries(menu).map((entry) => entry.id);
 
 describe("a shelve's diff", () => {
   it("keeps viewing and applying out of the menu: the page is the diff, and its button applies", () => {
-    expect(ids(menuOf(shelve('Spike')).menu)).toEqual(['applyAndDelete', 'newCodeReview', 'copy', 'delete']);
+    expect(ids(menuOf(shelve('Spike')).menu)).toEqual(['applyAndDelete', 'newCodeReview', 'copy', 'editComment', 'delete']);
   });
 
   it("never deletes someone else's shelve, nor applies and deletes it", () => {
@@ -77,6 +77,6 @@ describe("a shelve's diff", () => {
     expect(menuOf(shelve('Spike')).appliesTo).toBe(ws);
     const inRepository = shelveDiffMenu(repositoryPlace('game@local'), shelve('Spike'), { records: [], me: 'ana@example.com', onApplied: () => {}, onDeleted: () => {} });
     expect(inRepository.appliesTo).toBeNull();
-    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'copy', 'delete']);
+    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'copy', 'editComment', 'delete']);
   });
 });

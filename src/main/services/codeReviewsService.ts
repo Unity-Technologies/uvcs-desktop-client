@@ -1,11 +1,13 @@
 import type { Place } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
+import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
-import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
+import { addReviewersArgs, createReviewArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
+import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
+import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
@@ -20,14 +22,16 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
 
   function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
-      ...(filter.assignedToMe ? ["assignee = 'me'"] : []),
+      ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
+      // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
+      ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
     ];
     return findReviews(place, conditions, {
       owners: filter.owners,
       sinceDate: filter.sinceDate,
       text: filter.text,
-      limit: MAX_LISTED_CODE_REVIEWS,
+      limit: filter.limit,
     });
   }
 
@@ -60,33 +64,44 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       return review;
     },
 
-    async create(place, { targetSpec, title, assignee }) {
+    reviewers(place, reviewId) {
       const at = cmPlace(place);
-      const output = await cm.query(
-        ['codereview', at.spec(targetSpec), title, ...(assignee ? [`--assignee=${assignee}`] : []), '--format={id}', ...at.repositoryOption],
-        at.options,
-      );
+      return cm.queryRecords(listReviewersArgs(reviewId, at), layoutReader(LISTED_REVIEWERS), at.options);
+    },
+
+    async create(place, request) {
+      const at = cmPlace(place);
+      const output = await cm.query(createReviewArgs(request, at), at.options);
       return Number.parseInt(output.trim(), 10);
     },
 
-    async update(place, reviewId, { status, assignee }) {
+    async addReviewers(place, reviewId, reviewers) {
       const at = cmPlace(place);
-      await cm.query(
-        [
-          'codereview',
-          '-e',
-          String(reviewId),
-          ...(status ? [`--status=${status}`] : []),
-          ...(assignee !== undefined ? [`--assignee=${assignee}`] : []),
-          ...at.repositoryOption,
-        ],
-        at.options,
-      );
-      // `cm` succeeds without changing the status of a review nobody is assigned to.
-      const [updated] = status ? await findReviewById(place, reviewId) : [];
-      if (updated && updated.status !== status) {
-        throw new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again.");
+      await cm.query(addReviewersArgs(reviewId, reviewers, at), at.options);
+    },
+
+    async removeReviewers(place, reviewId, reviewers) {
+      const at = cmPlace(place);
+      await cm.query(removeReviewersArgs(reviewId, reviewers, at), at.options);
+    },
+
+    async reRequestReview(place, reviewId, reviewers) {
+      const at = cmPlace(place);
+      await cm.query(reRequestReviewArgs(reviewId, reviewers, at), at.options);
+    },
+
+    async setOwnStatus(place, reviewId, status, comment) {
+      const at = cmPlace(place);
+      if (!comment?.trim()) {
+        await cm.query(ownStatusArgs(reviewId, status, undefined, at), at.options);
+        return;
       }
+      await withTempFile(comment, (commentsFile) => cm.query(ownStatusArgs(reviewId, status, commentsFile, at), at.options));
+    },
+
+    async rename(place, reviewId, title) {
+      const at = cmPlace(place);
+      await cm.query(renameReviewArgs(reviewId, title, at), at.options);
     },
 
     async remove(place, reviewIds) {

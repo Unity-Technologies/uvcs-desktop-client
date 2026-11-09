@@ -35,6 +35,24 @@ export interface NewXlink {
   rules: XlinkRule[];
 }
 
+/**
+ * A checked-in xlink's files loaded (`XlinksApi.load`). The pending changes put aside to load them wait in shelve
+ * `changesWaitIn` when they couldn't merge back cleanly ("Welcome back" offers them).
+ */
+export interface LoadedXlinkFiles {
+  changesWaitIn?: number;
+}
+
+/**
+ * What creating an xlink did (`XlinksApi.create`): checked in, in `changesetId`, with its files loaded (`loaded`, as
+ * `LoadedXlinkFiles`), or stopped after `cm xlink` by a later step, whose failure `reason` names: not checked in, it
+ * is a pending change; checked in, its files didn't load.
+ */
+export type CreatedXlink =
+  | { kind: 'loaded'; changesetId: number; changesWaitIn?: number }
+  | { kind: 'notCheckedIn'; reason: string }
+  | { kind: 'notLoaded'; changesetId: number; reason: string };
+
 /** A change to an xlink (`XlinksApi.edit`): what changed only. */
 export interface XlinkEdit {
   path: string;

@@ -120,10 +120,15 @@ export function toQueryFilter({ since, people }: Pick<ChangesetFilters, 'since' 
 
 /** Whether each word of the search is in the changeset's number, comment, labels, branch or author (as shown or as stored). */
 export function matchesSearch(changeset: Changeset, search: string, labels: readonly Label[] = []): boolean {
-  return matchesWordFilter(
-    [String(changeset.id), changeset.comment, ...labels.map((label) => label.name), changeset.branch, ...userFilterTexts(changeset.owner)],
-    search,
-  );
+  return matchesWordFilter(changesetFilterTexts(changeset, labels), search);
+}
+
+/**
+ * What a changeset's row shows, which the Changesets view's filter looks through, and the `cs:` suggestions too (with
+ * no labels: they're the list's, read apart).
+ */
+export function changesetFilterTexts(changeset: Pick<Changeset, 'id' | 'comment' | 'branch' | 'owner'>, labels: readonly Pick<Label, 'name'>[] = []): string[] {
+  return [String(changeset.id), changeset.comment, ...labels.map((label) => label.name), changeset.branch, ...userFilterTexts(changeset.owner)];
 }
 
 /**

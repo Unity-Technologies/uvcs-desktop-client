@@ -4,9 +4,9 @@ import { GHOST_ALPHA, type DrawContext } from './drawContext';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
 import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
-import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
+import { fitBranchName, fitText, shownBranchName, summaryOf, textWidth } from './fitText';
 import { HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop } from './geometry';
-import { branchColor, HEADER_HOVER_TINT, HEADER_TINT, headerInks, type GraphPalette } from './graphPalette';
+import { HEADER_HOVER_TINT, HEADER_TINT, headerColor, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape, roomBeforeNextLane } from './laneShape';
 import { lanesAcross } from './spansInView';
@@ -57,6 +57,7 @@ export function drawBranchHeaders(draw: DrawContext): void {
 interface CardMetrics {
   palette: GraphPalette;
   review: CodeReviewSummary | undefined;
+  fullName: boolean;
   name: number;
   chip: number;
   comment: number;
@@ -69,14 +70,15 @@ function cardMetrics(draw: DrawContext, lane: Lane): CardMetrics {
   const { palette } = scene;
   const review = scene.reviews.get(lane.branch.id);
   const known = metricsByLane.get(lane);
-  if (known?.palette === palette && known.review === review) return known;
+  const fullName = draw.detail.fullBranchNames;
+  if (known?.palette === palette && known.review === review && known.fullName === fullName) return known;
 
   const comment = summaryOf(lane.branch.comment);
   ctx.save();
   ctx.font = palette.fonts.branchName;
-  const name = textWidth(ctx, lane.branch.name);
+  const name = textWidth(ctx, shownBranchName(lane.branch.name, fullName));
   ctx.font = palette.fonts.branchComment;
-  const metrics = { palette, review, name, chip: review ? reviewChipWidth(draw, review) : 0, comment: comment ? textWidth(ctx, comment) : 0 };
+  const metrics = { palette, review, fullName, name, chip: review ? reviewChipWidth(draw, review) : 0, comment: comment ? textWidth(ctx, comment) : 0 };
   ctx.restore();
   metricsByLane.set(lane, metrics);
   return metrics;
@@ -94,12 +96,12 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const { ctx, pen, scene } = draw;
   const { palette, search } = scene;
   const name = lane.branch.name;
-  const selected = scene.selectedBranch === name;
+  const selected = scene.selectedBranches.has(name);
   const current = scene.currentBranch === name;
   const hovered = scene.hoveredBranch === name;
   const isHit = search?.branches.has(name) ?? false;
   const ghost = search !== null && !search.litBranches.has(name);
-  const color = current ? palette.accent : branchColor(palette, name);
+  const color = headerColor(palette, name, current);
   const inks = headerInks(palette, name, current);
 
   ctx.save();
@@ -144,7 +146,8 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const chipWidth = cardMetrics(draw, lane).chip;
   ctx.textBaseline = 'middle';
   ctx.font = palette.fonts.branchName;
-  const fitted = fitBranchName(ctx, name, right - x - (chipWidth ? chipWidth + GAP : 0));
+  // A name shown short (its leaf alone) or cut to fit shows whole in a tooltip.
+  const fitted = fitBranchName(ctx, shownBranchName(name, draw.detail.fullBranchNames), right - x - (chipWidth ? chipWidth + GAP : 0));
   if (fitted !== name) draw.drawn.cutBranchNames.add(lane, x, top, textWidth(ctx, fitted), COMMENT_LINE_TOP);
   drawSearchMarks(draw, fitted, x, nameMiddle, NAME_MARK_HEIGHT);
   ctx.fillStyle = inks.name;

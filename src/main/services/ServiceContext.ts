@@ -1,6 +1,7 @@
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
 import type { ProfileList } from '../cm/ProfileList';
+import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
 import type { OperationTracker } from '../operations/OperationTracker';
 import type { RevisionCat } from '../files/RevisionCat';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
@@ -46,6 +47,8 @@ export interface ServiceContext {
   updates: AppUpdates;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;
+  /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */
+  issueTrackers: IssueTrackers;
 }
 
 /**

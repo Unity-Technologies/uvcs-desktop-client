@@ -33,8 +33,7 @@ export function createQueryClient(): QueryClient {
  */
 export const SLOW_CHANGING_QUERY = { staleTime: 5 * 60_000, refetchOnWindowFocus: false } as const;
 
-/** Marks a query whose result never changes once read (e.g. what a changeset changed), so refreshes skip it. */
-export const IMMUTABLE_QUERY = { immutable: true };
+export { IMMUTABLE_QUERY } from './queryMeta';
 
 /**
  * Meta of a query keyed by a part of the workspace info (the selector, or where the workspace stands): a refresh

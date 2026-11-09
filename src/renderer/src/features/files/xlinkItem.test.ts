@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detailsKindOf, editableXlinkOf, iconTypeOf, isUnderXlink, newXlinkDirectoryOf, xlinkDetailOf } from './xlinkItem';
+import { detailsKindOf, editableXlinkOf, iconTypeOf, isUnderXlink, newXlinkDirectoryOf, unloadedXlinkOf, xlinkDetailOf } from './xlinkItem';
 
 const xlink = { writable: true, path: '/', changeset: 27649, repository: 'pnunit', server: 'codice@cloud' };
 
@@ -59,6 +59,18 @@ describe('Creating and editing xlinks from Files', () => {
     expect(editableXlinkOf({ isPrivate: false, xlink }, inWorkspace)).toEqual({ isPrivate: false, xlink });
     expect(editableXlinkOf({ isPrivate: false }, inWorkspace)).toBeNull();
     expect(editableXlinkOf({ isPrivate: false, xlink }, { underXlink: true })).toBeNull();
+  });
+
+  it('loads the files of a checked-in xlink whose folder is listed empty, and of no other', () => {
+    const item = { isPrivate: false, xlink };
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [] })).toEqual(item);
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [{ path: 'code/lib/src' }] })).toBeNull();
+    // Not read yet: nothing tells it is empty.
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: undefined })).toBeNull();
+    // Not checked in: no command can load it yet.
+    expect(unloadedXlinkOf(item, inWorkspace, { added: true, listedItems: [] })).toBeNull();
+    expect(unloadedXlinkOf({ isPrivate: false }, inWorkspace, { added: false, listedItems: [] })).toBeNull();
+    expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [] })).toBeNull();
   });
 
   it('tells an item under an xlink from the folders listed above it', () => {

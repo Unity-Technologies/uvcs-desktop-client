@@ -37,7 +37,7 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
    Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
-   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.1, so check what
+   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.2, so check what
    they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
    (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
 
@@ -157,7 +157,10 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
   Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
   permission on the local server), `xlinks.sh` (a writable xlink with branch expansion rules and a read-only one
-  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks).
+  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks),
+  `code-reviews.sh` (a review holding every kind of comment: change requests pending, applied and discarded, questions
+  answered and not, comments on a deleted file, under one changeset and on an older revision; a description, a rename
+  and a status change; reviews of a changeset and a shelve).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
@@ -254,11 +257,15 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
 | `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
+| `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
+| `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
+| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`); no picture or video sits after the closing line or in "Fixed issues", where an unreferenced `--attach` lands, and none shows a file never uploaded; one in backticks or a fence is text (`misplacedPicture`) |
+| `scripts/build/noInvisibleCharacters.test.ts`               | no source, script or doc holds an invisible formatting character (bidirectional controls, zero-width joiners): an emoji that needs one writes it as an escape |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
 | `shared/links/parseLink.test.ts`                          | every link shape reads back as written; the official client's links keep opening |
@@ -345,10 +352,11 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for and how you verified it. A fresh context sees what the author's can't. The reviewer only reads:
-   it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't
-   start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
-   it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
+   the change is for, how you verified it and its release note (written now, with the `release-notes` skill: step 6).
+   A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
+   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch,
+   folder, verification and release note; the agent that started it runs the review, then resumes it (Claude Code:
+   `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
@@ -356,13 +364,23 @@ them on the server, and reading shell command lines cost more to keep right than
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
    message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   **Every pull request carries its release note**, written with the `release-notes` skill
+   (`.claude/skills/release-notes`): the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title,
+   then a short description, or `None:` and why users have nothing to read. It is what users read in What's New and on
+   the releases page, so it is written for them, apart from the title and the rest of the body, which are for
+   reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
+   without one.
    **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
-   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
-   One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
-   without it (a before and after, a theme-specific change). When a still can't show it (motion, a flow, something
-   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). Attach it with
-   `gh pr create --attach <file>` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`);
-   never commit it to the repository.
+   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the light theme, the pointer
+   out of the way). One is the rule: not every state, theme or window size, only a second shot when the feature can't
+   be understood without it (a before and after, a theme-specific change). When a still can't show it (motion, a
+   flow, something that must *not* move), a short GIF or video instead. Whether the release note gets a picture, a
+   still or a GIF, and which part of the screen, is the `release-notes` skill's call. When it does, that picture sits
+   inside `## Release note` and serves reviewers too; otherwise the reviewers' shot goes under "Behavior with this pull
+   request". Either way, reference it where it goes as `![alt](./shot.png)` and attach it with `gh pr create --attach
+   ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`): an unreferenced
+   attachment lands after the closing line, outside every section, and a reference to a file not attached stays
+   broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.

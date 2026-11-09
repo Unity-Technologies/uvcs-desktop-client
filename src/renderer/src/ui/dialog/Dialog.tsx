@@ -4,6 +4,8 @@ import { MODAL_DIALOG } from '../../lib/modalDialog';
 import styles from './Dialog.module.css';
 
 interface DialogProps {
+  /** A picture before the title, such as the app's mark (What's New). */
+  icon?: ReactNode;
   title: string;
   description?: ReactNode;
   /** A small control at the header's top right, for something the dialog rarely needs changed (where it starts). */
@@ -16,7 +18,7 @@ interface DialogProps {
   children?: ReactNode;
 }
 
-export function Dialog({ title, description, headerAction, width, onClose, onSubmit, footer, children }: DialogProps) {
+export function Dialog({ icon, title, description, headerAction, width, onClose, onSubmit, footer, children }: DialogProps) {
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     onSubmit?.();
@@ -33,7 +35,8 @@ export function Dialog({ title, description, headerAction, width, onClose, onSub
           {...MODAL_DIALOG}
         >
           <form onSubmit={submit} style={{ display: 'contents' }}>
-            <div className={styles.header}>
+            <div className={styles.header} data-icon={icon ? true : undefined}>
+              {icon}
               <div className={styles.heading}>
                 <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
                 {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}

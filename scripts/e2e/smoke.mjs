@@ -2,10 +2,11 @@
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
@@ -17,10 +18,13 @@ const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
+const VIEWPORT = { width: 1400, height: 880 };
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
-const shots = join(tmpdir(), 'uvcs-e2e-shots');
+// One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own.
+const checkoutHash = createHash('sha1').update(projectFolder).digest('hex').slice(0, 8);
+const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
 rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
@@ -51,12 +55,37 @@ const window = await app.firstWindow();
 window.setDefaultTimeout(TIMEOUT_MS);
 window.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 window.on('console', (message) => message.type() === 'error' && errors.push(`console.error: ${message.text()}`));
-await window.setViewportSize({ width: 1400, height: 880 });
+const browserWindow = await app.browserWindow(window);
+// The window's real size as well as the page's: a screenshot copies the real view (`capture`), which a frame's borders
+// (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
+await browserWindow.evaluate((shown, size) => shown.setContentSize(size.width, size.height), VIEWPORT);
+await window.setViewportSize(VIEWPORT);
 
 const main = window.getByRole('main');
 let shotNumber = 0;
+/** Saves what the page shows, without needing the window drawn on screen (scripts/e2e/README.md). */
 async function screenshot(name) {
-  await window.screenshot({ path: join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`) });
+  await withTimeout(capture(name), TIMEOUT_MS, `screenshot ${name}`);
+}
+
+async function capture(name) {
+  await window.evaluate(() => new Promise((rendered) => requestAnimationFrame(() => requestAnimationFrame(() => rendered()))));
+  const viewport = window.viewportSize();
+  const png = await browserWindow.evaluate(async (shown, area) => (await shown.webContents.capturePage(area)).toPNG().toString('base64'), { x: 0, y: 0, ...viewport });
+  writeFileSync(join(shots, `${String(++shotNumber).padStart(2, '0')}-${name}.png`), Buffer.from(png, 'base64'));
+}
+
+/** `promise`, or a failure naming `what` once `ms` pass: an `evaluate` has no timeout, and a wedged page never answers. */
+async function withTimeout(promise, ms, what) {
+  let timer;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer after ${ms} ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
@@ -70,6 +99,9 @@ async function step(name, run) {
     await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
+    // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that
+    // fails now and then can be read only from its output.
+    console.error(`FAIL  ${name}\n${error.message}`);
     await screenshot(`FAILED-${name.toLowerCase().replaceAll(' ', '-')}`).catch(() => {});
     throw new Error(`${name}: ${error.message.split('\n')[0]}`);
   }
@@ -79,12 +111,20 @@ const started = Date.now();
 try {
   const workspaceOnHome = window.getByRole('region', { name: 'All workspaces' }).getByRole('button', { name: /^demo / });
   await step('Home', () => workspaceOnHome.waitFor());
+  await step('The palette on the home screen', async () => {
+    // No place is shown: it searches commands only, and nothing in it may ask for the window's place.
+    await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
+    await window.keyboard.press('Escape');
+    await window.getByRole('dialog').waitFor({ state: 'detached' });
+  });
   await step("A Unity organization's projects", async () => {
     const sidebar = window.getByRole('navigation');
     await sidebar.getByRole('button', { name: /^studio/ }).click();
     await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
     await main.getByRole('button', { name: 'Project: All projects' }).click();
-    await window.keyboard.type('racing');
+    await window.getByPlaceholder('Find a project').fill('racing');
+    await window.getByText('Racing', { exact: true }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
@@ -112,11 +152,40 @@ try {
       await settled();
     });
   }
+  await step("A code review's conversation", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Code reviews( \d+)?$/ }).click();
+    await main.getByText('Review player movement', { exact: true }).dblclick();
+    await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
+    await main.getByText('Jump only when grounded.').first().waitFor();
+    await settled();
+  });
+  await step('Branch Explorer timeline', async () => {
+    // From another view its shortcut opens the Branch Explorer with the timeline shown.
+    await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');
+    await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor();
+    await main.getByRole('img', { name: 'Timeline' }).click();
+    await main.getByRole('button', { name: 'Hide timeline' }).click();
+    await main.getByRole('img', { name: 'Timeline' }).waitFor({ state: 'detached' });
+  });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
+  });
+  await step('Expanded diff', async () => {
+    // The header's button, then the key: the sidebar goes out of sight and the diff stays; Esc gives the window back.
+    const sidebar = window.getByRole('navigation');
+    await main.getByRole('button', { name: 'Expand diff' }).click();
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByText('void Jump() { }').first().waitFor();
+    await window.keyboard.press('Escape');
+    await sidebar.waitFor();
+    await window.keyboard.press('ControlOrMeta+Shift+E');
+    await sidebar.waitFor({ state: 'hidden' });
+    await main.getByRole('button', { name: 'Expand diff', pressed: true }).click();
+    await sidebar.waitFor();
   });
   await step('A revision read from the disk', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Files( \d+)?$/ }).click();
@@ -126,7 +195,10 @@ try {
     // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
     // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
     await window.keyboard.press('ControlOrMeta+P');
-    await window.keyboard.type('camera');
+    // Enter picks only a result shown: the workspace's paths are read when the dialog first opens, slowly on CI.
+    const goToFile = window.getByRole('dialog', { name: 'Go to file' });
+    await goToFile.locator('input').fill('camera');
+    await goToFile.getByText('camera.cs', { exact: false }).first().waitFor();
     await window.keyboard.press('Enter');
     await main.getByText('float distance = 8f;').first().waitFor();
     await main.getByText('float distance = 10f;').first().waitFor();
@@ -137,6 +209,12 @@ try {
     // The 3D view, and what changed in it: the fixture renamed the crate's material slot.
     await main.getByLabel('3D view of the model').waitFor();
     await main.getByRole('region', { name: 'What changed' }).waitFor();
+  });
+  await step('The .meta of a binary file', async () => {
+    await main.getByText('Assets/hurt.wav', { exact: true }).first().click();
+    await main.getByText('Binary file', { exact: true }).waitFor();
+    await main.getByRole('button', { name: '.meta', exact: true }).click();
+    await main.getByText('loadInBackground: 1').first().waitFor();
   });
   await step('A diff in a new window', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
@@ -175,6 +253,20 @@ try {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
+  await step('A prefix in the palette', async () => {
+    // `@` narrows it to people: the owners of what it read, with no command of its own.
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('@');
+    await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
+    await palette.getByRole('combobox').fill('');
+  });
+  await step("A code review's number in the palette", async () => {
+    // A number alone names a review too, first when it's past every changeset (the fake's reach changeset 7).
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('80');
+    await palette.getByRole('option').first().filter({ hasText: 'Review player movement' }).waitFor();
+    await palette.getByRole('combobox').fill('');
+  });
   await step('A link pasted in the palette', async () => {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
@@ -182,6 +274,7 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Explore a repository', async () => {
     await window.keyboard.press('Escape');
@@ -220,6 +313,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
+    await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('Settings and dark theme', async () => {
     await window.keyboard.press('Escape');
@@ -227,6 +321,13 @@ try {
     await window.getByRole('navigation').getByRole('button', { name: 'Settings' }).click();
     await window.getByRole('dialog', { name: 'Settings' }).getByRole('radio', { name: /^Dark/ }).click();
     await window.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+  });
+  await step('Settings › Issue tracker, with none connected', async () => {
+    // Its empty state reads only the app's own file: no tracker is reached, and no keychain is asked.
+    const settings = window.getByRole('dialog', { name: 'Settings' });
+    await settings.getByRole('button', { name: 'Issue tracker' }).click();
+    await settings.getByText('No sign-ins yet').waitFor({ timeout: TIMEOUT_MS });
+    await settings.getByRole('button', { name: 'Add a sign-in' }).waitFor({ timeout: TIMEOUT_MS });
   });
 } catch (error) {
   errors.push(error.message);

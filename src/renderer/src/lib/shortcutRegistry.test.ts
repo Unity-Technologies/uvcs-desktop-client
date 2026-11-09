@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
-import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } from './shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from './shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
 const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
@@ -38,14 +38,18 @@ describe('shortcut registry', () => {
   });
 
   it('shows the native menu accelerators of the keys the renderer binds', () => {
-    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'[,)]/g)];
+    // One accelerator for every OS, or one per OS where their keys differ (`isMac ? '…' : '…'`).
+    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', (?:'([^']+)'|isMac \? '([^']+)' : '([^']+)')[,)]/g)];
     expect(items.length).toBeGreaterThan(0);
-    for (const [, commandId, written] of items) {
-      // As the source writes it: a backslash key is escaped there.
-      const accelerator = written!.replaceAll('\\\\', '\\');
+    expect(items.some(([, , , onMac]) => onMac !== undefined)).toBe(true);
+    for (const [, commandId, everywhere, onMac, offMac] of items) {
       const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
       expect(shortcut, commandId).toBeDefined();
-      for (const mac of [true, false]) expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
+      for (const mac of [true, false]) {
+        // As the source writes it: a backslash key is escaped there.
+        const accelerator = (everywhere ?? (mac ? onMac : offMac))!.replaceAll('\\\\', '\\');
+        expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
+      }
     }
   });
 
@@ -62,6 +66,25 @@ describe('shortcut registry', () => {
       const keys = [...global, ...views];
       expect(new Set(keys).size).toBe(keys.length);
     }
+  });
+
+  it("lets only a comment field's keys share a global key, inside the field (`scope`), and gives them Slack's keys", () => {
+    for (const mac of [true, false]) {
+      const global = new Set(
+        Object.values(SHORTCUTS)
+          .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+          .flatMap((shortcut) => shortcutKeys(shortcut, mac)),
+      );
+      const sharing = Object.entries(SHORTCUTS)
+        // Views bind their own keys while they show (graphs, lists); a comment field's must say where they win.
+        .filter(([, shortcut]) => shortcut.area === 'Comments' && shortcutKeys(shortcut, mac).some((key) => global.has(key)))
+        .filter(([, shortcut]) => (shortcut as ShortcutDefinition).scope !== 'commentField')
+        .map(([id]) => id);
+      expect(sharing, mac ? 'macOS' : 'off macOS').toEqual([]);
+    }
+    expect(SHORTCUTS.commentLink.keys).toEqual(['mod+shift+u']);
+    expect(SHORTCUTS.commentCode.keys).toEqual(['mod+shift+c']);
+    for (const shortcut of Object.values(SHORTCUTS).filter((candidate) => candidate.area === 'Comments')) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
   });
 
   it('writes keys the formatter and matcher understand', () => {

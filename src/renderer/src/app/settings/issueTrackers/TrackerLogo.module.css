@@ -1,0 +1,26 @@
+/* A tracker's logo on its tile (`TrackerLogo`): Jira's white mark on its blue, GitHub's mark in the text's color on the
+   card's surface. The radius grows with the tile, as an app icon's does. */
+
+.logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24%;
+}
+
+.logo > svg {
+  display: block;
+  fill: currentColor;
+}
+
+.logo[data-choice='jira'] {
+  background: var(--brand-jira-tile);
+  color: var(--brand-jira-mark);
+}
+
+.logo[data-choice='github'] {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}

@@ -114,3 +114,24 @@ describe('incomingFileMenu', () => {
     expect(mergeOnly(incomingFileMenu([file('README.md')], context([])))).toEqual([]);
   });
 });
+
+describe('incomingFileMenu with a Unity asset listed with its .meta', () => {
+  const asset = file('Assets/Hero.png');
+  const meta = file('Assets/Hero.png.meta');
+  const ids = (menu: MenuEntry[]) => menu.flatMap((entry) => (typeof entry === 'object' && 'id' in entry && entry.id ? [entry.id] : []));
+  const metaAction = (menu: MenuEntry[]) => menu.find((entry): entry is Action => typeof entry === 'object' && 'id' in entry && entry.id === 'metaDiff');
+
+  it("opens the asset's .meta diff and history", () => {
+    const onMetaDiff = vi.fn();
+    const menu = incomingFileMenu([asset], context([], { metaOf: (entry) => (entry === asset ? meta : undefined), onMetaDiff }));
+    expect(ids(menu)).toEqual(expect.arrayContaining(['metaDiff', 'metaHistory']));
+    metaAction(menu)!.run();
+    expect(onMetaDiff).toHaveBeenCalledWith(meta);
+  });
+
+  it('offers nothing of a .meta for a file listed without one', () => {
+    const menu = incomingFileMenu([asset], context([], { metaOf: () => undefined, onMetaDiff: vi.fn() }));
+    expect(ids(menu)).not.toContain('metaDiff');
+    expect(ids(menu)).not.toContain('metaHistory');
+  });
+});

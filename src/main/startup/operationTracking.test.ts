@@ -2,6 +2,7 @@ import type { WebContents } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import { runForCaller } from '../ipc/caller';
+import { WindowWrites } from '../window/WindowWrites';
 import { trackOperations } from './operationTracking';
 
 vi.mock('electron', () => ({ BrowserWindow: { fromWebContents: () => null, getAllWindows: () => [] } }));
@@ -17,8 +18,9 @@ function setUp() {
     reported: (operationId: string, progress: OperationProgress) => void reported.push({ operationId, progress }),
   };
   const watchers = { ignoreOwnWrite: () => {}, workspaceOf: () => undefined };
-  const operations = trackOperations(watchers, icon, (caller) => (caller === page ? 7 : undefined));
-  return { operations, started, reported };
+  const windowWrites = new WindowWrites();
+  const operations = trackOperations(watchers, icon, windowWrites, (caller) => (caller === page ? 7 : undefined));
+  return { operations, started, reported, windowWrites };
 }
 
 describe('trackOperations', () => {
@@ -42,5 +44,19 @@ describe('trackOperations', () => {
     await operations.run('update-1', async () => {});
 
     expect(started).toEqual([]);
+  });
+
+  it('holds the close of the window that started a write while it runs; a slow read holds nothing', async () => {
+    const { operations, windowWrites } = setUp();
+    let finishUpdate!: () => void;
+
+    void runForCaller(page, () => operations.read('lookup-1', () => new Promise<void>(() => {})));
+    expect(windowWrites.runningIn([7])).toBe(false);
+    const update = runForCaller(page, () => operations.run('update-2', () => new Promise<void>((resolve) => (finishUpdate = resolve))));
+    expect(windowWrites.runningIn([7])).toBe(true);
+
+    finishUpdate();
+    await update;
+    expect(windowWrites.runningIn([7])).toBe(false);
   });
 });

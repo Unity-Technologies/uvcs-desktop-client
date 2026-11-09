@@ -26,5 +26,6 @@ export function collectResolutions({ plan, fileStates, directoryDecisionsId, com
     files[conflict.path] = resolution;
   }
 
-  return { ...(directoryDecisionsId !== undefined && { directoryDecisionsId }), files, comment };
+  // Trimmed, as a check-in's comment is (`joinComment`): a picked suggestion leaves a space after it.
+  return { ...(directoryDecisionsId !== undefined && { directoryDecisionsId }), files, comment: comment?.trim() };
 }

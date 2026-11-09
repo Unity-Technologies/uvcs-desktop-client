@@ -1,6 +1,6 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { UserLabel } from '../../ui/Avatar';
-import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/column';
 import { BranchNameCell } from './BranchNameCell';
@@ -29,7 +29,7 @@ export function branchColumns(
       ),
     },
     // Gives its room to the name in a narrow list: the details panel shows the comment anyway.
-    { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 560, render: (row) => <Highlight text={row.branch.comment} /> },
+    { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 560, render: (row) => <CommentLine comment={row.branch.comment} /> },
     {
       id: 'owner',
       header: 'Created by',

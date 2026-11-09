@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import type { LaunchCommand } from './launchCommand';
 
 /**
- * The one place an editor or a terminal is started, and only on the user's explicit "Open in…" (see
- * `noExternalUi.test.ts`). Resolves once the app has started; rejects when it can't be.
+ * The one place an editor, a terminal or one of the user's tools is started, and only on the user's explicit "Open
+ * in…" or a pick from "Tools" (see `noExternalUi.test.ts`). Resolves once the app has started; rejects when it can't be.
  */
 export function launchApp({ command, args, cwd, exits, verbatim }: LaunchCommand): Promise<void> {
   return new Promise((resolve, reject) => {

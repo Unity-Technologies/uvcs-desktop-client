@@ -41,6 +41,13 @@ describe('outputForLog', () => {
       "fatal: Authentication failed for 'https://•••@github.com/team/game.git/'",
     );
   });
+
+  it('hides an issue tracker’s token wherever it shows', () => {
+    const github = `ghp_${'a1'.repeat(18)}`;
+    const atlassian = `ATATT3xFfGF0${'Zz9-'.repeat(10)}`;
+    expect(outputForLog(`token ${github} and ${atlassian}.`)).toBe('token ••• and •••.');
+    expect(outputForLog(`github_pat_${'B_'.repeat(20)} gho_${'c'.repeat(36)}`)).toBe('••• •••');
+  });
 });
 
 describe('textForLog', () => {

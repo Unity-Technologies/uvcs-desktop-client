@@ -46,6 +46,11 @@ describe('myShelves', () => {
     expect(updated).toMatchObject({ title: 'Put aside to update task', left: true });
   });
 
+  it('names changes put aside to load an xlink by what they were put aside for', () => {
+    const [loading] = myShelves([shelve(13, automatic)], [record(13, 'xlink')], MINE, NOW);
+    expect(loading).toMatchObject({ title: 'Put aside to load an xlink on task', left: true });
+  });
+
   it("recognizes another app's automatic shelves as left changes", () => {
     expect(myShelves([shelve(12, automatic)], [], MINE, NOW)[0]).toMatchObject({ title: 'Left when switching', left: true });
   });

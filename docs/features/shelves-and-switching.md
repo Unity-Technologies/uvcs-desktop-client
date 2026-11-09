@@ -19,9 +19,10 @@ with a way to reveal it: `filesKeptAside`, `noteKeptAside`), switches, and merge
 `applyShelveCleanly`). Stopping is honoured only until the changes are shelved. Failures put the changes back
 (`rollBackSwitch`), switching back first if the switch moved the workspace halfway; when that isn't possible the error
 says which shelve holds them and where to restore them. Every flow that shelves changes out of the workspace (switch,
-shelve away, update) puts them back the same way (`putBackAfterFailure`). Left shelves (the app's and the official
-client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
-automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
+shelve away, update, loading an xlink's files: docs/features/xlinks.md) puts them back the same way
+(`putBackAfterFailure`). Left shelves (the app's and the official client's) are offered again by the "Welcome back"
+banner in Changes (`features/leftChanges`), or restored automatically on arrival when they apply cleanly
+(`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
 Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
@@ -94,12 +95,20 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm
   checkin` or shelve of those paths, the empty-comment warning, "Update & check in". Running at once was dropped: it
   skipped reading the comment, which a changelist's description only suggests. "Undo N changes…" opens the Undo dialog
-  on its changes. The default changelist has no menu of its own: right-clicking it acts on its files.
+  on its changes. The default changelist offers the same (`PreparedChangelist`'s `name` is null, `changelistNameOf`),
+  with no description to suggest and "Default changelist" under the button (`preparedChangelistNote`). Readying it
+  checks what can go in of its changes but the files the user had unchecked (a `Builds/` folder: `readiedChanges`);
+  readying a user changelist, filled by hand, checks all of it. Its "no pending change left" is read by the paths
+  readied, not by the changelist: every new edit lands in it, so it would never end; it ends once none of the paths it
+  readied (`PreparedChangelist`'s `readied`, which checking files by hand leaves alone) is pending in it. Ignored,
+  cloaked and hidden changes are never readied, as they never go in and would stay pending. Private files are: one left
+  checked is one the user means to add, and keeps it going until it is added or deleted, as does an added file undone,
+  left private at its path. changes.md "Changelist menus" holds the whole menu.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
   primary action (`ShelveDiffActions`; only for a shelve a list already read). Apply is on the row; Apply and delete,
-  code review, copy and delete are behind "More actions".
+  code review, copy, Edit comment… and delete are behind "More actions".
 - **Everyone's** shelves are the other side of "Mine | Everyone" at the top (a radio group: Tab reaches it, ← → switch;
   ⇧⌘S again in the list; "Everyone's shelves…" in the palette). Every opening starts on Mine, which the button counts,
   and reads nothing more until Everyone is picked: then one `cm find shelve` by the same date alone
@@ -108,8 +117,19 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   newest 200 ("Newest 200 of N · filter to find others"), and the server search of everyone's goes back a year
   (limit 100 as a ceiling, "More may match" when reached). Rows name the author with their avatar ("You" for the
   user's own), and the filter matches authors in what is listed: `cm` matches owners only whole. Someone else's shelve
-  is applied, shown, reviewed or copied, never deleted or restored from here (nor from its diff); the Shelves view
-  keeps those. "All shelves" opens it with the same scope and filter.
+  is applied, shown, reviewed or copied, never described again, deleted or restored from here (nor from its diff); the
+  Shelves view keeps those. "All shelves" opens it with the same scope and filter.
+- **A shelve's comment** is edited in its details (Shelves view) and with "Edit comment…" in its menu: the user's own
+  in Changes and a shelve's diff; any in the Shelves view and the palette, as Delete; never a shelve left by a switch
+  or an update (`editsShelveComment`). The automatic comment is what marks left changes for every client
+  (`AUTOMATIC_SHELVE_CONDITION`, the official client too): edited, they would become an ordinary shelve, applied
+  instead of restored, and for those this app recorded the title shown comes from the record, so an edit wouldn't
+  even show. `cm shelveset` has no command for it, but a shelve is a changeset numbered below zero, and
+  `cm changeset editcomment cs:-<number> -commentsfile=…` edits it in place (`shelveCommentArgs`): the shelve keeps its
+  number, GUID and changes; `sh:<number>` is refused. An empty comment clears it. The comment saved goes into every
+  list of shelves already read (`writeListedShelveComment`), so a shelve's diff, which shows it from them
+  (`useCachedShelve`), shows it at once; then the shelve lists and the top bar of a workspace on that shelve are read
+  again (`isAffectedByShelveComment`).
 - **Applying** (`shelves.apply`, `LeftChangesFinder.apply`) merges from `sh:N` at once when nothing conflicts, without
   leaving Changes; only conflicts open the merge view (whose `deleteShelve` finishes the same way). `cm` refuses to merge
   into a workspace with pending changes (unless client.conf's `MergeWithPendingChanges`), so the app offers to shelve

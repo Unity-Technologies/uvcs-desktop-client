@@ -6,6 +6,7 @@ import {
   ArrowLeftToLine,
   ArrowRightLeft,
   ArrowRightToLine,
+  ArrowUpDown,
   ArrowUpFromLine,
   Binary,
   Cherry,
@@ -28,6 +29,7 @@ import {
   FilePlus,
   Files,
   Filter,
+  FolderDown,
   FolderGit2,
   FolderInput,
   FolderLock,
@@ -79,6 +81,7 @@ import {
   Trash2,
   Undo2,
   UserPlus,
+  Wrench,
   X,
 } from 'lucide-react';
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
@@ -105,6 +108,7 @@ const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): Menu
 export const MENU_WORDS = {
   // What Enter or a double-click does in the app.
   diff: word('primary', FileDiff, 'Open diff'),
+  metaDiff: word('primary', FileDiff, 'Open .meta diff'),
   diffRange: word('primary', FileDiff),
   diffPair: word('primary', GitCompareArrows, 'Compare selected labels'),
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
@@ -112,6 +116,8 @@ export const MENU_WORDS = {
   openReview: word('primary', ExternalLink, 'Open review'),
   // The same, in a window of its own (`openInNewWindow`), to read beside the workspace's window, on another display.
   diffInNewWindow: word('primary', PictureInPicture2, 'Open diff in new window'),
+  // A changeset's branch, from where it starts up to the changeset: its work before a later merge from its parent.
+  branchDiffUpTo: word('primary', FileDiff, 'Open branch diff up to this changeset'),
   reviewInNewWindow: word('primary', PictureInPicture2, 'Open review in new window'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
@@ -124,6 +130,7 @@ export const MENU_WORDS = {
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
   // The words name the app ("Open in Visual Studio Code").
   open: word('open', AppWindow),
+  openMeta: word('open', AppWindow, 'Open .meta'),
   openInEditor: word('open', CodeXml),
   terminal: word('open', SquareTerminal),
   openRevision: word('open', AppWindow),
@@ -170,8 +177,9 @@ export const MENU_WORDS = {
   // An item deleted from disk and a new one paired by hand as one moved item (`pickMoveMatch`).
   searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
-  status: word('act', CircleDot, 'Set status'),
-  assign: word('act', UserPlus, 'Assign reviewer…'),
+  loadXlink: word('act', FolderDown, 'Load its files'),
+  yourReview: word('act', CircleDot, 'Your review'),
+  changeReviewers: word('act', UserPlus, 'Change reviewers…'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),
@@ -200,6 +208,7 @@ export const MENU_WORDS = {
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),
   history: word('navigate', History, 'View history'),
+  metaHistory: word('navigate', History, 'View .meta history'),
   annotate: word('navigate', ScanText, 'Annotate'),
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
   // Lines of code (`lineMenu`): who last changed them, as the diff's newer side has them.
@@ -226,8 +235,9 @@ export const MENU_WORDS = {
   source: word('navigate', ArrowLeftToLine, 'Go to source changeset'),
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
-  // The OS.
+  // The OS, and the user's own programs (docs/features/tools.md).
   saveAs: word('external', Download, 'Save this revision as…'),
+  tools: word('external', Wrench, 'Tools'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),
@@ -247,6 +257,8 @@ export const MENU_WORDS = {
   editComment: word('edit', MessageSquareText, 'Edit comment…'),
   describe: word('edit', Text, 'Edit description…'),
   move: word('edit', MoveRight, 'Move to another branch…'),
+  // Where a branch is drawn in the Branch Explorer: moved up or down, or back where the layout puts it.
+  position: word('edit', ArrowUpDown, 'Position'),
   changelist: word('edit', FolderInput, 'Move to changelist'),
   filterRules: word('edit', EyeOff, 'Ignore, cloak or hide'),
   revisionType: word('edit', Binary, 'Revision type'),
@@ -296,6 +308,7 @@ export const NEEDS_A_WORKSPACE = [
   'restoreTo',
   'add',
   'checkout',
+  'loadXlink',
   'merge',
   'mergeTask',
   'mergeTo',
@@ -307,6 +320,7 @@ export const NEEDS_A_WORKSPACE = [
   'newFolder',
   'newXlink',
   'openInEditor',
+  'openMeta',
   'terminal',
   'reveal',
   'openInFileManager',

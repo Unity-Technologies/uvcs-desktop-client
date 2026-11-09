@@ -1,0 +1,46 @@
+/* Over the dialog the picture came from, dimming it as a dialog dims the window: the dialogs' own backdrop, a layer
+   above their content (`Dialog.module.css`, 800 and 801). */
+.overlay {
+  composes: overlay from '../ui/dialog/Dialog.module.css';
+  z-index: 802;
+}
+
+/* The whole window: a click anywhere outside the buttons returns to the dialog. */
+.content {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  cursor: zoom-out;
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
+  z-index: 803;
+  outline: none;
+}
+
+/* As large as the window allows, leaving room for the buttons, and never larger than the picture is. */
+.picture {
+  display: block;
+  min-height: 0;
+  max-width: 100%;
+  max-height: calc(100% - var(--space-8) - var(--space-3));
+  object-fit: contain;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  cursor: default;
+}

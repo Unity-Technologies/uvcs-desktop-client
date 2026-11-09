@@ -6,7 +6,8 @@ import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { fileNameOf } from '../../lib/text';
 import { useHighlightWorkers } from '../diff/viewer/highlightWorkers';
 import { withLongLinesCut } from '../diff/viewer/longLines';
-import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
+import { pierreThemeName } from '../../lib/codeTheme';
+import { PIERRE_SURFACE_CSS } from '../diff/viewer/pierreOptions';
 import { highlightedLanguage, syntaxHighlighting } from '../diff/viewer/syntaxHighlighting';
 
 interface HighlightedCodeProps {

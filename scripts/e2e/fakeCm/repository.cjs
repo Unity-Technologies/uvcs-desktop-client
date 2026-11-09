@@ -34,7 +34,7 @@ const visible = { hidden: 'false' };
 
 const BRANCHES = [
   { id: 3, name: '/main', parent: '', changeset: 4, date: daysAgo(30), comment: 'The main branch', guid: 'aaaaaaaa-0000-0000-0000-000000000003', ...visible, ...common },
-  { id: 20, name: '/main/task-001', parent: '/main', changeset: 7, date: daysAgo(10), comment: 'Player movement', guid: 'aaaaaaaa-0000-0000-0000-000000000020', ...visible, ...common },
+  { id: 20, name: '/main/task-001', parent: '/main', changeset: 7, date: daysAgo(10), comment: 'Player movement: https://acme.atlassian.net/browse/VCS-12', guid: 'aaaaaaaa-0000-0000-0000-000000000020', ...visible, ...common },
   { id: 30, name: '/main/task-002', parent: '/main', changeset: 6, date: daysAgo(9), comment: 'Scene lighting', guid: 'aaaaaaaa-0000-0000-0000-000000000030', ...visible, ...common },
 ];
 
@@ -49,7 +49,7 @@ const CHANGESETS = [
   changeset(2, '/main', 1, 25, 'Add the player'),
   changeset(3, '/main', 2, 20, 'Tune the camera'),
   changeset(4, '/main', 3, 15, 'Release notes'),
-  changeset(5, '/main/task-001', 4, 10, 'Player jumps'),
+  changeset(5, '/main/task-001', 4, 10, 'VCS-12 Player jumps\n\nAlso fixes VCS-13 and VCS-99, as https://acme.atlassian.net/browse/VCS-14 asked.'),
   changeset(6, '/main/task-002', 4, 9, 'Warmer lights'),
   // Incoming: checked in on the workspace's branch after the changeset it loaded.
   changeset(7, '/main/task-001', 5, 8, 'Player runs', 'teammate@example.com'),
@@ -68,7 +68,41 @@ const SHELVES = [
 ];
 
 const REVIEWS = [
-  { id: 80, title: 'Review player movement', status: 'Status Under review', assignee: OWNER, targettype: 'branch', target: 'id:20', date: daysAgo(8), ...common },
+  {
+    id: 80,
+    title: 'Review player movement',
+    codereviewstatusname: 'Under review',
+    reviewers: `${OWNER}:Under review`,
+    comments: 3,
+    unresolvedissues: 1,
+    targettype: 'branch',
+    target: 'id:20',
+    date: daysAgo(8),
+    modifieddate: daysAgo(2),
+    ...common,
+  },
+  {
+    id: 81,
+    title: 'Review the HUD',
+    codereviewstatusname: 'Rework required',
+    reviewers: 'ana.diaz@acme.com:Reviewed,bob.smith@acme.com:Rework required,Developers:Under review,eva.lopez@acme.com:Reviewed',
+    comments: 14,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:20',
+    date: daysAgo(6),
+    modifieddate: daysAgo(1),
+    ...common,
+  },
+];
+
+/** Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its reply, a status. */
+const REVIEW_COMMENT_FIELDS = { owner: OWNER, parent: -1, revisionid: -1, itemid: '', path: '', line: '', changeset: -1, appliedinchangeset: -1, reviewid: 80 };
+const REVIEW_COMMENTS = [
+  { ...REVIEW_COMMENT_FIELDS, id: 90, guid: 'ffffffff-0000-0000-0000-000000000090', date: daysAgo(8), modifieddate: daysAgo(8), type: 'timeline', comment: '[description]Makes the player **jump**.' },
+  { ...REVIEW_COMMENT_FIELDS, id: 91, guid: 'ffffffff-0000-0000-0000-000000000091', date: daysAgo(7), modifieddate: daysAgo(7), type: 'change', comment: 'Jump only when grounded.', revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  { ...REVIEW_COMMENT_FIELDS, id: 92, guid: 'ffffffff-0000-0000-0000-000000000092', date: daysAgo(6), modifieddate: daysAgo(6), type: 'comment', comment: 'On it.', parent: 91, revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  { ...REVIEW_COMMENT_FIELDS, id: 93, guid: 'ffffffff-0000-0000-0000-000000000093', date: daysAgo(2), modifieddate: daysAgo(2), type: 'timeline', comment: '[status-rework-required]One change first.' },
 ];
 
 const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is', date: daysAgo(30), ...common }];
@@ -99,6 +133,13 @@ const FILES = {
     onDisk: 'o Crate\nusemtl Wood_mat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
   },
   'notes.txt': { onDisk: 'Ideas for the next level.\n' },
+  // A sound and its .meta, both changed: the sound's diff is a binary file's (a NUL byte makes it one, `looksBinary`),
+  // and its .meta can be shown instead.
+  'Assets/hurt.wav': { loaded: 'RIFF\u0000\u0000WAVE\u0001', onDisk: 'RIFF\u0000\u0000WAVE\u0002' },
+  'Assets/hurt.wav.meta': {
+    loaded: 'fileFormatVersion: 2\nguid: 9a8b7c6d5e4f40312a1b0c9d8e7f6a5b\nAudioImporter:\n  loadInBackground: 0\n',
+    onDisk: 'fileFormatVersion: 2\nguid: 9a8b7c6d5e4f40312a1b0c9d8e7f6a5b\nAudioImporter:\n  loadInBackground: 1\n',
+  },
 };
 
 /**
@@ -147,6 +188,7 @@ module.exports = {
   REPOSITORY,
   REPOSITORY_SPEC,
   REVIEWS,
+  REVIEW_COMMENTS,
   REVISIONS,
   SERVER,
   SHELVES,

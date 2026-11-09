@@ -8,7 +8,8 @@ import { runAction, runOperation, runRead } from '../../app/operations/runOperat
 import { queryClient } from '../../app/queryClient';
 import { saveSettings } from '../../app/settings/useSettings';
 import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
-import { firstLine, pluralize } from '../../lib/text';
+import { commentLineText } from '../../lib/comments/commentText';
+import { pluralize } from '../../lib/text';
 import { prompt } from '../../ui/dialog/prompt';
 import { updateToIncoming } from '../incoming/updateOperations';
 import { shelveAway } from '../shelves/shelveOperations';
@@ -71,7 +72,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
   if (result.kind === 'noChanges') return false;
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
-  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: firstLine(comment) || undefined });
+  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: commentLineText(comment) || undefined });
   if (comment.trim()) await rememberComment(comment.trim());
   return true;
 }

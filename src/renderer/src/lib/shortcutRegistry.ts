@@ -18,6 +18,7 @@ export const SHORTCUT_AREAS = [
   'Changes',
   'Diff',
   'Text',
+  'Comments',
   'Branch Explorer',
   'Files',
   'History',
@@ -42,6 +43,12 @@ export interface ShortcutDefinition {
   offMacOnly?: true;
   /** The command a native menu item runs; its accelerator must be the first key. */
   commandId?: string;
+  /**
+   * Where it binds, when not the window: a comment field's keys (`commentField`) win inside a focused comment field,
+   * and only there, so they may share a window's key (⇧⌘U formats a link there and updates the workspace elsewhere);
+   * no two window keys share one (`shortcutRegistry.test.ts`, `yieldsToCommentField`).
+   */
+  scope?: 'commentField';
 }
 
 export const SHORTCUTS = {
@@ -62,6 +69,7 @@ export const SHORTCUTS = {
   workspaceInNewWindow: { area: 'General', label: 'Open the workspace in a new window, or Shift-click it (home screen, switcher, palette)', keys: ['shift+enter'] },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
   toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar' },
+  toggleDetails: { area: 'General', label: "Hide or show the view's details panel", keys: ['mod+i'], commandId: 'view.details' },
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
@@ -99,6 +107,10 @@ export const SHORTCUTS = {
   editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'] },
   leaveEditor: { area: 'Diff', label: 'Leave the text for the file list (edits stay)', keys: ['escape'] },
   saveFile: { area: 'Diff', label: 'Save the edits', keys: ['mod+s'] },
+  // E for Expand, on every OS: no browser, desktop or the diff's editor takes it, and it stays clear of the window's
+  // own full screen (⌃⌘F, F11), which is another thing. Esc leaves once nothing else takes it (`escapeCollapsesDiff`).
+  expandDiff: { area: 'Diff', label: 'Expand the diff to the whole window, or collapse it', keys: ['mod+shift+e'], commandId: 'view.expandDiff' },
+  collapseDiff: { area: 'Diff', label: 'Collapse the expanded diff', keys: ['escape'] },
 
   // The text of a diff or a merge, as its editor (Pierre's) takes the keys; its right-click menu shows them (`codeMenu`).
   // Pierre opens Replace with ⌥⌘F on every OS, Ctrl+Alt+F off macOS, where Ctrl+Alt is AltGr: there it takes Ctrl+H,
@@ -113,6 +125,21 @@ export const SHORTCUTS = {
   textReplace: { area: 'Text', label: 'Find and replace in the text being typed', keys: ['mod+alt+f'], keysOffMac: ['mod+h'] },
   // ⌃G on macOS, as in other editors there: ⌘G is Find next.
   goToLine: { area: 'Text', label: 'Go to line', keys: ['ctrl+g'], keysOffMac: ['mod+g'] },
+
+  // A comment being written (`components/commentEditor`): Slack's keys, which take the comment's own text before the
+  // window's inside a focused comment field (`scope`): ⌘B, ⇧⌘U and ⇧⌘C do something else outside one. ⌘K stays the
+  // command palette's, as everywhere. Off macOS the code block takes Ctrl+Shift+E, as Ctrl+Alt is AltGr there.
+  commentBold: { area: 'Comments', label: 'Bold', keys: ['mod+b'], scope: 'commentField' },
+  commentItalic: { area: 'Comments', label: 'Italic', keys: ['mod+i'], scope: 'commentField' },
+  commentStrikethrough: { area: 'Comments', label: 'Strikethrough', keys: ['mod+shift+x'], scope: 'commentField' },
+  commentCode: { area: 'Comments', label: 'Code', keys: ['mod+shift+c'], scope: 'commentField' },
+  commentLink: { area: 'Comments', label: 'Link', keys: ['mod+shift+u'], scope: 'commentField' },
+  commentList: { area: 'Comments', label: 'List', keys: ['mod+shift+8'], scope: 'commentField' },
+  commentNumberedList: { area: 'Comments', label: 'Numbered list', keys: ['mod+shift+7'], scope: 'commentField' },
+  commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'], scope: 'commentField' },
+  commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'], scope: 'commentField' },
+  commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'], scope: 'commentField' },
+  commentFocusMode: { area: 'Comments', label: 'Write in a larger editor, and back', keys: ['mod+shift+f'], scope: 'commentField' },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
   graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },
@@ -132,12 +159,18 @@ export const SHORTCUTS = {
   graphOpen: { area: 'Branch Explorer', label: 'Diff the selected changeset or branch', keys: ['enter'] },
   graphOpenBranch: { area: 'Branch Explorer', label: 'Diff the branch of the selection', keys: ['shift+enter'] },
   graphMerge: { area: 'Branch Explorer', label: 'Merge from the selection', keys: ['m'] },
-  graphDetails: { area: 'Branch Explorer', label: 'Show or hide the details panel', keys: ['space'] },
+  graphDetails: { area: 'Branch Explorer', label: 'Hide or show the details panel', keys: ['space'] },
   graphContextMenu: { area: 'Branch Explorer', label: 'Actions of the selection', keys: ['shift+f10'] },
+  graphMoveBranchUp: { area: 'Branch Explorer', label: 'Move the branch up', keys: ['mod+up'] },
+  graphMoveBranchDown: { area: 'Branch Explorer', label: 'Move the branch down', keys: ['mod+down'] },
+  graphMoveBranchToTop: { area: 'Branch Explorer', label: 'Move the branch to the top', keys: ['mod+shift+up'] },
+  graphMoveBranchToBottom: { area: 'Branch Explorer', label: 'Move the branch to the bottom', keys: ['mod+shift+down'] },
   graphHome: { area: 'Branch Explorer', label: 'Go to the workspace', keys: ['h'] },
   graphZoomIn: { area: 'Branch Explorer', label: 'Zoom in', keys: ['plus', '='] },
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'] },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'] },
+  // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there. From another view it opens the Branch Explorer with it shown.
+  graphTimeline: { area: 'Branch Explorer', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline' },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'] },
 
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'] },

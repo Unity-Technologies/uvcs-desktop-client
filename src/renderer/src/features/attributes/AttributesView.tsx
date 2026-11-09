@@ -1,7 +1,9 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { Plus, Tags } from 'lucide-react';
 import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -12,7 +14,6 @@ import { userFilterTexts } from '../../lib/userName';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -38,7 +39,7 @@ const COLUMNS: Column<AttributeType>[] = [
     sortValue: (type) => type.name,
     render: (type) => <ObjectName icon={Tags} name={type.name} />,
   },
-  { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => <Highlight text={type.comment} /> },
+  { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => <CommentLine comment={type.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 700, sortValue: (type) => type.owner, render: (type) => <UserLabel user={type.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (type) => type.date, render: (type) => <RelativeTime date={type.date} /> },
 ];
@@ -64,6 +65,7 @@ export function AttributesView() {
     <>
       <ViewHeader
         title="Attributes"
+        detailsToggle={<DetailsToggleButton detailsKey="attributes" />}
         count={types && visible.length}
         total={types?.length}
         actions={
@@ -81,7 +83,7 @@ export function AttributesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="attributes"
+        detailsKey="attributes"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load attributes"

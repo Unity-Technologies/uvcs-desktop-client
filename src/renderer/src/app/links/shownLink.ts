@@ -3,6 +3,7 @@ import { shortBranchName } from '@shared/domain/specs';
 import type { LinkLines, LinkObject } from '@shared/links/link';
 import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
 import type { ShownRevision } from '../../features/history/shownRevision';
+import { openingTab } from '../../features/codeReviews/reviewTab';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
 import { LINK_VIEW_IDS, type LinkTarget } from './linkNavigation';
@@ -35,8 +36,11 @@ function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
       const object = diffTargetObject(page.target);
       return object && { object, ...fileIn(page.focusPath, shown) };
     }
-    case 'codeReview':
-      return { object: { kind: 'codeReview', id: page.reviewId }, ...fileIn(page.focusPath, shown) };
+    case 'codeReview': {
+      // Its conversation names the review alone; its changes, the file they show too.
+      const file = openingTab(page) === 'changes' ? fileIn(page.focusPath, shown) : {};
+      return { object: { kind: 'codeReview', id: page.reviewId }, ...file };
+    }
     case 'history':
       return historyLinkTarget(page, shown);
     case 'browseRepository': {

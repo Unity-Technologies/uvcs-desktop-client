@@ -20,6 +20,7 @@ import { usePageWindow } from './pageWindow/pageWindowStore';
 import { queryClient } from './queryClient';
 import { useAppMenuKeys } from './shell/appMenu';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
+import { useIssueTrackersFromMain } from '../components/issues/useIssueTrackers';
 import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
@@ -58,6 +59,7 @@ function Root() {
   useTheme();
   useGravatarSetting();
   useSettingsFromOtherWindows();
+  useIssueTrackersFromMain();
   useExternalApps();
   useAppCommands();
   useMenuCommands();

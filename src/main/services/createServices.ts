@@ -21,10 +21,12 @@ import { createBranchExplorerService } from './branchExplorerService';
 import { createBranchesService } from './branchesService';
 import { createChangesetsService } from './changesetsService';
 import { createCodeReviewsService } from './codeReviewsService';
+import { createReviewCommentsService } from './reviewCommentsService';
 import { createContentService } from './contentService';
 import { createDiffService } from './diffService';
 import { createExplorerService } from './explorerService';
 import { createHistoryService } from './historyService';
+import { createIssueTrackersService } from './issueTrackersService';
 import { createLabelsService } from './labelsService';
 import { createLeftChangesService } from './leftChangesService';
 import { createLocksService } from './locksService';
@@ -38,6 +40,7 @@ import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
+import { createToolsService } from './toolsService';
 import { createUnityAssetsService } from './unityAssetsService';
 import { createUpdatesService } from './updatesService';
 import { createWindowsService } from './windowsService';
@@ -62,10 +65,12 @@ export function createServices(context: ServiceContext): UvcsApi {
     branches: createBranchesService(context, naming),
     changesets: createChangesetsService(context),
     codeReviews: createCodeReviewsService(context, naming),
+    reviewComments: createReviewCommentsService(context),
     content: createContentService(context),
     diff: createDiffService(context),
     explorer: createExplorerService(context),
     history: createHistoryService(context, apps),
+    issueTrackers: createIssueTrackersService(context),
     labels: createLabelsService(context),
     leftChanges: createLeftChangesService(context, switching),
     locks: createLocksService(context),
@@ -73,17 +78,18 @@ export function createServices(context: ServiceContext): UvcsApi {
     mergeTools: createMergeToolsService(context, apps),
     pendingChanges: createPendingChangesService(context, switching),
     permissions: createPermissionsService(context),
-    repositories: createRepositoriesService(context, profiles),
+    repositories: createRepositoriesService(context, profiles, (from, to) => context.issueTrackers.repositoryRenamed(from, to)),
     review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
     system: createSystemService(context, profiles),
+    tools: createToolsService(context, launchApp),
     unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),
-    xlinks: createXlinksService(context),
+    xlinks: createXlinksService(context, switching),
   };
 }
 

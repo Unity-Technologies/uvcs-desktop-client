@@ -147,6 +147,11 @@ export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';
 }
 
+/** A shelve's comment was edited: the lists of shelves, and the top bar's comment of a workspace loaded from one. */
+export function isAffectedByShelveComment(key: QueryKey): boolean {
+  return isAffectedByShelving(key) || area(key) === 'workingObjectComment';
+}
+
 /** Shelves were deleted: the lists of shelves and the left changes, which offer shelves back. */
 export function isAffectedByShelveDeletion(key: QueryKey): boolean {
   return area(key) === 'shelves' || area(key) === 'leftChanges';

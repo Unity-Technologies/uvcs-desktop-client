@@ -1,7 +1,8 @@
 import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -14,7 +15,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { CODE_REVIEW_COLUMNS } from './codeReviewColumns';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
-import { openReview } from './codeReviewOperations';
+import { codeReviewPage, openReview } from './codeReviewOperations';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
@@ -33,6 +34,7 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
 
@@ -42,11 +44,11 @@ export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, assignedToMe, update } = filters;
+  const { text: search, people, since, status, reviewerIsMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewerIsMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
@@ -66,14 +68,15 @@ export function CodeReviewsView() {
     useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
+  useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
   useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader
       title="Code reviews"
+      detailsToggle={<DetailsToggleButton detailsKey="codeReviews" />}
       count={reviews && visible.length}
       total={reviews?.length}
-      subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
           <ViewRefreshButton fetching={isFetching} />
@@ -89,8 +92,8 @@ export function CodeReviewsView() {
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
           <>
-            <ToggleChip pressed={assignedToMe} icon={<UserCheck size={13} />} onChange={(value) => update({ assignedToMe: value })}>
-              Assigned to me
+            <ToggleChip pressed={reviewerIsMe} icon={<UserCheck size={13} />} onChange={(value) => update({ reviewerIsMe: value })}>
+              I'm a reviewer
             </ToggleChip>
             <ChoiceChip<StatusFilter>
               value={status}
@@ -109,7 +112,7 @@ export function CodeReviewsView() {
     <>
       {header}
       <ObjectListView
-        widthKey="codeReviews"
+        detailsKey="codeReviews"
         loading={isPending}
         error={error}
         errorTitle="Couldn't read the code reviews"

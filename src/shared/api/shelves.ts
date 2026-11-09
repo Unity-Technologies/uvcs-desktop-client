@@ -10,6 +10,8 @@ export interface ShelvesApi {
    * deleted once back, as when restored from Changes.
    */
   apply(workspacePath: string, shelveId: number, deleteShelve: boolean, operationId: string): Promise<ShelveApplyResult>;
+  /** Replaces the shelve's comment (an empty one clears it); its number and changes stay as they are. */
+  editComment(place: Place, shelveId: number, comment: string): Promise<void>;
   /** Deletes the shelve, and what this app kept to put it back. */
   delete(place: Place, shelveId: number): Promise<void>;
 }

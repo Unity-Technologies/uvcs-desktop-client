@@ -54,7 +54,7 @@
   overflow: auto;
   color: var(--text-primary);
   line-height: 1.5;
-  white-space: pre-wrap;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 

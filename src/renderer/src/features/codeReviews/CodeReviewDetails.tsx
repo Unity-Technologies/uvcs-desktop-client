@@ -1,12 +1,10 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { FileDiff, MessageSquareCode } from 'lucide-react';
-import { Fragment } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
-import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
@@ -14,32 +12,28 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import { DetailsEmpty } from '../../ui/DetailsSection';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { codeReviewPage, openReview } from './codeReviewOperations';
+import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { ReviewCommentCounts } from './ReviewCommentCounts';
+import { ReviewerStack } from './ReviewerStack';
 import { copiedWhat } from '../../components/copyMenu';
 
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
   const diffTarget = reviewDiffTarget(review.target);
   const { target } = review;
-  useShowInFollowingWindow(codeReviewPage(review));
 
   return (
     <DetailsPanel
       icon={<MessageSquareCode />}
       kind="Code review"
-      heading={<DetailsHeading name={review.title} />}
+      heading={<DetailsHeading name={<CommentLine comment={review.title} />} />}
       author={{ user: review.owner, date: review.date }}
       meta={[
         <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat('Code review', 'number')} />,
         target.kind === 'branch' && <BranchChip key="target" name={target.branch} />,
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,
         target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
-        review.assignee && (
-          <Fragment key="reviewer">
-            for <UserLabel user={review.assignee} />
-          </Fragment>
-        ),
       ]}
       badges={<CodeReviewStatusBadge status={review.status} />}
       primaryAction={
@@ -50,9 +44,11 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       menu={menu}
       primaryActionId="openReview"
       properties={[
-        { label: 'Reviewer', value: review.assignee ? <UserLabel user={review.assignee} /> : 'Unassigned' },
+        { label: 'Reviewers', value: <ReviewerStack reviewers={review.reviewers} /> },
+        { label: 'Comments', value: <ReviewCommentCounts review={review} /> },
         { label: 'Changes', value: describeTarget(target) },
         { label: 'Created', value: formatDateTime(review.date) },
+        { label: 'Last activity', value: formatDateTime(review.lastActivity) },
       ]}
       changes={
         diffTarget ? (

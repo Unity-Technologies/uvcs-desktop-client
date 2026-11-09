@@ -1,7 +1,9 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -25,16 +27,16 @@ import { labelFilterTexts, labelsQuery } from './labelFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LabelDetails } from './LabelDetails';
 import { labelMenu } from './labelMenu';
-import { newLabel, newLabelActionLabel, renameLabel, showLabelChanges } from './labelOperations';
+import { labelDiffPage, newLabel, newLabelActionLabel, renameLabel, showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import { labelCopyTexts } from './labelMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 
 const COLUMNS: Column<Label>[] = [
   {
@@ -46,7 +48,7 @@ const COLUMNS: Column<Label>[] = [
   },
   { id: 'changeset', header: 'Changeset', width: 100, sortValue: (label) => label.changeset, render: (label) => <span className="mono">{label.changeset}</span> },
   { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <PathLabel path={label.branch} /> },
-  { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <Highlight text={label.comment} /> },
+  { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <CommentLine comment={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 760, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (label) => label.date, render: (label) => <RelativeTime date={label.date} /> },
 ];
@@ -66,6 +68,7 @@ export function LabelsView() {
     [labels, people, me, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
+  useShowInFollowingWindow(selected ? labelDiffPage(selected) : null);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(place, label));
   useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(place, selected) : undefined);
   const filtering = isFiltering(filters);
@@ -74,6 +77,7 @@ export function LabelsView() {
     <>
       <ViewHeader
         title="Labels"
+        detailsToggle={<DetailsToggleButton detailsKey="labels" />}
         count={labels && visible.length}
         total={labels?.length}
         actions={
@@ -92,7 +96,7 @@ export function LabelsView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="labels"
+        detailsKey="labels"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load labels"

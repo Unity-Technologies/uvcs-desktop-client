@@ -2,14 +2,33 @@
 
 One or two sentences, in the product's words.
 
+## Release note
+
+<!--
+What the app's users read in What's New and on the releases page: written for them, not for reviewers, with the
+release-notes skill (.claude/skills/release-notes). One note:
+
+### New: <what users can now do>      (or Improved: / Fixed:)
+
+<A sentence or two: what it is, where to find it; for a fix, what users saw and what happens now.>
+
+Only when the skill's "Pictures and GIFs" says the note gets a picture (it decides whether, a still or a GIF, and
+which part of the screen), it goes here, attached with `gh pr create --attach ./shot.png`:
+
+![What it shows](./shot.png)
+
+Or, when users have nothing to read: "None: <why>". The Release note check fails the pull request otherwise.
+-->
+
 ## Current behavior
 
 What the user sees or the app does today (for performance work, the numbers and how they were measured).
 
 ## Behavior with this pull request
 
-What the user can now do or see, and the numbers after. A visible change shows it here: one representative screenshot
-(a short video or GIF when a still can't show it), attached with `gh pr create --attach`.
+What the user can now do or see, and the numbers after. A visible change shows its screenshot here when the release
+note has no picture, or when the note's crop can't show reviewers what changed; it is referenced in the body and
+attached with `--attach`.
 
 ## How it was implemented
 

@@ -72,7 +72,7 @@ describe('recheckIncoming', () => {
 
     await recheckIncoming(ws);
 
-    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks']);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks', 'workingObjectComment']);
   });
 
   it('refreshes nothing when the head stayed, or when the workspace moved itself', async () => {

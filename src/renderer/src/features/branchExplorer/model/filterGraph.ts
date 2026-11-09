@@ -11,6 +11,8 @@ export interface GraphFilter {
   focus: GraphFocus | null;
   /** Only these branches; null shows them all. */
   visibleBranches: ReadonlySet<string> | null;
+  /** Only the branches the advanced filters keep (`branchesKeptByRules`); null when none takes part. */
+  keptByRules: ReadonlySet<string> | null;
   /** Hide branches whose last changeset was already merged somewhere else. */
   hideMergedBranches: boolean;
   /** The workspace branch is never hidden by the filters. */
@@ -23,6 +25,10 @@ export function filterGraph(data: BranchExplorerData, filter: GraphFilter): Bran
   if (filter.visibleBranches) {
     const chosen = filter.visibleBranches;
     visible = new Set([...visible].filter((name) => chosen.has(name)));
+  }
+  if (filter.keptByRules) {
+    const kept = filter.keptByRules;
+    visible = new Set([...visible].filter((name) => kept.has(name)));
   }
   if (filter.hideMergedBranches) {
     const merged = mergedBranches(data);

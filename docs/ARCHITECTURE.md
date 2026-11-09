@@ -16,11 +16,12 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, expanding a diff to the whole window, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
 | `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
+| `features/tools.md`                     | The user's tools: programs run on files, changesets, branches, labels and shelves; Settings › Tools; the official client's external tools |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
@@ -32,6 +33,9 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
+| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
+| `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 
 ## How a request flows
 
@@ -59,9 +63,18 @@ you touch:
      workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
-   - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
-     characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
-     So is, on Windows, a command that prints text (see Parsing).
+   - A command that takes a process runs in a `cm shell` of its own, which reads its command line and exits after
+     it (`processCommand`), for one of three reasons; anything else starts `cm` as it is:
+     - It is an operation (`isOperation`: what changes the workspace, a shelve, a sync, a push or a pull), on every
+       OS: `cm` counts a `cm shell`'s commands as the app's, and a plain process's as a script's. The shell's start
+       costs about half a second, so the quick reads that take a process (a connection check, `version`, `cat`, a read
+       before the pooled sessions are warm) don't run in one on macOS and Linux.
+     - Its command line is too long to start a process with (a checkin or shelve of thousands of paths: Windows takes
+       32,767 characters, quotes included): still one command, never split.
+     - On Windows, it prints text (see Parsing).
+     A command with an argument a shell's line can't carry exactly (`canRunInShell`: a quote, a line break, leading or
+     trailing whitespace, an empty argument) starts as it is whatever the reason; comments never do, since they go
+     through `-commentsfile`. The shell reads `exit` after the command, so an operation never asks a question.
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
      `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
@@ -74,7 +87,9 @@ you touch:
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
-   logged: it's no failure.
+   logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
+   `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
+   (`repositoriesService`), a workspace's repository (`workspaceRepositories`).
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -377,7 +392,7 @@ and many people use the same server. Every `cm` command other than local reads (
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
   it, `changesetsService`); merges and labels come either way.
-- Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
+- Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments (`canRunInShell`).
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
   downloads' folders: `removeFoldersOfGoneProcesses`, only a process that is gone, never another app's running beside it).
@@ -524,14 +539,14 @@ by name, and never passes it to `cm`.
 `cm` never opens its merge or diff tool, and background work never opens anything. A merge tool opens only when the
 user asks for it on one conflicting file ("Resolve in…") or on each in turn ("Resolve N conflicts in…"), one at a time,
 and the app keeps the decision. An editor or a terminal opens only on the user's "Open in…" or "Open with"
-(docs/features/open-with.md).
+(docs/features/open-with.md), and a tool only when the user picks it (docs/features/tools.md).
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
   server branch hand `cm` each file's decision in a resolutions file (`--fileconflictsresolutionsfile`, docs/features/merge.md).
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
-  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
+  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal or run a tool
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
   only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
   asked for: docs/features/merge.md).
@@ -550,26 +565,52 @@ carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on it
 the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
 and toasts name a Git remote by the same rule, its user info dropped (`gitRemoteLabel`).
 
+An issue tracker's credential (docs/features/issue-trackers.md "Secrets") is kept by main alone, encrypted with the
+system's keychain (`safeStorage`, `TrackerSecrets`), or for the session only where there is none; it never goes back
+to a window, and a token goes to main once, as it's signed in with. Every tracker request goes through `TrackerHttp`,
+which sends a credential only to its connection's own origins, over `https:`, follows no redirect and sends no cookie.
+The trackers' token shapes are hidden in any text logged (`TRACKER_TOKENS`).
+
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
-any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
+any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program. The programs the app starts for the user (custom
+editors, merge tools, tools: `customEditors`, `customMergeTools`, `tools`) live in the settings the renderer writes, so
+a renderer taken over could start a program of its choosing; that is accepted, since each is the user's own choice
+made in the app's UI. Main still holds what reaches them to what the user asked: a tool runs only on the kinds of
+objects it was set up for, and a revision's temp file stays in its own folder (`saveRevisionToTemp`). An issue
+tracker's sign-in names its server from a link the window sends, so before a credential first goes to a host none of
+the trackers' own nor a connection's, main asks the user in its own dialog, which the window can't answer
+(`needsHostConsent`, docs/features/issue-trackers.md "Host consent").
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
+Besides `cm`, which talks to the user's own servers, the app reaches the places below, and nothing else. A comment
+can name an object on another server (`cs:4@game@build.example.com:8087`): its chip reads it from that server only
+when it's one the user already works with (one of their profiles, `serverReads`) and only when the chip's card opens,
+on hover or keyboard focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "What a chip
+reads"). A server the user doesn't use is never contacted, as `cm` would sign in there with their own credentials,
+and a comment never makes the app contact another server by being shown.
 There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
+- **The issue tracker the user connected** (Jira, GitHub; docs/features/issue-trackers.md "What leaves the
+  device"), from main only (`TrackerHttp`): signing in, and the issues a comment shown names (a Jira binding's
+  project keys, a GitHub server's repositories), read as the comment shows or a chip's card opens. Never a host a
+  comment names, never from a place with no tracker connected.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
+- **The hosts of images a comment links to** (`![alt](https://…)`), only when the image shows: on hover over its chip
+  or when the keyboard focus reaches it (`CommentImage`, docs/features/rich-comments.md "Images").
+  Fetched by the page with no referrer, so the host learns the picture was looked at, never from where.
 
-The page itself reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
-app's own files and `data:`/`blob:` images, so profile pictures reach it from main as data URLs.
+Otherwise the page reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
+app's own files, `data:`/`blob:` images (profile pictures reach it from main as data URLs) and `https:` images for
+those comments; no script, style or connection leaves it.
 
 ## Errors
 
@@ -605,10 +646,11 @@ says it's busy); a file that can't be read as settings is kept aside as `setting
 from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
-there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) and which merge
+there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`), which merge
 tool opens which files (client.conf's `<MergeTools>`, `readLegacyMergeTools`, `legacyMergeToolSettings`;
-docs/features/merge.md "Merge tools"). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,
-apart since the merge tools came later) even when it found nothing or couldn't read a file, and never runs again: from
+docs/features/merge.md "Merge tools"), and its external tools and "Open with" programs (`externaltools.conf`,
+`openwith.conf`: docs/features/tools.md). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,
+`legacyToolsImported`, apart since each came later) even when it found nothing or couldn't read a file, and never runs again: from
 then on the app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
@@ -641,9 +683,10 @@ for these names, and holds each module allowed to name them to exactly the file 
 
 ## Profile pictures (Gravatar)
 
-People show as their initials on their own color (`ui/Avatar`, `avatarColorOf`) until the user chooses to see their
-Gravatar pictures. Nothing goes to gravatar.com before that choice: it's a hash of each email address shown, and the
-user decides whether it leaves the machine.
+People show as their initials (`initials`: the first letters of the first two words of the name, or the first two
+letters of a one-word name, as the other UVCS clients show them) on their own color (`ui/Avatar`, `avatarColorOf`)
+until the user chooses to see their Gravatar pictures. Nothing goes to gravatar.com before that choice: it's a hash of
+each email address shown, and the user decides whether it leaves the machine.
 
 - **Off until chosen**: `showGravatar` and `gravatarChoiceAsked` both start false (`shared/domain/gravatarChoice.ts`).
   Pictures show only when both are true (`showsGravatar`), checked in one place, the main process's `system.gravatar`
@@ -755,6 +798,21 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   kill its `cm` partway: the OS's message box asks to quit once it finishes or to stay (`askToQuitWhenDone`), and with
   no window left (Windows and Linux quit as the last one closes) the app quits once it finishes. A slow read never holds
   it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
+- Closing a window holds back the same way, on every OS, while an operation changing a workspace that it (or a page
+  window it owns, `WorkspaceWindows.closingWith`) started runs (`ClosingWithWrites`, from `WindowWrites`, which
+  `trackOperations` fills with each write's window): closing would hide the operation while it runs, and where the
+  app quits with its last window, leave it running with no window at all. The OS's message box asks, over the window
+  brought forward, to close it once the operation finishes or to keep it (`askToCloseWhenDone`); other windows'
+  operations never hold it. Its `close` listener comes before the window's others, which check
+  `event.defaultPrevented`: a held close neither saves the session as the last window nor reaches the page's
+  unsaved edits, and the app's icon takes the window back (`windowKept`). Closing again while it waits asks nothing
+  more. There is no "Close now anyway": the operation would keep running out of sight (on Windows and Linux with no
+  window at all), and its card already offers Stop where stopping is safe. Once the app is quitting (`Quitting.started`)
+  nothing is held: quitting went on only after the operations finished, and a window's question must not veto the app's
+  own close (a quit a page cancels for unsaved edits is no quit anymore, and holds again). The `close` listener that
+  holds is the window's first (`createMainWindow`'s `onCloseRequested`), so the saved bounds also skip a held close. A
+  page window its workspace window left behind (the window shows another workspace) is closed by the app, not the
+  user: it asks nothing and stays open while its own operation runs, then closes (`ClosingWithWrites.closeLeftBehind`).
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens runs until it succeeds once; later windows take that answer (`untilSucceeded`), and
@@ -930,16 +988,19 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
     the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
-    replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
-    uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    replaces. A heavy library (Pierre, Shiki, three.js, CodeMirror) loads on first use, behind a `lazyComponent` at the
+    leaf that uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
+    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`, `CommentField`'s `LiveCommentEditor`), whose fallback looks
+    as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
   canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
-  development build too (scripts/e2e/README.md).
+  development build too (scripts/e2e/README.md). An effect returns a clean-up or nothing: an arrow that returns what
+  a DOM call gives can hand React a promise (`scrollIntoView` returns one in the Chromium the app runs), which crashes
+  the window as the effect runs again (`effectsReturnCleanUps.test.ts`).
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
@@ -1008,12 +1069,35 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Prefixes**: one vocabulary for what a prefix names, wherever it's typed (`KIND_PREFIXES`, `lib/kindPrefixes.ts`):
+  `cm`'s own specs `cs:` `br:` `lb:` `sh:`, `cr:` for a code review, and `@` for a person. In the command palette each
+  narrows the search to its section (`SCOPE_PREFIXES`, `parseScope`), beside the palette's own `>` commands and `/`
+  files; in a comment each opens its suggestions (`SUGGESTION_TRIGGERS`, docs/features/rich-comments.md), beside the
+  editor's own `:` emoji and `#` issues. A surface adds prefixes of its own, never another meaning for a shared one
+  (`sharedPrefixes.test.ts`). A prefix counts only at the start of the palette's text, lower case as `cm` writes it; a
+  changeset's number (`1234`, `cs:1234`) is still found in any search, and a number after `sh:` or `cr:` names that
+  shelve or review, first and as a full match (`namedFirst`): with its row when the lists read hold it, else by its
+  number alone (`exactShelveResult`, `exactCodeReviewResult`, as `exactChangesetResult`), read only once picked.
+  A number alone (`1234`, `typedObjectNumber`) names a shelve or code review too, only once it is known to exist,
+  never as a row that opens to an error: a shelve the recent shelves read hold, a review the newest reviews read hold
+  or, once typing pauses, one `cm find review "where id = N"` found (`reviewNumberToLookUp`,
+  `ServerMatches.reviewNumbered`; a changeset's number costs it too, as nothing read rules a review out; after `cr:`
+  the number alone shows until it answers none; no lookup for shelves, whose numbers nearly all exist and overlap the
+  changesets').
+  The changeset comes first, unless the number is past the newest changeset read
+  (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
+  its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
+  listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
+  everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
+  suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time
+  range it remembers (`showPersonChangesets`, the people filter's `onlyPerson`).
 - **Long menus scroll** within the room the window leaves them (`ui/menu/Menu.module.css`: Radix measures it), never
   running off-screen: a picker of many tools, a long "Open with ▸".
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
-  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS and the user's programs (save a revision, "Tools ▸": docs/features/tools.md), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
@@ -1041,8 +1125,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
-  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
-  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
+  (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
+  comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
@@ -1066,12 +1152,33 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
   the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
-  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
+  ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
+  once a key was pressed, and a clicked button at the next key, so focus the app moves on its own (Expand Diff giving
+  the code the keyboard: `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
+  `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab (Go to line… too). New code uses
+  `focusAs` and `settleClickFocus`. Two older marks remain for what they alone can see: a click inside the code, whose
+  focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
+  skip), and focus a closing menu hands back to its trigger (`trackPointerReturnFocus`, `data-pointer-return-focus`).
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
   path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
+    the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
+    every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. Each
+    keystroke looks at every row once, those holding the words together as typed first. A description hit ranks a
+    tier below the same match in a name (`DESCRIPTION_MATCH_PENALTY`, `tierBelow`) and shows its description in place
+    of the detail, cut to keep the longest word typed in view (`excerptAroundMatch`); a row whose description shows
+    none of the words (the name held them, or a link's hidden address did) is a name hit, with its usual detail. The
+    words are looked for in the description as written, Markdown and all, as the Branches view's filter does. The
+    owner isn't searched there: a person's name would list every branch they made. Hidden branches are searched too,
+    the user may be on one: `cm find branch` leaves them out of the every-branch list, so the palette reads them apart
+    (`onlyHidden`, one quick `find branch where hidden = 'true'`, cached as slow-changing beside it and refreshed by
+    hiding or unhiding through `isAffectedByBranchList`; `paletteBranches` joins the two). Their rows say "hidden", like "current" and
+    rank half a tier below a visible branch that matches as well (`HIDDEN_BRANCH_PENALTY`; `lowered` rounds both
+    penalties to hundredths).
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
     last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
@@ -1085,15 +1192,15 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `userFilterTexts`, marked with `HighlightQuery`, Everyone and You first, then the people picked when it opened and
     the rest by name, avatars, several at once, only the rows in view rendered; ↑↓ move, Enter toggles, Space toggles
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
-    (`lib/peopleFilter`: `othersLabel`, `describePick`). The people offered come from the rows: a list read whole
+    (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
     lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
-    is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
+    is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
     over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
@@ -1130,26 +1237,39 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
-  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
+  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; read as Markdown with chips for what it names, features/rich-comments.md; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
-  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch and label
+  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve
   comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
   on, `editsBranchComments`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its
-  changeset, `labelCommentArgs`); shelve comments stay read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
+  changeset, `labelCommentArgs`; a shelve's as the changeset below zero it is, `cm changeset editcomment cs:-<number>`,
+  `shelveCommentArgs`, see `features/shelves-and-switching.md`). Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
-  a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
+  a `DataTable` (`ui/table/`: only the rows in view render; a cell is as tall as its row, so a corner badge or a lifted avatar
+  isn't cut; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
   it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
   the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
   again. The sort keeps each column's ranks by column id
   (`ColumnSorter`), so a new `sortValue` function costs a number sort, never comparing the rows' text again.
+- **Hiding the details**: every view and page laid out with `ListWithDetails` hides its details and shows them again
+  the same way, remembered per view by its `detailsKey` (`detailsHidden`, `useDetailsPaneStore`): the
+  `DetailsToggleButton` rightmost in its header (`ViewHeader`'s `detailsToggle`; `detailsPanelsHide.test.ts` holds every
+  one to it), ⌘I or Ctrl+I, View ▸ Toggle Details and the palette's "Hide or show details" (`view.details`), which reach
+  the view or page in front, not one hidden under a page (`toggleDetailsInFront`); the Branch Explorer's Space too.
+  Hidden details aren't mounted, so they read nothing, and the list takes the whole view without being mounted again
+  (`SplitPane`'s `hidden`, `paneRole`). What only the details showed moves or comes back: an empty list's first-use
+  state shows under its column titles (`objectListLayout`), a page window keeps following the selection (the view, not
+  its details, calls `useShowInFollowingWindow`), and a link to a file's lines shows Browse repository's details again
+  (`showDetails`). Panes that show a diff beside its files (Changes, Incoming, merge, History, a diff) are not details:
+  they have no toggle. Their diff expands to the whole window instead, the merge page's aside (features/diff.md "Expanding the diff").
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
@@ -1186,40 +1306,39 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     (`ui/Button`), a dialog's primary button gives way before Cancel does, and a split button before the row it sits in.
   `scripts/sandboxes/long-branch-names.sh` builds a repository with such names to check a change against.
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
-  (after its checkbox), the files of every diff and details panel, the merge page, Incoming, Go to file,
-  the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
-  and, last on the row in one column, `ItemStatusMark`: the status letter (`StatusBadge`, the same tones and letters
-  everywhere; its tooltip says what it means there), or a dot for a folder with changes inside. A moved file that
-  changed shows its C before its M (`StatusMark.changedLabel`, in a diff's header too), and both filter chips find it
-  (`statusTones`). A moved item's name and its M show the move on hover, through the one tooltip
-  (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once ("in"), then one line each for
-  where it was ("from") and is ("to"), what the move removed and added tinted as a diff tints them
-  (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`), never wrapped
-  (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
-  and the shared folder, said twice, hid what changed. `ItemPathRow` is an item
-  named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
-  stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
-  letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
-  alert tone). A mark that leads somewhere is a button, its tooltip
-  saying where, that keeps the row's click and selection out of it; the row's menu offers the same to the keyboard: a
-  lock mark ("· click to see all locks") and the file's "Show in Locks" open the Locks view on that lock
-  (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored items dims: a private item keeps
-  its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey out, icon and name, with no
-  letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for their review mark. Files marks
-  what is notable only (a pending change, a checkout, a private item: `itemDecoration`); a list of changes letters
-  every row, as its filter chips do. In Changes every folder holds changes, so only its own change
-  marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source did);
-  `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
-  pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
-  its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
-  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
-  whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in once a
-  layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
-  rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
-  checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
-  takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked paths no longer pending don't count
-  (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms
-  for 500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
+  (after its checkbox), the files of every diff and details panel, the merge page, Incoming, Go to file, the Undo
+  dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name
+  (cut first, in the middle as every path is: `PathLabel`), extras and, last on the row in one column, `ItemStatusMark`:
+  the status letter (`StatusBadge`, the same tones and letters everywhere; its tooltip says what it means there), or a
+  dot for a folder with changes inside. A moved file that changed shows its C before its M (`StatusMark.changedLabel`,
+  in a diff's header too), and both filter chips find it (`statusTones`). A moved item's name and its M show the move on
+  hover, through the one tooltip (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once
+  ("in"), then one line each for where it was ("from") and is ("to"), the paths monospaced and what the move removed and
+  added tinted as a diff tints them (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first
+  (`trimFolderToFit`), never wrapped (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path
+  broke inside what the move added, and the shared folder, said twice, hid what changed. `ItemPathRow` is an item named
+  by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict stands (the merge
+  page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the letter, a quiet icon
+  whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the alert tone). A mark that
+  leads somewhere is a button, its tooltip saying where, that keeps the row's click and selection out of it; the row's
+  menu offers the same to the keyboard: a lock mark ("· click to see all locks") and the file's "Show in Locks" open the
+  Locks view on that lock (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored
+  items dims: a private item keeps its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey
+  out, icon and name, with no letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for
+  their review mark. Files marks what is notable only (a pending change, a checkout, a private item: `itemDecoration`);
+  a list of changes letters every row, as its filter chips do. In Changes every folder holds changes, so only its own
+  change marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source
+  did); `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read
+  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list
+  renders its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of
+  them (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
+  whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can go
+  in once a layout, counted where they are (`candidatesUnderRow`): a click on a box then asks each change once whether
+  it goes in, under the check-in rules (`consistentlyIncluded`, below), in one pass that adds everything up
+  (`checkinSelectionOf`). With every box checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and
+  a folder holding every change shown takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked
+  paths no longer pending don't count (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms for
+  500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
@@ -1230,33 +1349,74 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
     sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
-    order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
-    to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
-    one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
-    give.
-  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
-    one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), follows the
-    status chips, so it is in the same place in each list; a details panel too short for a filter bar has it in its
-    title. Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle).
-  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
-    holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
-    as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
-    holds while closed); `FileTreeCell` indents rows to their level. A click, Enter, ← and → open and close folders
-    (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
-    (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
-    `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
-    a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
-    every other diff alone. A list is scoped by its workspace too (`folderListScope`): `/main/feature` or cs:3 name
-    other things in another repository. A selection made from outside the list (a diff opened on a file, the merge
-    page or a resolve run moving to a conflict) opens the groups and folders holding it, so its row shows
-    (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a folder closed around it stays closed.
+    order. That path order is the default and the one every list's items come in; a sort is laid over it.
+  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`) or extension
+    (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
+    sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
+    (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
+    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
+    when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
+    million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
+    leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
+    a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
+    the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
+    nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
+    entries have none, so it would mean reading the disk or the server for every file.
+  - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
+    and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
+    alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
+    `fileListViewMenuModel`) takes the room of one button and follows the status chips, so it is in the same place in
+    each list; a details panel too short for a filter bar has it in its title. Its choices apply with the menu open, so
+    the list behind it shows each. Its button is an eye, since it holds the whole view and not only the layout, and
+    names that view in its tooltip ("View options: Tree, grouped by status"). Each list says what it offers
+    (`FileListViewOffer`): Changes adds grouping by changelist; the merge page and a details panel offer no grouping.
+    It ends with "Collapse all" or "Expand all" for a list with groups or folders (`fileTreeFoldingOf`, given by the
+    list around its toolbar: `FileTreeFoldingContext`). The palette has its choices too (`fileListViewCommands`).
+    Only a list's own modes come after it (`useChangeFilter`'s `actions`: the review mode toggle). Review mode stays
+    its own button rather than a choice in the menu: it is a way of working that is turned on and off within a task
+    (marks, the R key, the review bar), not how the files are laid out.
+  - **One tree**: `layoutPathTree` (`lib/pathTreeLayout`) lays out any items with a path: a folder's row, folders holding
+    only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder) as its
+    own row, with its status; a path listed twice (two conflicts on one path) is two rows, never a folder holding
+    itself. Its work grows with the items and the folders, never with how deep they sit: in path order a folder's items
+    are one run of the list, so a folder's or a group's row points into the list it was laid out from (`held`, an
+    `ItemRange` of `lib/itemRange`: the list, which never changes in place, and where the run starts and ends) instead
+    of copying it. What is drawn with every row walks its run without copying it (`forEachIn`, `countIn`; a count:
+    `folderItemCount`, `rangeLength`; a folder's check, `checkStateOver`; its review mark, `groupReviewStatus`); only
+    what acts on the files once copies them (`itemsIn`: a menu, a check, a review toggle). Each layout walks each path's
+    folders in place: the folders around an item are those it shares with the one before (a row stays open until its run
+    ends), a run's end is found by halves, and only the folders shown become strings. A folder copying its run, or
+    cutting each path into a string per folder above it, costs files × depth on every key typed in the filter: 170 ms a
+    key for 100,000 changes eight folders deep, 1.2 s for a million, where the run and the walk take 35 ms and 0.2 s.
+    Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it holds while closed);
+    `FileTreeCell` indents rows to their level. Every list with its own pane draws indent guides (`FileTreeList`,
+    Changes' `ChangesList`): a hairline down from the chevron of each group and folder holding a row. They are always
+    on: a guide costs nothing to read past, and an option for it would be one more knob. Drawing the one holding the
+    selected row stronger, as an editor's explorer does, was tried and dropped: it moved with every selection and read
+    as noise, where the selected row's own highlight already says where it is. A details panel's short list draws none.
+    A click, Enter, ← and → open and close folders (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the
+    review key act on everything in it (`itemsUnderRows`), and in review mode its mark marks every file in it, showing
+    how far its review got ("2/5", `partialReviewCount`). Closed folders are remembered for the session per list
+    (`useCollapsedFolders`: the Changes of a workspace, one diff, one details pane, one Incoming scope, one merge), so
+    closing one in a changeset's diff leaves every other diff alone. A list is scoped by its workspace too
+    (`folderListScope`): `/main/feature` or cs:3 name other things in another repository. A selection made from outside
+    the list (a diff opened on a file, the merge page or a resolve run moving to a conflict) opens the groups and
+    folders holding it, so its row shows (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a
+    folder closed around it stays closed.
   - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
     changes and changes to apply, the merge page's directory conflicts, file conflicts and changes to apply) lays them
     out with `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name,
     count, or what its items' progress says instead, `FileTreeList`'s `groupProgress`, the merge page's
     `mergeGroupProgress`; what it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
-    do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
-    them.
+    do. Grouping by status is a choice (`groupByStatus`, off by default): each status the files have becomes a group
+    (`statusGroupsOf`, in the chips' order, each file in its own status's, a moved file that changed in Moved), headed
+    by its badge, inside the list's own groups when it has some (`withStatusGroups`, `TreeGroup.subgroups`: Changes'
+    changelists, Incoming's), so every file sits as many groups in (`groupLevelsOf`). It was rejected once, when it was
+    the only order: a row jumps to another group when its status changes, and a folder's changes split apart. As a
+    choice made for it, that is what it asks for; a status group's checkbox checks or unchecks every change of that
+    status at once, which the chips can't. A list whose own groups already say what happens to each file (the merge
+    page) offers none (`GroupedFileListFacts.statusGroup` undefined).
   - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
     drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
@@ -1279,6 +1439,28 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
+  - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
+    together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
+    Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
+    `pairPendingMetas` for Changes, `pairDiffMetas` for a diff and a details panel's changed files, `pairIncomingMetas`,
+    `pairMergeMetas`); Changes adds the metas apart ("6 files + 2 meta", `changesCountLabel`) so its list adds up to the
+    changes pending its header counts (ignored, cloaked or hidden items the list's options show aren't pending). A meta
+    joins its asset only when both are listed and changed the same way (the same kinds and changelist in Changes, the
+    same status in a diff), with the name matched exactly as Unity writes it; otherwise it keeps its own row, so nothing
+    that changed alone is hidden. A conflict never joins: each is a decision with its own panel (Incoming keeps a
+    colliding meta apart; the merge page every conflict). Pairing is always on, not tied to a Unity project: a `.meta`
+    beside its asset means Unity.
+    What changes data takes the meta along (`withMetas`): Changes' checkbox, undo, add, checkout, changelists and filter
+    rules; a diff's revert and restore, whose "Restore to…" goes away when the meta comes back too, as an asset moved
+    without it would lose it. What views or opens an item takes the asset alone, and one asset's menu adds its meta's
+    own: "Open .meta diff" (`metaDiff`), "View .meta history" (`metaHistory`), and in Changes "Open .meta". Selecting
+    the row shows the asset's diff; the `.meta` toggle in the diff's toolbar, there whatever the asset's diff is (text,
+    image, model, binary, too large: `LoadedFileDiff`'s `compareControls`; `MetaDiffButton`, `diffedItem`), right
+    before the change arrows so it doesn't move as the asset's and the meta's controls differ, or "Open
+    .meta diff" shows the meta's, until another row is selected (`useDiffMetaShownFor`, Changes' `useMetaShownFor`).
+    "Since review" shares that slot, whatever the diff is: a committed file's (`EntryDiff`) compares the reviewed
+    revision with the current one, which an image or a model shows as for any two revisions; in Changes it needs a
+    snapshot, which `ReviewStore` keeps only of text files.
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
   badge cut into its bottom-right corner (`FolderXlinkIcon`: one color, the cutout and arrow transparent), in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
@@ -1302,7 +1484,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
-  output. Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
+  output. An issue tracker's requests show among the commands (`source: 'tracker'`: method, host and path, a failure
+  as "HTTP 404" or "No answer", `entryEnding`; docs/features/issue-trackers.md "The HTTP client"). Each command line
+  is colored by its parts (`commandLineTokens`, `--syntax-*` tokens): `cm` quiet, the command and its subcommand
+  (`lock list`, `find branch`) in one color, option names in another (each kept whole on its line), `--format`'s
+  `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line
+  is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
+  Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
@@ -1317,5 +1506,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
+    A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
+  - Several people in little room are one `ui/AvatarStack`: overlapping at rest, spreading on hover over what follows
+    (it keeps its resting width), each avatar with its own tooltip and an optional corner badge (a reviewer's status),
+    shown only spread; its `label` is for screen readers only, never a tooltip of the whole. Its geometry is
+    `avatarStackLayout`. What the spread covers steps aside while it does: the people filter's label fades out.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
     inside the layout they will fill ("One layout from the first frame").

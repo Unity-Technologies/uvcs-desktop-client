@@ -1,10 +1,11 @@
+import { commentText } from '../../lib/comments/commentText';
+import { CommentLine } from '../../components/comments/CommentLine';
 import { GitBranch } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { PathLabel } from '../../components/PathLabel';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { formatDateTime, formatRelativeDate } from '../../lib/formatDate';
-import { Highlight } from '../../ui/Highlight';
 import styles from './BranchSearchList.module.css';
 
 interface BranchSearchItemProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -31,8 +32,8 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
         </span>
         {firstLine && (
           // A clipped or multi-line comment shows in full on hover.
-          <span className={styles.comment} data-tip={comment} data-tip-overflow={multiline ? undefined : ''}>
-            <Highlight text={firstLine} />
+          <span className={styles.comment} data-tip={commentText(comment)} data-tip-overflow={multiline ? undefined : ''}>
+            <CommentLine comment={comment} interactive={false} />
           </span>
         )}
       </span>
