@@ -80,11 +80,14 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
                     <ActiveView key={view} />
                   </ViewShownContext.Provider>
                 </div>
-                {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it. */}
+                {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it; set aside, no
+                    shortcut inside it listens (`ViewShownContext`, read by `useShortcut`), its diffs' included. */}
                 {merge && (
                   <div key={`merge:${merge.id}`} className={styles.layer} hidden={!mergeShown}>
                     <PageShownContext.Provider value={mergeShown}>
-                      <PageFrame page={merge.page} />
+                      <ViewShownContext.Provider value={mergeShown}>
+                        <PageFrame page={merge.page} />
+                      </ViewShownContext.Provider>
                     </PageShownContext.Provider>
                   </div>
                 )}
