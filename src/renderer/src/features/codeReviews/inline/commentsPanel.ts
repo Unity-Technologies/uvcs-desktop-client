@@ -38,12 +38,25 @@ export function emptyCommentsText(filter: CommentsFilter, counts: Record<Comment
 
 /**
  * The comment after or before the one gone to (`direction` 1 or -1), in the order the panel lists them (`listed`,
- * across files): from none, or one no longer listed, the first or the last; none past either end.
+ * across files); none past either end. One that left the list (settled while Open lists) goes on from where it sat in
+ * every comment's order (`all`); from none, the first or the last.
  */
-export function steppedThread(listed: readonly LineThread[], currentId: number | undefined, direction: 1 | -1): LineThread | null {
+export function steppedThread(listed: readonly LineThread[], all: readonly LineThread[], currentId: number | undefined, direction: 1 | -1): LineThread | null {
   const index = listed.findIndex((thread) => thread.root.id === currentId);
-  if (index === -1) return (direction === 1 ? listed[0] : listed.at(-1)) ?? null;
-  return listed[index + direction] ?? null;
+  if (index !== -1) return listed[index + direction] ?? null;
+  const at = all.findIndex((thread) => thread.root.id === currentId);
+  if (at === -1) return (direction === 1 ? listed[0] : listed.at(-1)) ?? null;
+  const shown = new Set(listed.map((thread) => thread.root.id));
+  const onward = direction === 1 ? all.slice(at + 1) : all.slice(0, at).reverse();
+  return onward.find((thread) => shown.has(thread.root.id)) ?? null;
+}
+
+/**
+ * The filter the panel shows: the one picked, else the one it opened on (`initialCommentsFilter`, at the first read),
+ * kept as threads settle: Open stays Open, "Nothing left to answer", once the last is answered.
+ */
+export function shownCommentsFilter(picked: CommentsFilter | null, openedOn: CommentsFilter | null): CommentsFilter {
+  return picked ?? openedOn ?? 'all';
 }
 
 /** Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is. */

@@ -19,7 +19,7 @@ import { isLineThread, type LineThread } from './inline/fileThreads';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
-import { commentsPanelThreads, initialCommentsFilter, steppedThread, type CommentsFilter } from './inline/commentsPanel';
+import { commentsPanelThreads, initialCommentsFilter, shownCommentsFilter, steppedThread, type CommentsFilter } from './inline/commentsPanel';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 
@@ -50,10 +50,13 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
   const [request, setRequest] = useState<DiffFocusRequest | null>(null);
 
-  // The panel's filter, here so the keys go through what the panel lists while it's hidden too; it opens on what's
-  // still open, when anything is (`initialCommentsFilter`), until one is picked.
+  // The panel's filter, here so the keys go through what the panel lists while it's hidden too: it opens on what's
+  // still open, when anything is, decided at the first read and kept (`shownCommentsFilter`), until one is picked.
   const [pickedFilter, setFilter] = useState<CommentsFilter | null>(null);
-  const filter = pickedFilter ?? (threads ? initialCommentsFilter(threads) : 'all');
+  const [openedOn, setOpenedOn] = useState<CommentsFilter | null>(null);
+  if (threads && openedOn === null) setOpenedOn(initialCommentsFilter(threads));
+  const filter = shownCommentsFilter(pickedFilter, openedOn);
+  const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all') : []), [threads]);
   const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter) : []), [threads, filter]);
 
   const goToThread = (thread: LineThread): void => {
@@ -73,7 +76,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   );
   const seeInContext = useCommentContext(review, showInConversation);
   const step = (direction: 1 | -1): void => {
-    const next = steppedThread(listed, focus?.threadId, direction);
+    const next = steppedThread(listed, all, focus?.threadId, direction);
     if (next) goToThread(next);
   };
   useShortcut(hotkey('nextComment'), () => step(1), listed.length > 0, { whileTyping: false });
@@ -103,6 +106,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                 filter={filter}
                 onFilterChange={setFilter}
                 listed={listed}
+                all={all}
                 onStep={step}
                 onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}
               />

@@ -16,6 +16,8 @@ interface ReviewCommentsPanelProps {
   filter: CommentsFilter;
   onFilterChange: (filter: CommentsFilter) => void;
   listed: readonly LineThread[];
+  /** Every comment, in the order the panel lists them: where one that left the list sat. */
+  all: readonly LineThread[];
   /** Goes to the comment after or before the one gone to (`steppedThread`). */
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
@@ -35,7 +37,7 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, listed, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
   const counts = commentsPanelCounts(threads);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
@@ -59,8 +61,8 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, onStep, 
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current)}</span>
-          <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, current, -1) === null} onClick={() => onStep(-1)} />
-          <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, current, 1) === null} onClick={() => onStep(1)} />
+          <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
+          <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
         </div>
       )}
       {listed.length === 0 ? (
