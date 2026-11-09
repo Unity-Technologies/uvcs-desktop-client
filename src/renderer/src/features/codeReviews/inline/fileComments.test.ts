@@ -83,6 +83,13 @@ describe('annotationRowsOf', () => {
     expect(annotationRowsOf({ rows: lines }, outdated, 'additions').map((row) => row.metadata)).toEqual(['additions:9', 'additions:4', OUTDATED_ROW]);
   });
 
+  it('lists the outdated threads first while comments are hidden, the lines then in the order they were opened', () => {
+    const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
+    expect(annotationRowsOf({ rows: lines }, outdated, 'additions', false).map((row) => row.metadata)).toEqual([OUTDATED_ROW, 'additions:9']);
+  });
+
   it('puts the outdated threads above the code, on the side the file has', () => {
     const outdated = [{ thread: thread as never, revisionId: 20 }];
     expect(annotationRowsOf({ rows: [] }, outdated, 'deletions')).toEqual([{ side: 'deletions', lineNumber: 0, metadata: OUTDATED_ROW }]);

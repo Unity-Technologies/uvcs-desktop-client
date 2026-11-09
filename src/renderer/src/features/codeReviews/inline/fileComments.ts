@@ -71,13 +71,16 @@ export const OUTDATED_ROW = 'outdated';
  * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
  * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
  * go after: the lines with a thread on a version shown first, then those placed once an earlier version is read, then
- * the outdated ones; hidden, the lines in the order they were opened (`shownThreadRows`).
+ * the outdated ones. Hidden (`inCode` false), the outdated ones come first, there before any line is opened, and the
+ * lines follow in the order they were opened (`shownThreadRows`).
  */
-export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide): DiffLineAnnotation<string>[] {
+export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, inCode = true): DiffLineAnnotation<string>[] {
   const onShownVersion = (line: LineThreads): boolean => line.threads.some((entry) => entry.earlier === undefined);
   const ordered = [...shown.rows.filter(onShownVersion), ...shown.rows.filter((line) => !onShownVersion(line))];
   const rows = ordered.map((line): DiffLineAnnotation<string> => ({ side: line.side, lineNumber: line.line, metadata: line.key }));
-  return outdated.length > 0 ? [...rows, { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW }] : rows;
+  if (outdated.length === 0) return rows;
+  const outdatedRow: DiffLineAnnotation<string> = { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };
+  return inCode ? [...rows, outdatedRow] : [outdatedRow, ...rows];
 }
 
 /** Where a thread gone to is in the file's diff: at its line, or above the code when outdated; none when not here. */

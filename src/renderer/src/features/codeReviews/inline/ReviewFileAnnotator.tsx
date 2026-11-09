@@ -85,7 +85,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     }));
     const render = (row: DiffLineAnnotation<string>) =>
       renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onChangesSince: (revisionId) => setSince({ path: entry.path, revisionId }) });
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide), render, markers, scrollTo };
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode), render, markers, scrollTo };
   }, [comments, fileComments, inCode, openedKeys, topSide, scrollTo]);
 
   const controls = showsCommentControls(fileComments, sinceRevision !== null) && (
