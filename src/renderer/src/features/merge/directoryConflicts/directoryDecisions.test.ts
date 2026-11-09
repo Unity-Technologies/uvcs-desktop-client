@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryDecision } from '@shared/domain/merge';
-import { applyToNextLabel, canKeepBothAs, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
+import { applyToNextLabel, canKeepBothAs, changesDecisions, droppedDecisions, droppedDecisionsToast, isDecidedAs, nextOfSameKind, pickedChoice, resolutionsByConflict, withDecision, withDecisionAndNext } from './directoryDecisions';
 
 const conflictAt = (path: string, itemId: number): DirectoryConflict => ({
   type: 'evilTwin',
@@ -118,5 +118,18 @@ describe('applyToNextLabel', () => {
   it('counts the next conflicts of the same kind', () => {
     expect(applyToNextLabel(1)).toBe('Do the same for the next conflict of this kind');
     expect(applyToNextLabel(3)).toBe('Do the same for the next 3 conflicts of this kind');
+  });
+});
+
+describe('changesDecisions', () => {
+  it('changes nothing deciding a conflict again as it is decided, unless the next ones are decided with it', () => {
+    expect(changesDecisions([keepYours(assets)], assets, { choice: 'destination' }, [])).toBe(false);
+    expect(changesDecisions([keepYours(assets)], assets, { choice: 'destination' }, [shared])).toBe(true);
+    expect(changesDecisions([keepYours(assets)], assets, { choice: 'source' }, [])).toBe(true);
+  });
+
+  it('ignores the next ones for Keep both, which decides only its own conflict', () => {
+    const asMain = { choice: 'rename', newName: 'assets-main' } as const;
+    expect(changesDecisions([{ conflict: assets, resolution: asMain }], assets, asMain, [shared])).toBe(false);
   });
 });
