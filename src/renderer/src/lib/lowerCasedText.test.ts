@@ -16,6 +16,7 @@ describe('lowerCasedText', () => {
     expect(lower.length).toBe(text.length + 1);
     expect(text.slice(...originalRange(lower.indexOf('ankara'), lower.indexOf('ankara') + 6))).toBe('Ankara');
     expect(text.slice(...originalRange(0, 6))).toBe('İzmir');
+    expect(lowerCasedText(text).originalIndex(lower.indexOf('ankara'))).toBe(text.indexOf('Ankara'));
     // Half of what İ became is all of İ in the text.
     expect(originalRange(0, 1)).toEqual([0, 1]);
   });

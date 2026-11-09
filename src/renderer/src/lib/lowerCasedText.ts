@@ -5,6 +5,8 @@
  */
 export interface LowerCasedText {
   lower: string;
+  /** Where the character at `lowerIndex` of `lower` was lower-cased from starts in the text. */
+  originalIndex: (lowerIndex: number) => number;
   /** Where the slice `[lowerStart, lowerEnd)` of `lower` is in the text: the whole characters it was lower-cased from. */
   originalRange: (lowerStart: number, lowerEnd: number) => [start: number, end: number];
 }
@@ -15,7 +17,7 @@ export interface LowerCasedText {
  */
 export function lowerCasedText(text: string): LowerCasedText {
   const whole = text.toLowerCase();
-  if (whole.length === text.length) return { lower: whole, originalRange: (start, end) => [start, end] };
+  if (whole.length === text.length) return { lower: whole, originalIndex: (index) => index, originalRange: (start, end) => [start, end] };
   let lower = '';
   // For each code unit of `lower`, where the character it came from starts and ends in the text.
   const starts: number[] = [];
@@ -30,8 +32,6 @@ export function lowerCasedText(text: string): LowerCasedText {
     }
     at += character.length;
   }
-  return {
-    lower,
-    originalRange: (start, end) => [starts[start] ?? text.length, end > start ? (ends[end - 1] ?? text.length) : (starts[start] ?? text.length)],
-  };
+  const originalIndex = (index: number): number => starts[index] ?? text.length;
+  return { lower, originalIndex, originalRange: (start, end) => [originalIndex(start), end > start ? (ends[end - 1] ?? text.length) : originalIndex(start)] };
 }
