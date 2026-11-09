@@ -135,9 +135,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   scrolling to each (`ReviewSideRail`).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
   deleted starts a thread of its own. One on a line shows its file and line first, a click opening the Changes tab
-  there (`commentLocationPage`: the line selected when the comment was written in the whole review's diff; one
-  written in a single changeset's diff opens on its file only; one on an older revision of the file, or on a file the
-  review deletes, still opens at its line number in the newest version, until the Changes tab places comments). Its
+  at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and `focusChangeset` for one
+  written changeset by changeset; see "Comments in the code"). Its
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
   is **Open** until a changeset applies it (**Applied in** its changeset, the pill a link to it) or a reply discards it
@@ -154,3 +153,44 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
+
+## Comments in the code
+
+The Changes tab (`ReviewChangesTab`) shows what was said on the code where it was said, from the conversation already
+read (`useReviewConversation`): no other `cm` read, but the earlier versions of a file below.
+
+- **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
+  (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
+  diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which
+  `cm` comments on its last revision), under that line on the left. On an earlier version of the file (the reviewer
+  commented at cs:8, the author checked in cs:9 and cs:10), that version and the newer side are read
+  (`versionsToRead`, `useFileVersionTexts`: one immutable read each, only for a file shown that has such threads), and
+  the line is followed into the newest version (`newerLineOf`, a line diff ignoring line ends): unchanged, the thread
+  sits at its line there, tagged **Earlier version**; changed or gone, it is **outdated**, gathered above the code
+  ("2 outdated comments", folded), each with the lines it was written on (`snippetOf`) (`earlierTagOf`). Why not the
+  official client's banner (Revision with comments, Last in branch, Diff with head): most comments still sit on code
+  that didn't change, and those read best in place; the rest are what GitHub calls outdated, and its way of showing
+  them is known.
+- **Changes since this comment** (a thread's menu, for one on an earlier version) compares the version it was written
+  on with the newest: its threads sit on the left at their very lines, and the right shows what was done since. "Since
+  comment" in the file's header goes back (`ReviewFileAnnotator`).
+- **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
+  review's "Whole branch" or one changeset of "Changeset by changeset" (`reviewDiffViewOf`). Going to one opens that
+  mode and changeset (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
+  only the threads written in it; the whole branch's also shows those written changeset by changeset where their
+  line is still there, so an open change request never hides behind the mode it was written in. A review of a
+  changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
+- **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides
+  the threads from the code: each line holding some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), in
+  the Open color while anything there is open (`markerIsOpen`); a click opens that line's threads, an × folds them
+  back.
+- **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by its header button like any
+  details panel, `DetailsToggleButton`), lists every thread on the code as the conversation sums up a settled one
+  (`ThreadSummaryCard`), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when anything
+  is, `initialCommentsFilter`). A click goes to the thread: its file, its mode, scrolled to it and lit
+  (`ReviewComments.goToThread`, `ThreadFocus`).
+- In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
+  replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
+  conversation** (the Conversation tab scrolled to it and lit, `focusThread`) and Changes since this comment.
+- A line a thread is on is never hidden in a folded unchanged region: the diff unfolds it (`DiffAnnotations`,
+  docs/features/diff.md "Rows under lines").

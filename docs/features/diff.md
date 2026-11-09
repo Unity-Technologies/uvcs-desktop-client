@@ -827,6 +827,24 @@ extension (`representations`, rendered by default). The text keeps every text fe
 comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
 (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 
+## Rows under lines
+
+A place showing a committed diff can add to each file's diff without the diff knowing what it adds (a review's comments,
+docs/features/code-reviews.md "Comments in the code"):
+
+- `EntryAnnotatorContext`: a component wrapping each file's diff of a `DiffBrowser` (`EntryDiff`), which may compare
+  it with another older side (`AnnotatedEntry.original`) and add controls to its header. It may load on first use.
+- `DiffAnnotationsContext`, read by `TextDiff`: rows under lines (Pierre's `lineAnnotations`, `lineNumber: 0` above the
+  code), markers at the end of lines (`LineMarkers`, placed by `useLineBoxes`, which the lines' Copy link chip uses
+  too), and a line to scroll to. Every row's and marker's line is unfolded from a folded unchanged region
+  (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
+  replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
+- `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
+  diff switches to the mode and changeset asked for, `BranchDiff`).
+
+Rows are slotted into Pierre's shadow root, whose code inherits a monospace font and `pre` spacing: a row sets the
+app's own text back (`InlineThreads.module.css`).
+
 ## Review marks
 
 `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
