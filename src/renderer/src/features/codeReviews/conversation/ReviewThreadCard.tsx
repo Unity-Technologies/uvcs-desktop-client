@@ -154,7 +154,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
       {inCode && <span className={styles.kindLabel}>{threadKindName(root)}</span>}
       {inCode?.earlier &&
         (inCode.seeInContext ? (
-          <button type="button" className={styles.earlierTag} data-tip={inCode.earlier.tip} onClick={inCode.seeInContext}>
+          <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={inCode.earlier.tip} onClick={inCode.seeInContext}>
             {inCode.earlier.label}
           </button>
         ) : (
