@@ -75,7 +75,7 @@ export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated:
 export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, threadId: number, topSide: ThreadSide): (ChangedLine & { lineKey?: string }) | null {
   const line = lineOfThread(comments.lines, threadId);
   if (line) return { side: line.side, lineNumber: line.line, lineKey: line.key };
-  // Above the first line: scrolling there shows the row at the top of the code.
-  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 1 };
+  // Above the code (`lineNumber: 0`): the diff scrolls to its top.
+  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 0 };
   return null;
 }

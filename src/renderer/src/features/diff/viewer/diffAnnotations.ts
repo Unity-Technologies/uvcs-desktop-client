@@ -9,7 +9,8 @@ import { lineToReveal, type HunkSides } from './lineToReveal';
  * - `rows`: Pierre's line annotations, each a row under its line drawn by `render` (`lineNumber: 0` is above the file's
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
  * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it;
- * - `scrollTo`: a line to bring into view, once each time it's a new object (the thread a link or a list went to).
+ * - `scrollTo`: a line to bring into view, once each time it's a new object (the thread a link or a list went to);
+ *   `lineNumber: 0`, the rows above the code, at the diff's top.
  */
 export interface DiffAnnotations {
   rows: DiffLineAnnotation<string>[];

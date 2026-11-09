@@ -84,7 +84,7 @@ describe('threadPlace', () => {
 
   it("is a thread's line, or the top of the code for an outdated one, or nothing for another file's", () => {
     expect(threadPlace(comments, 1, 'additions')).toEqual({ side: 'additions', lineNumber: 2, lineKey: 'additions:2' });
-    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 1 });
+    expect(threadPlace(comments, 3, 'additions')).toEqual({ side: 'additions', lineNumber: 0 });
     expect(threadPlace(comments, 99, 'additions')).toBeNull();
   });
 });

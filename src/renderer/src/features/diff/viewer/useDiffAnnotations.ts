@@ -55,6 +55,8 @@ export function useDiffAnnotations({ containerRef, renderedDiff, hunks, shown, s
     const container = containerRef.current;
     if (!target || !container || !shown) return;
     revealRows();
+    // A row above the code (`lineNumber: 0`) shows at the top of the diff.
+    if (target.lineNumber < 1) return void container.scrollTo({ top: 0 });
     return latestScrollTo.current(container, target);
   }, [target, shown, containerRef, revealRows]);
 
