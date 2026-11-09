@@ -14,7 +14,9 @@ export function useShortcut(shortcut: string | undefined, handler: () => void, e
   latestHandler.current = handler;
   const latestWhileTyping = useRef(whileTyping);
   latestWhileTyping.current = whileTyping;
-  const listens = enabled && useContext(ViewShownContext);
+  // Read on every render, whatever `enabled` is: a hook skipped by `&&` changes the order React keeps hooks in.
+  const viewShown = useContext(ViewShownContext);
+  const listens = enabled && viewShown;
 
   useEffect(() => {
     if (!shortcut || !listens) return;
