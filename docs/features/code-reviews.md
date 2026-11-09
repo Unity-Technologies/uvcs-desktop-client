@@ -172,12 +172,16 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   that didn't change, and those read best in place; the rest are what GitHub calls outdated, and its way of showing
   them is known.
 - **See in context**, a button on each thread on an earlier version (outdated, or tagged Earlier version), opens a
-  dialog (`openCommentContextDialog`) with two views, each the file's diff with the thread at its line
-  (`commentContext`): **When commented**, the diff it was written on, as its author saw it (the older side of the diff
-  it was written in, `writtenDiffToRead`: the one on screen, or its changeset's, one `cm diff` already cached when that
-  changeset was seen); and **How it was applied** (Since then, for a thread not applied), the version commented on, the
-  thread on the left, against the file as the changeset that applied it left it (`itemid:N#cs:M`, one immutable read),
-  or the newest version shown. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
+  dialog (`openCommentContextDialog`, opened through `useCommentContext`) with two views, each the file's diff with the
+  thread at its line (`commentContext`): **When commented**, the diff it was written on, as its author saw it (the
+  older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's whole
+  diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
+  for a thread not applied), the version commented on, the thread on the left, against the file as the changeset that
+  applied it left it (`itemid:N#cs:M`, one immutable read), or the newest version. Every **Applied in N** pill (the
+  code, the Comments panel, the conversation) opens it on How it was applied; its **Open changeset N** opens the
+  changeset itself. The dialog shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
+  shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`), and closes if the
+  window goes to another place. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
   "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment" chip to go back,
   "Since review" off meanwhile), and the state it left was hard to read.
 - **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
@@ -199,7 +203,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   (`ReviewComments.goToThread`, `ThreadFocus`). In the code, the thread gone to keeps its ring until another one is:
   among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
   conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
-  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`).
+  to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); a version that can't be read (purged) keeps the diff
+  at its top.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `conversationAt`, a page of its own: Back returns to
