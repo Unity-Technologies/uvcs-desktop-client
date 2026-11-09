@@ -1,4 +1,4 @@
-import { ChevronRight, MessageSquareOff } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -51,8 +51,8 @@ export interface ThreadInCode {
    */
   seeInContext?: () => void;
   /**
-   * Folds it back into its line's marker, opened from it (or gone to) while comments are hidden: a small button at the
-   * header's end, so the card keeps its width; none while comments show in the code.
+   * Folds it back into its line's marker, opened from it (or gone to) while comments are hidden: an × at the header's
+   * end, so the card keeps its width; none while comments show in the code.
    */
   hide?: { label: string; onHide: () => void };
 }
@@ -141,39 +141,46 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
 
   return (
     <div className={styles.threadHeader}>
-      {onToggle && (
-        <button type="button" className={styles.foldToggle} aria-expanded={!folded} aria-label={folded ? 'Show the thread' : 'Fold the thread'} onClick={onToggle}>
-          <ChevronRight size={14} aria-hidden />
-        </button>
-      )}
-      {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
-      {anchor && location && (locationAsText ? (
-        // Cut short in a narrow panel, it names the whole path in its tooltip.
-        <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
-          <LocationParts location={location} />
-        </span>
-      ) : (
-        <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
-          <LocationParts location={location} />
-        </button>
-      ))}
-      {inCode && <span className={styles.kindLabel}>{threadKindName(root)}</span>}
-      {inCode?.earlier &&
-        (inCode.seeInContext ? (
-          <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={inCode.earlier.tip} onClick={inCode.seeInContext}>
-            {inCode.earlier.label}
+      <span className={styles.headerStart}>
+        {onToggle && (
+          <button type="button" className={styles.foldToggle} aria-expanded={!folded} aria-label={folded ? 'Show the thread' : 'Fold the thread'} onClick={onToggle}>
+            <ChevronRight size={14} aria-hidden />
           </button>
-        ) : (
-          <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
-            {inCode.earlier.label}
+        )}
+        {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
+        {anchor && location && (locationAsText ? (
+          // Cut short in a narrow panel, it names the whole path in its tooltip.
+          <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
+            <LocationParts location={location} />
           </span>
+        ) : (
+          <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+            <LocationParts location={location} />
+          </button>
         ))}
+        {inCode && (
+          // Cut short in a narrow card, it says its whole name in its tooltip.
+          <span className={styles.kindLabel} data-tip={threadKindName(root)} data-tip-overflow="">
+            {threadKindName(root)}
+          </span>
+        )}
+        {inCode?.earlier &&
+          (inCode.seeInContext ? (
+            <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={inCode.earlier.tip} onClick={inCode.seeInContext}>
+              {inCode.earlier.label}
+            </button>
+          ) : (
+            <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
+              {inCode.earlier.label}
+            </span>
+          ))}
+      </span>
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
           <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
         )}
-        {inCode?.hide && <IconButton size="small" icon={<MessageSquareOff size={13} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
+        {inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
   );

@@ -217,9 +217,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   open (`markerIsOpen`); a click opens that line's threads, and going to a thread opens its line. The outdated ones
   hide too: they have no line to mark, so one shows only when it is gone to (from the panel or the conversation), that
   one alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened ones share one row above the code,
-  `annotationRowsOf`'s `opened`). Each card opened so has a small Hide button at the end of its header (`ThreadInCode.hide`,
-  `hideLabel`) that folds it back: not an × beside the cards, which took their width, nor "close", as nothing is
-  closed: the comment goes back to its marker.
+  `annotationRowsOf`'s `opened`). Each card opened so has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide
+  this comment") that folds it back to its marker: in the header, not in a column beside the cards, which took their
+  width; an ×, not an icon of a comment struck through, which read less plainly. In a narrow card the header stays one
+  line: the kind's name is cut short first, then the tag, the state and the × keeping their place.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
   conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, whole in a
@@ -229,8 +230,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
   nothing offers "Clear filters". The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
   selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
-  `ThreadFocus`). Under its header, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the previous
-  and next; **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
+  `ThreadFocus`). In its header, by its name, where the one gone to is ("3 of 12", `commentPosition`) and arrows to
+  the previous and next (one row with Open/All and the ×, the filter row under it: two rows, not three); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
   and modes, stopping at either end; from a thread that just left the list, settled under Open, on from where it sat).
   The card gone to scrolls into the panel's view, and the focus a card held goes along to the current one, drawn
   without a ring: left behind, the key would draw it on a comment no longer current. The panel's filter is kept by the

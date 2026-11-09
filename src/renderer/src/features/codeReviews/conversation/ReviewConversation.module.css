@@ -607,6 +607,7 @@ button.pill:hover {
 
 /* Written on an earlier version of the file: said quietly, the tooltip telling which. */
 .earlierTag {
+  flex: none;
   padding: 0 6px;
   border-radius: var(--radius-full);
   background: var(--bg-active);
@@ -651,9 +652,35 @@ button.earlierTag:hover {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* In the code, a card is as wide as a side of the diff, which can be narrow: its band wraps rather than overflow. */
-.thread[data-in-code] .threadHeader {
-  flex-wrap: wrap;
-  row-gap: 2px;
-  padding-block: var(--space-1);
+/* The band's start (kind, file, tags): its own row of the band in the code, laid out as if it weren't there elsewhere. */
+.headerStart {
+  display: contents;
 }
+
+/*
+ * In the code, a card is as wide as a side of the diff, which can be narrow: its band stays one line, its start giving
+ * way: the kind's name cut short first, then the tag (each whole in its tooltip), the state and the × keeping their place.
+ */
+.thread[data-in-code] .headerStart {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.thread[data-in-code] .kindLabel {
+  flex-shrink: 100;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread[data-in-code] .earlierTag {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
