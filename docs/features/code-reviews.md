@@ -160,8 +160,10 @@ The Changes tab (`ReviewChangesTab`) shows what was said on the code where it wa
 read (`useReviewConversation`): no other `cm` read, but the earlier versions of a file below.
 
 - **Files with comments**: in the list of files, a comment icon by the status letter of each file holding threads in
-  the diff shown, how many in its tooltip (`ReviewFileMark`, `fileThreadCount`, through `EntryMarkContext`). It counts
-  from the threads alone, as the list reads no file. See in context's list marks the commented file the same way.
+  the diff shown, how many in its tooltip, and a **Commented** chip after the status chips showing only them
+  (`reviewFileFlag`, `fileThreadCount`, through `EntryFlagContext`). It counts every thread, whatever the Comments
+  panel's Open/All shows, so the icon and the chip agree, and from the threads alone, as the list reads no file. See in
+  context's list marks the commented file the same way, with no chip (`commentedFileFlag`).
 - **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
   (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
   diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which

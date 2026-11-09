@@ -1,4 +1,6 @@
+import { MessageSquare } from 'lucide-react';
 import type { DiffEntry } from '@shared/domain/diff';
+import type { EntryFlag } from '../../diff/entryFlag';
 import { appliedChangeset, entryOfThread } from './commentContext';
 import type { LineThread } from './fileThreads';
 
@@ -23,4 +25,9 @@ export function isCommentedEntry(entry: DiffEntry, thread: LineThread): boolean 
 /** What the dialog says under its title while another file of the changeset shows. */
 export function appliedFilesDescription(thread: LineThread): string {
   return `Changeset ${appliedChangeset(thread)}, which applied it`;
+}
+
+/** In that list, the commented file marked as the review's are (`reviewFileFlag`), with no chip: it's one file. */
+export function commentedFileFlag(thread: LineThread): EntryFlag {
+  return { icon: MessageSquare, markOf: () => (entry) => (isCommentedEntry(entry, thread) ? 'The comment is on this file' : null) };
 }

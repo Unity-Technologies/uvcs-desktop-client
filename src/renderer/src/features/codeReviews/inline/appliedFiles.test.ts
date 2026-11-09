@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { appliedFilesDescription, isCommentedEntry, listsAppliedFiles } from './appliedFiles';
+import { appliedFilesDescription, commentedFileFlag, isCommentedEntry, listsAppliedFiles } from './appliedFiles';
 import type { LineThread } from './fileThreads';
 
 function threadOn(fields: Partial<ReviewComment> = {}): LineThread {
@@ -60,5 +60,15 @@ describe('isCommentedEntry', () => {
 describe('appliedFilesDescription', () => {
   it('names the changeset whose files are listed', () => {
     expect(appliedFilesDescription(APPLIED)).toBe('Changeset 15, which applied it');
+  });
+});
+
+describe('commentedFileFlag', () => {
+  it('marks the commented file alone, and offers no chip', () => {
+    const flag = commentedFileFlag(APPLIED);
+    const markOf = flag.markOf({ kind: 'changeset', changesetId: 15 });
+    expect(markOf(COMMENTED)).toBe('The comment is on this file');
+    expect(markOf(TESTS)).toBeNull();
+    expect(flag.filterLabel).toBeUndefined();
   });
 });

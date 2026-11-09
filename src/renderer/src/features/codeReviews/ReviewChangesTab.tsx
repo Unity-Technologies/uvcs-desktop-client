@@ -11,13 +11,13 @@ import { lazyComponent } from '../../lib/lazyComponent';
 import { DiffFocusRequestContext, type DiffFocusRequest } from '../diff/diffFocusRequest';
 import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
-import { EntryMarkContext } from '../diff/entryMark';
+import { EntryFlagContext } from '../diff/entryFlag';
 import type { DiffTarget } from '@shared/domain/diff';
 import { threadsOf } from './conversation/reviewThreads';
 import { commentLocationPage } from './conversation/threadBadges';
 import { useReviewConversation } from './conversation/useReviewConversation';
 import { isLineThread, type LineThread } from './inline/fileThreads';
-import { ReviewFileMark } from './inline/ReviewFileMark';
+import { reviewFileFlag } from './inline/reviewFileFlag';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
@@ -77,6 +77,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     [review.id, threads],
   );
   const seeInContext = useCommentContext(review, showInConversation);
+  const fileFlag = useMemo(() => (threads ? reviewFileFlag(threads, review.target) : null), [threads, review.target]);
   const step = (direction: 1 | -1): void => {
     const next = steppedThread(listed, all, focus?.threadId, direction);
     if (next) goToThread(next);
@@ -91,7 +92,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   return (
     <ReviewCommentsContext.Provider value={comments}>
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
-        <EntryMarkContext.Provider value={ReviewFileMark}>
+        <EntryFlagContext.Provider value={fileFlag}>
           <DiffFocusRequestContext.Provider value={request}>
             <ListWithDetails
               detailsKey={COMMENTS_PANEL_KEY}
@@ -116,7 +117,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
               }
             />
           </DiffFocusRequestContext.Provider>
-        </EntryMarkContext.Provider>
+        </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
     </ReviewCommentsContext.Provider>
   );
