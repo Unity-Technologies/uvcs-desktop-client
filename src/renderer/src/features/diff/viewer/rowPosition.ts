@@ -49,6 +49,20 @@ export function scrollTopFor(linePosition: number, offset: number): number {
   return Math.max(0, linePosition - offset);
 }
 
+/** A line's height before the diff has laid one out. */
+export const FALLBACK_LINE_HEIGHT = 20;
+
+/**
+ * Where the line a row sits under starts, and its height, from the row's top and the box the diff lays the line out
+ * in (`pierreLineBox`). That box can hold the row too: side by side, Pierre's line is the whole row across both
+ * sides, the card under it included (a 20 px line read as 273 px put a card in a long file out of view). So the line
+ * ends where its row starts. Without a box above the row (not laid out yet, or out of date), one line above it.
+ */
+export function lineAboveRow(rowTop: number, lineBox: { top: number; height: number } | undefined): { lineTop: number; lineHeight: number } {
+  if (!lineBox || lineBox.top >= rowTop) return { lineTop: rowTop - FALLBACK_LINE_HEIGHT, lineHeight: FALLBACK_LINE_HEIGHT };
+  return { lineTop: lineBox.top, lineHeight: Math.min(lineBox.height, rowTop - lineBox.top) };
+}
+
 /** A row under a line and the part of it gone to, from the top of the scrolled content. */
 export interface RowFrame {
   /** Where the line the row is under starts: the row's own top for one above the code. */

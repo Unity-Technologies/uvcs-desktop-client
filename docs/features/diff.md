@@ -849,7 +849,8 @@ docs/features/code-reviews.md "Comments in the code"):
   `ROW_FOCUS_ATTRIBUTE` (one thread of several), read with context: the line a third of the way down, its row below; a
   row taller than the room below scrolls on just enough to fit, keeping three lines above the line; a line near the
   top stays at the top, one near the end stops at the end (`focusScrollTop` in `lib/scrollPlacement`, through
-  `framedScrollTop`; nothing moves when they already show, away from the edges). A row the diff already shows is glided to
+  `framedScrollTop`; nothing moves when they already show, away from the edges). The line ends where its row starts
+  (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the card under it included. A row the diff already shows is glided to
   (`scrollSmoothlyTo`); one not rendered yet is jumped to where Pierre lays its line out, then set right as rows render
   and grow. While the place goes to one of its rows (`opensAtRow`), the diff doesn't open at its
   first change (`openingStep`'s `opensOnLines`), which would scroll past the row once placed. Every row's and marker's

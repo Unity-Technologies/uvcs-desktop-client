@@ -3,15 +3,13 @@ import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangedLine } from './changeBlocks';
 import { ROW_FOCUS_ATTRIBUTE } from './diffAnnotations';
 import { pierreLineBox } from './pierreLinePosition';
-import { framedScrollTop, scrollTopFor, type RowFrame } from './rowPosition';
+import { framedScrollTop, lineAboveRow, scrollTopFor, type RowFrame } from './rowPosition';
 import { scrollSmoothlyTo } from './smoothScrollPlan';
 
 /** Frames to wait for the diff to render the row: it may only just have loaded, or render only the lines in view. */
 const MAX_FRAMES = 60;
 /** Frames the row must keep its place before the scroll ends: rows above it, and the row itself, grow as they render. */
 const SETTLED_FRAMES = 3;
-/** A line's height before the diff has laid one out. */
-const FALLBACK_LINE_HEIGHT = 20;
 
 /**
  * Scrolls the diff in `container` so the row under `line` (a place's `DiffAnnotations.rows`), and its part gone to
@@ -58,8 +56,9 @@ function rowFrameOf(container: HTMLElement, line: ChangedLine, virtualizer: Virt
   if (!row || !rowBox || rowBox.height === 0) return null;
   const focusBox = (row.querySelector(`[${ROW_FOCUS_ATTRIBUTE}]`) ?? row).getBoundingClientRect();
   const offset = container.scrollTop - container.getBoundingClientRect().top;
-  const lineHeight = line.lineNumber < 1 ? 0 : (lineBox(container, line, virtualizer)?.height ?? FALLBACK_LINE_HEIGHT);
-  return { lineTop: rowBox.top + offset - lineHeight, focusTop: focusBox.top + offset, focusBottom: focusBox.bottom + offset, lineHeight };
+  const rowTop = rowBox.top + offset;
+  const { lineTop, lineHeight } = line.lineNumber < 1 ? { lineTop: rowTop, lineHeight: 0 } : lineAboveRow(rowTop, lineBox(container, line, virtualizer));
+  return { lineTop, focusTop: focusBox.top + offset, focusBottom: focusBox.bottom + offset, lineHeight };
 }
 
 /** Scrolls to where Pierre lays the line out, so its row renders; the rows above the code are at the diff's top. */
