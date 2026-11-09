@@ -24,7 +24,7 @@ import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
-import { mountedTabs, openingTab } from './reviewTab';
+import { conversationFocus, mountedTabs, openingTab } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
 
@@ -76,7 +76,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
       {mounted.includes('conversation') && (
         <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={tab !== 'conversation'}>
-          <ReviewConversationTab review={review} focusThread={page.focusThread} />
+          <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
         </div>
       )}
       {mounted.includes('changes') && (
