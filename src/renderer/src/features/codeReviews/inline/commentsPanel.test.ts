@@ -3,6 +3,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread } from './fileThreads';
 import {
+  commentsPanelStartsHidden,
   commentPosition,
   commentsPanelCounts,
   commentsPanelThreads,
@@ -190,5 +191,12 @@ describe('shownCommentsFilter', () => {
     expect(shownCommentsFilter(null, 'open')).toBe('open');
     expect(shownCommentsFilter('all', 'open')).toBe('all');
     expect(shownCommentsFilter(null, null)).toBe('all');
+  });
+});
+
+describe('commentsPanelStartsHidden', () => {
+  it('starts hidden on a review with no comments on its code, which it would only say', () => {
+    expect(commentsPanelStartsHidden({ codeThreads: 0 })).toBe(true);
+    expect(commentsPanelStartsHidden({ codeThreads: 1 })).toBe(false);
   });
 });
