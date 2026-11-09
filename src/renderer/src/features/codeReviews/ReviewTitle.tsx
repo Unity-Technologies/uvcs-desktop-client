@@ -62,9 +62,13 @@ export function ReviewTitle({ review }: { review: CodeReview }) {
 
   return (
     <h1 className={`${styles.title} selectable`}>
-      <CommentLine comment={review.title} /> <span className={styles.id}>#{review.id}</span>
-      <span className={styles.titleEdit}>
-        <IconButton size="small" icon={<Pencil size={13} />} label="Edit title" onClick={() => setDraft(review.title)} />
+      <CommentLine comment={review.title} />{' '}
+      {/* The number and the pencil wrap together: the pencil alone, unseen until hovered, left an empty line. */}
+      <span className={styles.titleEnd}>
+        <span className={styles.id}>#{review.id}</span>
+        <span className={styles.titleEdit}>
+          <IconButton size="small" icon={<Pencil size={13} />} label="Edit title" onClick={() => setDraft(review.title)} />
+        </span>
       </span>
     </h1>
   );
