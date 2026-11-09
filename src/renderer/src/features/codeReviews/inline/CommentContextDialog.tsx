@@ -13,8 +13,7 @@ import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
-import { threadsOf } from '../conversation/reviewThreads';
-import { useReviewConversation } from '../conversation/useReviewConversation';
+import { useReviewThreads } from '../conversation/useReviewThreads';
 import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
@@ -70,8 +69,7 @@ function ThreadInContext(props: DialogProps) {
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
   const [commentShown, setCommentShown] = useState(true);
-  const { data: conversation } = useReviewConversation(review.id);
-  const threads = useMemo(() => conversation && threadsOf(conversation.comments), [conversation]);
+  const threads = useReviewThreads(review.id);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
   // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.
