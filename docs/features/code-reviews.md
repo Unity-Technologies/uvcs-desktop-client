@@ -230,8 +230,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   files' filter), and a chip per kind, its icon and how many Open or All lists (`threadKindCounts`); a search finding
   nothing offers "Clear filters". The keys step through what it lists. A click anywhere on a card goes to the thread (not the end of a drag
   selecting its text): its file, its mode, scrolled to it, whole, and lit (`ReviewComments.goToThread`,
-  `ThreadFocus`). In its header, by its name, where the one gone to is ("3 of 12", `commentPosition`) and arrows to
-  the previous and next (one row with Open/All and the ×, the filter row under it: two rows, not three); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
+  `ThreadFocus`). Under the filter row, where the one gone to is ("3 of 12", `commentPosition`) and arrows to the
+  previous and next (its own row: in one with the name and Open/All, the header read worse); **N** and **⇧N** do the same with the panel hidden (`steppedThread`: in the panel's order, across files
   and modes, stopping at either end; from a thread that just left the list, settled under Open, on from where it sat).
   The card gone to scrolls into the panel's view, and the focus a card held goes along to the current one, drawn
   without a ring: left behind, the key would draw it on a comment no longer current. The panel's filter is kept by the
