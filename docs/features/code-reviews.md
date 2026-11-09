@@ -244,7 +244,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   line: the kind's name is cut short first, then the tag, the state and the × keeping their place.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
-  hidden, decided as the changes first show, so a first comment doesn't open it, and the user's own choice is kept for
+  hidden, and so it does where the diff beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
+  width less the files' and the panel's, `diffWidthBesidePanel`), decided as the changes first show, so a first comment doesn't open it, and the user's own choice is kept for
   the next review: `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code as the
   conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, cut short in
   turn, the folder first, then the line, the file's name last, and whole in a tooltip), by file and line (`commentsPanelThreads`), **Open** or **All** (opening on Open when
