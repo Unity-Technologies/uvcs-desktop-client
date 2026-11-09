@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState, type RefObject } from 'react';
-import { isModalDialogOpen } from '../../../lib/modalDialog';
+import { keysReach } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { openingStep } from './changeNavigation';
@@ -183,7 +183,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     if (!active || (steps.length === 0 && !hasFiles)) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       // Keys the editor took (⌥↓ ⌥↑ move lines while typing) are its own.
-      if (event.defaultPrevented || isModalDialogOpen() || !takesKeysFrom(frame.current, event.target)) return;
+      if (event.defaultPrevented || !keysReach(frame.current) || !takesKeysFrom(frame.current, event.target)) return;
       const pressed = (id: ShortcutId): boolean => hotkeys(id).some((key) => matchesShortcut(event, key));
       const direction = pressed(shortcuts.next) ? 1 : pressed(shortcuts.previous) ? -1 : 0;
       if (direction === 0) return;
