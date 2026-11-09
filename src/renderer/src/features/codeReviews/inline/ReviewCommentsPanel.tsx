@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
@@ -42,6 +43,8 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
+  const listRef = useRef<HTMLUListElement>(null);
+  useFollowedCard(listRef, comments.focus?.seq);
   return (
     <>
       <header className={styles.header}>
@@ -68,7 +71,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
       {listed.length === 0 ? (
         <EmptyState title={empty.title} description={empty.description} />
       ) : (
-        <ul className={styles.list}>
+        <ul ref={listRef} className={styles.list}>
           {listed.map((thread) => (
             <li key={thread.root.id}>
               <ThreadSummaryCard
@@ -84,6 +87,22 @@ function PanelBody({ comments, threads, filter, onFilterChange, listed, all, onS
       )}
     </>
   );
+}
+
+/**
+ * Each time a comment is gone to (a card, the arrows, N), its card is scrolled into the list's view. A card clicked
+ * before keeps the focus otherwise, and the key pressed then draws its focus ring on a comment no longer the current one.
+ */
+function useFollowedCard(listRef: RefObject<HTMLUListElement | null>, focusSeq: number | undefined): void {
+  // Before the paint: the ring the key drew on the card left never shows.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || focusSeq === undefined) return;
+    const card = list.querySelector('[data-current]');
+    card?.scrollIntoView({ block: 'nearest' });
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && list.contains(focused) && !card?.contains(focused)) focused.blur();
+  }, [listRef, focusSeq]);
 }
 
 function Loading() {
