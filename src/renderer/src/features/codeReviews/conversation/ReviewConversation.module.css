@@ -260,16 +260,12 @@ button.location:hover .locationFile {
   text-decoration: underline;
 }
 
-/* "· line 1962", after the file's link and not part of it. */
+/* "line 1962", after the file's link and not part of it: the band's gap sets it apart. */
 .writtenLine {
   flex: none;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   white-space: nowrap;
-}
-
-.writtenLine::before {
-  content: '· ';
 }
 
 .headerEnd {

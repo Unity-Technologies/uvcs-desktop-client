@@ -137,7 +137,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   deleted starts a thread of its own. One on a line shows its file first, the whole path a link to it in the
   Changes tab, opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
   `focusChangeset` for one written changeset by changeset; see "Comments in the code"), then, apart and as text, the
-  line it was written on ("· line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that
+  line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that
   line, which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on
   every card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read,
   replied to, folded and selected. Its
