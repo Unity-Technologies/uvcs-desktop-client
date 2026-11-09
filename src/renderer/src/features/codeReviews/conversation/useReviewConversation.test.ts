@@ -1,8 +1,8 @@
 import '../../../testing/fakeWindow';
-import { QueryObserver, type QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '../../../app/queryClient';
-import { showQuery } from '../../../testing/queryProbes';
+import { showOnce, showQuery } from '../../../testing/queryProbes';
 import { SHOWN_BY_THE_PAGE } from './useReviewConversation';
 
 let client: QueryClient;
@@ -24,10 +24,7 @@ describe('the conversation a dialog over the review shows (SHOWN_BY_THE_PAGE)', 
     const page = await showQuery(client, CONVERSATION);
     vi.advanceTimersByTime(60_000);
 
-    const dialog = new QueryObserver(client, { queryKey: CONVERSATION, queryFn: async () => 'read again', ...SHOWN_BY_THE_PAGE });
-    const stop = dialog.subscribe(() => {});
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    stop();
+    await showOnce(client, { queryKey: CONVERSATION, queryFn: async () => 'read again', ...SHOWN_BY_THE_PAGE });
 
     expect(page.reads()).toBe(1);
     expect(client.getQueryData(CONVERSATION)).toBe(1);

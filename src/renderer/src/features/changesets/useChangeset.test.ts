@@ -1,12 +1,12 @@
 import '../../testing/fakeWindow';
-import { QueryObserver, type QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import { workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
 import { fakeApi } from '../../testing/fakeWindow';
-import { readQuery, showQuery } from '../../testing/queryProbes';
+import { readQuery, showOnce, showQuery } from '../../testing/queryProbes';
 import { changesetOnScreen, changesetQuery } from './useChangeset';
 
 const PLACE = workspacePlace('/ws');
@@ -30,10 +30,7 @@ afterEach(() => {
 
 /** A view showing the changeset, as `useChangeset` reads it; stops showing it once its first read, if any, ends. */
 async function showChangeset(): Promise<void> {
-  const view = new QueryObserver(client, changesetQuery(client, PLACE, 42, WHERE));
-  const stop = view.subscribe(() => {});
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  stop();
+  await showOnce(client, changesetQuery(client, PLACE, 42, WHERE));
 }
 
 describe('a changeset read by its number (useChangeset)', () => {
@@ -78,10 +75,7 @@ describe('a changeset read by its number (useChangeset)', () => {
   it("reads one under an xlink, another repository's, which the place's lists never hold", async () => {
     await showQuery(client, BRANCH_LIST, { answer: () => [changeset('listed')] });
 
-    const view = new QueryObserver(client, changesetQuery(client, PLACE, 42, { repository: 'assets@local', placeRepository: 'game@local' }));
-    const stop = view.subscribe(() => {});
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    stop();
+    await showOnce(client, changesetQuery(client, PLACE, 42, { repository: 'assets@local', placeRepository: 'game@local' }));
 
     expect(fakeApi.argsOf('changesets.get')).toHaveLength(1);
   });
