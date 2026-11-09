@@ -1,6 +1,6 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
-import { MessageSquare, MessageSquareOff } from 'lucide-react';
-import { useContext, useMemo, useState } from 'react';
+import { History, MessageSquare, MessageSquareOff } from 'lucide-react';
+import { useContext, useMemo, useState, type ReactNode } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { pluralize } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
@@ -17,7 +17,8 @@ import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThrea
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { markerTip } from './markerTip';
-import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads } from './threadRows';
+import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
+import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads, type MarkedThreads } from './threadRows';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
 const NO_REVISIONS: number[] = [];
@@ -25,7 +26,7 @@ const NO_REVISIONS: number[] = [];
 /**
  * A file of a review's diff with the review's comments in its code (`EntryAnnotatorContext`, given by its Changes tab):
  * each thread under its line, the outdated ones above the code; while comments are hidden, a marker on each line, and
- * the outdated ones only when one of them is gone to. One on an earlier version is seen in context in a dialog
+ * one on the code's first row for the outdated ones (`outdatedMarkerOf`), which show when it's clicked or one is gone to. One on an earlier version is seen in context in a dialog
  * (`ReviewComments.seeInContext`), which leaves this diff as it is.
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
@@ -84,6 +85,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       emphasized: markerIsOpen(line),
       onOpen: () => openLine(line.key),
     }));
+    const outdated = inCode ? null : outdatedMarkerOf(fileComments.outdated, openedKeys);
+    if (outdated) markers.unshift(outdatedLineMarker(outdated, topSide, () => setOpened({ path: entry.path, keys: outdated.opens })));
     const { seeInContext } = comments;
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
@@ -108,14 +111,32 @@ function readStateOf(text: VersionText): string {
   return text === undefined ? 'reading' : text === null ? 'failed' : 'read';
 }
 
-/** A marker's content: who wrote on the line, and how many comments there are, as a pull request's do. */
-function MarkerContent({ line }: { line: LineThreads }) {
+/** The outdated threads' marker, on the first row of the code (`lineNumber: 0`): what they're about on hover. */
+function outdatedLineMarker(outdated: OutdatedMarker, side: LineThreads['side'], onOpen: () => void): LineMarker {
+  return {
+    key: OUTDATED_ROW,
+    side,
+    lineNumber: 0,
+    label: outdated.label,
+    tip: outdated.tip,
+    content: <MarkerContent line={outdated} count={outdated.count} icon={<History size={12} aria-hidden />} />,
+    emphasized: outdated.emphasized,
+    onOpen,
+  };
+}
+
+/**
+ * A marker's content: who wrote there, and how many comments there are, as a pull request's do (a line's counts the
+ * replies too; the outdated ones' counts them as their strip does, after a mark saying they're outdated).
+ */
+function MarkerContent({ line, count = markerCommentCount(line), icon }: { line: MarkedThreads; count?: number; icon?: ReactNode }) {
   const { people, more } = markerPeople(line);
   return (
     <>
+      {icon}
       {/* Still: the marker's own tooltip previews its threads (`markerTip`). */}
       <AvatarStack still avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
-      {markerCommentCount(line)}
+      {count}
     </>
   );
 }
