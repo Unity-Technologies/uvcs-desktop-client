@@ -1119,7 +1119,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
-  shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
+  shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`); the one
+  exception is a diff shown in a dialog, whose step keys reach it, not the diff behind (`keysReach`, its dialog marked
+  `STEP_FRAME`: docs/features/code-reviews.md "See in context").
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match

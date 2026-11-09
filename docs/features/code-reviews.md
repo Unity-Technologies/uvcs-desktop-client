@@ -177,10 +177,12 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   older side of the diff it was written in, `contextEntryOf`: the one on screen, its changeset's, or the review's whole
   diff when opened away from the code, each the query the Changes tab reads); and **How it was applied** (Since then,
   for a thread not applied), the version commented on, the thread on the left, against the file as the changeset that
-  applied it left it (`itemid:N#cs:M`, one immutable read), or the newest version. Every **Applied in N** pill (the
+  applied it left it (`itemid:N#cs:M`, one immutable read), or the review's newest version (its whole diff's, never a
+  changeset's). Every **Applied in N** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; its **Open changeset N** opens the
   changeset itself. The dialog shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
-  shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`), and closes if the
+  shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
+  "Keyboard"), and closes if the
   window goes to another place. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
   "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment" chip to go back,
   "Since review" off meanwhile), and the state it left was hard to read.
@@ -203,8 +205,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   is, `initialCommentsFilter`). A click goes to the thread: its file, its mode, scrolled to it and lit
   (`ReviewComments.goToThread`, `ThreadFocus`). Under its header, where the one gone to is ("3 of 12",
   `commentPosition`) and arrows to the previous and next; **N** and **⇧N** do the same with the panel hidden
-  (`steppedThread`: in the panel's order, across files and modes, stopping at either end). The panel's filter is kept
-  by the Changes tab for that (`ReviewChangesTab`). In the code, the thread gone to keeps its ring until another one is:
+  (`steppedThread`: in the panel's order, across files and modes, stopping at either end; from a thread that just
+  left the list, settled under Open, on from where it sat). The panel's filter is kept by the Changes tab for that
+  (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the thread gone to keeps its ring until another one is:
   among the outdated ones, stacked alike, the eye finds it again. A diff opened to go to a thread (from the
   conversation, `commentLocationPage`) opens at it, not at its first change, even before an earlier version is read
   to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); a version that can't be read (purged) keeps the diff
