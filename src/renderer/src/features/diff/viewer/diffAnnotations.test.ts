@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linesToReveal, rowsKey } from './diffAnnotations';
+import { linesToReveal, MARKER_INSET, markerLeft, rowsKey } from './diffAnnotations';
 
 // Lines 1–10 unchanged, then line 11 replaced, then unchanged lines 12–40 (a hunk of 3 context lines each side).
 const HUNKS = [{ deletionStart: 8, deletionCount: 7, additionStart: 8, additionCount: 7 }];
@@ -29,5 +29,11 @@ describe('rowsKey', () => {
     const rows = [{ side: 'additions', lineNumber: 4, metadata: 'additions:4' }] as const;
     expect(rowsKey([...rows])).toBe(rowsKey([...rows]));
     expect(rowsKey(rows)).not.toBe(rowsKey([{ side: 'additions', lineNumber: 5, metadata: 'additions:5' }]));
+  });
+});
+
+describe('markerLeft', () => {
+  it('ends a marker just inside its pane, over the end of the line, leaving the code its whole width', () => {
+    expect(markerLeft(640)).toBe(640 - MARKER_INSET);
   });
 });

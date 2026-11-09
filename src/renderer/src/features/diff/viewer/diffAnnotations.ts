@@ -63,3 +63,11 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
 }
+
+/** The room between a line's marker and the right edge of its pane. */
+export const MARKER_INSET = 8;
+
+/** Where a line's marker ends (its right edge, `LineMarkers`): over the end of the line, just inside its pane. */
+export function markerLeft(paneRight: number): number {
+  return paneRight - MARKER_INSET;
+}

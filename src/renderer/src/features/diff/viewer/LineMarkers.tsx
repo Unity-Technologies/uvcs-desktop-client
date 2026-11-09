@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { LineMarker } from './diffAnnotations';
+import { markerLeft, type LineMarker } from './diffAnnotations';
 import type { CodeLayout } from './lineActions';
 import { useLineBoxes } from './useLineBoxes';
 import styles from './LineMarkers.module.css';
@@ -10,9 +10,6 @@ interface LineMarkersProps {
   markers: readonly LineMarker[];
   layout: CodeLayout;
 }
-
-/** The room between a marker and the right edge of its pane. */
-const MARKER_INSET = 8;
 
 /**
  * A mark at the end of each marked line, in its pane, centered on the line: what's folded away there (a review's
@@ -30,7 +27,7 @@ export function LineMarkers({ containerRef, markers, layout }: LineMarkersProps)
             key={marker.key}
             type="button"
             className={styles.marker}
-            style={{ top: (box.top + box.bottom) / 2, left: box.paneRight - MARKER_INSET }}
+            style={{ top: (box.top + box.bottom) / 2, left: markerLeft(box.paneRight) }}
             data-emphasized={marker.emphasized || undefined}
             data-tip={marker.tip ?? marker.label}
             aria-label={marker.label}
