@@ -111,7 +111,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   conversation, the review and its file on its changes (`pageLinkTarget`). Each tab shown so far stays mounted, the
   other hidden (`mountedTabs`), so going back to one finds it as it was left: its scroll, the threads unfolded, a reply
   being written, the file selected, the Comments panel's filter. The Changes tab isn't mounted, so not read, until it's
-  first shown, and while hidden its keys are off (N, ⇧N: `ReviewChangesTab`'s `shown`).
+  first shown, and while hidden its keys are off (N, ⇧N, ⌥⇧↓ ⌥⇧↑: `ViewShownContext`, which `useShortcut` reads).
 
 ## The conversation
 

@@ -36,8 +36,6 @@ interface ReviewChangesTabProps {
   review: CodeReview;
   page: PageOf<'codeReview'>;
   diffTarget: DiffTarget;
-  /** Whether it's the tab shown: it stays mounted behind the conversation, its keys off meanwhile. */
-  shown: boolean;
 }
 
 /**
@@ -45,7 +43,7 @@ interface ReviewChangesTabProps {
  * the Comments panel beside it lists them all, going to one in the mode it was written in. Opened on a thread
  * (`focusThread`, from the conversation), it shows that thread.
  */
-export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChangesTabProps) {
+export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabProps) {
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review.id);
@@ -93,9 +91,9 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
     const next = steppedThread(listed, all, focus?.threadId, direction);
     if (next) goToThread(next);
   };
-  // Only while the tab shows: it stays mounted behind the conversation.
-  useShortcut(hotkey('nextComment'), () => step(1), shown && listed.length > 0, { whileTyping: false });
-  useShortcut(hotkey('previousComment'), () => step(-1), shown && listed.length > 0, { whileTyping: false });
+  // Only while the tab shows, as every key in it (`ViewShownContext`): it stays mounted behind the conversation.
+  useShortcut(hotkey('nextComment'), () => step(1), listed.length > 0, { whileTyping: false });
+  useShortcut(hotkey('previousComment'), () => step(-1), listed.length > 0, { whileTyping: false });
   const comments = useMemo<ReviewComments>(
     () => ({ review, threads, user, focus, goToThread, showInConversation: showThreadInConversation, seeInContext }),
     [review, threads, user, focus, showThreadInConversation, seeInContext],
