@@ -134,12 +134,13 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open, a click
   scrolling to each (`ReviewSideRail`).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client
-  deleted starts a thread of its own. One on a line shows its file and line first, as text: where it was written,
-  which an outdated comment's line no longer is. **Show in code**, at the band's end while the pointer or the focus
-  is on the card (on every card of a long conversation it was noise), opens the Changes tab at the thread, in the mode
-  it was written in (`commentLocationPage`: `focusThread`, and `focusChangeset` for one written changeset by changeset;
-  see "Comments in the code"). Not the file name as a link: it read as going to that line, and only the name looked
-  clickable; not the whole card, which is read, replied to, folded and selected in the conversation. Its
+  deleted starts a thread of its own. One on a line shows its file first, the whole path a link to it in the
+  Changes tab, opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
+  `focusChangeset` for one written changeset by changeset; see "Comments in the code"), then, apart and as text, the
+  line it was written on ("· line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that
+  line, which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on
+  every card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read,
+  replied to, folded and selected. Its
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
   is **Open** until a changeset applies it (**Applied in** its changeset, the pill a link to it) or a reply discards it

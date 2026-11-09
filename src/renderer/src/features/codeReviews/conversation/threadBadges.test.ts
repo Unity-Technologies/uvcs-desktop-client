@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges, threadKindName } from './threadBadges';
+import { commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -92,5 +92,11 @@ describe('repliesText', () => {
     expect(repliesText({ replies: [] })).toBeUndefined();
     expect(repliesText({ replies: [comment(2)] })).toBe('1 reply');
     expect(repliesText({ replies: [comment(2), comment(3)] })).toBe('2 replies');
+  });
+});
+
+describe('writtenLineText', () => {
+  it('names the line a comment was written on', () => {
+    expect(writtenLineText({ line: 1962 })).toBe('line 1962');
   });
 });

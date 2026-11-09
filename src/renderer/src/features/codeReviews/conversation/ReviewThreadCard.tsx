@@ -1,4 +1,4 @@
-import { ChevronRight, SquareCode, X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -17,7 +17,7 @@ import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
-import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
+import { commentLocationPage, locationText, writtenLineText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -135,7 +135,7 @@ interface ThreadHeaderProps {
   thread: ReviewThread;
   folded: boolean;
   inCode?: ThreadInCode;
-  /** The card around it goes to the thread (the Comments panel's): no "Show in code" of its own. */
+  /** The card around it goes to the thread (the Comments panel's): its location only names where, line included. */
   cardOpens?: boolean;
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
@@ -159,13 +159,23 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
           </button>
         )}
         {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
-        {location && (
-          // Where it was written, not a link: an outdated comment's line is no longer there. Cut short, it names the
-          // whole path in its tooltip.
+        {anchor && location && (cardOpens ? (
+          // The card goes to the thread: its location only names where. Cut short, it names the whole path in its tooltip.
           <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
             <LocationParts location={location} />
           </span>
-        )}
+        ) : (
+          // The file, a link to it in Changes, opened at the comment.
+          <>
+            <button type="button" className={styles.location} data-tip="Show in Changes" data-tip-sub={`${location.folder}${location.file}`} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+              <LocationParts location={location} withLine={false} />
+            </button>
+            {/* Apart from the link, as text: the line it was written on, which an outdated comment's no longer is. */}
+            <span className={styles.writtenLine} data-tip="The line it was written on">
+              {writtenLineText(anchor)}
+            </span>
+          </>
+        ))}
         {inCode && (
           // Cut short in a narrow card, it says its whole name in its tooltip.
           <span className={styles.kindLabel} data-tip={threadKindName(root)} data-tip-overflow="">
@@ -184,14 +194,6 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
           ))}
       </span>
       <span className={styles.headerEnd}>
-        {anchor && !cardOpens && (
-          // Shown while the pointer or the focus is on the card: on every card of a long conversation, it was noise.
-          <span className={styles.showInCode}>
-            <Button size="small" variant="ghost" icon={<SquareCode size={13} />} data-tip="The comment in the Changes tab, in the diff it was written on" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
-              Show in code
-            </Button>
-          </span>
-        )}
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
           <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
@@ -228,7 +230,7 @@ function StatePill({ state, appliedIn, onSeeApplied }: { state: NonNullable<Thre
   );
 }
 
-function LocationParts({ location }: { location: NonNullable<ReturnType<typeof locationText>> }) {
+function LocationParts({ location, withLine = true }: { location: NonNullable<ReturnType<typeof locationText>>; withLine?: boolean }) {
   return (
     <>
       <span className={styles.locationFolder}>
@@ -237,7 +239,7 @@ function LocationParts({ location }: { location: NonNullable<ReturnType<typeof l
       <span className={styles.locationFile}>
         <Highlight text={location.file} />
       </span>
-      <span className={styles.locationLine}>{location.line}</span>
+      {withLine && <span className={styles.locationLine}>{location.line}</span>}
     </>
   );
 }

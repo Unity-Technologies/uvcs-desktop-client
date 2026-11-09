@@ -49,6 +49,11 @@ export function locationText(anchor: Extract<ReviewCommentAnchor, { kind: 'line'
   return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1), line: `:${anchor.line}` };
 }
 
+/** The line a comment was written on, as the conversation says it apart from its file's link: "line 42". */
+export function writtenLineText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'line'>): string {
+  return `line ${anchor.line}`;
+}
+
 /**
  * Whether a thread starts folded to one line: once it's settled (a change request applied or discarded, a question
  * answered), so what's still open stands out and a long review reads short. Open threads and plain comments show whole.

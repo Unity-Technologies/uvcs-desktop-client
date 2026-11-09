@@ -246,16 +246,30 @@
   color: var(--text-tertiary);
 }
 
-/* "Show in code", only on the card the pointer or the focus is on; its place kept, so the band doesn't move. */
-.showInCode {
-  display: inline-flex;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
+/* The file, a link to it in Changes at the comment: the hand and the underline over the whole path say so. */
+button.location {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
-.thread:hover .showInCode,
-.thread:focus-within .showInCode {
-  opacity: 1;
+button.location:hover .locationFolder,
+button.location:hover .locationFile {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+/* "· line 1962", after the file's link and not part of it. */
+.writtenLine {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.writtenLine::before {
+  content: '· ';
 }
 
 .headerEnd {
