@@ -144,6 +144,8 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
  */
 function usePanelStart(codeThreads: number | null, tab: RefObject<HTMLElement | null>): void {
   const decided = useRef(false);
+  // This tab's own start: another review's tab, replacing it, starts before this one is cleaned up.
+  const [owner] = useState(() => ({}));
   const startHidden = useDetailsPaneStore((state) => state.startHidden);
   const forgetStarted = useDetailsPaneStore((state) => state.forgetStarted);
   // Before the frame paints: the panel never shows for a moment first.
@@ -152,13 +154,13 @@ function usePanelStart(codeThreads: number | null, tab: RefObject<HTMLElement | 
     decided.current = true;
     const panelWidth = detailsWidthOf(useDetailsPaneStore.getState(), COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
     const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: FILES_WIDTH, panelWidth });
-    if (commentsPanelStartsHidden({ codeThreads, diffWidth })) startHidden(COMMENTS_PANEL_KEY);
-  }, [codeThreads, startHidden, tab]);
+    if (commentsPanelStartsHidden({ codeThreads, diffWidth })) startHidden(COMMENTS_PANEL_KEY, owner);
+  }, [codeThreads, startHidden, tab, owner]);
   useEffect(
     () => () => {
       decided.current = false;
-      forgetStarted(COMMENTS_PANEL_KEY);
+      forgetStarted(COMMENTS_PANEL_KEY, owner);
     },
-    [forgetStarted],
+    [forgetStarted, owner],
   );
 }

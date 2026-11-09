@@ -2,6 +2,9 @@ import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, toggledDetails, useDetailsPaneStore, withDetailsShown, withDetailsToggled } from './detailsPaneStore';
 
+/** The view that started without its details. */
+const TAB = {};
+
 describe('detailsWidthOf', () => {
   it("keeps each view's own width", () => {
     const state = { widths: { branches: 380, files: 900 } };
@@ -26,14 +29,14 @@ describe('detailsHidden', () => {
   });
 
   it('hides details a view starts without, whatever the user left them as elsewhere (a review with no comments on its code)', () => {
-    expect(detailsHidden({ hidden: {}, startedHidden: { reviewComments: true } }, 'reviewComments')).toBe(true);
+    expect(detailsHidden({ hidden: {}, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toBe(true);
   });
 });
 
 describe('toggledDetails', () => {
   it("shows details a view started without, keeping the user's own choice: the next review starts as they left it", () => {
-    expect(toggledDetails({ hidden: {}, startedHidden: { reviewComments: true } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
-    expect(toggledDetails({ hidden: { reviewComments: true }, startedHidden: { reviewComments: true } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
+    expect(toggledDetails({ hidden: {}, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
+    expect(toggledDetails({ hidden: { reviewComments: true }, startedHidden: { reviewComments: TAB } }, 'reviewComments')).toEqual({ hidden: {}, startedHidden: {} });
   });
 
   it('hides or shows them as the user chose otherwise', () => {
