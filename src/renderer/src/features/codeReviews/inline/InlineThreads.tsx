@@ -1,7 +1,6 @@
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { pluralize } from '../../../lib/text';
-import { IconButton } from '../../../ui/IconButton';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
 import type { ContextView } from './commentContext';
@@ -9,7 +8,7 @@ import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
-import type { LineThreads } from './threadRows';
+import { hideLabel, type LineThreads } from './threadRows';
 import styles from './InlineThreads.module.css';
 
 interface InlineThreadsProps {
@@ -26,11 +25,10 @@ type SeeInContext = (thread: LineThread, startsOn?: ContextView) => void;
 
 /** The threads at a line, under it: each as the conversation shows it, without the file it's at. */
 export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }: InlineThreadsProps) {
+  const hide = onClose && { label: hideLabel(line.threads.length), onHide: onClose };
   return (
     <div className={styles.row}>
-      <div className={styles.threads}>
-        {line.threads.map(({ thread, earlier }) => {
-          return (
+      {line.threads.map(({ thread, earlier }) => (
         <ThreadInRow
           key={thread.root.id}
           comments={comments}
@@ -41,31 +39,31 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
             earlier: earlier && earlierTagOf(thread, false),
             showInConversation: () => comments.showInConversation(thread.root.id),
             seeInContext: earlier && onSeeInContext && (() => onSeeInContext(thread)),
+            hide,
           }}
         />
-          );
-        })}
-      </div>
-      {onClose && <CloseButton label="Hide these comments" onClose={onClose} />}
+      ))}
     </div>
   );
 }
 
 interface OutdatedThreadsProps {
   comments: ReviewComments;
+  /** The file's outdated threads; while comments are hidden, only those gone to (`openedOutdated`). */
   outdated: readonly EarlierThread[];
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => string | undefined;
-  /** Hides them again, while comments are hidden in the code: they showed because one of them was gone to. */
-  onClose?: () => void;
+  /** Folds one gone to back, while comments are hidden: they show then without the strip that folds them all. */
+  onHide?: (thread: LineThread) => void;
   onSeeInContext?: SeeInContext;
 }
 
 /**
  * Above the code, the threads written on an earlier version of the file whose lines changed since: folded to one line
  * that says how many, each with the lines it was written on when opened (`snippetOf`), as they're in the code no more.
+ * While comments are hidden, only the ones gone to show, each folding back on its own, as a line opened from its marker.
  */
-export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, onSeeInContext }: OutdatedThreadsProps) {
+export function OutdatedThreads({ comments, outdated, focus, textOf, onHide, onSeeInContext }: OutdatedThreadsProps) {
   // The time an outdated thread was gone to, which opens them.
   const goneTo = outdatedOpensFor(focus, outdated) ? (focus?.seq ?? null) : null;
   const [open, setOpen] = useState(goneTo !== null);
@@ -74,6 +72,23 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
     setOpenedFor(goneTo);
     setOpen(true);
   }
+  const cards = outdated.map(({ thread, revisionId }) => (
+    <ThreadInRow
+      key={thread.root.id}
+      comments={comments}
+      thread={thread}
+      focus={focus}
+      onSeeInContext={onSeeInContext}
+      inCode={{
+        earlier: earlierTagOf(thread, true),
+        snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
+        showInConversation: () => comments.showInConversation(thread.root.id),
+        seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
+        hide: onHide && { label: hideLabel(1), onHide: () => onHide(thread) },
+      }}
+    />
+  ));
+  if (onHide) return <div className={styles.row}>{cards}</div>;
   return (
     <div className={styles.row}>
       <div className={styles.outdated}>
@@ -87,33 +102,9 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
           <ChevronRight size={14} aria-hidden className={styles.chevron} />
           {pluralize(outdated.length, 'outdated comment')}
         </button>
-        {open &&
-          outdated.map(({ thread, revisionId }) => (
-            <ThreadInRow
-              key={thread.root.id}
-              comments={comments}
-              thread={thread}
-              focus={focus}
-              onSeeInContext={onSeeInContext}
-              inCode={{
-                earlier: earlierTagOf(thread, true),
-                snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
-                showInConversation: () => comments.showInConversation(thread.root.id),
-                seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
-              }}
-            />
-          ))}
+        {open && cards}
       </div>
-      {onClose && <CloseButton label="Hide the outdated comments" onClose={onClose} />}
     </div>
-  );
-}
-
-function CloseButton({ label, onClose }: { label: string; onClose: () => void }) {
-  return (
-    <span className={styles.close}>
-      <IconButton size="small" icon={<X size={13} />} label={label} onClick={onClose} />
-    </span>
   );
 }
 

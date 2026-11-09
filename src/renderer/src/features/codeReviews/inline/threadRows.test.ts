@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread, PlacedThread, ThreadSide } from './fileThreads';
-import { lineOfThread, lineThreadsOf, markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows } from './threadRows';
+import { hideLabel, lineOfThread, lineThreadsOf, markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows } from './threadRows';
 
 function thread(id: number, fields: Partial<ReviewComment> = {}, replies: ReviewComment[] = []): LineThread {
   const root: ReviewComment = {
@@ -94,5 +94,12 @@ describe('markerIsOpen', () => {
     const answered = thread(1, { kind: 'question' }, [{ ...thread(2).root, parentId: 1, kind: 'comment', anchor: { kind: 'review' } }]);
     expect(markerIsOpen({ threads: [at('additions', 1, answered)] })).toBe(false);
     expect(markerIsOpen({ threads: [at('additions', 1, answered), at('additions', 1, thread(3))] })).toBe(true);
+  });
+});
+
+describe('hideLabel', () => {
+  it('hides the comment, or every comment on the line, as the line folds back whole', () => {
+    expect(hideLabel(1)).toBe('Hide this comment');
+    expect(hideLabel(3)).toBe('Hide the comments on this line');
   });
 });

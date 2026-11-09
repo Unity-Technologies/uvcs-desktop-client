@@ -11,7 +11,7 @@ import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '.
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileAnnotation';
-import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
@@ -84,7 +84,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     }));
     const { seeInContext } = comments;
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
-    const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, onClose: inCode ? undefined : closeLine, onSeeInContext });
+    const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, scrollTo, opensAtRow };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
 
@@ -118,7 +118,9 @@ interface RowContext {
   fileComments: FileComments;
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => string | undefined;
-  /** Folds a line opened from its marker (or the outdated threads gone to) back; none while comments show in the code. */
+  /** What was opened while comments are hidden (lines, outdated threads); none while they show in the code. */
+  opened?: readonly string[];
+  /** Folds a line opened from its marker (or an outdated thread gone to) back; none while comments show in the code. */
   onClose?: (key: string) => void;
   /** Shows a thread in context, on a view; none until the place's repository is known. */
   onSeeInContext?: (thread: LineThread, startsOn?: ContextView) => void;
@@ -130,10 +132,10 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
     return (
       <OutdatedThreads
         comments={comments}
-        outdated={fileComments.outdated}
+        outdated={context.opened ? openedOutdated(fileComments.outdated, context.opened) : fileComments.outdated}
         focus={focus}
         textOf={context.textOf}
-        onClose={context.onClose && (() => context.onClose!(OUTDATED_ROW))}
+        onHide={context.onClose && ((thread) => context.onClose!(outdatedKey(thread.root.id)))}
         onSeeInContext={context.onSeeInContext}
       />
     );

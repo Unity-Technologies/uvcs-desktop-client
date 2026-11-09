@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MessageSquareOff } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -10,6 +10,7 @@ import { CommentLine } from '../../../components/comments/CommentLine';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
+import { IconButton } from '../../../ui/IconButton';
 import { CommentComposer } from './CommentComposer';
 import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
@@ -49,6 +50,11 @@ export interface ThreadInCode {
    * (`openCommentContextDialog`, on "When commented"), as "Applied in" opens it on how it was applied.
    */
   seeInContext?: () => void;
+  /**
+   * Folds it back into its line's marker, opened from it (or gone to) while comments are hidden: a small button at the
+   * header's end, so the card keeps its width; none while comments show in the code.
+   */
+  hide?: { label: string; onHide: () => void };
 }
 
 type Answering = 'reply' | 'discard' | null;
@@ -167,6 +173,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
         {badges.state && (
           <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
         )}
+        {inCode?.hide && <IconButton size="small" icon={<MessageSquareOff size={13} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
   );

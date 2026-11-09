@@ -19,24 +19,6 @@
   user-select: text;
 }
 
-.threads {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* A line opened from its marker (or the outdated threads, gone to): its own row, the button that folds it back beside its threads. */
-.row:has(> .close) {
-  flex-direction: row;
-  align-items: flex-start;
-}
-
-.close {
-  flex: none;
-}
-
 .outdated {
   display: flex;
   flex: 1;

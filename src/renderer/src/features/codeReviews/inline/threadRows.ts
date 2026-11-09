@@ -99,3 +99,8 @@ export function markerIsOpen(line: Pick<LineThreads, 'threads'>): boolean {
 function sideOrder(side: ThreadSide): number {
   return side === 'deletions' ? 0 : 1;
 }
+
+/** What an opened line's hide button says, while comments are hidden: it folds back every thread on the line. */
+export function hideLabel(threadCount: number): string {
+  return threadCount > 1 ? 'Hide the comments on this line' : 'Hide this comment';
+}

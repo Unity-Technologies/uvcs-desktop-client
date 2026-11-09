@@ -60,6 +60,21 @@ export function topSideOf(file: Pick<ShownFile, 'modifiedRevision'>): ThreadSide
 /** The row above the code holding a file's outdated threads (`lineNumber: 0`). */
 export const OUTDATED_ROW = 'outdated';
 
+const OUTDATED_KEY_PREFIX = `${OUTDATED_ROW}:`;
+
+/**
+ * What opens an outdated thread while comments are hidden, as a line's key opens its line: each its own, so going to
+ * one shows that one, not every outdated thread of the file.
+ */
+export function outdatedKey(threadId: number): string {
+  return `${OUTDATED_KEY_PREFIX}${threadId}`;
+}
+
+/** The outdated threads opened while comments are hidden, in the order they were opened. */
+export function openedOutdated(outdated: readonly EarlierThread[], opened: readonly string[]): EarlierThread[] {
+  return opened.map((key) => outdated.find((entry) => outdatedKey(entry.thread.root.id) === key)).filter((entry): entry is EarlierThread => entry !== undefined);
+}
+
 /**
  * Pierre's rows for a file's threads: each line's shown, named by its key (`LineThreads.key`), and the outdated ones
  * above the code, on the side the file has (a deleted file has only its older one).
@@ -67,14 +82,15 @@ export const OUTDATED_ROW = 'outdated';
  * Where a row shows is its line's; its place in the list is only how Pierre keys its slot (by index, in
  * `renderDiffChildren`), and a row whose index changes is mounted anew, an open reply closed. So rows that come later
  * go after: the lines with a thread on a version shown first, then those placed once an earlier version is read, then
- * the outdated ones. While comments are hidden (`opened` given), only what was opened shows, the outdated ones as a
- * line (`OUTDATED_ROW`), in the order they were opened (`shownThreadRows`).
+ * the outdated ones. While comments are hidden (`opened` given), only what was opened shows, in the order it was
+ * opened (`shownThreadRows`): the outdated threads opened (`outdatedKey`) in one row, where the first was.
  */
 export function annotationRowsOf(shown: Pick<ShownThreadRows, 'rows'>, outdated: readonly EarlierThread[], topSide: ThreadSide, opened?: readonly string[]): DiffLineAnnotation<string>[] {
   const outdatedRow: DiffLineAnnotation<string> | null = outdated.length === 0 ? null : { side: topSide, lineNumber: 0, metadata: OUTDATED_ROW };
   if (opened) {
+    const firstOutdated = opened.find((key) => openedOutdated(outdated, [key]).length > 0);
     const rowOpened = (key: string): DiffLineAnnotation<string> | null => {
-      if (key === OUTDATED_ROW) return outdatedRow;
+      if (key.startsWith(OUTDATED_KEY_PREFIX)) return key === firstOutdated ? outdatedRow : null;
       const line = shown.rows.find((candidate) => candidate.key === key);
       return line ? rowOfLine(line) : null;
     };
@@ -96,7 +112,7 @@ export function threadPlace(comments: Pick<FileComments, 'lines' | 'outdated'>, 
   const line = lineOfThread(comments.lines, threadId);
   if (line) return { side: line.side, lineNumber: line.line, lineKey: line.key };
   // Above the code (`lineNumber: 0`): the diff scrolls to its top. Opened, while comments are hidden, as a line is.
-  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 0, lineKey: OUTDATED_ROW };
+  if (comments.outdated.some((entry) => entry.thread.root.id === threadId)) return { side: topSide, lineNumber: 0, lineKey: outdatedKey(threadId) };
   return null;
 }
 

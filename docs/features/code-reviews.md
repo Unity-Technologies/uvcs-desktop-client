@@ -214,8 +214,12 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
   some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
   there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
-  open (`markerIsOpen`); a click opens that line's threads, an × folds them back. The outdated ones hide too: they have no line to mark, so they show only when one of them is gone to (from
-  the panel or the conversation), with an × that hides them again (`annotationRowsOf`'s `opened`, `OUTDATED_ROW`).
+  open (`markerIsOpen`); a click opens that line's threads, and going to a thread opens its line. The outdated ones
+  hide too: they have no line to mark, so one shows only when it is gone to (from the panel or the conversation), that
+  one alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened ones share one row above the code,
+  `annotationRowsOf`'s `opened`). Each card opened so has a small Hide button at the end of its header (`ThreadInCode.hide`,
+  `hideLabel`) that folds it back: not an × beside the cards, which took their width, nor "close", as nothing is
+  closed: the comment goes back to its marker.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like
   any details panel, `DetailsToggleButton`, and closed by its own ×), lists every thread on the code as the
   conversation sums up a settled one (`ThreadSummaryCard`; its file and line only name where it goes, whole in a
