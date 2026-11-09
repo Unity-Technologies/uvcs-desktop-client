@@ -8,6 +8,7 @@ import { AvatarStack } from '../../../ui/AvatarStack';
 import { IconButton } from '../../../ui/IconButton';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileAnnotation';
@@ -16,6 +17,7 @@ import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
+import { commentMapTicks, commentMapTip } from './commentMapTicks';
 import { markerTip } from './markerTip';
 import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
 import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads, type MarkedThreads } from './threadRows';
@@ -27,6 +29,7 @@ const NO_REVISIONS: number[] = [];
  * A file of a review's diff with the review's comments in its code (`EntryAnnotatorContext`, given by its Changes tab):
  * each thread under its line, the outdated ones above the code; while comments are hidden, a marker on each line, and
  * one on the code's first row for the outdated ones (`outdatedMarkerOf`), shown when it's clicked or one is gone to.
+ * Shown or hidden, each spot is ticked in the diff's change map (`commentMapTicks`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
  * it is.
  */
@@ -71,6 +74,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
 
   // Gone to from elsewhere (the conversation), the file opens at the thread, even while its place is still worked out.
   const opensAtRow = focus !== null && holdsThread(fileComments, focus.threadId);
+  // Its own list only when the file's comments change: a new one places the change map's ticks again.
+  const mapTicks = useMemo(() => (fileComments ? commentMapTicks(fileComments, topSide) : NO_TICKS), [fileComments, topSide]);
   const annotations = useMemo<DiffAnnotations | null>(() => {
     if (!comments || !view || !fileComments || (!hasComments(fileComments) && !opensAtRow)) return null;
     const shown = shownThreadRows(fileComments.lines, inCode, openedKeys);
@@ -91,8 +96,9 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     const { seeInContext } = comments;
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, scrollTo, opensAtRow };
-  }, [comments, entry, fileComments, inCode, openedKeys, topSide, scrollTo, opensAtRow]);
+    const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow };
+  }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow]);
 
   // An action that says what it does, not a pressed state: "Comments in the code" didn't say which way it goes.
   const controls = hasComments(fileComments) && (
@@ -106,6 +112,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
 }
 
 const NO_KEYS: readonly string[] = [];
+const NO_TICKS: readonly MapTick[] = [];
 
 /** What changes the file's comments as its versions arrive: each version read, still read, or failed. */
 function readStateOf(text: VersionText): string {

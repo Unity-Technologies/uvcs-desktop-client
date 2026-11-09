@@ -53,6 +53,29 @@
     linear-gradient(to right, var(--map-deleted) 50%, var(--map-added) 50%);
 }
 
+/* A place's spot (a review's comments, `mapTickMarks`): a thin line across the whole track, the opposite shape of a
+   change's block, so it never reads as one and needs no lane of its own. Its element is taller than the line drawn
+   (`--tick-reach` above and below), so the pointer finds it for its tooltip; a press on it is a press on the track.
+   How tall the line is drawn (`--tick-height`) comes from `TICK_HEIGHT`, through the element's style.
+   The quiet text color where everything is settled, and where something waits for an answer the Open color the line
+   markers have (`LineMarkers.module.css`): both read at 4.5:1 on the track as text does (`tokens.test.ts`). */
+.tick {
+  --tick-reach: 3px;
+  --tick-color: var(--text-tertiary);
+
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: calc(var(--tick-height) + 2 * var(--tick-reach));
+  margin-top: calc(-1 * var(--tick-reach));
+  background: linear-gradient(var(--tick-color), var(--tick-color)) center / 100% var(--tick-height) no-repeat;
+  cursor: pointer;
+}
+
+.tick[data-emphasized] {
+  --tick-color: var(--status-changed);
+}
+
 /* The app's thumb (global.css: 4 px, 3 px in from each side), translucent so the marks show through it. */
 .thumb {
   position: absolute;

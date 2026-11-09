@@ -3,6 +3,7 @@ import { createContext, type ReactNode } from 'react';
 import type { ChangedLine } from './changeBlocks';
 import { lineToReveal, type HunkSides } from './lineToReveal';
 import type { LineBox } from './useLineBoxes';
+import type { MapTick } from './mapTicks';
 
 /**
  * What a place adds under a text diff's lines, given by it around the viewer (a review's comments in its Changes tab:
@@ -11,6 +12,8 @@ import type { LineBox } from './useLineBoxes';
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
  * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it; `lineNumber: 0`, on the
  *   code's first row, for the rows above the code (none while that row isn't rendered);
+ * - `mapTicks`: spots marked in the change map (`mapTickMarks`), rows shown or folded away alike, `lineNumber: 0` at the
+ *   track's top; `mapTickTip` says what the spots fused into one tick hold, on hover; none where it marks none;
  * - `scrollTo`: the line whose row to bring into view, line and row whole and high in the view, once each time it's a
  *   new object (the thread a link or a list went to); `lineNumber: 0`, the rows above the code;
  * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
@@ -20,6 +23,8 @@ export interface DiffAnnotations {
   rows: DiffLineAnnotation<string>[];
   render: (row: DiffLineAnnotation<string>) => ReactNode;
   markers: LineMarker[];
+  mapTicks?: readonly MapTick[];
+  mapTickTip?: (keys: readonly string[]) => string;
   scrollTo: ChangedLine | null;
   opensAtRow: boolean;
 }

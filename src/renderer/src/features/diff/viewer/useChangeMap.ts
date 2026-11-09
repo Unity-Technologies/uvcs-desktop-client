@@ -2,6 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
 import { changeMarks, placesAgain, showsChangeMap, type ChangeMark, type MarksPlacedFrom } from './changeMarks';
+import { lowestTickTop, mapTickMarks, type MapTick, type MapTickMark } from './mapTicks';
 import { pierreChangeColors, sameChangeColors, type ChangeColors } from './pierreChangeColors';
 import { pierreShadowRoot } from './pierreDom';
 import { pierreLineBox } from './pierreLinePosition';
@@ -9,6 +10,8 @@ import { pierreLineBox } from './pierreLinePosition';
 /** The change map as measured: its marks, and the sizes of the view it stands beside. */
 export interface ChangeMapView {
   marks: ChangeMark[];
+  /** The place's ticks (a review's comments), drawn over the marks. */
+  ticks: MapTickMark[];
   /** The diff's scrolling content (`scrollHeight`), which the track stands for whole. */
   contentHeight: number;
   /** The view's height (`clientHeight`). */
@@ -26,24 +29,27 @@ interface ChangeMapOptions {
   /** The diff's changes (`useChangeNavigation`'s, so they follow what's typed); none where it doesn't step through them. */
   regions: readonly ChangeRegion[];
   lineCounts: Record<DiffSide, number>;
-  /** Both sides are real versions; a version shown alone has no map. */
+  /** Both sides are real versions; a version shown alone marks no change, only its ticks. */
   bothSides: boolean;
+  /** The spots the place marks (`DiffAnnotations.mapTicks`); none where it adds nothing. */
+  ticks: readonly MapTick[];
   /** How the lines are laid out (Split or Unified, collapsed, wrapped): a new one places the marks again. */
   layoutKey: string;
 }
 
 /**
  * The change map of the diff in `containerRef` (`changeMarks`), or null while it doesn't show (`showsChangeMap`). The
- * marks are placed where Pierre lays the changes out (`pierreLineBox`), and placed again (`placesAgain`) when the changes, the layout
+ * marks and the place's ticks (`mapTickMarks`) are placed where Pierre lays their lines out (`pierreLineBox`), and placed
+ * again (`placesAgain`) when the changes, the ticks, the layout
  * or the sizes change: on a resize, and as Pierre renders rows (expanding unchanged lines, wrapped lines measured),
  * batched to a frame as `PaneScrollbars` measures. Scrolling renders rows too, but leaves the sizes as they were, so
  * it places nothing again. The marks' colors are read anew each time, apart from that: a theme switch recolors the
  * diff without moving anything.
  */
-export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, bothSides, layoutKey }: ChangeMapOptions): ChangeMapView | null {
+export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, bothSides, ticks, layoutKey }: ChangeMapOptions): ChangeMapView | null {
   const [view, setView] = useState<ChangeMapView | null>(null);
-  const latest = useRef({ regions, lineCounts, bothSides, layoutKey });
-  latest.current = { regions, lineCounts, bothSides, layoutKey };
+  const latest = useRef({ regions, lineCounts, bothSides, ticks, layoutKey });
+  latest.current = { regions, lineCounts, bothSides, ticks, layoutKey };
   const placedFrom = useRef<MarksPlacedFrom | null>(null);
 
   // After every render, as `PaneScrollbars`: the diff (and its shadow root) may have only just appeared.
@@ -54,7 +60,7 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
     let frame = 0;
     const measure = (): void => {
       frame = 0;
-      const { regions, lineCounts, bothSides, layoutKey } = latest.current;
+      const { regions, lineCounts, bothSides, ticks, layoutKey } = latest.current;
       const fileContainer = container.querySelector('diffs-container');
       if (!fileContainer) return;
       const colors = pierreChangeColors(fileContainer);
@@ -62,10 +68,12 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       const from: MarksPlacedFrom = {
         regions,
         bothSides,
+        ticks,
         layoutKey,
         contentHeight: container.scrollHeight,
         viewHeight: container.clientHeight,
         lastChangeTop: regions.length > 0 ? boxOf(regions.at(-1)!.lines[0]!)?.top : undefined,
+        lastTickTop: lowestTickTop(ticks, boxOf),
       };
       if (!placesAgain(placedFrom.current, from)) {
         setView((current) => (current && !sameChangeColors(current.colors, colors) ? { ...current, colors } : current));
@@ -73,10 +81,12 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
       }
       placedFrom.current = from;
       const { contentHeight, viewHeight } = from;
-      if (!showsChangeMap({ changes: regions.length, bothSides, contentHeight, viewHeight })) return setView(null);
+      if (!showsChangeMap({ changes: regions.length, bothSides, ticks: ticks.length, contentHeight, viewHeight })) return setView(null);
       const trackHeight = viewHeight;
-      const marks = changeMarks(regions, { boxOf, lineCounts, contentHeight, trackHeight });
-      const next = { marks, contentHeight, viewHeight, trackHeight, colors };
+      const layout = { boxOf, lineCounts, contentHeight, trackHeight };
+      // A version shown alone is one change, the whole text: only its ticks are marked.
+      const marks = bothSides ? changeMarks(regions, layout) : [];
+      const next = { marks, ticks: mapTickMarks(ticks, layout), contentHeight, viewHeight, trackHeight, colors };
       setView((current) => (current && sameView(current, next) ? current : next));
     };
     const schedule = (): void => {
@@ -98,7 +108,14 @@ export function useChangeMap({ containerRef, virtualizer, regions, lineCounts, b
 }
 
 function sameView(a: ChangeMapView, b: ChangeMapView): boolean {
-  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && sameChangeColors(a.colors, b.colors) && sameMarks(a.marks, b.marks);
+  return a.contentHeight === b.contentHeight && a.viewHeight === b.viewHeight && sameChangeColors(a.colors, b.colors) && sameMarks(a.marks, b.marks) && sameTicks(a.ticks, b.ticks);
+}
+
+function sameTicks(a: readonly MapTickMark[], b: readonly MapTickMark[]): boolean {
+  return a.length === b.length && a.every((tick, index) => {
+    const other = b[index]!;
+    return tick.top === other.top && tick.emphasized === other.emphasized && tick.keys.join('\n') === other.keys.join('\n');
+  });
 }
 
 function sameMarks(a: readonly ChangeMark[], b: readonly ChangeMark[]): boolean {

@@ -454,9 +454,24 @@ The marks are the regions the arrows step through (`useChangeNavigation`'s `regi
 placed where Pierre lays them out (`pierreLineBox`: collapsed unchanged lines and wrapped lines counted) or, until
 Pierre can tell, at the line's share of its side.
 
-It shows only for a diff that scrolls, with changes, of two versions (`showsChangeMap`): not for a version shown alone
-(an added or deleted file), a file typed into whole, nor where the arrows don't step (the merge page); then the
-browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
+A place that adds rows under the lines (a review's comments) marks its spots in the track too (`DiffAnnotations.mapTicks`,
+"Rows under lines"; the viewer knows nothing of what they are): a tick across the whole track, `TICK_HEIGHT` (2 px)
+tall, the opposite shape of a change's block (tall, inset from each side), so a spot never reads as a change and needs no
+lane of its own; drawn over the blocks, under the thumb, and as wide as the track hovered too. Each is at its line's top,
+placed as changes are (`mapTickMarks`, `mapTicks.ts`: `pierreLineBox`, or the line's share of its side), what's above the
+code (`lineNumber: 0`) at the track's very top. In the quiet `--text-tertiary` where everything there is settled, in the
+Open color the line markers have (`--status-changed`, `LineMarker.emphasized`) where something waits for an answer; both
+read at 4.5:1 on the track, as text. Ticks closer than `TICK_HEIGHT` and `TICK_FUSE_GAP` (3 px) fuse into one, emphasized
+if any is, so what's drawn is bounded by the track. Its tooltip is the place's (`DiffAnnotations.mapTickTip`, given the
+spots fused into it), asked once each time the ticks are placed, not as the thumb moves: a review's reads every thread's
+Markdown. A press on it is a press on the track like any other: it scrolls there, never to the row. The ticks drawn are
+`shownMapTicks`' (none for a file typed into whole).
+
+It shows only for a diff that scrolls with something to mark (`showsChangeMap`): changes between two versions, or the
+place's ticks. A version shown alone (an added or deleted file) is one change, the whole text, so it has a map only for
+its ticks (a file a review adds, commented on), with no block. Never for a file typed into whole (it shows none of the place's
+rows, so none of their ticks), nor where the arrows don't step and no place adds rows (the merge page);
+then the browser's scrollbar stays, as everywhere. While it shows, the browser's vertical bar is hidden
 (`.diff[data-change-map]`) and the map is the first thing in the diff's scrolling element, standing still at its top as
 it scrolls and taking no room of its own, as `PaneScrollbars`' bars stay at its bottom: the wheel over it scrolls the
 diff, and at rest no code goes under it. It looks like the app's other scrollbars, so a diff and a file shown alone have
@@ -469,8 +484,9 @@ color (`--diff-scrollbar-thumb`, close to the app's resting thumb over an empty 
 too faint over the marks in the dark theme; stronger on hover), and dragged with the pointer captured; a press anywhere
 across the track's width on the thumb's rows takes it (`pressesThumb`), so the slim pill is as easy to grab as the track
 is wide. It moves on the scroll event itself (`useScrollTop`), with the content, not a frame behind. `useChangeMap`
-places the marks again (`placesAgain`) when the changes, the layout or the sizes change, or as Pierre measures the lines
-above the last change (its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
+places the marks again (`placesAgain`) when the changes, the ticks, the layout or the sizes change, or as Pierre
+measures the lines above the last change or the lowest tick (`lowestTickTop`, whatever order the place lists them in;
+its estimate of a line not rendered is one row, a wrapped one too): batched to a frame on a
 resize or as Pierre renders rows, as `PaneScrollbars` measures. Scrolling alone places nothing again; the colors are
 read anew each time, so a theme switch recolors the map.
 
@@ -847,10 +863,11 @@ docs/features/code-reviews.md "Comments in the code"):
   `lineNumber: 0` marks the code's first row, whatever it is, never a row under a line, and nothing while the file's top
   is scrolled out of what Pierre renders, `topRowOf`; markers on one row sit side by side, `markerSpots`; it measures
   again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short file when a
-  row goes in above the code), and a line whose row to scroll to (`scrollToAnnotationRow`): the line and its row, or the
-  part of the row marked `ROW_FOCUS_ATTRIBUTE` (one thread of several), read with context: the line a third of the way
-  down, its row below; a row taller than the room below scrolls on just enough to fit, keeping three lines above the
-  line; a line near the top stays at the top, one near the end stops at the end (`focusScrollTop` in
+  row goes in above the code), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a line whose
+  row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE`
+  (one thread of several), read with context: the line a third of the way down, its row below; a row taller than the
+  room below scrolls on just enough to fit, keeping three lines above the line; a line near the top stays at the top,
+  one near the end stops at the end (`focusScrollTop` in
   `lib/scrollPlacement`, through `framedScrollTop`; nothing moves when they already show, away from the edges). The line
   ends where its row starts (`lineAboveRow`): side by side, the box Pierre lays a line out in spans the whole row, the
   card under it included. A row above the code has no line to keep: only its part gone to is framed (`rowFrameOf`), so a

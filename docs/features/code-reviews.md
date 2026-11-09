@@ -248,6 +248,15 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   marker: in the header, not in a column beside the cards, which took their width; an ×, not an icon of a comment struck
   through, which read less plainly. In a narrow card the header stays one line: the kind's name is cut short first, then
   the tag, the state and the × keeping their place.
+- **In the scrollbar.** The diff's change map (docs/features/diff.md "The change map") ticks every line with threads,
+  and the outdated ones at its top (`commentMapTicks`, through `DiffAnnotations.mapTicks`), whether comments show in
+  the code or are hidden behind markers: a thin line across the track, in the Open color while anything there is open
+  (`markerIsOpen`), a quiet gray once everything is settled. Its tooltip previews the threads there as their marker's
+  does (`commentMapTip`, built on `markerTip` and `outdatedTip`): the lines' threads of ticks fused together in one,
+  three at most and then how many more, then the outdated ones under their "Outdated" heading when their tick at the top
+  fused with a comment on the first lines, so they never read as on that line. A file the review adds or deletes gets the map for its comments alone, with no change
+  blocks. A click scrolls there as anywhere on the track, not to the thread: N and ⇧N, and the panel, go to threads.
+  Threads still being placed (their version being read) have no tick until they are.
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
   details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
   hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's

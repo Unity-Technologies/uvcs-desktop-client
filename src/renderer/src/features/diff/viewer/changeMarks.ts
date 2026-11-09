@@ -1,5 +1,6 @@
 import { formatCount } from '../../../lib/text';
 import type { ChangedLine, ChangeRegion, DiffSide } from './changeBlocks';
+import type { MapTick } from './mapTicks';
 
 /**
  * The change map: the diff's own vertical scrollbar marks where its changes are in its track (`ChangeMap`), so the
@@ -54,10 +55,14 @@ export const FUSE_GAP = 4;
  */
 export const FUSE_LINES = 3;
 
-/** Whether the map shows: a diff of two versions that has changes and doesn't fit without scrolling. */
-export function showsChangeMap({ changes, bothSides, contentHeight, viewHeight }: { changes: number; bothSides: boolean; contentHeight: number; viewHeight: number }): boolean {
-  // A version shown alone (an added or deleted file) is one change, the whole text: nothing to map.
-  return changes > 0 && bothSides && viewHeight > 0 && contentHeight > viewHeight + 1;
+/**
+ * Whether the map shows: a diff that doesn't fit without scrolling, with something to mark: changes between two
+ * versions, or a place's ticks (`mapTickMarks`: a review's comments), which a version shown alone has too.
+ */
+export function showsChangeMap({ changes, bothSides, ticks, contentHeight, viewHeight }: { changes: number; bothSides: boolean; ticks: number; contentHeight: number; viewHeight: number }): boolean {
+  // A version shown alone (an added or deleted file) is one change, the whole text: no change to map, only ticks.
+  const marks = (changes > 0 && bothSides) || ticks > 0;
+  return marks && viewHeight > 0 && contentHeight > viewHeight + 1;
 }
 
 export function changeKindOf(region: ChangeRegion): ChangeMarkKind {
@@ -120,7 +125,8 @@ function sideEnds(lines: readonly ChangedLine[]): ChangedLine[] {
   return ends;
 }
 
-function shareOfSide({ side, lineNumber }: ChangedLine, { lineCounts, contentHeight }: ChangeMapLayout): LineBox {
+/** Where a line is placed while Pierre can't tell: at its share of its side's lines. */
+export function shareOfSide({ side, lineNumber }: ChangedLine, { lineCounts, contentHeight }: Pick<ChangeMapLayout, 'lineCounts' | 'contentHeight'>): LineBox {
   const lines = Math.max(1, lineCounts[side]);
   return { top: ((lineNumber - 1) / lines) * contentHeight, height: contentHeight / lines };
 }
@@ -145,6 +151,8 @@ export function changeMarkLabel(mark: ChangeMark, count: number): string {
 export interface MarksPlacedFrom {
   regions: readonly ChangeRegion[];
   bothSides: boolean;
+  /** The place's ticks (`DiffAnnotations.mapTicks`): its comments' spots, a new list when they change. */
+  ticks: readonly MapTick[];
   /** How the lines are laid out: Split or Unified, collapsed, wrapped. */
   layoutKey: string;
   contentHeight: number;
@@ -154,20 +162,27 @@ export interface MarksPlacedFrom {
    * as Pierre measures the lines above it: its estimate of a line it hasn't rendered is one row, a wrapped one too.
    */
   lastChangeTop: number | undefined;
+  /**
+   * The same for the lowest tick (`lowestTickTop`): what Pierre measures above it moves it too, in a version shown
+   * alone with no change.
+   */
+  lastTickTop: number | undefined;
 }
 
 /**
- * Whether the marks are placed again: none were yet, or the changes, the layout, the sizes or Pierre's place for the
- * last change changed. Scrolling changes none of them, so it places nothing again.
+ * Whether the marks are placed again: none were yet, or the changes, the ticks, the layout, the sizes or Pierre's place
+ * for the last change or tick changed. Scrolling changes none of them, so it places nothing again.
  */
 export function placesAgain(previous: MarksPlacedFrom | null, next: MarksPlacedFrom): boolean {
   return (
     previous === null ||
     previous.regions !== next.regions ||
     previous.bothSides !== next.bothSides ||
+    previous.ticks !== next.ticks ||
     previous.layoutKey !== next.layoutKey ||
     previous.contentHeight !== next.contentHeight ||
     previous.viewHeight !== next.viewHeight ||
-    previous.lastChangeTop !== next.lastChangeTop
+    previous.lastChangeTop !== next.lastChangeTop ||
+    previous.lastTickTop !== next.lastTickTop
   );
 }
