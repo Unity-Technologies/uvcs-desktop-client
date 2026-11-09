@@ -2,6 +2,7 @@ import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { hasRevisions, isControlled } from '../pendingChanges/changeCategories';
+import { filesCheckinChanges } from './filesCheckin';
 import type { PendingChangesIndex } from './itemStatus';
 import { hasRevisionType } from './itemType';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -16,6 +17,8 @@ export interface FileMenuTargets {
   undoable: PendingChange[];
   /** Files whose revision type can be changed. */
   typedFiles: TreeItem[];
+  /** The pending changes a check-in of the selection takes (`filesCheckinChanges`). */
+  checkinable: PendingChange[];
 }
 
 export function fileMenuTargets(items: TreeItem[], pendingChanges: PendingChangesIndex): FileMenuTargets {
@@ -25,6 +28,7 @@ export function fileMenuTargets(items: TreeItem[], pendingChanges: PendingChange
     checkoutCandidates: controlled.filter((item) => !item.isCheckedOut && !pendingChanges.changeAt(item.path)),
     undoable: items.map((item) => pendingChanges.changeAt(item.path)).filter((change): change is PendingChange => change !== undefined && isControlled(change)),
     typedFiles: controlled.filter((item) => hasRevisionType(item.itemType)),
+    checkinable: filesCheckinChanges(items, pendingChanges.changes),
   };
 }
 

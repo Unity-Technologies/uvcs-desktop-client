@@ -15,7 +15,8 @@ export class PendingChangesIndex {
   /** How many changes each directory holds, at any depth. */
   private readonly changesInside = new Map<string, number>();
 
-  constructor(changes: PendingChange[]) {
+  /** Every pending change, as listed: what a check-in from Files picks from. */
+  constructor(readonly changes: PendingChange[]) {
     this.byPath = new Map(changes.map((change) => [change.path, change]));
     for (const change of changes) {
       const segments = change.path.split('/');

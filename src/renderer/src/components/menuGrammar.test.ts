@@ -717,6 +717,15 @@ describe('locks', () => {
   });
 });
 
+describe("a file's check-in", () => {
+  const ids = (menu: MenuEntry[]): (string | undefined)[] => topEntries(menu).map((entry) => entry.id);
+
+  it('Files offers Check in for an item with a change, and not for one with nothing pending', () => {
+    expect(ids(MENUS.lockedFile!())).toContain('checkin');
+    expect(ids(MENUS.file!())).not.toContain('checkin');
+  });
+});
+
 describe("a changeset's menu", () => {
   const shortcuts = (entries: MenuEntry[]): Record<string, string> =>
     Object.fromEntries(

@@ -1,4 +1,4 @@
-import { FileDiff, FilePlus, FolderPlus, FolderTree, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
+import { FileDiff, FilePlus, FolderPlus, FolderTree, GitCommitHorizontal, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -7,6 +7,8 @@ import { otherFileView } from '../annotate/fileView';
 import { browseRepositoryAtChangeset } from '../browseRepository/browseRepositoryAtChangeset';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
+import { filesCheckinChanges } from './filesCheckin';
+import { checkinItems } from './filesCheckinOperation';
 import { itemViews, type ItemViews } from './fileMenuTargets';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -33,6 +35,7 @@ export function useFileCommands(
     const views = single ? itemViews(single, pendingChanges) : NO_VIEWS;
     const directory = targetDirectoryFor(single);
     const hasRoot = selected.some(isWorkspaceRoot);
+    const checkinable = filesCheckinChanges(selected, pendingChanges.changes);
 
     return [
       { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
@@ -76,6 +79,14 @@ export function useFileCommands(
         shortcut: FILE_SHORTCUTS.delete,
         disabled: selected.length === 0 || hasRoot,
         run: () => !hasRoot && void deleteItems(workspacePath, selected),
+      },
+      {
+        id: 'files.checkin',
+        group: 'Files',
+        label: 'Check in selected items…',
+        icon: GitCommitHorizontal,
+        disabled: checkinable.length === 0,
+        run: () => checkinable.length > 0 && void checkinItems(workspacePath, checkinable, pendingChanges.changes),
       },
       {
         id: 'files.history',
