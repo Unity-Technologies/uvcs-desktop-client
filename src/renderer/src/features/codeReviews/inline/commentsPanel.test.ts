@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { commentsPanelCounts, commentsPanelThreads, emptyCommentsText, initialCommentsFilter } from './commentsPanel';
+import { commentPosition, commentsPanelCounts, commentsPanelThreads, emptyCommentsText, initialCommentsFilter, steppedThread } from './commentsPanel';
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: '', kind: 'changeRequest', anchor: { kind: 'review' }, ...fields };
@@ -45,5 +45,37 @@ describe('emptyCommentsText', () => {
   it('tells a review with no comments on its code from one with nothing left to answer', () => {
     expect(emptyCommentsText('all', { open: 0, all: 0 }).title).toBe('No comments on the code yet');
     expect(emptyCommentsText('open', { open: 0, all: 3 }).title).toBe('Nothing left to answer');
+  });
+});
+
+describe('steppedThread', () => {
+  const listed = commentsPanelThreads(THREADS, 'all');
+  const ids = listed.map((thread) => thread.root.id);
+
+  it('goes to the next or previous comment in the order the panel lists them, across files', () => {
+    expect(steppedThread(listed, ids[0], 1)?.root.id).toBe(ids[1]);
+    expect(steppedThread(listed, ids[2], -1)?.root.id).toBe(ids[1]);
+  });
+
+  it('starts at the first or the last when none is gone to yet, or the one gone to is no longer listed', () => {
+    expect(steppedThread(listed, undefined, 1)?.root.id).toBe(ids[0]);
+    expect(steppedThread(listed, undefined, -1)?.root.id).toBe(ids.at(-1));
+    expect(steppedThread(listed, 99, 1)?.root.id).toBe(ids[0]);
+  });
+
+  it('stops at either end, and has nowhere to go in an empty list', () => {
+    expect(steppedThread(listed, ids.at(-1), 1)).toBeNull();
+    expect(steppedThread(listed, ids[0], -1)).toBeNull();
+    expect(steppedThread([], undefined, 1)).toBeNull();
+  });
+});
+
+describe('commentPosition', () => {
+  const listed = commentsPanelThreads(THREADS, 'all');
+
+  it('says where the comment gone to is among those listed, and how many there are when none is', () => {
+    expect(commentPosition(listed, listed[1]!.root.id)).toBe(`2 of ${listed.length}`);
+    expect(commentPosition(listed, undefined)).toBe(`${listed.length} comments`);
+    expect(commentPosition(listed.slice(0, 1), undefined)).toBe('1 comment');
   });
 });
