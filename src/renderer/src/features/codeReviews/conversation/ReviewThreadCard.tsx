@@ -1,4 +1,4 @@
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, SquareCode, X } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -116,7 +116,7 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
     <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
-      <ThreadHeader reviewId={reviewId} thread={thread} folded locationAsText onSeeApplied={onSeeApplied} />
+      <ThreadHeader reviewId={reviewId} thread={thread} folded cardOpens onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
       </div>
@@ -135,14 +135,14 @@ interface ThreadHeaderProps {
   thread: ReviewThread;
   folded: boolean;
   inCode?: ThreadInCode;
-  /** Its location only names where it is: the card around it goes there (the Comments panel's), not a link of its own. */
-  locationAsText?: boolean;
+  /** The card around it goes to the thread (the Comments panel's): no "Show in code" of its own. */
+  cardOpens?: boolean;
   /** Folds or unfolds a settled thread; none for one that stays whole. */
   onToggle?: () => void;
   onSeeApplied?: () => void;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onToggle, onSeeApplied }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied }: ThreadHeaderProps) {
   const { root } = thread;
   const badges = threadBadges(thread);
   // In the code, the thread is at its line: its location would name where the user already is.
@@ -159,16 +159,13 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
           </button>
         )}
         {(badges.kind || inCode) && <ThreadKindIcon root={root} />}
-        {anchor && location && (locationAsText ? (
-          // Cut short in a narrow panel, it names the whole path in its tooltip.
+        {location && (
+          // Where it was written, not a link: an outdated comment's line is no longer there. Cut short, it names the
+          // whole path in its tooltip.
           <span className={styles.location} data-tip={`${location.folder}${location.file}${location.line}`} data-tip-overflow="">
             <LocationParts location={location} />
           </span>
-        ) : (
-          <button type="button" className={styles.location} data-tip="Show in Changes" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
-            <LocationParts location={location} />
-          </button>
-        ))}
+        )}
         {inCode && (
           // Cut short in a narrow card, it says its whole name in its tooltip.
           <span className={styles.kindLabel} data-tip={threadKindName(root)} data-tip-overflow="">
@@ -187,6 +184,14 @@ function ThreadHeader({ reviewId, thread, folded, inCode, locationAsText, onTogg
           ))}
       </span>
       <span className={styles.headerEnd}>
+        {anchor && !cardOpens && (
+          // Shown while the pointer or the focus is on the card: on every card of a long conversation, it was noise.
+          <span className={styles.showInCode}>
+            <Button size="small" variant="ghost" icon={<SquareCode size={13} />} data-tip="The comment in the Changes tab, in the diff it was written on" onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
+              Show in code
+            </Button>
+          </span>
+        )}
         {replies && <span className={styles.replyCount}>{replies}</span>}
         {badges.state && (
           <StatePill state={badges.state} appliedIn={badges.appliedIn} onSeeApplied={onSeeApplied} />
