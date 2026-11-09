@@ -83,6 +83,11 @@
   min-height: 0;
 }
 
+/* The tab not shown, kept mounted. */
+.tabPanel[hidden] {
+  display: none;
+}
+
 /* The skeleton's rows, as tall as the title, the meta line and the actions they stand for. */
 .placeholderTitle {
   align-items: center;

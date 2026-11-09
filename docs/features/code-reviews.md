@@ -107,7 +107,10 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a file (`focusPath`,
   a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
   (`navigation.replacePage`), so Back leaves the review, and the page's link follows it: the review alone on its
-  conversation, the review and its file on its changes (`pageLinkTarget`).
+  conversation, the review and its file on its changes (`pageLinkTarget`). Each tab shown so far stays mounted, the
+  other hidden (`mountedTabs`), so going back to one finds it as it was left: its scroll, the threads unfolded, a reply
+  being written, the file selected, the Comments panel's filter. The Changes tab isn't mounted, so not read, until it's
+  first shown, and while hidden its keys are off (N, ⇧N: `ReviewChangesTab`'s `shown`).
 
 ## The conversation
 

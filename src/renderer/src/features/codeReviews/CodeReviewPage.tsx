@@ -1,4 +1,5 @@
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps, ReviewTab } from '../../app/navigation/pages';
@@ -23,7 +24,7 @@ import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
-import { openingTab } from './reviewTab';
+import { mountedTabs, openingTab } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
 
@@ -37,6 +38,9 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
   const diffExpanded = useDiffExpanded();
   const tab = openingTab(page);
+  const [mountedSoFar, setMounted] = useState<readonly ReviewTab[]>([tab]);
+  const mounted = mountedTabs(mountedSoFar, tab);
+  if (mounted !== mountedSoFar) setMounted(mounted);
 
   // Not in a list already read (opened from a branch chip, the palette, a link): the page's frame, its header a skeleton.
   if (isLoading) {
@@ -69,15 +73,21 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           />
         </div>
       </Stowable>
-      <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, tab)} aria-labelledby={tabId(TABS_ID, tab)}>
-        {tab === 'conversation' ? (
+      {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
+      {mounted.includes('conversation') && (
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={tab !== 'conversation'}>
           <ReviewConversationTab review={review} focusThread={page.focusThread} />
-        ) : diffTarget ? (
-          <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
-        ) : (
-          <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
-        )}
-      </div>
+        </div>
+      )}
+      {mounted.includes('changes') && (
+        <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={tab !== 'changes'}>
+          {diffTarget ? (
+            <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} shown={tab === 'changes'} />
+          ) : (
+            <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
