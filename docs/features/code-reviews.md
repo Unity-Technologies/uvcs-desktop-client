@@ -210,7 +210,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open the
   changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog is
   as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
-  shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
+  shows, a thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
   "Keyboard"), and closes if the
   window goes to another place. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
   "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment" chip to go back,

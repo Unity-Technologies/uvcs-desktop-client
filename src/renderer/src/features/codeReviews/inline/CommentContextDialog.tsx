@@ -14,6 +14,7 @@ import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { useReviewThreads } from '../conversation/useReviewThreads';
+import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
 import { appliedFilesDescription, listsAppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
@@ -69,7 +70,7 @@ function ThreadInContext(props: DialogProps) {
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
   const [commentShown, setCommentShown] = useState(true);
-  const threads = useReviewThreads(review.id);
+  const threads = useReviewThreads(review.id, SHOWN_BY_THE_PAGE);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
   // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.
