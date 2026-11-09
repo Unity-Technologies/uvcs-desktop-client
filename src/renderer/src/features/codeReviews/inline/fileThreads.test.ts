@@ -117,9 +117,9 @@ describe('placeEarlier', () => {
     expect(ids(reading).sort()).toEqual([1, 2, 3, 4]);
   });
 
-  it("places the others' threads when a version can't be read (purged), keeping that one's apart", () => {
-    const { placed, outdated, reading, unreadable } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
-    expect([ids(placed), ids(outdated), ids(reading), ids(unreadable)]).toEqual([[1], [2], [], [3]]);
+  it("places the others' threads when a version's read fails, showing that one's among the outdated: its line is known", () => {
+    const { placed, outdated, reading } = placeEarlier(earlier, (revision) => (revision === 20 ? OLD_TEXT : null), lineOf, writtenWhole);
+    expect([ids(placed), ids(outdated), ids(reading)]).toEqual([[1], [2, 3], []]);
   });
 });
 
