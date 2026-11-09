@@ -32,7 +32,7 @@ export function LineMarkers({ containerRef, markers, layout }: LineMarkersProps)
             className={styles.marker}
             style={{ top: (box.top + box.bottom) / 2, left: box.paneRight - MARKER_INSET }}
             data-emphasized={marker.emphasized || undefined}
-            data-tip={marker.label}
+            data-tip={marker.tip ?? marker.label}
             aria-label={marker.label}
             onClick={marker.onOpen}
           >

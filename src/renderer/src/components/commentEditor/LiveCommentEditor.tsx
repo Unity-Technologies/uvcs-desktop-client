@@ -23,6 +23,7 @@ import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { fieldFocused, focusEditor } from './editorFocus';
+import { editorRootOf } from './editorRoot';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
 import { formatsOf } from './formatActions';
@@ -70,6 +71,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useEffect(() => {
     const editor = new EditorView({
       parent: host.current!,
+      root: editorRootOf(host.current!),
       state: EditorState.create({
         doc: value,
         extensions: [

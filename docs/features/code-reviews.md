@@ -146,11 +146,12 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   replied to, folded and selected. Its
   header is one quiet line: its kind's icon, its folder (giving way first in a narrow card), file and line
   (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones: a change request
-  is **Open** until a changeset applies it (**Applied in** its changeset, the pill a link to it) or a reply discards it
+  is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its tooltip naming the changeset: "Applied in changeset 4: see
+  how it was applied", `appliedPillTip`) or a reply discards it
   (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
   way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
   (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. Where it stands is an outlined pill:
-  **Open** in the color of "Rework required", **Applied in** and **Answered** in the color of "Reviewed",
+  **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed",
   **Discarded** neutral.
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
@@ -196,7 +197,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the version it made; "Changeset N didn't change this file" for a request marked applied by hand), or the review's
   newest version (its whole diff's, never a
   changeset's). A view waits for the diff it reads, says so when that read fails, and why it has nothing to compare
-  otherwise (`contextComparisonState`). Every **Applied in N** pill (the
+  otherwise (`contextComparisonState`). Every **Applied** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
   something else. Its **Open
@@ -209,7 +210,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   on). The list costs no command: it is the changeset's diff "How it was applied" reads anyway. Why not open the
   changeset's diff page: the reviewer would leave the review, and that page knows nothing of the comment. The dialog is
   as wide as the window allows, up to 1680 px: two versions of code side by side, and the files beside them. It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it
-  shows, a thread deleted is gone), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
+  shows, a thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md
   "Keyboard"), and closes if the
   window goes to another place. A dialog rather than a mode of the file's diff, so the review's diff stays as it was:
   "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment" chip to go back,
@@ -225,7 +226,11 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   the threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding
   some keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments
   there are, as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is
-  open (`markerIsOpen`); a click opens that line's threads, and going to a thread opens its line. The outdated ones
+  open (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
+  characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1
+  reply"), three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which
+  its avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that
+  line's threads, and going to a thread opens its line. The outdated ones
   hide too: they have no line to mark, so one shows only when it is gone to (from the panel or the conversation), that
   one alone, as a line opens alone (`outdatedKey`, `openedOutdated`; the opened ones share one row above the code,
   `annotationRowsOf`'s `opened`). Each card opened so has an × at the end of its header (`ThreadInCode.hide`, `hideLabel`: "Hide

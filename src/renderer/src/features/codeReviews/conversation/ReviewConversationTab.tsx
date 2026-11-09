@@ -32,7 +32,7 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
   // Already in the conversation: "Show in conversation" from the dialog scrolls to the thread on this page.
   const showThreadHere = useCallback((threadId: number) => navigation.replacePage(conversationAt(review.id, threadId)), [review.id]);
   const seeInContext = useCommentContext(review, showThreadHere);
-  // "Applied in" shows how the change request was applied, in context, as in the code.
+  // "Applied" shows how the change request was applied, in context, as in the code.
   const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
     seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);

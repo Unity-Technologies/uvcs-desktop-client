@@ -99,6 +99,10 @@
 }
 
 
+.titleEnd {
+  white-space: nowrap;
+}
+
 .titleEdit {
   display: inline-flex;
   margin-left: var(--space-1);

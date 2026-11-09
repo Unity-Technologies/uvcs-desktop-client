@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
+import { appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
@@ -19,13 +19,20 @@ describe('threadBadges', () => {
 
   it('says how one was resolved: answered, applied in a changeset, discarded', () => {
     expect(badgesOf(comment(1, { kind: 'question' }), comment(2, { parentId: 1, kind: 'comment' })).state).toEqual({ label: 'Answered', tone: 'resolved' });
-    expect(badgesOf(comment(1, { kind: 'changeRequest', appliedInChangeset: 4 }))).toEqual({ kind: 'Change request', state: { label: 'Applied in', tone: 'resolved' }, appliedIn: 4 });
+    expect(badgesOf(comment(1, { kind: 'changeRequest', appliedInChangeset: 4 }))).toEqual({ kind: 'Change request', state: { label: 'Applied', tone: 'resolved' }, appliedIn: 4 });
     expect(badgesOf(comment(1, { kind: 'changeRequest' }), comment(2, { parentId: 1, kind: 'discard' })).state).toEqual({ label: 'Discarded', tone: 'discarded' });
   });
 
   it('marks nothing on a plain or general comment', () => {
     expect(badgesOf(comment(1))).toEqual({});
     expect(badgesOf(comment(1, { kind: 'comment', anchor: ON_LINE }))).toEqual({});
+  });
+});
+
+describe('appliedPillTip', () => {
+  it('names the changeset that applied it, and what the pill does: how it was applied, else the changeset itself', () => {
+    expect(appliedPillTip(4, true)).toBe('Applied in changeset 4: see how it was applied');
+    expect(appliedPillTip(4, false)).toBe('Applied in changeset 4: open it');
   });
 });
 

@@ -16,6 +16,7 @@ import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
+import { markerTip } from './markerTip';
 import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads } from './threadRows';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
@@ -78,6 +79,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       side: line.side,
       lineNumber: line.line,
       label: markerLabel(line),
+      tip: markerTip(line),
       content: <MarkerContent line={line} />,
       emphasized: markerIsOpen(line),
       onOpen: () => openLine(line.key),
@@ -111,7 +113,7 @@ function MarkerContent({ line }: { line: LineThreads }) {
   const { people, more } = markerPeople(line);
   return (
     <>
-      {/* Still: the marker's own tooltip names the people (`markerLabel`). */}
+      {/* Still: the marker's own tooltip previews its threads (`markerTip`). */}
       <AvatarStack still avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
       {markerCommentCount(line)}
     </>

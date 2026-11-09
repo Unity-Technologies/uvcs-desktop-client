@@ -25,8 +25,10 @@ export interface DiffAnnotations {
 /** A mark on a line, at the end of its pane. */
 export interface LineMarker extends ChangedLine {
   key: string;
-  /** What it marks, its tooltip and what a screen reader says. */
+  /** What it marks, as a screen reader says it. */
   label: string;
+  /** Its tooltip, when it says more than the label: a preview of what's folded there. */
+  tip?: string;
   /** Drawn inside the mark: an icon, a count. */
   content: ReactNode;
   /** Draws it louder: something there still waits for an answer. */

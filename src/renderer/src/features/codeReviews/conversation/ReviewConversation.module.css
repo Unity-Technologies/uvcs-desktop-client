@@ -317,7 +317,7 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* "Applied in 281299": the pill is the changeset's link as a whole. */
+/* "Applied": the pill is a link as a whole, to how the change request was applied. */
 button.pill {
   font-family: inherit;
   background: none;
@@ -637,7 +637,7 @@ button.pill:hover {
   white-space: nowrap;
 }
 
-/* "Outdated" opens the comment as it was written: a link as a whole, as "Applied in" is. */
+/* "Outdated" opens the comment as it was written: a link as a whole, as "Applied" is. */
 button.earlierTag {
   border: none;
   font-family: inherit;
