@@ -1,14 +1,11 @@
 import { createContext, type ComponentType, type ReactNode } from 'react';
-import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 
 /**
- * What a place changes in how a file of a committed diff shows (a review's comments, in its Changes tab: they give the
- * diff its rows through `DiffAnnotationsContext`): the version it is compared with, and controls beside the diff's own.
+ * What a place adds to how a file of a committed diff shows (a review's comments, in its Changes tab: they give the
+ * diff its rows through `DiffAnnotationsContext`): controls beside the diff's own.
  */
 export interface AnnotatedEntry {
-  /** The older side to show instead of the entry's own (a review's "Changes since this comment"). */
-  original?: ContentSource;
   /** Beside the diff's controls, after them. */
   controls?: ReactNode;
 }

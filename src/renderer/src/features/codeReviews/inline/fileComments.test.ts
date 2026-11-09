@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, showsCommentControls, threadPlace, topSideOf, versionsToRead } from './fileComments';
+import { annotationRowsOf, fileCommentsOf, holdsThread, OUTDATED_ROW, threadPlace, topSideOf, versionsToRead } from './fileComments';
 import type { ShownFile } from './fileThreads';
 import { lineThreadsOf } from './threadRows';
 
@@ -57,9 +57,9 @@ describe('fileCommentsOf', () => {
     expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([1]);
   });
 
-  it('shows the threads on the revision compared with on its side, since a comment', () => {
-    const since: ShownFile = { ...PLAYER, originalRevision: 20 };
-    const comments = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: since, textOf: (revision) => TEXTS.get(revision) });
+  it("shows the threads on the older side's revision on that side", () => {
+    const olderCommented: ShownFile = { ...PLAYER, originalRevision: 20 };
+    const comments = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: olderCommented, textOf: (revision) => TEXTS.get(revision) });
     expect(comments.lines.map((line) => line.key)).toEqual(['deletions:2', 'deletions:3', 'additions:2']);
     expect(comments.outdated).toEqual([]);
   });
@@ -138,14 +138,5 @@ describe('topSideOf', () => {
   it('is the newer side, or the older one of a deleted file', () => {
     expect(topSideOf(PLAYER)).toBe('additions');
     expect(topSideOf({ modifiedRevision: -1 })).toBe('deletions');
-  });
-});
-
-describe('showsCommentControls', () => {
-  it('shows them on a file with threads, or compared since one', () => {
-    expect(showsCommentControls(null, false)).toBe(false);
-    expect(showsCommentControls({ lines: [], outdated: [] }, false)).toBe(false);
-    expect(showsCommentControls({ lines: [], outdated: [] }, true)).toBe(true);
-    expect(showsCommentControls({ lines: [], outdated: [{ thread: threadsOf([onLine(1, 20, 1)])[0] as never, revisionId: 20 }] }, false)).toBe(true);
   });
 });

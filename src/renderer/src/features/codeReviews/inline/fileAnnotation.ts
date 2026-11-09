@@ -1,7 +1,7 @@
 import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
-import type { EarlierThread, PlacedThread, ShownFile } from './fileThreads';
+import type { EarlierThread, ShownFile } from './fileThreads';
 import type { LineThreads } from './threadRows';
 import type { ThreadFocus } from './reviewComments';
 
@@ -13,12 +13,9 @@ export function isCommentable(entry: Pick<DiffEntry, 'itemType' | 'repository'>,
   return entry.itemType !== 'directory' && otherRepository(entry.repository, placeRepository) === undefined;
 }
 
-/**
- * The file as its diff shows it: the entry's revisions, the older side the revision a thread was written on while
- * "Changes since this comment" compares from it.
- */
-export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>, sinceRevision: number | null): ShownFile {
-  return { path: entry.path, oldPath: entry.oldPath, originalRevision: sinceRevision ?? entry.baseRevisionId, modifiedRevision: entry.revisionId };
+/** The file as its diff shows it: the entry's path and revisions. */
+export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): ShownFile {
+  return { path: entry.path, oldPath: entry.oldPath, originalRevision: entry.baseRevisionId, modifiedRevision: entry.revisionId };
 }
 
 /** Whether a file shows anything of its threads: some at their lines, or outdated ones. */
@@ -38,11 +35,6 @@ export function openedOnFocus(opened: readonly string[], lineKey: string | undef
 /** What a line's marker counts: the threads on it, when more than one; one thread is just the mark. */
 export function markerCount(line: Pick<LineThreads, 'threads'>): number | null {
   return line.threads.length > 1 ? line.threads.length : null;
-}
-
-/** The version "Changes since this comment" compares from: the one a thread was written on, for one on an earlier version. */
-export function changesSinceRevision(placed: Pick<PlacedThread, 'earlier'>): number | undefined {
-  return placed.earlier?.revisionId;
 }
 
 /** Whether the outdated threads above the code open: when one of them is gone to. */

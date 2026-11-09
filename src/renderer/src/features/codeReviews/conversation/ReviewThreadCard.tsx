@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, History } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
@@ -32,8 +32,8 @@ interface ReviewThreadCardProps {
 
 /**
  * A thread in the code (the Changes tab) rather than the conversation: its header names no file (it is at it), but
- * says when it was written on an earlier version, and its first comment's menu leads to the conversation and to what
- * changed since.
+ * says when it was written on an earlier version, with a button showing it in context; its first comment's menu leads
+ * to the conversation.
  */
 export interface ThreadInCode {
   /** Written on an earlier version of the file: what the header says of it ("Earlier version"), and its tooltip. */
@@ -41,11 +41,12 @@ export interface ThreadInCode {
   /** The earlier version's lines it was written on, for one outdated: they're no longer in the code. */
   snippet?: ReactNode;
   showInConversation: () => void;
-  changesSince?: () => void;
+  /** Shows it in the diff it was written on, and what was done since (`openCommentContextDialog`): for one on an earlier version. */
+  seeInContext?: () => void;
 }
 
 type Answering = 'reply' | 'discard' | null;
-type ThreadActions = Pick<ThreadInCode, 'showInConversation' | 'changesSince'>;
+type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
 
 /**
  * A comment and its replies as one card. A change request or a question has a header band: its kind's icon, its file
@@ -63,7 +64,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight }: Re
     setShownHighlight(highlight);
     if (highlight !== undefined) setFolded(false);
   }
-  const threadActions = inCode && { showInConversation: inCode.showInConversation, changesSince: inCode.changesSince };
+  const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
   return (
     <section
@@ -141,6 +142,11 @@ function ThreadHeader({ reviewId, thread, folded, inCode, onLocation, onToggle }
         <span className={styles.earlierTag} data-tip={inCode.earlier.tip}>
           {inCode.earlier.label}
         </span>
+      )}
+      {inCode?.seeInContext && (
+        <Button size="small" variant="ghost" icon={<History size={13} />} data-tip="The diff it was written on, and what was done since" onClick={inCode.seeInContext}>
+          See in context
+        </Button>
       )}
       <span className={styles.headerEnd}>
         {replies && <span className={styles.replyCount}>{replies}</span>}

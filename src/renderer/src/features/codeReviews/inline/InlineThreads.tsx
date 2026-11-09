@@ -4,7 +4,7 @@ import { pluralize } from '../../../lib/text';
 import { IconButton } from '../../../ui/IconButton';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
-import { changesSinceRevision, outdatedOpensFor } from './fileAnnotation';
+import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
 import type { ReviewComments } from './reviewComments';
@@ -17,17 +17,16 @@ interface InlineThreadsProps {
   focus: ReviewComments['focus'];
   /** Folds the line back into its marker, while comments are hidden in the code. */
   onClose?: () => void;
-  onChangesSince: (revisionId: number) => void;
+  onSeeInContext: (thread: LineThread) => void;
 }
 
 /** The threads at a line, under it: each as the conversation shows it, without the file it's at. */
-export function InlineThreads({ comments, line, focus, onClose, onChangesSince }: InlineThreadsProps) {
+export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }: InlineThreadsProps) {
   return (
     <div className={styles.row}>
       <div className={styles.threads}>
         {line.threads.map((placed) => {
           const { thread, earlier } = placed;
-          const sinceRevision = changesSinceRevision(placed);
           return (
         <ThreadInRow
           key={thread.root.id}
@@ -37,7 +36,7 @@ export function InlineThreads({ comments, line, focus, onClose, onChangesSince }
           inCode={{
             earlier: earlier && earlierTagOf(thread, false),
             showInConversation: () => comments.showInConversation(thread.root.id),
-            changesSince: sinceRevision === undefined ? undefined : () => onChangesSince(sinceRevision),
+            seeInContext: earlier && (() => onSeeInContext(thread)),
           }}
         />
           );
@@ -55,14 +54,14 @@ interface OutdatedThreadsProps {
   textOf: (revisionId: number) => string | undefined;
   /** Hides them again, while comments are hidden in the code: they showed because one of them was gone to. */
   onClose?: () => void;
-  onChangesSince: (revisionId: number) => void;
+  onSeeInContext: (thread: LineThread) => void;
 }
 
 /**
  * Above the code, the threads written on an earlier version of the file whose lines changed since: folded to one line
  * that says how many, each with the lines it was written on when opened (`snippetOf`), as they're in the code no more.
  */
-export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, onChangesSince }: OutdatedThreadsProps) {
+export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, onSeeInContext }: OutdatedThreadsProps) {
   // The time an outdated thread was gone to, which opens them.
   const goneTo = outdatedOpensFor(focus, outdated) ? (focus?.seq ?? null) : null;
   const [open, setOpen] = useState(goneTo !== null);
@@ -95,7 +94,7 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onClose, on
                 earlier: earlierTagOf(thread, true),
                 snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
                 showInConversation: () => comments.showInConversation(thread.root.id),
-                changesSince: () => onChangesSince(revisionId),
+                seeInContext: () => onSeeInContext(thread),
               }}
             />
           ))}

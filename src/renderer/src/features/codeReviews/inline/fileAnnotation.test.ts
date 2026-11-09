@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { changesSinceRevision, comparedFile, hasComments, isCommentable, markerCount, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, markerCount, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -25,9 +25,8 @@ describe('isCommentable', () => {
 });
 
 describe('comparedFile', () => {
-  it("is the entry's revisions, the older side the version commented on while compared since a comment", () => {
-    expect(comparedFile(ENTRY, null)).toEqual({ path: 'src/Player.cs', oldPath: undefined, originalRevision: 10, modifiedRevision: 30 });
-    expect(comparedFile(ENTRY, 20).originalRevision).toBe(20);
+  it("is the entry's path and revisions", () => {
+    expect(comparedFile(ENTRY)).toEqual({ path: 'src/Player.cs', oldPath: undefined, originalRevision: 10, modifiedRevision: 30 });
   });
 });
 
@@ -56,13 +55,6 @@ describe('markerCount', () => {
   it('counts the threads of a line only when there are several', () => {
     expect(markerCount({ threads: [{ thread: thread(1), side: 'additions', line: 1 }] })).toBeNull();
     expect(markerCount({ threads: [1, 2].map((id) => ({ thread: thread(id), side: 'additions' as const, line: 1 })) })).toBe(2);
-  });
-});
-
-describe('changesSinceRevision', () => {
-  it('compares from the version a thread on an earlier version was written on, and offers nothing for the others', () => {
-    expect(changesSinceRevision({ earlier: { thread: thread(1), revisionId: 20 } })).toBe(20);
-    expect(changesSinceRevision({})).toBeUndefined();
   });
 });
 

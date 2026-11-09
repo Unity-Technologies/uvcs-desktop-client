@@ -37,8 +37,4 @@ describe('diff review', () => {
     expect(reviewedRevisionToCompare(marks, entry('gone.ts', -1))).toBeNull();
     expect(reviewedRevisionToCompare(marks, entry('c.ts', 30))).toBeNull();
   });
-
-  it('offers none while the place compares the file with another older side', () => {
-    expect(reviewedRevisionToCompare(marks, entry('b.ts', 20), true)).toBeNull();
-  });
 });

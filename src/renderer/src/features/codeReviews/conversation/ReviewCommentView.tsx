@@ -27,7 +27,7 @@ interface ReviewCommentViewProps {
   /** Whether its author wrote the review: marked Author, as who answers for the changes. */
   byReviewAuthor?: boolean;
   /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
-  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation' | 'changesSince'>;
+  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */

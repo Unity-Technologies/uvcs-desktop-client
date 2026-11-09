@@ -4,7 +4,6 @@ import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { earlierRevisions, placeEarlier, threadsOfFile, writtenIn, type EarlierThread, type ReviewDiffView, type ShownFile, type ThreadSide } from './fileThreads';
 import { newerLineFinder } from './newerLine';
-import { hasComments } from './fileAnnotation';
 import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } from './threadRows';
 
 /** A file's threads as its diff shows them: by line, and those outdated, apart above the code. */
@@ -56,11 +55,6 @@ export function versionsToRead({ threads, review, view, file }: Omit<FileComment
 /** The side a file's rows above its code go on: the one it has, the older for a deleted file. */
 export function topSideOf(file: Pick<ShownFile, 'modifiedRevision'>): ThreadSide {
   return file.modifiedRevision === -1 ? 'deletions' : 'additions';
-}
-
-/** Whether a file's diff offers the comments' controls: it has threads, or is compared since one. */
-export function showsCommentControls(comments: Pick<FileComments, 'lines' | 'outdated'> | null, comparingSince: boolean): boolean {
-  return comparingSince || hasComments(comments);
 }
 
 /** The row above the code holding a file's outdated threads (`lineNumber: 0`). */

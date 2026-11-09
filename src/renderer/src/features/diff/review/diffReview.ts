@@ -31,14 +31,8 @@ export function diffReviewStatusOf(marks: DiffReviewMarks): ReviewStatusOf<DiffE
   };
 }
 
-/**
- * The revision reviewed of a file changed since, to show just what changed after it; none when either side is missing,
- * or while the place compares the file with an older side of its own (`AnnotatedEntry.original`).
- */
-export function reviewedRevisionToCompare(marks: DiffReviewMarks, entry: DiffEntry, placeComparesFrom = false): number | null {
-  // One older side at a time: compared with what the place asks for (a review's "Changes since this comment"), the
-  // threads it places on that side are its own.
-  if (placeComparesFrom) return null;
+/** The revision reviewed of a file changed since, to show just what changed after it; none when either side is missing. */
+export function reviewedRevisionToCompare(marks: DiffReviewMarks, entry: DiffEntry): number | null {
   const reviewed = marks.get(entry.path);
   if (reviewed === undefined || reviewed === entry.revisionId || reviewed === -1 || entry.revisionId === -1) return null;
   return reviewed;

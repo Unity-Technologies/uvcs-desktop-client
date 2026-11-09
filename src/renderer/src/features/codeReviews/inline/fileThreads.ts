@@ -63,7 +63,7 @@ export interface FileThreads {
 /**
  * The threads a file's diff shows, in `view`:
  * - on a line of a revision either side shows, at that line: the newer side's, or the older one's (a file the review
- *   deletes is commented on its last revision; "Changes since this comment" shows the revision commented on the left);
+ *   deletes is commented on its last revision, which its older side shows);
  * - on another revision of the file, an earlier one, to place by where its line went (`placeEarlier`).
  * A changeset's diff shows the threads written in it; the whole review's those written in it, and those written
  * changeset by changeset whose revision it shows or whose line it still has, so an open change
