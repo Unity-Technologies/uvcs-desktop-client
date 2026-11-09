@@ -94,3 +94,15 @@ selected file's (`pastePlan`, pure): never into themselves, a private folder (co
 folder has in any case (those stay, after asking); items already there are left. `explorer.moveItems` runs it as one
 operation, a `cm move` per controlled item and a rename on disk per private one, refusing any existing target
 (`cm move` onto a folder moves inside it); then the moved items are selected, with Undo.
+
+## Checking in
+
+Check in… (the menu; the palette's "Check in selected items…") checks in only the selected items, without leaving
+Files: a new file is added and checked in on its own, the rest of Changes left pending. What it takes is
+`filesCheckinChanges` (pure): each item's own change (a private one even when the Changes filter hides private
+items), every controlled change inside a selected controlled folder, everything inside a selected private folder,
+and what those need (`neededWith`: the new folder above a new file, the rest of a merge); never ignored, cloaked or
+hidden items. The menu offers it only when that is something (`fileMenuTargets`' `checkinable`). `checkinItems`
+asks for the comment (`askForCheckinComment`; an empty one is confirmed when the setting says so), then asks what
+the Changes panel asks (`checkinConfirmations`: a pile of private files, the changes a folder takes along) and runs
+`checkinChanges`, which offers to update when the branch moved on. It leaves the Changes panel's comment as it was.
