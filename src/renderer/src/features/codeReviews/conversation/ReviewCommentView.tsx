@@ -1,7 +1,7 @@
 import { MoreHorizontal } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
@@ -28,11 +28,17 @@ interface ReviewCommentViewProps {
   byReviewAuthor?: boolean;
   /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
   threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
+  /** Gone to, the how-many-th time (the reply an Answered pill leads to): scrolled to and lit for a moment. */
+  lit?: number;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions }: ReviewCommentViewProps) {
+export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit }: ReviewCommentViewProps) {
   const place = usePlace();
+  const element = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (lit !== undefined) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [lit]);
   const [editing, setEditing] = useState(false);
   const menu = commentMenu(comment, thread, user, {
     edit: () => setEditing(true),
@@ -42,7 +48,7 @@ export function ReviewCommentView({ comment, thread, user, action, byReviewAutho
   });
 
   return (
-    <article className={styles.comment} aria-label={`${displayName(comment.author)}'s comment`}>
+    <article ref={element} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>
       <Avatar user={comment.author} size={24} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>

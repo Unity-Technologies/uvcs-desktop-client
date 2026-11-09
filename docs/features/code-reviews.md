@@ -150,7 +150,11 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   how it was applied", `appliedPillTip`) or a reply discards it
   (**Discarded**); a question is **Open** until anyone replies (**Answered**: any reply answers it, there's no other
   way to resolve one). Other comments are never open. A settled thread starts folded to that line and its first words
-  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole. Where it stands is an outlined pill:
+  (`startsFolded`, `repliesText`), so what's open stands out; a click shows it whole (by keyboard, its fold toggle:
+  the folded line is the pointer's way only, so it isn't a second tab stop). **Answered** is a link as **Applied** is,
+  in the conversation and in the code (not the Comments panel's cards, which go to the thread): it shows the thread
+  whole, scrolled to the reply that answered it, the first, lit for a moment ("Answered by Borja: see the answer",
+  `answerOf`). Where it stands is an outlined pill:
   **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed",
   **Discarded** neutral.
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
