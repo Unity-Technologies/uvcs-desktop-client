@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryConflictResolution, MergePlan } from '@shared/domain/merge';
 import { layoutGroupedTree } from '../../lib/groupedPathTree';
-import { buildMergeItems, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, directoryConflictsInListOrder, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
@@ -85,6 +85,12 @@ describe('merge items', () => {
     expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions()))?.path).toBe('twin.txt');
     expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions({ choice: 'source' })))?.path).toBe('a.txt');
     expect(firstWaiting(items, mergeProgress([fileState(true)], twinResolutions({ choice: 'source' })))).toBeUndefined();
+  });
+
+  it('names the directory conflicts in the order the list shows them, decided ones too', () => {
+    const before: DirectoryConflict = { ...twin, itemId: 2, source: { ...side, path: '/a-twin.txt' }, destination: { ...side, path: '/a-twin.txt' } };
+    const items = buildMergeItems({ ...twinDecided, directoryConflicts: [before] }, [{ conflict: twin, resolution: { choice: 'source' } }], [file]);
+    expect(directoryConflictsInListOrder(items)).toEqual([before, twin]);
   });
 
   it("reads a conflicting file's state by its key, never a stale copy in the item", () => {

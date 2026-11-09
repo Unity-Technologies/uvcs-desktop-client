@@ -51,3 +51,78 @@ export function isDecidedAs(decisions: readonly DirectoryDecision[], conflict: D
   if (decided?.choice === 'rename' && resolution.choice === 'rename') return decided.newName === resolution.newName;
   return decided?.choice === resolution.choice;
 }
+
+/**
+ * The conflicts after `conflict` in the list (`ordered`) of the same kind, not decided yet: those "Do the same for the
+ * next conflicts of this kind" decides with it. The same kind offers the same choices, so each takes the decision.
+ */
+export function nextOfSameKind(
+  ordered: readonly DirectoryConflict[],
+  conflict: DirectoryConflict,
+  resolutions: ReadonlyMap<string, DirectoryConflictResolution>,
+): DirectoryConflict[] {
+  const identity = directoryConflictIdentity(conflict);
+  const index = ordered.findIndex((other) => directoryConflictIdentity(other) === identity);
+  if (index < 0) return [];
+  return ordered.slice(index + 1).filter((other) => other.type === conflict.type && !resolutions.has(directoryConflictIdentity(other)));
+}
+
+/**
+ * The page's decisions with `conflict` decided as `resolution`, then each of `next` decided the same way, in order.
+ * Keep both decides only `conflict`: the name it gives belongs to one item.
+ */
+export function withDecisionAndNext(
+  decisions: readonly DirectoryDecision[],
+  conflict: DirectoryConflict,
+  resolution: DirectoryConflictResolution,
+  next: readonly DirectoryConflict[],
+): DirectoryDecision[] {
+  const decided = withDecision(decisions, conflict, resolution);
+  if (resolution.choice === 'rename') return decided;
+  return next.reduce((all, other) => withDecision(all, other, resolution), decided);
+}
+
+/** The label of the box deciding the next conflicts of the same kind too: "Do the same for the next 3 conflicts of this kind". */
+export function applyToNextLabel(count: number): string {
+  return count === 1 ? 'Do the same for the next conflict of this kind' : `Do the same for the next ${count} conflicts of this kind`;
+}
+
+/**
+ * Whether deciding `conflict` as `resolution`, with the `next` conflicts the same way, changes the page's decisions:
+ * not when it is decided so already and no next one goes with it (Keep both takes none).
+ */
+export function changesDecisions(
+  decisions: readonly DirectoryDecision[],
+  conflict: DirectoryConflict,
+  resolution: DirectoryConflictResolution,
+  next: readonly DirectoryConflict[],
+): boolean {
+  return !isDecidedAs(decisions, conflict, resolution) || (resolution.choice !== 'rename' && next.length > 0);
+}
+
+/** The box deciding the next conflicts of the same kind too, as the panel shows it. */
+export interface ApplyToNextBox {
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+}
+
+/**
+ * The box the panel shows for the `nextCount` conflicts of the same kind waiting after this one, with the choice
+ * `picked` and the box as the user left it (`checked`): none when none waits; off and disabled for Keep both, whose
+ * name belongs to one item (`withDecisionAndNext`).
+ */
+export function applyToNextBox(nextCount: number, picked: DirectoryConflictResolution['choice'] | undefined, checked: boolean): ApplyToNextBox | undefined {
+  if (nextCount === 0) return undefined;
+  const keepingBoth = picked === 'rename';
+  return { label: applyToNextLabel(nextCount), checked: checked && !keepingBoth, disabled: keepingBoth };
+}
+
+/**
+ * Whether clicking `choice` decides the `nextCount` conflicts waiting after this one too, with the box as the user
+ * left it (`checked`). Decided from the choice clicked, not the one shown picked: the box shows off while Keep both is
+ * picked (`applyToNextBox`), and the user who picks another choice next never unchecked it.
+ */
+export function decidesNextToo(nextCount: number, choice: DirectoryConflictResolution['choice'], checked: boolean): boolean {
+  return applyToNextBox(nextCount, choice, checked)?.checked ?? false;
+}

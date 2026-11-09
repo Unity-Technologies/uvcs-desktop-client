@@ -158,6 +158,12 @@
   margin-top: calc(var(--text-sm) * 1.5 + 6px);
 }
 
+/* Under the choices, as a condition on the one the user picks next. */
+.applyToNext {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
 .applying {
   display: flex;
   align-items: center;
