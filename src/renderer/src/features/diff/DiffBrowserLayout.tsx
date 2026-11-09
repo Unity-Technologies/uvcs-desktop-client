@@ -31,6 +31,9 @@ interface DiffBrowserLayoutProps {
  * dragged and what's above the files stay, so the changesets keep their focus, scroll and filter as they're stepped.
  * Only the diff's column holds what changes height from one target to the next (`aboveDiff`): the lists never move.
  */
+/** The list of files' width beside a diff, until it's dragged. */
+export const FILES_WIDTH = 340;
+
 export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true }: DiffBrowserLayoutProps) {
   const [files, setFiles] = useState<HTMLElement | null>(null);
   const [diff, setDiff] = useState<HTMLElement | null>(null);
@@ -41,7 +44,7 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable 
   return (
     <ExpandableDiffContext.Provider value={expandable}>
       <SplitPane
-        initialSize={340}
+        initialSize={FILES_WIDTH}
         minSize={220}
         maxSize={640}
         // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.

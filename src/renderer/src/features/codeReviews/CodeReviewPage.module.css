@@ -83,6 +83,15 @@
   min-height: 0;
 }
 
+/* The Changes tab's content, measured as it first shows (`usePanelStart`). */
+.changesTab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 /* The tab not shown, kept mounted. */
 .tabPanel[hidden] {
   display: none;

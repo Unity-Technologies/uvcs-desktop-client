@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
+import styles from './CodeReviewPage.module.css';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
-import { useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { commentLineText } from '../../lib/comments/commentText';
@@ -20,7 +22,7 @@ import { reviewFileFlag } from './inline/reviewFileFlag';
 import { conversationAt, ReviewCommentsContext, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useCommentContext } from './inline/useCommentContext';
-import { commentsPanelStartsHidden, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
+import { commentsPanelStartsHidden, commentsPanelThreads, diffWidthBesidePanel, initialCommentsFilter, NO_COMMENTS_SEARCH, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 
@@ -61,7 +63,8 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
   const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all') : []), [threads]);
   const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
   const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search) : []), [threads, filter, search]);
-  usePanelStart(threads === undefined ? null : all.length);
+  const tab = useRef<HTMLDivElement>(null);
+  usePanelStart(threads === undefined ? null : all.length, tab);
 
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
@@ -97,30 +100,32 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
         <EntryFlagContext.Provider value={fileFlag}>
           <DiffFocusRequestContext.Provider value={request}>
-            <ListWithDetails
-              detailsKey={COMMENTS_PANEL_KEY}
-              widthLimits={COMMENTS_PANEL_WIDTH}
-              list={
-                <DiffPage
-                  page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
-                  focusChangeset={page.focusChangeset}
-                  detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
-                />
-              }
-              details={
-                <ReviewCommentsPanel
-                  comments={comments}
-                  filter={filter}
-                  onFilterChange={setFilter}
-                  search={search}
-                  onSearchChange={setSearch}
-                  listed={listed}
-                  all={all}
-                  onStep={step}
-                  onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}
-                />
-              }
-            />
+            <div ref={tab} className={styles.changesTab}>
+              <ListWithDetails
+                detailsKey={COMMENTS_PANEL_KEY}
+                widthLimits={COMMENTS_PANEL_WIDTH}
+                list={
+                  <DiffPage
+                    page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
+                    focusChangeset={page.focusChangeset}
+                    detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
+                  />
+                }
+                details={
+                  <ReviewCommentsPanel
+                    comments={comments}
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    search={search}
+                    onSearchChange={setSearch}
+                    listed={listed}
+                    all={all}
+                    onStep={step}
+                    onClose={() => toggleDetails(COMMENTS_PANEL_KEY)}
+                  />
+                }
+              />
+            </div>
           </DiffFocusRequestContext.Provider>
         </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
@@ -132,7 +137,7 @@ export function ReviewChangesTab({ review, page, diffTarget, shown }: ReviewChan
  * Starts the Comments panel hidden when it has nothing to list (`commentsPanelStartsHidden`), decided once the
  * conversation is first read (`codeThreads`, null until then); leaving the review forgets it.
  */
-function usePanelStart(codeThreads: number | null): void {
+function usePanelStart(codeThreads: number | null, tab: RefObject<HTMLElement | null>): void {
   const decided = useRef(false);
   const startHidden = useDetailsPaneStore((state) => state.startHidden);
   const forgetStarted = useDetailsPaneStore((state) => state.forgetStarted);
@@ -140,8 +145,10 @@ function usePanelStart(codeThreads: number | null): void {
   useLayoutEffect(() => {
     if (decided.current || codeThreads === null) return;
     decided.current = true;
-    if (commentsPanelStartsHidden({ codeThreads })) startHidden(COMMENTS_PANEL_KEY);
-  }, [codeThreads, startHidden]);
+    const panelWidth = detailsWidthOf(useDetailsPaneStore.getState(), COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
+    const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: FILES_WIDTH, panelWidth });
+    if (commentsPanelStartsHidden({ codeThreads, diffWidth })) startHidden(COMMENTS_PANEL_KEY);
+  }, [codeThreads, startHidden, tab]);
   useEffect(
     () => () => {
       decided.current = false;
