@@ -130,7 +130,7 @@ does.
 | Every list (changesets, branches, labels, shelves, attributes, code reviews, History, Incoming, the changeset picker, the branch search, My shelves, a check-in's rejection) | The first line: inline formatting, compact chips, emoji, links as their text, images by their description (`CommentLine`); the filter's words marked |
 | What holds only text: the Branch Explorer's canvas, its tooltips, the palette's rows (reviews' titles too), notifications, the branch pill, the comparison title | Without marks (`commentLineText`, `commentText`): references as written, emoji as themselves; a line with nothing Markdown could read skips the parsing (the canvas asks for thousands) |
 
-Inline code looks the same wherever a comment shows, as Slack draws it: crimson (`--text-code`) in a `--bg-code` pill
+Inline code looks the same wherever a comment shows: crimson (`--text-code`) in a `--bg-code` pill
 with a `--border-default` border (`Markdown.module.css`, `CommentLine.module.css`). Code in a link takes the link's
 color, struck through the struck words' color, and a filter's match in it the text's color (crimson on the match's
 yellow is too dark). A code block keeps the text's color, no border. The editor draws inline code in its color and pill
