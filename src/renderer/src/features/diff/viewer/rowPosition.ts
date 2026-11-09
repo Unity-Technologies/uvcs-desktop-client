@@ -47,3 +47,30 @@ export function lineOfRow(lineNumber: string | undefined, lineType: string | und
 export function scrollTopFor(linePosition: number, offset: number): number {
   return Math.max(0, linePosition - offset);
 }
+
+/** A row under a line and the part of it gone to, from the top of the scrolled content. */
+export interface RowFrame {
+  /** Where the line the row is under starts: the row's own top for one above the code. */
+  lineTop: number;
+  /** The part of the row gone to (one thread of several under a line): the whole row when there's no such part. */
+  focusTop: number;
+  focusBottom: number;
+}
+
+/** Room kept between what's gone to and the edges of the view. */
+export const FRAME_MARGIN = 24;
+
+/**
+ * Where to scroll so a line and the row gone to under it show whole, the line a quarter of the way down: what's read
+ * next sits high in the view, not against its bottom. Taller than the view, the part gone to shows from its top. None
+ * when it all shows already, away from the edges: the view doesn't move under the reader.
+ */
+export function framedScrollTop(frame: RowFrame, view: { scrollTop: number; height: number }): number | null {
+  const { lineTop, focusTop, focusBottom } = frame;
+  const inView = lineTop >= view.scrollTop + FRAME_MARGIN && focusBottom <= view.scrollTop + view.height - FRAME_MARGIN;
+  if (inView) return null;
+  let top = lineTop - view.height / 4;
+  if (focusBottom - top > view.height - FRAME_MARGIN) top = focusBottom - view.height + FRAME_MARGIN;
+  if (focusTop - top < FRAME_MARGIN) top = focusTop - FRAME_MARGIN;
+  return Math.max(0, top);
+}

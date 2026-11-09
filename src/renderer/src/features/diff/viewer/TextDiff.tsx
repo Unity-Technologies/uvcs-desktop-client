@@ -20,6 +20,7 @@ import { linesLayoutOf } from './keptPlace';
 import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
+import { scrollToAnnotationRow } from './annotationRowScroll';
 import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
 import { LineMarkers } from './LineMarkers';
@@ -181,17 +182,25 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   }, []);
   // Going to a line (a link's, Go to line's) shows it first: with unchanged lines collapsed, its region is folded away
   // and has no row to scroll to. Pierre's `revealLine` expands only that region, from its nearer end (`lineToReveal`).
-  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+  const revealFolded = (line: ChangedLine): void => {
     const newerLine = lineToReveal(latest.current.diff.meta.hunks, line.side, line.lineNumber);
     if (newerLine !== null) renderedDiff.current?.revealLine(newerLine);
+  };
+  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    revealFolded(line);
     return scrollToLine(element, line, virtualizer);
+  };
+  // A row a place adds under a line is gone to with its line, both shown whole (`scrollToAnnotationRow`).
+  const scrollToShownRow = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    revealFolded(line);
+    return scrollToAnnotationRow(element, line, virtualizer);
   };
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   // What the place adds under the lines (a review's comments), each row's line unfolded once rendered.
-  const { annotations, revealRows } = useDiffAnnotations({ containerRef: container, renderedDiff, hunks: diff.meta.hunks, shown: canHighlight, scrollTo: scrollToShownLine });
+  const { annotations, revealRows } = useDiffAnnotations({ containerRef: container, renderedDiff, hunks: diff.meta.hunks, shown: canHighlight, scrollTo: scrollToShownRow });
   revealAnnotated.current = revealRows;
   // A workspace file's diff picks lines of its own, to discard them; any other diff selects them for links.
   const lineLinks = useLineLinks({

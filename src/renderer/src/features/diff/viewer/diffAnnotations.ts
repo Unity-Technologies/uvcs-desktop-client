@@ -9,8 +9,8 @@ import { lineToReveal, type HunkSides } from './lineToReveal';
  * - `rows`: Pierre's line annotations, each a row under its line drawn by `render` (`lineNumber: 0` is above the file's
  *   first line); the viewer unfolds the unchanged lines holding them, so none is hidden in a folded region;
  * - `markers`: a small mark at the end of a line whose row is folded away, a click opening it;
- * - `scrollTo`: a line to bring into view, once each time it's a new object (the thread a link or a list went to);
- *   `lineNumber: 0`, the rows above the code, at the diff's top;
+ * - `scrollTo`: the line whose row to bring into view, line and row whole and high in the view, once each time it's a
+ *   new object (the thread a link or a list went to); `lineNumber: 0`, the rows above the code;
  * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
  *   the diff doesn't open at its first change, which would scroll past it.
  */
@@ -33,6 +33,12 @@ export interface LineMarker extends ChangedLine {
   emphasized: boolean;
   onOpen: () => void;
 }
+
+/**
+ * Marks the part of a row that's gone to (one thread of several under a line, one of the outdated ones above the code):
+ * scrolling to the row shows that part whole (`scrollToAnnotationRow`). Without it, the whole row is.
+ */
+export const ROW_FOCUS_ATTRIBUTE = 'data-row-focus';
 
 export const DiffAnnotationsContext = createContext<DiffAnnotations | null>(null);
 

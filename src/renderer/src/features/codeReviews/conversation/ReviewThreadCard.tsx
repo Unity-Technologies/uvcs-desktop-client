@@ -18,6 +18,7 @@ import type { ReviewThread } from './reviewThreads';
 import { commentLocationPage, locationText, replyAction, repliesText, startsFolded, threadBadges, threadKindName, type ThreadBadges } from './threadBadges';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
+import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewThreadCardProps {
@@ -74,6 +75,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
       data-folded={folded}
       data-in-code={inCode ? '' : undefined}
       data-highlight={highlight === undefined ? undefined : highlight % 2}
+      {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
     >
       {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
