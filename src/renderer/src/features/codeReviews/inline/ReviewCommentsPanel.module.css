@@ -105,8 +105,9 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* The hover's tint laid over the band's own color: the band stays opaque, the rows under it hidden. */
 .groupHeader:hover {
-  background: color-mix(in srgb, var(--bg-hover) 100%, var(--bg-subtle));
+  background: linear-gradient(var(--bg-hover), var(--bg-hover)), var(--bg-subtle);
 }
 
 /* Its file's comments folded away (pointing right) or shown (down). */
