@@ -57,6 +57,10 @@ describe('commentedComparison', () => {
     expect(commentedComparison(threadOn(20), { ...SHOWN, baseRevisionId: -1 }).original).toEqual({ kind: 'empty' });
   });
 
+  it('keeps a comment on a removed line on the older side, against the newer side of the diff it was written in', () => {
+    expect(commentedComparison(threadOn(10), { ...SHOWN, baseRevisionId: 10, revisionId: 20 })).toEqual({ original: revision(10), modified: revision(20), side: 'deletions', line: 12 });
+  });
+
   it("keeps on the older side a comment on a file the diff deletes, which is on its last revision", () => {
     expect(commentedComparison(threadOn(25), { ...SHOWN, baseRevisionId: 25, revisionId: -1 })).toEqual({ original: revision(25), modified: { kind: 'empty' }, side: 'deletions', line: 12 });
   });
