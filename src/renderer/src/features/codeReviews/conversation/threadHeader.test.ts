@@ -43,6 +43,11 @@ describe('threadHeaderOf', () => {
       expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: 'line 11', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
     });
 
+    it('names no file under the file\'s name in the Comments panel, with the kind\'s icon even for a plain comment', () => {
+      const header = headerOf(plainOnLine, { place: 'fileGroup' });
+      expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, null, true]);
+    });
+
     it('names its kind in the code instead of the file it is at, with its icon even for a plain comment', () => {
       const header = headerOf(plainOnLine, { place: 'code' });
       expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, 'Comment', true]);

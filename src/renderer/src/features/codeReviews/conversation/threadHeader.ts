@@ -3,9 +3,10 @@ import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, thre
 
 /**
  * Where a thread's card is: the conversation's timeline, the code of the Changes tab (`ThreadInCode`), or the Comments
- * panel, whose whole card goes to the thread (`ThreadSummaryCard`).
+ * panel, whose whole card goes to the thread (`ThreadSummaryCard`): alone in a time order (`panel`), or under its
+ * file's name in the code order (`fileGroup`, `ThreadSummaryRow`), where its line stands apart.
  */
-export type ThreadCardPlace = 'conversation' | 'code' | 'panel';
+export type ThreadCardPlace = 'conversation' | 'code' | 'panel' | 'fileGroup';
 
 /** What the card can do from its header, which decides what the header offers. */
 export interface ThreadHeaderInput {
@@ -66,11 +67,14 @@ export function hasThreadHeader(thread: ReviewThread): boolean {
 export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer, inContext }: ThreadHeaderInput): ThreadHeaderView {
   const badges = threadBadges(thread);
   const inCode = place === 'code';
+  // Under its file, every row has the icon, so their words start in one column.
+  const underFile = place === 'fileGroup';
   return {
     foldToggle: foldable ? { expanded: !folded, label: folded ? 'Show the thread' : 'Fold the thread' } : null,
-    kindIcon: badges.kind !== undefined || inCode,
-    // In the code, the thread is at its line: its location would name where the user already is.
-    location: inCode ? null : locationOf(thread, place === 'panel'),
+    kindIcon: badges.kind !== undefined || inCode || underFile,
+    // In the code, the thread is at its line: its location would name where the user already is. Under its file's
+    // name, the file is named already.
+    location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     kindLabel: inCode ? threadKindName(thread.root) : null,
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
