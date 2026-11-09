@@ -25,6 +25,11 @@ interface AvatarStackProps {
    * reads each avatar's own, and "+N"'s names the rest.
    */
   label?: string;
+  /**
+   * Stays stacked when hovered, and the avatars name no one: for a stack too small to spread, inside something that
+   * names them itself (a line's comments marker).
+   */
+  still?: boolean;
 }
 
 /**
@@ -33,7 +38,7 @@ interface AvatarStackProps {
  * each names itself in its own tooltip. A badge (a reviewer's status) shows in each avatar's corner only once spread:
  * at rest the stack says who, spread it says where each stands.
  */
-export function AvatarStack({ avatars, size, more, label }: AvatarStackProps) {
+export function AvatarStack({ avatars, size, more, label, still = false }: AvatarStackProps) {
   const { slots, restWidth, spreadWidth } = avatarStackLayout(avatars.length + (more ? 1 : 0), size);
 
   return (
@@ -42,9 +47,10 @@ export function AvatarStack({ avatars, size, more, label }: AvatarStackProps) {
       style={{ width: restWidth, height: size, '--avatar-size': `${size}px`, '--spread-width': `${spreadWidth}px` } as CSSProperties}
       aria-label={label}
       aria-hidden={label ? undefined : true}
+      data-still={still || undefined}
     >
       {avatars.map((avatar, index) => (
-        <span key={avatar.user} className={styles.item} style={slotStyle(slots[index]!)} data-tip={avatar.tip}>
+        <span key={avatar.user} className={styles.item} style={slotStyle(slots[index]!)} data-tip={still ? undefined : avatar.tip}>
           {avatar.group ? <GroupAvatar size={size} /> : <Avatar user={avatar.user} size={size} tip={null} />}
           {avatar.badge && (
             <span className={styles.badge} style={{ '--badge-color': avatar.badge.color } as CSSProperties}>
@@ -54,7 +60,7 @@ export function AvatarStack({ avatars, size, more, label }: AvatarStackProps) {
         </span>
       ))}
       {more && (
-        <span className={styles.item} style={slotStyle(slots[avatars.length]!)} data-tip={more.tip}>
+        <span className={styles.item} style={slotStyle(slots[avatars.length]!)} data-tip={still ? undefined : more.tip}>
           <span className={styles.more}>+{more.count}</span>
         </span>
       )}

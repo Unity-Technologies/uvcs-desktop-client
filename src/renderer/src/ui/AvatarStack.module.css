@@ -103,3 +103,16 @@
   transition-duration: var(--duration-normal);
   transition-delay: calc(var(--order) * var(--duration-instant) / 4 + var(--duration-slow) * 0.6);
 }
+
+/* A still stack (`still`) rests as it is when hovered: no spread, no growth, no strip holding it open. */
+.stack[data-still]:hover::after {
+  pointer-events: none;
+}
+
+.stack[data-still]:hover .item,
+.stack[data-still]:hover .item:hover {
+  z-index: var(--layer);
+  translate: var(--rest-x);
+  scale: none;
+  box-shadow: 0 0 0 1.5px var(--bg-surface);
+}

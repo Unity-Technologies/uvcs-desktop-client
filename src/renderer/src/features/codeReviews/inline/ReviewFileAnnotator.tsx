@@ -106,7 +106,8 @@ function MarkerContent({ line }: { line: LineThreads }) {
   const { people, more } = markerPeople(line);
   return (
     <>
-      <AvatarStack avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
+      {/* Still: the marker's own tooltip names the people (`markerLabel`). */}
+      <AvatarStack still avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
       {markerCommentCount(line)}
     </>
   );
