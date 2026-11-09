@@ -782,21 +782,18 @@ button.earlierTag:hover {
   color: var(--status-changed);
 }
 
+/*
+ * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ */
 .rowAbout {
   display: flex;
+  overflow: hidden;
   align-items: center;
   gap: 6px;
   min-width: 0;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
-}
-
-/*
- * Cut short in turn in a narrow panel: who started it, then the replies, the line last (weights orders of magnitude
- * apart, as `.locationFolder`'s).
- */
-.rowAbout {
-  overflow: hidden;
 }
 
 .rowAbout .author {

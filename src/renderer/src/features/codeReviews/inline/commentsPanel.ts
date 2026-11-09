@@ -221,8 +221,12 @@ export function toggledFold(folded: FoldedFiles, path: string): FoldedFiles {
   return next;
 }
 
-/** A comment gone to (a click, the arrows, N) is never hidden: its file unfolds. The same set when it was open. */
-export function unfoldedFor(folded: FoldedFiles, path: string): FoldedFiles {
+/**
+ * A comment gone to (a click, the arrows, N) is never hidden: the file it's grouped under (`commentsByFile`) unfolds.
+ * The same set when it was open.
+ */
+export function unfoldedFor(folded: FoldedFiles, thread: LineThread): FoldedFiles {
+  const path = pathOf(thread);
   if (!folded.has(path)) return folded;
   const next = new Set(folded);
   next.delete(path);
@@ -230,13 +234,28 @@ export function unfoldedFor(folded: FoldedFiles, path: string): FoldedFiles {
 }
 
 /**
- * The sort menu's entry folding every file at once: "Collapse all" while any is open, else "Expand all", and what it
- * leaves folded. None in a time order, which has no files to fold.
+ * The files shown folded: none while searching, so a match in a folded file shows its row and why it's listed; the
+ * folds come back as the search is cleared.
  */
-export function foldAllEntry(groups: readonly CommentsFileGroup[] | null, folded: FoldedFiles): { label: string; collapses: boolean; folded: FoldedFiles } | null {
+export function shownFolds(folded: FoldedFiles, search: CommentsSearch): FoldedFiles {
+  return isSearching(search) ? NO_FOLDED_FILES : folded;
+}
+
+/** The sort menu's entry folding or unfolding every file at once, and what it leaves folded. */
+export interface FoldAllEntry {
+  label: 'Collapse all' | 'Expand all';
+  collapses: boolean;
+  folded: FoldedFiles;
+}
+
+/**
+ * "Collapse all" while any file listed is open (keeping the folds of files the filter hides now), else "Expand all".
+ * None in a time order, which has no files to fold.
+ */
+export function foldAllEntry(groups: readonly CommentsFileGroup[] | null, folded: FoldedFiles): FoldAllEntry | null {
   if (!groups || groups.length === 0) return null;
   const anyOpen = groups.some((group) => !folded.has(group.path));
-  return anyOpen ? { label: 'Collapse all', collapses: true, folded: new Set(groups.map((group) => group.path)) } : { label: 'Expand all', collapses: false, folded: NO_FOLDED_FILES };
+  return anyOpen ? { label: 'Collapse all', collapses: true, folded: new Set([...folded, ...groups.map((group) => group.path)]) } : { label: 'Expand all', collapses: false, folded: NO_FOLDED_FILES };
 }
 
 /**

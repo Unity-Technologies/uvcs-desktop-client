@@ -16,7 +16,7 @@ import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
 import { useReviewThreads } from './conversation/useReviewThreads';
 import { commentsByFile, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
-import { anchorPath, isLineThread, type LineThread } from './inline/fileThreads';
+import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
@@ -68,10 +68,9 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const goToThread = (thread: LineThread): void => {
     seq.current += 1;
     setFocus({ threadId: thread.root.id, seq: seq.current });
-    setFolded((current) => unfoldedFor(current, anchorPath(thread.root.anchor)));
+    setFolded((current) => unfoldedFor(current, thread));
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
-
 
   const showThreadInConversation = useCallback((threadId: number): void => showInConversation(review.id, threadId), [review.id]);
   const seeInContext = useCommentContext(review);

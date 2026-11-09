@@ -260,13 +260,14 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
     (`commentsByFile`), so a file with many comments is named once. The name stays at the top while its comments scroll
     (sticky), with its folder cut from the start (the folder nearest the file stays) and how many. A click on it folds
     its comments away and back (`toggledFold`); the sort menu folds or unfolds every file at once, one entry saying
-    Collapse all while any is open, else Expand all (`foldAllEntry`). Going to a comment (a click, the arrows, N)
-    unfolds its file (`unfoldedFor`), so the one gone to never hides; the folds are kept by the Changes tab, as the
-    filter is. The name doesn't also show the file: two targets in one band read worse, and a row goes there. Each
-    thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its kind's icon leading, as a bullet; who started
-    it, "line N" and its replies, then its state; its first words under them, as wide as the row. A line number in a
-    column of its own read as an id, and the icon beside the words took their room. In a narrow panel, who started it is
-    cut first, then the replies, the line last. The one gone to has the accent bar on its left.
+    Collapse all while any is open, else Expand all (`foldAllEntry`; collapsing keeps the folds of files the filter
+    hides now). While searching, every file shows unfolded, so a match says why it's listed (`shownFolds`). Going to a
+    comment (a click, the arrows, N) unfolds its file (`unfoldedFor`), so the one gone to never hides; the folds are
+    kept by the Changes tab, as the filter is. The name doesn't also show the file: two targets in one band read worse,
+    and a row goes there. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its kind's icon leading,
+    as a bullet; who started it, "line N" and its replies, then its state; its first words under them, as wide as the
+    row. A line number in a column of its own read as an id, and the icon beside the words took their room. In a narrow
+    panel, who started it is cut first, then the replies, the line last. The one gone to has the accent bar on its left.
   - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old
     thread up; one list, as the conversation sums up a settled thread (`ThreadSummaryCard`; its file and line only name
     where it goes, cut short in turn, the folder first, then the line, the file's name last, and whole in a tooltip).

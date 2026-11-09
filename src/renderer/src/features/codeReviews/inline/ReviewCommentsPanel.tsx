@@ -20,6 +20,7 @@ import {
   commentPosition,
   commentsPanelCounts,
   foldAllEntry,
+  shownFolds,
   toggledFold,
   type CommentsFileGroup,
   type CommentsOrder,
@@ -85,6 +86,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
   const listRef = useRef<HTMLDivElement>(null);
+  const shownFolded = shownFolds(folded, search);
   useFollowedCard(listRef, comments.focus?.seq, order);
   return (
     <>
@@ -106,7 +108,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current, groups)}</span>
-          <CommentsOrderMenu order={order} onChange={onOrderChange} foldAll={foldAllEntry(groups, folded)} onFold={onFoldedChange} />
+          <CommentsOrderMenu order={order} onChange={onOrderChange} foldAll={foldAllEntry(groups, shownFolded)} onFold={onFoldedChange} />
           <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous comment" shortcut={hotkey('previousComment')} disabled={steppedThread(listed, all, current, -1) === null} onClick={() => onStep(-1)} />
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next comment" shortcut={hotkey('nextComment')} disabled={steppedThread(listed, all, current, 1) === null} onClick={() => onStep(1)} />
         </div>
@@ -122,7 +124,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
           {groups ? (
             <div className={styles.groups}>
               {groups.map((group) => (
-                <FileGroup key={group.path} group={group} folded={folded.has(group.path)} onToggle={() => onFoldedChange(toggledFold(folded, group.path))}>
+                <FileGroup key={group.path} group={group} folded={shownFolded.has(group.path)} onToggle={() => onFoldedChange(toggledFold(shownFolded, group.path))}>
                   {group.threads.map((thread) => (
                     <li key={thread.root.id}>
                       <ThreadSummaryRow
@@ -222,9 +224,9 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
 }
 
 /**
- * Each time a comment is gone to (a card, the arrows, N), or the list is sorted again, its card is brought into the list's view, a third of the way
- * down (`listScrollTop`), gliding unless motion is reduced. The focus, when a
- * card before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
+ * Each time a comment is gone to (a card, the arrows, N), or the list is sorted again, its card is brought into the
+ * list's view, a third of the way down (`listScrollTop`), gliding unless motion is reduced. The focus, when a card
+ * before held it, goes along to the current card's first control: left behind, the key pressed draws its ring on a
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
 function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined, order: CommentsOrder): void {

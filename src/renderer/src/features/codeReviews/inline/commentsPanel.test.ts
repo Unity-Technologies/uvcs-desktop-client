@@ -11,6 +11,8 @@ import {
   commentsByFile,
   commentsOrderTip,
   foldAllEntry,
+  NO_COMMENTS_SEARCH,
+  shownFolds,
   NO_FOLDED_FILES,
   toggledFold,
   unfoldedFor,
@@ -110,10 +112,24 @@ describe('folding files', () => {
     expect([...toggledFold(folded, 'src/b.cs')]).toEqual([]);
   });
 
-  it('unfolds the file of a comment gone to, and changes nothing when it was open', () => {
-    const folded = new Set(['a.cs', 'src/b.cs']);
-    expect([...unfoldedFor(folded, 'src/b.cs')]).toEqual(['a.cs']);
-    expect(unfoldedFor(folded, 'c.cs')).toBe(folded);
+  it('unfolds the file a comment gone to is grouped under, and changes nothing when it was open', () => {
+    const [onA, onB] = groups!;
+    const folded = new Set([onA!.path, onB!.path]);
+    expect([...unfoldedFor(folded, onB!.threads[0]!)]).toEqual([onA!.path]);
+    expect(unfoldedFor(new Set([onA!.path]), onB!.threads[0]!)).toEqual(new Set([onA!.path]));
+    const open = new Set<string>();
+    expect(unfoldedFor(open, onA!.threads[0]!)).toBe(open);
+  });
+
+  it('shows every file unfolded while searching, so a match in a folded one shows why it is listed', () => {
+    const folded = new Set(['a.cs']);
+    expect(shownFolds(folded, { query: 'shelve', kinds: new Set() })).toEqual(NO_FOLDED_FILES);
+    expect(shownFolds(folded, { query: '', kinds: new Set(['question']) })).toEqual(NO_FOLDED_FILES);
+    expect(shownFolds(folded, NO_COMMENTS_SEARCH)).toBe(folded);
+  });
+
+  it('keeps folded what the filter hides now, collapsing all', () => {
+    expect(foldAllEntry(groups, new Set(['gone.cs']))?.folded).toEqual(new Set(['gone.cs', 'a.cs', 'src/b.cs']));
   });
 
   it('collapses every file while any is open, and expands them all once none is', () => {
