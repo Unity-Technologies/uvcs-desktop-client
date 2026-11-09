@@ -3,7 +3,9 @@ import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
+import { showsMerge } from '../navigation/mergeInProgress';
 import { useNavigation } from '../navigation/navigationStore';
+import { PageShownContext } from '../navigation/pageShown';
 import { viewDefinition } from '../navigation/viewRegistry';
 import { useOwnPageWindows } from '../pageWindow/useShowInFollowingWindow';
 import { CommandLogPanel } from './CommandLogPanel';
@@ -32,7 +34,7 @@ interface PlaceLayoutProps {
  * page windows.
  */
 export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps) {
-  const { view, pages } = useNavigation();
+  const { view, pages, merge } = useNavigation();
   const commandLogOpen = useCommandLogStore((state) => state.open);
   const commandLogHeight = useCommandLogStore((state) => state.height);
   const setCommandLogHeight = useCommandLogStore((state) => state.setHeight);
@@ -47,6 +49,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
 
   const ActiveView = viewDefinition(view).component;
   const topPage = pages.at(-1);
+  const mergeShown = showsMerge(merge, pages);
 
   return (
     <div className={styles.screen}>
@@ -77,7 +80,15 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
                     <ActiveView key={view} />
                   </ViewShownContext.Provider>
                 </div>
-                {topPage && <PageFrame key={pages.length} page={topPage} />}
+                {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it. */}
+                {merge && (
+                  <div key={`merge:${merge.id}`} className={styles.layer} hidden={!mergeShown}>
+                    <PageShownContext.Provider value={mergeShown}>
+                      <PageFrame page={merge.page} />
+                    </PageShownContext.Provider>
+                  </div>
+                )}
+                {topPage && !mergeShown && <PageFrame key={pages.length} page={topPage} />}
               </div>
             }
             second={<CommandLogPanel />}

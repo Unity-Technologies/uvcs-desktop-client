@@ -1,6 +1,8 @@
+import type { PendingChange } from '@shared/domain/pendingChanges';
 import { describe, expect, it } from 'vitest';
 import { checkedInMessage, isMomentOver, successCardTellsCheckin, successLinkObject, type SuccessMoment } from './successMoment';
 
+const pending = (path: string): PendingChange => ({ path, kinds: ['changed'], itemType: 'file', size: 1, lastModified: '' });
 const moment: SuccessMoment = { verb: 'Checked in', changesetId: 4, at: 1_000 };
 const noChanges = { readAt: 2_000, count: 0 };
 
@@ -36,8 +38,15 @@ describe('isMomentOver', () => {
 
 describe('successCardTellsCheckin', () => {
   it('leaves a check-in of everything pending to the success moment, and one that leaves changes behind to a toast', () => {
-    expect(successCardTellsCheckin(3, 3)).toBe(true);
-    expect(successCardTellsCheckin(2, 3)).toBe(false);
+    const [a, b, c] = ['a.txt', 'b.txt', 'c.txt'].map(pending);
+    expect(successCardTellsCheckin([a, b, c], [a, b, c])).toBe(true);
+    expect(successCardTellsCheckin([a, b], [a, b, c])).toBe(false);
+  });
+
+  it('counts what stays pending, not how many went in: a private file Changes never listed leaves the rest behind', () => {
+    const [listed, unlisted] = ['a.txt', 'build/out.txt'].map(pending);
+    expect(successCardTellsCheckin([unlisted], [listed])).toBe(false);
+    expect(successCardTellsCheckin([listed, unlisted], [listed])).toBe(true);
   });
 });
 

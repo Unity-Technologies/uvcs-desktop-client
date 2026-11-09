@@ -105,5 +105,5 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
   );
 }
 
-/** The question before an edit is thrown away, the same in Edit comment (`EditCommentDialog`). */
+/** The question before an edit is thrown away, the same in Edit comment (`CommentDialog`). */
 export const DISCARD_QUESTION = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true } as const;

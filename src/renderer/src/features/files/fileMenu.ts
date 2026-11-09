@@ -25,6 +25,7 @@ import {
   targetDirectoryFor,
 } from './fileOperations';
 import { cutAction, pasteAction } from './cutPasteActions';
+import { checkinItems } from './filesCheckinOperation';
 import { filesItemLink } from './filesItemLink';
 import { fileMenuTargets, itemViews } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
@@ -87,7 +88,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
 
   const single = items.length === 1 ? items[0]! : null;
   const lock = single ? locks.get(single.path) : undefined;
-  const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
+  const { privateItems, checkoutCandidates, checkinable, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
   const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
@@ -104,6 +105,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
+    checkinable.length > 0 && menuAction('checkin', () => void checkinItems(workspacePath, checkinable, pendingChanges.changes), { label: 'Check in…' }),
     unloadedXlink && menuAction('loadXlink', () => void loadXlinkFiles(workspacePath, unloadedXlink.path)),
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),

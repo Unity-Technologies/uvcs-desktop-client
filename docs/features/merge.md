@@ -348,6 +348,14 @@ and their decisions went to paths a decision had moved.
   typed: each decision makes `cm` calculate the merge again. Its name is one name, never a path, `.` or `..`
   (`isValidRenameName`, `canKeepBothAs`; the field says what is wrong: `renameNameProblem`); the main process refuses
   anything else (`assertDecisionValid`).
+- "Do the same for the next N conflicts of this kind" (`applyToNextBox`, `applyToNextLabel`) decides, with the
+  conflict, the undecided directory conflicts of the same type after it in the list (`nextOfSameKind`, over
+  `directoryConflictsInListOrder`): the same type offers the same choices, so each takes the decision. The box shows
+  only when one waits, starts unticked for each conflict, and is ticked before picking Keep yours or Keep incoming.
+  Keep both never carries over (the box is off and disabled while it's picked): its name belongs to one item. All
+  go in one request, the new decisions in list order after the others (`withDecisionAndNext`); the main process
+  applies them one `cm` call each, as any decisions, and drops one an earlier one took out of the merge. The official
+  client counts the other selected conflicts instead; the kind was chosen so the next ones never need a selection.
 - The page sends its decisions in the order they were made with the new one after them (`useDirectoryDecisions`,
   `applyDirectoryDecision`, `withDecision`), and the main process applies them (`DirectoryDecisions`): one `cm merge
   --resolveconflict --conflict=N` each, a quick read that never merges (no `--merge`: `cm` returns before merging and
@@ -395,6 +403,32 @@ and their decisions went to paths a decision had moved.
 
 Sandbox: `scripts/sandboxes/merge-conflicts.sh` (a folder moved apart on both sides holding a file changed on both, a
 folder added on both sides, a file moved on one side and deleted on the other).
+
+### A merge in progress
+
+A merge is in progress from the moment its page opens until it completes or the user closes it (`MergeInProgress`,
+`navigationStore`). Checking something in the workspace meanwhile never loses it: another view, Back, or a page opened
+on top of it (a file's history from its list) only set it aside. Its page stays mounted (`PlaceLayout`, keyed by the
+merge's id), so everything decided, edited or read comes back as it was, and a run of a merge tool goes on while it's
+away; its shortcuts and Back wait until it shows again (`usePageShown`). The sidebar holds the way back above the views
+(`MergeInProgressItem`: "Merge /main/task", a dot, "In progress: Merge /main/task into your workspace" in its tooltip,
+`mergeInProgressWords`), which shows the merge again over the view shown (`returnToMerge`).
+
+- Only Close merge (the page's ✕, `CloseMergeButton`, `closeMergeAsked`, confirmed) drops it. Completing it, or the
+  page finding nothing it can do (nothing to merge, pending changes in the way), settles it (`mergeSettled`,
+  `settleMerge`); leaving a settled merge closes it as any page. One that settles while set aside (it completed, or its
+  plan came back, while the user was elsewhere) keeps its sidebar entry until the user has seen how it ended
+  (`mergeAfterLeaving`).
+- One merge at a time, as the official client: opening the same merge again (what is merged where, and the task:
+  `isSameMerge`) goes back to it as it stands; another one asks first ("Start another merge?", `replaceMergeQuestion`)
+  and replaces it.
+- A merge belongs to its workspace (`MergeInProgress.workspacePath`): leaving the workspace, for the home screen or
+  another workspace, ends it, since the workspace's screen closes with everything in it.
+- What ends a merge from its page ends that one only (`closeMerge(id)`, `shownMergeId`): a merge into a server branch
+  that completes, and "Resolve in the workspace instead", never close another merge the user started while it ran.
+- Nothing is kept across restarts: the app stores nothing of its own about a merge. The official client reopens a merge
+  it left half applied in the workspace, from a record `cm` keeps there; no `cm` command prints that record, and this
+  app never reads `cm`'s files (ARCHITECTURE.md "`cm` owns its files"), so it can't yet.
 
 ### Stepping through conflicts
 

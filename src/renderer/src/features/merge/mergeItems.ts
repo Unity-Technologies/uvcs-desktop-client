@@ -103,6 +103,11 @@ export function inListOrder(items: MergeItem[]): MergeItem[] {
   return mergeItemGroups(items).flatMap((group) => group.sorted);
 }
 
+/** The directory conflicts in the order the list shows them, decided ones too: what "the next ones" means. */
+export function directoryConflictsInListOrder(items: MergeItem[]): DirectoryConflict[] {
+  return inListOrder(items).flatMap((item) => (item.kind === 'directoryConflict' ? [item.conflict] : []));
+}
+
 /** The first item still waiting for the user, as the list shows them: where the page starts, and goes after a run. */
 export function firstWaiting(items: MergeItem[], progress: MergeProgress): MergeItem | undefined {
   return inListOrder(items).find((item) => needsDecision(item, progress));

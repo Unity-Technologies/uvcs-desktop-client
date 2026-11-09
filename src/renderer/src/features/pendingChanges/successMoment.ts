@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { LinkObject } from '@shared/links/link';
 import { branchLabel } from '../../lib/branchLabels';
 
@@ -41,11 +42,13 @@ export function checkedInMessage(changesetId: number, branch: string): string {
 }
 
 /**
- * Whether checking in `checkedIn` of the `pending` changes leaves Changes empty, where the success moment tells it: then
- * no toast says it too. A check-in that leaves changes behind is told by a toast.
+ * Whether checking in `checkedIn` leaves none of the `pending` changes behind, so Changes ends up empty, where the success
+ * moment tells it: then no toast says it too. A check-in that leaves changes behind is told by a toast. Compared by path,
+ * not by count: a check-in from Files can add private files Changes never listed.
  */
-export function successCardTellsCheckin(checkedIn: number, pending: number): boolean {
-  return checkedIn === pending;
+export function successCardTellsCheckin(checkedIn: PendingChange[], pending: PendingChange[]): boolean {
+  const goingIn = new Set(checkedIn.map((change) => change.path));
+  return pending.every((change) => goingIn.has(change.path));
 }
 
 /**

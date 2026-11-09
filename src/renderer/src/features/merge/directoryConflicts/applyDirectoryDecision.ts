@@ -2,11 +2,12 @@ import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, Dire
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
-import { droppedDecisions, droppedDecisionsToast, withDecision } from './directoryDecisions';
+import { droppedDecisions, droppedDecisionsToast, withDecisionAndNext } from './directoryDecisions';
 
 /**
  * Applies the user's decision on a directory conflict to the merge, after the page's earlier ones
- * (`decideDirectoryConflicts`), and resolves with the merge calculated again on them. Decisions an earlier one took
+ * (`decideDirectoryConflicts`), with the `next` conflicts decided the same way after it (`withDecisionAndNext`),
+ * and resolves with the merge calculated again on them. Decisions an earlier one took
  * out of the merge are told in a toast. Null when it failed: a toast says why, and the page stays as it was.
  */
 export async function applyDirectoryDecision(
@@ -16,8 +17,9 @@ export async function applyDirectoryDecision(
   decided: readonly DirectoryDecision[],
   conflict: DirectoryConflict,
   resolution: DirectoryConflictResolution,
+  next: readonly DirectoryConflict[] = [],
 ): Promise<DecidedMerge | null> {
-  const asked = withDecision(decided, conflict, resolution);
+  const asked = withDecisionAndNext(decided, conflict, resolution, next);
   try {
     const merge = await api.merge.decideDirectoryConflicts(workspacePath, request, decisionsId, asked);
     const dropped = droppedDecisions(asked, merge.decisions);

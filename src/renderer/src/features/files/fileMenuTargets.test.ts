@@ -44,6 +44,18 @@ describe('fileMenuTargets', () => {
   });
 });
 
+describe('fileMenuTargets checkinable', () => {
+  it('checks in the selected new file and changed folder, nothing else pending', () => {
+    const index = new PendingChangesIndex([change('notes.txt', 'private'), change('src/app.ts', 'changed'), change('docs/a.md', 'changed')]);
+    const targets = fileMenuTargets([item('notes.txt', { isPrivate: true }), item('src', { itemType: 'directory' })], index);
+    expect(targets.checkinable.map((checkin) => checkin.path).sort()).toEqual(['notes.txt', 'src/app.ts']);
+  });
+
+  it('has nothing to check in for items with nothing pending', () => {
+    expect(fileMenuTargets([item('lib.ts')], new PendingChangesIndex([change('app.ts', 'changed')])).checkinable).toEqual([]);
+  });
+});
+
 describe('hasRevisionsToShow', () => {
   it('holds for controlled items, not for private or just added ones', () => {
     const index = new PendingChangesIndex([change('new.ts', 'added'), change('app.ts', 'changed')]);

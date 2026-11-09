@@ -1,19 +1,12 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { settleBeforeLeaving } from '../../app/navigation/leaveGuard';
 import { joinComment } from '../../lib/comment';
-import { fileNameOf, listNames, pluralize } from '../../lib/text';
-import { confirm } from '../../ui/dialog/confirm';
-import { bulkPrivateMessage, type BulkPrivate } from './bulkPrivate';
-import { checkinChanges, shelveChanges } from './checkinOperations';
-import { checkinPathsOf, type CheckinPaths } from './checkinPaths';
+import type { BulkPrivate } from './bulkPrivate';
+import { confirmCheckinWithoutComment, confirmPulledIn } from './checkinConfirmations';
+import { shelveChanges } from './checkinOperations';
+import { checkinPathsOf } from './checkinPaths';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
-import { FILTER_LIST_FILES } from './pendingChangeOperations';
-import { successCardTellsCheckin } from './successMoment';
-
-/** Runs the check-in or shelve itself, once everything is confirmed: the panel shows it busy meanwhile. */
-export type WhileRunning = <T>(run: () => Promise<T>) => Promise<T>;
-
-const justRun: WhileRunning = (run) => run();
+import { checkinConfirmed, justRun, type WhileRunning } from './confirmedCheckin';
 
 /** How a check-in from the panel ended: a changeset, nothing (cancelled or failed), or the user wants to write a comment. */
 export type PanelCheckinOutcome = 'checkedIn' | 'notCheckedIn' | 'writeComment';
@@ -34,30 +27,15 @@ export interface PanelCheckin {
 
 /**
  * The check-in panel's check-in, with the draft's comment: asks about an empty comment (when the setting says to),
- * takes the files as they are on disk (unsaved edits are saved first, or dropped, or it waits), asks about a pile of
- * private files and about the changes a folder takes along unchecked (`checkinPathsOf`), then checks in. A changeset
- * clears the comment.
+ * then checks in as every check-in does (`checkinConfirmed`). A changeset clears the comment.
  */
 export async function checkinFromPanel(request: PanelCheckin, whileRunning: WhileRunning = justRun): Promise<PanelCheckinOutcome> {
-  const { workspacePath, included } = request;
+  const { workspacePath } = request;
   const comment = joinComment(checkinDraftOf(workspacePath));
   if (!comment.trim() && request.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) return 'writeComment';
-  if (!(await settleBeforeLeaving())) return 'notCheckedIn';
-  if (request.bulkPrivate && !(await confirmBulkPrivateCheckin(request.bulkPrivate))) return 'notCheckedIn';
-  const plan = checkinPathsOf(included, request.allChanges);
-  const { paths, addsPrivate, pulledIn } = plan;
-  if (pulledIn.length > 0 && !(await confirmPulledIn('checkin', plan))) return 'notCheckedIn';
-  const changes = [...included, ...pulledIn];
-  const checkedIn = await whileRunning(() =>
-    checkinChanges({
-      workspacePath,
-      changes,
-      paths,
-      addsPrivate,
-      comment,
-      updateFirst: request.behind,
-      quiet: successCardTellsCheckin(changes.length, request.allChanges.length),
-    }),
+  const checkedIn = await checkinConfirmed(
+    { workspacePath, changes: request.included, allChanges: request.allChanges, comment, bulkPrivate: request.bulkPrivate, updateFirst: request.behind },
+    whileRunning,
   );
   if (!checkedIn) return 'notCheckedIn';
   useCheckinDraftStore.getState().clearMessage(workspacePath);
@@ -99,36 +77,4 @@ export async function shelveFromPanel(request: PanelShelve, keep: boolean, while
  */
 function endPreparedUnlessHidden(workspacePath: string, hiddenIncludedCount: number): void {
   if (hiddenIncludedCount === 0) useCheckinDraftStore.getState().endPrepared(workspacePath);
-}
-
-/**
- * Asked before a folder takes along changes the user didn't check: cm can't check in or shelve a folder without
- * everything inside it. Declined, the user checks those too, or unchecks the folder.
- */
-function confirmPulledIn(mode: 'checkin' | 'shelve', plan: CheckinPaths): Promise<boolean> {
-  const count = plan.pulledIn.length;
-  const action = mode === 'checkin' ? 'check in' : 'shelve';
-  return confirm({
-    title: `Also ${action} ${pluralize(count, 'change')} inside ${listNames(plan.pullingFolders)}?`,
-    message: `A folder is ${mode === 'checkin' ? 'checked in' : 'shelved'} with everything inside it, so ${listNames(plan.pulledIn.map((change) => fileNameOf(change.path)))} ${count === 1 ? 'goes' : 'go'} too.`,
-    confirmLabel: `${mode === 'checkin' ? 'Check' : 'Shelve'} ${count === 1 ? 'it' : 'them'}${mode === 'checkin' ? ' in' : ''} too`,
-  });
-}
-
-/** Asked before a check-in without a comment, when the setting says to. */
-function confirmCheckinWithoutComment(): Promise<boolean> {
-  return confirm({
-    title: 'Check in without a comment?',
-    message: 'A short description helps your team understand the change later.',
-    confirmLabel: 'Check in anyway',
-  });
-}
-
-/** A check-in that adds a pile of private files goes ahead only once confirmed, even from the keyboard. */
-function confirmBulkPrivateCheckin(bulk: BulkPrivate): Promise<boolean> {
-  return confirm({
-    title: `Check in ${pluralize(bulk.fileCount, 'private file')}?`,
-    message: `${bulkPrivateMessage(bulk)}. They are added to version control with this check-in; build output and generated files usually belong in ${FILTER_LIST_FILES.ignore}.`,
-    confirmLabel: 'Check in anyway',
-  });
 }

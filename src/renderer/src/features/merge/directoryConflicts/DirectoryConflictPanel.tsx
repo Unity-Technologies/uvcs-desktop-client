@@ -11,12 +11,13 @@ import {
 import { workspacePlace } from '@shared/domain/place';
 import { PathLabel } from '../../../components/PathLabel';
 import { Button } from '../../../ui/Button';
+import { Checkbox } from '../../../ui/Checkbox';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Spinner } from '../../../ui/Spinner';
 import { TextField } from '../../../ui/TextField';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import type { MergeLabels } from '../mergeDescription';
-import { canKeepBothAs, pickedChoice } from './directoryDecisions';
+import { applyToNextBox, canKeepBothAs, decidesNextToo, pickedChoice } from './directoryDecisions';
 import { comparedVersions, comparisonSegments, comparisonsOf, FIRST_COMPARISON, identicalNoteOf, type DirectoryConflictComparison } from './directoryConflictComparison';
 import { renameNameProblem } from './renameNameProblem';
 import { suggestRename } from './renameSuggestion';
@@ -34,7 +35,10 @@ interface DirectoryConflictPanelProps {
   applying: boolean;
   /** A decision is being applied, this one's or another's: the choices wait for it. */
   locked: boolean;
-  onResolve: (resolution: DirectoryConflictResolution) => void;
+  /** The conflicts of the same kind waiting after this one, which the decision can decide too (`nextOfSameKind`). */
+  nextCount: number;
+  /** `applyToNext`: decide the next conflicts of the kind the same way too. */
+  onResolve: (resolution: DirectoryConflictResolution, applyToNext: boolean) => void;
 }
 
 /**
@@ -42,22 +46,24 @@ interface DirectoryConflictPanelProps {
  * base. Keeping a side applies it at once; keeping both applies once the name is confirmed, not on each key typed: each
  * decision makes `cm` calculate the merge again.
  */
-export function DirectoryConflictPanel({ workspacePath, request, contributors, conflict, labels, resolution, applying, locked, onResolve }: DirectoryConflictPanelProps) {
+export function DirectoryConflictPanel({ workspacePath, request, contributors, conflict, labels, resolution, applying, locked, nextCount, onResolve }: DirectoryConflictPanelProps) {
   const canKeepBoth = RENAMEABLE_CONFLICTS.has(conflict.type);
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState(() => (resolution?.choice === 'rename' ? resolution.newName : suggestRename(conflict.destination.path, labels.destination)));
+  const [applyToNext, setApplyToNext] = useState(false);
   const picked = pickedChoice(naming, resolution);
+  const nextBox = applyToNextBox(nextCount, picked, applyToNext);
   const { source, destination } = labels.roles;
 
   // While a decision applies, the choices wait without being disabled: a disabled button would drop the keyboard's focus.
   const keepSide = (choice: 'source' | 'destination'): void => {
     if (locked) return;
     setNaming(false);
-    onResolve({ choice });
+    onResolve({ choice }, decidesNextToo(nextCount, choice, applyToNext));
   };
   const keepBoth = (event: FormEvent): void => {
     event.preventDefault();
-    if (!locked && canKeepBothAs(newName, resolution)) onResolve({ choice: 'rename', newName });
+    if (!locked && canKeepBothAs(newName, resolution)) onResolve({ choice: 'rename', newName }, false);
   };
 
   return (
@@ -107,6 +113,12 @@ export function DirectoryConflictPanel({ workspacePath, request, contributors, c
             </Option>
           )}
         </div>
+
+        {nextBox && (
+          <div className={styles.applyToNext}>
+            <Checkbox label={nextBox.label} checked={nextBox.checked} disabled={nextBox.disabled} onChange={setApplyToNext} />
+          </div>
+        )}
 
         {applying && (
           <p className={styles.applying}>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
+import { nextOfSameKind } from './directoryConflicts/directoryDecisions';
 import { MergeChangePreview } from './MergeChangePreview';
 import { directoryResolutionOf, fileStateOf, isApplying, type MergeItem, type MergeProgress } from './mergeItems';
 import type { ConflictToolActions } from './mergeTools/MergeToolButton';
@@ -12,13 +13,16 @@ interface MergeDetailProps {
   workspacePath: string;
   item: MergeItem;
   progress: MergeProgress;
+  /** The directory conflicts in the order the list shows them, decided ones too (`directoryConflictsInListOrder`). */
+  directoryConflicts: readonly DirectoryConflict[];
   plan: MergePlan;
   labels: MergeLabels;
   request: MergeRequest;
   toolActions: ConflictToolActions;
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
-  onResolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution) => void;
+  /** Decides `conflict`, and each of `next` the same way when the user asks it. */
+  onResolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution, next: readonly DirectoryConflict[]) => void;
   /** Buttons beside a change's diff, e.g. the `.meta` toggle of an asset listed with its meta. */
   compareControls?: ReactNode;
 }
@@ -28,6 +32,7 @@ export function MergeDetail({
   workspacePath,
   item,
   progress,
+  directoryConflicts,
   plan,
   labels,
   request,
@@ -38,7 +43,8 @@ export function MergeDetail({
   compareControls,
 }: MergeDetailProps) {
   switch (item.kind) {
-    case 'directoryConflict':
+    case 'directoryConflict': {
+      const next = nextOfSameKind(directoryConflicts, item.conflict, progress.directoryResolutions);
       return (
         <DirectoryConflictPanel
           key={item.key}
@@ -50,9 +56,11 @@ export function MergeDetail({
           resolution={directoryResolutionOf(item, progress)}
           applying={isApplying(item, progress)}
           locked={progress.applyingDirectory !== null}
-          onResolve={(resolution) => onResolveDirectory(item.conflict, resolution)}
+          nextCount={next.length}
+          onResolve={(resolution, applyToNext) => onResolveDirectory(item.conflict, resolution, applyToNext ? next : [])}
         />
       );
+    }
     case 'fileConflict':
       return (
         <FileConflictPanel
