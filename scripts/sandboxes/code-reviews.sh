@@ -88,12 +88,12 @@ checkin "$(text retry 'Retry reads better on several lines')"
 REVIEW=$(cm cr br:/main/task-2210 "Switch with changes" --users=me --format={id} \
   --descriptionfile="$(text description 'Switching with pending changes **never loses them**:
 
-1. Shelve the changes
+1. Shelve the changes (`ShelveChanges`)
 2. Undo them, switch, then bring them back
 
 Follows cs:'"$FIRST"'.')")
 
-GENERAL=$(on_review -commentsfile="$(text general 'Nice work. Could we add a test for a switch that **fails**?')")
+GENERAL=$(on_review -commentsfile="$(text general 'Nice work. Could we add a test for a switch that **fails**, where `Switch()` throws?')")
 cm cr comment reply "$GENERAL" -c="Yes, in the next changeset." >/dev/null
 
 APPLIED=$(on_review --path=/Assets/Scripts/SwitchFlow.cs --line=11 --type=Change -c="Undo before shelving fails: shelve first.")
