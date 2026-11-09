@@ -22,7 +22,10 @@
   background: var(--bg-surface);
 }
 
-/* A request applied in other files than its own: the thread, as tall as it is, then the changeset's files filling the rest. */
+/*
+ * A request applied in other files than its own: the thread, folded to one line and no wider than it reads (`.thread`),
+ * then the changeset's files filling the rest.
+ */
 .elsewhere {
   display: flex;
   flex-direction: column;

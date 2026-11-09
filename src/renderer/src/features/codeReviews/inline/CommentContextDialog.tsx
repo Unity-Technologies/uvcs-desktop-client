@@ -150,7 +150,9 @@ function ThreadDialog(props: ThreadDialogProps) {
       {lists && files === 'withoutComment' && applied.data && appliedTarget ? (
         // The changeset didn't change the commented file: its files, the thread above them, folded to its first words.
         <div className={styles.elsewhere}>
-          <ThreadCard {...props} />
+          <div className={styles.thread}>
+            <ThreadCard {...props} folded />
+          </div>
           <div className={styles.files}>
             <AppliedChangesetFiles {...props} thread={thread} view={view} onCommentShown={setCommentShown} target={appliedTarget} entries={applied.data} />
           </div>
@@ -178,14 +180,17 @@ function ThreadDialog(props: ThreadDialogProps) {
   );
 }
 
-/** The thread alone, as the code shows it, its first comment's menu leading to the conversation. */
-function ThreadCard({ review, thread, user, showInConversation, onClose }: ViewProps) {
+/**
+ * The thread alone, as the code shows it, its first comment's menu leading to the conversation: whole, or folded to its
+ * first words (`folded`, above the changeset's files, where the code is what the user came to see).
+ */
+function ThreadCard({ review, thread, user, showInConversation, onClose, folded = false }: ViewProps & { folded?: boolean }) {
   return (
     <ReviewThreadCard
       review={review}
       thread={thread}
       user={user}
-      highlight={0}
+      highlight={folded ? undefined : 0}
       inCode={{
         inContext: true,
         showInConversation: () => {
