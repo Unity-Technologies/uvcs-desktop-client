@@ -5,7 +5,7 @@ import { spec } from '@shared/domain/specs';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
 import { reviewDiffTarget } from '../reviewTarget';
-import { anchorPath, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
+import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
 
 /**
  * The two ways "See in context" shows a thread: the diff it was written on, as its author saw it (`commented`), and
@@ -32,6 +32,12 @@ export interface OnScreen {
   entry: ShownEntry;
 }
 
+/** How a thread opens in context: on which view, and from which file's diff (none from the conversation or the panel). */
+export interface ContextRequest {
+  startsOn?: ContextView;
+  onScreen?: OnScreen;
+}
+
 /**
  * Where a view finds the file's entry it compares from: the diff on screen's, a diff to read (the changeset the thread
  * was written in, or the review's whole diff, a read the Changes tab shares), or none (how a change request was
@@ -45,7 +51,8 @@ export function contextEntryOf(review: CodeReviewTarget, thread: LineThread, vie
     const target = reviewDiffTarget(review);
     return target ? { kind: 'read', target } : { kind: 'none' };
   };
-  if (view === 'since') return appliedChangeset(thread) !== undefined ? { kind: 'none' } : onScreen ? { kind: 'onScreen' } : whole();
+  // Not applied, what it became is the review's newest version: the whole review's diff's, never a changeset's.
+  if (view === 'since') return appliedChangeset(thread) !== undefined ? { kind: 'none' } : whole();
   const written = writtenIn(review, thread);
   if (written.kind === 'whole') return whole();
   if (onScreen?.view.kind === 'changeset' && onScreen.view.changesetId === written.changesetId) return { kind: 'onScreen' };
@@ -131,7 +138,7 @@ export type LiveThread = { kind: 'reading' } | { kind: 'thread'; thread: LineThr
 export function liveThreadOf(threads: readonly ReviewThread[] | undefined, threadId: number): LiveThread {
   if (!threads) return { kind: 'reading' };
   const thread = threads.find((candidate) => candidate.root.id === threadId);
-  return thread && thread.root.anchor.kind === 'line' ? { kind: 'thread', thread: thread as LineThread } : { kind: 'gone' };
+  return thread && isLineThread(thread) ? { kind: 'thread', thread } : { kind: 'gone' };
 }
 
 const EMPTY: ContentSource = { kind: 'empty' };

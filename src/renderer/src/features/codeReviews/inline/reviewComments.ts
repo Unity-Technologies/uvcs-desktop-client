@@ -4,7 +4,7 @@ import type { PageOf } from '../../../app/navigation/pages';
 import type { DiffFocusRequest } from '../../diff/diffFocusRequest';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { anchorPath, writtenIn, type LineThread } from './fileThreads';
-import type { ContextRequest } from './useCommentContext';
+import type { ContextRequest } from './commentContext';
 
 /** A thread gone to in the Changes tab, again each time (`seq`): the file's diff scrolls to it and marks it. */
 export interface ThreadFocus {

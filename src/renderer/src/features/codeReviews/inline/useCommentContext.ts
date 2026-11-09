@@ -3,16 +3,10 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
-import type { ContextView, OnScreen } from './commentContext';
+import type { ContextRequest } from './commentContext';
 import { openCommentContextDialog } from './CommentContextDialog';
 import type { LineThread } from './fileThreads';
 import { conversationAt } from './reviewComments';
-
-/** How a thread opens in context: on which view, and from which file's diff (none from the conversation or the panel). */
-export interface ContextRequest {
-  startsOn?: ContextView;
-  onScreen?: OnScreen;
-}
 
 /**
  * Opens a review's threads in context (`openCommentContextDialog`), from wherever they show: the code, the Comments

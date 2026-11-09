@@ -42,9 +42,10 @@ describe('contextEntryOf', () => {
     expect(contextEntryOf({ kind: 'shelve', shelveId: 3 }, inChangeset, 'commented', null)).toEqual({ kind: 'read', target: { kind: 'shelve', shelveId: 3 } });
   });
 
-  it("reads no diff for how a change request was applied, and the newest version for anything else", () => {
+  it("reads no diff for how a change request was applied, and the review's newest version for anything else, never a changeset's", () => {
     expect(contextEntryOf(BRANCH, threadOn(20, { appliedInChangeset: 15 }), 'since', null)).toEqual({ kind: 'none' });
     expect(contextEntryOf(BRANCH, threadOn(20), 'since', whole)).toEqual({ kind: 'onScreen' });
+    expect(contextEntryOf(BRANCH, threadOn(20, { changesetId: 8 }), 'since', { view: { kind: 'changeset', changesetId: 8 } })).toEqual({ kind: 'read', target: { kind: 'branch', branch: '/main/task' } });
     expect(contextEntryOf(BRANCH, threadOn(20), 'since', null)).toEqual({ kind: 'read', target: { kind: 'branch', branch: '/main/task' } });
   });
 
