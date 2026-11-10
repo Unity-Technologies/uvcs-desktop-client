@@ -25,11 +25,16 @@ export function useCodeReview(reviewId: number) {
   // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
   const listed = () => listedReviewIn(queryClient, place, reviewId);
   return useQuery({
-    queryKey: queryKeys.inPlace(place, 'codeReviews', 'review', reviewId),
+    queryKey: codeReviewKey(place, reviewId),
     queryFn: () => api.codeReviews.get(place, reviewId),
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
+}
+
+/** One review, as its page reads it. */
+export function codeReviewKey(place: Place, reviewId: number): readonly unknown[] {
+  return queryKeys.inPlace(place, 'codeReviews', 'review', reviewId);
 }
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */

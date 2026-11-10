@@ -1,4 +1,4 @@
-import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, RefreshCw, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
+import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
@@ -11,10 +11,10 @@ import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useCommands, type Command } from '../commands/commandStore';
+import { refreshCommand } from '../commands/refreshCommand';
 import { viewCommands } from '../commands/viewCommands';
 import { navigation, useNavigation } from '../navigation/navigationStore';
 import { viewsOf } from '../navigation/viewRegistry';
-import { invalidatePlace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useSession } from '../workspace/sessionStore';
@@ -48,14 +48,7 @@ export function usePlaceCommands(): void {
   const commands = useMemo<Command[]>(
     () => [
       ...viewCommands(viewsOf(place), navigation.goToView),
-      {
-        id: 'workspace.refresh',
-        group: 'Workspace',
-        label: 'Refresh',
-        icon: RefreshCw,
-        shortcut: hotkey('refresh'),
-        run: () => void invalidatePlace(place),
-      },
+      refreshCommand(place),
       {
         id: 'workspace.reviewMode',
         group: 'Workspace',
