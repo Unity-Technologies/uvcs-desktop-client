@@ -60,7 +60,9 @@ Apply runs one `cm partial configure +/<path> -/<path> … --silent` in the work
 `workspaces.configurePartial`, `applyDownloads`). `cm` downloads and deletes as it configures, so no update follows.
 One rule `cm` refuses (a path not found, something already loaded or not) fails the whole command and nothing changes.
 It runs as an update (`operations.run`, `execute()`): it blocks other updates and switches of the workspace while it
-runs, and refreshes what an update refreshes.
+runs, and refreshes what an update refreshes. Every `cm partial` command is a write of the workspace
+(`changesWorkspace`), so it runs in a `cm shell` of its own that reads it from its input (`processCommand`): a choice of
+thousands of items is still one command, past the command-line limit, rather than several that could stop halfway.
 
 ## Staying partial
 
