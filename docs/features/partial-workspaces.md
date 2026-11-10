@@ -32,10 +32,12 @@ updating it.
 The dialog shows the repository's tree at the workspace's changeset, a folder at a time as it opens (the same listing
 Browse repository reads, `repositoryListingQuery`), with a checkbox per item. A partial workspace on a branch loaded no
 one changeset (`cm` reports none), so there it shows the branch's head, which its updates follow (`downloadTreePoint`);
-unlike a changeset's, that listing is read again on a refresh. A workspace on a shelve has no tree to list. What the workspace has loaded comes from
-one `cm ls` records read per folder (`workspaces.loadedIn`, `loadedItemsArgs`, `readLoadedItem`), local: only the root
-and the open folders the workspace holds anything of (`foldersToReadLoaded`), since `cm ls` can't list a folder that
-isn't loaded. A folder counts as loaded when anything below it is, as `cm` counts it.
+unlike a changeset's, that listing is read again on a refresh. A workspace on a shelve has no tree to list.
+
+What the workspace has loaded comes from one `cm ls` records read per folder (`workspaces.loadedIn`, `loadedItemsArgs`,
+`readLoadedItem`), local: only the root and the open folders the workspace holds anything of (`foldersToReadLoaded`),
+since `cm ls` can't list a folder that isn't loaded. A folder counts as loaded when anything below it is, as `cm`
+counts it.
 
 Its decisions are pure and tested:
 
