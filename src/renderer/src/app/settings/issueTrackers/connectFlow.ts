@@ -142,6 +142,23 @@ export function signInMethodShown(methods: readonly SignInMethodKind[], tokenCho
   return methods[0] === 'deviceCode' && !tokenChosen ? 'deviceCode' : 'token';
 }
 
+/** What the sign-in step for a link shows, and the failure under it (`SignInFor`). */
+export type SignInForView =
+  | { kind: 'useConnection'; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; failure: SignInFailure | null }
+  | { kind: 'alreadySignedIn'; step: Extract<SignInStep, { kind: 'useConnection' }>; failure: SignInFailure | null }
+  | { kind: 'signIn'; step: Extract<SignInStep, { kind: 'signIn' }>; method: 'deviceCode' | 'token'; failure: SignInFailure | null };
+
+/**
+ * The sign-in step's view. A sign-in kept though its project couldn't be read turns the step into using it (with a
+ * repository) or into "already signed in" (with none): its failure stays on screen across that turn. The token step
+ * words its own failures, so a sign-in shows one only under the device flow.
+ */
+export function signInForView(step: SignInStep, repository: string | undefined, tokenChosen: boolean, failure: SignInFailure | null): SignInForView {
+  if (step.kind === 'useConnection') return repository ? { kind: 'useConnection', step, repository, failure } : { kind: 'alreadySignedIn', step, failure };
+  const method = signInMethodShown(step.methods, tokenChosen);
+  return { kind: 'signIn', step, method, failure: method === 'deviceCode' ? failure : null };
+}
+
 /** Whether "Add a project" can read its link: one that reads back as an issue. */
 export function addProjectReady(link: string): boolean {
   return linkReadBack(link).kind === 'read';

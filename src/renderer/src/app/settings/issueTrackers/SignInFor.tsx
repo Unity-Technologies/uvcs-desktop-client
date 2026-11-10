@@ -4,7 +4,7 @@ import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { CheckedLine } from './CheckedLine';
-import { connectFailureWords, hostOf, signInMethodShown, type SignInStep } from './connectFlow';
+import { connectFailureWords, hostOf, signInForView, type SignInStep } from './connectFlow';
 import { SignInProblem } from './SignInProblem';
 import type { SignedIn } from './ConnectTracker';
 import { DeviceSignIn } from './DeviceSignIn';
@@ -29,44 +29,46 @@ interface SignInForProps {
 export function SignInFor({ link, linkText, step, repository, picked, onConnected, onDifferentAccount }: SignInForProps) {
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const [tokenChosen, setTokenChosen] = useState(false);
-  const method = step.kind === 'signIn' ? signInMethodShown(step.methods, tokenChosen) : 'token';
   const finish = (outcome: SignInOutcome): void => {
     if (outcome.kind === 'signedIn') onConnected(outcome);
     else setFailure(outcome.failure);
   };
 
-  // A sign-in kept though its project couldn't be read turns this step into using it: the failure stays on screen.
-  const problem = failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: TRACKER_GRAMMARS[link.kind].name, server: link.server })} />;
-  if (step.kind === 'useConnection') {
-    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} picked={picked} failure={failure} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
-    return (
-      <div className={styles.next}>
-        <p className={styles.nextTitle}>You're already signed in</p>
-        <CheckedLine>
-          Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
-        </CheckedLine>
-        <DifferentAccountLink onClick={onDifferentAccount} />
-        {problem}
-      </div>
-    );
+  const view = signInForView(step, repository, tokenChosen, failure);
+  const problem = view.failure && <SignInProblem failed={connectFailureWords(view.failure, { trackerName: TRACKER_GRAMMARS[link.kind].name, server: link.server })} />;
+  switch (view.kind) {
+    case 'useConnection':
+      return <UseConnection link={link} linkText={linkText} step={view.step} repository={view.repository} picked={picked} failure={view.failure} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
+    case 'alreadySignedIn':
+      return (
+        <div className={styles.next}>
+          <p className={styles.nextTitle}>You're already signed in</p>
+          <CheckedLine>
+            Signed in as <strong>{view.step.connection.account.name}</strong> at {hostOf(view.step.connection.server)}
+          </CheckedLine>
+          <DifferentAccountLink onClick={onDifferentAccount} />
+          {problem}
+        </div>
+      );
+    case 'signIn':
+      return (
+        <div className={styles.next}>
+          {view.step.replacesWords && <p className={styles.note}>{view.step.replacesWords}</p>}
+          {view.method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
+          {view.method === 'deviceCode' ? (
+            <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={view.step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
+          ) : (
+            <TokenSignIn
+              kind={link.kind}
+              server={link.server}
+              pageTarget={{ link: linkText }}
+              failure={failure}
+              onOutcome={finish}
+              signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
+            />
+          )}
+          {problem}
+        </div>
+      );
   }
-  return (
-    <div className={styles.next}>
-      {step.replacesWords && <p className={styles.note}>{step.replacesWords}</p>}
-      {method === 'deviceCode' && <p className={styles.intro}>So the app can show each issue’s title and status. It only reads.</p>}
-      {method === 'deviceCode' ? (
-        <DeviceSignIn request={{ ...(repository && { repository }), link: linkText }} trackerName={step.trackerName} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
-      ) : (
-        <TokenSignIn
-          kind={link.kind}
-          server={link.server}
-          pageTarget={{ link: linkText }}
-          failure={failure}
-          onOutcome={finish}
-          signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
-        />
-      )}
-      {method === 'deviceCode' && problem}
-    </div>
-  );
 }
