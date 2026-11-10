@@ -410,6 +410,22 @@ describe('IssueTrackers', () => {
     expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer gho_token');
   });
 
+  it('offers to install the GitHub App when its sign-in can’t read the project: a private one is read only where it’s installed', async () => {
+    const installPage = 'https://github.com/apps/acme-desktop/installations/new';
+    const { engine } = trackers(
+      {
+        ...SIGNED_IN,
+        [GRAPHQL]: { json: { data: { repository: null, search: { issueCount: 0 } }, errors: [{ type: 'NOT_FOUND', path: ['repository'] }] } },
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_token', token_type: 'bearer' } },
+      },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app', installPage } } },
+    );
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
+    expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game', installPage } });
+    expect(await engine.useConnection({ repository: REPOSITORY, link: LINK, connectionId: 'id2' })).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game', installPage } });
+  });
+
   it('signs a connection in again with the device flow, keeping its bindings', async () => {
     const { engine, tracker } = trackers(
       {

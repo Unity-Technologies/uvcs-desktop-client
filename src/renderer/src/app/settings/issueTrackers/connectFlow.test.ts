@@ -92,6 +92,13 @@ describe('connectFailureWords', () => {
       words: "You're signed in, but acme/game can't be read with this sign-in. Check that the token can read it.",
       offersTokenPage: true,
     });
+    // Signed in with the GitHub App, which reads a private repository only where it's installed.
+    const installPage = 'https://github.com/apps/acme-desktop/installations/new';
+    expect(connectFailureWords({ reason: 'projectUnreadable', project: 'acme/game', installPage }, { trackerName: 'GitHub' })).toEqual({
+      words: "You're signed in, but acme/game can't be read. If it's private, install the app on acme.",
+      offersTokenPage: false,
+      installPage,
+    });
     expect(connectFailureWords({ reason: 'unreachable', server: 'https://acme.atlassian.net' }, { trackerName: 'Jira', server: 'https://acme.atlassian.net' }).words).toBe("Jira couldn't be reached at acme.atlassian.net.");
     expect(connectFailureWords({ reason: 'notGitHubEnterprise', server: 'https://git.acme.com' }, { trackerName: 'GitHub' }).words).toBe("This doesn't look like GitHub Enterprise Server.");
     expect(connectFailureWords({ reason: 'sentToLogin', server: 'https://jira.acme.com' }, { trackerName: 'Jira' })).toEqual({
