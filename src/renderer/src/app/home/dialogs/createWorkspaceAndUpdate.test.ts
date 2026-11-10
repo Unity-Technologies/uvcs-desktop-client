@@ -4,7 +4,11 @@ import type { CreateWorkspaceRequest } from '@shared/api/workspaces';
 import { queryKeys } from '../../../api/queryKeys';
 import { shownToasts, watchRefreshes, type WorkspaceArea } from '../../../testing/operationOutcome';
 import { queryClient } from '../../queryClient';
+import { openChooseDownloads } from '../../../features/partialWorkspace/ChooseDownloadsDialog';
 import { createWorkspaceAndUpdate } from './createWorkspaceAndUpdate';
+
+// The dialog renders React: a test only sees that it was opened, and for which workspace.
+vi.mock('../../../features/partialWorkspace/ChooseDownloadsDialog', () => ({ openChooseDownloads: vi.fn() }));
 
 const request: CreateWorkspaceRequest = { name: 'game', path: '/Users/me/wkspaces/game', repository: 'game@local' };
 const created = { name: 'game', path: request.path, guid: 'g' };
@@ -54,6 +58,31 @@ describe('createWorkspaceAndUpdate', () => {
     expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ ...request, kind: 'dynamic' }]]);
     expect(open).toHaveBeenCalledWith(request.path);
     expect(shownToasts()).toEqual([]);
+  });
+
+  it('creates and opens a partial workspace, then asks what to download instead of updating it, which would download everything', async () => {
+    const open = vi.fn();
+    vi.mocked(openChooseDownloads).mockClear();
+    fakeApi.answer('workspaces.create', () => created);
+
+    await createWorkspaceAndUpdate({ ...request, kind: 'partial' }, open);
+
+    expect(fakeApi.methods()).toEqual(['workspaces.create']);
+    expect(open).toHaveBeenCalledWith(request.path);
+    expect(vi.mocked(openChooseDownloads).mock.calls).toEqual([[request.path]]);
+    expect(open.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(openChooseDownloads).mock.invocationCallOrder[0]!);
+    expect(shownToasts()).toEqual([]);
+  });
+
+  it('asks nothing after creating a standard or dynamic workspace', async () => {
+    vi.mocked(openChooseDownloads).mockClear();
+    fakeApi.answer('workspaces.create', () => created);
+    fakeApi.answer('workspaces.update', () => undefined);
+
+    await createWorkspaceAndUpdate(request, () => {});
+    await createWorkspaceAndUpdate({ ...request, kind: 'dynamic' }, () => {});
+
+    expect(openChooseDownloads).not.toHaveBeenCalled();
   });
 
   it('keeps the workspace created and open when the update fails, and says the update failed', async () => {
