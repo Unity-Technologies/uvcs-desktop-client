@@ -17,7 +17,8 @@ export interface ShelveFlowDependencies {
   backupsRoot: string;
   /**
    * How the workspace at a path holds its files: a partial one updates, switches and checks in with `cm partial`.
-   * A local read the workspace headers already cache (`WorkspaceHeaders.names`), so a flow reads it once, at its start.
+   * A local read (`cm getworkspacefrompath`) the workspace headers share while fresh (`WorkspaceHeaders.names`): a flow
+   * asks for it where it needs it, and a step after a command that rewrote the workspace reads it again, at no server cost.
    */
   kindOf(workspacePath: string): Promise<WorkspaceKind>;
 }
