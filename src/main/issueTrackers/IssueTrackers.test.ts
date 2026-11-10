@@ -398,7 +398,7 @@ describe('IssueTrackers', () => {
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': [{ json: { error: 'authorization_pending' } }, { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } }],
+        'POST https://github.com/login/oauth/access_token': [{ json: { error: 'authorization_pending' } }, { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } }],
       },
       { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
@@ -407,7 +407,7 @@ describe('IssueTrackers', () => {
     expect(started).toEqual({ flowId: 'id1', userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device', expiresAt: 900_000 });
     expect(tracker.requests[0]!.form).toEqual({ client_id: 'Iv1.app' });
     expect(await engine.finishDeviceSignIn('id1')).toMatchObject({ kind: 'signedIn', connection: { signInMethod: 'deviceCode', scope: '*' } });
-    expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer gho_token');
+    expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer ghu_token');
   });
 
   it('offers to install the GitHub App when its sign-in can’t read the project: a private one is read only where it’s installed', async () => {
@@ -431,7 +431,7 @@ describe('IssueTrackers', () => {
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_again', token_type: 'bearer', scope: 'repo' } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_again', token_type: 'bearer', scope: '' } },
       },
       { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
@@ -439,7 +439,7 @@ describe('IssueTrackers', () => {
     const started = await engine.startDeviceSignIn({ connectionId: 'id1' });
     expect(started).toMatchObject({ userCode: 'C' });
     expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept', signInMethod: 'deviceCode' } });
-    expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer gho_again');
+    expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer ghu_again');
     expect(engine.setup().bindings).toHaveLength(1);
   });
 
@@ -462,7 +462,7 @@ describe('IssueTrackers', () => {
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
         'POST https://github.com/login/oauth/access_token': () => {
           cancel();
-          return { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } };
+          return { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } };
         },
       },
       { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
@@ -480,7 +480,7 @@ describe('IssueTrackers', () => {
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } },
       },
       { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );

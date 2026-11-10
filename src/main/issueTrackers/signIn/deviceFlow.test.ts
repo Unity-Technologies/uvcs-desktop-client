@@ -20,7 +20,7 @@ describe('nextDevicePoll', () => {
   });
 
   it('ends with the token, a denial, or an expired code', () => {
-    expect(nextDevicePoll(5_000, 900_000, { access_token: 'gho_abc', token_type: 'bearer', scope: 'repo' }, 0)).toEqual({ kind: 'done', token: 'gho_abc' });
+    expect(nextDevicePoll(5_000, 900_000, { access_token: 'ghu_abc', token_type: 'bearer', scope: '' }, 0)).toEqual({ kind: 'done', token: 'ghu_abc' });
     expect(nextDevicePoll(5_000, 900_000, { error: 'access_denied' }, 0)).toEqual({ kind: 'failed', reason: 'denied' });
     expect(nextDevicePoll(5_000, 900_000, { error: 'expired_token' }, 0)).toEqual({ kind: 'failed', reason: 'expired' });
     expect(nextDevicePoll(5_000, 900_000, { error: 'authorization_pending' }, 900_000)).toEqual({ kind: 'failed', reason: 'expired' });
@@ -44,7 +44,7 @@ describe('the device flow', () => {
   it('asks for a code, then polls at the server’s pace until approved', async () => {
     const tracker = fakeTrackerHttp({
       [CODE_URL]: { json: DEVICE_CODE },
-      [TOKEN_URL]: [{ json: { error: 'authorization_pending' } }, { json: { error: 'slow_down', interval: 10 } }, { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } }],
+      [TOKEN_URL]: [{ json: { error: 'authorization_pending' } }, { json: { error: 'slow_down', interval: 10 } }, { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } }],
     });
     const http = tracker.http.bound(['https://github.com'], null);
     const code = await requestDeviceCode(http, SERVER, 0);
@@ -54,7 +54,7 @@ describe('the device flow', () => {
     const wait = async (ms: number) => {
       waits.push(ms);
     };
-    expect(await pollForToken(http, SERVER, code, wait, () => 0, new AbortController().signal)).toEqual({ token: 'gho_token' });
+    expect(await pollForToken(http, SERVER, code, wait, () => 0, new AbortController().signal)).toEqual({ token: 'ghu_token' });
     expect(waits).toEqual([5_000, 5_000, 10_000]);
     expect(tracker.lines()).toEqual([CODE_URL, TOKEN_URL, TOKEN_URL, TOKEN_URL]);
     expect(tracker.requests[1]!.form).toEqual({ client_id: 'Iv1.abc', device_code: DEVICE_CODE.device_code, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' });
