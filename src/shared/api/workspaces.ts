@@ -55,7 +55,10 @@ export interface WorkspacesApi {
    * file system serves their files. One local process listing, no `cm` call.
    */
   canCreateDynamic(): Promise<boolean>;
-  /** Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update. */
+  /**
+   * Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update;
+   * a partial one has nothing loaded until `configurePartial` loads what the user chooses.
+   */
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */

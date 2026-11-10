@@ -6,7 +6,7 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
-import { partialConfigureArgs } from '../cm/partialWorkspace';
+import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
@@ -63,6 +63,8 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     // A dynamic workspace's create waits for its file system to mount it (up to 30 s): a process, not a pooled shell.
     await (request.kind === 'dynamic' ? cm.execute(args) : cm.query(args));
     if (madeHere) createdFolders.add(request.path);
+    // An update of the workspace's files, so a process of its own in it, as every partial command runs.
+    if (request.kind === 'partial') await cm.execute([...EMPTY_PARTIAL_UPDATE_ARGS], { cwd: request.path });
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);
     return created;
