@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { MenuEntry } from '../../lib/actions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 
-const ids = (entries: MenuEntry[]): string[] => entries.flatMap((entry) => (typeof entry === 'object' && 'id' in entry ? [entry.id] : []));
+const ids = (entries: MenuEntry[]): string[] => entries.flatMap((entry) => (typeof entry === 'object' && 'id' in entry && entry.id ? [entry.id] : []));
 
 describe('currentWorkspaceMenu', () => {
   it('offers choosing what to download in a partial workspace', () => {

@@ -238,7 +238,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
-  currentWorkspace: () => currentWorkspaceMenu(ws, 'game'),
+  currentWorkspace: () => currentWorkspaceMenu(ws, { name: 'game', kind: 'partial' }),
   graphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, graphContext),
   graphBranch: () => graphMenu({ kind: 'branch', lane }, graphContext),
   graphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, graphContext),
