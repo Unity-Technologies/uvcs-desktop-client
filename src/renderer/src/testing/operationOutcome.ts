@@ -57,7 +57,7 @@ export function watchRepositoryRefreshes(repository: string): () => WorkspaceAre
 
 /** The info a workspace's key holds, shaped as `api.workspaces.info` answers: the refreshes compare it before and after. */
 function workspaceInfoAt(path: string): WorkspaceInfo {
-  return { name: 'game', path, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 1 };
+  return { name: 'game', path, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 1, kind: 'standard' };
 }
 
 /** The rest of the key of an area whose refreshes go by it: the Files view's listing of the workspace root. */
