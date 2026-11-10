@@ -13,7 +13,9 @@ each other (`toggledKind`). The request carries the kind (`CreateWorkspaceReques
 
 `workspaces.create` makes the workspace, then runs `cm partial update --silent` in it (`EMPTY_PARTIAL_UPDATE_ARGS`),
 through `execute()` since it changes the workspace's files. An update of no paths downloads nothing but marks the
-workspace partial, so it opens empty. Rejected alternatives:
+workspace partial, so it opens empty. If that update fails, the workspace is deleted (`markPartial`, `discardNew`), and
+its folder if `create` made it: left behind, it would be a standard workspace with nothing downloaded whose name and
+folder stop the user creating it again. Rejected alternatives:
 
 - **A plain `cm update`** after creating it: it downloads everything and the workspace is standard.
 - **`cm partial configure -/`** to mark it partial: `cm` refuses it on an empty repository.
