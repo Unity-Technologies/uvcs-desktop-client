@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { toggled } from './downloadSelection';
-import { downloadKey, downloadRows, downloadTreeOf, foldersToReadLoaded, rootStatus, rulesSummary, type DownloadRow } from './downloadTree';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { downloadKey, downloadRows, downloadTreeOf, downloadTreePoint, foldersToReadLoaded, rootStatus, rulesSummary, type DownloadRow } from './downloadTree';
 
 function item(path: string, itemType: ItemType): TreeItem {
   return {
@@ -169,5 +170,21 @@ describe('rootStatus', () => {
 
   it('says so when the root couldn’t be read', () => {
     expect(rootStatus(downloadTreeOf(new Map(), new Map()), new Map([['', 'Couldn’t read this folder']]))).toBe('failed');
+  });
+});
+
+describe('downloadTreePoint', () => {
+  const on = (selector: WorkspaceSelector, loadedChangeset: number | null) => ({ selector, loadedChangeset });
+
+  it("shows the tree of the changeset the workspace loaded", () => {
+    expect(downloadTreePoint(on({ kind: 'label', name: 'v1' }, 12))).toEqual({ kind: 'changeset', changeset: 12 });
+  });
+
+  it("shows a branch's tree when a partial workspace on it loaded no one changeset", () => {
+    expect(downloadTreePoint(on({ kind: 'branch', name: '/main/task' }, null))).toEqual({ kind: 'branch', branch: '/main/task' });
+  });
+
+  it('shows nothing on a shelve, whose tree is no changeset of the repository', () => {
+    expect(downloadTreePoint(on({ kind: 'shelve', name: '7' }, null))).toBeNull();
   });
 });
