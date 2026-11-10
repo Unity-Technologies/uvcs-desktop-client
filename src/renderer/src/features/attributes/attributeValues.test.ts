@@ -28,6 +28,16 @@ describe('chipText', () => {
     expect(chipText('**Blocked** by `cm` 1.2')).toBe('Blocked by cm 1.2');
     expect(chipText('*done*')).toBe('done');
   });
+
+  it('keeps a short value Markdown would read as a block as written: a rule, a heading, a quote, a list item', () => {
+    expect(chipText('---')).toBe('---');
+    expect(chipText('***')).toBe('***');
+    expect(chipText('#')).toBe('#');
+    expect(chipText('>')).toBe('>');
+    expect(chipText('- WIP')).toBe('- WIP');
+    expect(chipText('1. Draft')).toBe('1. Draft');
+    expect(chipHover({ name: 'status', value: '---' }, false)).toEqual({ kind: 'tip', text: 'status: ---' });
+  });
 });
 
 describe('chipHover', () => {

@@ -12,6 +12,9 @@ const MAX_SHORT_LENGTH = 90;
 const MAX_SUGGESTION_LENGTH = 40;
 const MAX_SUGGESTIONS = 12;
 
+/** A short value Markdown would read as a block: a rule, a heading, a quote or a list item (`---`, `#`, `- WIP`). */
+const BLOCK_START = /^(?:[-+*>]|#{1,6}|\d+[.)]|-{3,}|\*{3,}|_{3,}|`{3,}|~{3,})(?:\s|$)/;
+
 const TONE_WORDS: Record<Exclude<AttributeTone, 'neutral'>, string[]> = {
   success: ['resolved', 'ready', 'done', 'passed', 'pass', 'ok', 'success', 'succeeded', 'enabled', 'true', 'yes', 'approved', 'merged', 'reviewed', 'completed', 'green', 'stable', 'released'],
   danger: ['failed', 'fail', 'failure', 'error', 'broken', 'rejected', 'blocked', 'red', 'false', 'no', 'disabled', 'cancelled', 'canceled'],
@@ -41,7 +44,8 @@ export function chipText(value: string): string {
     case 'url':
       return trimmed.replace(/^https?:\/\//i, '');
     default:
-      return commentLineText(trimmed);
+      // Only inline marks are left out: a value that opens as a block would read as that block (`---` a rule, empty).
+      return BLOCK_START.test(trimmed) ? trimmed : commentLineText(trimmed);
   }
 }
 
