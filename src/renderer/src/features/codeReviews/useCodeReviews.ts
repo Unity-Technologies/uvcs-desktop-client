@@ -7,7 +7,7 @@ import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { codeReviewKey } from './codeReviewKey';
-import { listedReviewIn } from './listedReview';
+import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
@@ -27,7 +27,12 @@ export function useCodeReview(reviewId: number) {
   const listed = () => listedReviewIn(queryClient, place, reviewId);
   return useQuery({
     queryKey: codeReviewKey(place, reviewId),
-    queryFn: () => api.codeReviews.get(place, reviewId),
+    queryFn: async () => {
+      const review = await api.codeReviews.get(place, reviewId);
+      // The lists under the page show the review as it now is too (a Refresh, a focus): going back finds them in step.
+      showReviewReadInListsIn(queryClient, place, review);
+      return review;
+    },
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
