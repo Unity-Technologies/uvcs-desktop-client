@@ -276,7 +276,7 @@ describe('a partial workspace', () => {
   it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
     // `cm ls <folder>` lists the folder itself first, then the children the workspace has loaded, with the OS's separator.
     const { service, commands } = workspaces({
-      ls: formatOutput(['Assets', 'dir', 4, ''], ['Assets\Textures', 'dir', 4, ''], ['Assets\hero ñ.png', 'bin', 9, ''], ['Assets\notes.txt', 'txt', '', '']),
+      ls: formatOutput(['Assets', 'dir', 4, ''], ['Assets\\Textures', 'dir', 4, ''], ['Assets\\hero ñ.png', 'bin', 9, ''], ['Assets\\notes.txt', 'txt', '', '']),
     });
 
     expect(await service.loadedIn(WORKSPACE, 'Assets')).toEqual(['Assets/Textures', 'Assets/hero ñ.png']);
