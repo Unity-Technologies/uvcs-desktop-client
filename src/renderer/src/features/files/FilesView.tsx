@@ -1,4 +1,4 @@
-import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
+import { FilePlus, FolderDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
@@ -9,6 +9,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
@@ -39,6 +40,8 @@ import { useTreeListings } from './useTreeListings';
 import { singleSelection } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
+import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
+import { showsNothingDownloaded } from './nothingDownloaded';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
 import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
 
@@ -129,6 +132,13 @@ export function FilesView() {
           // The tree's own header over placeholder rows while the root is read: the layout never changes shape.
           isLoadingRoot ? (
             <FileTreeSkeleton />
+          ) : showsNothingDownloaded(workspace?.kind, childrenByDirectory) ? (
+            <EmptyState
+              icon={<FolderDown size={24} />}
+              title="Nothing downloaded yet"
+              description="This workspace downloads only the folders and files you choose."
+              action={<Button icon={<FolderDown size={14} />} onClick={() => openChooseDownloads(workspacePath)}>Choose what to download…</Button>}
+            />
           ) : (
             <FileTreeTable
               rows={rows}
