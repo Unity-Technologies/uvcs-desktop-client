@@ -239,7 +239,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   1000×800 or 900×700). Its diff's comments button hides the thread from the code, to read the code alone, as the
   review's diff does: a marker on its line, a click showing it again (`useThreadRow`, `contextThreadParts`,
   `CommentsInCodeButton`); its line keeps its outline in the accent, the thread being what the dialog is about. It
-  shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it. It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
+  shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it.
+  It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
   while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)

@@ -865,7 +865,8 @@ docs/features/code-reviews.md "Comments in the code"):
   again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short file when a
   row goes in above the code), outlines around the lines its rows and markers are about (`bands`, `LineBands`,
   `bandRect`: a 1px border across the pane's code, never a fill, which muddied the added and removed tints under it;
-  the one `selected` in the accent), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a line whose
+  the one `selected` in the accent), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a
+  line whose
   row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE`
   (one thread of several), read with context: the line a third of the way down, its row below; a row taller than the
   room below scrolls on just enough to fit, keeping three lines above the line; a line near the top stays at the top,
