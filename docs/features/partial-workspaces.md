@@ -47,6 +47,8 @@ Its decisions are pure and tested:
   load a folder that holds anything already. The root is never removed, only its items.
 - `downloadTree.ts`: the rows shown (`downloadRows`), the keys (`downloadKey`, a desktop tree's), the body's state
   (`rootStatus`) and the summary beside Apply (`rulesSummary`).
+- `downloadTreeReads.ts`: what the folder reads give the tree (`downloadTreeReads`: the listings, what's loaded, the
+  folders that failed to read) and when Apply can run (`canApply`).
 
 An xlink is downloaded whole, like a file: its own repository's folders aren't chosen here.
 
