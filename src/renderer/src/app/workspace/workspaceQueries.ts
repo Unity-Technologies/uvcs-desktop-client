@@ -75,6 +75,25 @@ export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));
 }
 
+/**
+ * How every listed workspace holds its files (standard, partial or dynamic), from a local `cm getworkspacefrompath` of
+ * each. A workspace's kind is set when it is created, so it is read once a session; a workspace created again in the
+ * same folder has another guid, and so another key.
+ */
+export function workspaceKindsQuery(workspaces: WorkspaceSummary[]) {
+  const paths = workspaces.map((workspace) => workspace.path);
+  return queryOptions({
+    queryKey: queryKeys.workspaceKinds(workspaces.map(({ path, guid }) => [path, guid] as const)),
+    queryFn: () => api.workspaces.kinds(paths),
+    enabled: paths.length > 0,
+    staleTime: Infinity,
+  });
+}
+
+export function useWorkspaceKinds(workspaces: WorkspaceSummary[] | undefined) {
+  return useQuery(workspaceKindsQuery(workspaces ?? []));
+}
+
 /** Which of these recent paths (ones `cm` doesn't list) lost their folder. */
 export function useMissingWorkspacePaths(paths: string[]) {
   return useQuery({

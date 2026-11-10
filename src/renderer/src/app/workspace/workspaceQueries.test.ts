@@ -2,7 +2,7 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '../queryClient';
-import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
+import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceKindsQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
   it('asks cm about each recent workspace once a session, whatever order or company it comes back in', async () => {
@@ -79,5 +79,29 @@ describe('workspaceHeadsQuery', () => {
     await settle();
 
     expect(reads.count).toBe(1);
+  });
+});
+
+describe('workspaceKindsQuery', () => {
+  const game = { name: 'game', path: '/wk/game', guid: 'g1' };
+  const tools = { name: 'tools', path: '/wk/tools', guid: 't1' };
+
+  it('reads every listed workspace in one call, once a session', async () => {
+    const client = createQueryClient();
+    fakeApi.answer('workspaces.kinds', () => ({ '/wk/game': 'partial', '/wk/tools': 'standard' }));
+
+    expect(await client.fetchQuery(workspaceKindsQuery([game, tools]))).toEqual({ '/wk/game': 'partial', '/wk/tools': 'standard' });
+    await client.fetchQuery(workspaceKindsQuery([game, tools]));
+
+    expect(fakeApi.argsOf('workspaces.kinds')).toEqual([[['/wk/game', '/wk/tools']]]);
+  });
+
+  it('reads again a workspace created anew in the same folder', () => {
+    const recreated = { ...game, guid: 'g2' };
+    expect(workspaceKindsQuery([recreated]).queryKey).not.toEqual(workspaceKindsQuery([game]).queryKey);
+  });
+
+  it('asks nothing while no workspace is listed', () => {
+    expect(workspaceKindsQuery([]).enabled).toBe(false);
   });
 });
