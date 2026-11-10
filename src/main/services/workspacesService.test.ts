@@ -29,7 +29,7 @@ function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<Worksp
   return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }
 
-const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612']) };
+const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612', 'regular', 'static']) };
 
 describe('workspace list', () => {
   it('lists the workspaces with one local read in any directory, each folder once', async () => {
@@ -46,7 +46,7 @@ describe('workspace list', () => {
 });
 
 describe('workspace info', () => {
-  it('tells what the workspace is loaded from and its name with two local reads', async () => {
+  it('tells what the workspace is loaded from, its name and its kind with two local reads', async () => {
     const { service, lines } = workspaces({ status: STATUS_HEADER, ...WORKSPACE_NAMES });
 
     expect(await service.info(WORKSPACE)).toEqual({
@@ -57,6 +57,7 @@ describe('workspace info', () => {
       server: 'local',
       selector: { kind: 'branch', name: '/main/task1' },
       loadedChangeset: 12,
+      kind: 'standard',
     });
     expect(lines().map((line) => line.split(' ')[0])).toEqual(['status', 'getworkspacefrompath']);
   });
@@ -76,6 +77,7 @@ describe('workspace info', () => {
       server: 'AcmeStudio@unity',
       selector: { kind: 'branch', name: '/main/task1' },
       loadedChangeset: 12,
+      kind: 'standard',
     });
     // Only an id asks the machine-readable header, a local read in the workspace's own sessions.
     expect(commands.filter(({ args }) => args.includes('--machinereadable'))).toMatchObject([
@@ -113,6 +115,14 @@ describe('workspace info', () => {
       `getworkspacefrompath ${WORKSPACE}`,
     ]);
     expect(lines()[1]).toBe('workspace rename game game-2');
+  });
+
+  it('tells a dynamic workspace from a partial one', async () => {
+    for (const [type, dynamic, kind] of [['partial', 'static', 'partial'], ['regular', 'dynamic', 'dynamic']]) {
+      const { service } = workspaces({ status: STATUS_HEADER, getworkspacefrompath: formatOutput(['game', 'a0411612', type!, dynamic!]) });
+
+      expect(await service.info(WORKSPACE)).toMatchObject({ kind });
+    }
   });
 });
 
@@ -349,6 +359,33 @@ describe('other workspaces', () => {
     expect(commands.map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
       { via: 'query', path: game, options: { anyDirectory: true } },
       { via: 'query', path: cloud, options: { anyDirectory: true } },
+    ]);
+  });
+
+  it('tells how every listed workspace holds its files with one local cm getworkspacefrompath each, one at a time with the heads', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-kinds-'));
+    const [art, remote] = [join(root, 'art'), join(root, 'remote')];
+    await Promise.all([mkdir(art), mkdir(remote)]);
+    let reading = 0;
+    let most = 0;
+    const oneAtATime = (answer: CmAnswer): CmAnswer => async (command) => {
+      most = Math.max(most, ++reading);
+      await Promise.resolve();
+      reading--;
+      return typeof answer === 'function' ? answer(command) : answer;
+    };
+    const { service, commands } = workspaces({
+      getworkspacefrompath: oneAtATime(({ args }) => formatOutput(args[1] === art ? ['partial', 'static'] : ['regular', 'dynamic'])),
+      wi: oneAtATime('BR\u001f/main\u001fgame@local\n'),
+    });
+
+    const [kinds] = await Promise.all([service.kinds([art, remote, join(root, 'gone')]), service.heads([art, remote])]);
+
+    expect(kinds).toEqual({ [art]: 'partial', [remote]: 'dynamic' });
+    expect(most).toBe(1);
+    expect(commands.filter(({ args }) => args[0] === 'getworkspacefrompath').map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
+      { via: 'query', path: art, options: { anyDirectory: true } },
+      { via: 'query', path: remote, options: { anyDirectory: true } },
     ]);
   });
 });

@@ -4,6 +4,13 @@ export interface WorkspaceSummary {
   guid: string;
 }
 
+/**
+ * How a workspace holds its files: `standard` downloads the whole tree it's loaded from; `partial` only the files and
+ * folders its owner configured (Gluon); `dynamic` downloads files as they're opened (a virtual file system). A dynamic
+ * workspace that is also partial is told as dynamic, how its files behave.
+ */
+export type WorkspaceKind = 'standard' | 'partial' | 'dynamic';
+
 export type SelectorKind = 'branch' | 'changeset' | 'label' | 'shelve';
 
 /** What the workspace is currently loaded from: a branch, a changeset, a label or a shelve. */
@@ -25,6 +32,8 @@ export interface WorkspaceInfo {
    * numbers it as changeset `-id`, never a changeset to query from): the selector names the shelve.
    */
   loadedChangeset: number | null;
+  /** How it holds its files; left out when `cm` didn't tell. */
+  kind?: WorkspaceKind;
 }
 
 /** What a workspace works on, as `cm wi` tells it without asking the server. */

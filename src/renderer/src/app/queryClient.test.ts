@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 function workspaceOn(branch: string, loadedChangeset: number): WorkspaceInfo {
-  return { name: 'game', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: branch }, loadedChangeset };
+  return { name: 'game', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: branch }, loadedChangeset, kind: 'standard' };
 }
 
 /** The workspace info on screen, which reads `after` from the next read on (the operation moved the workspace). */

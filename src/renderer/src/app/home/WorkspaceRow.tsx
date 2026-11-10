@@ -1,9 +1,10 @@
 import { MoreHorizontal } from 'lucide-react';
-import type { WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceKind, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { MissingChip } from '../../components/MissingChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { SelectorChip } from '../../components/SelectorChip';
 import { ServerChip } from '../../components/ServerChip';
+import { WorkspaceKindChip } from '../../components/WorkspaceKindChip';
 import { splitRepositorySpec } from '../../lib/servers';
 import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
@@ -21,13 +22,15 @@ interface WorkspaceRowProps {
   repositoryName?: string;
   /** What it's loaded from, when known without asking the server. */
   selector?: WorkspaceSelector | null;
+  /** How it holds its files, once read: a chip unless standard. */
+  kind?: WorkspaceKind;
   /** Its folder is gone: dimmed, and opening it offers to locate or recreate it. */
   missing?: boolean;
   onOpen: (path: string) => void;
   compact?: boolean;
 }
 
-export function WorkspaceRow({ workspace, repository, repositoryName: knownName, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
+export function WorkspaceRow({ workspace, repository, repositoryName: knownName, selector, kind, missing = false, onOpen, compact }: WorkspaceRowProps) {
   const openIn = workspaceOpener(onOpen);
   const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, openIn));
   const repositoryName = repository ? splitRepositorySpec(repository).name : knownName;
@@ -54,6 +57,7 @@ export function WorkspaceRow({ workspace, repository, repositoryName: knownName,
             </span>
           </span>
           {missing && <MissingChip />}
+          {!missing && <WorkspaceKindChip kind={kind} className={styles.rowChip} />}
           {!compact && !missing && selector && <SelectorChip selector={selector} className={styles.rowChip} />}
           {!compact && !missing && repository && <ServerChip repository={repository} className={styles.rowChip} />}
         </button>

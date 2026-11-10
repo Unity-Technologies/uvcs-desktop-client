@@ -2,7 +2,7 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '../queryClient';
-import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
+import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceKindQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
   it('asks cm about each recent workspace once a session, whatever order or company it comes back in', async () => {
@@ -79,5 +79,38 @@ describe('workspaceHeadsQuery', () => {
     await settle();
 
     expect(reads.count).toBe(1);
+  });
+});
+
+describe('workspaceKindQuery', () => {
+  const game = { name: 'game', path: '/wk/game', guid: 'g1' };
+  const tools = { name: 'tools', path: '/wk/tools', guid: 't1' };
+  const kindsOf = (answer: Record<string, string>) => fakeApi.answer('workspaces.kinds', (paths: string[]) => Object.fromEntries(paths.filter((path) => path in answer).map((path) => [path, answer[path]])));
+  const askedPaths = () => fakeApi.argsOf('workspaces.kinds').map(([paths]) => paths);
+
+  it('asks about each workspace once a session: a workspace added later costs only its own read', async () => {
+    const client = createQueryClient();
+    kindsOf({ '/wk/game': 'partial', '/wk/tools': 'standard' });
+    const read = (workspaces: (typeof game)[]) => Promise.all(workspaces.map((workspace) => client.fetchQuery(workspaceKindQuery(workspace))));
+
+    expect(await read([game])).toEqual(['partial']);
+    expect(await read([game, tools])).toEqual(['partial', 'standard']);
+
+    expect(askedPaths()).toEqual([['/wk/game'], ['/wk/tools']]);
+  });
+
+  it("asks again about a workspace whose kind cm couldn't tell", async () => {
+    const client = createQueryClient();
+    kindsOf({});
+
+    expect(await client.fetchQuery(workspaceKindQuery(game))).toBeNull();
+    await client.fetchQuery(workspaceKindQuery(game));
+
+    expect(askedPaths()).toEqual([['/wk/game'], ['/wk/game']]);
+  });
+
+  it('reads again a workspace created anew in the same folder', () => {
+    const recreated = { ...game, guid: 'g2' };
+    expect(workspaceKindQuery(recreated).queryKey).not.toEqual(workspaceKindQuery(game).queryKey);
   });
 });

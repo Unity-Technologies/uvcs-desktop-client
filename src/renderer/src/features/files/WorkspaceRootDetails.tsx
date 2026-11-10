@@ -1,6 +1,7 @@
 import { FolderRoot } from 'lucide-react';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
+import { workspaceKindWords } from '../../components/workspaceKindWords';
 import type { MenuEntry } from '../../lib/actions';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import { DetailsSection } from '../../ui/DetailsSection';
@@ -22,6 +23,7 @@ export function WorkspaceRootDetails({ workspace, menu }: { workspace: Workspace
           properties={[
             { label: 'Path', value: workspace.path, mono: true, copyText: workspace.path },
             { label: 'Repository', value: workspace.repository },
+            { label: 'Type', value: workspace.kind && workspaceKindWords(workspace.kind).label },
             { label: SELECTOR_LABELS[workspace.selector.kind], value: workspace.selector.name },
             { label: 'Loaded changeset', value: workspace.loadedChangeset },
           ]}

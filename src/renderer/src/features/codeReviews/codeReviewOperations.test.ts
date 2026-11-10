@@ -33,6 +33,7 @@ const workspaceOn = (server: string) =>
     server,
     selector: { kind: 'branch', name: '/main' },
     loadedChangeset: 5,
+    kind: 'standard',
   });
 
 describe('setting your own review status', () => {

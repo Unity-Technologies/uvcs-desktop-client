@@ -42,8 +42,8 @@ export function recordsOutput<Field extends string>(layout: RecordLayout<unknown
 
 export const WORKSPACE_GUID = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
 
-/** `cm getworkspacefrompath --format=…`: the workspace's name and GUID. */
-export const WORKSPACE_NAMES = formatOutput(['work', WORKSPACE_GUID]);
+/** `cm getworkspacefrompath --format=…`: the workspace's name, GUID, `{type}` and `{dynamic}`: a standard workspace. */
+export const WORKSPACE_NAMES = formatOutput(['work', WORKSPACE_GUID, 'regular', 'static']);
 
 type SelectorType = 'Branch' | 'Changeset' | 'Label' | 'Shelve';
 

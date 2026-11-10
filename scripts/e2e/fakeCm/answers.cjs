@@ -36,7 +36,8 @@ const ORGANIZATION_REPOSITORIES = [
   { repid: 5, repname: 'Puzzle/Levels', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS', repguid: '00000000-0000-4000-8000-000000000005' },
   { repid: 6, repname: 'storage', repserver: ORGANIZATION, repowner: OWNER, reptype: 'WorkspaceStorage', repguid: '00000000-0000-4000-8000-000000000006' },
 ];
-const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid }];
+/** The workspace as `cm workspace list` and `cm getworkspacefrompath` print it: a standard one (`type`, `dynamic`). */
+const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
 const COMMANDS = {
   version: () => '11.0.16.9000\n',

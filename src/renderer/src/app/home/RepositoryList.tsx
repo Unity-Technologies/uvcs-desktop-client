@@ -2,6 +2,7 @@ import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { nameInProject } from '@shared/domain/organizations';
 import type { RepositorySummary } from '@shared/domain/repository';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { keepRendered } from '../../lib/keepRendered';
 import { HighlightQuery } from '../../ui/Highlight';
 import { RepositoryRow } from './RepositoryRow';
@@ -22,6 +23,8 @@ export interface RepositoryListHandle {
 
 interface RepositoryListProps {
   rows: RepositoryListRow[];
+  /** How each workspace holds its files, by its path, once read: a chip on its row unless standard. */
+  workspaceKinds: ReadonlyMap<string, WorkspaceKind>;
   /** The filter the repositories' names are marked by. */
   query: string;
   /** The Unity project shown, whose repositories go by their own names; none for all projects. */
@@ -41,7 +44,7 @@ interface RepositoryListProps {
  * the row holding the focus stays rendered while scrolled away (`keepRendered`).
  */
 export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListProps>(function RepositoryList(
-  { rows, query, project, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
+  { rows, workspaceKinds, query, project, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
   ref,
 ) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -151,7 +154,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
           // The filter matches repository names only, not their workspaces.
           <HighlightQuery query="">
             <div className={styles.nested}>
-              <WorkspaceRow workspace={row.workspace} repository={row.repository.spec} onOpen={onOpen} compact />
+              <WorkspaceRow workspace={row.workspace} repository={row.repository.spec} kind={workspaceKinds.get(row.workspace.path)} onOpen={onOpen} compact />
             </div>
           </HighlightQuery>
         );

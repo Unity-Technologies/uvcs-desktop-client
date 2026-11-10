@@ -11,6 +11,7 @@ const info = (selector: WorkspaceSelector, loadedChangeset: number | null = 11):
   server: 'local',
   selector,
   loadedChangeset,
+  kind: 'standard',
 });
 const summary = (changesetCount: number, branch = '/main', countCapped = false): IncomingSummary => ({
   branch,

@@ -41,6 +41,8 @@ export const queryKeys = {
   workspaceHeads: (paths: readonly string[]) => [...queryKeys.everyWorkspaceHeads, paths] as const,
   /** The heads of every list of workspaces read (the home screen's, the switcher's). */
   everyWorkspaceHeads: ['workspaceHeads'] as const,
+  /** Keyed by the workspace's path and guid: a workspace recreated in the same folder may hold its files another way. */
+  workspaceKind: (path: string, guid: string) => ['workspaceKind', path, guid] as const,
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,

@@ -87,7 +87,7 @@ const review: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the 
 const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
 /** A changeset's review, as every list reads it: its target needs no branch name. */
 const changesetReview: CodeReview = { ...review, target: { kind: 'changeset', changesetId: 5 } };
-const workspace: WorkspaceInfo = { name: 'game', path: ws, repository, repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6 };
+const workspace: WorkspaceInfo = { name: 'game', path: ws, repository, repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6, kind: 'standard' };
 const file: TreeItem = {
   path: 'src/a.ts',
   name: 'a.ts',
@@ -105,7 +105,7 @@ const file: TreeItem = {
   itemId: 4,
 };
 /** The workspace's info, as its window reads it: on /main, changeset 5 loaded. */
-const WORKSPACE_INFO = { name: 'ws', path: '/ws', repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5 } as const;
+const WORKSPACE_INFO = { name: 'ws', path: '/ws', repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5, kind: 'standard' } as const;
 const change: PendingChange = { path: 'src/a.ts', kinds: ['checkedOut', 'changed'], itemType: 'file', size: 10, lastModified: '' };
 const lock: Lock = {
   itemId: 1,

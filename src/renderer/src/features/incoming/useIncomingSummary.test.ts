@@ -13,7 +13,7 @@ import { recheckIncoming } from './useIncomingSummary';
 const ws = '/ws';
 
 function workspaceOn(selector: WorkspaceInfo['selector'], loadedChangeset: number | null): void {
-  const info: WorkspaceInfo = { name: 'game', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector, loadedChangeset };
+  const info: WorkspaceInfo = { name: 'game', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector, loadedChangeset, kind: 'standard' };
   queryClient.setQueryData(queryKeys.inWorkspace(ws, 'info'), info);
 }
 
