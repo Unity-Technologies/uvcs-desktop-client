@@ -9,6 +9,7 @@ describe('isOperation', () => {
     ['a switch', ['switch', 'br:/main/task']],
     ['a merge', ['merge', 'br:/main/task', '--merge']],
     ['a shelve', ['shelveset', 'create', '--all', '-commentsfile=/t/c.txt']],
+    ['a partial shelve', ['partial', 'shelveset', 'create', '--applychanged', '-commentsfile=/t/c.txt']],
     ['a shelve applied', ['shelveset', 'apply', 'sh:3']],
     ['a sync', ['sync', 'game@local', 'git', 'https://example.com/game.git']],
     ['a push', ['push', 'br:/main@game@local', 'game@cloud']],
