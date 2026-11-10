@@ -56,6 +56,14 @@
   overflow: auto;
 }
 
+/*
+ * Its card keeps its whole height, for this box to scroll: shrunk to fit the box, the card (whose own overflow is
+ * hidden, for its rounded corners) clipped its text instead, and a long thread couldn't be read.
+ */
+.threadAbove > * {
+  flex-shrink: 0;
+}
+
 .note {
   margin: 0;
   color: var(--text-secondary);
