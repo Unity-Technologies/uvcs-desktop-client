@@ -1,7 +1,7 @@
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
+import type { RepositoryTreePoint } from '@shared/domain/explorer';
 import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -15,10 +15,10 @@ import { repositoryListingQuery } from '../browseRepository/repositoryListing';
 import { applyDownloads } from './applyDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import { downloadKey, downloadRows, downloadTreeOf, downloadTreePoint, foldersToReadLoaded, rootStatus, rulesSummary } from './downloadTree';
+import { canApply, dataByFolder, downloadTreeReads, type FolderRead } from './downloadTreeReads';
 import styles from './ChooseDownloadsDialog.module.css';
 
 const ROOT = '';
-const READ_FAILURE = 'Couldn’t read this folder';
 /** Stands in while there's no tree to list (the query is disabled then): a workspace on a shelve, or still loading. */
 const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
 
@@ -29,6 +29,10 @@ export function openChooseDownloads(workspacePath: string): void {
 
 function loadedInKey(workspacePath: string, folder: string) {
   return queryKeys.inWorkspace(workspacePath, 'partial', 'loadedIn', folder);
+}
+
+function folderRead<T>(folder: string, query: { data: T | undefined; isError: boolean }): FolderRead<T> {
+  return { folder, data: query.data, failed: query.isError };
 }
 
 function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string; close: () => void }) {
@@ -49,24 +53,19 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       enabled: treePoint != null,
     })),
   });
-  const listings = new Map<string, readonly TreeItem[]>();
-  const failures = new Map<string, string>();
-  if (info && !treePoint) failures.set(ROOT, READ_FAILURE);
-  repositoryFolders.forEach((folder, index) => {
-    const query = listingQueries[index]!;
-    if (query.data) listings.set(folder, query.data);
-    if (query.isError) failures.set(folder, READ_FAILURE);
-  });
+  const listingReads = repositoryFolders.map((folder, index) => folderRead(folder, listingQueries[index]!));
 
   // The workspace side: what it holds of each loaded folder. Whether a folder is loaded shows only once its parent is
   // read, so the folders to read come from what this dialog read so far; dropped as it closes (`gcTime` 0), they're
   // read afresh each time it opens, since applying changes them.
-  const loadedSoFar = new Map<string, readonly string[]>();
-  for (const folder of repositoryFolders) {
-    const loaded = queryClient.getQueryData<string[]>(loadedInKey(workspacePath, folder));
-    if (loaded) loadedSoFar.set(folder, loaded);
-  }
-  const loadedFolders = foldersToReadLoaded(downloadTreeOf(listings, loadedSoFar), expanded);
+  const loadedSoFar = dataByFolder(
+    repositoryFolders.map((folder) => ({
+      folder,
+      data: queryClient.getQueryData<string[]>(loadedInKey(workspacePath, folder)),
+      failed: false,
+    })),
+  );
+  const loadedFolders = foldersToReadLoaded(downloadTreeOf(dataByFolder(listingReads), loadedSoFar), expanded);
   const loadedQueries = useQueries({
     queries: loadedFolders.map((folder) => ({
       queryKey: loadedInKey(workspacePath, folder),
@@ -75,11 +74,10 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       gcTime: 0,
     })),
   });
-  const loadedIn = new Map<string, readonly string[]>();
-  loadedFolders.forEach((folder, index) => {
-    const query = loadedQueries[index]!;
-    if (query.data) loadedIn.set(folder, query.data);
-    if (query.isError) failures.set(folder, READ_FAILURE);
+  const { listings, loadedIn, failures } = downloadTreeReads({
+    treeless: info != null && treePoint == null,
+    listings: listingReads,
+    loaded: loadedFolders.map((folder, index) => folderRead(folder, loadedQueries[index]!)),
   });
 
   const tree = downloadTreeOf(listings, loadedIn);
@@ -128,7 +126,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
         <>
           <span className={styles.summary}>{rulesSummary(rules)}</span>
           <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" disabled={rules.length === 0 || applying} onClick={() => void apply()}>
+          <Button variant="primary" disabled={!canApply(rules, applying)} onClick={() => void apply()}>
             Apply
           </Button>
         </>
