@@ -2,7 +2,7 @@ import type { LinkSignIn, RepositorySignIn, TokenPageChoice, TokenPageTarget } f
 import type { BoundProject, BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, TrackerErrorReason, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
-import { deviceFlowHostsOf, GITHUB_OAUTH_SCOPES } from '@shared/issueTrackers/signInMethods';
+import { deviceFlowHostsOf } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import type { IssueTrackerStore, StoredConnection } from './IssueTrackerStore';
@@ -141,7 +141,7 @@ export class IssueTrackers {
     if ('failure' in reading) return reading;
     const clientId = this.deps.oauthClientIds[new URL(reading.server).hostname] ?? '';
     if (reading.kind !== 'github' || !clientId) return { failure: { reason: 'unexpected', message: 'This tracker has no browser sign-in' } };
-    const device = { server: reading.server, clientId, scopes: GITHUB_OAUTH_SCOPES };
+    const device = { server: reading.server, clientId };
     const http = this.deps.http.bound([new URL(reading.server).origin], null);
     let code;
     try {

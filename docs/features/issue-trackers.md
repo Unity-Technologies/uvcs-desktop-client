@@ -484,8 +484,8 @@ Settings.
 
 ### The device flow
 
-"Sign in with GitHub" asks for a code (`requestDeviceCode`: `POST /login/device/code`, the client id and the `repo`
-scope, `GITHUB_OAUTH_SCOPES`, as GitHub has no narrower scope that reads a private repository's issues), shows it,
+"Sign in with GitHub" asks for a code (`requestDeviceCode`: `POST /login/device/code` with the client id alone, no scope:
+the app's permissions on GitHub say what the token reads, below), shows it,
 copies it (a button beside it copies it again) and opens `github.com/login/device`, where the user pastes it and
 approves. Main polls the token endpoint at the server's pace (`pollForToken`, `nextDevicePoll`: `authorization_pending`
 waits the interval, `slow_down` five seconds more, `access_denied` and `expired_token` end it), then signs in as with a

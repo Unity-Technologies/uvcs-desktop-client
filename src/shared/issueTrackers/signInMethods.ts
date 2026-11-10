@@ -10,9 +10,6 @@ export const GITHUB_OAUTH_CLIENT_IDS: Readonly<Record<string, string>> = {
   'github.com': 'Ov23li9k9uyuCxbsWJSa',
 };
 
-/** The scopes the device flow asks for: `repo`, as GitHub has no narrower scope that reads a private repository's issues. */
-export const GITHUB_OAUTH_SCOPES = 'repo';
-
 /** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_OAUTH_CLIENT_ID`). */
 export function deviceFlowHostsOf(clientIds: Readonly<Record<string, string>>): string[] {
   return Object.entries(clientIds)

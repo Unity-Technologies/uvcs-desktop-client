@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeTrackerHttp } from '../testing/fakeTrackerHttp';
 import { deviceCodeOf, nextDevicePoll, pollForToken, realWait, requestDeviceCode, type Wait } from './deviceFlow';
 
-const SERVER = { server: 'https://github.com', clientId: 'Iv1.abc', scopes: 'repo' };
+const SERVER = { server: 'https://github.com', clientId: 'Iv1.abc' };
 const CODE_URL = 'POST https://github.com/login/device/code';
 const TOKEN_URL = 'POST https://github.com/login/oauth/access_token';
 
@@ -48,7 +48,7 @@ describe('the device flow', () => {
     });
     const http = tracker.http.bound(['https://github.com'], null);
     const code = await requestDeviceCode(http, SERVER, 0);
-    expect(tracker.requests[0]!.form).toEqual({ client_id: 'Iv1.abc', scope: 'repo' });
+    expect(tracker.requests[0]!.form).toEqual({ client_id: 'Iv1.abc' });
 
     const waits: number[] = [];
     const wait = async (ms: number) => {

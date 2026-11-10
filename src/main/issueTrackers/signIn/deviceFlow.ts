@@ -74,13 +74,13 @@ export const realWait: Wait = (ms, signal) =>
 export interface DeviceFlowServer {
   /** `https://github.com`: the device and token endpoints are its `/login/device/code` and `/login/oauth/access_token`. */
   server: string;
+  /** A GitHub App's: its permissions say what the token reads, so no scope is asked. */
   clientId: string;
-  scopes: string;
 }
 
 /** Asks the server for a device code. */
-export async function requestDeviceCode(http: ConnectionHttp, { server, clientId, scopes }: DeviceFlowServer, now: number): Promise<DeviceCode> {
-  const response = await http.send({ method: 'POST', url: `${server}/login/device/code`, form: { client_id: clientId, scope: scopes } });
+export async function requestDeviceCode(http: ConnectionHttp, { server, clientId }: DeviceFlowServer, now: number): Promise<DeviceCode> {
+  const response = await http.send({ method: 'POST', url: `${server}/login/device/code`, form: { client_id: clientId } });
   const code = response.status === 200 ? deviceCodeOf(response.body, now) : null;
   if (!code) throw new TrackerError('unexpected', `${new URL(server).host} gave no sign-in code`);
   return code;
