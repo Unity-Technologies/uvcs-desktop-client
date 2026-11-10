@@ -392,7 +392,7 @@ describe('IssueTrackers', () => {
     ]);
   });
 
-  it('signs in with GitHub’s device flow where an app is registered', async () => {
+  it('signs in with GitHub’s device flow where an app is registered, asking for no scope: the GitHub App’s permissions say what it reads', async () => {
     const { engine, tracker } = trackers(
       {
         ...SIGNED_IN,
@@ -404,6 +404,7 @@ describe('IssueTrackers', () => {
     expect(engine.setup().deviceFlowHosts).toEqual(['github.com']);
     const started = await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     expect(started).toEqual({ flowId: 'id1', userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device', expiresAt: 900_000 });
+    expect(tracker.requests[0]!.form).toEqual({ client_id: 'Iv1.app' });
     expect(await engine.finishDeviceSignIn('id1')).toMatchObject({ kind: 'signedIn', connection: { signInMethod: 'deviceCode', scope: '*' } });
     expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer gho_token');
   });
