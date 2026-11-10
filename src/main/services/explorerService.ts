@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ExplorerApi } from '@shared/api/explorer';
-import type { DeletedItemRestore, ItemMove, RevisionType } from '@shared/domain/explorer';
+import type { DeletedItemRestore, ItemMove, RepositoryTreePoint, RevisionType } from '@shared/domain/explorer';
 import type { Place, RepositoryPlace } from '@shared/domain/place';
-import { repositorySpec } from '@shared/domain/specs';
+import { repositorySpec, treePointSpec } from '@shared/domain/specs';
 import { cmPlace } from '../cm/cmPlace';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
@@ -41,9 +41,9 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
     return items.map(withoutHash);
   }
 
-  async function listRepositoryDirectory(place: Place, changesetId: number, directory: string) {
+  async function listRepositoryDirectory(place: Place, tree: RepositoryTreePoint, directory: string) {
     const at = cmPlace(place);
-    const items = await cm.queryRecords(['ls', `/${directory}`, `--tree=${at.spec(`cs:${changesetId}`)}`, TREE_ITEM_FORMAT], readTreeItem, at.options);
+    const items = await cm.queryRecords(['ls', `/${directory}`, `--tree=${at.spec(treePointSpec(tree))}`, TREE_ITEM_FORMAT], readTreeItem, at.options);
     return rememberedItems(place, items);
   }
 

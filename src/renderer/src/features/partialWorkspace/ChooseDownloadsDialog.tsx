@@ -1,7 +1,7 @@
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import type { TreeItem } from '@shared/domain/explorer';
+import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
 import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -14,11 +14,13 @@ import { Spinner } from '../../ui/Spinner';
 import { repositoryListingQuery } from '../browseRepository/repositoryListing';
 import { applyDownloads } from './applyDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
-import { downloadKey, downloadRows, downloadTreeOf, foldersToReadLoaded, rootStatus, rulesSummary } from './downloadTree';
+import { downloadKey, downloadRows, downloadTreeOf, downloadTreePoint, foldersToReadLoaded, rootStatus, rulesSummary } from './downloadTree';
 import styles from './ChooseDownloadsDialog.module.css';
 
 const ROOT = '';
 const READ_FAILURE = 'Couldn’t read this folder';
+/** Stands in while there's no tree to list (the query is disabled then): a workspace on a shelve, or still loading. */
+const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
 
 /** Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. */
 export function openChooseDownloads(workspacePath: string): void {
@@ -31,23 +33,25 @@ function loadedInKey(workspacePath: string, folder: string) {
 
 function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string; close: () => void }) {
   const queryClient = useQueryClient();
-  const changesetId = useWorkspaceInfoOf(workspacePath).data?.loadedChangeset;
+  const info = useWorkspaceInfoOf(workspacePath).data;
+  const treePoint = info ? downloadTreePoint(info) : null;
   const place = workspacePlace(workspacePath);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const [selected, setSelected] = useState(ROOT);
   const [choices, setChoices] = useState<DownloadedChoices>(() => new Map());
   const [applying, setApplying] = useState(false);
 
-  // The repository side: what the workspace's changeset holds, folder by folder, read once and kept.
+  // The repository side: what the workspace's changeset (or branch) holds, folder by folder.
   const repositoryFolders = [ROOT, ...expanded];
   const listingQueries = useQueries({
     queries: repositoryFolders.map((folder) => ({
-      ...repositoryListingQuery(place, changesetId ?? -1, folder),
-      enabled: changesetId != null,
+      ...repositoryListingQuery(place, treePoint ?? NO_TREE, folder),
+      enabled: treePoint != null,
     })),
   });
   const listings = new Map<string, readonly TreeItem[]>();
   const failures = new Map<string, string>();
+  if (info && !treePoint) failures.set(ROOT, READ_FAILURE);
   repositoryFolders.forEach((folder, index) => {
     const query = listingQueries[index]!;
     if (query.data) listings.set(folder, query.data);

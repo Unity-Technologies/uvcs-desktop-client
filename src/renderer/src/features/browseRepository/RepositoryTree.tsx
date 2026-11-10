@@ -68,7 +68,7 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
     if (opening.expand.length > 0) useExpandedDirectoriesStore.getState().expand(treeId, opening.expand);
   }, []);
 
-  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, changesetId, directory), expanded);
+  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, { kind: 'changeset', changeset: changesetId }, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   // Expanded, the file's diff in the details ends with the file: deleted, or the selection cleared by a refresh.

@@ -1,5 +1,5 @@
-import type { TreeItem } from '@shared/domain/explorer';
-import type { PartialRule } from '@shared/domain/workspace';
+import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
+import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
 import type { CheckState } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
@@ -140,4 +140,15 @@ export function rootStatus(tree: DownloadTree, failures: ReadonlyMap<string, str
   if (failures.has(ROOT)) return 'failed';
   if (!isFolderRead(ROOT, tree)) return 'loading';
   return (tree.items.get(ROOT) ?? []).length === 0 ? 'empty' : 'ready';
+}
+
+/**
+ * The repository tree to choose from: the changeset the workspace loaded, or, on a partial workspace on a branch, which
+ * loaded no one changeset, the branch's head, which its updates follow. Null on a shelve, whose tree is no
+ * changeset of the repository to list.
+ */
+export function downloadTreePoint({ selector, loadedChangeset }: Pick<WorkspaceInfo, 'selector' | 'loadedChangeset'>): RepositoryTreePoint | null {
+  if (loadedChangeset != null) return { kind: 'changeset', changeset: loadedChangeset };
+  if (selector.kind === 'branch') return { kind: 'branch', branch: selector.name };
+  return null;
 }
