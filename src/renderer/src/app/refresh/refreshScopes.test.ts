@@ -22,6 +22,7 @@ import {
   isAffectedByShelving,
   isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
+  isShownByCodeReviewPage,
 } from './refreshScopes';
 
 const key = (...parts: unknown[]) => ['workspace', '/ws', ...parts];
@@ -246,5 +247,44 @@ describe('incoming changeset pages', () => {
   it('leave the incoming changes themselves to the refreshes', () => {
     expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
     expect(isAffectedByCheckinOrUpdate(key('incoming', 'changes'))).toBe(true);
+  });
+});
+
+describe("a code review's page", () => {
+  const branchReview = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' });
+
+  it('reads again the review, what was said on it and its reviewers, of that review only', () => {
+    expect(branchReview(key('codeReviews', 'review', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'conversation', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'reviewers', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'conversation', 8))).toBe(false);
+    expect(branchReview(key('codeReviews', 'review', 70))).toBe(false);
+  });
+
+  it('leaves the lists of reviews, the branch chips and the rest of the window alone', () => {
+    expect(branchReview(key('codeReviews', { onlyAssigned: true }))).toBe(false);
+    expect(branchReview(key('codeReviews', 'summaries', { text: undefined }))).toBe(false);
+    expect(branchReview(key('pendingChanges', 'all'))).toBe(false);
+    expect(branchReview(key('info'))).toBe(false);
+    expect(branchReview(key('branches', {}))).toBe(false);
+    expect(branchReview(key('incoming', 'changes'))).toBe(false);
+  });
+
+  it("reads again a branch review's files and changesets, as a changeset checked in there changes them", () => {
+    expect(branchReview(key('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(true);
+    expect(branchReview(key('changesets', { branch: '/main/task-12' }))).toBe(true);
+    expect(branchReview(key('diff', { kind: 'branch', branch: '/main/task-13' }))).toBe(false);
+    expect(branchReview(key('changesets', { branch: '/main' }))).toBe(false);
+    expect(branchReview(key('changesets', {}))).toBe(false);
+  });
+
+  it("leaves a changeset's or shelve's changes alone, and every diff while the review isn't read yet", () => {
+    const changesetReview = isShownByCodeReviewPage(7, { kind: 'changeset', changesetId: 40 });
+    const unread = isShownByCodeReviewPage(7, undefined);
+    expect(changesetReview(key('codeReviews', 'conversation', 7))).toBe(true);
+    expect(changesetReview(key('diff', { kind: 'changeset', changesetId: 40 }))).toBe(false);
+    expect(isShownByCodeReviewPage(7, { kind: 'shelve', shelveId: 3 })(key('diff', { kind: 'shelve', shelveId: 3 }))).toBe(false);
+    expect(unread(key('codeReviews', 'review', 7))).toBe(true);
+    expect(unread(key('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(false);
   });
 });

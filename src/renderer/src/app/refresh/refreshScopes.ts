@@ -1,3 +1,7 @@
+import type { CodeReviewTarget } from '@shared/domain/codeReview';
+import type { DiffTarget } from '@shared/domain/diff';
+import type { QueryFilter } from '@shared/domain/query';
+
 /**
  * Which queries of a place each kind of change makes stale. A place's query keys are `['workspace', path, area,
  * ...details]` (`queryKeys.inWorkspace`) or, for a repository explored without a workspace, `['repository', spec,
@@ -119,6 +123,29 @@ export function isAffectedByPermissions(kind: string, ownerChanged: boolean): (k
 /** A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list. */
 export function isAffectedByCodeReviews(key: QueryKey): boolean {
   return area(key) === 'codeReviews';
+}
+
+/** What a code review's page reads about the review itself, by its number: the review, what was said on it, its reviewers. */
+const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers'];
+
+/**
+ * What a code review's page shows that others can change while it's open (a comment written, a status set, a changeset
+ * checked in on its branch): the review, what was said on it and its reviewers, and, for a branch's review, the
+ * branch's files and changesets its Changes tab reads. Not the lists of reviews, nor anything else of the window. A
+ * changeset's or shelve's changes never change, and refreshes skip them anyway (`isRefreshable`).
+ */
+export function isShownByCodeReviewPage(reviewId: number, target: CodeReviewTarget | undefined): (key: QueryKey) => boolean {
+  return (key) => {
+    if (area(key) === 'codeReviews') return OF_ONE_REVIEW.includes(detail(key) as string) && key[4] === reviewId;
+    if (target?.kind !== 'branch') return false;
+    if (area(key) === 'diff') return isBranchDiffOf(detail(key), target.branch);
+    return area(key) === 'changesets' && (detail(key) as QueryFilter | undefined)?.branch === target.branch;
+  };
+}
+
+function isBranchDiffOf(diffTarget: unknown, branch: string): boolean {
+  const target = diffTarget as DiffTarget | undefined;
+  return target?.kind === 'branch' && target.branch === branch;
 }
 
 /** Locks were released or removed: the Locks view and the lock marks of pending changes, which read the same locks. */
