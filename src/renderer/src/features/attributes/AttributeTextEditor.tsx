@@ -29,6 +29,8 @@ export function AttributeTextEditor({ attribute, original, initialDraft, onSave,
       onChange={setDraft}
       onSave={onSave}
       onClose={onClose}
+      descriptionLabel={attribute}
+      descriptionPlaceholder="Value"
       discardQuestion={{ title: `Discard your changes to ${attribute}?`, message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true }}
     />
   );

@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { confirm } from '../ui/dialog/confirm';
+import { confirm, type ConfirmOptions } from '../ui/dialog/confirm';
 import { DESCRIPTION_PLACEHOLDER } from './commentEditor/commentPlaceholders';
 import { CommentField } from './commentEditor/CommentField';
 import { CommentFocusGroup } from './commentEditor/CommentFocusGroup';
@@ -26,14 +26,17 @@ interface CommentEditorProps {
   onSave: (comment: string) => Promise<boolean>;
   onClose: () => void;
   /** What Esc or Cancel asks before throwing an edit away; a comment's by default. */
-  discardQuestion?: DiscardQuestion;
+  discardQuestion?: ConfirmOptions;
+  /** The description field's name and placeholder, where it holds something else (an attribute's value). */
+  descriptionLabel?: string;
+  descriptionPlaceholder?: string;
 }
 
 /**
  * A summary field and a description, like the checkin composer: ⌘↵ saves, Escape cancels, an empty comment is fine.
  * Both grow with their text, so a comment written as one long line reads whole in its summary field.
  */
-export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose, discardQuestion = DISCARD_QUESTION }: CommentEditorProps) {
+export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose, discardQuestion = DISCARD_QUESTION, descriptionLabel = 'Description', descriptionPlaceholder = DESCRIPTION_PLACEHOLDER }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
   // A changeset's title and description are one larger editor, as the check-in's (`CommentFocusGroup`).
   const withSummary = focusModeFor(surface).title;
@@ -88,8 +91,8 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
         autoFocus={!withSummary}
         className={styles.descriptionField}
         value={draft.description}
-        placeholder={DESCRIPTION_PLACEHOLDER}
-        label="Description"
+        placeholder={descriptionPlaceholder}
+        label={descriptionLabel}
         disabled={saving}
         onChange={(text) => onChange({ ...draft, description: text })}
         onSubmit={() => void save()}
@@ -110,12 +113,5 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
   );
 }
 
-interface DiscardQuestion {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  danger: true;
-}
-
 /** The question before an edit is thrown away, the same in Edit comment (`CommentDialog`). */
-export const DISCARD_QUESTION: DiscardQuestion = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true };
+export const DISCARD_QUESTION: ConfirmOptions = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true };
