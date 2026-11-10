@@ -118,7 +118,8 @@ describe('Loading a checked-in xlink’s files', () => {
     const { service, commands } = xlinks({ status: '', update: '' });
 
     expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
-    expect(commands.filter((command) => command.args[0] !== 'status')).toMatchObject([
+    // Besides the update, only local reads: the changes in the way and the workspace's kind.
+    expect(commands.filter((command) => !['status', 'getworkspacefrompath'].includes(command.args[0]))).toMatchObject([
       { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'] },
     ]);
   });
