@@ -13,8 +13,11 @@ import styles from './CommentEditor.module.css';
 
 interface CommentEditorProps {
   draft: CommentParts;
-  /** A changeset's (a title over its description, as the check-in writes it) or a named object's (one description). */
-  surface: Extract<CommentSurface, 'changesetDetails' | 'namedObjectDetails'>;
+  /**
+   * A changeset's (a title over its description, as the check-in writes it), a named object's or an attribute value's
+   * (one description).
+   */
+  surface: Extract<CommentSurface, 'changesetDetails' | 'namedObjectDetails' | 'attributeValue'>;
   original: string;
   /** The parts the editor opened with: while the draft still reads them, saving leaves the comment as it was. */
   opened: CommentParts;
@@ -22,13 +25,15 @@ interface CommentEditorProps {
   /** Resolves to whether it saved. */
   onSave: (comment: string) => Promise<boolean>;
   onClose: () => void;
+  /** What Esc or Cancel asks before throwing an edit away; a comment's by default. */
+  discardQuestion?: DiscardQuestion;
 }
 
 /**
  * A summary field and a description, like the checkin composer: ⌘↵ saves, Escape cancels, an empty comment is fine.
  * Both grow with their text, so a comment written as one long line reads whole in its summary field.
  */
-export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
+export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose, discardQuestion = DISCARD_QUESTION }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
   // A changeset's title and description are one larger editor, as the check-in's (`CommentFocusGroup`).
   const withSummary = focusModeFor(surface).title;
@@ -37,7 +42,7 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
   const edited = hasUnsavedEdit(original, opened, draft);
   // Esc and Cancel ask before throwing an edit away (`commentEditorExit`), as Edit comment does.
   const cancel = async (): Promise<void> => {
-    if (commentEditorExit(edited, 'cancel') === 'close' || (await confirm(DISCARD_QUESTION))) onClose();
+    if (commentEditorExit(edited, 'cancel') === 'close' || (await confirm(discardQuestion))) onClose();
   };
 
   const save = async (): Promise<void> => {
@@ -105,5 +110,12 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
   );
 }
 
+interface DiscardQuestion {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger: true;
+}
+
 /** The question before an edit is thrown away, the same in Edit comment (`CommentDialog`). */
-export const DISCARD_QUESTION = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true } as const;
+export const DISCARD_QUESTION: DiscardQuestion = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true };
