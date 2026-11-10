@@ -109,6 +109,13 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         autoFocus={Boolean(initialRepository)}
       />
       <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
+      {form.offersPartial && (
+        <Checkbox
+          label="Download only the folders and files I choose"
+          checked={form.partial}
+          onChange={(checked) => setKindChosen((current) => toggledKind(current, 'partial', checked))}
+        />
+      )}
       {form.offersDynamic && (
         <div className={styles.choiceRow}>
           <Checkbox label="Make this workspace dynamic (alpha)" checked={form.dynamic} onChange={(checked) => setKindChosen((current) => toggledKind(current, 'dynamic', checked))} />
