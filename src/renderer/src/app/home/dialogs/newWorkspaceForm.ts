@@ -8,7 +8,7 @@ import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repository
 /** What "Learn more" next to the dynamic choice opens: Unity's page on dynamic workspaces. */
 export const DYNAMIC_WORKSPACES_URL = 'https://docs.unity.com/en-us/unity-version-control/dynamic-workspaces';
 
-/** What a new workspace loads: everything (`standard`), files as they're opened (`dynamic`), or chosen folders (`partial`). */
+/** What a new workspace loads: everything (`standard`), files as they're opened (`dynamic`), or what the user chooses (`partial`). */
 export type WorkspaceKind = 'standard' | 'dynamic' | 'partial';
 
 /**
@@ -50,12 +50,6 @@ export interface NewWorkspaceFormInput {
   dynamicAvailable: boolean;
   /** The kind the user chose with the dialog's checkboxes. */
   kindChosen: WorkspaceKind;
-  /** The top folders of the repository's /main (`api.workspaces.topFolders`); undefined until read, or while not asked. */
-  topFolders: readonly string[] | undefined;
-  /** Reading the top folders failed. */
-  topFoldersFailed: boolean;
-  /** The top folders the user ticked for a partial workspace. */
-  pickedFolders: readonly string[];
   creating: boolean;
 }
 
@@ -78,14 +72,10 @@ export interface NewWorkspaceForm {
   offersDynamic: boolean;
   /** The workspace is created dynamic: chosen, and offered. */
   dynamic: boolean;
-  /** Whether the dialog offers a partial workspace: only of a repository that exists, whose folders can be listed. */
+  /** Whether the dialog offers a partial workspace: only of a repository that exists, which has something to choose from. */
   offersPartial: boolean;
-  /** The workspace is created partial, loading only `folders`: chosen, and offered. */
+  /** The workspace is created partial, with nothing downloaded until the user chooses: chosen, and offered. */
   partial: boolean;
-  /** Whether the repository's top folders, which a partial workspace picks from, are being read, couldn't be, or are. */
-  folderList: 'loading' | 'failed' | 'ready';
-  /** The folders a partial workspace loads: the ones picked that the repository still has, in its order. */
-  folders: readonly string[];
   canCreate: boolean;
 }
 
@@ -97,7 +87,6 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   const createsRepository = repository?.kind === 'new' && !repository.created;
   const offersPartial = repository?.kind === 'existing';
   const partial = offersPartial && input.kindChosen === 'partial';
-  const folders = (input.topFolders ?? []).filter((folder) => input.pickedFolders.includes(folder));
   return {
     repository,
     repositoryList: input.repositoriesFailed ? 'failed' : input.repositories ? 'ready' : 'loading',
@@ -111,9 +100,7 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
     dynamic: input.dynamicAvailable && input.kindChosen === 'dynamic',
     offersPartial,
     partial,
-    folderList: input.topFolders ? 'ready' : input.topFoldersFailed ? 'failed' : 'loading',
-    folders,
-    canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating && (!partial || folders.length > 0)),
+    canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
   };
 }
 

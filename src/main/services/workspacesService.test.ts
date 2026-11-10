@@ -253,13 +253,6 @@ describe('a new workspace for a task', () => {
 });
 
 describe('a partial workspace', () => {
-  it('offers the folders at the root of the repository, from one cm ls of the root alone', async () => {
-    const { service, commands } = workspaces({ ls: formatOutput(['dir', '/'], ['dir', '/Assets'], ['xlink', '/Shared'], ['txt', '/README.md']) });
-
-    expect(await service.topFolders('game@local')).toEqual(['Assets', 'Shared']);
-    expect(commands).toMatchObject([{ via: 'query', args: ['ls', '/', '--tree=br:/main@game@local', '--format={type}\u001f{path}\u001e'], options: { anyDirectory: true } }]);
-  });
-
   it('loads the chosen folders with one cm partial configure of its own process, run in the new workspace', async () => {
     const { service, commands } = workspaces({ 'partial configure': '' });
 

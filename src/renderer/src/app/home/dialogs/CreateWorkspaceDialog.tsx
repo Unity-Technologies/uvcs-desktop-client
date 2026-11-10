@@ -36,7 +36,6 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
   const [kindChosen, setKindChosen] = useState<WorkspaceKind>('standard');
-  const [pickedFolders] = useState<readonly string[]>([]);
   const [creating, setCreating] = useState(false);
   const { data: dynamicAvailable = false } = useCanCreateDynamicWorkspaces();
   const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
@@ -55,9 +54,6 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     root,
     dynamicAvailable,
     kindChosen,
-    topFolders: undefined,
-    topFoldersFailed: false,
-    pickedFolders,
     creating,
   });
 

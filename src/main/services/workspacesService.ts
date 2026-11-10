@@ -6,7 +6,7 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
-import { partialConfigureArgs, readTopFolder, topFoldersArgs } from '../cm/partialWorkspace';
+import { partialConfigureArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
@@ -138,7 +138,6 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),
     canCreateDynamic: () => readTrayRuns(process.platform),
-    topFolders: (repository) => cm.queryRecords(topFoldersArgs(repository), readTopFolder, { anyDirectory: true }),
     create,
     rename,
     remove,
