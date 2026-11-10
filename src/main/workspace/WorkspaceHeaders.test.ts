@@ -11,7 +11,7 @@ function setUp() {
   let now = 0;
   const readers = {
     status: vi.fn<HeaderReaders['status']>(async () => STATUS),
-    names: vi.fn<HeaderReaders['names']>(async () => ({ name: 'wk', guid: 'g-1' })),
+    names: vi.fn<HeaderReaders['names']>(async () => ({ name: 'wk', guid: 'g-1', kind: 'standard' as const })),
   };
   const headers = new WorkspaceHeaders(readers, () => now);
   return { headers, readers, advance: (ms: number) => void (now += ms) };
@@ -23,7 +23,7 @@ describe('WorkspaceHeaders', () => {
     await Promise.all([headers.status('/wk'), headers.names('/wk')]);
     advance(1000);
     await expect(headers.status('/wk')).resolves.toEqual(STATUS);
-    await expect(headers.names('/wk')).resolves.toEqual({ name: 'wk', guid: 'g-1' });
+    await expect(headers.names('/wk')).resolves.toEqual({ name: 'wk', guid: 'g-1', kind: 'standard' });
     expect(readers.status).toHaveBeenCalledOnce();
     expect(readers.names).toHaveBeenCalledOnce();
   });
@@ -62,12 +62,13 @@ describe('WorkspaceHeaders', () => {
 });
 
 describe('cmHeaderReaders', () => {
-  it("reads the workspace's name and guid with one getworkspacefrompath, read as records", async () => {
+  it("reads the workspace's name, guid and kind with one getworkspacefrompath, read as records", async () => {
     const workspace = join('wkspaces', 'game');
-    const { cm, commands } = fakeCmClient({ getworkspacefrompath: formatOutput([' game ', 'a0411612 ']) });
+    const { cm, commands } = fakeCmClient({ getworkspacefrompath: formatOutput([' game ', 'a0411612 ', 'partial', 'static']) });
 
-    await expect(cmHeaderReaders(cm).names(workspace)).resolves.toEqual({ name: 'game', guid: 'a0411612' });
+    await expect(cmHeaderReaders(cm).names(workspace)).resolves.toEqual({ name: 'game', guid: 'a0411612', kind: 'partial' });
 
     expect(commands.map(({ via, args, readsRecords }) => [via, args[0], args[1], readsRecords])).toEqual([['query', 'getworkspacefrompath', workspace, true]]);
+    expect(commands[0]?.args[2]).toBe('--format={wkname}{guid}{type}{dynamic}');
   });
 });
