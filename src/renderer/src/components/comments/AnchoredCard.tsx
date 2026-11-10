@@ -1,13 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { hoverCardPosition } from './hoverCardPosition';
+import { hoverStep, type HoverEvent } from '../../lib/hoverOpening';
 import styles from './AnchoredCard.module.css';
-
-/** How long the pointer rests on a chip before its card shows. */
-const HOVER_DELAY_MS = 350;
-
-/** How long a card that scrolls stays once the pointer leaves its anchor: time to cross the gap onto it. */
-const LEAVE_GRACE_MS = 200;
 
 /** The handlers a card that scrolls takes (`AnchoredCard`'s `scrollWith`): over it, it stays, a press in it too. */
 export interface CardPointerHandlers {
@@ -16,50 +11,44 @@ export interface CardPointerHandlers {
 }
 
 /**
- * Whether a hover card shows: after the pointer rests on its anchor, at once on keyboard focus, gone as either
- * leaves. The handlers go on the anchor. A card that scrolls (`scrollable`: a long text) stays while the pointer
- * crosses onto it and rests there, its own handlers (`cardHandlers`) on the card.
+ * Whether a hover card shows (`hoverStep`): the handlers go on the anchor, and a card that scrolls (`scrollable`: a
+ * long text) takes `cardHandlers`.
  */
 export function useHoverOpen({ scrollable = false }: { scrollable?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number>(undefined);
-  // A press in a card that scrolls (selecting its text) takes the anchor's focus: that blur keeps it open.
   const overCard = useRef(false);
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const hide = (): void => {
+  const on = (event: HoverEvent): void => {
     window.clearTimeout(timer.current);
-    setOpen(false);
-  };
-  const leave = (): void => {
-    if (!scrollable) return hide();
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(false), LEAVE_GRACE_MS);
+    const step = hoverStep(event, { scrollable, overCard: overCard.current });
+    if ('keep' in step) return;
+    if (step.afterMs === 0) setOpen(step.open);
+    else timer.current = window.setTimeout(() => setOpen(step.open), step.afterMs);
   };
   const cardHandlers: CardPointerHandlers = {
     onMouseEnter: () => {
       overCard.current = true;
-      window.clearTimeout(timer.current);
+      on('enterCard');
     },
     onMouseLeave: () => {
       overCard.current = false;
-      leave();
+      on('leaveCard');
     },
   };
   return {
     open,
     /** Closes it now, as a click on its anchor that opens what the card previews. */
-    hide,
+    hide: () => {
+      window.clearTimeout(timer.current);
+      setOpen(false);
+    },
     cardHandlers,
     handlers: {
-      onMouseEnter: () => {
-        window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => setOpen(true), HOVER_DELAY_MS);
-      },
-      onMouseLeave: leave,
-      onFocus: () => setOpen(true),
-      onBlur: () => {
-        if (!overCard.current) hide();
-      },
+      onMouseEnter: () => on('enterAnchor'),
+      onMouseLeave: () => on('leaveAnchor'),
+      onFocus: () => on('focus'),
+      onBlur: () => on('blur'),
     },
   };
 }
@@ -90,7 +79,8 @@ export function AnchoredCard({ anchor, children, scrollWith }: AnchoredCardProps
       ref={card}
       className={styles.card}
       style={style}
-      aria-hidden
+      // A card that scrolls takes the pointer, and its links a press: it isn't hidden from assistive technology.
+      aria-hidden={scrollWith === undefined}
       data-scrolls={scrollWith !== undefined}
       {...scrollWith}
     >

@@ -191,7 +191,7 @@ many lines, or past 90 characters); a short one keeps its quick field, where Ent
 elsewhere are offered, and moves on to the comment editor, its draft kept, once it gains a second line (⇧↵, a paste:
 `outgrowsQuickField`). What hovering an attribute chip shows is `chipHover`'s: a short value's tooltip, text
 only, reads without its marks; a long one shows whole in a card, its Markdown drawn (`AttributeValueCard`), which the
-pointer can move onto to scroll it and select its text (`AnchoredCard`'s `scrollWith`), and which a click on the chip
+pointer can move onto to scroll it and select its text (`AnchoredCard`'s `scrollWith`, `hoverStep`), and which a click on the chip
 closes, as the value opens under the chips. Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
 A changeset's or a shelve's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
