@@ -357,20 +357,32 @@ describe('how alike the items of a move are', () => {
 describe('shelve', () => {
   it('shelves the paths with one cm shelveset of its own process and returns the new shelve', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', 'sh:12@game@local\n');
-    const { service, commands } = pendingChanges({ 'shelveset create': answer });
+    const { service, commands } = pendingChanges({ ...STANDARD, 'shelveset create': answer });
 
     const shelveId = await service.shelve(WORKSPACE, ['src/a.cs'], 'Half done', 'op-1');
 
     expect(shelveId).toBe(12);
-    expect(commands).toMatchObject([
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
       { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', '--dependencies', `-commentsfile=${seen.file}`, '--summaryformat'] },
     ]);
     expect(seen.content).toBe('Half done');
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('shelves a partial workspace with cm partial, which refuses the regular command', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', "Created shelve sh:12@game@local (mount:'/')\n");
+    const { service, commands } = pendingChanges({ ...PARTIAL, 'partial shelveset create': answer });
+
+    const shelveId = await service.shelve(WORKSPACE, ['src/a.cs'], 'Half done', 'op-1');
+
+    expect(shelveId).toBe(12);
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
+      { via: 'execute', args: ['partial', 'shelveset', 'create', at('src', 'a.cs'), '--applychanged', `-commentsfile=${seen.file}`] },
+    ]);
+  });
+
   it('fails when cm reports no shelve', async () => {
-    const { service } = pendingChanges({ 'shelveset create': '\n' });
+    const { service } = pendingChanges({ ...STANDARD, 'shelveset create': '\n' });
 
     await expect(service.shelve(WORKSPACE, ['src/a.cs'], 'c', 'op-1')).rejects.toThrow('no shelve id was reported');
   });
