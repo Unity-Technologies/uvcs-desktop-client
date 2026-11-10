@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { LineBand } from './diffAnnotations';
+import { bandRect, type LineBand } from './diffAnnotations';
 import type { CodeLayout } from './lineActions';
 import { useLineBoxes } from './useLineBoxes';
 import styles from './LineBands.module.css';
@@ -27,7 +27,7 @@ export function LineBands({ containerRef, bands, layout }: LineBandsProps) {
             key={band.key}
             className={styles.band}
             data-selected={band.selected || undefined}
-            style={{ top: box.top, left: box.contentLeft, width: box.paneRight - box.contentLeft, height: box.bottom - box.top }}
+            style={bandRect(box)}
           />
         );
       })}
