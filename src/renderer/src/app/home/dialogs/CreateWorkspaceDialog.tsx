@@ -13,7 +13,7 @@ import { createNewWorkspace } from './createNewWorkspace';
 import styles from './HomeDialogs.module.css';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NamedRepository } from './newWorkspaceForm';
+import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NamedRepository, type WorkspaceKind } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: NamedRepository;
@@ -35,7 +35,8 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
-  const [dynamicChosen, setDynamicChosen] = useState(false);
+  const [kindChosen, setKindChosen] = useState<WorkspaceKind>('standard');
+  const [pickedFolders] = useState<readonly string[]>([]);
   const [creating, setCreating] = useState(false);
   const { data: dynamicAvailable = false } = useCanCreateDynamicWorkspaces();
   const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
@@ -53,7 +54,10 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     chosenPath,
     root,
     dynamicAvailable,
-    dynamicChosen,
+    kindChosen,
+    topFolders: undefined,
+    topFoldersFailed: false,
+    pickedFolders,
     creating,
   });
 
@@ -110,7 +114,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
       <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
       {form.offersDynamic && (
         <div className={styles.choiceRow}>
-          <Checkbox label="Make this workspace dynamic (alpha)" checked={dynamicChosen} onChange={setDynamicChosen} />
+          <Checkbox label="Make this workspace dynamic (alpha)" checked={form.dynamic} onChange={(checked) => setKindChosen((current) => toggledKind(current, 'dynamic', checked))} />
           <Button variant="ghost" size="small" onClick={() => void api.system.openExternal(DYNAMIC_WORKSPACES_URL)}>
             Learn more
           </Button>

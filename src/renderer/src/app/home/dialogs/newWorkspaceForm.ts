@@ -8,6 +8,18 @@ import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repository
 /** What "Learn more" next to the dynamic choice opens: Unity's page on dynamic workspaces. */
 export const DYNAMIC_WORKSPACES_URL = 'https://docs.unity.com/en-us/unity-version-control/dynamic-workspaces';
 
+/** What a new workspace loads: everything (`standard`), files as they're opened (`dynamic`), or chosen folders (`partial`). */
+export type WorkspaceKind = 'standard' | 'dynamic' | 'partial';
+
+/**
+ * The kind after the user ticks or clears one kind's checkbox: ticking one chooses it (dynamic and partial exclude each
+ * other), clearing the chosen one goes back to standard, and clearing one not chosen changes nothing.
+ */
+export function toggledKind(current: WorkspaceKind, kind: Exclude<WorkspaceKind, 'standard'>, checked: boolean): WorkspaceKind {
+  if (checked) return kind;
+  return current === kind ? 'standard' : current;
+}
+
 /** The repository a new workspace works with, as the dialog's Repository field resolves it. */
 export type WorkspaceRepository =
   | { kind: 'existing'; spec: string }
@@ -36,8 +48,14 @@ export interface NewWorkspaceFormInput {
   root: string | undefined;
   /** This computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`); false until told. */
   dynamicAvailable: boolean;
-  /** The user ticked "Make this workspace dynamic". */
-  dynamicChosen: boolean;
+  /** The kind the user chose with the dialog's checkboxes. */
+  kindChosen: WorkspaceKind;
+  /** The top folders of the repository's /main (`api.workspaces.topFolders`); undefined until read, or while not asked. */
+  topFolders: readonly string[] | undefined;
+  /** Reading the top folders failed. */
+  topFoldersFailed: boolean;
+  /** The top folders the user ticked for a partial workspace. */
+  pickedFolders: readonly string[];
   creating: boolean;
 }
 
@@ -60,6 +78,14 @@ export interface NewWorkspaceForm {
   offersDynamic: boolean;
   /** The workspace is created dynamic: chosen, and offered. */
   dynamic: boolean;
+  /** Whether the dialog offers a partial workspace: only of a repository that exists, whose folders can be listed. */
+  offersPartial: boolean;
+  /** The workspace is created partial, loading only `folders`: chosen, and offered. */
+  partial: boolean;
+  /** Whether the repository's top folders, which a partial workspace picks from, are being read, couldn't be, or are. */
+  folderList: 'loading' | 'failed' | 'ready';
+  /** The folders a partial workspace loads: the ones picked that the repository still has, in its order. */
+  folders: readonly string[];
   canCreate: boolean;
 }
 
@@ -69,6 +95,9 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   const workspaceNameTaken = isWorkspaceNameTaken(workspaceName, input.workspaceNames);
   const path = input.chosenPath ?? defaultWorkspacePath(input.root, workspaceName);
   const createsRepository = repository?.kind === 'new' && !repository.created;
+  const offersPartial = repository?.kind === 'existing';
+  const partial = offersPartial && input.kindChosen === 'partial';
+  const folders = (input.topFolders ?? []).filter((folder) => input.pickedFolders.includes(folder));
   return {
     repository,
     repositoryList: input.repositoriesFailed ? 'failed' : input.repositories ? 'ready' : 'loading',
@@ -79,8 +108,12 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
     workspaceNameTaken,
     path,
     offersDynamic: input.dynamicAvailable,
-    dynamic: input.dynamicAvailable && input.dynamicChosen,
-    canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
+    dynamic: input.dynamicAvailable && input.kindChosen === 'dynamic',
+    offersPartial,
+    partial,
+    folderList: input.topFolders ? 'ready' : input.topFoldersFailed ? 'failed' : 'loading',
+    folders,
+    canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating && (!partial || folders.length > 0)),
   };
 }
 
