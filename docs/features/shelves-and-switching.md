@@ -59,7 +59,9 @@ A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon fo
 (`shelveCreateArgs`). It has no `--dependencies`: it takes each path with everything under it. Nor can a partial
 workspace merge, so a shelve comes back with `cm partial shelveset apply` (`applyShelveCleanly`), which has no preview
 and waits for the merge tool on a conflict: it runs only on a workspace with no pending changes whose loaded items
-are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwise the changes stay on the shelve.
+are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwise the changes stay on the shelve,
+and a switch's toast says to merge it in a standard workspace instead of offering the merge page (`mergesHere` on
+`bringPending`), which refuses a partial workspace (`conflictRepositories`).
 
 A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
 update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
