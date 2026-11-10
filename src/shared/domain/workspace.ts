@@ -11,6 +11,15 @@ export interface WorkspaceSummary {
  */
 export type WorkspaceKind = 'standard' | 'partial' | 'dynamic';
 
+/**
+ * One change to what a partial workspace has loaded: `path` (from the repository's root, forward slashes, such as
+ * `Assets/Textures`) and everything below it is downloaded (`load`) or removed from the disk.
+ */
+export interface PartialRule {
+  path: string;
+  load: boolean;
+}
+
 export type SelectorKind = 'branch' | 'changeset' | 'label' | 'shelve';
 
 /** What the workspace is currently loaded from: a branch, a changeset, a label or a shelve. */
