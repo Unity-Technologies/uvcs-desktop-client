@@ -1,4 +1,5 @@
 import type { RepositorySummary } from '@shared/domain/repository';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 
 /** What the dialog reads of a repository: its name and spec (a server's listed one, or one explored without a workspace). */
 export type NamedRepository = Pick<RepositorySummary, 'name' | 'spec'>;
@@ -7,9 +8,6 @@ import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repository
 
 /** What "Learn more" next to the dynamic choice opens: Unity's page on dynamic workspaces. */
 export const DYNAMIC_WORKSPACES_URL = 'https://docs.unity.com/en-us/unity-version-control/dynamic-workspaces';
-
-/** What a new workspace loads: everything (`standard`), files as they're opened (`dynamic`), or what the user chooses (`partial`). */
-export type WorkspaceKind = 'standard' | 'dynamic' | 'partial';
 
 /**
  * The kind after the user ticks or clears one kind's checkbox: ticking one chooses it (dynamic and partial exclude each
@@ -76,6 +74,8 @@ export interface NewWorkspaceForm {
   offersPartial: boolean;
   /** The workspace is created partial, with nothing downloaded until the user chooses: chosen, and offered. */
   partial: boolean;
+  /** The kind the workspace is created as: the one chosen if offered, else standard. */
+  kind: WorkspaceKind;
   canCreate: boolean;
 }
 
@@ -87,6 +87,7 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   const createsRepository = repository?.kind === 'new' && !repository.created;
   const offersPartial = repository?.kind === 'existing';
   const partial = offersPartial && input.kindChosen === 'partial';
+  const dynamic = input.dynamicAvailable && input.kindChosen === 'dynamic';
   return {
     repository,
     repositoryList: input.repositoriesFailed ? 'failed' : input.repositories ? 'ready' : 'loading',
@@ -97,9 +98,10 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
     workspaceNameTaken,
     path,
     offersDynamic: input.dynamicAvailable,
-    dynamic: input.dynamicAvailable && input.kindChosen === 'dynamic',
+    dynamic,
     offersPartial,
     partial,
+    kind: dynamic ? 'dynamic' : partial ? 'partial' : 'standard',
     canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
   };
 }

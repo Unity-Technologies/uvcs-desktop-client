@@ -151,7 +151,7 @@ describe('creating a workspace', () => {
     const path = await emptyFolder();
     const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
 
-    expect(await service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(await service.create({ name: 'game', path, repository: 'game@local', kind: 'dynamic' })).toEqual({ name: 'game', path, guid: 'g1' });
     expect(commands[0]).toMatchObject({ via: 'execute', args: ['workspace', 'create', 'game', path, '--dynamic', '--tree=br:/main@game@local'] });
   });
 
@@ -159,7 +159,7 @@ describe('creating a workspace', () => {
     const path = await emptyFolder();
     const { service, lines } = workspaces({ 'workspace create': cmFails('Error: The workspace could not be mounted.') });
 
-    await expect(service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).rejects.toThrow('The workspace could not be mounted.');
+    await expect(service.create({ name: 'game', path, repository: 'game@local', kind: 'dynamic' })).rejects.toThrow('The workspace could not be mounted.');
     expect(lines()).toEqual([`workspace create game ${path} --dynamic --tree=br:/main@game@local`]);
   });
 

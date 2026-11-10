@@ -43,6 +43,7 @@ describe('newWorkspaceFormOf', () => {
         dynamic: false,
         offersPartial: true,
         partial: false,
+        kind: 'standard',
         canCreate: true,
       });
     });
@@ -155,7 +156,7 @@ describe('newWorkspaceFormOf: the dynamic choice', () => {
   });
 
   it('makes the workspace dynamic when ticked', () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'dynamic' })).toMatchObject({ dynamic: true, canCreate: true });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'dynamic' })).toMatchObject({ dynamic: true, kind: 'dynamic', canCreate: true });
   });
 
   it('is offered with a new repository too, which a dynamic workspace can start on', () => {
@@ -163,7 +164,7 @@ describe('newWorkspaceFormOf: the dynamic choice', () => {
   });
 
   it("doesn't make the workspace dynamic when ticked but no longer offered", () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: false, kindChosen: 'dynamic' })).toMatchObject({ offersDynamic: false, dynamic: false });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: false, kindChosen: 'dynamic' })).toMatchObject({ offersDynamic: false, dynamic: false, kind: 'standard' });
   });
 });
 
@@ -172,12 +173,12 @@ describe('newWorkspaceFormOf: the partial choice', () => {
 
   it('is offered only for a repository that exists, which has something to choose from', () => {
     expect(newWorkspaceFormOf(inGame)).toMatchObject({ offersPartial: true, partial: false });
-    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false });
+    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false, kind: 'standard' });
     expect(newWorkspaceFormOf({ ...input, kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false });
   });
 
   it('makes the workspace partial, not dynamic, when chosen, ready to create: what it downloads is chosen after', () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial' })).toMatchObject({ partial: true, dynamic: false, canCreate: true });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial' })).toMatchObject({ partial: true, dynamic: false, kind: 'partial', canCreate: true });
   });
 });
 

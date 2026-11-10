@@ -1,3 +1,4 @@
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { useState } from 'react';
 import { api } from '../../../api/client';
 import { splitRepositorySpec } from '../../../lib/servers';
@@ -13,7 +14,7 @@ import { createNewWorkspace } from './createNewWorkspace';
 import styles from './HomeDialogs.module.css';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NamedRepository, type WorkspaceKind } from './newWorkspaceForm';
+import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NamedRepository } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: NamedRepository;
@@ -60,7 +61,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const create = async (): Promise<void> => {
     if (!form.canCreate || !form.repository) return;
     setCreating(true);
-    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository, dynamic: form.dynamic }, (createdPath) => {
+    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository, kind: form.kind }, (createdPath) => {
       onClose();
       onCreated(createdPath);
     });

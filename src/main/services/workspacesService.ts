@@ -61,7 +61,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     const madeHere = (await checkNewWorkspaceFolder(request.path)) === 'available';
     const args = workspaceCreateArgs(request);
     // A dynamic workspace's create waits for its file system to mount it (up to 30 s): a process, not a pooled shell.
-    await (request.dynamic ? cm.execute(args) : cm.query(args));
+    await (request.kind === 'dynamic' ? cm.execute(args) : cm.query(args));
     if (madeHere) createdFolders.add(request.path);
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);

@@ -48,10 +48,10 @@ describe('createWorkspaceAndUpdate', () => {
     const open = vi.fn();
     fakeApi.answer('workspaces.create', () => created);
 
-    await createWorkspaceAndUpdate({ ...request, dynamic: true }, open);
+    await createWorkspaceAndUpdate({ ...request, kind: 'dynamic' }, open);
 
     expect(fakeApi.methods()).toEqual(['workspaces.create']);
-    expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ ...request, dynamic: true }]]);
+    expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ ...request, kind: 'dynamic' }]]);
     expect(open).toHaveBeenCalledWith(request.path);
     expect(shownToasts()).toEqual([]);
   });

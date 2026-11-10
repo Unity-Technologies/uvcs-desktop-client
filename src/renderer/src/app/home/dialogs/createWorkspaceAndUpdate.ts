@@ -15,5 +15,5 @@ export async function createWorkspaceAndUpdate(request: CreateWorkspaceRequest, 
   const created = await api.workspaces.create(request);
   void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
   open(created.path);
-  if (!request.dynamic) await updateWorkspace(created.path);
+  if (request.kind !== 'dynamic') await updateWorkspace(created.path);
 }

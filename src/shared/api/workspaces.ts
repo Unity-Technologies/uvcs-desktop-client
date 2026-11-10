@@ -6,10 +6,10 @@ export interface CreateWorkspaceRequest {
   path: string;
   repository: string;
   /**
-   * A dynamic workspace: its files are fetched from the server as they're opened, instead of downloaded by an update.
-   * Only where `canCreateDynamic` says so.
+   * How it holds its files; standard when not given. A dynamic workspace fetches its files from the server as they're
+   * opened, instead of downloading them with an update: only where `canCreateDynamic` says so.
    */
-  dynamic?: boolean;
+  kind?: WorkspaceKind;
 }
 
 /**
