@@ -23,7 +23,8 @@ export type DownloadedChoices = ReadonlyMap<string, boolean>;
 
 const ROOT = '';
 
-function isLoaded(path: string, tree: DownloadTree): boolean {
+/** Whether the workspace holds anything of `path`, as far as what was read tells: the root always counts. */
+export function isLoaded(path: string, tree: DownloadTree): boolean {
   if (path === ROOT) return true;
   return tree.loadedIn.get(parentOf(path))?.includes(path) ?? false;
 }
