@@ -722,12 +722,13 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   `onOutputLine: context.progressOf(reader)`; the operation's `ProgressReport` (made by the `OperationTracker`) adds the
   step (`context.beginStep`) and throttles to ten reports a second, stage changes at once.
 - `cm update`/`cm switch` run with `--forcedetailedprogress` (`updateCommand`, `switchCommand` in `cm/updateArgs.ts`):
-  `cm` prints its bytes-and-files line only to a terminal otherwise, and `--machinereadable` turns it off. In a partial
-  workspace they are `cm partial update`/`cm partial switch`, which refuse that option and always print a line of
-  their own (`readPartialUpdateProgress`). It rewrites the line with `\r` every 200 ms, so
-  `runCmProcess` splits lines at `\r` too. The words are localized: readers go by the line's shape. Its percentage
-  goes by bytes and it writes big files first (99% with 1 of 8,001 files written), so the fraction weighs each file as
-  128 KB more than its bytes; where the percentage shows beside one measure, the other is at hand (card, tooltip).
+  `cm` prints its bytes-and-files line only to a terminal otherwise, and `--machinereadable` turns it off. That line is
+  rewritten with `\r` every 200 ms, so `runCmProcess` splits lines at `\r` too. The words are localized: readers go by
+  the line's shape. Its percentage goes by bytes and it writes big files first (99% with 1 of 8,001 files written), so
+  the fraction weighs each file as 128 KB more than its bytes; where the percentage shows beside one measure, the other
+  is at hand (card, tooltip). In a partial workspace the commands are `cm partial update`/`cm partial switch`, which
+  refuse `--forcedetailedprogress` and always print a line of their own, a new one every second
+  (`readPartialUpdateProgress`).
 - `cm checkin --machinereadable` reports uploaded bytes only every 5 s with redirected output; `cm merge` prints its plan,
   then a record per change applied in a burst, then downloads silently; `cm shelveset create` only names its stages.
 - Stopping is offered only while it leaves things as they were: a killed update or switch leaves the workspace half
