@@ -1,12 +1,14 @@
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationContext } from '../operations/OperationTracker';
-import type { LeftChangesFinder } from './leftChanges';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { changedPaths } from './pendingSnapshot';
 import { putBack } from './privateBackups';
 import { readPendingSnapshot } from './readPendingChanges';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
+
+/** What putting shelved changes back needs: the kind tells how a shelve applies (`applyShelveCleanly`). */
+type PutBackDependencies = Pick<ShelveFlowDependencies, 'cm' | 'leftChanges' | 'kindOf'>;
 
 /**
  * Puts shelved changes back in the workspace they were shelved from, after a step that was taking them out of it
@@ -16,15 +18,14 @@ import type { ShelveFlowDependencies } from './shelveFlowDependencies';
  * workspace again; then the shelve and its record are gone (`LeftChangesFinder.finish`).
  */
 export async function putShelvedChangesBack(
-  cm: CmClient,
-  leftChanges: LeftChangesFinder,
+  { cm, leftChanges, kindOf }: PutBackDependencies,
   workspacePath: string,
   record: SwitchShelveRecord,
   context: OperationContext,
 ): Promise<boolean> {
   if (record.backup) await putBack(workspacePath, record.backup);
   if (!(await allStillPending(cm, workspacePath, record.paths))) {
-    const outcome = await applyShelveCleanly(cm, workspacePath, record.shelveId, context);
+    const outcome = await applyShelveCleanly(cm, workspacePath, record.shelveId, await kindOf(workspacePath), context);
     if (outcome.kind !== 'applied') return false;
   }
   await leftChanges.finish(workspacePath, record);
@@ -36,13 +37,13 @@ export async function putShelvedChangesBack(
  * are still safe in the shelve, and the caller's error says so.
  */
 export async function putBackAfterFailure(
-  { cm, leftChanges }: Pick<ShelveFlowDependencies, 'cm' | 'leftChanges'>,
+  deps: PutBackDependencies,
   workspacePath: string,
   record: SwitchShelveRecord,
   context: OperationContext,
 ): Promise<boolean> {
   try {
-    return await putShelvedChangesBack(cm, leftChanges, workspacePath, record, context);
+    return await putShelvedChangesBack(deps, workspacePath, record, context);
   } catch {
     return false;
   }
@@ -53,7 +54,7 @@ export async function putBackAfterFailure(
  * `failure`, then whether the changes were put back (`putBackAfterFailure`) or where they wait.
  */
 export async function changesPutBackError(
-  deps: Pick<ShelveFlowDependencies, 'cm' | 'leftChanges'>,
+  deps: PutBackDependencies,
   workspacePath: string,
   record: SwitchShelveRecord,
   failure: string,

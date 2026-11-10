@@ -7,7 +7,7 @@ import type { WebContents } from 'electron';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
-import { UPDATE_ARGS } from '../cm/updateArgs';
+import { updateCommand } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
@@ -203,16 +203,25 @@ describe('creating a workspace', () => {
 
 describe('update', () => {
   it('updates with one cm update of its own process that never opens a merge tool', async () => {
-    const { service, commands } = workspaces({ update: '' });
+    const { service, commands } = workspaces({ ...WORKSPACE_NAMES, update: '' });
 
     await service.update(WORKSPACE, 'op-1');
 
-    expect(commands).toMatchObject([{ via: 'execute', args: UPDATE_ARGS, options: { cwd: WORKSPACE } }]);
-    expect(commands[0]?.args).toContain('--dontmerge');
+    expect(commands).toMatchObject([{ via: 'query', args: ['getworkspacefrompath', WORKSPACE, expect.any(String)] }, { via: 'execute', args: updateCommand('standard').args, options: { cwd: WORKSPACE } }]);
+    expect(commands[1]?.args).toContain('--dontmerge');
+  });
+
+  it('updates a partial workspace with cm partial update, which never merges either', async () => {
+    const { service, commands } = workspaces({ getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']), partial: '' });
+
+    await service.update(WORKSPACE, 'op-1');
+
+    expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['partial', 'update', '--dontmerge'], options: { cwd: WORKSPACE } });
   });
 
   it('explains an update stopped by local changes that collide with incoming ones', async () => {
     const { service } = workspaces({
+      ...WORKSPACE_NAMES,
       update: cmFails(
         '<STAGE:Calculating conflicts>\nThe update operation detected conflicts. The operation cannot continue since it was run with the --dontmerge option.\n<STAGE:Finished>\n',
       ),
@@ -227,13 +236,13 @@ describe('update', () => {
   });
 
   it('keeps any other failure as cm reported it', async () => {
-    const { service } = workspaces({ update: cmFails('Error: The server is unreachable.') });
+    const { service } = workspaces({ ...WORKSPACE_NAMES, update: cmFails('Error: The server is unreachable.') });
 
     await expect(service.update(WORKSPACE, 'op-1')).rejects.toThrow('The server is unreachable.');
   });
 
   it('can be cancelled', async () => {
-    const { service, operations } = workspaces({ update: runsUntilCancelled('Error: Operation cancelled.') });
+    const { service, operations } = workspaces({ ...WORKSPACE_NAMES, update: runsUntilCancelled('Error: Operation cancelled.') });
 
     const updating = service.update(WORKSPACE, 'op-9');
     operations.cancel('op-9');
@@ -244,11 +253,11 @@ describe('update', () => {
 
 describe('a new workspace for a task', () => {
   it('switches the empty workspace with one plain cm switch of its own process', async () => {
-    const { service, commands } = workspaces({ switch: '' });
+    const { service, commands } = workspaces({ ...WORKSPACE_NAMES, switch: '' });
 
     await service.switchNewWorkspace(WORKSPACE, 'br:/main/task2', 'op-1');
 
-    expect(commands).toMatchObject([{ via: 'execute', args: ['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } }]);
+    expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } });
   });
 });
 

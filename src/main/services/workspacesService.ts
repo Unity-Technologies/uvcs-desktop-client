@@ -6,8 +6,7 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
-import { readUpdateProgress } from '../cm/progress/updateProgress';
-import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
+import { switchCommand, updateCommand } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
@@ -20,6 +19,7 @@ import { locateInWorkspace } from '../links/locateInWorkspace';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
+import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
@@ -28,7 +28,8 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
 export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
-  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
+  const kindOf = kindFromHeaders(headers);
+  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   // The heads and the kinds of the listed workspaces read one workspace at a time between them, so one pooled shell stays free.
   const listedReadTurns = workspaceReadTurns();
@@ -80,7 +81,8 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   function update(workspacePath: string, operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal, progressOf }) => {
       try {
-        await cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal, onOutputLine: progressOf(readUpdateProgress) });
+        const { args, readProgress } = updateCommand(await kindOf(workspacePath));
+        await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
       } catch (error) {
         if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
@@ -105,7 +107,8 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
 
   function switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal, progressOf }) => {
-      await cm.execute(switchArgs(targetSpec), { cwd: workspacePath, signal, onOutputLine: progressOf(readUpdateProgress) });
+      const { args, readProgress } = switchCommand(targetSpec, await kindOf(workspacePath));
+      await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
     });
   }
 

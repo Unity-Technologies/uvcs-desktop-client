@@ -20,7 +20,7 @@ export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selec
     repository: workspace.repository,
     itemId: 0,
     // On a shelve the root is the shelve's, as `cm ls` lists it.
-    ...(workspace.loadedChangeset === null && { shelveId: Number(workspace.selector.name) }),
+    ...(workspace.selector.kind === 'shelve' && { shelveId: Number(workspace.selector.name) }),
   };
 }
 

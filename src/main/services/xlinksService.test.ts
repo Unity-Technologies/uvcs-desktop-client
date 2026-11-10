@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { NewXlink } from '@shared/domain/xlinks';
 import { describe, expect, it, vi } from 'vitest';
 import { FOUND_LABELS } from '../cm/foundObjects';
-import { recordsOutput } from '../cm/testing/cmOutput';
+import { formatOutput, recordsOutput, WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
 import { playAlongDependencies } from '../workspace/testing/playAlongDependencies';
@@ -20,8 +20,11 @@ vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }));
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const LIB = join(WORKSPACE, 'code', 'lib');
 
+// How `cm getworkspacefrompath` names the workspace: its type says which `cm` checks the xlink in (`checkinArgs`).
+const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID, 'regular', 'static']) };
+
 function xlinks(answers: Record<string, CmAnswer>) {
-  const fake = fakeCmClient(answers);
+  const fake = fakeCmClient({ ...WORKSPACE_NAMES, ...answers });
   return { ...fake, service: createXlinksService(serviceContext(fake.cm), {} as SwitchContext) };
 }
 
@@ -56,8 +59,8 @@ describe('Creating an xlink', () => {
 
     expect(await service.create(WORKSPACE, ENGINE, 'Add the engine', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3 });
 
-    // Besides a local read of the pending changes, none of which are in the way here.
-    expect(commands.filter((command) => command.args[0] !== 'status')).toMatchObject([
+    // Besides local reads of the pending changes, none of which are in the way here, and of the workspace's type.
+    expect(commands.filter((command) => !['status', 'getworkspacefrompath'].includes(command.args[0] ?? ''))).toMatchObject([
       { via: 'query', args: ['xlink', '-w', LIB, '/', 'br:/main@lib@local', 'br:/main/task-br:/main/dev'] },
       { via: 'execute', args: ['checkin', LIB, '--all', '--dependencies', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'], options: { cwd: WORKSPACE } },
       { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'], options: { cwd: WORKSPACE } },
@@ -115,7 +118,8 @@ describe('Loading a checked-in xlink’s files', () => {
     const { service, commands } = xlinks({ status: '', update: '' });
 
     expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
-    expect(commands.filter((command) => command.args[0] !== 'status')).toMatchObject([
+    // Besides the update, only local reads: the changes in the way and the workspace's kind.
+    expect(commands.filter((command) => !['status', 'getworkspacefrompath'].includes(command.args[0]))).toMatchObject([
       { via: 'execute', args: ['update', join(WORKSPACE, 'code'), '--forcedetailedprogress', '--noinput', '--dontmerge'] },
     ]);
   });

@@ -14,6 +14,8 @@ export const MAX_QUICK_WRITE_PATHS = 50;
  */
 export function runsLong(args: readonly string[]): boolean {
   if (!changesWorkspace(args)) return false;
+  // A partial workspace's `cm partial update|switch|checkin` transfers as the regular command does.
+  if (args[0] === 'partial') return runsLong(args.slice(1));
   const [command = ''] = args;
   if (TRANSFERS.has(command)) return true;
   if (args.some((arg) => RECURSIVE_FLAGS.has(arg))) return true;

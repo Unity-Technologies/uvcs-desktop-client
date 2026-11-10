@@ -36,13 +36,22 @@ describe('switchToast', () => {
   });
 
   it('leads to the merge when the changes brought along wait for decisions', () => {
-    expect(words(switchToast({ kind: 'bringPending', conflictCount: 2, shelveId: 5 }, '/main/task'))).toEqual({
+    expect(words(switchToast({ kind: 'bringPending', conflictCount: 2, shelveId: 5, mergesHere: true }, '/main/task'))).toEqual({
       kind: 'info',
       title: 'Switched to /main/task',
       detail: '2 files need your decision to bring your changes. They’re safe in shelve 5.',
       action: 'Resolve now',
     });
-    expect(switchToast({ kind: 'bringPending', conflictCount: 0, shelveId: 5 }, '/main/task').detail).toBe('Your changes weren’t applied yet. They’re safe in shelve 5.');
+    expect(switchToast({ kind: 'bringPending', conflictCount: 0, shelveId: 5, mergesHere: true }, '/main/task').detail).toBe('Your changes weren’t applied yet. They’re safe in shelve 5.');
+  });
+
+  it('offers no merge in a partial workspace, which can’t take one, and says where the changes can come back', () => {
+    expect(words(switchToast({ kind: 'bringPending', conflictCount: 2, shelveId: 5, mergesHere: false }, '/main/task'))).toEqual({
+      kind: 'info',
+      title: 'Switched to /main/task',
+      detail: '2 files need a merge to bring your changes, which a partial workspace can’t take. They’re safe in shelve 5: merge it in a standard workspace.',
+      action: undefined,
+    });
   });
 
   it('counts the unchanged checkouts it undid', () => {
@@ -57,7 +66,7 @@ describe('switchToast', () => {
 
   it('adds the private files in the way to what happened to the changes', () => {
     const renamedPrivates = ['a', 'b'].map((name) => ({ path: name, renamedTo: `${name}.private.0` }));
-    const ending = switchToast({ kind: 'bringPending', shelveId: 7, conflictCount: 1, renamedPrivates }, '/main/t1');
+    const ending = switchToast({ kind: 'bringPending', shelveId: 7, conflictCount: 1, mergesHere: true, renamedPrivates }, '/main/t1');
 
     expect(ending.detail).toBe('1 file needs your decision to bring your changes. They’re safe in shelve 7. 2 private files were in the way: they’re kept renamed, as name.private.0.');
   });

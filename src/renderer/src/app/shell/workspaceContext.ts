@@ -16,7 +16,7 @@ export interface LoadedChangeset {
 }
 
 export interface WorkspaceContext {
-  /** Null on a shelve: its tree is no changeset, and the shelve itself is the working object. */
+  /** Null on a shelve, whose tree is no changeset and which is itself the working object, and in a partial workspace. */
   changeset: LoadedChangeset | null;
   /** `repo@server`. */
   repository: string;

@@ -53,9 +53,10 @@ export function successCardTellsCheckin(checkedIn: PendingChange[], pending: Pen
 
 /**
  * Whether the moment is over. It lasts until the next change (pending changes read after it happened), or until the
- * workspace moves to another changeset (read after it happened: a switch, an update elsewhere).
+ * workspace moves to another changeset (read after it happened: a switch, an update elsewhere). A partial workspace
+ * names no loaded changeset (null): there only the next change ends it.
  */
 export function isMomentOver(moment: SuccessMoment, changes: { readAt: number; count: number }, workspace: { readAt: number; loadedChangeset: number | null } | undefined): boolean {
   if (changes.count > 0 && changes.readAt > moment.at) return true;
-  return workspace !== undefined && workspace.readAt > moment.at && workspace.loadedChangeset !== moment.changesetId;
+  return workspace !== undefined && workspace.readAt > moment.at && workspace.loadedChangeset !== null && workspace.loadedChangeset !== moment.changesetId;
 }

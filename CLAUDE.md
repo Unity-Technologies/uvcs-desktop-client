@@ -151,8 +151,10 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
   (TGA, TIFF, PSD, EXR and HDR textures changed, resized, added, deleted, unreadable and in conflict: the image
   diff; takes names), `incoming.sh`
-  (a workspace three changesets behind, with a local change that conflicts: Incoming), `merge-conflicts.sh` (a branch
-  whose merge has file and directory conflicts and changes in several folders: the merge page), `deletes.sh`
+  (a workspace three changesets behind, with a local change that conflicts: Incoming), `partial-operations.sh`
+  (a partial workspace behind, with a change pending, a branch to switch to and a label it must refuse: `cm partial`),
+  `merge-conflicts.sh` (a branch whose merge has file and directory conflicts and changes
+  in several folders: the merge page), `deletes.sh`
   (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
   Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge

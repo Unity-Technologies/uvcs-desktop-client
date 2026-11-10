@@ -1,6 +1,8 @@
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import type { CmClient } from '../cm/CmClient';
 import type { LeftChangesFinder } from './leftChanges';
 import type { SwitchShelveRecords } from './switchShelveRecords';
+import type { WorkspaceNames } from './WorkspaceHeaders';
 
 /** What every flow that shelves changes out of the workspace (switch, shelve away, update, loading an xlink) works with. */
 export interface ShelveFlowDependencies {
@@ -13,4 +15,19 @@ export interface ShelveFlowDependencies {
    * (`moveNewItemsAside`), and the local versions an update merges (`updateWithMerge`).
    */
   backupsRoot: string;
+  /**
+   * How the workspace at a path holds its files: a partial one updates, switches and checks in with `cm partial`.
+   * A local read (`cm getworkspacefrompath`) the workspace headers share while fresh (`WorkspaceHeaders.names`): a flow
+   * asks for it where it needs it, and a step after a command that rewrote the workspace reads it again, at no server cost.
+   */
+  kindOf(workspacePath: string): Promise<WorkspaceKind>;
+}
+
+/**
+ * `ShelveFlowDependencies.kindOf` from the workspace headers, which read it with the workspace's name and cache it.
+ * A kind `cm` didn't tell runs the standard commands: only a workspace known to be partial needs `cm partial`, and the
+ * standard ones are what every workspace ran before partial ones were told apart.
+ */
+export function kindFromHeaders(headers: { names(workspacePath: string): Promise<WorkspaceNames> }): ShelveFlowDependencies['kindOf'] {
+  return (workspacePath) => headers.names(workspacePath).then((names) => names.kind ?? 'standard');
 }

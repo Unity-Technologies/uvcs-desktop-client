@@ -34,6 +34,10 @@ describe('isMomentOver', () => {
   it('outlasts the workspace read before it, still on the changeset it was before the check-in', () => {
     expect(isMomentOver(moment, noChanges, { readAt: 900, loadedChangeset: 3 })).toBe(false);
   });
+
+  it('outlasts a workspace read with no loaded changeset: a partial workspace never names one', () => {
+    expect(isMomentOver(moment, noChanges, { readAt: 2_000, loadedChangeset: null })).toBe(false);
+  });
 });
 
 describe('successCardTellsCheckin', () => {

@@ -16,6 +16,8 @@ import { describeSelector } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
+/** A partial workspace loads files with `cm partial`, which this flow doesn't run yet: refused before anything moves. */
+const IN_PARTIAL = 'A partial workspace can’t load an xlink’s files here yet: load them from a standard workspace of the same repository.';
 const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then open the xlink’s folder in Files and choose Load its files on it.';
 
 /** How a checked-in xlink's files loaded: the changes moved aside for it wait in a shelve when they couldn't merge back cleanly. */
@@ -32,10 +34,12 @@ export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId:
  * 2. Undo them, move the files they added aside, and load the xlink's files.
  * 3. Merge the shelve back: the workspace is at the changeset it was shelved on, so only a change made under the
  *    xlink's folder meanwhile could conflict.
- * If a step before the files load fails, the changes are put back. Private files are no change in the way.
+ * If a step before the files load fails, the changes are put back. Private files are no change in the way. A partial
+ * workspace is refused first (`IN_PARTIAL`), its changes untouched.
  */
 export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: string, xlinkPath: string, context: OperationContext): Promise<XlinkLoad> {
   const { cm } = deps;
+  if ((await deps.kindOf(workspacePath)) === 'partial') throw new Error(IN_PARTIAL);
   const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
   const snapshot = await readPendingSnapshot(cm, workspacePath);
   switch (switchApproach(summarizePending(snapshot.changes))) {
@@ -65,7 +69,7 @@ async function loadAroundChanges(
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
   context.beginStep('Putting your changes aside', 1, 3);
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, await deps.kindOf(workspacePath), context);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
   records.save(record);
 
@@ -82,6 +86,6 @@ async function loadAroundChanges(
   }
 
   context.beginStep('Bringing your changes back', 3, 3);
-  const broughtBack = await putShelvedChangesBack(cm, deps.leftChanges, workspacePath, record, context).catch(() => false);
+  const broughtBack = await putShelvedChangesBack(deps, workspacePath, record, context).catch(() => false);
   return broughtBack ? { kind: 'loaded' } : { kind: 'changesWaiting', shelveId: record.shelveId };
 }

@@ -14,8 +14,8 @@ import { parseSize } from './sizes';
 const PROGRESS_LINE = /^[-\\|/] .+?\s+\[[#.]+\]\s+\d+%(.*)$/;
 const TOTALS = /^\s+([\d.,]+)\/([\d.,]+) (\S+) -\s+(\d+)\/(\d+)(?:\s+\S+)?(?: - (.*))?$/;
 
-const PREPARING: CommandProgress = { stage: 'preparing', stageLabel: 'Preparing', fraction: null, cancellable: true };
-const CALCULATING: CommandProgress = { stage: 'calculating', stageLabel: 'Calculating changes', fraction: null, cancellable: true };
+export const PREPARING: CommandProgress = { stage: 'preparing', stageLabel: 'Preparing', fraction: null, cancellable: true };
+export const CALCULATING: CommandProgress = { stage: 'calculating', stageLabel: 'Calculating changes', fraction: null, cancellable: true };
 
 export const readUpdateProgress: ProgressReader = (previous, line) => {
   const trimmed = line.trimEnd();
@@ -55,7 +55,7 @@ export const readUpdateProgress: ProgressReader = (previous, line) => {
 const FILE_WEIGHT = 128 * 1024;
 
 /** How far along an update is, by bytes and files together: both only grow, so it never goes back. */
-function workDone(bytesDone: number, bytesTotal: number, current: number, total: number): number | null {
+export function workDone(bytesDone: number, bytesTotal: number, current: number, total: number): number | null {
   const all = bytesTotal + total * FILE_WEIGHT;
   if (!all) return null;
   return Math.min(1, (Math.min(bytesDone, bytesTotal) + Math.min(current, total) * FILE_WEIGHT) / all);

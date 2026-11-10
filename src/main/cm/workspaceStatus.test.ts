@@ -71,9 +71,33 @@ describe('parseWorkspaceStatus', () => {
 
   it('fails on a changeset below zero that is not the shelve loaded, rather than query from it', () => {
     expect(() => parseWorkspaceStatus(onShelve.replace('<Changeset>-3', '<Changeset>-2'))).toThrow(/cm status/);
-    expect(() => parseWorkspaceStatus(header.replace('278638', '-1'))).toThrow(/cm status/);
     expect(() => parseWorkspaceStatus(header.replace('278638', '-2'))).toThrow(/cm status/);
     expect(() => parseWorkspaceStatus(onShelve.replace('<Changeset>-3', '<Changeset>3'))).toThrow(/cm status/);
+  });
+
+  // `cm status --header --xml` of a partial workspace after `cm partial configure "+/Code"` (a local server).
+  const partial = `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus>
+    <Status>
+      <RepSpec>
+        <Server>local</Server>
+        <Name>partial-operations</Name>
+      </RepSpec>
+      <Changeset>-1</Changeset>
+    </Status>
+  </WorkspaceStatus>
+  <WkConfigType>Branch</WkConfigType>
+  <WkConfigName>/main@partial-operations@local</WkConfigName>
+</StatusOutput>`;
+
+  it('reads a partial workspace as on its branch with no one changeset loaded: cm reports changeset -1', () => {
+    expect(parseWorkspaceStatus(partial)).toEqual({
+      repositoryName: 'partial-operations',
+      printedServer: 'local',
+      selector: { kind: 'branch', name: '/main' },
+      loadedChangeset: null,
+    });
   });
 
   it('fails on output without a status, instead of returning an empty branch and changeset -1', () => {
@@ -90,5 +114,12 @@ describe('loadedChangesetOf', () => {
     expect(loadedChangesetOf(-1, { kind: 'shelve', name: '1' })).toBeNull();
     expect(loadedChangesetOf(-5, { kind: 'changeset', name: '-5' })).toBeUndefined();
     expect(loadedChangesetOf(Number.NaN, { kind: 'shelve', name: '3' })).toBeUndefined();
+  });
+
+  it("takes -1 on a branch as a partial workspace's, which has no one changeset, but on no other selector", () => {
+    expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
+    expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
+    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
+    expect(loadedChangesetOf(-1, { kind: 'changeset', name: '-1' })).toBeUndefined();
   });
 });
