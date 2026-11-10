@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { countCalls } from '@shared/testing/countCalls';
-import { matchingRepositories, movesBetweenRows, repositoryListRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
+import { matchingRepositories, movesBetweenRows, repositoryListRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, workspaceKindsByPath, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
 
 const repository = (name: string): RepositorySummary => ({ id: name, name, server: 'local', owner: 'ana', spec: `${name}@local` });
 const workspace = (name: string): WorkspaceSummary => ({ name, path: `/work/${name}`, guid: name });
@@ -31,6 +31,13 @@ describe('workspacesByRepository', () => {
       'game@local': ['game-wk', 'game-hotfix'],
       'tools@local': ['tools-wk'],
     });
+  });
+});
+
+describe('workspaceKindsByPath', () => {
+  it('names the kind of each workspace read already, by its path', () => {
+    const kinds = workspaceKindsByPath([{ workspace: gameWk, kind: 'partial' }, { workspace: toolsWk, kind: 'standard' }, { workspace: gameHotfix }]);
+    expect(Object.fromEntries(kinds)).toEqual({ [gameWk.path]: 'partial', [toolsWk.path]: 'standard' });
   });
 });
 

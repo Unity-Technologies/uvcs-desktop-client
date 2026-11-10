@@ -1,16 +1,19 @@
 import { useState } from 'react';
+import { api } from '../../../api/client';
 import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
+import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
-import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
+import { useCanCreateDynamicWorkspaces, useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { createNewWorkspace } from './createNewWorkspace';
+import styles from './HomeDialogs.module.css';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NamedRepository } from './newWorkspaceForm';
+import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NamedRepository } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: NamedRepository;
@@ -32,7 +35,9 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
+  const [dynamicChosen, setDynamicChosen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const { data: dynamicAvailable = false } = useCanCreateDynamicWorkspaces();
   const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
   const repositories = repositoriesToName(initialRepository, listed);
 
@@ -47,13 +52,15 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     workspaceNames: (workspaces ?? []).map((workspace) => workspace.name),
     chosenPath,
     root,
+    dynamicAvailable,
+    dynamicChosen,
     creating,
   });
 
   const create = async (): Promise<void> => {
     if (!form.canCreate || !form.repository) return;
     setCreating(true);
-    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository }, (createdPath) => {
+    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository, dynamic: form.dynamic }, (createdPath) => {
       onClose();
       onCreated(createdPath);
     });
@@ -101,6 +108,14 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         autoFocus={Boolean(initialRepository)}
       />
       <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
+      {form.offersDynamic && (
+        <div className={styles.choiceRow}>
+          <Checkbox label="Make this workspace dynamic (alpha)" checked={dynamicChosen} onChange={setDynamicChosen} />
+          <Button variant="ghost" size="small" onClick={() => void api.system.openExternal(DYNAMIC_WORKSPACES_URL)}>
+            Learn more
+          </Button>
+        </div>
+      )}
     </Dialog>
   );
 }

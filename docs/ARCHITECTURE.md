@@ -155,8 +155,8 @@ and many people use the same server. Every `cm` command other than local reads (
   (`repositoryPath`). Reads go through `CmClient.query()`, so they reuse a warm `cm shell` instead of starting a
   process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
-  of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
-  tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
+  of each workspace (`workspaceHeadsReader`, "Home", below) and its `cm getworkspacefrompath` (`workspaceKindsReader`),
+  the recent workspaces' `cm status --header` it couldn't tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
   header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`). An `--xml` header still asks the server
   for the branch head ("`cm status` asks the server for its header", in "Parsing `cm` output").
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
@@ -222,6 +222,12 @@ and many people use the same server. Every `cm` command other than local reads (
   wait for the five minutes. The app never reads `cm`'s own files in `.plastic`, whose format is `cm`'s to change
   ("`cm` owns its files"). `cm` is asked about the repository again (`repositoryOf`) only for recent workspaces `wi`
   couldn't tell (or named by a Unity organization's id: "Unity organizations").
+  How each listed workspace holds its files (standard, partial or dynamic: `WorkspaceKind`) comes from a
+  `cm getworkspacefrompath <path> --format={type}…{dynamic}` of each (`workspaces.kinds`, `workspaceKindsReader`,
+  `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
+  only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
+  keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
+  none, never as standard, and is asked again the next time it shows.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
@@ -864,6 +870,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
   there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
+  On Windows, where the UVCS tray runs (its file system mounts dynamic workspaces), the dialog offers to make the
+  workspace dynamic (`workspaces.canCreateDynamic`, which lists local processes with `tasklist`: never a server, and
+  never `cm`'s own files; `newWorkspaceFormOf`'s `offersDynamic`). A dynamic one is created with `cm workspace create
+  --dynamic --tree=br:/main@<repository>` (`workspaceCreateArgs`) in a process of its own, as it waits for the mount,
+  and opens without an Update: its files download as they're first opened.
   The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
   repositories (`ui/Combobox`: "Big lists render only the rows in view"); a name the server has is that repository,
   any other (by case, as `cm` tells them apart) is created with the workspace (`newWorkspaceFormOf`,
@@ -880,7 +891,10 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
-  in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). In
+  in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). A
+  partial or dynamic workspace also shows its kind as a chip, with what it means in its tooltip (`WorkspaceKindChip`,
+  `workspaceKindChip`); a standard one, the way most are, shows none, and its details' Type line says it
+  (`workspaceKindWords`). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
 ## Start-up
@@ -1038,6 +1052,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
     older than 20 s. A branch head moved by someone else refreshes the repository views (`isAffectedByNewChangesets`).
+  - Refresh, asked for (⌘R, the menu's, a view's `ViewRefreshButton`), reads again what the window shows, or only what
+    the page in front shows when it says (`refreshShown`, `pageRefreshScope`: a code review's, features/code-reviews.md
+    "The review's page"). A page window has its own Refresh (`refreshCommand`).
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).

@@ -71,4 +71,10 @@ describe('cmHeaderReaders', () => {
     expect(commands.map(({ via, args, readsRecords }) => [via, args[0], args[1], readsRecords])).toEqual([['query', 'getworkspacefrompath', workspace, true]]);
     expect(commands[0]?.args[2]).toBe('--format={wkname}{guid}{type}{dynamic}');
   });
+
+  it("leaves the kind unknown when cm doesn't tell it, never calling it standard", async () => {
+    const { cm } = fakeCmClient({ getworkspacefrompath: '' });
+
+    await expect(cmHeaderReaders(cm).names(join('wkspaces', 'game'))).resolves.toEqual({ name: '', guid: '' });
+  });
 });

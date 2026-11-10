@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-
-const OPEN_DELAY_MS = 350;
-const CLOSE_DELAY_MS = 200;
+import { HOVER_CLOSE_DELAY_MS as CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS as OPEN_DELAY_MS } from './hoverOpening';
 
 /**
  * A popover that opens while its trigger is hovered and stays open while the pointer moves onto it.

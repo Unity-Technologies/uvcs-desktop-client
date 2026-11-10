@@ -34,7 +34,8 @@ export interface WorkspaceInfo {
    * Tell them apart by `selector.kind`, never by this.
    */
   loadedChangeset: number | null;
-  kind: WorkspaceKind;
+  /** How it holds its files; left out when `cm` didn't tell. */
+  kind?: WorkspaceKind;
 }
 
 /** What a workspace works on, as `cm wi` tells it without asking the server. */

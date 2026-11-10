@@ -16,7 +16,7 @@ import { noRepositoriesState, projectChoices, repositoriesInProject, shownProjec
 import { ProjectFilter } from './ProjectFilter';
 import { useProjectPickStore } from './projectPickStore';
 import { RepositoryList, type RepositoryListHandle } from './RepositoryList';
-import { matchingRepositories, repositoryListRows, workspacesByRepository } from './repositoryListRows';
+import { matchingRepositories, repositoryListRows, workspaceKindsByPath, workspacesByRepository } from './repositoryListRows';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
 
 interface RepositoriesPanelProps {
@@ -40,6 +40,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const place = describeServer(server);
 
   const shown = useMemo(() => matchingRepositories(repositoriesInProject(repositories ?? [], project), filter), [repositories, project, filter]);
+  const workspaceKinds = useMemo(() => workspaceKindsByPath(workspaceEntries), [workspaceEntries]);
   const rows = repositoryListRows(shown, workspacesByRepository(workspaceEntries), expanded);
   const empty = noRepositoriesState(filter, project);
   const toggle = (repository: RepositorySummary): void => setExpanded((open) => toggled(open, repository.spec));
@@ -79,6 +80,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
       <RepositoryList
         ref={listRef}
         rows={rows}
+        workspaceKinds={workspaceKinds}
         query={filter}
         project={project}
         onToggle={toggle}

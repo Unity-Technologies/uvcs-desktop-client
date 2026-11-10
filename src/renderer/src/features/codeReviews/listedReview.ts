@@ -30,3 +30,28 @@ export function listedReviewIn(client: QueryClient, place: Place, reviewId: numb
     .map((query) => ({ data: query.state.data, readAt: query.state.dataUpdatedAt }));
   return listedReview(lists, reviewId);
 }
+
+/**
+ * A list of reviews with the review just read in place of its row: the status, title and counts its page shows, while
+ * the list's other rows stay as they were read. Anything else (not a list, a list without it) comes back as it was.
+ */
+export function withReviewRead(data: unknown, review: CodeReview): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows = data as (CodeReview | CodeReviewSummary)[];
+  const at = rows.findIndex((row) => row.id === review.id);
+  if (at === -1) return data;
+  return rows.map((row, index) => (index === at ? { ...row, ...review } : row));
+}
+
+/**
+ * Puts the review just read into the lists already read that hold it (`withReviewRead`), so the Code reviews view under
+ * its page shows what the page does when the user goes back, with no `cm` command of its own. Each list keeps when it
+ * was read, so it's read again when it would have been; one an operation marked stale is left to that read.
+ */
+export function showReviewReadInListsIn(client: QueryClient, place: Place, review: CodeReview): void {
+  for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
+    if (query.state.isInvalidated) continue;
+    const updated = withReviewRead(query.state.data, review);
+    if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
+  }
+}

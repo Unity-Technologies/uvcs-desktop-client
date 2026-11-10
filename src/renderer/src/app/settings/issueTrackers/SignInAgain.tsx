@@ -5,6 +5,7 @@ import { api } from '../../../api/client';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { connectFailureWords, signInAgainStep, signInAgainView, type SignInAgainStep } from './connectFlow';
+import { SignInProblem } from './SignInProblem';
 import { DeviceSignIn } from './DeviceSignIn';
 import { TokenSignIn } from './TokenSignIn';
 import styles from './IssueTrackerPane.module.css';
@@ -52,7 +53,7 @@ export function SignInAgain({ connection, why }: { connection: TrackerConnection
         <div className={styles.next}>
           <p className={styles.calloutTitle}>{why}</p>
           <DeviceSignIn request={target} trackerName={name} onOutcome={finish} onUseToken={() => setTokenChosen(true)} />
-          {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: connection.server }).words}</p>}
+          {failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: name, server: connection.server })} />}
         </div>
       );
     case 'token':

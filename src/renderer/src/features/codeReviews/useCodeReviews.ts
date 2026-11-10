@@ -6,7 +6,8 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
-import { listedReviewIn } from './listedReview';
+import { codeReviewKey } from './codeReviewKey';
+import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
@@ -25,8 +26,13 @@ export function useCodeReview(reviewId: number) {
   // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
   const listed = () => listedReviewIn(queryClient, place, reviewId);
   return useQuery({
-    queryKey: queryKeys.inPlace(place, 'codeReviews', 'review', reviewId),
-    queryFn: () => api.codeReviews.get(place, reviewId),
+    queryKey: codeReviewKey(place, reviewId),
+    queryFn: async () => {
+      const review = await api.codeReviews.get(place, reviewId);
+      // The lists under the page show the review as it now is too (a Refresh, a focus): going back finds them in step.
+      showReviewReadInListsIn(queryClient, place, review);
+      return review;
+    },
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });

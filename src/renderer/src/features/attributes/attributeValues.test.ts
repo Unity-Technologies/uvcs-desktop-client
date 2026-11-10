@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeTone, attributeValueKind, chipText, defaultValuesIn, suggestedValues, valueCounts } from './attributeValues';
+import { attributeEditorFor, attributeTone, attributeValueKind, chipHover, chipText, defaultValuesIn, outgrowsQuickField, suggestedValues, valueCounts } from './attributeValues';
 
 describe('attributeValueKind', () => {
   it('shows short enumerable values as pills', () => {
@@ -22,6 +22,61 @@ describe('chipText', () => {
     expect(chipText('## Fixes\n- Crash on start')).toBe('Fixes — Crash on start');
     expect(chipText('https://ci.example.com/build/42')).toBe('ci.example.com/build/42');
     expect(chipText(' resolved ')).toBe('resolved');
+  });
+
+  it('reads a short value as Markdown does, its marks left out', () => {
+    expect(chipText('**Blocked** by `cm` 1.2')).toBe('Blocked by cm 1.2');
+    expect(chipText('*done*')).toBe('done');
+  });
+
+  it('keeps a short value Markdown would read as a block as written: a rule, a heading, a quote, a list item', () => {
+    expect(chipText('---')).toBe('---');
+    expect(chipText('***')).toBe('***');
+    expect(chipText('#')).toBe('#');
+    expect(chipText('>')).toBe('>');
+    expect(chipText('- WIP')).toBe('- WIP');
+    expect(chipText('1. Draft')).toBe('1. Draft');
+    expect(chipHover({ name: 'status', value: '---' }, false)).toEqual({ kind: 'tip', text: 'status: ---' });
+  });
+});
+
+describe('chipHover', () => {
+  it('shows a short value as it reads, after its name', () => {
+    expect(chipHover({ name: 'status', value: ' resolved ' }, false)).toEqual({ kind: 'tip', text: 'status: resolved' });
+    expect(chipHover({ name: 'note', value: 'Waiting for **art**' }, false)).toEqual({ kind: 'tip', text: 'note: Waiting for art' });
+    expect(chipHover({ name: 'status', value: '' }, false)).toEqual({ kind: 'tip', text: 'status: empty' });
+  });
+
+  it('shows a link whole', () => {
+    expect(chipHover({ name: 'build', value: 'https://ci.example.com/build/42' }, false)).toEqual({ kind: 'tip', text: 'https://ci.example.com/build/42' });
+  });
+
+  it('shows a long text whole in a card, as Markdown, unless it is already open under the chips', () => {
+    const releaseNotes = { name: 'releasenotes', value: '### New\n\n#### Restore deleted repositories\n\n```text\ncm repository undelete old\n```\n' };
+    expect(chipHover(releaseNotes, false)).toEqual({ kind: 'card', markdown: '### New\n\n#### Restore deleted repositories\n\n```text\ncm repository undelete old\n```' });
+    expect(chipHover(releaseNotes, true)).toEqual({ kind: 'none' });
+  });
+});
+
+describe('attributeEditorFor', () => {
+  it('opens a long text, Markdown most often, in the comment editor', () => {
+    expect(attributeEditorFor('### New\r\n\r\n#### All platforms')).toBe('text');
+    expect(attributeEditorFor('x'.repeat(91))).toBe('text');
+  });
+
+  it('opens a short value, an empty one or a link in the quick field, which offers the values used elsewhere', () => {
+    expect(attributeEditorFor('resolved')).toBe('value');
+    expect(attributeEditorFor('')).toBe('value');
+    expect(attributeEditorFor('Waiting for the art team')).toBe('value');
+    expect(attributeEditorFor('https://ci.example.com/build/42')).toBe('value');
+  });
+});
+
+describe('outgrowsQuickField', () => {
+  it('hands a draft to the comment editor once it holds a second line, typed with Shift+Enter or pasted', () => {
+    expect(outgrowsQuickField('resolved\n')).toBe(true);
+    expect(outgrowsQuickField('### New\r\n- Undelete')).toBe(true);
+    expect(outgrowsQuickField('x'.repeat(200))).toBe(false);
   });
 });
 

@@ -44,6 +44,18 @@ describe('createWorkspaceAndUpdate', () => {
     expect(refreshed()).toEqual(REFRESHED_BY_UPDATE);
   });
 
+  it("creates and opens a dynamic workspace without updating it: its files download as they're opened", async () => {
+    const open = vi.fn();
+    fakeApi.answer('workspaces.create', () => created);
+
+    await createWorkspaceAndUpdate({ ...request, dynamic: true }, open);
+
+    expect(fakeApi.methods()).toEqual(['workspaces.create']);
+    expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ ...request, dynamic: true }]]);
+    expect(open).toHaveBeenCalledWith(request.path);
+    expect(shownToasts()).toEqual([]);
+  });
+
   it('keeps the workspace created and open when the update fails, and says the update failed', async () => {
     const open = vi.fn();
     fakeApi.answer('workspaces.create', () => created);

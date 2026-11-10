@@ -9,7 +9,10 @@ import { recordFormat } from '../cm/formatRecords';
 import { switchCommand, updateCommand } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
+import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
 import { workspaceHeadsReader } from '../cm/workspaceHeads';
+import { workspaceKindsReader } from '../cm/workspaceKinds';
+import { workspaceReadTurns } from '../cm/workspaceReadTurns';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { locateInWorkspace } from '../links/locateInWorkspace';
@@ -17,6 +20,7 @@ import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
 import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -27,7 +31,10 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   const kindOf = kindFromHeaders(headers);
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf };
   const lookUpRepository = workspaceRepositoryLookup(cm);
-  const readHeads = workspaceHeadsReader(cm);
+  // The heads and the kinds of the listed workspaces read one workspace at a time between them, so one pooled shell stays free.
+  const listedReadTurns = workspaceReadTurns();
+  const readHeads = workspaceHeadsReader(cm, listedReadTurns);
+  const readKinds = workspaceKindsReader(cm, listedReadTurns);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
@@ -52,7 +59,9 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {
     const madeHere = (await checkNewWorkspaceFolder(request.path)) === 'available';
-    await cm.query(['workspace', 'create', request.name, request.path, request.repository]);
+    const args = workspaceCreateArgs(request);
+    // A dynamic workspace's create waits for its file system to mount it (up to 30 s): a process, not a pooled shell.
+    await (request.dynamic ? cm.execute(args) : cm.query(args));
     if (madeHere) createdFolders.add(request.path);
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);
@@ -120,9 +129,11 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoryOf,
     heads: readHeads,
+    kinds: readKinds,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),
+    canCreateDynamic: () => readTrayRuns(process.platform),
     create,
     rename,
     remove,

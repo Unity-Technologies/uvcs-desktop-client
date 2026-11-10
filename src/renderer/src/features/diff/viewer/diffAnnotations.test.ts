@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linesToReveal, MARKER_INSET, markerLeft, markerSpots, rowsKey } from './diffAnnotations';
+import { bandRect, linesToReveal, MARKER_INSET, markerLeft, markerSpots, rowsKey } from './diffAnnotations';
 
 // Lines 1–10 unchanged, then line 11 replaced, then unchanged lines 12–40 (a hunk of 3 context lines each side).
 const HUNKS = [{ deletionStart: 8, deletionCount: 7, additionStart: 8, additionCount: 7 }];
@@ -38,9 +38,15 @@ describe('markerLeft', () => {
   });
 });
 
+describe('bandRect', () => {
+  it("outlines a line's row across its pane's code, from the gutter's edge to the pane's end", () => {
+    expect(bandRect({ top: 100, bottom: 120, contentLeft: 48, paneRight: 640 })).toEqual({ top: 100, left: 48, width: 592, height: 20 });
+  });
+});
+
 describe('markerSpots', () => {
   const marker = (key: string, lineNumber: number) => ({ key, lineNumber });
-  const box = (top: number, bottom = top + 20, paneRight = 640) => ({ top, bottom, paneRight });
+  const box = (top: number, bottom = top + 20, paneRight = 640) => ({ top, bottom, contentLeft: 40, paneRight });
 
   it("places each marker at the end of its line, centered on it", () => {
     const spots = markerSpots([marker('a', 4)], new Map([['a', box(100)]]));

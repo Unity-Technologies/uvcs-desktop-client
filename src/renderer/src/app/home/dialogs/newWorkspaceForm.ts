@@ -5,6 +5,9 @@ export type NamedRepository = Pick<RepositorySummary, 'name' | 'spec'>;
 import { lastSegment } from '../../../lib/paths';
 import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repositoryNamedButForCase, suggestWorkspaceName } from '../workspaceNaming';
 
+/** What "Learn more" next to the dynamic choice opens: Unity's page on dynamic workspaces. */
+export const DYNAMIC_WORKSPACES_URL = 'https://docs.unity.com/en-us/unity-version-control/dynamic-workspaces';
+
 /** The repository a new workspace works with, as the dialog's Repository field resolves it. */
 export type WorkspaceRepository =
   | { kind: 'existing'; spec: string }
@@ -31,6 +34,10 @@ export interface NewWorkspaceFormInput {
   chosenPath: string | undefined;
   /** The folder new workspaces go in. */
   root: string | undefined;
+  /** This computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`); false until told. */
+  dynamicAvailable: boolean;
+  /** The user ticked "Make this workspace dynamic". */
+  dynamicChosen: boolean;
   creating: boolean;
 }
 
@@ -49,6 +56,10 @@ export interface NewWorkspaceForm {
   workspaceName: string;
   workspaceNameTaken: boolean;
   path: string;
+  /** Whether the dialog offers to make the workspace dynamic: only where this computer can mount one. */
+  offersDynamic: boolean;
+  /** The workspace is created dynamic: chosen, and offered. */
+  dynamic: boolean;
   canCreate: boolean;
 }
 
@@ -67,6 +78,8 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
     workspaceName,
     workspaceNameTaken,
     path,
+    offersDynamic: input.dynamicAvailable,
+    dynamic: input.dynamicAvailable && input.dynamicChosen,
     canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
   };
 }

@@ -131,13 +131,13 @@ does.
 | What holds only text: the Branch Explorer's canvas, its tooltips, the palette's rows (reviews' titles too), notifications, the branch pill, the comparison title | Without marks (`commentLineText`, `commentText`): references as written, emoji as themselves; a line with nothing Markdown could read skips the parsing (the canvas asks for thousands) |
 
 Inline code in a comment shown whole (`Markdown`: threads, descriptions, release notes, the annotate card, the
-caption card) is crimson (`--text-code`) in a `--bg-code` pill with a `--border-default` border (`Markdown.module.css`).
-Code in a link takes the link's color, struck through the struck words' color; a code block keeps the text's color,
-no border. The editor draws inline code in the same crimson and pill but without the border on purpose: CodeMirror
+caption card) is a muted berry (`--text-code`) in a `--bg-code` pill with a `--border-default` border
+(`Markdown.module.css`). Code in a link takes the link's color, struck through the struck words' color; a code block keeps the text's color,
+no border. The editor draws inline code in the same color and pill but without the border on purpose: CodeMirror
 splits the code into a span per mark (the backticks the caret shows), and each span would get a box of its own.
 A one-line preview (`CommentLine`: every list, the Comments panel, pickers, titles) keeps inline code in the plain gray
-pill, no crimson, no border, on purpose: a preview is scanned, not read, its color already means status (Applied,
-Answered, the selection), and crimson pills in rows out-shouted it, added boxes and read as broken where an ellipsis
+pill, no color, no border, on purpose: a preview is scanned, not read, its color already means status (Applied,
+Answered, the selection), and colored pills in rows out-shouted it, added boxes and read as broken where an ellipsis
 cut them.
 
 The Branch Explorer's caption card lays its first line over the canvas's: the canvas draws its text (`summaryOf`), the
@@ -185,7 +185,14 @@ Files (`askForCheckinComment` in `CheckinCommentDialog`), New branch,
 New label and New attribute (`CommentArea`: a press on its label puts the caret in the editor, which a `<label
 htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) a new code review's title
 (`CreateCodeReviewDialog`), a review's title edited in place (`ReviewTitle`), and its conversation's description, comments,
-replies and discards (`CommentComposer`: ⌘↵ sends, its draft kept per place, docs/features/code-reviews.md). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
+replies and discards (`CommentComposer`: ⌘↵ sends, its draft kept per place, docs/features/code-reviews.md). A long attribute value (release notes, a description:
+Markdown, most often) is a comment too, written as a branch's (`AttributeTextEditor`, chosen by `attributeEditorFor`:
+many lines, or past 90 characters); a short one keeps its quick field, where Enter saves and the values used
+elsewhere are offered, and moves on to the comment editor, its draft kept, once it gains a second line (⇧↵, a paste:
+`outgrowsQuickField`). What hovering an attribute chip shows is `chipHover`'s: a short value's tooltip, text
+only, reads without its marks; a long one shows whole in a card, its Markdown drawn (`AttributeValueCard`), which the
+pointer can move onto to scroll it and select its text (`AnchoredCard`'s `scrollWith`, `hoverStep`), and which a click on the chip
+closes, as the value opens under the chips. Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
 A changeset's or a shelve's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
 panels' editor open it in its parts (`editingParts`: its title and the rest when it has one; whole in the description
@@ -280,7 +287,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
   the dialogs it opens (z 790): a question it raises never shows behind it, nor does Tab walk the dimmed view. Its
   entry points: the check-in's summary (⇧⌘F) and description, Edit comment, a details panel's editor (a changeset's
-  title and description; a branch's, label's or attribute's description), New branch, New label and New attribute.
+  title and description; a branch's, label's or attribute's description; a long attribute value), New branch, New
+  label and New attribute.
   A merge's comment and a code review's title are one line and have none. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
   undo, caret and suggestions would start over.

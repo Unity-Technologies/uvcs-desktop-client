@@ -15,3 +15,10 @@
   grid-template-columns: 1fr 1.4fr;
   gap: var(--space-3);
 }
+
+/* A choice, and a link that explains it right after its label. */
+.choiceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

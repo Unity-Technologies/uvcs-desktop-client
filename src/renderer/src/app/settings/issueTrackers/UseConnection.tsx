@@ -6,6 +6,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, type SignInStep } from './connectFlow';
+import { SignInProblem } from './SignInProblem';
 import type { SignedIn } from './ConnectTracker';
 import { DifferentAccountLink } from './DifferentAccountLink';
 import styles from './IssueTrackerPane.module.css';
@@ -20,11 +21,13 @@ export function UseConnection(props: {
   step: Extract<SignInStep, { kind: 'useConnection' }>;
   repository: string;
   picked: boolean;
+  /** The sign-in's own failure, from the step before (a project it couldn't read), until Connect tries again. */
+  failure: SignInFailure | null;
   onConnected: (outcome: SignedIn) => void;
   onDifferentAccount: () => void;
 }) {
   const { link, linkText, step, repository, picked, onConnected, onDifferentAccount } = props;
-  const [failure, setFailure] = useState<SignInFailure | null>(null);
+  const [failure, setFailure] = useState<SignInFailure | null>(props.failure);
   const [busy, setBusy] = useState(false);
   const name = TRACKER_GRAMMARS[step.connection.kind].name;
   const connect = async (): Promise<void> => {
@@ -50,7 +53,7 @@ export function UseConnection(props: {
         </Button>
         <DifferentAccountLink onClick={onDifferentAccount} />
       </div>
-      {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
+      {failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: name, server: link.server })} />}
     </div>
   );
 }

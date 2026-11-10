@@ -1,9 +1,11 @@
-import { ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { LinkSignIn } from '@shared/api/issueTrackers';
 import type { DeviceSignIn as DeviceCode, SignInOutcome } from '@shared/domain/issueTrackers';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
+import { copyToClipboard } from '../../../ui/copyToClipboard';
+import { IconButton } from '../../../ui/IconButton';
 import { deviceCodeWords } from './connectFlow';
 import styles from './IssueTrackerPane.module.css';
 import deviceStyles from './DeviceSignIn.module.css';
@@ -62,10 +64,14 @@ export function DeviceSignIn({ request, trackerName, onOutcome, onUseToken }: De
       <div className={styles.next}>
         <p className={styles.intro}>{words.instruction}</p>
         <div className={deviceStyles.preview}>
-          <span className={deviceStyles.previewLabel}>Your code</span>
-          <span className={deviceStyles.code} aria-label={`Code ${code.userCode}`}>
-            {code.userCode}
-          </span>
+          <div className={deviceStyles.previewText}>
+            <span className={deviceStyles.previewLabel}>Your code</span>
+            <span className={deviceStyles.code} aria-label={`Code ${code.userCode}`}>
+              {code.userCode}
+            </span>
+          </div>
+          {/* Copied once already; this copies it again, after something else took the clipboard. */}
+          <IconButton size="small" icon={<Copy size={14} />} label="Copy the code" onClick={() => copyToClipboard(code.userCode, 'Code')} />
         </div>
         <div className={deviceStyles.progress} role="progressbar" aria-label={words.waiting} />
         <div className={styles.row}>

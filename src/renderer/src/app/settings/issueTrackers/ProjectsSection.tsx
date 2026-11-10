@@ -6,7 +6,8 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { TextField } from '../../../ui/TextField';
-import { addProjectReady, connectFailureWords, linkReadBack } from './connectFlow';
+import { addProjectReady, connectFailureWords, linkReadBack, type FailureWords } from './connectFlow';
+import { SignInProblem } from './SignInProblem';
 import { choiceOf, trackerChoiceCard } from './trackerChoices';
 import { LinkReadBackLine } from './LinkReadBackLine';
 import { projectRows, projectsExplained, projectsSectionWords } from './trackerCardContent';
@@ -56,7 +57,7 @@ function AddProject({ repository, kind, words }: { repository: string; kind: Iss
   const [adding, setAdding] = useState(false);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<FailureWords | null>(null);
   const read = linkReadBack(link);
   const close = (): void => {
     setAdding(false);
@@ -77,7 +78,7 @@ function AddProject({ repository, kind, words }: { repository: string; kind: Iss
     const outcome = await api.issueTrackers.addProject({ repository, link });
     setBusy(false);
     if (outcome.kind === 'signedIn') close();
-    else setProblem(connectFailureWords(outcome.failure, { trackerName: TRACKER_GRAMMARS[kind].name }).words);
+    else setProblem(connectFailureWords(outcome.failure, { trackerName: TRACKER_GRAMMARS[kind].name }));
   };
   const keys = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Escape') {
@@ -106,7 +107,7 @@ function AddProject({ repository, kind, words }: { repository: string; kind: Iss
       />
       {read.kind === 'read' && <LinkReadBackLine parts={read.parts} words={read.words} />}
       {read.kind === 'problem' && <p className={styles.problem}>{read.words}</p>}
-      {problem && <p className={styles.problem}>{problem}</p>}
+      {problem && <SignInProblem failed={problem} />}
       <div className={styles.row}>
         <Button size="small" variant="primary" disabled={!addProjectReady(link)} loading={busy} onClick={() => void add()}>
           Add

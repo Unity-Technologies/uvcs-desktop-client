@@ -1,11 +1,7 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
-import { History, MessageSquare, MessageSquareOff } from 'lucide-react';
-import { useContext, useMemo, useState, type ReactNode } from 'react';
+import { History } from 'lucide-react';
+import { useContext, useMemo, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
-import { pluralize } from '../../../lib/text';
-import { displayName } from '../../../lib/userName';
-import { AvatarStack } from '../../../ui/AvatarStack';
-import { IconButton } from '../../../ui/IconButton';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
@@ -15,12 +11,15 @@ import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileA
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
+import { CommentMarkerContent } from './CommentMarkerContent';
+import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
 import { markerTip } from './markerTip';
 import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
-import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads, type MarkedThreads } from './threadRows';
+import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
+import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
 const NO_REVISIONS: number[] = [];
@@ -63,13 +62,14 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const [openedFor, setOpenedFor] = useState<number | null>(null);
   if (focus && focusPlace && openedFor !== focus.seq) {
     setOpenedFor(focus.seq);
-    const next = openedOnFocus(openedKeys, focusPlace.lineKey, inCode);
+    const next = openedOnFocus(openedKeys, focus, focusPlace.lineKey, inCode);
     if (next !== openedKeys) setOpened({ path: entry.path, keys: next });
   }
-  // A new place to scroll to only when a thread is gone to: a refetch, a line opened or comments hidden scroll nothing.
+  // A new place to scroll to only when a thread is gone to: a refetch, a line opened, comments hidden or a card picked
+  // in the code (`inPlace`, on screen already) scroll nothing.
   const scrollTo = useMemo(
-    () => (focusPlace ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
-    [focus?.seq, focusPlace?.side, focusPlace?.lineNumber],
+    () => (focusPlace && scrollsToFocus(focus) ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
+    [focus?.seq, focus?.inPlace, focusPlace?.side, focusPlace?.lineNumber],
   );
 
   // Gone to from elsewhere (the conversation), the file opens at the thread, even while its place is still worked out.
@@ -87,9 +87,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       lineNumber: line.line,
       label: markerLabel(line),
       tip: markerTip(line),
-      content: <MarkerContent line={line} />,
+      content: <CommentMarkerContent line={line} />,
       emphasized: markerIsOpen(line),
-      onOpen: () => openLine(line.key),
+      // Opened, the line's first thread is the one looked at: selected, as a card clicked is.
+      onOpen: () => {
+        openLine(line.key);
+        comments.selectThread(threadOpenedFrom(line));
+      },
     }));
     const outdated = outdatedMarkerOf(fileComments.outdated, openedKeys, inCode);
     if (outdated) markers.push(outdatedLineMarker(outdated, topSide, () => setOpened({ path: entry.path, keys: outdated.opens })));
@@ -97,21 +101,16 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow };
+    const bands = lineBandsOf(fileComments.lines, focus);
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow]);
 
-  // An action that says what it does, not a pressed state: "Comments in the code" didn't say which way it goes.
-  const controls = hasComments(fileComments) && (
-    <IconButton
-      icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />}
-      label={inCode ? 'Hide comments in the code' : 'Show comments in the code'}
-      onClick={() => setInCode(!inCode)}
-    />
-  );
+  const controls = hasComments(fileComments) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
   return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
 }
 
 const NO_KEYS: readonly string[] = [];
+
 const NO_TICKS: readonly MapTick[] = [];
 
 /** What changes the file's comments as its versions arrive: each version read, still read, or failed. */
@@ -127,23 +126,10 @@ function outdatedLineMarker(outdated: OutdatedMarker, side: LineThreads['side'],
     lineNumber: 0,
     label: outdated.label,
     tip: outdated.tip,
-    content: <MarkerContent line={outdated} icon={<History size={12} aria-hidden />} />,
+    content: <CommentMarkerContent line={outdated} icon={<History size={12} aria-hidden />} />,
     emphasized: outdated.emphasized,
     onOpen,
   };
-}
-
-/** A marker's content: who wrote there, and how many comments there are, as a pull request's do; the outdated ones', after a clock. */
-function MarkerContent({ line, icon }: { line: MarkedThreads; icon?: ReactNode }) {
-  const { people, more } = markerPeople(line);
-  return (
-    <>
-      {icon}
-      {/* Still: the marker's own tooltip previews its threads (`markerTip`). */}
-      <AvatarStack still avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
-      {markerCommentCount(line)}
-    </>
-  );
 }
 
 interface RowContext {

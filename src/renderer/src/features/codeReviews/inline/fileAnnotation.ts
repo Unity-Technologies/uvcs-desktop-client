@@ -36,10 +36,12 @@ export function hasComments(comments: Pick<FileComments, 'lines' | 'outdated'> |
 
 /**
  * The lines opened while comments are hidden, once a thread on one is gone to: its line opens, after the others (the
- * order rows keep, `annotationRowsOf`). Unchanged when comments show in the code, or the thread is at no line.
+ * order rows keep, `annotationRowsOf`). Unchanged when comments show in the code, the thread is at no line, or it was
+ * picked in place (`ThreadFocus.inPlace`): it's on screen already, and its card's Hide, whose click picks it too, has
+ * just folded its line.
  */
-export function openedOnFocus(opened: readonly string[], lineKey: string | undefined, inCode: boolean): readonly string[] {
-  if (inCode || lineKey === undefined || opened.includes(lineKey)) return opened;
+export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lineKey: string | undefined, inCode: boolean): readonly string[] {
+  if (inCode || focus.inPlace || lineKey === undefined || opened.includes(lineKey)) return opened;
   return [...opened, lineKey];
 }
 

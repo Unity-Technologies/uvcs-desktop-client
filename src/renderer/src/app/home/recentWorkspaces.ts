@@ -1,4 +1,4 @@
-import type { WorkspaceHead, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceHead, WorkspaceKind, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import { lastSegment } from '../../lib/paths';
 import { splitRepositorySpec } from '../../lib/servers';
@@ -13,6 +13,8 @@ export interface WorkspaceEntry {
   repositoryName?: string;
   /** What it's loaded from, when known (`WorkspaceHead`). */
   selector?: WorkspaceSelector | null;
+  /** How it holds its files, once read (`useWorkspaceKinds`). */
+  kind?: WorkspaceKind;
 }
 
 /** Recent paths `cm` doesn't list: candidates for a missing folder. */
@@ -41,12 +43,17 @@ export function headsNamingRepository(heads: Record<string, WorkspaceHead> = {})
 
 /**
  * A listed workspace with what is cheaply known of it: its head's repository and branch, else the repository `cm`
- * named in the recent workspaces' lookup (`lookedUp`), keeping the head's repository name meanwhile.
+ * named in the recent workspaces' lookup (`lookedUp`), keeping the head's repository name meanwhile; and its kind once read.
  */
-export function describedEntry(entry: Pick<WorkspaceEntry, 'workspace' | 'missing'>, head: WorkspaceHead | undefined, lookedUp: Record<string, string | null>): WorkspaceEntry {
+export function describedEntry(
+  entry: Pick<WorkspaceEntry, 'workspace' | 'missing'>,
+  head: WorkspaceHead | undefined,
+  lookedUp: Record<string, string | null>,
+  kind?: WorkspaceKind,
+): WorkspaceEntry {
   const repository = head?.repository ?? lookedUp[entry.workspace.path];
   const repositoryName = head?.repositoryName ?? (repository ? splitRepositorySpec(repository).name : undefined);
-  return { ...entry, repository, repositoryName, selector: head?.selector ?? null };
+  return { ...entry, repository, repositoryName, selector: head?.selector ?? null, kind };
 }
 
 /** Whether a workspace is found by the home screen's search: every word of it in its name, path, repository or branch. */

@@ -1,6 +1,6 @@
 import { queryOptions, useQueries, useQuery, type QueryClient } from '@tanstack/react-query';
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
-import type { WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
@@ -75,6 +75,33 @@ export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));
 }
 
+/**
+ * How one workspace holds its files (standard, partial or dynamic), null when `cm` couldn't tell; from a local
+ * `cm getworkspacefrompath`. One query per workspace, kept for the session: a kind is set when the workspace is
+ * created, so a workspace listed later costs only its own read. A workspace created again in the same folder has
+ * another guid, and so another key. An unknown kind is asked again the next time it shows.
+ */
+export function workspaceKindQuery({ path, guid }: Pick<WorkspaceSummary, 'path' | 'guid'>) {
+  return queryOptions({
+    queryKey: queryKeys.workspaceKind(path, guid),
+    queryFn: async (): Promise<WorkspaceKind | null> => (await api.workspaces.kinds([path]))[path] ?? null,
+    staleTime: (query) => (query.state.data === null ? 0 : Infinity),
+    // Kept off screen too: one small answer per listed workspace.
+    gcTime: Infinity,
+  });
+}
+
+/** The kind of every listed workspace already known, by path (`workspaceKindQuery`); unknown ones are left out. */
+export function useWorkspaceKinds(workspaces: WorkspaceSummary[] | undefined) {
+  const listed = workspaces ?? [];
+  return useQueries({
+    queries: listed.map(workspaceKindQuery),
+    combine: (results) => ({
+      data: Object.fromEntries(results.flatMap((result, index) => (result.data ? [[listed[index]!.path, result.data]] : []))) as Record<string, WorkspaceKind>,
+    }),
+  });
+}
+
 /** Which of these recent paths (ones `cm` doesn't list) lost their folder. */
 export function useMissingWorkspacePaths(paths: string[]) {
   return useQuery({
@@ -82,6 +109,15 @@ export function useMissingWorkspacePaths(paths: string[]) {
     queryFn: () => api.workspaces.findMissing(paths),
     enabled: paths.length > 0,
   });
+}
+
+/**
+ * Whether this computer can create dynamic workspaces: read when the New workspace dialog opens, as the tray that
+ * mounts them may have started or stopped since; a local process list, so it never reaches a server. Only then:
+ * not again on every focus while the dialog stays open.
+ */
+export function useCanCreateDynamicWorkspaces() {
+  return useQuery({ queryKey: queryKeys.dynamicWorkspaces, queryFn: () => api.workspaces.canCreateDynamic(), staleTime: 0, refetchOnWindowFocus: false });
 }
 
 export const serversQuery = queryOptions({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });

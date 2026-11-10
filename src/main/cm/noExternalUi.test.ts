@@ -96,7 +96,7 @@ describe('cm commands never open an external tool', () => {
 });
 
 describe('merge tools open only on the user’s request', () => {
-  it('starts processes only to run cm, open an app the user picked (an editor, a terminal, a merge tool), ask the OS which apps are installed, ask codesign how the app is signed, read the folder dragged over a window (osascript), or make an AppImage the handler of uvcs:// links (xdg-mime, which opens nothing)', () => {
+  it('starts processes only to run cm, open an app the user picked (an editor, a terminal, a merge tool), ask the OS which apps are installed, ask codesign how the app is signed, read the folder dragged over a window (osascript), find the UVCS tray that serves dynamic workspaces (tasklist), or make an AppImage the handler of uvcs:// links (xdg-mime, which opens nothing)', () => {
     const spawning = allSources.filter(({ source }) => source.includes("'node:child_process'")).map(({ file }) => relative(file));
     expect(spawning.sort()).toEqual([
       'cm/CmShellSession.ts',
@@ -106,6 +106,7 @@ describe('merge tools open only on the user’s request', () => {
       'system/apps/launchApp.ts',
       'system/apps/readInstalledApps.ts',
       'system/dragPasteboard.ts',
+      'system/uvcsTray.ts',
       'update/macSignature.ts',
     ]);
   });

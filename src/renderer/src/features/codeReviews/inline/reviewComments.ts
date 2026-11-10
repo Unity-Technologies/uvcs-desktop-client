@@ -7,10 +7,15 @@ import type { ReviewThread } from '../conversation/reviewThreads';
 import { anchorPath, writtenIn, type LineThread } from './fileThreads';
 import type { ContextRequest } from './commentContext';
 
-/** A thread gone to in the Changes tab, again each time (`seq`): the file's diff scrolls to it and marks it. */
+/**
+ * The thread selected in the Changes tab, again each time (`seq`): its card and line marked, its entry in the Comments
+ * panel too. Gone to (from the panel, the keys, the conversation), the file's diff scrolls to it; picked in the code
+ * (`inPlace`), it's on screen already and the diff stays where it is.
+ */
 export interface ThreadFocus {
   threadId: number;
   seq: number;
+  inPlace?: boolean;
 }
 
 /**
@@ -25,6 +30,8 @@ export interface ReviewComments {
   focus: ThreadFocus | null;
   /** Shows a thread in the Changes tab: its file, in the mode it was written in, scrolled to it. */
   goToThread: (thread: LineThread) => void;
+  /** Selects a thread already on screen, its card clicked or focused in the code: nothing scrolls but the panel's list. */
+  selectThread: (thread: LineThread) => void;
   /** Shows a thread in the Conversation tab, among the rest. */
   showInConversation: (threadId: number) => void;
   /** Shows a thread in context (`useCommentContext`); none until the place's repository is known. */

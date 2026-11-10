@@ -1,5 +1,6 @@
 import { SelectorChip } from '../../components/SelectorChip';
 import { ServerChip } from '../../components/ServerChip';
+import { WorkspaceKindChip } from '../../components/WorkspaceKindChip';
 import type { WorkspaceEntry } from '../home/recentWorkspaces';
 import { useWorkspaceGlance } from './useWorkspaceGlance';
 import styles from './WorkspaceSwitcher.module.css';
@@ -11,7 +12,7 @@ interface WorkspaceSwitcherChipsProps {
 }
 
 /**
- * A switcher row's workspace told as the home screen tells it: its branch and its server. When the row is short of
+ * A switcher row's workspace told as the home screen tells it: its kind, its branch and its server. When the row is short of
  * room the server gives way first, down to its icon, then the branch's name.
  */
 export function WorkspaceSwitcherChips({ entry, sameRepository }: WorkspaceSwitcherChipsProps) {
@@ -20,6 +21,7 @@ export function WorkspaceSwitcherChips({ entry, sameRepository }: WorkspaceSwitc
   const pendingCount = glance?.pendingCount ?? 0;
   return (
     <span className={styles.chips}>
+      <WorkspaceKindChip kind={entry.kind} />
       {selector && <SelectorChip selector={selector} className={styles.branchChip} />}
       {pendingCount > 0 && (
         <span className={styles.pending} data-tip={pendingCount === 1 ? '1 pending change' : `${pendingCount} pending changes`}>

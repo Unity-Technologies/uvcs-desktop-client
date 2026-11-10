@@ -139,6 +139,30 @@ describe('creating a workspace', () => {
     expect(lines()[0]).toBe(`workspace create game ${path} game@local`);
   });
 
+  it('creates a regular workspace in a pooled shell, naming its repository', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    await service.create({ name: 'game', path, repository: 'game@local' });
+    expect(commands[0]).toMatchObject({ via: 'query', args: ['workspace', 'create', 'game', path, 'game@local'] });
+  });
+
+  it('creates a dynamic workspace in a process, since cm waits for it to be mounted, loading /main of its repository', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    expect(await service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(commands[0]).toMatchObject({ via: 'execute', args: ['workspace', 'create', 'game', path, '--dynamic', '--tree=br:/main@game@local'] });
+  });
+
+  it('fails as cm reported when a dynamic workspace is not created, and lists nothing after it', async () => {
+    const path = await emptyFolder();
+    const { service, lines } = workspaces({ 'workspace create': cmFails('Error: The workspace could not be mounted.') });
+
+    await expect(service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).rejects.toThrow('The workspace could not be mounted.');
+    expect(lines()).toEqual([`workspace create game ${path} --dynamic --tree=br:/main@game@local`]);
+  });
+
   it("fails when the new workspace isn't listed", async () => {
     const path = await emptyFolder();
     const { service } = workspaces({ 'workspace create': '', 'workspace list': '' });
@@ -344,6 +368,33 @@ describe('other workspaces', () => {
     expect(commands.map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
       { via: 'query', path: game, options: { anyDirectory: true } },
       { via: 'query', path: cloud, options: { anyDirectory: true } },
+    ]);
+  });
+
+  it('tells how every listed workspace holds its files with one local cm getworkspacefrompath each, one at a time with the heads', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-kinds-'));
+    const [art, remote] = [join(root, 'art'), join(root, 'remote')];
+    await Promise.all([mkdir(art), mkdir(remote)]);
+    let reading = 0;
+    let most = 0;
+    const oneAtATime = (answer: CmAnswer): CmAnswer => async (command) => {
+      most = Math.max(most, ++reading);
+      await Promise.resolve();
+      reading--;
+      return typeof answer === 'function' ? answer(command) : answer;
+    };
+    const { service, commands } = workspaces({
+      getworkspacefrompath: oneAtATime(({ args }) => formatOutput(args[1] === art ? ['partial', 'static'] : ['regular', 'dynamic'])),
+      wi: oneAtATime('BR\u001f/main\u001fgame@local\n'),
+    });
+
+    const [kinds] = await Promise.all([service.kinds([art, remote, join(root, 'gone')]), service.heads([art, remote])]);
+
+    expect(kinds).toEqual({ [art]: 'partial', [remote]: 'dynamic' });
+    expect(most).toBe(1);
+    expect(commands.filter(({ args }) => args[0] === 'getworkspacefrompath').map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
+      { via: 'query', path: art, options: { anyDirectory: true } },
+      { via: 'query', path: remote, options: { anyDirectory: true } },
     ]);
   });
 });

@@ -23,7 +23,11 @@ export interface ShelveFlowDependencies {
   kindOf(workspacePath: string): Promise<WorkspaceKind>;
 }
 
-/** `ShelveFlowDependencies.kindOf` from the workspace headers, which read it with the workspace's name and cache it. */
+/**
+ * `ShelveFlowDependencies.kindOf` from the workspace headers, which read it with the workspace's name and cache it.
+ * A kind `cm` didn't tell runs the standard commands: only a workspace known to be partial needs `cm partial`, and the
+ * standard ones are what every workspace ran before partial ones were told apart.
+ */
 export function kindFromHeaders(headers: { names(workspacePath: string): Promise<WorkspaceNames> }): ShelveFlowDependencies['kindOf'] {
-  return (workspacePath) => headers.names(workspacePath).then((names) => names.kind);
+  return (workspacePath) => headers.names(workspacePath).then((names) => names.kind ?? 'standard');
 }

@@ -707,10 +707,18 @@ button.earlierTag:hover {
 }
 
 /*
- * In the code, the thread gone to keeps its ring until another is: among several alike (the outdated ones, stacked
- * above the code), the eye finds it again after the light fades.
+ * In the code, a card's border is its line's outline color (`LineBands`): over the diff's added and removed tints, the
+ * subtle border the conversation uses all but disappears.
  */
-.thread[data-in-code][data-highlight] {
+.thread[data-in-code] {
+  border-color: var(--border-comment);
+}
+
+/*
+ * In the code, the thread selected (gone to, or picked there: `cardFocusOf`) keeps its ring until another is: among
+ * several alike (the outdated ones, stacked above the code), the eye finds it again after the light fades.
+ */
+.thread[data-in-code][data-selected] {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }

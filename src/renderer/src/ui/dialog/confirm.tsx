@@ -3,7 +3,7 @@ import { Button } from '../Button';
 import { Dialog } from './Dialog';
 import { askDialog } from './dialogStore';
 
-interface ConfirmOptions {
+export interface ConfirmOptions {
   title: string;
   message?: ReactNode;
   confirmLabel: string;

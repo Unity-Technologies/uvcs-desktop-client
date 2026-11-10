@@ -1,5 +1,5 @@
 import type { IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
-import { coveringConnection, needsSignIn } from '@shared/issueTrackers/connections';
+import { coveringConnection, needsSignIn, ownerOf } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
 import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
@@ -140,6 +140,23 @@ export function clearsClipboardAfter(pasted: boolean, outcome: Pick<SignInOutcom
 /** Which way to sign in shows: the server's best, unless the user chose a token instead ("Use a token instead"). */
 export function signInMethodShown(methods: readonly SignInMethodKind[], tokenChosen: boolean): 'deviceCode' | 'token' {
   return methods[0] === 'deviceCode' && !tokenChosen ? 'deviceCode' : 'token';
+}
+
+/** What the sign-in step for a link shows, and the failure under it (`SignInFor`). */
+export type SignInForView =
+  | { kind: 'useConnection'; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; failure: SignInFailure | null }
+  | { kind: 'alreadySignedIn'; step: Extract<SignInStep, { kind: 'useConnection' }>; failure: SignInFailure | null }
+  | { kind: 'signIn'; step: Extract<SignInStep, { kind: 'signIn' }>; method: 'deviceCode' | 'token'; failure: SignInFailure | null };
+
+/**
+ * The sign-in step's view. A sign-in kept though its project couldn't be read turns the step into using it (with a
+ * repository) or into "already signed in" (with none): its failure stays on screen across that turn. The token step
+ * words its own failures, so a sign-in shows one only under the device flow.
+ */
+export function signInForView(step: SignInStep, repository: string | undefined, tokenChosen: boolean, failure: SignInFailure | null): SignInForView {
+  if (step.kind === 'useConnection') return repository ? { kind: 'useConnection', step, repository, failure } : { kind: 'alreadySignedIn', step, failure };
+  const method = signInMethodShown(step.methods, tokenChosen);
+  return { kind: 'signIn', step, method, failure: method === 'deviceCode' ? failure : null };
 }
 
 /** Whether "Add a project" can read its link: one that reads back as an issue. */
@@ -301,10 +318,12 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
   };
 }
 
-/** A failure in plain words, and whether a new token would help (a link back to the token page). */
+/** A failure in plain words, and what would help: a new token (a link back to the token page), or installing the GitHub App. */
 export interface FailureWords {
   words: string;
   offersTokenPage: boolean;
+  /** The GitHub App's install page (`SignInFailure`'s `projectUnreadable`). */
+  installPage?: string;
 }
 
 export function connectFailureWords(failure: SignInFailure, context: { trackerName: string; server?: string; email?: string }): FailureWords {
@@ -329,6 +348,7 @@ export function connectFailureWords(failure: SignInFailure, context: { trackerNa
     case 'emailNeeded':
       return { words: `${trackerName} needs the email you sign in with, along with the token.`, offersTokenPage: false };
     case 'projectUnreadable':
+      if (failure.installPage) return { words: `You're signed in, but ${failure.project} can't be read. If it's private, add the Unity Version Control Desktop app to ${ownerOf(failure.project)} on GitHub.`, offersTokenPage: false, installPage: failure.installPage };
       return { words: `You're signed in, but ${failure.project} can't be read with this sign-in. Check that the token can read it.`, offersTokenPage: true };
     case 'notGitHubEnterprise':
       return { words: "This doesn't look like GitHub Enterprise Server.", offersTokenPage: false };

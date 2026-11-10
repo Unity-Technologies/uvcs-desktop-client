@@ -1,5 +1,5 @@
 import type { RepositorySummary } from '@shared/domain/repository';
-import type { WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { navigationTarget } from '../../lib/listNavigation';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 
@@ -24,6 +24,13 @@ export function workspacesByRepository(entries: readonly { workspace: WorkspaceS
     else byRepository.set(repository, [workspace]);
   }
   return byRepository;
+}
+
+/** How each workspace holds its files, by its path, for those whose kind is read already. */
+export function workspaceKindsByPath(entries: readonly { workspace: WorkspaceSummary; kind?: WorkspaceKind }[]): Map<string, WorkspaceKind> {
+  const kinds = new Map<string, WorkspaceKind>();
+  for (const { workspace, kind } of entries) if (kind) kinds.set(workspace.path, kind);
+  return kinds;
 }
 
 /** The repositories whose name holds every word of `filter` (all of them for a blank one), in their order. */
