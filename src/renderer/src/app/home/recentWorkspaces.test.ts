@@ -55,13 +55,17 @@ describe('describedEntry', () => {
   it("keeps the repository's name from its head while cm hasn't named its server", () => {
     const described = describedEntry(cloud, cloudHead, {});
 
-    expect(described).toEqual({ ...cloud, repository: undefined, repositoryName: '3dtest/cloud', selector: branch });
+    expect(described).toEqual({ ...cloud, repository: undefined, repositoryName: '3dtest/cloud', selector: branch, kind: undefined });
     expect(entryMatches(described, '3dtest')).toBe(true);
   });
 
   it('takes the whole repository from cm once it names it, and from the file when it does', () => {
     expect(describedEntry(cloud, cloudHead, { '/wk/cloud': '3dtest/cloud@AcmeStudio@unity' })).toMatchObject({ repository: '3dtest/cloud@AcmeStudio@unity', repositoryName: '3dtest/cloud' });
     expect(describedEntry({ workspace: game, missing: false }, { repository: 'game@local', repositoryName: 'game', selector: branch }, {})).toMatchObject({ repository: 'game@local', repositoryName: 'game' });
-    expect(describedEntry({ workspace: game, missing: false }, undefined, { '/wk/game': null })).toEqual({ workspace: game, missing: false, repository: null, repositoryName: undefined, selector: null });
+    expect(describedEntry({ workspace: game, missing: false }, undefined, { '/wk/game': null })).toEqual({ workspace: game, missing: false, repository: null, repositoryName: undefined, selector: null, kind: undefined });
+  });
+
+  it('says how the workspace holds its files once that is read', () => {
+    expect(describedEntry(cloud, cloudHead, {}, 'dynamic')).toMatchObject({ kind: 'dynamic' });
   });
 });
