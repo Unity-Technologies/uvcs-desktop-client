@@ -36,6 +36,8 @@ export const queryKeys = {
   cmSetup: ['cmSetup'] as const,
   serverConnection: (server: string) => ['serverConnection', server] as const,
   homeDirectory: ['homeDirectory'] as const,
+  /** Whether this computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`). */
+  dynamicWorkspaces: ['dynamicWorkspaces'] as const,
   workspaceHeads: (paths: readonly string[]) => [...queryKeys.everyWorkspaceHeads, paths] as const,
   /** The heads of every list of workspaces read (the home screen's, the switcher's). */
   everyWorkspaceHeads: ['workspaceHeads'] as const,
