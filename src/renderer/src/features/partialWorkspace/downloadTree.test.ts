@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ItemType, TreeItem } from '@shared/domain/explorer';
+import type { TreeItem } from '@shared/domain/explorer';
+import type { ItemType } from '@shared/domain/pendingChanges';
 import { toggled } from './downloadSelection';
 import { downloadKey, downloadRows, downloadTreeOf, foldersToReadLoaded, rootStatus, rulesSummary, type DownloadRow } from './downloadTree';
 
