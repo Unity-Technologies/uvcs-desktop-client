@@ -16,6 +16,8 @@ import { describeSelector } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
+/** A partial workspace loads files with `cm partial`, which this flow doesn't run yet: refused before anything moves. */
+const IN_PARTIAL = 'A partial workspace can’t load an xlink’s files here yet: load them from a standard workspace of the same repository.';
 const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then open the xlink’s folder in Files and choose Load its files on it.';
 
 /** How a checked-in xlink's files loaded: the changes moved aside for it wait in a shelve when they couldn't merge back cleanly. */
@@ -32,10 +34,12 @@ export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId:
  * 2. Undo them, move the files they added aside, and load the xlink's files.
  * 3. Merge the shelve back: the workspace is at the changeset it was shelved on, so only a change made under the
  *    xlink's folder meanwhile could conflict.
- * If a step before the files load fails, the changes are put back. Private files are no change in the way.
+ * If a step before the files load fails, the changes are put back. Private files are no change in the way. A partial
+ * workspace is refused first (`IN_PARTIAL`), its changes untouched.
  */
 export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: string, xlinkPath: string, context: OperationContext): Promise<XlinkLoad> {
   const { cm } = deps;
+  if ((await deps.kindOf(workspacePath)) === 'partial') throw new Error(IN_PARTIAL);
   const load = () => cm.execute(loadXlinkArgs(workspacePath, xlinkPath), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
   const snapshot = await readPendingSnapshot(cm, workspacePath);
   switch (switchApproach(summarizePending(snapshot.changes))) {
