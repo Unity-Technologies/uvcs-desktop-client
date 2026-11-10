@@ -23,6 +23,28 @@ interface DiffAppearance {
   wrapLines: boolean;
 }
 
+/**
+ * A row of comments under an added or removed line takes that line's tint, so it reads as part of the line it's on:
+ * the content's row only on the side holding the comments (`:has(slot)`; the other side's row is an empty buffer),
+ * and its gutter with the change bar, on a side holding such a row.
+ */
+function annotationRowTint(lineType: 'change-addition' | 'change-deletion', base: string): string {
+  const mixTarget = `var(${base})`;
+  const tint = `light-dark(color-mix(in lab, var(--diffs-bg) 88%, ${mixTarget}), color-mix(in lab, var(--diffs-bg) 80%, ${mixTarget}))`;
+  const gutterTint = `light-dark(color-mix(in lab, var(--diffs-bg) 91%, ${mixTarget}), color-mix(in lab, var(--diffs-bg) 85%, ${mixTarget}))`;
+  const row = `[data-line][data-line-type=${lineType}] + [data-line-annotation]`;
+  return (
+    `${row}:has(slot){--diffs-computed-decoration-bg:${tint}}` +
+    `[data-code]:has(${row} slot) [data-column-number][data-line-type=${lineType}] + [data-gutter-buffer=annotation]{` +
+    // The change bar as a background: Pierre's `::before` on a gutter buffer is what keeps the gutter's width.
+    `--diffs-computed-decoration-bg:${gutterTint};` +
+    `background-image:linear-gradient(${mixTarget},${mixTarget});background-size:4px 100%;background-repeat:no-repeat}`
+  );
+}
+
+const ANNOTATION_ROW_TINT_CSS =
+  annotationRowTint('change-addition', '--diffs-addition-base') + annotationRowTint('change-deletion', '--diffs-deletion-base');
+
 export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<LAnnotation, undefined> {
   return {
     theme: pierreThemeName(theme),
@@ -35,7 +57,7 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
     expandUnchanged: !collapseUnchanged,
     disableFileHeader: true,
     stickyHeader: false,
-    unsafeCSS: PIERRE_SURFACE_CSS,
+    unsafeCSS: PIERRE_SURFACE_CSS + ANNOTATION_ROW_TINT_CSS,
   };
 }
 
