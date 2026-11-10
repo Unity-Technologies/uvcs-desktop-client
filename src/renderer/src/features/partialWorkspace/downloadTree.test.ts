@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemType, TreeItem } from '@shared/domain/explorer';
 import { toggled } from './downloadSelection';
-import { downloadKey, downloadRows, downloadTreeOf, foldersToReadLoaded, rulesSummary, type DownloadRow } from './downloadTree';
+import { downloadKey, downloadRows, downloadTreeOf, foldersToReadLoaded, rootStatus, rulesSummary, type DownloadRow } from './downloadTree';
 
 function item(path: string, itemType: ItemType): TreeItem {
   return {
@@ -155,5 +155,18 @@ describe('rulesSummary', () => {
       '2 items to download, 1 to remove',
     );
     expect(rulesSummary([{ path: 'c', load: false }, { path: 'd', load: false }])).toBe('2 items to remove');
+  });
+});
+
+describe('rootStatus', () => {
+  it('waits for both sides of the root, then shows its items or says it holds none', () => {
+    expect(rootStatus(downloadTreeOf(new Map(), new Map([['', []]])), new Map())).toBe('loading');
+    expect(rootStatus(downloadTreeOf(listings, new Map()), new Map())).toBe('loading');
+    expect(rootStatus(downloadTreeOf(listings, new Map([['', []]])), new Map())).toBe('ready');
+    expect(rootStatus(downloadTreeOf(new Map([['', []]]), new Map([['', []]])), new Map())).toBe('empty');
+  });
+
+  it('says so when the root couldn’t be read', () => {
+    expect(rootStatus(downloadTreeOf(new Map(), new Map()), new Map([['', 'Couldn’t read this folder']]))).toBe('failed');
   });
 });
