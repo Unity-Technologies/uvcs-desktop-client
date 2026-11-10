@@ -1,6 +1,5 @@
 import { selectorSpec } from '@shared/domain/specs';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import type { CmClient } from '../cm/CmClient';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
@@ -15,7 +14,7 @@ import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 export async function rollBackSwitch(deps: ShelveFlowDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const reason = failureReason(cause);
   // Whatever fails from here, the changes are still safe in the shelve: the error says where.
-  const onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context).catch(() => false);
+  const onSource = await returnToSource(deps, workspacePath, record.source.spec, context).catch(() => false);
   if (onSource && (await putBackAfterFailure(deps, workspacePath, record, context))) {
     return new Error(`${reason}. Your changes were put back.`);
   }
@@ -28,9 +27,10 @@ export async function rollBackSwitch(deps: ShelveFlowDependencies, workspacePath
  * A switch that fails halfway has already moved the workspace to the target, some files updated and others not: it
  * goes back (nothing is pending by then). Resolves to whether the workspace is on the source.
  */
-async function returnToSource(cm: CmClient, workspacePath: string, sourceSpec: string, context: OperationContext): Promise<boolean> {
+async function returnToSource(deps: ShelveFlowDependencies, workspacePath: string, sourceSpec: string, context: OperationContext): Promise<boolean> {
+  const { cm } = deps;
   const isOnSource = async (): Promise<boolean> => selectorSpec((await readWorkspaceLoad(cm, workspacePath)).selector) === sourceSpec;
   if (await isOnSource()) return true;
-  await runSwitch(cm, workspacePath, sourceSpec, context);
+  await runSwitch(cm, workspacePath, sourceSpec, await deps.kindOf(workspacePath), context);
   return isOnSource();
 }

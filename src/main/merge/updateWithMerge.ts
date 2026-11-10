@@ -2,10 +2,10 @@ import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { UpdateConflict, UpdateResolutions, UpdateResult } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
-import { readUpdateProgress } from '../cm/progress/updateProgress';
-import { UPDATE_ARGS } from '../cm/updateArgs';
+import { updateCommand } from '../cm/updateArgs';
 import { waitForNextSecond } from '../files/nextSecond';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
@@ -24,13 +24,14 @@ import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type 
 export async function updateWithMerge(
   cm: CmClient,
   workspacePath: string,
+  kind: WorkspaceKind,
   resolutions: UpdateResolutions,
   backupsRoot: string,
   context: OperationContext,
 ): Promise<UpdateResult> {
   const { conflicts, blockedPaths } = await readIncomingChanges(cm, workspacePath);
   if (blockedPaths.length > 0) throw new Error(`Check in, shelve or undo your changes to ${blockedPaths.join(', ')} first: the branch deleted or moved them.`);
-  return updateMergingConflicts(cm, workspacePath, conflicts, resolutions, backupsRoot, context);
+  return updateMergingConflicts(cm, workspacePath, kind, conflicts, resolutions, backupsRoot, context);
 }
 
 /**
@@ -40,13 +41,14 @@ export async function updateWithMerge(
 export async function updateMergingConflicts(
   cm: CmClient,
   workspacePath: string,
+  kind: WorkspaceKind,
   conflicts: UpdateConflict[],
   resolutions: UpdateResolutions,
   backupsRoot: string,
   context: OperationContext,
 ): Promise<UpdateResult> {
-  const update = (): Promise<string> =>
-    cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
+  const { args, readProgress } = updateCommand(kind);
+  const update = (): Promise<string> => cm.execute(args, { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readProgress) });
 
   if (conflicts.length === 0) {
     await update();

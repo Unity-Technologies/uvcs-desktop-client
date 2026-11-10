@@ -16,6 +16,9 @@ export type BringDisabledReason = 'label' | 'shelve' | 'otherRepository';
 /** Why the changes can't stay behind. */
 export type LeaveDisabledReason = 'shelveSource';
 
+/** Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch of its own repository. */
+export type PartialSwitchDisabledReason = 'notBranch' | 'otherRepository';
+
 /** What the app knows about the workspace before switching it, to decide what to offer. */
 export interface SwitchPreflight {
   /** What the workspace is on now, e.g. `/main/t1`, `changeset 12` or `label v1`. */

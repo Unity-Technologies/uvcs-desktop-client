@@ -63,6 +63,42 @@ describe('switching a workspace without changes', () => {
   });
 });
 
+describe('switching a partial workspace', () => {
+  function partialWorkspace(scenario: WorkspaceScenario = {}) {
+    const workspace = workspaceWith(scenario);
+    return { ...workspace, deps: { ...workspace.deps, kindOf: async () => 'partial' as const } };
+  }
+
+  it('switches to a branch with cm partial switch, which keeps the files it was configured to load', async () => {
+    const { deps, commands, branch } = partialWorkspace();
+
+    expect(await switchTo(deps, 'br:/main/task2')).toEqual({ kind: 'switched' });
+    expect(branch()).toBe('/main/task2');
+    expect(commands.find((command) => command.args[0] === 'partial')).toMatchObject({ via: 'execute', args: ['partial', 'switch', 'br:/main/task2', '--noinput'] });
+  });
+
+  it('brings changes along with cm partial switch too', async () => {
+    const { deps, lines, branch } = partialWorkspace({ pending: EDITED_AND_ADDED });
+
+    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'brought' });
+    expect(branch()).toBe('/main/task2');
+    expect(lines().some((line) => line.startsWith('partial switch br:/main/task2'))).toBe(true);
+  });
+
+  const refuses = async (target: string, message: string) => {
+    const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
+    const before = { ...pending() };
+
+    await expect(switchTo(deps, target, 'leave')).rejects.toThrow(message);
+    expect(lines().filter((line) => /^(shelveset|undo|switch|partial)/.test(line))).toEqual([]);
+    expect(pending()).toEqual(before);
+  };
+
+  it.each(['cs:12', 'lb:v1', 'sh:4'])('refuses %s, touching nothing: cm partial switch takes only a branch', (target) => refuses(target, 'A partial workspace can only switch to a branch.'));
+
+  it('refuses a branch of another repository, touching nothing', () => refuses('br:/main@other@local', 'A partial workspace can only switch to a branch of its own repository.'));
+});
+
 describe('switching with changes refuses, touching nothing,', () => {
   const refuses = async (scenario: WorkspaceScenario, target: string, action: SwitchChangesAction | undefined, message: string | RegExp) => {
     const { deps, lines, pending } = workspaceWith(scenario);

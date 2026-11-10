@@ -31,30 +31,33 @@ import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
 import { listNarrowingDown } from '../workspace/listNarrowingDown';
 import { measureMoveSimilarities, type FileGlance } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
+import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
-export function createPendingChangesService({ cm, operations, revisionCat }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
-  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
+export function createPendingChangesService({ cm, operations, revisionCat, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+  const kindOf = kindFromHeaders(headers);
+  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf };
 
   function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
     return readPendingChanges(cm, workspacePath, pendingChangesStatusOptions(filter), { diskDetails: true });
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
-    return operations.run(operationId, ({ signal, progressOf }) =>
-      withTempFile(request.comment, async (commentsFile) => {
+    return operations.run(operationId, async ({ signal, progressOf }) => {
+      const kind = await kindOf(workspacePath);
+      return withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
-          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate), {
+          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate, kind), {
             cwd: workspacePath,
             signal,
             onOutputLine: progressOf(readCheckinProgress),
           }),
         );
         return readCheckinOutput(output);
-      }),
-    );
+      });
+    });
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {

@@ -1,7 +1,6 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
-import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { UPDATE_ARGS } from '../cm/updateArgs';
+import { updateCommand } from '../cm/updateArgs';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
@@ -35,6 +34,7 @@ export async function shelveBlockedAndUpdate(
   if (incoming.blockedPaths.length === 0) throw new Error('Nothing blocks the update anymore: update from Incoming.');
 
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
+  const kind = await deps.kindOf(workspacePath);
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so nothing was shelved.`);
 
@@ -56,9 +56,10 @@ export async function shelveBlockedAndUpdate(
     context.beginStep('Updating', 2, 2);
     if (incoming.conflicts.length > 0) {
       // The blocking files are undone: what came in, read before shelving, is all the update has to merge.
-      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
+      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, kind, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
     }
-    await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
+    const { args, readProgress } = updateCommand(kind);
+    await cm.execute(args, { cwd: workspacePath, onOutputLine: context.progressOf(readProgress) });
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
     throw await changesPutBackError(deps, workspacePath, record, `Couldn't update: ${failureReason(error)}`, context);

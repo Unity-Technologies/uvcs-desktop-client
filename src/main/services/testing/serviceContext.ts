@@ -5,9 +5,13 @@ import { WorkspaceCopies } from '../../files/WorkspaceCopies';
 import { OperationTracker } from '../../operations/OperationTracker';
 import { ProfileList } from '../../cm/ProfileList';
 import { HandedOverDiffs } from '../../window/HandedOverDiffs';
+import { cmHeaderReaders, WorkspaceHeaders } from '../../workspace/WorkspaceHeaders';
 import type { ProfilesContext, ServiceContext } from '../ServiceContext';
 
-/** A `ServiceContext` for a service test: its `cm`, a real `OperationTracker`, and whatever else the service uses. */
+/**
+ * A `ServiceContext` for a service test: its `cm`, a real `OperationTracker`, the workspace headers read through that
+ * `cm` (`cm getworkspacefrompath`: answer it with `cmOutput.WORKSPACE_NAMES`), and whatever else the service uses.
+ */
 export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}): ServiceContext {
   const operations = new OperationTracker(
     () => undefined,
@@ -15,7 +19,7 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
   );
   // Nothing downloads in a service's test unless it says so: the trees list through its fake `cm`.
   const downloads = { read: () => Promise.reject(new Error('Nothing downloads here')) };
-  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), ...parts } as ServiceContext;
+  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), ...parts } as ServiceContext;
 }
 
 /** The profiles read the accounts, the servers and the setup check share, over the test's `cm`. */

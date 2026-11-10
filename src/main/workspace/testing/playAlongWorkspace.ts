@@ -218,6 +218,9 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     undo,
     switch: switchTo,
     update,
+    // A partial workspace's `cm partial switch` and `cm partial update` move it as their regular forms do.
+    'partial switch': (command) => switchTo({ ...command, args: command.args.slice(1) }),
+    'partial update': (command) => update({ ...command, args: command.args.slice(1) }),
     merge: mergeShelve,
     'lock list': () =>
       formatOutput(

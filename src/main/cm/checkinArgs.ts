@@ -1,3 +1,4 @@
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { onLinksThemselves } from './symlinkArgs';
 
 /**
@@ -5,8 +6,10 @@ import { onLinksThemselves } from './symlinkArgs';
  * takes everything under each path, with `--private` every private item there too, so it is asked for only when a
  * private item is to go in. `--dependencies` takes the private and added folders above each path, and nothing else in
  * them, so a private file goes in without its folder given (which would take all the folder holds). A link named checks in the link itself: without `--symlink` cm checks in the file it
- * points to ("The item /README.md is not changed").
+ * points to ("The item /README.md is not changed"). A partial workspace checks in with `cm partial checkin`, which takes
+ * the same options.
  */
-export function checkinArgs(paths: string[], commentsFile: string, addsPrivate: boolean): string[] {
-  return onLinksThemselves('checkin', ...paths, '--all', '--dependencies', ...(addsPrivate ? ['--private'] : []), `-commentsfile=${commentsFile}`, '--machinereadable');
+export function checkinArgs(paths: string[], commentsFile: string, addsPrivate: boolean, kind: WorkspaceKind): string[] {
+  const args = onLinksThemselves('checkin', ...paths, '--all', '--dependencies', ...(addsPrivate ? ['--private'] : []), `-commentsfile=${commentsFile}`, '--machinereadable');
+  return kind === 'partial' ? ['partial', ...args] : args;
 }

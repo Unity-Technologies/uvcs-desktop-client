@@ -72,7 +72,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   });
   const records = new SwitchShelveRecords(memorySettings());
   const finish = vi.fn(async () => {});
-  const deps = { cm: fake.cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups') };
+  const deps = { cm: fake.cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups'), kindOf: async () => 'standard' as const };
   return { ...fake, deps, records, finish, shelveComment: () => shelveComment };
 }
 

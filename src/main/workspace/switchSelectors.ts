@@ -1,5 +1,5 @@
 import { selectorSpec } from '@shared/domain/specs';
-import type { BringDisabledReason, LeaveDisabledReason } from '@shared/domain/switchWithChanges';
+import type { BringDisabledReason, LeaveDisabledReason, PartialSwitchDisabledReason } from '@shared/domain/switchWithChanges';
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 
 const KINDS_BY_PREFIX: Record<string, SelectorKind> = { br: 'branch', cs: 'changeset', lb: 'label', sh: 'shelve' };
@@ -42,4 +42,12 @@ export function bringDisabledReason(targetSpec: string, workspaceRepositoryName:
 /** Changes can only stay behind where a shelve comment can name the place they were made: not on a shelve. */
 export function leaveDisabledReason(source: WorkspaceSelector): LeaveDisabledReason | undefined {
   return source.kind === 'shelve' ? 'shelveSource' : undefined;
+}
+
+/** A partial workspace switches only to a branch of its own repository: `cm partial switch` takes nothing else. */
+export function partialSwitchDisabledReason(targetSpec: string, workspaceRepositoryName: string): PartialSwitchDisabledReason | undefined {
+  const { selector, repositoryName } = parseSelectorSpec(targetSpec);
+  if (selector.kind !== 'branch') return 'notBranch';
+  if (repositoryName && repositoryName !== workspaceRepositoryName) return 'otherRepository';
+  return undefined;
 }

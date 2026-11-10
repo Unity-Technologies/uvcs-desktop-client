@@ -36,4 +36,10 @@ describe('runsLong', () => {
     // A deleted folder comes back with everything it held, downloaded.
     expect(runsLong(['undelete', 'revid:24', '/ws/docs'])).toBe(true);
   });
+
+  it('takes a partial workspace’s transfers as long', () => {
+    expect(runsLong(['partial', 'update', '--dontmerge'])).toBe(true);
+    expect(runsLong(['partial', 'switch', 'br:/main/task', '--noinput'])).toBe(true);
+    expect(runsLong(['partial', 'checkin', '/ws/a.txt', '--machinereadable'])).toBe(true);
+  });
 });
