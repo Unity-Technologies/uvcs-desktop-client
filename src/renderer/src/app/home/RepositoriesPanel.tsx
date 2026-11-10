@@ -16,7 +16,7 @@ import { noRepositoriesState, projectChoices, repositoriesInProject, shownProjec
 import { ProjectFilter } from './ProjectFilter';
 import { useProjectPickStore } from './projectPickStore';
 import { RepositoryList, type RepositoryListHandle } from './RepositoryList';
-import { matchingRepositories, repositoryListRows, workspacesByRepository } from './repositoryListRows';
+import { matchingRepositories, repositoryListRows, workspaceKindsByPath, workspacesByRepository } from './repositoryListRows';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
 
 interface RepositoriesPanelProps {
@@ -79,6 +79,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
       <RepositoryList
         ref={listRef}
         rows={rows}
+        workspaceKinds={workspaceKindsByPath(workspaceEntries)}
         query={filter}
         project={project}
         onToggle={toggle}
