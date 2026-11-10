@@ -1,7 +1,7 @@
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NewWorkspaceFormInput } from './newWorkspaceForm';
+import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NewWorkspaceFormInput } from './newWorkspaceForm';
 
 const root = join('Users', 'me', 'wkspaces');
 const repositoryOnServer = (name: string): RepositorySummary => ({ id: name, name, server: 'acme@cloud', owner: 'me', spec: `${name}@acme@cloud` });
@@ -19,7 +19,10 @@ const input: NewWorkspaceFormInput = {
   chosenPath: undefined,
   root,
   dynamicAvailable: false,
-  dynamicChosen: false,
+  kindChosen: 'standard',
+  topFolders: undefined,
+  topFoldersFailed: false,
+  pickedFolders: [],
   creating: false,
 };
 
@@ -41,6 +44,10 @@ describe('newWorkspaceFormOf', () => {
         path: join(root, 'game'),
         offersDynamic: false,
         dynamic: false,
+        offersPartial: true,
+        partial: false,
+        folderList: 'loading',
+        folders: [],
         canCreate: true,
       });
     });
@@ -153,15 +160,66 @@ describe('newWorkspaceFormOf: the dynamic choice', () => {
   });
 
   it('makes the workspace dynamic when ticked', () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, dynamicChosen: true })).toMatchObject({ dynamic: true, canCreate: true });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'dynamic' })).toMatchObject({ dynamic: true, canCreate: true });
   });
 
   it('is offered with a new repository too, which a dynamic workspace can start on', () => {
-    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', dynamicAvailable: true, dynamicChosen: true })).toMatchObject({ createsRepository: true, dynamic: true });
+    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', dynamicAvailable: true, kindChosen: 'dynamic' })).toMatchObject({ createsRepository: true, dynamic: true });
   });
 
   it("doesn't make the workspace dynamic when ticked but no longer offered", () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: false, dynamicChosen: true })).toMatchObject({ offersDynamic: false, dynamic: false });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: false, kindChosen: 'dynamic' })).toMatchObject({ offersDynamic: false, dynamic: false });
+  });
+});
+
+describe('newWorkspaceFormOf: the partial choice', () => {
+  const inGame: NewWorkspaceFormInput = { ...input, repositoryName: 'game', topFolders: ['Assets', 'Docs', 'Tools'] };
+
+  it('is offered only for a repository that exists, whose folders can be picked', () => {
+    expect(newWorkspaceFormOf(inGame)).toMatchObject({ offersPartial: true, partial: false });
+    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false });
+    expect(newWorkspaceFormOf({ ...input, kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false });
+  });
+
+  it('makes the workspace partial, not dynamic, when chosen', () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial', pickedFolders: ['Assets'] })).toMatchObject({ partial: true, dynamic: false });
+  });
+
+  it("can't create until a folder is picked", () => {
+    expect(newWorkspaceFormOf({ ...inGame, kindChosen: 'partial' })).toMatchObject({ canCreate: false });
+    expect(newWorkspaceFormOf({ ...inGame, kindChosen: 'partial', pickedFolders: ['Docs'] })).toMatchObject({ canCreate: true });
+  });
+
+  it('loads the picked folders in the order the repository lists them, dropping any it no longer has', () => {
+    const form = newWorkspaceFormOf({ ...inGame, kindChosen: 'partial', pickedFolders: ['Tools', 'Gone', 'Assets'] });
+    expect(form.folders).toEqual(['Assets', 'Tools']);
+  });
+
+  it('says whether the folders are loading, failed or ready', () => {
+    expect(newWorkspaceFormOf({ ...inGame, topFolders: undefined }).folderList).toBe('loading');
+    expect(newWorkspaceFormOf({ ...inGame, topFolders: undefined, topFoldersFailed: true }).folderList).toBe('failed');
+    expect(newWorkspaceFormOf(inGame).folderList).toBe('ready');
+  });
+
+  it("can't create a partial workspace of a repository with no folders", () => {
+    expect(newWorkspaceFormOf({ ...inGame, topFolders: [], kindChosen: 'partial' })).toMatchObject({ folderList: 'ready', folders: [], canCreate: false });
+  });
+});
+
+describe('toggledKind', () => {
+  it('takes the kind ticked, leaving the other one', () => {
+    expect(toggledKind('standard', 'partial', true)).toBe('partial');
+    expect(toggledKind('dynamic', 'partial', true)).toBe('partial');
+    expect(toggledKind('partial', 'dynamic', true)).toBe('dynamic');
+  });
+
+  it('goes back to standard when the kind chosen is unticked', () => {
+    expect(toggledKind('partial', 'partial', false)).toBe('standard');
+    expect(toggledKind('dynamic', 'dynamic', false)).toBe('standard');
+  });
+
+  it('keeps the kind chosen when another one is unticked', () => {
+    expect(toggledKind('dynamic', 'partial', false)).toBe('dynamic');
   });
 });
 
