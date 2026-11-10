@@ -24,4 +24,8 @@ describe('workspaceCardTip', () => {
     expect(workspaceCardTip({ name: 'game', repository: 'game@local', kind: 'standard' })).toBe('game · game@local');
     expect(workspaceCardTip({ name: 'game', repository: 'game@local', kind: 'partial' })).toBe('game · game@local · Partial workspace');
   });
+
+  it('says no kind when it is unknown', () => {
+    expect(workspaceCardTip({ name: 'game', repository: 'game@local' })).toBe('game · game@local');
+  });
 });

@@ -12,9 +12,13 @@ describe('workspaceKindOf', () => {
     expect(workspaceKindOf('partial', 'dynamic')).toBe('dynamic');
   });
 
-  it('reads padded or capitalized values, and anything unknown as standard', () => {
+  it('reads padded or capitalized values', () => {
     expect(workspaceKindOf(' Partial\r', 'Static ')).toBe('partial');
-    expect(workspaceKindOf('', '')).toBe('standard');
-    expect(workspaceKindOf('something', 'else')).toBe('standard');
+    expect(workspaceKindOf('Regular ', ' STATIC')).toBe('standard');
+  });
+
+  it('tells nothing when cm printed no kind it knows, rather than guess standard', () => {
+    expect(workspaceKindOf('', '')).toBeUndefined();
+    expect(workspaceKindOf('something', 'else')).toBeUndefined();
   });
 });
