@@ -175,6 +175,22 @@ describe('creating a workspace', () => {
     expect(lines()).toEqual([`workspace create game ${path} --dynamic --tree=br:/main@game@local`]);
   });
 
+  it("removes a partial workspace whose partial update failed, and the folder it made, so creating it again works", async () => {
+    const path = await emptyFolder();
+    const { service, lines } = workspaces({
+      'workspace create': async () => {
+        await mkdir(path);
+        return '';
+      },
+      'partial update': cmFails('Error: The server is not reachable.'),
+      'workspace delete': '',
+    });
+
+    await expect(service.create({ name: 'game', path, repository: 'game@local', kind: 'partial' })).rejects.toThrow('The server is not reachable.');
+    expect(lines().at(-1)).toBe(`workspace delete ${path}`);
+    expect(existsSync(path)).toBe(false);
+  });
+
   it("fails when the new workspace isn't listed", async () => {
     const path = await emptyFolder();
     const { service } = workspaces({ 'workspace create': '', 'workspace list': '' });
