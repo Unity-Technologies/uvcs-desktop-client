@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
-import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
+import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
 import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
@@ -112,9 +112,9 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
-  function configurePartial(workspacePath: string, folders: string[], operationId: string): Promise<void> {
+  function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal }) => {
-      await cm.execute(partialConfigureArgs(folders), { cwd: workspacePath, signal });
+      await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
     });
   }
 

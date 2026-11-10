@@ -1,5 +1,5 @@
 import type { SwitchChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, PartialRule, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -83,10 +83,10 @@ export interface WorkspacesApi {
   /** Loads `targetSpec` in a workspace just created (nothing pending, nothing loaded): a plain `cm switch`. */
   switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
   /**
-   * Loads `folders` (paths from the repository's root, such as `Assets`) and everything below them in a partial
-   * workspace: they download as they're configured, so no update follows.
+   * Changes what a partial workspace has loaded, all at once or not at all: each rule downloads or removes a file or a
+   * folder and everything below it, as it's configured, so no update follows. One `cm partial configure`.
    */
-  configurePartial(workspacePath: string, folders: string[], operationId: string): Promise<void>;
+  configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void>;
   /**
    * Undoes the creation of a workspace that failed halfway: unregisters it, and deletes its folder when `create`
    * made it (it didn't exist or was empty), so nothing of the user's goes.
