@@ -6,7 +6,7 @@ import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
 const treeItemsIn = (output: string) => recordsIn(output, readTreeItem);
-import { conflictListingArgs, destinationTree, withConflictRepositories, withRepositories } from './conflictRepositories';
+import { conflictListingArgs, destinationTree, noLoadedTreeMessage, withConflictRepositories, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
 const OWN = '/01project/src/client/cm/commands/merge/MergePrinter.cs';
@@ -28,6 +28,13 @@ const LISTING = recordsOutput(
   { name: 'MergePrinter.cs', wkpath: OWN, type: 'txt', size: 4211, changeset: 276520, repspec: 'rep:acme@acme@cloud', revid: 31259533, itemid: 420525 },
   { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 30889126, changeset: 276611, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 },
 );
+
+describe('noLoadedTreeMessage', () => {
+  it('says what to do on a shelve and in a partial workspace, neither of which has one changeset loaded', () => {
+    expect(noLoadedTreeMessage({ kind: 'shelve', name: '3' })).toMatch(/shelve.*Switch it to a branch/);
+    expect(noLoadedTreeMessage({ kind: 'branch', name: '/main' })).toMatch(/partial workspace.*standard workspace/);
+  });
+});
 
 describe('destinationTree', () => {
   it('is the destination contributor, else the branch merged into, else the workspace tells', () => {
