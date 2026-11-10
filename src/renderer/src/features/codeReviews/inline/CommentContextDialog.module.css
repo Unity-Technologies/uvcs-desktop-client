@@ -47,21 +47,26 @@
 }
 
 /*
- * Unfolded, with replies or the reply box open, it takes at most 40% of the height, scrolling within it: the files keep
- * the rest, and the dialog never scrolls as a whole.
+ * Unfolded, with replies or the reply box open, it takes at most 40% of the height, its comments scrolling within it:
+ * the files keep the rest, and the dialog never scrolls as a whole.
  */
 .threadAbove {
   flex: none;
   max-height: 40%;
-  overflow: auto;
 }
 
 /*
- * Its card keeps its whole height, for this box to scroll: shrunk to fit the box, the card (whose own overflow is
- * hidden, for its rounded corners) clipped its text instead, and a long thread couldn't be read.
+ * Its card fits the box whole, its border drawn all round, and its comments scroll inside it, under its header band
+ * (`data-thread-body`). The box scrolling the card instead cut the card's border off at the bottom; shrinking the card
+ * alone clipped the text with nothing to scroll.
  */
 .threadAbove > * {
-  flex-shrink: 0;
+  min-height: 0;
+}
+
+.threadAbove [data-thread-body] {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .note {

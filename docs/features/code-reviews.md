@@ -226,8 +226,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   while it's selected (`appliedFilesHeading`). When that changeset didn't change the commented file at all (the request
   applied elsewhere: a missing test added, a sibling fixed), How it was applied lists its files alone, the first
   selected, the thread above them, folded to its first words (`contextBodyOf`, which picks it over the thread alone;
-  unfolded, it takes at most 40% of the height and scrolls within it, its card keeping its whole height: shrunk to
-  fit, the card clipped a long thread instead), so the request and its fix read together; the subtitle
+  unfolded, it takes at most 40% of the height, its border whole and its comments scrolling inside it under its header
+  band, `data-thread-body`: the box scrolling the card cut its border off, and the card shrunk alone clipped a long
+  thread with nothing to scroll), so the request and its fix read together; the subtitle
   says the changeset applied it in other files, and the view switch stays, leading back to When commented. It says
   "applied", even for a request marked applied by hand there: what the review records can't tell the two apart, and
   the files beside it show what that changeset did. No list for a fix of that file alone. The list costs no command:

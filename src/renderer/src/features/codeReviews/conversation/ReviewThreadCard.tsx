@@ -102,7 +102,8 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
     >
       {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onSeeAnswer={seeAnswer} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
       {inCode?.snippet}
-      <div className={styles.threadBody}>
+      {/* Named for a place that bounds the card's height and scrolls its body (See in context's thread above the files). */}
+      <div className={styles.threadBody} data-thread-body="">
         {folded ? (
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
           <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
