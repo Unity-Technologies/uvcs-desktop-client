@@ -88,6 +88,12 @@ export interface WorkspacesApi {
    */
   configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void>;
   /**
+   * The children of `folder` (from the root, forward slashes, '' for the root) a workspace has loaded, as paths from
+   * the root; a folder counts as loaded when anything below it is. One `cm ls` of the folder, which reads the
+   * workspace's metadata; only for a folder that is loaded, since `cm` fails on one that isn't.
+   */
+  loadedIn(workspacePath: string, folder: string): Promise<string[]>;
+  /**
    * Undoes the creation of a workspace that failed halfway: unregisters it, and deletes its folder when `create`
    * made it (it didn't exist or was empty), so nothing of the user's goes.
    */

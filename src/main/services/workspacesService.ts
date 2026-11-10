@@ -6,6 +6,7 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
+import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
 import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
@@ -118,6 +119,12 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
+  async function loadedIn(workspacePath: string, folder: string): Promise<string[]> {
+    const items = await cm.queryRecords(loadedItemsArgs([join(workspacePath, folder)]), readLoadedItem, { cwd: workspacePath });
+    // `cm ls` lists the folder itself first.
+    return items.filter((item) => item.path !== folder).map((item) => item.path);
+  }
+
   async function discardNew(workspacePath: string): Promise<void> {
     await cm.query(['workspace', 'delete', workspacePath]);
     if (!createdFolders.delete(workspacePath)) return;
@@ -153,6 +160,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
     configurePartial,
+    loadedIn,
     discardNew,
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
