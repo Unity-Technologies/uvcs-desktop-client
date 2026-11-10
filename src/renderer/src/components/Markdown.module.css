@@ -45,7 +45,7 @@
   font-size: 0.92em;
 }
 
-/* Inline code: crimson in a pill with a faint border (`--border-default`: the subtle one all but
+/* Inline code: berry (`--text-code`) in a pill with a faint border (`--border-default`: the subtle one all but
    vanishes around the pill, in the dark theme most). A code block's code keeps the text's color and no border. */
 .markdown code {
   padding: 1px 4px;
