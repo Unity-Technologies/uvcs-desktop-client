@@ -5,3 +5,8 @@
   z-index: 1100;
   pointer-events: none;
 }
+
+/* A card that scrolls (a long attribute value) takes the pointer, so the wheel reaches it. */
+.card[data-scrolls='true'] {
+  pointer-events: auto;
+}
