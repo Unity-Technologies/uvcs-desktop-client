@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInForView, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
@@ -162,6 +162,21 @@ describe('the token step’s words and readiness', () => {
     expect(signInMethodShown(['deviceCode', 'token'], false)).toBe('deviceCode');
     expect(signInMethodShown(['deviceCode', 'token'], true)).toBe('token');
     expect(signInMethodShown(['token'], false)).toBe('token');
+  });
+
+  it('keeps a sign-in’s failure on screen once the sign-in, kept though its project couldn’t be read, turns the step into using it', () => {
+    const failure = { reason: 'projectUnreadable', project: 'acme/game', installPage: 'https://github.com/apps/acme-desktop/installations/new' } as const;
+    const useIt = { kind: 'useConnection', connection: { ...jira, kind: 'github', server: 'https://github.com' }, words: '' } as const;
+    expect(signInForView(useIt, 'game@acme@unity', false, failure)).toEqual({ kind: 'useConnection', failure });
+    expect(signInForView(useIt, undefined, false, failure)).toEqual({ kind: 'alreadySignedIn', failure });
+    expect(signInForView(useIt, undefined, false, null)).toEqual({ kind: 'alreadySignedIn', failure: null });
+  });
+
+  it('shows a failed sign-in under the device flow; the token step words its own', () => {
+    const failure = { reason: 'denied' } as const;
+    const signIn = { kind: 'signIn', methods: ['deviceCode', 'token'], trackerName: 'GitHub' } as const;
+    expect(signInForView(signIn, undefined, false, failure)).toEqual({ kind: 'signIn', method: 'deviceCode', failure });
+    expect(signInForView(signIn, undefined, true, failure)).toEqual({ kind: 'signIn', method: 'token', failure: null });
   });
 
   it('adds a project by a link that reads as an issue', () => {
