@@ -2,7 +2,7 @@ import type { LinkSignIn, RepositorySignIn, TokenPageChoice, TokenPageTarget } f
 import type { BoundProject, BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, TrackerErrorReason, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
 import { sameRepository } from '@shared/issueTrackers/issueReferences';
-import { deviceFlowHostsOf } from '@shared/issueTrackers/signInMethods';
+import { deviceFlowHostsOf, type GitHubApp } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import type { IssueTrackerStore, StoredConnection } from './IssueTrackerStore';
@@ -26,8 +26,8 @@ export interface IssueTrackersDeps {
   now: () => number;
   /** The device flow's wait between polls. */
   wait: Wait;
-  /** OAuth apps' client ids by host (`GITHUB_OAUTH_CLIENT_IDS`). */
-  oauthClientIds: Readonly<Record<string, string>>;
+  /** The GitHub Apps the device flow signs in with, by host (`GITHUB_APPS`). */
+  githubApps: Readonly<Record<string, GitHubApp>>;
   providers?: Readonly<Record<IssueTrackerKind, IssueTrackerProvider>>;
   /** Opens a web page in the browser (`shell.openExternal`): the token pages. */
   openExternal: (url: string) => void;
@@ -76,7 +76,7 @@ export class IssueTrackers {
     const connections = store.connections().map((connection) => this.withCredential(connection));
     // Every window reads the setup as it shows comments: the keychain is asked only once a tracker is connected.
     const sessionOnly = connections.length > 0 && !secrets.canKeep();
-    return { connections, bindings: [...store.bindings()], sessionOnly, deviceFlowHosts: deviceFlowHostsOf(this.deps.oauthClientIds) };
+    return { connections, bindings: [...store.bindings()], sessionOnly, deviceFlowHosts: deviceFlowHostsOf(this.deps.githubApps) };
   }
 
   async signInWithToken(request: LinkSignIn & { token: string }): Promise<SignInOutcome> {
@@ -139,7 +139,7 @@ export class IssueTrackers {
     const again = 'connectionId' in request ? this.deps.store.connection(request.connectionId) : undefined;
     const reading = 'connectionId' in request ? (again ?? { failure: { reason: 'unexpected', message: 'This sign-in is gone' } as const }) : this.readLink(request.link);
     if ('failure' in reading) return reading;
-    const clientId = this.deps.oauthClientIds[new URL(reading.server).hostname] ?? '';
+    const clientId = this.deps.githubApps[new URL(reading.server).hostname]?.clientId ?? '';
     if (reading.kind !== 'github' || !clientId) return { failure: { reason: 'unexpected', message: 'This tracker has no browser sign-in' } };
     const device = { server: reading.server, clientId };
     const http = this.deps.http.bound([new URL(reading.server).origin], null);

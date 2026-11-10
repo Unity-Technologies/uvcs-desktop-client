@@ -142,8 +142,8 @@ Every edge with the outside is passed in, never imported where it's used:
 - The files' paths, as `SettingsStore` takes its own.
 
 A development build reads two variables (`createIssueTrackers`; a packaged app reads neither):
-`UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for GitHub's device flow in place of the app's
-(`GITHUB_OAUTH_CLIENT_IDS`), and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do (`scripts/e2e/fakeTrackers.cjs`), to see every flow with no account
+`UVCS_GITHUB_APP_CLIENT_ID`, the client id of a GitHub App of the developer's own for GitHub's device flow in place of
+the app's (`GITHUB_APPS`), and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do (`scripts/e2e/fakeTrackers.cjs`), to see every flow with no account
 and no network.
 
 The Connect flow's decisions (which step shows, its words, which failure gets which message, what the suggestion
@@ -477,7 +477,7 @@ Settings.
 
 | Server | Methods |
 | --- | --- |
-| github.com | The device flow, where the app ships an OAuth App's client id (`GITHUB_OAUTH_CLIENT_IDS`); a token otherwise |
+| github.com | The device flow, where the app ships a GitHub App's client id (`GITHUB_APPS`); a token otherwise |
 | `<name>.ghe.com`, Enterprise Server | A token: the device flow needs an app registered on that server |
 | Jira Cloud | An API token and the account's email: Atlassian's OAuth needs a client secret, which a desktop app can't keep |
 | Jira Data Center | A token sent as Bearer, no email: Jira's own personal access token, or one an app makes where the server turns those off (resolution's API Token Authentication, whose tokens may be read-only: every request is a GET). Browser sign-in would need an application link each site's admin sets up: its `browser` slot stays empty |
@@ -491,7 +491,7 @@ approves. Main polls the token endpoint at the server's pace (`pollForToken`, `n
 waits the interval, `slow_down` five seconds more, `access_denied` and `expired_token` end it), then signs in as with a
 token. No client secret is needed, so none ships. "Use a token instead" is a quiet link beside the button.
 
-The app's OAuth App on github.com (its client id in `GITHUB_OAUTH_CLIENT_IDS`) has Device Flow on and "Expire user
+The app's OAuth App on github.com (its client id in `GITHUB_APPS`) has Device Flow on and "Expire user
 access tokens" off: the app keeps the access token alone, no refresh token, so a token that expired would ask the user
 to sign in again every eight hours. The token lasts until the user signs out, revokes the app on GitHub, or leaves it
 unused for a year (GitHub then revokes it): each asks the user to sign in again. Turning expiry on first needs the

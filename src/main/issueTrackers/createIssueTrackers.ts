@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { safeStorage, session, shell } from 'electron';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
-import { GITHUB_OAUTH_CLIENT_IDS } from '@shared/issueTrackers/signInMethods';
+import { GITHUB_APPS } from '@shared/issueTrackers/signInMethods';
 import { askHostConsent } from './askHostConsent';
 import { IssueTrackers } from './IssueTrackers';
 import { IssueTrackerStore } from './IssueTrackerStore';
@@ -16,7 +16,7 @@ interface TrackersWiring {
   /** Logs a request in the command log, beside `cm`'s commands. */
   logRequest: (entry: TrackerRequestLog) => void;
   changed: (setup: IssueTrackerSetup) => void;
-  /** A development build: it may sign in with its own OAuth app and answer from a fake tracker (below). */
+  /** A development build: it may sign in with its own GitHub App and answer from a fake tracker (below). */
   development: boolean;
   env: NodeJS.ProcessEnv;
 }
@@ -27,9 +27,9 @@ interface TrackersWiring {
  * browser for the token pages, and main's own dialog asking before a sign-in goes to a host no tracker is known by
  * (`askHostConsent`).
  *
- * A development build reads two variables: `UVCS_GITHUB_OAUTH_CLIENT_ID`, an OAuth app of the developer's own for
- * GitHub's device flow in place of the app's (`GITHUB_OAUTH_CLIENT_IDS`), and `UVCS_FAKE_TRACKERS`, a module whose `fetch` answers as the trackers do
- * (`scripts/e2e/fakeTrackers.cjs`), to see the flows with no account. A packaged app reads neither.
+ * A development build reads two variables: `UVCS_GITHUB_APP_CLIENT_ID`, the client id of a GitHub App of the
+ * developer's own for GitHub's device flow in place of the app's (`GITHUB_APPS`), and `UVCS_FAKE_TRACKERS`, a module
+ * whose `fetch` answers as the trackers do (`scripts/e2e/fakeTrackers.cjs`), to see the flows with no account. A packaged app reads neither.
  */
 export function createIssueTrackers({ userData, logRequest, changed, development, env }: TrackersWiring): IssueTrackers {
   const fake = development && env.UVCS_FAKE_TRACKERS ? env.UVCS_FAKE_TRACKERS : null;
@@ -44,7 +44,7 @@ export function createIssueTrackers({ userData, logRequest, changed, development
     // Against the fake trackers, a token page would be a real tracker's: it's named in the console instead.
     openExternal: (url) => (fake ? console.log(`[fake trackers] the token page: ${url}`) : void shell.openExternal(url)),
     askHostConsent,
-    oauthClientIds: development && env.UVCS_GITHUB_OAUTH_CLIENT_ID ? { ...GITHUB_OAUTH_CLIENT_IDS, 'github.com': env.UVCS_GITHUB_OAUTH_CLIENT_ID } : GITHUB_OAUTH_CLIENT_IDS,
+    githubApps: development && env.UVCS_GITHUB_APP_CLIENT_ID ? { ...GITHUB_APPS, 'github.com': { clientId: env.UVCS_GITHUB_APP_CLIENT_ID } } : GITHUB_APPS,
   });
 }
 

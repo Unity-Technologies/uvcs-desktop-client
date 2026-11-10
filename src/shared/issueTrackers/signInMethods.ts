@@ -1,19 +1,24 @@
 import type { IssueTrackerKind, SignInMethodKind } from '../domain/issueTrackers';
 
+/** An app registered on a GitHub host that the device flow signs in with. */
+export interface GitHubApp {
+  /** Public, as the device flow needs no secret, so it ships with the app. */
+  clientId: string;
+}
+
 /**
- * The OAuth apps the device flow signs in with, by the host they're registered on: a client id is public (the device
- * flow needs no secret), so it ships with the app. A host whose id is empty isn't offered the device flow, only a
- * token. The app keeps no refresh token, so the OAuth app's "Expire user access tokens" stays off
- * (docs/features/issue-trackers.md, "The device flow").
+ * The apps the device flow signs in with, by the host they're registered on. A host with none, or whose client id is
+ * empty, isn't offered the device flow, only a token. The app keeps no refresh token, so the registered app's
+ * "Expire user access tokens" stays off (docs/features/issue-trackers.md, "The device flow").
  */
-export const GITHUB_OAUTH_CLIENT_IDS: Readonly<Record<string, string>> = {
-  'github.com': 'Ov23li9k9uyuCxbsWJSa',
+export const GITHUB_APPS: Readonly<Record<string, GitHubApp>> = {
+  'github.com': { clientId: 'Ov23li9k9uyuCxbsWJSa' },
 };
 
-/** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_OAUTH_CLIENT_ID`). */
-export function deviceFlowHostsOf(clientIds: Readonly<Record<string, string>>): string[] {
-  return Object.entries(clientIds)
-    .filter(([, clientId]) => clientId !== '')
+/** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_APP_CLIENT_ID`). */
+export function deviceFlowHostsOf(apps: Readonly<Record<string, GitHubApp>>): string[] {
+  return Object.entries(apps)
+    .filter(([, app]) => app.clientId !== '')
     .map(([host]) => host);
 }
 

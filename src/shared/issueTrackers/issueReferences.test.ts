@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '../domain/issueTrackers';
 import { bindingOf, issueReferenceReader, sameRepository } from './issueReferences';
-import { deviceFlowHostsOf, GITHUB_OAUTH_CLIENT_IDS, signInMethodsFor } from './signInMethods';
+import { deviceFlowHostsOf, GITHUB_APPS, signInMethodsFor } from './signInMethods';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*' };
@@ -78,11 +78,11 @@ describe('signInMethodsFor', () => {
   });
 
   it('names the hosts with a client id', () => {
-    expect(deviceFlowHostsOf({ 'github.com': '' })).toEqual([]);
-    expect(deviceFlowHostsOf({ 'github.com': 'Iv1.abc' })).toEqual(['github.com']);
+    expect(deviceFlowHostsOf({ 'github.com': { clientId: '' } })).toEqual([]);
+    expect(deviceFlowHostsOf({ 'github.com': { clientId: 'Iv1.abc' } })).toEqual(['github.com']);
   });
 
   it('ships the app’s client id for github.com, so signing in to GitHub starts with its device flow', () => {
-    expect(deviceFlowHostsOf(GITHUB_OAUTH_CLIENT_IDS)).toEqual(['github.com']);
+    expect(deviceFlowHostsOf(GITHUB_APPS)).toEqual(['github.com']);
   });
 });
