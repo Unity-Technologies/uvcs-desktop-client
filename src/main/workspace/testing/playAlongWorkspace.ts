@@ -205,8 +205,9 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     const folders = [...new Set(shelved.map(([path]) => path.split('/').slice(0, -1).join('/')))].filter((folder) => folder !== '');
     const changedSince = (index: number) => index < (fail.shelveConflicts ?? 0);
     const files = shelved
-      .filter(([, codes], index) => changedSince(index) || !isAdded(codes))
-      .map(([path], index) => [path, 'txt', changedSince(index) ? 12 : 11, '']);
+      .map(([path, codes], index) => ({ path, codes, changed: changedSince(index) }))
+      .filter(({ codes, changed }) => changed || !isAdded(codes))
+      .map(({ path, changed }) => [path, 'txt', changed ? 12 : 11, '']);
     return formatOutput(...folders.map((folder) => [folder, 'dir', 5, '']), ...files);
   };
 

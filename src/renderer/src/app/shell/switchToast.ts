@@ -34,6 +34,20 @@ function changesEnding(result: SwitchResult, title: string): OperationSuccess {
     case 'brought':
       return { kind: 'success', title, detail: 'Your changes came along.', action: viewChanges };
     case 'bringPending':
+      // A partial workspace can't take a merge (`conflictRepositories`): the toast says where the shelve can merge.
+      if (!result.mergesHere) {
+        return {
+          kind: 'info',
+          title,
+          detail: sentences(
+            result.conflictCount > 0
+              ? `${pluralize(result.conflictCount, 'file needs', 'files need')} a merge to bring your changes, which a partial workspace can’t take.`
+              : 'Your changes weren’t applied yet.',
+            `They’re safe in shelve ${result.shelveId}: merge it in a standard workspace.`,
+          ),
+          action: undefined,
+        };
+      }
       return {
         kind: 'info',
         title,

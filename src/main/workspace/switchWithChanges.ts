@@ -210,15 +210,17 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
 
 async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {
   context.beginStep('Bringing your changes', 4, 4);
+  const kind = await deps.kindOf(workspacePath);
+  const mergesHere = kind !== 'partial';
   try {
-    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, await deps.kindOf(workspacePath), context);
+    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, kind, context);
     if (outcome.kind === 'applied') {
       await deps.leftChanges.finish(workspacePath, record);
       return { kind: 'brought' };
     }
-    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: outcome.kind === 'conflicts' ? outcome.count : 0 };
+    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: outcome.kind === 'conflicts' ? outcome.count : 0, mergesHere };
   } catch {
     // The switch is done and the changes are safe in the shelve; the merge view explains what went wrong.
-    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: 0 };
+    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: 0, mergesHere };
   }
 }

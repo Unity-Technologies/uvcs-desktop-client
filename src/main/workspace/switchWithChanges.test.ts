@@ -338,7 +338,7 @@ describe('bringing the changes', () => {
   });
 
   it('leaves conflicts for the merge view, keeping the shelve and its record on the target', async () => {
-    const { deps, recordOf, shelves, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 1 } });
+    const { deps, recordOf, shelves, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 2 } });
 
     expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 2, mergesHere: true });
     expect(branch()).toBe('/main/task2');

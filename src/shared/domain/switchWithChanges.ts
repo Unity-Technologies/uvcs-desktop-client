@@ -46,8 +46,11 @@ export type SwitchResult = (
   | { kind: 'brought' }
   /** The changes were undone before switching, as the user chose: they are gone. */
   | { kind: 'discarded'; count: number; restored?: RestoredChanges }
-  /** Switched, but the changes wait in the shelve until the user resolves how they merge on the target. */
-  | { kind: 'bringPending'; shelveId: number; conflictCount: number }
+  /**
+   * Switched, but the changes wait in the shelve until the user resolves how they merge on the target. `mergesHere` is
+   * false in a partial workspace, which can't take a merge: the shelve merges in a standard workspace.
+   */
+  | { kind: 'bringPending'; shelveId: number; conflictCount: number; mergesHere: boolean }
 ) & { renamedPrivates?: RenamedPrivateFile[] };
 
 /** A private file in the way of a file the switch wrote: `cm` kept it next to it, under another name. */
