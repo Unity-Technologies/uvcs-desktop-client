@@ -85,6 +85,14 @@ describe('switching a partial workspace', () => {
     expect(lines().some((line) => line.startsWith('partial switch br:/main/task2'))).toBe(true);
   });
 
+  it('leaves changes that need a merge on their shelve, saying a partial workspace can’t merge them', async () => {
+    const { deps, shelves, branch } = partialWorkspace({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 1 } });
+
+    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 1, mergesHere: false });
+    expect(branch()).toBe('/main/task2');
+    expect(shelves()).toEqual([7]);
+  });
+
   const refuses = async (target: string, message: string) => {
     const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
     const before = { ...pending() };
@@ -330,9 +338,9 @@ describe('bringing the changes', () => {
   });
 
   it('leaves conflicts for the merge view, keeping the shelve and its record on the target', async () => {
-    const { deps, recordOf, shelves, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 2 } });
+    const { deps, recordOf, shelves, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 1 } });
 
-    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 2 });
+    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 2, mergesHere: true });
     expect(branch()).toBe('/main/task2');
     expect(shelves()).toEqual([7]);
     expect(recordOf(7)).toMatchObject({ mode: 'bring', target: { spec: 'br:/main/task2' } });
@@ -341,7 +349,7 @@ describe('bringing the changes', () => {
   it('keeps the switch when bringing fails: the changes wait safe in the shelve', async () => {
     const { deps, shelves, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { shelveMerge: 'The merge failed.' } });
 
-    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 0 });
+    expect(await switchTo(deps, 'br:/main/task2', 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 0, mergesHere: true });
     expect(branch()).toBe('/main/task2');
     expect(shelves()).toEqual([7]);
   });

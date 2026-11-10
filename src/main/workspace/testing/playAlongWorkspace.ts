@@ -197,11 +197,16 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   /**
    * `cm ls` of folders: the workspace has loaded every item a shelve changed, unchanged, at the revision the shelve
    * started from (the `diff` above says 11), and the folders holding them; so a partial workspace takes a shelve back.
+   * With `fail.shelveConflicts`, that many shelved files changed since on what the workspace switched to: one the
+   * shelve changed is at a newer revision, one it added is already there; each needs a merge.
    */
   const loadedItems = (): string => {
     const shelved = [...shelves.values()].flatMap((shelve) => Object.entries(shelve.changes)).filter(([path]) => !(path in pending));
     const folders = [...new Set(shelved.map(([path]) => path.split('/').slice(0, -1).join('/')))].filter((folder) => folder !== '');
-    const files = shelved.filter(([, codes]) => !isAdded(codes)).map(([path]) => [path, 'txt', 11, '']);
+    const changedSince = (index: number) => index < (fail.shelveConflicts ?? 0);
+    const files = shelved
+      .filter(([, codes], index) => changedSince(index) || !isAdded(codes))
+      .map(([path], index) => [path, 'txt', changedSince(index) ? 12 : 11, '']);
     return formatOutput(...folders.map((folder) => [folder, 'dir', 5, '']), ...files);
   };
 
