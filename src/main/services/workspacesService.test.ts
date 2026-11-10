@@ -155,6 +155,17 @@ describe('creating a workspace', () => {
     expect(commands[0]).toMatchObject({ via: 'execute', args: ['workspace', 'create', 'game', path, '--dynamic', '--tree=br:/main@game@local'] });
   });
 
+  it('creates a partial workspace with nothing loaded: a regular one, then an empty partial update run in it', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'partial update': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    expect(await service.create({ name: 'game', path, repository: 'game@local', kind: 'partial' })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(commands.slice(0, 2)).toMatchObject([
+      { via: 'query', args: ['workspace', 'create', 'game', path, 'game@local'] },
+      { via: 'execute', args: ['partial', 'update', '--silent'], options: { cwd: path } },
+    ]);
+  });
+
   it('fails as cm reported when a dynamic workspace is not created, and lists nothing after it', async () => {
     const path = await emptyFolder();
     const { service, lines } = workspaces({ 'workspace create': cmFails('Error: The workspace could not be mounted.') });
