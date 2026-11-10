@@ -15,7 +15,7 @@ export function SignInProblem({ failed }: { failed: FailureWords }) {
       <p className={styles.problem}>{failed.words}</p>
       {installPage && (
         <Button size="small" variant="ghost" icon={<ExternalLink size={13} />} onClick={() => void api.system.openExternal(installPage)}>
-          Install the app
+          Install on GitHub
         </Button>
       )}
     </div>

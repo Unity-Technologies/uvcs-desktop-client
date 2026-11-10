@@ -1,5 +1,5 @@
 import type { IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
-import { coveringConnection, needsSignIn } from '@shared/issueTrackers/connections';
+import { coveringConnection, needsSignIn, ownerOf } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
 import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
@@ -342,7 +342,7 @@ export function connectFailureWords(failure: SignInFailure, context: { trackerNa
     case 'emailNeeded':
       return { words: `${trackerName} needs the email you sign in with, along with the token.`, offersTokenPage: false };
     case 'projectUnreadable':
-      if (failure.installPage) return { words: `You're signed in, but ${failure.project} can't be read. If it's private, install the app on ${failure.project.split('/')[0]}.`, offersTokenPage: false, installPage: failure.installPage };
+      if (failure.installPage) return { words: `You're signed in, but ${failure.project} can't be read. If it's private, add the Unity Version Control Desktop app to ${ownerOf(failure.project)} on GitHub.`, offersTokenPage: false, installPage: failure.installPage };
       return { words: `You're signed in, but ${failure.project} can't be read with this sign-in. Check that the token can read it.`, offersTokenPage: true };
     case 'notGitHubEnterprise':
       return { words: "This doesn't look like GitHub Enterprise Server.", offersTokenPage: false };

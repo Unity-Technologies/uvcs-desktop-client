@@ -503,8 +503,8 @@ secret and trading it for a new access token.
 A GitHub App's user token reads what the user can read, but a private repository only where the app is installed on
 its owner (a public one anywhere). So the device flow's connection still covers every owner (`scope` `*`), and when it
 can't read a project (`projectUnreadable`, from `bindProven`), the failure carries the app's install page
-(`GitHubApp.installPage`, added by `withInstallPage`): Settings says "If it's private, install the app on acme" with an
-"Install the app" button beside it (`SignInProblem`). A token sign-in's failure never carries it: the token itself is
+(`GitHubApp.installPage`, added by `withInstallPage`): Settings says "If it's private, add the Unity Version Control Desktop
+app to acme on GitHub" with an "Install on GitHub" button beside it (`SignInProblem`). A token sign-in's failure never carries it: the token itself is
 what to check. An organization may need its owner to approve the installation; that happens on GitHub.
 
 A flow lives as long as the window that started it waits for it:

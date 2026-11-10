@@ -95,7 +95,7 @@ describe('connectFailureWords', () => {
     // Signed in with the GitHub App, which reads a private repository only where it's installed.
     const installPage = 'https://github.com/apps/acme-desktop/installations/new';
     expect(connectFailureWords({ reason: 'projectUnreadable', project: 'acme/game', installPage }, { trackerName: 'GitHub' })).toEqual({
-      words: "You're signed in, but acme/game can't be read. If it's private, install the app on acme.",
+      words: "You're signed in, but acme/game can't be read. If it's private, add the Unity Version Control Desktop app to acme on GitHub.",
       offersTokenPage: false,
       installPage,
     });
