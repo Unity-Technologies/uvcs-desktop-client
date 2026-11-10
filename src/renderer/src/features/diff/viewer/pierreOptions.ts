@@ -2,6 +2,7 @@ import type { FileDiffOptions, FileOptions } from '@pierre/diffs/react';
 import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../../lib/codeTheme';
 import type { DiffLayout } from './diffPreferencesStore';
+import { pierreTint } from './pierreTint';
 
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
@@ -30,8 +31,8 @@ interface DiffAppearance {
  */
 function annotationRowTint(lineType: 'change-addition' | 'change-deletion', base: string): string {
   const mixTarget = `var(${base})`;
-  const tint = `light-dark(color-mix(in lab, var(--diffs-bg) 88%, ${mixTarget}), color-mix(in lab, var(--diffs-bg) 80%, ${mixTarget}))`;
-  const gutterTint = `light-dark(color-mix(in lab, var(--diffs-bg) 91%, ${mixTarget}), color-mix(in lab, var(--diffs-bg) 85%, ${mixTarget}))`;
+  const tint = pierreTint(mixTarget, 88, 80);
+  const gutterTint = pierreTint(mixTarget, 91, 85);
   const row = `[data-line][data-line-type=${lineType}] + [data-line-annotation]`;
   return (
     `${row}:has(slot){--diffs-computed-decoration-bg:${tint}}` +
