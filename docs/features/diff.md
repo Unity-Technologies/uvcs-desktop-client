@@ -863,7 +863,9 @@ docs/features/code-reviews.md "Comments in the code"):
   `lineNumber: 0` marks the code's first row, whatever it is, never a row under a line, and nothing while the file's top
   is scrolled out of what Pierre renders, `topRowOf`; markers on one row sit side by side, `markerSpots`; it measures
   again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short file when a
-  row goes in above the code), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a line whose
+  row goes in above the code), outlines around the lines its rows and markers are about (`bands`, `LineBands`,
+  `bandRect`: a 1px border across the pane's code, never a fill, which muddied the added and removed tints under it;
+  the one `selected` in the accent), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a line whose
   row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE`
   (one thread of several), read with context: the line a third of the way down, its row below; a row taller than the
   room below scrolls on just enough to fit, keeping three lines above the line; a line near the top stays at the top,
@@ -877,7 +879,12 @@ docs/features/code-reviews.md "Comments in the code"):
   goes to one of its rows (`opensAtRow`), the diff doesn't open at its first change (`openingStep`'s `opensOnLines`),
   which would scroll past the row once placed. Every row's and marker's line is unfolded from a folded unchanged region
   (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
-  replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
+  replacing the plain one), folding its regions again, and a line already shown unfolds nothing. A row under an added
+  or removed line takes that line's tint, and its gutter the change bar, on the side holding it only (Pierre's
+  `unsafeCSS` in `pierreDiffOptions`: a row whose content holds a `slot`; side by side, the other side's row is an
+  empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
+  buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
+  whose row is empty, and a buffer under a changed line on the other side may take its tint too.
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 

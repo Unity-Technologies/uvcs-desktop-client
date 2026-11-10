@@ -319,10 +319,27 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   last glide goes), and the focus a card held goes along to the current one, drawn without a ring: left behind, the key
   would draw it on a comment no longer current. The panel's filter is kept by the Changes tab for that
   (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the
-  thread gone to keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
+  thread selected keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
   diff opened to go to a thread (from the conversation, `commentLocationPage`) opens at it, not at its first change,
   even before an earlier version is read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version
   that can't be read (purged, or its read failed) is among the outdated ones, above the code, and opens there.
+- **What a comment is about.** In the code, each line with threads is outlined across its pane, open or hidden behind
+  its marker (`lineBandsOf`, through `DiffAnnotations.bands`), in its card's border color (`--border-comment`, a step
+  stronger in the dark theme, where the default border disappears over the added and removed tints): a border, never
+  a fill, so the diff's tints keep meaning added and removed only. The line's corners are slightly rounded
+  (`--radius-sm`), softer than a selection, a line's and not a card's: the card's radius on one line reads as a pill.
+  A row under an added or removed line takes its tint (docs/features/diff.md "Rows under lines"). The outline was
+  tried joined to the card as one shape (the line its first row, or its sides running into the card): the card keeps a
+  reading width, so where the line is wider the shape read as broken, and a card stretched to the line read worse.
+- **The thread selected** has its card and its line outlined in the accent, and its entry in the Comments panel marked.
+  Gone to (from the panel, the arrows, N, the conversation), it's scrolled to, unfolded and lit. Picked in the code, it's
+  only selected (`ReviewComments.selectThread`, `ThreadFocus.inPlace`, `selectedInPlace`): a click anywhere in its card
+  or the focus entering it (Reply, Tab), its controls still doing what they do, or opening its line from the marker
+  (the line's first thread, `threadOpenedFrom`). It's on screen already, so the diff stays where it is
+  (`scrollsToFocus`), the card is ringed but neither unfolded nor lit (`cardFocusOf`: unfolding it would undo the
+  chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
+  it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
+  list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
