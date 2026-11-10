@@ -26,6 +26,8 @@ const WORKSPACE_WRITES = new Set([
 export function changesWorkspace(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;
   if (WORKSPACE_WRITES.has(command)) return true;
+  // `cm partial` alone does nothing; each of its subcommands (configure, update, checkin, switch...) is a write.
+  if (command === 'partial') return subcommand !== undefined;
   // Without `--merge`, `cm merge` only previews.
   if (command === 'merge') return args.includes('--merge');
   if (command === 'shelveset') return subcommand === 'apply' && !args.includes('--preview');
