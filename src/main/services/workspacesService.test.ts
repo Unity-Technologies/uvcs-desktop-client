@@ -215,7 +215,7 @@ describe('creating a workspace', () => {
 
 describe('update', () => {
   it('updates with one cm update of its own process that never opens a merge tool', async () => {
-    const { service, commands } = workspaces({ update: '' });
+    const { service, commands } = workspaces({ ...WORKSPACE_NAMES, update: '' });
 
     await service.update(WORKSPACE, 'op-1');
 
@@ -223,8 +223,28 @@ describe('update', () => {
     expect(commands[0]?.args).toContain('--dontmerge');
   });
 
+  it('keeps a partial workspace partial: a partial update of what it holds, never one that loads everything', async () => {
+    const { service, commands } = workspaces({ getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']), 'partial update': '' });
+
+    await service.update(WORKSPACE, 'op-1');
+
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
+      { via: 'execute', args: ['partial', 'update', '--dontmerge'], options: { cwd: WORKSPACE } },
+    ]);
+  });
+
+  it('explains a partial update stopped by local changes that collide with incoming ones', async () => {
+    const { service } = workspaces({
+      getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']),
+      'partial update': cmFails('The update operation detected conflicts. The operation cannot continue since it was run with the --dontmerge option.'),
+    });
+
+    await expect(service.update(WORKSPACE, 'op-1')).rejects.toThrow('Some of your local changes collide with incoming ones.');
+  });
+
   it('explains an update stopped by local changes that collide with incoming ones', async () => {
     const { service } = workspaces({
+      ...WORKSPACE_NAMES,
       update: cmFails(
         '<STAGE:Calculating conflicts>\nThe update operation detected conflicts. The operation cannot continue since it was run with the --dontmerge option.\n<STAGE:Finished>\n',
       ),
@@ -239,13 +259,13 @@ describe('update', () => {
   });
 
   it('keeps any other failure as cm reported it', async () => {
-    const { service } = workspaces({ update: cmFails('Error: The server is unreachable.') });
+    const { service } = workspaces({ ...WORKSPACE_NAMES, update: cmFails('Error: The server is unreachable.') });
 
     await expect(service.update(WORKSPACE, 'op-1')).rejects.toThrow('The server is unreachable.');
   });
 
   it('can be cancelled', async () => {
-    const { service, operations } = workspaces({ update: runsUntilCancelled('Error: Operation cancelled.') });
+    const { service, operations } = workspaces({ ...WORKSPACE_NAMES, update: runsUntilCancelled('Error: Operation cancelled.') });
 
     const updating = service.update(WORKSPACE, 'op-9');
     operations.cancel('op-9');
