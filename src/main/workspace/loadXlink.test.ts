@@ -111,6 +111,14 @@ describe('Loading a checked-in xlink’s files', () => {
     expect(shelves()).toEqual([]);
   });
 
+  it('refuses in a partial workspace before putting anything aside, as its files load with cm partial', async () => {
+    const { deps, pending, shelves } = workspaceWith({ pending: EDITED_AND_ADDED });
+
+    await expect(load({ ...deps, kindOf: async () => 'partial' })).rejects.toThrow('A partial workspace can’t load an xlink’s files here');
+    expect(pending()).toEqual(EDITED_AND_ADDED);
+    expect(shelves()).toEqual([]);
+  });
+
   it('fails with cm’s words when nothing is pending: no change could be in the way', async () => {
     const { deps, shelves } = workspaceWith({ fail: { update: 'The server is unreachable.' } });
 
