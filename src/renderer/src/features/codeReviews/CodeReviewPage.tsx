@@ -1,11 +1,15 @@
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { useIsFetching } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import { placeKey } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps, ReviewTab } from '../../app/navigation/pages';
+import { isShownByCodeReviewPage } from '../../app/refresh/refreshScopes';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { MENU_WORDS } from '../../components/menuWords';
 import { PathLabel } from '../../components/PathLabel';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
@@ -113,7 +117,8 @@ function ReviewHeaderSkeleton() {
 
 /**
  * Two rows: the title, then what's reviewed, by whom and when, its status first. The actions sit at the title's end:
- * the reviewed code to the workspace, the user's own review, and the page's menu (`reviewPageMenu`), deleting in it.
+ * the reviewed code to the workspace, the user's own review, Refresh (others write on the review while it's open), and
+ * the page's menu (`reviewPageMenu`), deleting in it.
  */
 function ReviewHeader({ review }: { review: CodeReview }) {
   const place = usePlace();
@@ -121,6 +126,9 @@ function ReviewHeader({ review }: { review: CodeReview }) {
   // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it, in a workspace.
   const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
+  // What Refresh reads again here (`pageRefreshScope`): its icon spins while any of it is read.
+  const shownByThePage = isShownByCodeReviewPage(review.id, review.target);
+  const fetching = useIsFetching({ queryKey: placeKey(place), predicate: ({ queryKey }) => shownByThePage(queryKey) }) > 0;
 
   return (
     <header className={styles.header}>
@@ -140,6 +148,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
             </Button>
           )}
           <OwnReviewButton review={review} />
+          <ViewRefreshButton fetching={fetching} />
           <ActionDropdownMenu entries={reviewPageMenu(place, review)}>
             <IconButton icon={<MoreHorizontal size={15} />} label="More actions" />
           </ActionDropdownMenu>
