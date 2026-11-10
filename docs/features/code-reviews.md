@@ -100,7 +100,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 
 - The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
   server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one
-  Apply its page offers: the shelve's diff below drops its own, `pageApplies`), **Your review** and the page's menu
+  Apply its page offers: the shelve's diff below drops its own, `pageApplies`), **Your review**, Refresh and the page's menu
   (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays out
   of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation, not in
   the header. Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed
@@ -111,6 +111,18 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   other hidden (`mountedTabs`), so going back to one finds it as it was left: its scroll, the threads unfolded, a reply
   being written, the file selected, the Comments panel's filter. The Changes tab isn't mounted, so not read, until it's
   first shown, and while hidden its keys are off (N, ⇧N, ⌥⇧↓ ⌥⇧↑: `ViewShownContext`, which `useShortcut` reads).
+- **Refresh** (the header's button, ⌘R, the menu's; in a page window too): others write on a review while it's open,
+  someone waiting for comments (a teammate, an agent) among them, and a focus reads it again only once stale, so the
+  page reads it again on demand, in place. With the review in front, Refresh reads only what the page shows
+  (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation and its
+  reviewers; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
+  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, and on a branch review's
+  Changes one more for what they show (`cm diff` of the branch, or its changesets changeset by changeset). The review
+  read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
+  when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
+  with the review's new status and counts, at no `cm` command of its own.
+  Nothing remounts, so the tab, the file selected, the scroll and the threads unfolded stay; the icon spins while any
+  of it is read. Nothing reads it on a timer.
 
 ## The conversation
 

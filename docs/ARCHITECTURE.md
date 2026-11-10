@@ -1035,6 +1035,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
     older than 20 s. A branch head moved by someone else refreshes the repository views (`isAffectedByNewChangesets`).
+  - Refresh, asked for (⌘R, the menu's, a view's `ViewRefreshButton`), reads again what the window shows, or only what
+    the page in front shows when it says (`refreshShown`, `pageRefreshScope`: a code review's, features/code-reviews.md
+    "The review's page"). A page window has its own Refresh (`refreshCommand`).
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
