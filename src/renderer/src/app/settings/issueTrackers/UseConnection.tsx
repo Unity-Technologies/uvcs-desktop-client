@@ -6,6 +6,7 @@ import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, type SignInStep } from './connectFlow';
+import { SignInProblem } from './SignInProblem';
 import type { SignedIn } from './ConnectTracker';
 import { DifferentAccountLink } from './DifferentAccountLink';
 import styles from './IssueTrackerPane.module.css';
@@ -50,7 +51,7 @@ export function UseConnection(props: {
         </Button>
         <DifferentAccountLink onClick={onDifferentAccount} />
       </div>
-      {failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: name, server: link.server }).words}</p>}
+      {failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: name, server: link.server })} />}
     </div>
   );
 }

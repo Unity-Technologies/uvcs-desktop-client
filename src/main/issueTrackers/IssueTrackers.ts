@@ -400,8 +400,14 @@ export class IssueTrackers {
       return { kind: 'signedIn', connection: this.withCredential(connection), access };
     } catch (error) {
       this.announce();
-      return failed(signInFailureOf(error, connection.server, project));
+      return failed(this.withInstallPage(signInFailureOf(error, connection.server, project), connection));
     }
+  }
+
+  /** A project the GitHub App's sign-in can't read: installing the app on its owner may be all that's missing. */
+  private withInstallPage(failure: SignInFailure, connection: StoredConnection): SignInFailure {
+    const installPage = connection.signInMethod === 'deviceCode' ? this.deps.githubApps[new URL(connection.server).hostname]?.installPage : undefined;
+    return failure.reason === 'projectUnreadable' && installPage ? { ...failure, installPage } : failure;
   }
 
   private keep(connection: StoredConnection, credential: TrackerCredential): void {

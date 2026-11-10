@@ -4,6 +4,8 @@ import type { IssueTrackerKind, SignInMethodKind } from '../domain/issueTrackers
 export interface GitHubApp {
   /** Public, as the device flow needs no secret, so it ships with the app. */
   clientId: string;
+  /** Where a user installs it on an account or organization: its token reads a private repository only there. */
+  installPage?: string;
 }
 
 /**
@@ -12,7 +14,7 @@ export interface GitHubApp {
  * "Expire user access tokens" stays off (docs/features/issue-trackers.md, "The device flow").
  */
 export const GITHUB_APPS: Readonly<Record<string, GitHubApp>> = {
-  'github.com': { clientId: 'Iv23li6C4izonxAQZ02g' },
+  'github.com': { clientId: 'Iv23li6C4izonxAQZ02g', installPage: 'https://github.com/apps/unity-version-control-desktop/installations/new' },
 };
 
 /** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_APP_CLIENT_ID`). */

@@ -140,7 +140,11 @@ export type SignInFailure =
   /** The server sent the signed-in request to its login page (an SSO server refusing a token). */
   | { reason: 'sentToLogin'; server: string }
   | { reason: 'emailNeeded' }
-  | { reason: 'projectUnreadable'; project: string }
+  /**
+   * `installPage`: signed in with a GitHub App (`GITHUB_APPS`), which reads a private repository only where it's
+   * installed, so installing it there may be all that's missing.
+   */
+  | { reason: 'projectUnreadable'; project: string; installPage?: string }
   | { reason: 'notGitHubEnterprise'; server: string }
   | { reason: 'unreachable'; server: string }
   | { reason: 'rateLimited' }

@@ -295,10 +295,12 @@ export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, reposit
   };
 }
 
-/** A failure in plain words, and whether a new token would help (a link back to the token page). */
+/** A failure in plain words, and what would help: a new token (a link back to the token page), or installing the GitHub App. */
 export interface FailureWords {
   words: string;
   offersTokenPage: boolean;
+  /** The GitHub App's install page (`SignInFailure`'s `projectUnreadable`). */
+  installPage?: string;
 }
 
 export function connectFailureWords(failure: SignInFailure, context: { trackerName: string; server?: string; email?: string }): FailureWords {
@@ -323,6 +325,7 @@ export function connectFailureWords(failure: SignInFailure, context: { trackerNa
     case 'emailNeeded':
       return { words: `${trackerName} needs the email you sign in with, along with the token.`, offersTokenPage: false };
     case 'projectUnreadable':
+      if (failure.installPage) return { words: `You're signed in, but ${failure.project} can't be read. If it's private, install the app on ${failure.project.split('/')[0]}.`, offersTokenPage: false, installPage: failure.installPage };
       return { words: `You're signed in, but ${failure.project} can't be read with this sign-in. Check that the token can read it.`, offersTokenPage: true };
     case 'notGitHubEnterprise':
       return { words: "This doesn't look like GitHub Enterprise Server.", offersTokenPage: false };

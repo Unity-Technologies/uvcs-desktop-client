@@ -495,9 +495,17 @@ The app signs in to github.com with the GitHub App "Unity Version Control Deskto
 its client id in `GITHUB_APPS`). It asks for read-only Issues and Pull requests (and Metadata, which every GitHub App
 has), and nothing of the account: `GET /user` answers any user token. It has no webhook and no callback URL, and
 anyone can install it. Its Device Flow is on and "Expire user authorization tokens" is off: the app keeps the access
-token alone, no refresh token, so a token that expired would ask the user to sign in again every eight hours. The token lasts until the user signs out, revokes the app on GitHub, or leaves it
-unused for a year (GitHub then revokes it): each asks the user to sign in again. Turning expiry on first needs the
-refresh: keeping the `refresh_token` as a secret and trading it for a new access token.
+token alone, no refresh token, so a token that expired would ask the user to sign in again every eight hours. The
+token lasts until the user signs out, revokes the app on GitHub, or leaves it unused for a year (GitHub then revokes
+it): each asks the user to sign in again. Turning expiry on first needs the refresh: keeping the `refresh_token` as a
+secret and trading it for a new access token.
+
+A GitHub App's user token reads what the user can read, but a private repository only where the app is installed on
+its owner (a public one anywhere). So the device flow's connection still covers every owner (`scope` `*`), and when it
+can't read a project (`projectUnreadable`, from `bindProven`), the failure carries the app's install page
+(`GitHubApp.installPage`, added by `withInstallPage`): Settings says "If it's private, install the app on acme" with an
+"Install the app" button beside it (`SignInProblem`). A token sign-in's failure never carries it: the token itself is
+what to check. An organization may need its owner to approve the installation; that happens on GitHub.
 
 A flow lives as long as the window that started it waits for it:
 

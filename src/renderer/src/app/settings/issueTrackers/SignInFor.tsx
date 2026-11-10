@@ -4,6 +4,7 @@ import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { api } from '../../../api/client';
 import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, signInMethodShown, type SignInStep } from './connectFlow';
+import { SignInProblem } from './SignInProblem';
 import type { SignedIn } from './ConnectTracker';
 import { DeviceSignIn } from './DeviceSignIn';
 import { DifferentAccountLink } from './DifferentAccountLink';
@@ -61,7 +62,7 @@ export function SignInFor({ link, linkText, step, repository, picked, onConnecte
           signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
         />
       )}
-      {method === 'deviceCode' && failure && <p className={styles.problem}>{connectFailureWords(failure, { trackerName: step.trackerName, server: link.server }).words}</p>}
+      {method === 'deviceCode' && failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: step.trackerName, server: link.server })} />}
     </div>
   );
 }
