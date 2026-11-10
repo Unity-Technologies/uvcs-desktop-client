@@ -62,7 +62,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const [openedFor, setOpenedFor] = useState<number | null>(null);
   if (focus && focusPlace && openedFor !== focus.seq) {
     setOpenedFor(focus.seq);
-    const next = openedOnFocus(openedKeys, focusPlace.lineKey, inCode);
+    const next = openedOnFocus(openedKeys, focus, focusPlace.lineKey, inCode);
     if (next !== openedKeys) setOpened({ path: entry.path, keys: next });
   }
   // A new place to scroll to only when a thread is gone to: a refetch, a line opened, comments hidden or a card picked
