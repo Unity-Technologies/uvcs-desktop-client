@@ -171,15 +171,20 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     return '';
   };
 
+  /** Brings a shelve's changes back into the workspace, writing back the files it added. */
+  const takeBack = (shelve: Shelve): void => {
+    pending = { ...pending, ...shelve.changes };
+    for (const [path, content] of Object.entries(shelve.addedContents)) {
+      mkdirSync(dirname(onDisk(path)), { recursive: true });
+      writeFileSync(onDisk(path), content);
+    }
+  };
+
   const mergeShelve = ({ args }: FakeCmCommand): string | CmFailure => {
     const shelve = shelves.get(Number(args[1]!.slice('sh:'.length)))!;
     if (args.includes('--merge')) {
       if (fail.shelveMerge) return cmFails(fail.shelveMerge);
-      pending = { ...pending, ...shelve.changes };
-      for (const [path, content] of Object.entries(shelve.addedContents)) {
-        mkdirSync(dirname(onDisk(path)), { recursive: true });
-        writeFileSync(onDisk(path), content);
-      }
+      takeBack(shelve);
       return '';
     }
     const conflicts = Array.from({ length: fail.shelveConflicts ?? 0 }, (_, index) => {
@@ -187,6 +192,17 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
       return ['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'Changed and deleted.', `Modified ${path}`, `Deleted ${path}`, String(90 + index), 'False', 'CHG', path, 'RM', path];
     });
     return mergePreviewOutput(...Object.keys(shelve.changes).map((path) => ['APPLY', 'ADD', `/${path}`]), ...conflicts);
+  };
+
+  /**
+   * `cm ls` of folders: the workspace has loaded every item a shelve changed, unchanged, at the revision the shelve
+   * started from (the `diff` above says 11), and the folders holding them; so a partial workspace takes a shelve back.
+   */
+  const loadedItems = (): string => {
+    const shelved = [...shelves.values()].flatMap((shelve) => Object.entries(shelve.changes)).filter(([path]) => !(path in pending));
+    const folders = [...new Set(shelved.map(([path]) => path.split('/').slice(0, -1).join('/')))].filter((folder) => folder !== '');
+    const files = shelved.filter(([, codes]) => !isAdded(codes)).map(([path]) => [path, 'txt', 11, '']);
+    return formatOutput(...folders.map((folder) => [folder, 'dir', 5, '']), ...files);
   };
 
   const findBranch = ({ args }: FakeCmCommand): string => {
@@ -222,6 +238,11 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     'partial switch': (command) => switchTo({ ...command, args: command.args.slice(1) }),
     'partial update': (command) => update({ ...command, args: command.args.slice(1) }),
     merge: mergeShelve,
+    ls: loadedItems,
+    'partial shelveset apply': ({ args }) => {
+      takeBack(shelves.get(Number(args[3]!.slice('sh:'.length)))!);
+      return '';
+    },
     'lock list': () =>
       formatOutput(
         ...(scenario.locks ?? []).map(({ repository, path }, index) => [

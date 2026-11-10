@@ -82,6 +82,6 @@ async function loadAroundChanges(
   }
 
   context.beginStep('Bringing your changes back', 3, 3);
-  const broughtBack = await putShelvedChangesBack(cm, deps.leftChanges, workspacePath, record, context).catch(() => false);
+  const broughtBack = await putShelvedChangesBack(deps, workspacePath, record, context).catch(() => false);
   return broughtBack ? { kind: 'loaded' } : { kind: 'changesWaiting', shelveId: record.shelveId };
 }

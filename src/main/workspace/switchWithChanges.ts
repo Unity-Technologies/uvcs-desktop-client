@@ -211,7 +211,7 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
 async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {
   context.beginStep('Bringing your changes', 4, 4);
   try {
-    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
+    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, await deps.kindOf(workspacePath), context);
     if (outcome.kind === 'applied') {
       await deps.leftChanges.finish(workspacePath, record);
       return { kind: 'brought' };

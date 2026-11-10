@@ -127,7 +127,7 @@ export class LeftChangesFinder {
   /** Puts back the files the record moved aside, then merges the shelve when nothing conflicts. */
   private async applyRecorded(workspacePath: string, shelveId: number, record: SwitchShelveRecord | undefined, context: OperationContext): Promise<ApplyOutcome> {
     if (record?.backup) await putBack(workspacePath, record.backup);
-    return applyShelveCleanly(this.cm, workspacePath, shelveId, context);
+    return applyShelveCleanly(this.cm, workspacePath, shelveId, (await this.headers.names(workspacePath)).kind, context);
   }
 
   private async finishApplied(workspacePath: string, workspace: WorkspaceIdentity, shelveId: number, deleteShelve: boolean): Promise<void> {
