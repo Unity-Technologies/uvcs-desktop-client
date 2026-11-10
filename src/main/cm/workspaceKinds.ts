@@ -20,13 +20,13 @@ export type WorkspaceKindsReader = (workspacePaths: string[]) => Promise<Record<
  * gone is not asked about; a workspace `cm` can't tell is left out.
  */
 export function workspaceKindsReader(cm: CmClient, inTurn: WorkspaceReadTurns = workspaceReadTurns()): WorkspaceKindsReader {
-  const readKind = ([type = '', dynamic = '']: string[]): WorkspaceKind => workspaceKindOf(type, dynamic);
+  const readKind = ([type = '', dynamic = '']: string[]): WorkspaceKind | undefined => workspaceKindOf(type, dynamic);
   return async (workspacePaths) => {
     const kinds: Record<string, WorkspaceKind> = {};
     await Promise.all(
       workspacePaths.filter((path) => existsSync(path)).map((path) =>
         inTurn(async () => {
-          const [kind] = await cm.queryRecords(workspaceKindArgs(path), readKind, { anyDirectory: true }).catch((): WorkspaceKind[] => []);
+          const [kind] = await cm.queryRecords(workspaceKindArgs(path), readKind, { anyDirectory: true }).catch((): undefined[] => []);
           if (kind) kinds[path] = kind;
         }),
       ),

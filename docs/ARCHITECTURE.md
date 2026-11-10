@@ -227,8 +227,8 @@ and many people use the same server. Every `cm` command other than local reads (
   `cm getworkspacefrompath <path> --format={type}…{dynamic}` of each (`workspaces.kinds`, `workspaceKindsReader`,
   `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
   only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
-  keyed by its path and id): a workspace listed later costs only its own read, and a kind `cm` couldn't tell is
-  asked again the next time it shows.
+  keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
+  none, never as standard, and is asked again the next time it shows.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.

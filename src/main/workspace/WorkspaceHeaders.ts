@@ -12,7 +12,8 @@ const FRESH_MS = 5000;
 export interface WorkspaceNames {
   name: string;
   guid: string;
-  kind: WorkspaceKind;
+  /** Left out when `cm` didn't tell it. */
+  kind?: WorkspaceKind;
 }
 
 export interface HeaderReaders {
@@ -25,13 +26,12 @@ export function cmHeaderReaders(cm: CmClient): HeaderReaders {
     status: (workspacePath) => readWorkspaceStatus(cm, workspacePath),
     names: async (workspacePath) => {
       const args = ['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid', ...WORKSPACE_KIND_FIELDS])}`];
-      const readNames = ([name = '', guid = '', type = '', dynamic = '']: string[]): WorkspaceNames => ({
-        name: name.trim(),
-        guid: guid.trim(),
-        kind: workspaceKindOf(type, dynamic),
-      });
+      const readNames = ([name = '', guid = '', type = '', dynamic = '']: string[]): WorkspaceNames => {
+        const kind = workspaceKindOf(type, dynamic);
+        return { name: name.trim(), guid: guid.trim(), ...(kind && { kind }) };
+      };
       const [names] = await cm.queryRecords(args, readNames, { cwd: workspacePath });
-      return names ?? { name: '', guid: '', kind: 'standard' };
+      return names ?? { name: '', guid: '' };
     },
   };
 }

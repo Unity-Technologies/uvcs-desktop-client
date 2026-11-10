@@ -23,7 +23,7 @@ export function WorkspaceRootDetails({ workspace, menu }: { workspace: Workspace
           properties={[
             { label: 'Path', value: workspace.path, mono: true, copyText: workspace.path },
             { label: 'Repository', value: workspace.repository },
-            { label: 'Type', value: workspaceKindWords(workspace.kind).label },
+            { label: 'Type', value: workspace.kind && workspaceKindWords(workspace.kind).label },
             { label: SELECTOR_LABELS[workspace.selector.kind], value: workspace.selector.name },
             { label: 'Loaded changeset', value: workspace.loadedChangeset },
           ]}

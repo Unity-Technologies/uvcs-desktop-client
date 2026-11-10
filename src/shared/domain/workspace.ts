@@ -32,7 +32,8 @@ export interface WorkspaceInfo {
    * numbers it as changeset `-id`, never a changeset to query from): the selector names the shelve.
    */
   loadedChangeset: number | null;
-  kind: WorkspaceKind;
+  /** How it holds its files; left out when `cm` didn't tell. */
+  kind?: WorkspaceKind;
 }
 
 /** What a workspace works on, as `cm wi` tells it without asking the server. */

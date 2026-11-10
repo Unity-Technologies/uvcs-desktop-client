@@ -26,7 +26,7 @@ export function workspaceKindChip(kind: WorkspaceKind | undefined): WorkspaceKin
 }
 
 /** The collapsed sidebar's tooltip of the workspace card: its name and repository, and its kind when not standard. */
-export function workspaceCardTip(workspace: { name: string; repository: string; kind: WorkspaceKind }): string {
+export function workspaceCardTip(workspace: { name: string; repository: string; kind?: WorkspaceKind }): string {
   const chip = workspaceKindChip(workspace.kind);
   return [workspace.name, workspace.repository, chip && `${chip.label} workspace`].filter(Boolean).join(' · ');
 }
