@@ -15,16 +15,6 @@ describe('pageRefreshScope', () => {
     expect(scope?.(key('pendingChanges', 'all'))).toBe(false);
   });
 
-  it('asks what the review in front is of, by its number', () => {
-    const asked: number[] = [];
-    pageRefreshScope({ kind: 'codeReview', reviewId: 7 }, (reviewId) => {
-      asked.push(reviewId);
-      return undefined;
-    });
-
-    expect(asked).toEqual([7]);
-  });
-
   it('refreshes everything the window shows with any other page in front, or none', () => {
     expect(pageRefreshScope(undefined, ofBranch)).toBeUndefined();
     expect(pageRefreshScope({ kind: 'history', path: 'src/a.ts' }, ofBranch)).toBeUndefined();

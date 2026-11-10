@@ -261,6 +261,13 @@ describe("a code review's page", () => {
     expect(branchReview(key('codeReviews', 'review', 70))).toBe(false);
   });
 
+  it('reads a repository explored without a workspace the same way', () => {
+    const inRepository = (...parts: unknown[]) => ['repository', 'game@local', ...parts];
+    expect(branchReview(inRepository('codeReviews', 'conversation', 7))).toBe(true);
+    expect(branchReview(inRepository('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(true);
+    expect(branchReview(inRepository('codeReviews', {}))).toBe(false);
+  });
+
   it('leaves the lists of reviews, the branch chips and the rest of the window alone', () => {
     expect(branchReview(key('codeReviews', { onlyAssigned: true }))).toBe(false);
     expect(branchReview(key('codeReviews', 'summaries', { text: undefined }))).toBe(false);
