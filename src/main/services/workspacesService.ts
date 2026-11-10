@@ -11,6 +11,8 @@ import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceHeadsReader } from '../cm/workspaceHeads';
+import { workspaceKindsReader } from '../cm/workspaceKinds';
+import { workspaceReadTurns } from '../cm/workspaceReadTurns';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { locateInWorkspace } from '../links/locateInWorkspace';
@@ -26,7 +28,10 @@ const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming one
 export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   const lookUpRepository = workspaceRepositoryLookup(cm);
-  const readHeads = workspaceHeadsReader(cm);
+  // The heads and the kinds of the listed workspaces read one workspace at a time between them, so one pooled shell stays free.
+  const listedReadTurns = workspaceReadTurns();
+  const readHeads = workspaceHeadsReader(cm, listedReadTurns);
+  const readKinds = workspaceKindsReader(cm, listedReadTurns);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
@@ -117,6 +122,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoryOf,
     heads: readHeads,
+    kinds: readKinds,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),

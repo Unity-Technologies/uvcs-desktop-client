@@ -337,4 +337,31 @@ describe('other workspaces', () => {
       { via: 'query', path: cloud, options: { anyDirectory: true } },
     ]);
   });
+
+  it('tells how every listed workspace holds its files with one local cm getworkspacefrompath each, one at a time with the heads', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-kinds-'));
+    const [art, remote] = [join(root, 'art'), join(root, 'remote')];
+    await Promise.all([mkdir(art), mkdir(remote)]);
+    let reading = 0;
+    let most = 0;
+    const oneAtATime = (answer: CmAnswer): CmAnswer => async (command) => {
+      most = Math.max(most, ++reading);
+      await Promise.resolve();
+      reading--;
+      return typeof answer === 'function' ? answer(command) : answer;
+    };
+    const { service, commands } = workspaces({
+      getworkspacefrompath: oneAtATime(({ args }) => formatOutput(args[1] === art ? ['partial', 'static'] : ['regular', 'dynamic'])),
+      wi: oneAtATime('BR\u001f/main\u001fgame@local\n'),
+    });
+
+    const [kinds] = await Promise.all([service.kinds([art, remote, join(root, 'gone')]), service.heads([art, remote])]);
+
+    expect(kinds).toEqual({ [art]: 'partial', [remote]: 'dynamic' });
+    expect(most).toBe(1);
+    expect(commands.filter(({ args }) => args[0] === 'getworkspacefrompath').map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
+      { via: 'query', path: art, options: { anyDirectory: true } },
+      { via: 'query', path: remote, options: { anyDirectory: true } },
+    ]);
+  });
 });

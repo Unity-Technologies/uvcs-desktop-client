@@ -1,5 +1,5 @@
 import type { SwitchChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -29,6 +29,12 @@ export interface WorkspacesApi {
    * call), cheap enough for every listed workspace. Workspaces `cm` can't tell (a folder that is gone) are left out.
    */
   heads(workspacePaths: string[]): Promise<Record<string, WorkspaceHead>>;
+  /**
+   * How each workspace holds its files (standard, partial or dynamic), from one local `cm getworkspacefrompath` each,
+   * taking turns with `heads`. A workspace's kind is set when it is created, so it is asked once. Workspaces `cm`
+   * can't tell are left out.
+   */
+  kinds(workspacePaths: string[]): Promise<Record<string, WorkspaceKind>>;
   /** The paths whose folder doesn't exist (deleted, moved, or on a drive that isn't mounted). No `cm` call. */
   findMissing(paths: string[]): Promise<string[]>;
   /** Returns the workspace root containing the given directory, or null. A workspace moved on disk is re-registered at its new place. */
