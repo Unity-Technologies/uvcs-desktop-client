@@ -711,7 +711,7 @@ button.earlierTag:hover {
  * subtle border the conversation uses all but disappears.
  */
 .thread[data-in-code] {
-  border-color: var(--border-default);
+  border-color: var(--border-comment);
 }
 
 /*

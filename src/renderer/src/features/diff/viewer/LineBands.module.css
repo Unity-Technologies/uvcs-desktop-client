@@ -6,7 +6,7 @@
   position: absolute;
   z-index: 1;
   box-sizing: border-box;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-comment);
   /* Softer than a selection's square, yet a line's, not a card's (`--radius-lg` on one line reads as a pill). */
   border-radius: var(--radius-sm);
   pointer-events: none;
