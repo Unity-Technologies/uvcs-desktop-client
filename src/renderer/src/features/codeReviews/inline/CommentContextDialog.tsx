@@ -192,6 +192,7 @@ function ThreadCard({ review, thread, user, showInConversation, onClose, unlit =
       thread={thread}
       user={user}
       highlight={unlit ? undefined : 0}
+      selected={!unlit}
       inCode={{
         inContext: true,
         showInConversation: () => {

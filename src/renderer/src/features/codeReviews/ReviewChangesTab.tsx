@@ -21,6 +21,7 @@ import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useReviewCommentsStore } from './inline/reviewCommentsStore';
+import { selectedInPlace } from './inline/threadSelection';
 import { useCommentContext } from './inline/useCommentContext';
 import { changesFocusAskedFor } from './reviewTab';
 import { COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH, useCommentsPanelStart } from './useCommentsPanelStart';
@@ -72,6 +73,15 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
+  const selectThread = useCallback((thread: LineThread): void => {
+    setFocus((current) => {
+      const next = selectedInPlace(current, thread.root.id, seq.current + 1);
+      seq.current = next.seq;
+      return next;
+    });
+    setFolded((current) => unfoldedFor(current, thread));
+  }, []);
+
   const showThreadInConversation = useCallback((threadId: number): void => showInConversation(review.id, threadId), [review.id]);
   const seeInContext = useCommentContext(review);
   // The page moved to a thread while these changes show already (a comment's file gone to from the conversation): go
@@ -98,8 +108,8 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   useShortcut(hotkey('nextComment'), () => step(1), listed.length > 0, { whileTyping: false });
   useShortcut(hotkey('previousComment'), () => step(-1), listed.length > 0, { whileTyping: false });
   const comments = useMemo<ReviewComments>(
-    () => ({ review, threads, user, focus, goToThread, showInConversation: showThreadInConversation, seeInContext }),
-    [review, threads, user, focus, showThreadInConversation, seeInContext],
+    () => ({ review, threads, user, focus, goToThread, selectThread, showInConversation: showThreadInConversation, seeInContext }),
+    [review, threads, user, focus, selectThread, showThreadInConversation, seeInContext],
   );
 
   return (

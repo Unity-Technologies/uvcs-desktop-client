@@ -7,6 +7,7 @@ import type { ContextView } from './commentContext';
 import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread, VersionText } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
+import { cardFocusOf } from './threadSelection';
 import type { ReviewComments } from './reviewComments';
 import { hideLabel, type LineThreads } from './threadRows';
 import styles from './InlineThreads.module.css';
@@ -116,11 +117,19 @@ interface ThreadInRowProps {
   onSeeInContext?: SeeInContext;
 }
 
-/** A thread in the code; its "Applied" pill shows how the change request was applied, in context. */
+/**
+ * A thread in the code; its "Applied" pill shows how the change request was applied, in context. Clicked anywhere, or
+ * focused (a reply typed, a key's Tab), it's selected (`selectThread`), its controls still doing what they do.
+ */
 function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: ThreadInRowProps) {
-  const highlight = focus?.threadId === thread.root.id ? focus.seq : undefined;
+  const { highlight, selected } = cardFocusOf(focus, thread.root.id);
   const onSeeApplied = onSeeInContext && (() => onSeeInContext(thread, 'since'));
-  return <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} onSeeApplied={onSeeApplied} />;
+  const select = (): void => comments.selectThread(thread);
+  return (
+    <div className={styles.thread} onClickCapture={select} onFocusCapture={select}>
+      <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} selected={selected} onSeeApplied={onSeeApplied} />
+    </div>
+  );
 }
 
 /** The lines an outdated thread was written on, the one it's on marked. */

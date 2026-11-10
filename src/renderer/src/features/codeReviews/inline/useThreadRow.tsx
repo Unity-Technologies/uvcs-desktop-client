@@ -39,6 +39,7 @@ export function useThreadRow({ review, thread, user, comparison, showInConversat
                   user={user}
                   // What the dialog is about: shown whole, ringed, even when settled (a settled thread starts folded).
                   highlight={0}
+                  selected
                   inCode={{
                     inContext: true,
                     showInConversation: () => {

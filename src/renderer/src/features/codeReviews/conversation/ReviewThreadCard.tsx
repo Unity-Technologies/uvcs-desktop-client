@@ -32,6 +32,8 @@ interface ReviewThreadCardProps {
   inCode?: ThreadInCode;
   /** Gone to, the how-many-th time (`ThreadFocus.seq`): unfolded and lit for a moment, so the eye finds it. */
   highlight?: number;
+  /** The thread selected in the code, gone to or picked there (`cardFocusOf`): ringed in the accent, as its line is. */
+  selected?: boolean;
   /** What "Applied" opens: how the change request was applied, in context; else the changeset that applied it. */
   onSeeApplied?: () => void;
 }
@@ -69,7 +71,7 @@ type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
  * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
  * its first words (`startsFolded`); a click shows it whole.
  */
-export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSeeApplied }: ReviewThreadCardProps) {
+export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, onSeeApplied }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
@@ -94,6 +96,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, onSe
       data-folded={folded}
       data-in-code={inCode ? '' : undefined}
       data-highlight={highlight === undefined ? undefined : highlight % 2}
+      data-selected={selected || undefined}
       {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
     >
