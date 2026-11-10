@@ -11,7 +11,7 @@ import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
-export function createMergeService({ cm, operations, workspaceCopies }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
+export function createMergeService({ cm, operations, workspaceCopies, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
   const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
 
@@ -39,7 +39,11 @@ export function createMergeService({ cm, operations, workspaceCopies }: ServiceC
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     incomingChangesets: (workspacePath, request) => readIncomingChangesetPage(cm, workspacePath, request),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
-      operations.run(operationId, (context) => updateWithMerge(cm, workspacePath, resolutions, backupsRoot, context)),
+      operations.run(operationId, async (context) => {
+        // A plain update would load everything and make a partial workspace standard.
+        const { kind } = await headers.names(workspacePath);
+        return updateWithMerge(cm, workspacePath, kind, resolutions, backupsRoot, context);
+      }),
     shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) =>
         shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),

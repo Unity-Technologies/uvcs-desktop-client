@@ -7,9 +7,9 @@ import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shar
 import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
 import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
-import { EMPTY_PARTIAL_UPDATE_ARGS, PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
+import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
-import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
+import { switchArgs } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
@@ -25,6 +25,7 @@ import { callerId } from '../ipc/caller';
 import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
+import { updateWorkspace } from '../workspace/updateWorkspace';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
@@ -82,12 +83,10 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   }
 
   function update(workspacePath: string, operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal, progressOf }) => {
+    return operations.run(operationId, async (context) => {
       try {
-        // A plain update would load everything and make a partial workspace standard.
         const { kind } = await headers.names(workspacePath);
-        if (kind === 'partial') await cm.execute(PARTIAL_UPDATE_ARGS, { cwd: workspacePath, signal });
-        else await cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal, onOutputLine: progressOf(readUpdateProgress) });
+        await updateWorkspace(cm, workspacePath, kind, context);
       } catch (error) {
         if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;

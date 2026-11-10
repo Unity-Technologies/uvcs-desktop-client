@@ -1,7 +1,5 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
-import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
@@ -13,6 +11,7 @@ import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import { describeSelector } from './switchSelectors';
+import { updateWorkspace } from './updateWorkspace';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
@@ -56,9 +55,9 @@ export async function shelveBlockedAndUpdate(
     context.beginStep('Updating', 2, 2);
     if (incoming.conflicts.length > 0) {
       // The blocking files are undone: what came in, read before shelving, is all the update has to merge.
-      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
+      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, workspace.kind, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
     }
-    await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
+    await updateWorkspace(cm, workspacePath, workspace.kind, context);
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
     throw await changesPutBackError(deps, workspacePath, record, `Couldn't update: ${failureReason(error)}`, context);
