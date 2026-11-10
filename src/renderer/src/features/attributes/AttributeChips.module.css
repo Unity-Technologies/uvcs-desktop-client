@@ -290,3 +290,22 @@
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }
+
+/* A long value whole on hover, its Markdown drawn: wide enough for release notes, scrolling past what a glance reads. */
+.valueCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: max-content;
+  max-width: min(460px, calc(100vw - 32px));
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
