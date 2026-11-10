@@ -18,6 +18,7 @@ const workspaceOn = (selector: WorkspaceSelector, loadedChangeset: number | null
   server: 'local',
   selector,
   loadedChangeset,
+  kind: 'standard',
 });
 
 /** Where each starting point offered begins: the parent branch and the spec. */
