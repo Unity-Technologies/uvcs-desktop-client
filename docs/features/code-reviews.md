@@ -226,7 +226,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   while it's selected (`appliedFilesHeading`). When that changeset didn't change the commented file at all (the request
   applied elsewhere: a missing test added, a sibling fixed), How it was applied lists its files alone, the first
   selected, the thread above them, folded to its first words (`contextBodyOf`, which picks it over the thread alone;
-  unfolded, it takes at most 40% of the height), so the request and its fix read together; the subtitle
+  unfolded, it takes at most 40% of the height, its border whole and its comments scrolling inside it under its header
+  band, `data-thread-body`: the box scrolling the card cut its border off, and the card shrunk alone clipped a long
+  thread with nothing to scroll), so the request and its fix read together; the subtitle
   says the changeset applied it in other files, and the view switch stays, leading back to When commented. It says
   "applied", even for a request marked applied by hand there: what the review records can't tell the two apart, and
   the files beside it show what that changeset did. No list for a fix of that file alone. The list costs no command:
@@ -234,7 +236,11 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   would leave the review, and that page knows nothing of the comment. The dialog is as wide as the window allows, up to
   1680 px: two versions of code side by side, and the files beside them. Its diff
   is 66vh tall, less where the window leaves the dialog less, so the dialog never scrolls as a whole (a window of
-  1000×800 or 900×700). It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
+  1000×800 or 900×700). Its diff's comments button hides the thread from the code, to read the code alone, as the
+  review's diff does: a marker on its line, a click showing it again (`useThreadRow`, `contextThreadParts`,
+  `CommentsInCodeButton`); its line keeps its outline in the accent, the thread being what the dialog is about. It
+  shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it.
+  It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
   while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
@@ -319,10 +325,27 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   last glide goes), and the focus a card held goes along to the current one, drawn without a ring: left behind, the key
   would draw it on a comment no longer current. The panel's filter is kept by the Changes tab for that
   (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the
-  thread gone to keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
+  thread selected keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
   diff opened to go to a thread (from the conversation, `commentLocationPage`) opens at it, not at its first change,
   even before an earlier version is read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version
   that can't be read (purged, or its read failed) is among the outdated ones, above the code, and opens there.
+- **What a comment is about.** In the code, each line with threads is outlined across its pane, open or hidden behind
+  its marker (`lineBandsOf`, through `DiffAnnotations.bands`), in its card's border color (`--border-comment`, a step
+  stronger in the dark theme, where the default border disappears over the added and removed tints): a border, never
+  a fill, so the diff's tints keep meaning added and removed only. The line's corners are slightly rounded
+  (`--radius-sm`), softer than a selection, a line's and not a card's: the card's radius on one line reads as a pill.
+  A row under an added or removed line takes its tint (docs/features/diff.md "Rows under lines"). The outline was
+  tried joined to the card as one shape (the line its first row, or its sides running into the card): the card keeps a
+  reading width, so where the line is wider the shape read as broken, and a card stretched to the line read worse.
+- **The thread selected** has its card and its line outlined in the accent, and its entry in the Comments panel marked.
+  Gone to (from the panel, the arrows, N, the conversation), it's scrolled to, unfolded and lit. Picked in the code, it's
+  only selected (`ReviewComments.selectThread`, `ThreadFocus.inPlace`, `selectedInPlace`): a click anywhere in its card
+  or the focus entering it (Reply, Tab), its controls still doing what they do, or opening its line from the marker
+  (the line's first thread, `threadOpenedFrom`). It's on screen already, so the diff stays where it is
+  (`scrollsToFocus`), the card is ringed but neither unfolded nor lit (`cardFocusOf`: unfolding it would undo the
+  chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
+  it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
+  list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,

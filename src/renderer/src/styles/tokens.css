@@ -225,6 +225,8 @@
   --border-strong: #afb8c1;
   /* The indent guides of a tree of files: a hairline under each chevron. */
   --tree-guide: var(--border-subtle);
+  /* A review comment in the code and the line it's on, outlined as a pair (`LineBands`, `.thread[data-in-code]`). */
+  --border-comment: var(--border-default);
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;
@@ -358,6 +360,8 @@
   --border-strong: #484f58;
   /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
   --tree-guide: var(--border-default);
+  /* A shade up from the light theme's: over the dark added and removed tints, the default border all but disappears. */
+  --border-comment: var(--border-strong);
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;

@@ -39,15 +39,22 @@ describe('hasComments', () => {
 });
 
 describe('openedOnFocus', () => {
+  const goneTo = { threadId: 1, seq: 2 };
+
   it('opens the line of a thread gone to while comments are hidden, after the others', () => {
-    expect(openedOnFocus(['additions:2'], 'additions:9', false)).toEqual(['additions:2', 'additions:9']);
+    expect(openedOnFocus(['additions:2'], goneTo, 'additions:9', false)).toEqual(['additions:2', 'additions:9']);
   });
 
   it('opens nothing in the code, for a thread at no line, or one already open', () => {
     const opened = ['additions:2'];
-    expect(openedOnFocus(opened, 'additions:9', true)).toBe(opened);
-    expect(openedOnFocus(opened, undefined, false)).toBe(opened);
-    expect(openedOnFocus(opened, 'additions:2', false)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, 'additions:9', true)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, undefined, false)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, 'additions:2', false)).toBe(opened);
+  });
+
+  it("doesn't open again a line whose card was picked in place: its Hide, which picks it too, folded it", () => {
+    const opened = ['additions:2'];
+    expect(openedOnFocus(opened, { threadId: 1, seq: 3, inPlace: true }, 'additions:9', false)).toBe(opened);
   });
 });
 

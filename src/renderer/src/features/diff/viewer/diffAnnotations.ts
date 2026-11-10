@@ -27,6 +27,15 @@ export interface DiffAnnotations {
   mapTickTip?: (keys: readonly string[]) => string;
   scrollTo: ChangedLine | null;
   opensAtRow: boolean;
+  /** The lines rows or markers are about, outlined (`LineBands`); the one gone to in the accent, as its card is. */
+  bands?: readonly LineBand[];
+}
+
+/** A line a row or a marker is about. */
+export interface LineBand extends ChangedLine {
+  key: string;
+  /** What it's about is the one gone to: outlined in the accent, as its card is. */
+  selected: boolean;
 }
 
 /** A mark on a line, at the end of its pane; `lineNumber: 0`, on the code's first row (`topRowOf`), for what's above it. */
@@ -69,6 +78,11 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
 /** What names a set of rows, to tell a new one from the same rows built anew. */
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
+}
+
+/** Where a line's outline is drawn (`LineBands`): its row, across its pane's code, from the gutter to the pane's end. */
+export function bandRect(box: LineBox): { top: number; left: number; width: number; height: number } {
+  return { top: box.top, left: box.contentLeft, width: box.paneRight - box.contentLeft, height: box.bottom - box.top };
 }
 
 /** The room between a line's marker and the right edge of its pane. */

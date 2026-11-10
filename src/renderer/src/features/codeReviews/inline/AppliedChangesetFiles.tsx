@@ -60,14 +60,14 @@ function CommentView({ children, ...props }: AppliedFilesProps & Pick<EntryAnnot
     return () => onCommentShown(false);
   }, [onCommentShown]);
   const state = useContextComparison(props);
-  const annotations = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
+  const { annotations, controls } = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
   if (state.kind !== 'comparison') return <ContextViewPending state={state} />;
   // None only without a comparison.
   if (!annotations) return null;
   const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
-      {children({ compared: { original: comparison.original, modified: comparison.modified } })}
+      {children({ controls, compared: { original: comparison.original, modified: comparison.modified } })}
     </DiffAnnotationsContext.Provider>
   );
 }

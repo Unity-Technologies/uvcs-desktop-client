@@ -1,0 +1,18 @@
+/*
+ * Around a line a row or a marker is about, never in the way of a click: in its card's border color, so the two read as
+ * a pair (`.thread[data-in-code]`). A border, not a fill: a wash over the diff's added and removed tints muddied both.
+ */
+.band {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--border-comment);
+  /* Softer than a selection's square, yet a line's, not a card's (`--radius-lg` on one line reads as a pill). */
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+/* The one gone to: outlined in the accent, as its card. */
+.band[data-selected] {
+  border-color: var(--accent);
+}

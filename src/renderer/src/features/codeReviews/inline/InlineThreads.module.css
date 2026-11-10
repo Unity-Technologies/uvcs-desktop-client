@@ -19,6 +19,11 @@
   user-select: text;
 }
 
+/* Only listens for a click or the focus in its card (`ThreadInRow`): laid out as if it weren't there. */
+.thread {
+  display: contents;
+}
+
 .outdated {
   display: flex;
   flex: 1;
