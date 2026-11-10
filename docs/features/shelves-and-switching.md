@@ -42,6 +42,18 @@ right (`StartingPointPicker`, the dialog's `headerAction`), which names the chos
 `chosenStartingPoint`), opens them as explained cards in a popover, so the body reads the same with one starting point
 or several.
 
+### A partial workspace
+
+A partial workspace (its kind read by `kindOf`, from `cm getworkspacefrompath`, a local read) is updated, switched
+and checked in with `cm partial`: `updateCommand`, `switchCommand` (`cm/updateArgs.ts`) and `checkinArgs` choose the
+command by kind, everywhere the app updates, switches or checks in (Incoming, the switch with its pending changes,
+the update that shelves blocking changes, Changes, merges). Standard and dynamic workspaces keep `cm update`,
+`cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
+rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
+`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`): a changeset,
+label or shelve ("A partial workspace can only switch to a branch."), or a branch of another repository ("… of its own
+repository.").
+
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
 "Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,
