@@ -237,6 +237,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     // A partial workspace's `cm partial switch` and `cm partial update` move it as their regular forms do.
     'partial switch': (command) => switchTo({ ...command, args: command.args.slice(1) }),
     'partial update': (command) => update({ ...command, args: command.args.slice(1) }),
+    // `cm partial shelveset create` shelves as `cm shelveset create` does (`--applychanged` for `--all`).
+    'partial shelveset create': (command) => createShelve({ ...command, args: command.args.slice(1) }),
     merge: mergeShelve,
     ls: loadedItems,
     'partial shelveset apply': ({ args }) => {

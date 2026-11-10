@@ -65,7 +65,7 @@ async function loadAroundChanges(
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
   context.beginStep('Putting your changes aside', 1, 3);
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, await deps.kindOf(workspacePath), context);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
   records.save(record);
 

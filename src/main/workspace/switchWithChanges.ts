@@ -170,7 +170,7 @@ async function shelveAndSwitch(
   const steps = mode === 'bring' ? 4 : 3;
   context.beginStep('Shelving your changes', 1, steps);
   const objectRef = await sourceObjectRef(cm, workspacePath, workspace);
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, workspace.kind, context);
   const target = selectorPlace(parseSelectorSpec(targetSpec).selector);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode, objectRef, target });
   records.save(record);

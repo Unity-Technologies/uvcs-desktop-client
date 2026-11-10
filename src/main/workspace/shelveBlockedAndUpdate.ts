@@ -43,7 +43,7 @@ export async function shelveBlockedAndUpdate(
   const changes = snapshot.changes.filter((change) => blocked.has(change.path));
 
   context.beginStep('Shelving the blocking files', 1, 2);
-  const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
+  const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, kind, context, incoming.blockedPaths);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'update', objectRef, target: NO_TARGET });
   records.save(record);
   const result = { shelveId: shelve.id, count: record.paths.length };
