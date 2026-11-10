@@ -1,21 +1,26 @@
 import type { IssueTrackerKind, SignInMethodKind } from '../domain/issueTrackers';
 
+/** An app registered on a GitHub host that the device flow signs in with. */
+export interface GitHubApp {
+  /** Public, as the device flow needs no secret, so it ships with the app. */
+  clientId: string;
+  /** Where a user installs it on an account or organization: its token reads a private repository only there. */
+  installPage?: string;
+}
+
 /**
- * The OAuth apps the device flow signs in with, by the host they're registered on: a client id is public (the device
- * flow needs no secret), so it ships with the app. Empty until the app is registered: GitHub's device flow is then not
- * offered, and a token is.
+ * The apps the device flow signs in with, by the host they're registered on. A host with none, or whose client id is
+ * empty, isn't offered the device flow, only a token. The app keeps no refresh token, so the registered app's
+ * "Expire user authorization tokens" stays off (docs/features/issue-trackers.md, "The device flow").
  */
-export const GITHUB_OAUTH_CLIENT_IDS: Readonly<Record<string, string>> = {
-  'github.com': '',
+export const GITHUB_APPS: Readonly<Record<string, GitHubApp>> = {
+  'github.com': { clientId: 'Iv23li6C4izonxAQZ02g', installPage: 'https://github.com/apps/unity-version-control-desktop/installations/new' },
 };
 
-/** The scopes the device flow asks for: `repo`, as GitHub has no narrower scope that reads a private repository's issues. */
-export const GITHUB_OAUTH_SCOPES = 'repo';
-
-/** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_OAUTH_CLIENT_ID`). */
-export function deviceFlowHostsOf(clientIds: Readonly<Record<string, string>>): string[] {
-  return Object.entries(clientIds)
-    .filter(([, clientId]) => clientId !== '')
+/** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_APP_CLIENT_ID`). */
+export function deviceFlowHostsOf(apps: Readonly<Record<string, GitHubApp>>): string[] {
+  return Object.entries(apps)
+    .filter(([, app]) => app.clientId !== '')
     .map(([host]) => host);
 }
 
