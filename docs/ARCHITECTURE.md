@@ -156,8 +156,7 @@ and many people use the same server. Every `cm` command other than local reads (
   process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
   of each workspace (`workspaceHeadsReader`, "Home", below) and its `cm getworkspacefrompath` (`workspaceKindsReader`),
-  the recent workspaces' `cm status --header` it couldn't
-  tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
+  the recent workspaces' `cm status --header` it couldn't tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
   header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`). An `--xml` header still asks the server
   for the branch head ("`cm status` asks the server for its header", in "Parsing `cm` output").
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a

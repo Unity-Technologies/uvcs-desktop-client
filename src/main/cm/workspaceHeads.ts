@@ -57,8 +57,8 @@ export type WorkspaceHeadsReader = (workspacePaths: string[]) => Promise<Record<
  * (`cm wi` would answer for a workspace holding it); workspaces `cm` can't tell are left out. A `wi` that stalls (a
  * network drive that went away) holds the rows after it until the shell's read timeout stops it and that row is left
  * out (`shellCommandTimeoutMs`): as the turns are shared by every window (`workspaceReadTurns`), it holds every
- * window's reads, and one of the shown directory's two sessions, while it lasts. A shorter bound would need a `signal`, which sends every read to
- * a process of its own instead of the pooled shell.
+ * window's reads, and one of the shown directory's two sessions, while it lasts. A shorter bound would need a
+ * `signal`, which sends every read to a process of its own instead of the pooled shell.
  */
 export function workspaceHeadsReader(cm: CmClient, inTurn: WorkspaceReadTurns = workspaceReadTurns()): WorkspaceHeadsReader {
   return async (workspacePaths) => {
