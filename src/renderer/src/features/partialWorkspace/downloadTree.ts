@@ -131,3 +131,13 @@ export function rulesSummary(rules: readonly PartialRule[]): string {
 function itemCount(count: number): string {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
 }
+
+/** What the dialog's body shows: the root still being read, the root unreadable, a repository of nothing, or the tree. */
+export type DownloadRootStatus = 'loading' | 'failed' | 'empty' | 'ready';
+
+/** The body's state from the root: its items show only once both its sides are read, so their checks are right. */
+export function rootStatus(tree: DownloadTree, failures: ReadonlyMap<string, string>): DownloadRootStatus {
+  if (failures.has(ROOT)) return 'failed';
+  if (!isFolderRead(ROOT, tree)) return 'loading';
+  return (tree.items.get(ROOT) ?? []).length === 0 ? 'empty' : 'ready';
+}
