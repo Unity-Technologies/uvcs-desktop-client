@@ -16,9 +16,8 @@ export type NewWorkspaceOutcome = { kind: 'opened' } | CreationFailure;
 /**
  * What the New workspace dialog's Create does. In an existing repository: creates the workspace, opens it and
  * downloads its files, or asks a partial one what to download (`createWorkspaceAndUpdate`). With a new repository:
- * creates the repository (unless an earlier
- * try did) and the workspace, and opens it without an update or a choice, since it holds nothing yet
- * (`createNewRepository`). Either can be dynamic or partial.
+ * creates the repository (unless an earlier try did) and the workspace, and opens it without an update or a choice,
+ * since it holds nothing yet (`createNewRepository`). Either can be dynamic or partial.
  */
 export async function createNewWorkspace({ name, path, repository, kind }: NewWorkspace, open: (workspacePath: string) => void): Promise<NewWorkspaceOutcome> {
   if (repository.kind === 'existing') {
