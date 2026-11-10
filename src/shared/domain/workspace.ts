@@ -37,8 +37,10 @@ export interface WorkspaceInfo {
   server: string;
   selector: WorkspaceSelector;
   /**
-   * The changeset the workspace has loaded; null on a shelve, whose tree is no changeset of the repository (`cm`
-   * numbers it as changeset `-id`, never a changeset to query from): the selector names the shelve.
+   * The changeset the workspace has loaded; null when it loaded no one changeset, never a changeset to query from:
+   * on a shelve, whose tree is no changeset of the repository (`cm` numbers it as changeset `-id`), and on a partial
+   * workspace on a branch, whose files may come from different changesets (`cm` reports -1). The selector names
+   * what it is on, so tell a shelve by `selector.kind`, never by this.
    */
   loadedChangeset: number | null;
   /** How it holds its files; left out when `cm` didn't tell. */

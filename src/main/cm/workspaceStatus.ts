@@ -15,7 +15,7 @@ export interface WorkspaceStatus {
   /** By name, as `cm` prints it almost everywhere (`AcmeStudio@unity` for a Unity organization). */
   server: string;
   selector: WorkspaceSelector;
-  /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
+  /** Null on a shelve or a partial workspace on a branch: no one changeset is loaded (`WorkspaceInfo.loadedChangeset`). */
   loadedChangeset: number | null;
 }
 
@@ -76,14 +76,16 @@ export function parseWorkspaceStatus(xml: string): PrintedWorkspaceStatus {
 }
 
 /**
- * The loaded changeset `cm status` reports, null on a shelve, undefined when it makes no sense. `cm` keeps shelves as
- * changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official client reads a shelve as
- * changeset `-id`). So the shelve's own negated id is no changeset; any other number below zero, or a shelve with a
- * changeset, is output to reject, never a changeset to query from.
+ * The loaded changeset `cm status` reports, null when no one changeset is loaded, undefined when it makes no sense.
+ * `cm` keeps shelves as changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official
+ * client reads a shelve as changeset `-id`), so the shelve's own negated id is no changeset. A partial workspace on a
+ * branch reports -1, even once updated: its files may come from different changesets. Any other number below zero,
+ * or a shelve with a changeset, is output to reject, never a changeset to query from.
  */
 export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector): number | null | undefined {
   if (changeset >= 0) return selector.kind === 'shelve' ? undefined : changeset;
-  return selector.kind === 'shelve' && changeset === -Number(selector.name) ? null : undefined;
+  if (selector.kind === 'shelve') return changeset === -Number(selector.name) ? null : undefined;
+  return selector.kind === 'branch' && changeset === -1 ? null : undefined;
 }
 
 /**
