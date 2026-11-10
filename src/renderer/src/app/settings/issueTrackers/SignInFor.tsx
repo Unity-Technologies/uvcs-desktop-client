@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
+import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { CheckedLine } from './CheckedLine';
 import { connectFailureWords, hostOf, signInMethodShown, type SignInStep } from './connectFlow';
@@ -34,8 +35,10 @@ export function SignInFor({ link, linkText, step, repository, picked, onConnecte
     else setFailure(outcome.failure);
   };
 
+  // A sign-in kept though its project couldn't be read turns this step into using it: the failure stays on screen.
+  const problem = failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: TRACKER_GRAMMARS[link.kind].name, server: link.server })} />;
   if (step.kind === 'useConnection') {
-    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} picked={picked} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
+    if (repository) return <UseConnection link={link} linkText={linkText} step={step} repository={repository} picked={picked} failure={failure} onConnected={onConnected} onDifferentAccount={onDifferentAccount} />;
     return (
       <div className={styles.next}>
         <p className={styles.nextTitle}>You're already signed in</p>
@@ -43,6 +46,7 @@ export function SignInFor({ link, linkText, step, repository, picked, onConnecte
           Signed in as <strong>{step.connection.account.name}</strong> at {hostOf(step.connection.server)}
         </CheckedLine>
         <DifferentAccountLink onClick={onDifferentAccount} />
+        {problem}
       </div>
     );
   }
@@ -62,7 +66,7 @@ export function SignInFor({ link, linkText, step, repository, picked, onConnecte
           signIn={(token, email) => api.issueTrackers.signInWithToken({ ...(repository && { repository }), link: linkText, token, ...(email && { email }) })}
         />
       )}
-      {method === 'deviceCode' && failure && <SignInProblem failed={connectFailureWords(failure, { trackerName: step.trackerName, server: link.server })} />}
+      {method === 'deviceCode' && problem}
     </div>
   );
 }

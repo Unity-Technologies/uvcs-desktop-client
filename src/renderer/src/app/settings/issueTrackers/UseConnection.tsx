@@ -21,11 +21,13 @@ export function UseConnection(props: {
   step: Extract<SignInStep, { kind: 'useConnection' }>;
   repository: string;
   picked: boolean;
+  /** The sign-in's own failure, from the step before (a project it couldn't read), until Connect tries again. */
+  failure: SignInFailure | null;
   onConnected: (outcome: SignedIn) => void;
   onDifferentAccount: () => void;
 }) {
   const { link, linkText, step, repository, picked, onConnected, onDifferentAccount } = props;
-  const [failure, setFailure] = useState<SignInFailure | null>(null);
+  const [failure, setFailure] = useState<SignInFailure | null>(props.failure);
   const [busy, setBusy] = useState(false);
   const name = TRACKER_GRAMMARS[step.connection.kind].name;
   const connect = async (): Promise<void> => {
