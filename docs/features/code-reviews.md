@@ -226,7 +226,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   while it's selected (`appliedFilesHeading`). When that changeset didn't change the commented file at all (the request
   applied elsewhere: a missing test added, a sibling fixed), How it was applied lists its files alone, the first
   selected, the thread above them, folded to its first words (`contextBodyOf`, which picks it over the thread alone;
-  unfolded, it takes at most 40% of the height), so the request and its fix read together; the subtitle
+  unfolded, it takes at most 40% of the height and scrolls within it, its card keeping its whole height: shrunk to
+  fit, the card clipped a long thread instead), so the request and its fix read together; the subtitle
   says the changeset applied it in other files, and the view switch stays, leading back to When commented. It says
   "applied", even for a request marked applied by hand there: what the review records can't tell the two apart, and
   the files beside it show what that changeset did. No list for a fix of that file alone. The list costs no command:
@@ -234,7 +235,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   would leave the review, and that page knows nothing of the comment. The dialog is as wide as the window allows, up to
   1680 px: two versions of code side by side, and the files beside them. Its diff
   is 66vh tall, less where the window leaves the dialog less, so the dialog never scrolls as a whole (a window of
-  1000×800 or 900×700). It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
+  1000×800 or 900×700). Its diff's comments button hides the thread from the code, to read the code alone, as the
+  review's diff does: a marker on its line, a click showing it again (`useThreadRow`, `contextThreadParts`,
+  `CommentsInCodeButton`); its line keeps its outline in the accent, the thread being what the dialog is about. It
+  shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it. It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
   while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
