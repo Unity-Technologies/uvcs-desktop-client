@@ -27,6 +27,15 @@ export interface DiffAnnotations {
   mapTickTip?: (keys: readonly string[]) => string;
   scrollTo: ChangedLine | null;
   opensAtRow: boolean;
+  /** The lines rows or markers are about, outlined (`LineBands`); the one gone to in the accent, as its card is. */
+  bands?: readonly LineBand[];
+}
+
+/** A line a row or a marker is about. */
+export interface LineBand extends ChangedLine {
+  key: string;
+  /** What it's about is the one gone to: outlined in the accent, as its card is. */
+  selected: boolean;
 }
 
 /** A mark on a line, at the end of its pane; `lineNumber: 0`, on the code's first row (`topRowOf`), for what's above it. */

@@ -21,6 +21,7 @@ import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { scrollToAnnotationRow } from './annotationRowScroll';
+import { LineBands } from './LineBands';
 import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
 import { LineMarkers } from './LineMarkers';
@@ -367,6 +368,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           <PaneScrollbars containerRef={container} />
           {discard.overlay}
           {lineTools.chip}
+          {annotations?.bands && annotations.bands.length > 0 && <LineBands containerRef={container} bands={annotations.bands} layout={layout} />}
           {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
         </div>

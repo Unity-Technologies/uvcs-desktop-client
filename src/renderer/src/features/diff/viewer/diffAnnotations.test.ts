@@ -40,7 +40,7 @@ describe('markerLeft', () => {
 
 describe('markerSpots', () => {
   const marker = (key: string, lineNumber: number) => ({ key, lineNumber });
-  const box = (top: number, bottom = top + 20, paneRight = 640) => ({ top, bottom, paneRight });
+  const box = (top: number, bottom = top + 20, paneRight = 640) => ({ top, bottom, contentLeft: 40, paneRight });
 
   it("places each marker at the end of its line, centered on it", () => {
     const spots = markerSpots([marker('a', 4)], new Map([['a', box(100)]]));

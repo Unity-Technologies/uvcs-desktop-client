@@ -7,7 +7,7 @@ import { displayName } from '../../../lib/userName';
 import { AvatarStack } from '../../../ui/AvatarStack';
 import { IconButton } from '../../../ui/IconButton';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
-import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import { DiffAnnotationsContext, type DiffAnnotations, type LineBand, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
@@ -97,7 +97,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     const render = (row: DiffLineAnnotation<string>) => renderRow(row, { comments, fileComments, focus, textOf, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
-    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow };
+    const bands = fileComments.lines.map((line) => lineBand(line, focus));
+    return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow]);
 
   // An action that says what it does, not a pressed state: "Comments in the code" didn't say which way it goes.
@@ -112,6 +113,12 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
 }
 
 const NO_KEYS: readonly string[] = [];
+
+/** A line with threads, outlined; selected when it holds the thread gone to. */
+function lineBand(line: LineThreads, focus: ReviewComments['focus']): LineBand {
+  const selected = focus !== null && line.threads.some(({ thread }) => thread.root.id === focus.threadId);
+  return { key: line.key, side: line.side, lineNumber: line.line, selected };
+}
 const NO_TICKS: readonly MapTick[] = [];
 
 /** What changes the file's comments as its versions arrive: each version read, still read, or failed. */

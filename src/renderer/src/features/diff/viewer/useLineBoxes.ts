@@ -3,10 +3,11 @@ import type { ChangedLine } from './changeBlocks';
 import { lineNumberCellSelector, paneContentSelector, topRowOf, type CodeLayout } from './lineActions';
 import { paneRect, pierreShadowRoot } from './pierreDom';
 
-/** Where a line is, in the container's scrolled content: its row's top and bottom, and its pane's right edge. */
+/** Where a line is, in the container's scrolled content: its row's top and bottom, and its pane's code's left and right edges. */
 export interface LineBox {
   top: number;
   bottom: number;
+  contentLeft: number;
   paneRight: number;
 }
 
@@ -42,9 +43,11 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
         const pane = cell?.closest('[data-code]');
         if (!cell || !pane) continue;
         const rect = cell.getBoundingClientRect();
+        const content = pane.querySelector(':scope > [data-content]')?.getBoundingClientRect();
         next.set(line.key, {
           top: rect.top - view.top + container.scrollTop,
           bottom: rect.bottom - view.top + container.scrollTop,
+          contentLeft: (content?.left ?? rect.right) - view.left + container.scrollLeft,
           paneRight: paneRect(pane).right - view.left + container.scrollLeft,
         });
       }
@@ -103,7 +106,7 @@ function sameBoxes(a: ReadonlyMap<string, LineBox>, b: ReadonlyMap<string, LineB
   if (a.size !== b.size) return false;
   for (const [key, box] of a) {
     const other = b.get(key);
-    if (!other || other.top !== box.top || other.bottom !== box.bottom || other.paneRight !== box.paneRight) return false;
+    if (!other || other.top !== box.top || other.bottom !== box.bottom || other.contentLeft !== box.contentLeft || other.paneRight !== box.paneRight) return false;
   }
   return true;
 }

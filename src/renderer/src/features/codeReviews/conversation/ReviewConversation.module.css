@@ -707,6 +707,14 @@ button.earlierTag:hover {
 }
 
 /*
+ * In the code, a card's border is its line's outline color (`LineBands`): over the diff's added and removed tints, the
+ * subtle border the conversation uses all but disappears.
+ */
+.thread[data-in-code] {
+  border-color: var(--border-default);
+}
+
+/*
  * In the code, the thread gone to keeps its ring until another is: among several alike (the outdated ones, stacked
  * above the code), the eye finds it again after the light fades.
  */
