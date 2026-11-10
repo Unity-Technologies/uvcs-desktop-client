@@ -1,7 +1,7 @@
+import { useRef } from 'react';
 import { Pencil, X } from 'lucide-react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { api } from '../../api/client';
-import { useRef } from 'react';
 import { AnchoredCard, useHoverOpen } from '../../components/comments/AnchoredCard';
 import { AttributeValueCard } from './AttributeValueCard';
 import { attributeTone, attributeValueKind, chipHover, chipText } from './attributeValues';
@@ -27,7 +27,6 @@ export function AttributeChip({ attribute, active, onOpen, onRemove }: Attribute
   const hover = chipHover(attribute, active);
   const main = useRef<HTMLButtonElement>(null);
   const card = useHoverOpen({ scrollable: true });
-  // An empty tip shows none: without it, the tooltip layer would show the clipped value's raw text before the card.
 
   const open = (): void => {
     // The chip keeps the focus that opened its card: closed now, it stays closed as the value opens and closes again.
@@ -38,6 +37,7 @@ export function AttributeChip({ attribute, active, onOpen, onRemove }: Attribute
 
   return (
     <span className={styles.chip} data-tone={kind === 'pill' ? attributeTone(value) : 'neutral'} data-kind={kind} data-active={active}>
+      {/* An empty tip shows none: else the tooltip layer would show the clipped value's raw text before the card. */}
       <button ref={main} className={styles.chipMain} onClick={open} data-tip={hover.kind === 'tip' ? hover.text : ''} {...(hover.kind === 'card' ? card.handlers : {})}>
         <span className={styles.chipName}>{attribute.name}</span>
         <span className={styles.chipValue}>{chipText(attribute.value)}</span>
