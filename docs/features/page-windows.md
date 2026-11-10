@@ -48,8 +48,9 @@ window" is what browsers and the official client say.
   renderer: the workspace window goes to the view as it was.
 - **Commands**: going to a view (⌘1…, the palette) brings the workspace window forward on it
   (`usePageWindowCommands`, `windows.showWorkspaceWindow`); a menu bar command the page window doesn't have (Switch
-  branch, Update workspace…) runs there the same way (`useMenuCommands`). The Window menu lists each page window under
-  its workspace window.
+  branch, Update workspace…) runs there the same way (`useMenuCommands`). Refresh (⌘R) is the page window's own: it
+  reads its page again (`pageWindowCommands`, `refreshCommand`) and leaves the workspace window where it is. The Window
+  menu lists each page window under its workspace window.
 - **Its commands show in its workspace window's command log** (`commandLogOf`).
 - **Its diff expands** (Expand Diff, diff.md "Expanding the diff"): the page's files go out of sight under its top bar,
   and following the selection to another object keeps it expanded, as the page is replaced at the same depth.
