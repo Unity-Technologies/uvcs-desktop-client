@@ -38,13 +38,14 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   }
 
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
-    const [status, { name }] = await Promise.all([headers.status(workspacePath), headers.names(workspacePath)]);
+    const [status, { name, kind }] = await Promise.all([headers.status(workspacePath), headers.names(workspacePath)]);
 
     return {
       name,
       path: workspacePath,
       repository: `${status.repositoryName}@${status.server}`,
       ...status,
+      kind,
     };
   }
 

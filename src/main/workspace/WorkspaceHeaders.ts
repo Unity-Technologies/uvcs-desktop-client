@@ -1,14 +1,18 @@
 import type { CmClient } from '../cm/CmClient';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
+import { WORKSPACE_KIND_FIELDS, workspaceKindOf } from '../cm/workspaceKind';
 import { readWorkspaceStatus, type WorkspaceStatus } from '../cm/workspaceStatus';
 import { isSameOrInside } from '../files/pathContainment';
 
 /** A read this recent answers again, unless something rewrote the workspace meanwhile (`forget`). */
 const FRESH_MS = 5000;
 
+/** Who the workspace is, and how it holds its files: what one `cm getworkspacefrompath` tells about it. */
 export interface WorkspaceNames {
   name: string;
   guid: string;
+  kind: WorkspaceKind;
 }
 
 export interface HeaderReaders {
@@ -20,9 +24,14 @@ export function cmHeaderReaders(cm: CmClient): HeaderReaders {
   return {
     status: (workspacePath) => readWorkspaceStatus(cm, workspacePath),
     names: async (workspacePath) => {
-      const args = ['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid'])}`];
-      const [names] = await cm.queryRecords(args, ([name = '', guid = '']) => ({ name: name.trim(), guid: guid.trim() }), { cwd: workspacePath });
-      return names ?? { name: '', guid: '' };
+      const args = ['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid', ...WORKSPACE_KIND_FIELDS])}`];
+      const readNames = ([name = '', guid = '', type = '', dynamic = '']: string[]): WorkspaceNames => ({
+        name: name.trim(),
+        guid: guid.trim(),
+        kind: workspaceKindOf(type, dynamic),
+      });
+      const [names] = await cm.queryRecords(args, readNames, { cwd: workspacePath });
+      return names ?? { name: '', guid: '', kind: 'standard' };
     },
   };
 }
@@ -34,7 +43,7 @@ interface Reads {
 }
 
 /**
- * What a workspace is loaded from (`cm status --header`) and its name and guid, shared by the reads that follow one
+ * What a workspace is loaded from (`cm status --header`) and its name, guid and kind, shared by the reads that follow one
  * another as a window opens it (the workspace info, then the left changes). Every command that rewrites a workspace,
  * and every `.plastic` rewrite the watchers see, forgets that workspace's.
  */
