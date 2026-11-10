@@ -861,6 +861,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
   there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
+  On Windows, where the UVCS tray runs (its file system mounts dynamic workspaces), the dialog offers to make the
+  workspace dynamic (`workspaces.canCreateDynamic`, which lists local processes with `tasklist`: never a server, and
+  never `cm`'s own files; `newWorkspaceFormOf`'s `offersDynamic`). A dynamic one is created with `cm workspace create
+  --dynamic --tree=br:/main@<repository>` (`workspaceCreateArgs`) in a process of its own, as it waits for the mount,
+  and opens without an Update: its files download as they're first opened.
   The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
   repositories (`ui/Combobox`: "Big lists render only the rows in view"); a name the server has is that repository,
   any other (by case, as `cm` tells them apart) is created with the workspace (`newWorkspaceFormOf`,
