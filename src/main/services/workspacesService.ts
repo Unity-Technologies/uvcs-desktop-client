@@ -10,6 +10,7 @@ import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
+import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
 import { workspaceHeadsReader } from '../cm/workspaceHeads';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
@@ -17,6 +18,7 @@ import { locateInWorkspace } from '../links/locateInWorkspace';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
+import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -50,7 +52,9 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {
     const madeHere = (await checkNewWorkspaceFolder(request.path)) === 'available';
-    await cm.query(['workspace', 'create', request.name, request.path, request.repository]);
+    const args = workspaceCreateArgs(request);
+    // A dynamic workspace's create waits for its file system to mount it (up to 30 s): a process, not a pooled shell.
+    await (request.dynamic ? cm.execute(args) : cm.query(args));
     if (madeHere) createdFolders.add(request.path);
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);
@@ -119,6 +123,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),
+    canCreateDynamic: () => readTrayRuns(process.platform),
     create,
     rename,
     remove,

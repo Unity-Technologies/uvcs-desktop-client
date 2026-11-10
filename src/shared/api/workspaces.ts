@@ -5,6 +5,11 @@ export interface CreateWorkspaceRequest {
   name: string;
   path: string;
   repository: string;
+  /**
+   * A dynamic workspace: its files are fetched from the server as they're opened, instead of downloaded by an update.
+   * Only where `canCreateDynamic` says so.
+   */
+  dynamic?: boolean;
 }
 
 /**
@@ -39,6 +44,12 @@ export interface WorkspacesApi {
    * `cm getworkspacefrompath`; null outside any workspace.
    */
   locate(path: string): Promise<WorkspaceLocation | null>;
+  /**
+   * Whether dynamic workspaces can be created here: on Windows, while the Unity Version Control tray runs, since its
+   * file system serves their files. One local process listing, no `cm` call.
+   */
+  canCreateDynamic(): Promise<boolean>;
+  /** Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update. */
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */

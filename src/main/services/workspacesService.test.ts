@@ -129,6 +129,22 @@ describe('creating a workspace', () => {
     expect(lines()[0]).toBe(`workspace create game ${path} game@local`);
   });
 
+  it('creates a regular workspace in a pooled shell, naming its repository', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    await service.create({ name: 'game', path, repository: 'game@local' });
+    expect(commands[0]).toMatchObject({ via: 'query', args: ['workspace', 'create', 'game', path, 'game@local'] });
+  });
+
+  it('creates a dynamic workspace in a process, since cm waits for it to be mounted, loading /main of its repository', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    expect(await service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(commands[0]).toMatchObject({ via: 'execute', args: ['workspace', 'create', 'game', path, '--dynamic', '--tree=br:/main@game@local'] });
+  });
+
   it("fails when the new workspace isn't listed", async () => {
     const path = await emptyFolder();
     const { service } = workspaces({ 'workspace create': '', 'workspace list': '' });
