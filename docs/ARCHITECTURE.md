@@ -36,6 +36,7 @@ you touch:
 | `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
+| `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
 
 ## How a request flows
 
@@ -227,7 +228,8 @@ and many people use the same server. Every `cm` command other than local reads (
   `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
   only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
   keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
-  none, never as standard, and is asked again the next time it shows.
+  none, never as standard, and is asked again the next time it shows. How a partial workspace is created, chosen
+  and kept partial: docs/features/partial-workspaces.md.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
