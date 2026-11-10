@@ -7,7 +7,7 @@ export interface WorkspaceKindWords {
 }
 
 const WORKSPACE_KIND_WORDS: Record<WorkspaceKind, WorkspaceKindWords> = {
-  standard: { label: 'Standard', description: 'Holds every file of what it is loaded from' },
+  standard: { label: 'Standard', description: 'Holds every file of the branch or changeset it is on' },
   partial: { label: 'Partial', description: 'Holds only the files and folders chosen for it' },
   dynamic: { label: 'Dynamic', description: 'Downloads each file the first time it is opened' },
 };
