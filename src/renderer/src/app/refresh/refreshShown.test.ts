@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../api/queryKeys';
-import { codeReviewKey } from '../../features/codeReviews/useCodeReviews';
+import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { createQueryClient, IMMUTABLE_QUERY } from '../queryClient';
 import { refreshShownIn } from './refreshShown';

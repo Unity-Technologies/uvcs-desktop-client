@@ -6,6 +6,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
+import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
@@ -30,11 +31,6 @@ export function useCodeReview(reviewId: number) {
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
-}
-
-/** One review, as its page reads it. */
-export function codeReviewKey(place: Place, reviewId: number): readonly unknown[] {
-  return queryKeys.inPlace(place, 'codeReviews', 'review', reviewId);
 }
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */

@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
-import { codeReviewKey } from '../../features/codeReviews/useCodeReviews';
+import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
 import type { Page } from '../navigation/pages';
 import { useNavigation } from '../navigation/navigationStore';
 import { invalidatePlaceIn, queryClient } from '../queryClient';
