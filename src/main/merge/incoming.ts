@@ -98,7 +98,7 @@ interface NewestIncoming {
 
 async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string): Promise<NewestIncoming> {
   const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
-  // Only a shelve has no loaded changeset, and a shelve is no branch.
+  // Off a branch nothing comes in; a partial workspace has no one changeset to count from (`loadedChangesetOf`).
   if (selector.kind !== 'branch' || loadedChangeset === null) return { summary: NOTHING_INCOMING, changesets: [], moreChangesets: false };
 
   const branch = selector.name;

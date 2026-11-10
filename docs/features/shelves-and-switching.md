@@ -54,6 +54,12 @@ rest, rather than stopping. `cm partial switch` only takes a branch of the works
 label or shelve ("A partial workspace can only switch to a branch."), or a branch of another repository ("… of its own
 repository.").
 
+A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
+update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
+(`loadedChangesetOf`: -1 only on a branch, any other number below zero stays unexpected output), as on a shelve, and
+tells the two apart by the selector's kind, never by `loadedChangeset`. So nothing comes in (`NothingIncoming`), no
+branch is made from the workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
+
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
 "Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,

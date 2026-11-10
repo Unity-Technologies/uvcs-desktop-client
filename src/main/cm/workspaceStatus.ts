@@ -15,7 +15,7 @@ export interface WorkspaceStatus {
   /** By name, as `cm` prints it almost everywhere (`AcmeStudio@unity` for a Unity organization). */
   server: string;
   selector: WorkspaceSelector;
-  /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
+  /** Null on a shelve or in a partial workspace: neither has one changeset loaded (`WorkspaceInfo.loadedChangeset`). */
   loadedChangeset: number | null;
 }
 
@@ -75,14 +75,19 @@ export function parseWorkspaceStatus(xml: string): PrintedWorkspaceStatus {
   return { repositoryName, printedServer, selector, loadedChangeset };
 }
 
+/** What `cm status` reports as the loaded changeset of a partial workspace, which has none (`loadedChangesetOf`). */
+const PARTIAL_WORKSPACE_CHANGESET = -1;
+
 /**
- * The loaded changeset `cm status` reports, null on a shelve, undefined when it makes no sense. `cm` keeps shelves as
- * changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official client reads a shelve as
- * changeset `-id`). So the shelve's own negated id is no changeset; any other number below zero, or a shelve with a
- * changeset, is output to reject, never a changeset to query from.
+ * The loaded changeset `cm status` reports, null when the workspace has none, undefined when it makes no sense. `cm`
+ * keeps shelves as changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official client
+ * reads a shelve as changeset `-id`), so the shelve's own negated id is no changeset. A partial workspace on a branch
+ * reports -1: each folder it loads may be at another changeset (`cm partial update` of one path), so it has no single
+ * one. Any other number below zero, or a shelve with a changeset, is output to reject, never a changeset to query from.
  */
 export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector): number | null | undefined {
   if (changeset >= 0) return selector.kind === 'shelve' ? undefined : changeset;
+  if (selector.kind === 'branch') return changeset === PARTIAL_WORKSPACE_CHANGESET ? null : undefined;
   return selector.kind === 'shelve' && changeset === -Number(selector.name) ? null : undefined;
 }
 
