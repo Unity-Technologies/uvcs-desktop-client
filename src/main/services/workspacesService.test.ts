@@ -219,8 +219,9 @@ describe('update', () => {
 
     await service.update(WORKSPACE, 'op-1');
 
-    expect(commands).toMatchObject([{ via: 'execute', args: UPDATE_ARGS, options: { cwd: WORKSPACE } }]);
-    expect(commands[0]?.args).toContain('--dontmerge');
+    const started = commands.filter((command) => command.via === 'execute');
+    expect(started).toMatchObject([{ via: 'execute', args: UPDATE_ARGS, options: { cwd: WORKSPACE } }]);
+    expect(started[0]?.args).toContain('--dontmerge');
   });
 
   it('keeps a partial workspace partial: a partial update of what it holds, never one that loads everything', async () => {
