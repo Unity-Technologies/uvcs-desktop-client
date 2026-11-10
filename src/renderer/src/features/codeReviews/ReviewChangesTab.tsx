@@ -73,12 +73,15 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     setRequest(threadDiffRequest(review, thread, seq.current));
   };
 
+  // The focus as last set, for a pick to compare with outside a state updater, which must stay pure.
+  const latestFocus = useRef(focus);
+  latestFocus.current = focus;
   const selectThread = useCallback((thread: LineThread): void => {
-    setFocus((current) => {
-      const next = selectedInPlace(current, thread.root.id, seq.current + 1);
-      seq.current = next.seq;
-      return next;
-    });
+    const next = selectedInPlace(latestFocus.current, thread.root.id, seq.current + 1);
+    if (next === latestFocus.current) return;
+    seq.current = next.seq;
+    latestFocus.current = next;
+    setFocus(next);
     setFolded((current) => unfoldedFor(current, thread));
   }, []);
 
