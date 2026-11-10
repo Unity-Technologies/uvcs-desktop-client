@@ -86,10 +86,11 @@ export function useMissingWorkspacePaths(paths: string[]) {
 
 /**
  * Whether this computer can create dynamic workspaces: read when the New workspace dialog opens, as the tray that
- * mounts them may have started or stopped since; a local process list, so it never reaches a server.
+ * mounts them may have started or stopped since; a local process list, so it never reaches a server. Only then:
+ * not again on every focus while the dialog stays open.
  */
 export function useCanCreateDynamicWorkspaces() {
-  return useQuery({ queryKey: queryKeys.dynamicWorkspaces, queryFn: () => api.workspaces.canCreateDynamic(), staleTime: 0 });
+  return useQuery({ queryKey: queryKeys.dynamicWorkspaces, queryFn: () => api.workspaces.canCreateDynamic(), staleTime: 0, refetchOnWindowFocus: false });
 }
 
 export const serversQuery = queryOptions({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });
