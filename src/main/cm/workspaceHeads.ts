@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
 import type { SelectorKind, WorkspaceHead } from '@shared/domain/workspace';
-import { concurrencyLimit } from '@shared/concurrencyLimit';
 import type { CmClient } from './CmClient';
 import { FIELD_SEPARATOR } from './formatRecords';
 import { isOrganizationIdServer } from './organizationIds';
+import { workspaceReadTurns, type WorkspaceReadTurns } from './workspaceReadTurns';
 
 /** The working mode codes `cm wi --machinereadable` starts its line with; a smart branch is a branch. */
 const KINDS_BY_CODE: Record<string, SelectorKind> = { BR: 'branch', CS: 'changeset', LB: 'label', SH: 'shelve' };
@@ -46,14 +46,6 @@ export function parseWorkspaceInfo(output: string): WorkspaceHead | null {
   return null;
 }
 
-/**
- * One workspace read at a time, across every call (two windows, a list read again while the last read runs): each is
- * a pooled `cm shell` command of a few ms, and the pool keeps two sessions per directory, so one stays free for every
- * other read. Before the pool is warm, a query runs as a process of its own: one at a time also keeps the home screen
- * from starting a process per workspace.
- */
-const CONCURRENT_READS = 1;
-
 /** What each of these workspaces works on, for the ones `cm` can tell. */
 export type WorkspaceHeadsReader = (workspacePaths: string[]) => Promise<Record<string, WorkspaceHead>>;
 
@@ -64,12 +56,11 @@ export type WorkspaceHeadsReader = (workspacePaths: string[]) => Promise<Record<
  * (`anyDirectory`), so the home screen starts no sessions per workspace. A folder that is gone is not asked about
  * (`cm wi` would answer for a workspace holding it); workspaces `cm` can't tell are left out. A `wi` that stalls (a
  * network drive that went away) holds the rows after it until the shell's read timeout stops it and that row is left
- * out (`shellCommandTimeoutMs`): as the limiter is shared by every window, it holds every window's heads, and one of
- * the shown directory's two sessions, while it lasts. A shorter bound would need a `signal`, which sends every read to
+ * out (`shellCommandTimeoutMs`): as the turns are shared by every window (`workspaceReadTurns`), it holds every
+ * window's reads, and one of the shown directory's two sessions, while it lasts. A shorter bound would need a `signal`, which sends every read to
  * a process of its own instead of the pooled shell.
  */
-export function workspaceHeadsReader(cm: CmClient): WorkspaceHeadsReader {
-  const inTurn = concurrencyLimit(CONCURRENT_READS);
+export function workspaceHeadsReader(cm: CmClient, inTurn: WorkspaceReadTurns = workspaceReadTurns()): WorkspaceHeadsReader {
   return async (workspacePaths) => {
     const heads: Record<string, WorkspaceHead> = {};
     await Promise.all(
