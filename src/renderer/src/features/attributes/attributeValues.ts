@@ -1,3 +1,4 @@
+import { commentLineText } from '../../lib/comments/commentText';
 import { markdownPreview } from '../../lib/markdown';
 
 /** How an attribute value reads best: a status pill, a link, a long text folded to one line, or plain text. */
@@ -26,7 +27,10 @@ export function attributeValueKind(value: string): AttributeValueKind {
   return 'text';
 }
 
-/** What a value's chip says: "empty", a long text's first line, a link without its scheme, else the value. */
+/**
+ * What a value's chip says: "empty", a long text folded to one line, a link without its scheme, else the value as it
+ * reads, its Markdown marks left out (`**urgent**` says "urgent").
+ */
 export function chipText(value: string): string {
   const trimmed = value.trim();
   switch (attributeValueKind(value)) {
@@ -37,8 +41,44 @@ export function chipText(value: string): string {
     case 'url':
       return trimmed.replace(/^https?:\/\//i, '');
     default:
-      return trimmed;
+      return commentLineText(trimmed);
   }
+}
+
+/** What hovering a value's chip shows: a tooltip of text, a card with a long text's Markdown drawn, or nothing. */
+export type ChipHover = { kind: 'tip'; text: string } | { kind: 'card'; markdown: string } | { kind: 'none' };
+
+/**
+ * A link shows its whole address; a short value reads as it does on the chip (`chipText`), after its attribute's name.
+ * A long text (release notes: Markdown, most often) shows whole in a card, drawn as it reads, as a comment's chips show
+ * theirs (`ChipHoverCard`); while it's open under the chips, the card would only repeat it.
+ */
+export function chipHover(attribute: { name: string; value: string }, opened: boolean): ChipHover {
+  switch (attributeValueKind(attribute.value)) {
+    case 'url':
+      return { kind: 'tip', text: attribute.value.trim() };
+    case 'long':
+      return opened ? { kind: 'none' } : { kind: 'card', markdown: attribute.value.trim() };
+    default:
+      return { kind: 'tip', text: `${attribute.name}: ${chipText(attribute.value)}` };
+  }
+}
+
+/** Where a value is edited: a quick field offering the values it takes elsewhere, or the comment editor for a text. */
+export type AttributeEditor = 'value' | 'text';
+
+/**
+ * A long text (release notes, a description: Markdown, most often) opens in the comment editor, its Markdown drawn as
+ * it reads; anything shorter in the quick field, where Enter saves. A draft there that gains a second line (⇧↵, a
+ * paste) moves on to the comment editor too.
+ */
+export function attributeEditorFor(value: string): AttributeEditor {
+  return attributeValueKind(value) === 'long' ? 'text' : 'value';
+}
+
+/** Whether the quick field's draft has become a text of many lines, which the comment editor takes from there. */
+export function outgrowsQuickField(draft: string): boolean {
+  return draft.includes('\n');
 }
 
 /** Green for values that mean "good", red for "bad", amber for "in between"; anything else stays neutral. */
