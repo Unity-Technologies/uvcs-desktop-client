@@ -1,11 +1,7 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
-import { History, MessageSquare, MessageSquareOff } from 'lucide-react';
-import { useContext, useMemo, useState, type ReactNode } from 'react';
+import { History } from 'lucide-react';
+import { useContext, useMemo, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
-import { pluralize } from '../../../lib/text';
-import { displayName } from '../../../lib/userName';
-import { AvatarStack } from '../../../ui/AvatarStack';
-import { IconButton } from '../../../ui/IconButton';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type DiffAnnotations, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
@@ -15,12 +11,14 @@ import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileA
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
+import { CommentMarkerContent } from './CommentMarkerContent';
+import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads } from './InlineThreads';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
 import { markerTip } from './markerTip';
 import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
-import { markerCommentCount, markerIsOpen, markerLabel, markerPeople, shownThreadRows, type LineThreads, type MarkedThreads } from './threadRows';
+import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
@@ -89,7 +87,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       lineNumber: line.line,
       label: markerLabel(line),
       tip: markerTip(line),
-      content: <MarkerContent line={line} />,
+      content: <CommentMarkerContent line={line} />,
       emphasized: markerIsOpen(line),
       // Opened, the line's first thread is the one looked at: selected, as a card clicked is.
       onOpen: () => {
@@ -107,14 +105,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     return { rows: annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow]);
 
-  // An action that says what it does, not a pressed state: "Comments in the code" didn't say which way it goes.
-  const controls = hasComments(fileComments) && (
-    <IconButton
-      icon={inCode ? <MessageSquare size={14} /> : <MessageSquareOff size={14} />}
-      label={inCode ? 'Hide comments in the code' : 'Show comments in the code'}
-      onClick={() => setInCode(!inCode)}
-    />
-  );
+  const controls = hasComments(fileComments) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
   return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
 }
 
@@ -135,23 +126,10 @@ function outdatedLineMarker(outdated: OutdatedMarker, side: LineThreads['side'],
     lineNumber: 0,
     label: outdated.label,
     tip: outdated.tip,
-    content: <MarkerContent line={outdated} icon={<History size={12} aria-hidden />} />,
+    content: <CommentMarkerContent line={outdated} icon={<History size={12} aria-hidden />} />,
     emphasized: outdated.emphasized,
     onOpen,
   };
-}
-
-/** A marker's content: who wrote there, and how many comments there are, as a pull request's do; the outdated ones', after a clock. */
-function MarkerContent({ line, icon }: { line: MarkedThreads; icon?: ReactNode }) {
-  const { people, more } = markerPeople(line);
-  return (
-    <>
-      {icon}
-      {/* Still: the marker's own tooltip previews its threads (`markerTip`). */}
-      <AvatarStack still avatars={people.map((user) => ({ user, tip: displayName(user) }))} size={14} more={more > 0 ? { count: more, tip: pluralize(more, 'other') } : undefined} />
-      {markerCommentCount(line)}
-    </>
-  );
 }
 
 interface RowContext {
