@@ -23,6 +23,17 @@ describe('createNewWorkspace', () => {
       expect(open).toHaveBeenCalledWith(path);
     });
 
+    it('creates a dynamic workspace, and opens it without an update', async () => {
+      const open = vi.fn();
+      fakeApi.answer('workspaces.create', () => created);
+
+      await createNewWorkspace({ name, path, repository: { kind: 'existing', spec: 'game@local' }, dynamic: true }, open);
+
+      expect(fakeApi.methods()).toEqual(['workspaces.create']);
+      expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ name, path, repository: 'game@local', dynamic: true }]]);
+      expect(open).toHaveBeenCalledWith(path);
+    });
+
     it('says the workspace failed, and opens nothing', async () => {
       const open = vi.fn();
       fakeApi.answer('workspaces.create', () => {
@@ -50,6 +61,15 @@ describe('createNewWorkspace', () => {
       expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ name, path, repository: 'game@acme@cloud' }]]);
       expect(open).toHaveBeenCalledWith(path);
       expect(shownToasts()).toEqual([]);
+    });
+
+    it('makes the workspace of a new repository dynamic when asked', async () => {
+      fakeApi.answer('repositories.create', () => 'game@acme@cloud');
+      fakeApi.answer('workspaces.create', () => created);
+
+      await createNewWorkspace({ name, path, repository: newRepository, dynamic: true }, () => {});
+
+      expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ name, path, repository: 'game@acme@cloud', dynamic: true }]]);
     });
 
     it('makes only the workspace once an earlier try made the repository', async () => {

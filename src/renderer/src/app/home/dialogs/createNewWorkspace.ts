@@ -6,6 +6,8 @@ interface NewWorkspace {
   name: string;
   path: string;
   repository: WorkspaceRepository;
+  /** Made dynamic (`CreateWorkspaceRequest.dynamic`): its files download as they're opened. */
+  dynamic?: boolean;
 }
 
 export type NewWorkspaceOutcome = { kind: 'opened' } | CreationFailure;
@@ -13,19 +15,19 @@ export type NewWorkspaceOutcome = { kind: 'opened' } | CreationFailure;
 /**
  * What the New workspace dialog's Create does. In an existing repository: creates the workspace, opens it and
  * downloads its files (`createWorkspaceAndUpdate`). With a new repository: creates the repository (unless an earlier
- * try did) and the workspace, and opens it without an update (`createNewRepository`).
+ * try did) and the workspace, and opens it without an update (`createNewRepository`). Either can be dynamic.
  */
-export async function createNewWorkspace({ name, path, repository }: NewWorkspace, open: (workspacePath: string) => void): Promise<NewWorkspaceOutcome> {
+export async function createNewWorkspace({ name, path, repository, dynamic }: NewWorkspace, open: (workspacePath: string) => void): Promise<NewWorkspaceOutcome> {
   if (repository.kind === 'existing') {
     try {
-      await createWorkspaceAndUpdate({ name, path, repository: repository.spec }, open);
+      await createWorkspaceAndUpdate({ name, path, repository: repository.spec, dynamic }, open);
       return { kind: 'opened' };
     } catch (error) {
       return { kind: 'failed', title: "Couldn't create the workspace", error };
     }
   }
 
-  const outcome = await createNewRepository({ server: repository.server, name: repository.name, created: repository.created, workspace: { name, path } });
+  const outcome = await createNewRepository({ server: repository.server, name: repository.name, created: repository.created, workspace: { name, path, dynamic } });
   if (outcome.kind === 'failed') return outcome;
   // Always there: a workspace was asked for.
   open(outcome.workspace!.path);
