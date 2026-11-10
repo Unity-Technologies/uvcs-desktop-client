@@ -6,6 +6,7 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
+import { partialConfigureArgs, readTopFolder, topFoldersArgs } from '../cm/partialWorkspace';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
@@ -109,6 +110,12 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
+  function configurePartial(workspacePath: string, folders: string[], operationId: string): Promise<void> {
+    return operations.run(operationId, async ({ signal }) => {
+      await cm.execute(partialConfigureArgs(folders), { cwd: workspacePath, signal });
+    });
+  }
+
   async function discardNew(workspacePath: string): Promise<void> {
     await cm.query(['workspace', 'delete', workspacePath]);
     if (!createdFolders.delete(workspacePath)) return;
@@ -131,6 +138,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),
     canCreateDynamic: () => readTrayRuns(process.platform),
+    topFolders: (repository) => cm.queryRecords(topFoldersArgs(repository), readTopFolder, { anyDirectory: true }),
     create,
     rename,
     remove,
@@ -143,6 +151,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     glance: (workspacePath) => readWorkspaceGlance(cm, workspacePath),
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
+    configurePartial,
     discardNew,
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>

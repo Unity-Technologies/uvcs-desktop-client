@@ -55,6 +55,11 @@ export interface WorkspacesApi {
    * file system serves their files. One local process listing, no `cm` call.
    */
   canCreateDynamic(): Promise<boolean>;
+  /**
+   * The folders (and xlinks) at the root of the repository's /main, the ones a partial workspace can load: one `cm ls`
+   * of the root alone, never the whole tree.
+   */
+  topFolders(repository: string): Promise<string[]>;
   /** Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update. */
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;
@@ -79,6 +84,11 @@ export interface WorkspacesApi {
   checkNewFolder(path: string): Promise<NewFolderCheck>;
   /** Loads `targetSpec` in a workspace just created (nothing pending, nothing loaded): a plain `cm switch`. */
   switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
+  /**
+   * Makes a workspace just created partial, loading only `folders` (top folders of its repository, from `topFolders`)
+   * and everything below them: they download as they're configured, so no update follows.
+   */
+  configurePartial(workspacePath: string, folders: string[], operationId: string): Promise<void>;
   /**
    * Undoes the creation of a workspace that failed halfway: unregisters it, and deletes its folder when `create`
    * made it (it didn't exist or was empty), so nothing of the user's goes.
