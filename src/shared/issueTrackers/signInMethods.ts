@@ -11,7 +11,7 @@ export interface GitHubApp {
 /**
  * The apps the device flow signs in with, by the host they're registered on. A host with none, or whose client id is
  * empty, isn't offered the device flow, only a token. The app keeps no refresh token, so the registered app's
- * "Expire user access tokens" stays off (docs/features/issue-trackers.md, "The device flow").
+ * "Expire user authorization tokens" stays off (docs/features/issue-trackers.md, "The device flow").
  */
 export const GITHUB_APPS: Readonly<Record<string, GitHubApp>> = {
   'github.com': { clientId: 'Iv23li6C4izonxAQZ02g', installPage: 'https://github.com/apps/unity-version-control-desktop/installations/new' },

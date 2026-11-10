@@ -505,7 +505,9 @@ its owner (a public one anywhere). So the device flow's connection still covers 
 can't read a project (`projectUnreadable`, from `bindProven`), the failure carries the app's install page
 (`GitHubApp.installPage`, added by `withInstallPage`): Settings says "If it's private, add the Unity Version Control Desktop
 app to acme on GitHub" with an "Install on GitHub" button beside it (`SignInProblem`). A token sign-in's failure never carries it: the token itself is
-what to check. An organization may need its owner to approve the installation; that happens on GitHub.
+what to check. An organization may need its owner to approve the installation; that happens on GitHub. A project
+connected before and unreadable later (the app uninstalled, or the repository taken out of its installation) shows its
+key alone in Settings (`readProjects`), as any project out of reach does: no install page there yet.
 
 A flow lives as long as the window that started it waits for it:
 
