@@ -13,6 +13,12 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['xlink', '--addrules', '/ws/lib', 'br:/main-br:/main/dev'])).toBe(true);
   });
 
+  it('recognizes what a partial workspace runs: every partial command writes it', () => {
+    expect(changesWorkspace(['partial', 'update', '--silent'])).toBe(true);
+    expect(changesWorkspace(['partial', 'update', '--dontmerge'])).toBe(true);
+    expect(changesWorkspace(['partial', 'configure', '+/src', '-/art', '--silent'])).toBe(true);
+  });
+
   it('leaves out reads and previews', () => {
     expect(changesWorkspace(['status', '--xml'])).toBe(false);
     expect(changesWorkspace(['merge', 'br:/main/task', '--machinereadable'])).toBe(false);
