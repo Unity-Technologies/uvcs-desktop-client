@@ -491,9 +491,11 @@ approves. Main polls the token endpoint at the server's pace (`pollForToken`, `n
 waits the interval, `slow_down` five seconds more, `access_denied` and `expired_token` end it), then signs in as with a
 token. No client secret is needed, so none ships. "Use a token instead" is a quiet link beside the button.
 
-The app's OAuth App on github.com (its client id in `GITHUB_APPS`) has Device Flow on and "Expire user
-access tokens" off: the app keeps the access token alone, no refresh token, so a token that expired would ask the user
-to sign in again every eight hours. The token lasts until the user signs out, revokes the app on GitHub, or leaves it
+The app signs in to github.com with the GitHub App "Unity Version Control Desktop" (`unity-version-control-desktop`,
+its client id in `GITHUB_APPS`). It asks for read-only Issues and Pull requests (and Metadata, which every GitHub App
+has), and nothing of the account: `GET /user` answers any user token. It has no webhook and no callback URL, and
+anyone can install it. Its Device Flow is on and "Expire user authorization tokens" is off: the app keeps the access
+token alone, no refresh token, so a token that expired would ask the user to sign in again every eight hours. The token lasts until the user signs out, revokes the app on GitHub, or leaves it
 unused for a year (GitHub then revokes it): each asks the user to sign in again. Turning expiry on first needs the
 refresh: keeping the `refresh_token` as a secret and trading it for a new access token.
 

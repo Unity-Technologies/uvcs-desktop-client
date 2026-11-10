@@ -12,7 +12,7 @@ export interface GitHubApp {
  * "Expire user access tokens" stays off (docs/features/issue-trackers.md, "The device flow").
  */
 export const GITHUB_APPS: Readonly<Record<string, GitHubApp>> = {
-  'github.com': { clientId: 'Ov23li9k9uyuCxbsWJSa' },
+  'github.com': { clientId: 'Iv23li6C4izonxAQZ02g' },
 };
 
 /** The hosts whose device flow has a client id: the app's, or a development build's own (`UVCS_GITHUB_APP_CLIENT_ID`). */
