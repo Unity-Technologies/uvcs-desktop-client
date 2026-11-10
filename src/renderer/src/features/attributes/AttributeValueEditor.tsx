@@ -1,10 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { attributeTone } from './attributeValues';
+import { attributeTone, outgrowsQuickField } from './attributeValues';
 import styles from './AttributeChips.module.css';
-
-const MAX_ROWS = 12;
 
 interface AttributeValueEditorProps {
   initialValue: string;
@@ -12,17 +10,25 @@ interface AttributeValueEditorProps {
   suggestions: string[];
   onSave: (value: string) => void;
   onCancel: () => void;
+  /** The draft gained a second line: the comment editor takes it from here (`outgrowsQuickField`). */
+  onOutgrown: (draft: string) => void;
 }
 
-/** Edits a value in place: Enter saves, Shift+Enter adds a line, Escape cancels; clicking a suggestion saves it. */
-export function AttributeValueEditor({ initialValue, suggestions, onSave, onCancel }: AttributeValueEditorProps) {
+/**
+ * Edits a short value in place: Enter saves, Escape cancels, clicking a suggestion saves it; Shift+Enter, or a paste of
+ * many lines, hands the draft to the comment editor (`AttributeTextEditor`).
+ */
+export function AttributeValueEditor({ initialValue, suggestions, onSave, onCancel, onOutgrown }: AttributeValueEditorProps) {
   const [draft, setDraft] = useState(initialValue);
+  // Handed on, the field leaves: a blur it may still get saves nothing.
+  const handedOn = useRef(false);
   // Until the user types, every suggestion shows: the selected value is replaced by the first keystroke anyway.
   const typed = draft === initialValue ? '' : draft;
   const offered = suggestions.filter((suggestion) => suggestion !== draft.trim() && matchesWordFilter([suggestion], typed));
 
   // A value left as it was is no edit.
   const finish = (value: string): void => {
+    if (handedOn.current) return;
     if (value === initialValue) onCancel();
     else onSave(value);
   };
@@ -34,8 +40,13 @@ export function AttributeValueEditor({ initialValue, suggestions, onSave, onCanc
         value={draft}
         autoFocus
         onFocus={(event) => event.currentTarget.select()}
-        rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
-        onChange={(event) => setDraft(event.target.value)}
+        rows={1}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (!outgrowsQuickField(next)) return setDraft(next);
+          handedOn.current = true;
+          onOutgrown(next);
+        }}
         onBlur={() => finish(draft)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey) {
