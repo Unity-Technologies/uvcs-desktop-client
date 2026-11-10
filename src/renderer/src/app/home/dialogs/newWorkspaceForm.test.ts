@@ -18,6 +18,8 @@ const input: NewWorkspaceFormInput = {
   workspaceNames: [],
   chosenPath: undefined,
   root,
+  dynamicAvailable: false,
+  dynamicChosen: false,
   creating: false,
 };
 
@@ -37,6 +39,8 @@ describe('newWorkspaceFormOf', () => {
         workspaceName: 'game',
         workspaceNameTaken: false,
         path: join(root, 'game'),
+        offersDynamic: false,
+        dynamic: false,
         canCreate: true,
       });
     });
@@ -137,6 +141,27 @@ describe('repositoriesToName', () => {
   it("names the fixed repository as it is, never one to create", () => {
     const fixed = repositoryOnServer('game');
     expect(newWorkspaceFormOf({ ...input, repositoryName: 'game', repositories: repositoriesToName(fixed, undefined) }).repository).toEqual({ kind: 'existing', spec: fixed.spec });
+  });
+});
+
+describe('newWorkspaceFormOf: the dynamic choice', () => {
+  const inGame = { ...input, repositoryName: 'game' };
+
+  it('is offered only where this computer can create dynamic workspaces', () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true })).toMatchObject({ offersDynamic: true, dynamic: false });
+    expect(newWorkspaceFormOf(inGame)).toMatchObject({ offersDynamic: false, dynamic: false });
+  });
+
+  it('makes the workspace dynamic when ticked', () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, dynamicChosen: true })).toMatchObject({ dynamic: true, canCreate: true });
+  });
+
+  it('is offered with a new repository too, which a dynamic workspace can start on', () => {
+    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', dynamicAvailable: true, dynamicChosen: true })).toMatchObject({ createsRepository: true, dynamic: true });
+  });
+
+  it("doesn't make the workspace dynamic when ticked but no longer offered", () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: false, dynamicChosen: true })).toMatchObject({ offersDynamic: false, dynamic: false });
   });
 });
 
