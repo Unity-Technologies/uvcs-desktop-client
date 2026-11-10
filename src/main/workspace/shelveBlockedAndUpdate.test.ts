@@ -9,10 +9,12 @@ import {
   change,
   changesetsFound,
   diffRecord,
+  formatOutput,
   mergePreviewOutput,
   pendingStatus,
   shelvesCreated,
   statusHeader,
+  WORKSPACE_GUID,
   WORKSPACE_NAMES,
 } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -32,10 +34,12 @@ interface Scenario {
   /** Merging the shelve back conflicts. */
   putBackConflicts?: boolean;
   branchExists?: boolean;
+  /** A partial workspace, which an update must keep partial. */
+  partial?: boolean;
 }
 
 /** A workspace on /main/task1 (branch id 37) with src/old.txt and src/a.txt changed, while changeset 2 deleted src/old.txt. */
-function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.txt', 'src/a.txt'], alsoIncoming = '', failUpdate = false, putBackConflicts = false, branchExists = true }: Scenario = {}) {
+function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.txt', 'src/a.txt'], alsoIncoming = '', failUpdate = false, putBackConflicts = false, branchExists = true, partial = false }: Scenario = {}) {
   let shelveComment = '';
   let pending = changed;
   const pendingChanges = (): string => pendingStatus(workspacePath, ...pending.map((path) => change('CH', path)));
@@ -45,7 +49,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   };
   const fake = fakeCmClient({
     'status --header --xml': statusHeader('/main/task1'),
-    getworkspacefrompath: WORKSPACE_NAMES,
+    getworkspacefrompath: partial ? formatOutput(['work', WORKSPACE_GUID, 'partial', 'static']) : WORKSPACE_NAMES,
     'find changeset': changesetsFound('/main/task1', { id: 2, owner: 'ana' }),
     'find branch': branchExists ? branchFound('/main/task1', 37) : '',
     'diff cs:1 cs:2': diffRecord('D', 'src/old.txt', { revision: 11 }) + alsoIncoming,
@@ -65,6 +69,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
       if (failUpdate) return cmFails('The server is unreachable.');
       return '';
     },
+    'partial update': '',
     'merge sh:12': (command) => {
       if (command.args.includes('--merge')) pending = [...pending, 'src/old.txt'];
       return shelveMerge(command);
@@ -102,6 +107,23 @@ describe('shelveBlockedAndUpdate', () => {
     // The official comment, so "Welcome back" and the official client offer them back on this branch.
     expect(shelveComment()).toBe('Automatic shelve created during switch operation (from br:37)');
     expect(records.find({ shelveId: 12, repository: 'eco@local' })).toMatchObject({ reason: 'update', mode: 'leave', source: { spec: 'br:/main/task1' }, paths: ['src/old.txt'] });
+  });
+
+  it('keeps a partial workspace partial when it updates after shelving', async () => {
+    const { deps, commands, ran } = blockedWorkspace(workspacePath, { partial: true });
+
+    expect(await run(deps)).toMatchObject({ shelveId: 12, updated: true });
+    expect(commands.filter((command) => command.via === 'execute').map((command) => command.args)).toContainEqual(['partial', 'update', '--dontmerge']);
+    expect(ran('update')).toBe(false);
+  });
+
+  it('keeps a partial workspace partial while merging what both sides changed after shelving', async () => {
+    const { deps, ran } = blockedWorkspace(workspacePath, { partial: true, alsoIncoming: diffRecord('C', 'src/a.txt', { base: 1, revision: 2 }) });
+
+    await run(deps, { 'src/a.txt': { choice: 'text', text: 'combined\n' } });
+
+    expect(ran('partial update')).toBe(true);
+    expect(ran('update')).toBe(false);
   });
 
   it("stops after shelving when other files still need the user's merge: Incoming then shows only them", async () => {

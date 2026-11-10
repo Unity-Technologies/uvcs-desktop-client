@@ -70,6 +70,10 @@ function updatingCm(
       for (const name of FILES) await writeFile(file(name), `incoming ${name}\n`);
       return '';
     },
+    'partial update': async () => {
+      for (const name of FILES) await writeFile(file(name), `incoming ${name}\n`);
+      return '';
+    },
     checkout: '',
     cat,
   });
@@ -99,7 +103,7 @@ describe('updateWithMerge', () => {
   it("updates, then leaves each file as decided: the user's text, their own version, or the incoming one", async () => {
     const { cm } = updatingCm(workspacePath, { incoming: changedOnBranch });
 
-    const { backupDirectory } = await updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context);
+    const { backupDirectory } = await updateWithMerge(cm, workspacePath, 'standard', resolved, backupsRoot, recordingContext().context);
 
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['combined\n', 'mine b.txt\n', 'incoming c.txt\n']);
     // The local versions stay saved, just in case.
@@ -112,7 +116,7 @@ describe('updateWithMerge', () => {
   it('keeps the base, the revision the workspace had loaded: its text as read, else the file undoing wrote, downloading nothing', async () => {
     const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch });
 
-    await updateWithMerge(cm, workspacePath, keepingBase, backupsRoot, recordingContext().context);
+    await updateWithMerge(cm, workspacePath, 'standard', keepingBase, backupsRoot, recordingContext().context);
 
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['loaded as read\n', 'loaded\n', 'incoming c.txt\n']);
     expect(ran('cat')).toBe(false);
@@ -121,7 +125,7 @@ describe('updateWithMerge', () => {
   it('downloads a base kept that undoing left no file of, with one cm cat in a process before updating', async () => {
     const { cm, commands } = updatingCm(workspacePath, { incoming: changedOnBranch, undoLeavesNoFile: ['b.txt'] });
 
-    await updateWithMerge(cm, workspacePath, keepingBase, backupsRoot, recordingContext().context);
+    await updateWithMerge(cm, workspacePath, 'standard', keepingBase, backupsRoot, recordingContext().context);
 
     expect(await read('b.txt')).toBe('downloaded\n');
     expect(commands.map(({ args }) => args[0]).filter((command) => command === 'undo' || command === 'cat' || command === 'update')).toEqual(['undo', 'cat', 'update']);
@@ -131,7 +135,7 @@ describe('updateWithMerge', () => {
   it("puts the local versions back when a base kept can't be read, before updating", async () => {
     const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch, undoLeavesNoFile: ['b.txt'], cat: fakeCat(() => undefined) });
 
-    await expect(updateWithMerge(cm, workspacePath, keepingBase, backupsRoot, recordingContext().context)).rejects.toThrow(/b\.txt.*nothing was lost/s);
+    await expect(updateWithMerge(cm, workspacePath, 'standard', keepingBase, backupsRoot, recordingContext().context)).rejects.toThrow(/b\.txt.*nothing was lost/s);
     expect(ran('update')).toBe(false);
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['mine a.txt\n', 'mine b.txt\n', 'mine c.txt\n']);
   });
@@ -139,7 +143,7 @@ describe('updateWithMerge', () => {
   it('undoes only the conflicting files before updating, and checks out again those that were checked out', async () => {
     const { cm, lines } = updatingCm(workspacePath, { incoming: changedOnBranch });
 
-    await updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context);
+    await updateWithMerge(cm, workspacePath, 'standard', resolved, backupsRoot, recordingContext().context);
 
     const path = (name: string): string => join(workspacePath, 'src', name);
     expect(lines().filter((line) => /^(undo|update|checkout)/.test(line))).toEqual([
@@ -152,7 +156,7 @@ describe('updateWithMerge', () => {
   it('puts the local versions back when the update fails: nothing is lost', async () => {
     const { cm } = updatingCm(workspacePath, { incoming: changedOnBranch, failUpdate: 'The server is unreachable.' });
 
-    await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
+    await expect(updateWithMerge(cm, workspacePath, 'standard', resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
       'The server is unreachable. Your local changes were put back; nothing was lost.',
     );
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['mine a.txt\n', 'mine b.txt\n', 'mine c.txt\n']);
@@ -161,14 +165,14 @@ describe('updateWithMerge', () => {
   it('checks out again the files that were checked out when the update fails, as they were', async () => {
     const { cm, lines } = updatingCm(workspacePath, { incoming: changedOnBranch, failUpdate: 'The server is unreachable.' });
 
-    await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow('nothing was lost');
+    await expect(updateWithMerge(cm, workspacePath, 'standard', resolved, backupsRoot, recordingContext().context)).rejects.toThrow('nothing was lost');
     expect(lines().filter((line) => line.startsWith('checkout'))).toEqual([`checkout ${join(workspacePath, 'src', 'a.txt')}`]);
   });
 
   it('puts the local versions back when undoing them fails halfway', async () => {
     const { cm } = updatingCm(workspacePath, { incoming: changedOnBranch, failUndoAfterFirst: 'The file is in use.' });
 
-    await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
+    await expect(updateWithMerge(cm, workspacePath, 'standard', resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
       'The file is in use. Your local changes were put back; nothing was lost.',
     );
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['mine a.txt\n', 'mine b.txt\n', 'mine c.txt\n']);
@@ -177,7 +181,7 @@ describe('updateWithMerge', () => {
   it('touches nothing while a conflicting file has no decision', async () => {
     const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch });
 
-    await expect(updateWithMerge(cm, workspacePath, { 'src/a.txt': { choice: 'source' } }, backupsRoot, recordingContext().context)).rejects.toThrow(
+    await expect(updateWithMerge(cm, workspacePath, 'standard', { 'src/a.txt': { choice: 'source' } }, backupsRoot, recordingContext().context)).rejects.toThrow(
       'Resolve src/b.txt, src/c.txt before updating.',
     );
     expect(ran('undo') || ran('update')).toBe(false);
@@ -186,7 +190,7 @@ describe('updateWithMerge', () => {
   it('refuses local changes to files the branch deleted or moved: an update cannot merge them', async () => {
     const { cm, ran } = updatingCm(workspacePath, { incoming: diffRecord('D', 'src/b.txt', { revision: 2 }) });
 
-    await expect(updateWithMerge(cm, workspacePath, {}, backupsRoot, recordingContext().context)).rejects.toThrow(
+    await expect(updateWithMerge(cm, workspacePath, 'standard', {}, backupsRoot, recordingContext().context)).rejects.toThrow(
       'Check in, shelve or undo your changes to src/b.txt first: the branch deleted or moved them.',
     );
     expect(ran('update')).toBe(false);
@@ -196,9 +200,31 @@ describe('updateWithMerge', () => {
     const { cm, commands } = updatingCm(workspacePath, { incoming: diffRecord('A', 'src/new.txt') });
     const { context } = recordingContext();
 
-    expect(await updateWithMerge(cm, workspacePath, {}, backupsRoot, context)).toEqual({ backupDirectory: null });
+    expect(await updateWithMerge(cm, workspacePath, 'standard', {}, backupsRoot, context)).toEqual({ backupDirectory: null });
     const update = commands.find((command) => command.args[0] === 'update')!;
     expect(update.via).toBe('execute');
     expect(update.options.signal).toBe(context.signal);
+  });
+
+  it('keeps a partial workspace partial, cancellably, when nothing needs merging', async () => {
+    const { cm, commands, ran } = updatingCm(workspacePath, { incoming: diffRecord('A', 'src/new.txt') });
+    const { context } = recordingContext();
+
+    await updateWithMerge(cm, workspacePath, 'partial', {}, backupsRoot, context);
+    const update = commands.find((command) => command.args[0] === 'partial')!;
+    expect(update.args).toEqual(['partial', 'update', '--dontmerge']);
+    expect(update.via).toBe('execute');
+    expect(update.options.signal).toBe(context.signal);
+    expect(ran('update')).toBe(false);
+  });
+
+  it('keeps a partial workspace partial while merging what both sides changed', async () => {
+    const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch });
+
+    await updateWithMerge(cm, workspacePath, 'partial', resolved, backupsRoot, recordingContext().context);
+
+    expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['combined\n', 'mine b.txt\n', 'incoming c.txt\n']);
+    expect(ran('partial update')).toBe(true);
+    expect(ran('update')).toBe(false);
   });
 });
