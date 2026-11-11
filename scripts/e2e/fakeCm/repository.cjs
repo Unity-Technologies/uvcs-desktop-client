@@ -153,7 +153,9 @@ const REVISIONS = {
 };
 
 /** What `cm diff` finds changed, whatever it compares: its fields named as `--format` names them. */
-const DIFFERENCES = [{ status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"` }];
+const DIFFERENCES = [
+  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"' },
+];
 
 /** `cm lock list` records, their fields in the order `cm` prints them. */
 const LOCKS = [

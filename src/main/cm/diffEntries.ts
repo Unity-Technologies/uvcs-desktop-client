@@ -1,4 +1,4 @@
-import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
+import type { DiffEntry, DiffStatus, PermissionsChange } from '@shared/domain/diff';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
 import type { CmClient, CmRecordsOptions } from './CmClient';
@@ -6,10 +6,11 @@ import { recordFormat, unquoted, type ReadRecord } from './formatRecords';
 
 /**
  * `--format` for `cm diff --repositorypaths` that `readDiffEntry` understands. `{repository}` is the repository of
- * each item's revisions: under an xlink, the xlinked one. `cm diff` prints the paths and the repository between double
- * quotes, which are no part of them.
+ * each item's revisions: under an xlink, the xlinked one. `{srcfsprotection}` and `{fsprotection}` are the item's file
+ * permissions before and after (`-rw-r--r--`, nothing where none is set). `cm diff` prints the paths, the repository and
+ * the permissions between double quotes, which are no part of them.
  */
-export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository']);
+export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository', 'srcfsprotection', 'fsprotection']);
 
 const STATUSES: Record<string, DiffStatus> = { A: 'added', C: 'changed', D: 'deleted', M: 'moved' };
 const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'directory', X: 'xlink' };
@@ -36,28 +37,56 @@ export function mergedDiffEntries(entries: readonly DiffEntry[]): DiffEntry[] {
 }
 
 /** One record of `DIFF_FORMAT`; none for a status `cm` has no word for here. */
-export const readDiffEntry: ReadRecord<DiffEntry> = ([statusCode = '', quotedPath = '', quotedSourcePath = '', baseRevision = '', revision = '', typeCode = '', quotedRepository = '']) => {
+export const readDiffEntry: ReadRecord<DiffEntry> = ([
+  statusCode = '',
+  quotedPath = '',
+  quotedSourcePath = '',
+  baseRevision = '',
+  revision = '',
+  typeCode = '',
+  quotedRepository = '',
+  quotedPermissionsBefore = '',
+  quotedPermissionsAfter = '',
+]) => {
   const [path, sourcePath, repository] = [unquoted(quotedPath), unquoted(quotedSourcePath), unquoted(quotedRepository)];
   const status = STATUSES[statusCode];
   if (!status) return undefined;
 
+  const itemType = ITEM_TYPES[typeCode] ?? 'file';
   const revisionId = Number(revision);
   const baseRevisionId = Number(baseRevision);
-  return {
+  const entry: DiffEntry = {
     status,
     path: withoutLeadingSlash(path),
     oldPath: status === 'moved' && sourcePath ? withoutLeadingSlash(sourcePath) : undefined,
-    itemType: ITEM_TYPES[typeCode] ?? 'file',
+    itemType,
     ...sidesOf(status, baseRevisionId, revisionId),
     repository,
   };
+  if (!onlyPermissionsChanged(status, itemType, baseRevisionId, revisionId)) return entry;
+  return { ...entry, permissionsChange: permissionsChange(unquoted(quotedPermissionsBefore), unquoted(quotedPermissionsAfter)) };
 };
 
-/** `cm` reports a deleted item's last revision as `revid`, and a pure move without a base revision. */
+/**
+ * `cm` reports a deleted item's last revision as `revid`, and an item without a base revision, a pure move or a change
+ * of its permissions alone (`onlyPermissionsChanged`), as its one revision on both sides.
+ */
 function sidesOf(status: DiffStatus, baseRevisionId: number, revisionId: number): Pick<DiffEntry, 'baseRevisionId' | 'revisionId'> {
   if (status === 'deleted') return { baseRevisionId: revisionId, revisionId: -1 };
-  if (status === 'moved' && baseRevisionId === -1) return { baseRevisionId: revisionId, revisionId };
+  if ((status === 'moved' || status === 'changed') && baseRevisionId === -1) return { baseRevisionId: revisionId, revisionId };
   return { baseRevisionId, revisionId };
+}
+
+/**
+ * Whether a changed item kept its content and changed only its file permissions: `cm` gives a change without a content
+ * change no base revision. A changed xlink has no revisions at all: where it points changed, not its permissions.
+ */
+function onlyPermissionsChanged(status: DiffStatus, itemType: DiffEntry['itemType'], baseRevisionId: number, revisionId: number): boolean {
+  return status === 'changed' && itemType !== 'xlink' && baseRevisionId === -1 && revisionId !== -1;
+}
+
+function permissionsChange(before: string, after: string): PermissionsChange {
+  return { before: before || null, after: after || null };
 }
 
 function mergeEntries(first: DiffEntry, second: DiffEntry): DiffEntry {
