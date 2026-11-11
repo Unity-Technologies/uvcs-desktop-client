@@ -7,7 +7,7 @@ import type { CmClient } from '../cm/CmClient';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { notInTreePaths } from '../cm/missingItem';
 import { readPendingChanges } from '../workspace/readPendingChanges';
-import { compareWithHead, HEAD_TREE_FORMAT, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import { compareWithHead, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
 /** What updating the partial workspace on `branch` to its head would change in the folders it loaded. */
 export async function readPartialIncomingItems(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingItem[]> {
@@ -21,15 +21,30 @@ export async function readPartialIncomingItems(cm: CmClient, workspacePath: stri
 }
 
 /**
- * The loaded folders as the head's server paths ('/' the root, `/Code`), sorted: the folders `cm partial update`
- * brings new items into. An xlink and what it holds belong to another repository, so they aren't listed.
+ * The loaded folders, the ones `cm partial update` brings new items into. An xlink and what it holds belong to another
+ * repository, so they aren't listed.
  */
-export function loadedFolders(loaded: readonly LoadedTreeItem[]): string[] {
-  const xlinks = loaded.filter((item) => item.xlink).map((item) => item.path);
-  return loaded
-    .filter((item) => item.isDirectory && !item.xlink && !xlinks.some((xlink) => item.path.startsWith(`${xlink}/`)))
-    .map((item) => `/${item.path}`)
-    .sort();
+export function loadedFolders(loaded: readonly LoadedTreeItem[]): LoadedTreeItem[] {
+  const xlinks = new Set(loaded.filter((item) => item.xlink).map((item) => item.path));
+  return loaded.filter((item) => item.isDirectory && !item.xlink && !isInsideAny(item.path, xlinks));
+}
+
+/** A workspace path ('' the root, `Code`) as the server path `cm ls --tree` takes ('/', `/Code`). */
+function serverPath(path: string): string {
+  return `/${path}`;
+}
+
+/**
+ * The server paths still to list: the loaded folders the listings so far found somewhere they weren't listed, because
+ * the head moved them (or the folder they went along with), sorted.
+ */
+export function movedFolderPaths(folders: readonly LoadedTreeItem[], head: readonly HeadItem[], listed: ReadonlySet<string>): string[] {
+  const headById = new Map(head.map((item) => [item.itemId, item]));
+  const paths = folders.flatMap((folder) => {
+    const onHead = headById.get(folder.itemId);
+    return onHead && !listed.has(serverPath(onHead.path)) ? [serverPath(onHead.path)] : [];
+  });
+  return [...new Set(paths)].sort();
 }
 
 /**
@@ -51,9 +66,20 @@ export function headListingArgs(folders: readonly string[], branch: string): str
   return batches.map(listing);
 }
 
-async function readHeadOfFolders(cm: CmClient, workspacePath: string, folders: readonly string[], branch: string): Promise<HeadItem[]> {
+/**
+ * The loaded folders and their children on the head. A folder the head moved fails to list where it was loaded, but
+ * shows up in its parent's listing under its new path: it's listed there in a next pass, one per level moved, so what
+ * changed inside it is read too. A folder moved out of every listed folder isn't found, and reads as removed.
+ */
+async function readHeadOfFolders(cm: CmClient, workspacePath: string, folders: readonly LoadedTreeItem[], branch: string): Promise<HeadItem[]> {
   const head: HeadItem[] = [];
-  for (const args of headListingArgs(folders, branch)) head.push(...(await listHead(cm, workspacePath, args)));
+  const listed = new Set<string>();
+  let toList = folders.map((folder) => serverPath(folder.path)).sort();
+  while (toList.length > 0) {
+    for (const args of headListingArgs(toList, branch)) head.push(...(await listHead(cm, workspacePath, args)));
+    for (const path of toList) listed.add(path);
+    toList = movedFolderPaths(folders, head, listed);
+  }
   return head;
 }
 

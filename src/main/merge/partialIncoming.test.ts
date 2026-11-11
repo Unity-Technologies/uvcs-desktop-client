@@ -19,6 +19,7 @@ const partialWorkspace = (headListing: CmAnswer) =>
     'status --controlledchanged --changed': pendingStatus(WORKSPACE, change('CH', 'Code/Ship.cs')),
     'ls -R': LOADED,
     'ls /': headListing,
+    'ls /Src': headListing,
     'find changeset': formatOutput([3]),
   });
 
