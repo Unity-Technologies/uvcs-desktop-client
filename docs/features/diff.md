@@ -127,6 +127,23 @@ Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prin
 xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
 reader of the diff needs.
 
+## Only the permissions changed
+
+A file whose file permissions changed and whose content didn't (`chmod +x`, or permissions first set on a file checked
+in from Windows) is rarely what a reviewer looks for, so a diff tells it apart, as the official client's "Only
+filesystem permissions changed" group does. `cm` gives such a change no base revision: `cm diff` prints it as `C` with
+`baserevid` -1, which `readDiffEntry` reads as the one revision on both sides with its permissions before and after
+(`{srcfsprotection}`, `{fsprotection}` in `DIFF_FORMAT`, nothing where none is set) in `DiffEntry.permissionsChange`.
+A file whose content changed too is a plain change; one moved too is a move.
+
+- Its row is lettered FS (`diffEntryTone`), found by the "Only filesystem permissions" chip and grouped under it when
+  the list groups by status; its chip and group come after Added's.
+- Its diff says which permissions changed in place of the content, which is the same on both sides and isn't read
+  ("Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.", `permissionsNote`): a text, a binary, an image
+  and a folder alike. The permissions never break across lines (non-breaking hyphens).
+- It has no content to revert (`canRevertFromDiff`), and updating with local changes never merges it
+  (`findUpdateConflicts`): Incoming, whose list is a diff's, never counts it among the conflicts with local changes.
+
 ## A purged version
 
 A purge (`cm purge`, where the server allows it) removes old revisions' content for good; their changesets, paths and

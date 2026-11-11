@@ -143,17 +143,24 @@ const FILES = {
 };
 
 /**
- * Revisions by id, for `cm cat revid:N`: the two sides of the one change every `cm diff` reports, and the revision
- * before `src/camera.cs`'s (Files' last change of it).
+ * Revisions by id, for `cm cat revid:N`: the two sides of the change every `cm diff` reports, the one revision of the
+ * file whose permissions alone changed, and the revision before `src/camera.cs`'s (Files' last change of it).
  */
 const REVISIONS = {
   200: FILES['src/camera.cs'].parent,
   201: FILES['src/player.cs'].loaded,
   202: FILES['src/player.cs'].onDisk,
+  203: FILES['README.md'].loaded,
 };
 
-/** What `cm diff` finds changed, whatever it compares: its fields named as `--format` names them. */
-const DIFFERENCES = [{ status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"` }];
+/**
+ * What `cm diff` finds changed, whatever it compares: its fields named as `--format` names them. README.md changed only
+ * its permissions, which `cm` prints with no base revision.
+ */
+const DIFFERENCES = [
+  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-r--r--r--"' },
+  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"' },
+];
 
 /** `cm lock list` records, their fields in the order `cm` prints them. */
 const LOCKS = [

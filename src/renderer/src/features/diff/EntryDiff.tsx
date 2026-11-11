@@ -3,7 +3,7 @@ import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
-import { describeDiffEntry, diffEntrySources, diffEntryStatus } from './diffEntrySources';
+import { describeDiffEntry, diffEntrySources, diffEntryStatus, permissionsNote } from './diffEntrySources';
 import { EntryAnnotatorContext, type AnnotatedEntry } from './entryAnnotator';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
@@ -36,6 +36,9 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
   const Annotator = useContext(EntryAnnotatorContext);
 
+  // Its content is the same on both sides, whatever it is (a text, a binary, an image, a folder): nothing to read.
+  const permissions = permissionsNote(entry);
+  if (permissions) return <EmptyState title={entry.path} description={permissions} action={metaToggle} />;
   if (entry.itemType === 'directory') {
     return <EmptyState title={entry.path} description={`Directory · ${describeDiffEntry(entry)}`} action={metaToggle} />;
   }
