@@ -9,6 +9,7 @@ import {
   type IncomingChanges,
   type IncomingSummary,
   type NothingIncoming,
+  type PartialIncomingChanges,
 } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
@@ -18,6 +19,7 @@ import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { readPendingChanges } from '../workspace/readPendingChanges';
+import { readPartialIncomingItems } from './partialIncoming';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, countCapped: false, authors: [] };
@@ -91,10 +93,19 @@ function distinctAuthors(owners: string[]): string[] {
 
 /**
  * What updating brings: the newest page of incoming changesets (`readIncomingChangesetPage` reads the older ones), the
- * one diff from the loaded changeset to the head, and which local changes it collides with.
+ * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace isn't
+ * at a changeset: what it gets is the items its branch head changes in the folders it loaded (`readPartialIncomingItems`).
  */
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
-  return changesetIncomingChangesOf(cm, workspacePath, await readWorkspaceLoad(cm, workspacePath));
+  const load = await readWorkspaceLoad(cm, workspacePath);
+  const { selector, loadedChangeset } = load;
+  if (selector.kind === 'branch' && loadedChangeset === null) return readPartialIncomingChanges(cm, workspacePath, selector.name);
+  return changesetIncomingChangesOf(cm, workspacePath, load);
+}
+
+async function readPartialIncomingChanges(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingChanges> {
+  const [head, items] = await Promise.all([readBranchHead(cm, workspacePath, branch), readPartialIncomingItems(cm, workspacePath, branch)]);
+  return { branch, partial: true, headChangeset: head ?? 0, items };
 }
 
 /**
