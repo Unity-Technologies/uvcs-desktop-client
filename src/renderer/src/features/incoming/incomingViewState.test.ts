@@ -12,6 +12,7 @@ describe('incomingDiffs', () => {
   it('is reading, or has changes coming in to diff', () => {
     expect(incomingDiffs('reading')).toBe('reading');
     expect(incomingDiffs('incoming')).toBe('some');
+    expect(incomingDiffs('partial')).toBe('some');
   });
 });
 
@@ -48,6 +49,19 @@ describe('incomingViewState', () => {
   it('is up to date with nothing new on the branch, and lists what came in otherwise', () => {
     expect(incomingViewState(upToDate, false, false)).toEqual({ kind: 'upToDate' });
     expect(incomingViewState(behind, false, false)).toEqual({ kind: 'incoming', incoming: behind });
+  });
+});
+
+describe('incomingViewState in a partial workspace', () => {
+  const item = { kind: 'changed', path: 'Code/Ship.cs', isDirectory: false, conflict: false, loadedRevisionId: 1, headRevisionId: 2 } as const;
+  const partial: IncomingChanges = { branch: '/main', partial: true, headChangeset: 43, items: [item] };
+
+  it('lists the items the head would change', () => {
+    expect(incomingViewState(partial, false, false)).toEqual({ kind: 'partial', incoming: partial });
+  });
+
+  it('is up to date once no loaded item differs from the head', () => {
+    expect(incomingViewState({ ...partial, items: [] }, false, false)).toEqual({ kind: 'upToDate' });
   });
 });
 
