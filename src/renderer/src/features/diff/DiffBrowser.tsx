@@ -31,7 +31,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
-import { entryFlagChip, EntryFlagContext } from './entryFlag';
+import { entryFlagChip, EntryFlagContext, withMetaMarks } from './entryFlag';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -99,7 +99,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // What a diff compares, by value: a branch diff passes a new target each render.
   const targetKey = JSON.stringify(target);
   const entryFlag = useContext(EntryFlagContext);
-  const flagMarkOf = useMemo(() => entryFlag?.markOf(target), [entryFlag, targetKey]);
+  // An asset's row carries its `.meta`'s mark too: the meta rides on it (`withMetaMarks`).
+  const flagMarkOf = useMemo(() => {
+    const markOf = entryFlag?.markOf(target);
+    return markOf && withMetaMarks(markOf, pairs.metaOf);
+  }, [entryFlag, targetKey, pairs]);
   const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
   const markOf = useMemo(() => {
