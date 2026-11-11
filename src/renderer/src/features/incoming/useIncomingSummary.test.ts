@@ -123,6 +123,17 @@ describe('recheckIncoming in a partial workspace', () => {
     expect(fakeApi.argsOf('merge.incomingChanges')).toHaveLength(1);
   });
 
+  it('compares again under the same head once an operation refreshed the comparison, as its own update does', async () => {
+    partialOnMain();
+    const answers = [changes(7, ['Code/Ship.cs']), changes(7, [])];
+    fakeApi.answer('merge.branchHead', () => 7);
+    fakeApi.answer('merge.incomingChanges', () => answers.shift());
+    await recheckIncoming(ws);
+    await queryClient.invalidateQueries({ queryKey: incomingChangesKey(ws) });
+
+    expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+  });
+
   it('brings nothing from a branch with no changeset yet', async () => {
     partialOnMain();
     fakeApi.answer('merge.branchHead', () => null);
