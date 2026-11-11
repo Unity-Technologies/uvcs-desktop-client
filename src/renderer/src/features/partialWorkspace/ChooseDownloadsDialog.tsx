@@ -1,11 +1,13 @@
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { RepositoryTreePoint } from '@shared/domain/explorer';
 import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
+import { ItemIcon } from '../../components/ItemIcon';
+import { ItemRow } from '../../components/ItemRow';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -163,18 +165,24 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
               onClick={() => setSelected(row.path)}
               onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
             >
-              <span
-                className={styles.chevron}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (row.expandable) toggleExpanded(row.path);
-                }}
-              >
-                {row.expandable && (row.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
-              </span>
+              {row.expandable ? (
+                <button
+                  className={styles.chevron}
+                  data-expanded={row.expanded}
+                  aria-label={row.expanded ? 'Collapse' : 'Expand'}
+                  tabIndex={-1}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleExpanded(row.path);
+                  }}
+                >
+                  <ChevronRight size={13} />
+                </button>
+              ) : (
+                <span className={styles.chevronSpace} />
+              )}
               <Checkbox checked={row.check} focusable={false} ariaLabel={row.name} onChange={() => toggleChecked(row.path)} />
-              {row.isDirectory ? <Folder size={14} className={styles.icon} /> : <File size={14} className={styles.icon} />}
-              <span className={styles.name}>{row.name}</span>
+              <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
               {row.note === 'loading' && <Spinner size={12} />}
               {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
             </div>

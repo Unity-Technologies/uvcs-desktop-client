@@ -30,16 +30,33 @@
   background: var(--bg-selected);
 }
 
-.chevron {
-  display: inline-flex;
-  width: 16px;
+.chevron,
+.chevronSpace {
+  display: flex;
+  flex: none;
+  align-items: center;
   justify-content: center;
-  color: var(--text-tertiary);
+  width: 16px;
+  height: 16px;
 }
 
-.icon {
-  flex-shrink: 0;
-  color: var(--text-secondary);
+/* The same chevron as Files': it turns as its folder opens. */
+.chevron {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast);
+}
+
+.chevron:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.chevron[data-expanded='true'] {
+  transform: rotate(90deg);
 }
 
 .name {
