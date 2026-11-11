@@ -1,4 +1,4 @@
-/* Fills the hovered line's number cell, the button at its end, by the code: where a line is commented on. */
+/* Fills the hovered line's row, the button on the edge between its number and its code (`GUTTER_CSS`). */
 .slot {
   display: flex;
   align-items: center;
@@ -10,8 +10,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
