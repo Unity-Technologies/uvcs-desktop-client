@@ -121,9 +121,29 @@ describe('updatePartialToIncoming', () => {
 
     expect(await updatePartialToIncoming(ws, partialIn('Code/Ship.cs', 'Code/Hull.cs'))).toBe(true);
 
-    expect(fakeApi.argsOf('workspaces.update')).toEqual([[ws, expect.any(String)]]);
+    expect(fakeApi.argsOf('workspaces.update')).toEqual([[ws, expect.any(String), undefined]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 2 items from main' }]);
     expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '2 items' });
+  });
+
+  it('updates just the paths the checked items need, and counts what they bring', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs', 'Code/Hull.cs', 'Art/sky.png');
+
+    expect(await updatePartialToIncoming(ws, changes, { paths: ['Code/Ship.cs'], brought: [changes.items[0]!] })).toBe(true);
+
+    expect(fakeApi.argsOf('workspaces.update')).toEqual([[ws, expect.any(String), ['Code/Ship.cs']]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 1 item from main' }]);
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '1 item' });
+  });
+
+  it('names no path when the selection brings every item', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs');
+
+    await updatePartialToIncoming(ws, changes, { paths: 'all', brought: changes.items });
+
+    expect(fakeApi.argsOf('workspaces.update')[0]![2]).toBeUndefined();
   });
 
   it('refreshes what an update changes, and nothing it leaves alone', async () => {

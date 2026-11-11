@@ -10,6 +10,7 @@ import { useToastStore } from '../../ui/toast/toastStore';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
 import { changesetsFrom, updatedMessage } from './updatedMessage';
 import { updateStoppedByConflicts } from './updateFailure';
+import type { PartialUpdateSelection } from './partialIncomingSelection';
 
 /**
  * Updates to the incoming changesets (known not to collide with local changes), then says what came in and offers
@@ -34,16 +35,19 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
 
 /**
  * Updates a partial workspace to the items its branch head changes (`cm partial update`: an item changed both locally
- * and on the branch stops it, and leads to Incoming), then says how many came. Resolves to whether it updated.
+ * and on the branch stops it, and leads to Incoming), then says how many came. Given a `selection`, it updates just
+ * the paths it names (`partialUpdateSelection`) and counts what they bring; without one, every item.
+ * Resolves to whether it updated.
  */
-export async function updatePartialToIncoming(workspacePath: string, incoming: PartialIncomingChanges): Promise<boolean> {
-  const itemCount = incoming.items.length;
+export async function updatePartialToIncoming(workspacePath: string, incoming: PartialIncomingChanges, selection?: PartialUpdateSelection): Promise<boolean> {
+  const itemCount = selection?.brought.length ?? incoming.items.length;
+  const paths = selection === undefined || selection.paths === 'all' ? undefined : selection.paths;
   const updated = await runOperation({
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',
     run: async (operationId) => {
-      await api.workspaces.update(workspacePath, operationId);
+      await api.workspaces.update(workspacePath, operationId, paths);
       return true;
     },
     affects: isAffectedByCheckinOrUpdate,
