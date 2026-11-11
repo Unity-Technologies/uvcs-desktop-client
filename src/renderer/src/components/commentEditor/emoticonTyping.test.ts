@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
-import type { EditorState } from '@codemirror/state';
+import { Transaction, type EditorState } from '@codemirror/state';
 import { editorState, run, written } from './commentEditorTesting';
-import { emoticonAfterTyping, emoticonBeforeLineBreak, justReplacedEmoticon, revertEmoticon } from './emoticonTyping';
+import { emoticonBeforeLineBreak, emoticonKeys, justReplacedEmoticon, revertEmoticon, typedWithEmoticon } from './emoticonTyping';
 
 const typingEmoticons = [history(), justReplacedEmoticon];
 
-/** Types `text` key by key at the caret, as the field does: each key, then the emoticon it ends turned into its emoji. */
-function type(state: EditorState, text: string): EditorState {
+/** The editor's own insertion of a key typed at the caret, as `inputHandler` hands it over. */
+function insertion(state: EditorState, key: string): () => Transaction {
+  const at = state.selection.main.head;
+  return () => state.update({ changes: { from: at, insert: key }, selection: { anchor: at + key.length }, userEvent: 'input.type' });
+}
+
+/** Types `text` key by key at the caret, as the field does (`typedWithEmoticon`, or the editor's own insertion). */
+function type(state: EditorState, text: string, composing = false): EditorState {
   let next = state;
   for (const key of text) {
-    const at = next.selection.main.head;
-    next = next.update({ changes: { from: at, insert: key }, selection: { anchor: at + key.length }, userEvent: 'input.type' }).state;
-    const replacement = emoticonAfterTyping(next, at, key);
-    if (replacement) next = next.update(replacement).state;
+    const steps = typedWithEmoticon(next.selection.main.head, key, insertion(next, key), composing);
+    if (!steps) next = insertion(next, key)().state;
+    else for (const step of steps) next = step instanceof Transaction ? step.state : next.update(step).state;
   }
   return next;
 }
@@ -22,7 +27,7 @@ function typed(before: string, text: string): string {
   return written(type(editorState(before, typingEmoticons), text));
 }
 
-describe('emoticonAfterTyping', () => {
+describe('typedWithEmoticon', () => {
   it('turns an emoticon into its emoji as a space is typed after it', () => {
     expect(typed('Done ', ':-) ')).toBe('Done 🙂 ‸');
   });
@@ -79,7 +84,16 @@ describe('emoticonAfterTyping', () => {
   it('turns nothing with several carets', () => {
     const state = editorState('a ', typingEmoticons);
     const twoCarets = state.update({ selection: { anchor: 0 } }).state.update({ selection: state.selection.addRange(state.selection.main) }).state;
-    expect(emoticonAfterTyping(twoCarets, 2, ' ')).toBeNull();
+    expect(typedWithEmoticon(2, ' ', insertion(twoCarets, ' '), false)).toBeNull();
+  });
+
+  it('leaves a text being composed with an input method to the editor', () => {
+    expect(written(type(editorState('Done ', typingEmoticons), ':-) ', true))).toBe('Done :-) ‸');
+  });
+
+  it('leaves the keys that end no emoticon to the editor', () => {
+    expect(typedWithEmoticon(0, 'a', insertion(editorState(':-)', typingEmoticons), 'a'), false)).toBeNull();
+    expect(typedWithEmoticon(5, ' ', insertion(editorState('Done ', typingEmoticons), ' '), false)).toBeNull();
   });
 });
 
@@ -92,6 +106,13 @@ describe('emoticonBeforeLineBreak', () => {
   it('turns nothing with a selection, or with no emoticon before the caret', () => {
     expect(emoticonBeforeLineBreak(editorState('Thanks «:-)»', typingEmoticons))).toBeNull();
     expect(emoticonBeforeLineBreak(editorState('Thanks‸', typingEmoticons))).toBeNull();
+  });
+});
+
+describe('emoticonKeys', () => {
+  it('takes Enter in a field of many lines, never in a one-line field, which Enter leaves', () => {
+    expect(emoticonKeys(false).map((binding) => binding.key)).toEqual(['Backspace', 'Enter']);
+    expect(emoticonKeys(true).map((binding) => binding.key)).toEqual(['Backspace']);
   });
 });
 

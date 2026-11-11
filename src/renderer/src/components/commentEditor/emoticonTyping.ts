@@ -1,7 +1,7 @@
 import { undo } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
-import { Prec, StateEffect, StateField, type EditorState, type Extension, type StateCommand, type TransactionSpec } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { Prec, StateEffect, StateField, type EditorState, type Extension, type StateCommand, type Transaction, type TransactionSpec } from '@codemirror/state';
+import { EditorView, keymap, type KeyBinding } from '@codemirror/view';
 import { emoticonEnding, endsEmoticon, insideOpenCodeSpan, isTableDelimiterRow } from './emoticons';
 import { isInCode } from './formatCommands';
 import { ownStep } from './ownStep';
@@ -47,9 +47,17 @@ export function emoticonReplacement(state: EditorState, end: number): Transactio
   };
 }
 
-/** After `typed` was typed at `typedAt`: the emoticon it ends turned into its emoji, or null. */
-export function emoticonAfterTyping(state: EditorState, typedAt: number, typed: string): TransactionSpec | null {
-  return endsEmoticon(typed) ? emoticonReplacement(state, typedAt) : null;
+/**
+ * What typing `text` at `from` does (`insert`: the editor's own insertion of it), when it ends an emoticon: the key
+ * typed, then the emoticon turned into its emoji, dispatched in that order, so undo brings the emoticon back with the
+ * key after it, and typing on never turns it again. Null leaves the key to the editor: no emoticon ended, or a text
+ * still being composed with an input method.
+ */
+export function typedWithEmoticon(from: number, text: string, insert: () => Transaction, composing: boolean): [Transaction, TransactionSpec] | null {
+  if (composing || !endsEmoticon(text)) return null;
+  const typed = insert();
+  const replacement = emoticonReplacement(typed.state, from);
+  return replacement ? [typed, replacement] : null;
 }
 
 /** Before Enter starts a line: the emoticon before the caret turned into its emoji, or null. */
@@ -65,26 +73,28 @@ export function emoticonBeforeLineBreak(state: EditorState): TransactionSpec | n
 export const revertEmoticon: StateCommand = (target) => (target.state.field(justReplacedEmoticon, false) ? undo(target) : false);
 
 /**
+ * The keys an emoticon takes: Backspace right after one became its emoji, and Enter in a field of many lines. A
+ * one-line field's Enter leaves the field (the summary's goes to the description, a dialog's submits), the emoticon
+ * as typed: turning it as the field hands its text over could hand over the text before.
+ */
+export function emoticonKeys(singleLine: boolean): KeyBinding[] {
+  return [{ key: 'Backspace', run: revertEmoticon }, ...(singleLine ? [] : [{ key: 'Enter', run: replaceBeforeLineBreak }])];
+}
+
+/**
  * Emoticons typed in a comment field become their emoji, as in Slack: after a space or a sentence's punctuation
- * typed, and Enter in a field of many lines (a one-line field's Enter leaves it). Only what is typed: a paste never
- * reaches `inputHandler`, nor does a text composed with an input method until it's done.
+ * typed (`typedWithEmoticon`), and before Enter (`emoticonKeys`). Only what is typed: a paste never reaches
+ * `inputHandler`.
  */
 export function emoticonTyping(singleLine: boolean): Extension {
   return [
     justReplacedEmoticon,
     EditorView.inputHandler.of((view, from, _to, text, insert) => {
-      if (view.composing || !endsEmoticon(text)) return false;
-      view.dispatch(insert());
-      const replacement = emoticonAfterTyping(view.state, from, text);
-      if (replacement) view.dispatch(replacement);
-      return true;
+      const steps = typedWithEmoticon(from, text, insert, view.composing);
+      for (const step of steps ?? []) view.dispatch(step);
+      return steps !== null;
     }),
-    Prec.highest(
-      keymap.of([
-        { key: 'Backspace', run: revertEmoticon },
-        ...(singleLine ? [] : [{ key: 'Enter', run: replaceBeforeLineBreak }]),
-      ]),
-    ),
+    Prec.highest(keymap.of(emoticonKeys(singleLine))),
   ];
 }
 
