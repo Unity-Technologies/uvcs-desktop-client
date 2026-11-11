@@ -7,6 +7,7 @@ import {
   downloadKey,
   downloadRows,
   downloadSearchChangeset,
+  downloadSearchName,
   downloadTreeOf,
   downloadTreePoint,
   foldersToReadLoaded,
@@ -244,5 +245,16 @@ describe('downloadSearchChangeset', () => {
 
   it('searches nothing without a tree', () => {
     expect(downloadSearchChangeset(null, 40)).toBeNull();
+  });
+});
+
+describe('downloadSearchName', () => {
+  it("names the branch or label the workspace is on, as the search's notes say it", () => {
+    expect(downloadSearchName({ kind: 'branch', name: '/main/task' })).toBe('/main/task');
+    expect(downloadSearchName({ kind: 'label', name: 'BL100' })).toBe('BL100');
+  });
+
+  it('names a changeset by its number', () => {
+    expect(downloadSearchName({ kind: 'changeset', name: '12' })).toBe('changeset 12');
   });
 });
