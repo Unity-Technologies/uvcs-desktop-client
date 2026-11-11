@@ -8,7 +8,7 @@ import { DiffAnnotationsContext, type DiffAnnotations, type LineAction, type Lin
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -45,7 +45,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const inCode = useReviewCommentsStore((state) => state.inCode);
   const setInCode = useReviewCommentsStore((state) => state.setInCode);
   // Per file: the lines opened while comments are hidden are a way to read one file.
-  const [opened, setOpened] = useState<{ path: string; keys: readonly string[] }>({ path: entry.path, keys: NO_KEYS });
+  const [opened, setOpened] = useState<OpenedLines>({ path: entry.path, keys: NO_KEYS });
   const openedKeys = opened.path === entry.path ? opened.keys : NO_KEYS;
 
   const threads = comments && isCommentable(entry, placeRepository) ? comments.threads : undefined;
@@ -124,9 +124,8 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     const { seeInContext } = comments;
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
     // Sent while comments are hidden, the line opens, so the new thread shows where it was written. From the lines open
-    // then: others may have opened while it was sent.
-    const onSent = (key: string): void =>
-      setOpened((now) => (now.path === entry.path ? { path: entry.path, keys: openedOnSend(now.keys, key, inCode) } : now));
+    // and the setting as they are then: either may have changed while it was sent.
+    const onSent = (key: string): void => setOpened((now) => openedOnSend(now, entry.path, key, useReviewCommentsStore.getState().inCode));
     const render = (row: DiffLineAnnotation<string>) =>
       renderRow(row, { comments, fileComments, focus, textOf, shownLines: shown.rows, spots, onSent, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
