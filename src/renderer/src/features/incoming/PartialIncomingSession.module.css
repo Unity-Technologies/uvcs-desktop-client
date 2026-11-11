@@ -53,17 +53,18 @@
   margin-top: 2px;
 }
 
+/* Fills the row: `PathLabel` takes its width from its container, and fits the path to it. */
 .text {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
 
 .path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  min-width: 0;
 }
 
 .meta {
