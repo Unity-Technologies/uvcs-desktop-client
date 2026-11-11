@@ -1,7 +1,16 @@
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NewWorkspaceFormInput } from './newWorkspaceForm';
+import {
+  downloadCards,
+  initialRepositoryName,
+  kindForDownloads,
+  newWorkspaceFormOf,
+  repositoriesToName,
+  serverToList,
+  toggledKind,
+  type NewWorkspaceFormInput,
+} from './newWorkspaceForm';
 
 const root = join('Users', 'me', 'wkspaces');
 const repositoryOnServer = (name: string): RepositorySummary => ({ id: name, name, server: 'acme@cloud', owner: 'me', spec: `${name}@acme@cloud` });
@@ -41,8 +50,10 @@ describe('newWorkspaceFormOf', () => {
         path: join(root, 'game'),
         offersDynamic: false,
         dynamic: false,
-        offersPartial: true,
+        dynamicDisabled: false,
+        partialAllowed: true,
         partial: false,
+        downloads: 'branch',
         kind: 'standard',
         canCreate: true,
       });
@@ -168,17 +179,68 @@ describe('newWorkspaceFormOf: the dynamic choice', () => {
   });
 });
 
-describe('newWorkspaceFormOf: the partial choice', () => {
+describe('newWorkspaceFormOf: what to download', () => {
   const inGame: NewWorkspaceFormInput = { ...input, repositoryName: 'game' };
 
-  it('is offered only for a repository that exists, which has something to choose from', () => {
-    expect(newWorkspaceFormOf(inGame)).toMatchObject({ offersPartial: true, partial: false });
-    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false, kind: 'standard' });
-    expect(newWorkspaceFormOf({ ...input, kindChosen: 'partial' })).toMatchObject({ offersPartial: false, partial: false });
+  it('downloads the whole branch until the user picks otherwise', () => {
+    expect(newWorkspaceFormOf(inGame)).toMatchObject({ downloads: 'branch', partial: false, kind: 'standard' });
   });
 
-  it('makes the workspace partial, not dynamic, when chosen, ready to create: what it downloads is chosen after', () => {
-    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial' })).toMatchObject({ partial: true, dynamic: false, kind: 'partial', canCreate: true });
+  it('lets the user pick folders of a repository that exists, and before naming one, so the choice reads the same from the start', () => {
+    expect(newWorkspaceFormOf(inGame)).toMatchObject({ partialAllowed: true });
+    expect(newWorkspaceFormOf(input)).toMatchObject({ partialAllowed: true });
+  });
+
+  it("doesn't for a new repository, which has nothing to pick: the workspace gets the whole branch", () => {
+    expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', kindChosen: 'partial' })).toMatchObject({
+      partialAllowed: false,
+      partial: false,
+      downloads: 'branch',
+      kind: 'standard',
+    });
+  });
+
+  it('makes the workspace partial, not dynamic, when folders are picked, ready to create: which ones is chosen after', () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial' })).toMatchObject({
+      downloads: 'folders',
+      partial: true,
+      dynamic: false,
+      kind: 'partial',
+      canCreate: true,
+    });
+  });
+
+  it('greys the dynamic choice while folders are picked: a dynamic workspace has the whole branch', () => {
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'partial' })).toMatchObject({ dynamicDisabled: true });
+    expect(newWorkspaceFormOf({ ...inGame, dynamicAvailable: true, kindChosen: 'dynamic' })).toMatchObject({ dynamicDisabled: false, downloads: 'branch' });
+  });
+});
+
+describe('kindForDownloads', () => {
+  it('makes any kind partial when folders are picked', () => {
+    expect(kindForDownloads('standard', 'folders')).toBe('partial');
+    expect(kindForDownloads('dynamic', 'folders')).toBe('partial');
+  });
+
+  it('makes a partial choice standard when the whole branch is picked, and keeps a dynamic one, which has the whole branch', () => {
+    expect(kindForDownloads('partial', 'branch')).toBe('standard');
+    expect(kindForDownloads('dynamic', 'branch')).toBe('dynamic');
+    expect(kindForDownloads('standard', 'branch')).toBe('standard');
+  });
+});
+
+describe('downloadCards', () => {
+  it('tells when to pick folders: less to download, but merging needs the whole branch', () => {
+    const [branch, folders] = downloadCards({ partialAllowed: true });
+    expect(branch).toMatchObject({ value: 'branch', title: 'The whole branch' });
+    expect(branch.description).toContain('merge freely');
+    expect(folders).toMatchObject({ value: 'folders', title: 'Only the folders I pick', disabled: false });
+    expect(folders.description).toContain('Merging needs the whole branch');
+  });
+
+  it('greys picking folders for a new repository and says why', () => {
+    const [, folders] = downloadCards({ partialAllowed: false });
+    expect(folders).toMatchObject({ disabled: true, description: 'Not for a new repository: it has nothing to pick yet.' });
   });
 });
 
