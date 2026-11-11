@@ -45,6 +45,24 @@ export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lin
   return [...opened, lineKey];
 }
 
+/** The lines opened while comments are hidden, in the file they were opened in (`ReviewFileAnnotator` stays as files change). */
+export interface OpenedLines {
+  path: string;
+  keys: readonly string[];
+}
+
+/**
+ * The lines opened while comments are hidden, once a comment written on one of `path` is sent: its line opens, so the
+ * new thread shows where it was written rather than folding into a marker; lines opened in another file aren't this
+ * one's. Unchanged when comments show in the code (read as it's sent: they may have been hidden meanwhile), or the line
+ * is open already.
+ */
+export function openedOnSend(opened: OpenedLines, path: string, lineKey: string, inCode: boolean): OpenedLines {
+  const keys = opened.path === path ? opened.keys : [];
+  if (inCode || keys.includes(lineKey)) return opened;
+  return { path, keys: [...keys, lineKey] };
+}
+
 /** Whether the outdated threads above the code open: when one of them is gone to. */
 export function outdatedOpensFor(focus: ThreadFocus | null, outdated: readonly EarlierThread[]): boolean {
   return focus !== null && outdated.some((entry) => entry.thread.root.id === focus.threadId);

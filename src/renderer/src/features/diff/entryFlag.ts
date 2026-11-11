@@ -25,3 +25,19 @@ export const EntryFlagContext = createContext<EntryFlag | null>(null);
 export function entryFlagChip(flag: Pick<EntryFlag, 'icon' | 'filterLabel'>, markOf: (entry: DiffEntry) => string | null): ListFlag<DiffEntry> | undefined {
   return flag.filterLabel ? { icon: flag.icon, label: flag.filterLabel, holds: (entry) => markOf(entry) !== null } : undefined;
 }
+
+/**
+ * A place's marks on a diff whose Unity `.meta`s ride on their assets' rows (`pairDiffMetas`): an asset's row carries its
+ * meta's mark too, said as the meta's ("1 comment on its .meta"), so the meta's comments show on the row it's reached
+ * from and the place's chip keeps it.
+ */
+export function withMetaMarks(markOf: (entry: DiffEntry) => string | null, metaOf: (entry: DiffEntry) => DiffEntry | undefined): (entry: DiffEntry) => string | null {
+  return (entry) => {
+    const own = markOf(entry);
+    const meta = metaOf(entry);
+    const metaMark = meta ? markOf(meta) : null;
+    if (metaMark === null) return own;
+    const onMeta = `${metaMark} on its .meta`;
+    return own === null ? onMeta : `${own}, ${onMeta}`;
+  };
+}

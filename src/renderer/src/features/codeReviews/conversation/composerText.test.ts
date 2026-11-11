@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composerText, isSendable } from './composerText';
+import { cancelAsks, composerText, isSendable } from './composerText';
 
 describe('composerText', () => {
   it('shows the draft, else what the composer opened with', () => {
@@ -31,5 +31,13 @@ describe('an optional text', () => {
   it('is always sendable, empty or as it opened', () => {
     expect(isSendable('', '', false, true)).toBe(true);
     expect(isSendable('LGTM', '', false, true)).toBe(true);
+  });
+});
+
+describe('cancelAsks', () => {
+  it('asks before losing words written, where the composer says so', () => {
+    expect(cancelAsks('Rename this', true)).toBe(true);
+    expect(cancelAsks('  \n', true)).toBe(false);
+    expect(cancelAsks('Rename this', false)).toBe(false);
   });
 });

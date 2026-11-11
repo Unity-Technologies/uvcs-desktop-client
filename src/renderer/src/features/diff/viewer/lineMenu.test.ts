@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { SEPARATOR, type Action, type MenuEntry } from '../../../lib/actions';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { groupedMenu } from '../../../lib/menuGroups';
-import { lineMenuEntries } from './lineMenu';
+import type { LineAction } from './diffAnnotations';
+import { lineActionTarget, lineMenuEntries } from './lineMenu';
 
 /** The lines' entries as a menu of their own reads them. */
 const linesMenu = (context: Parameters<typeof lineMenuEntries>[0]): MenuEntry[] => groupedMenu(lineMenuEntries(context));
@@ -30,5 +31,28 @@ describe('lineMenuEntries', () => {
 
   it('copies only the text where no link names the lines', () => {
     expect(labels(linesMenu({ lines: LINE, copyLines: vi.fn() }))).toEqual(['Copy line']);
+  });
+});
+
+describe("a place's own action on a line", () => {
+  const onNewerSide: LineAction = {
+    offers: (line) => line.side === 'additions',
+    label: (line) => `Comment on line ${line.lineNumber}`,
+    run: vi.fn(),
+  };
+
+  it('comes first, on the last of the lines selected', () => {
+    const menu = linesMenu({ lines: RANGE, copyLines: vi.fn(), lineAction: onNewerSide });
+    expect(labels(menu)).toEqual(['Comment on line 52', '—', 'Copy lines']);
+    (menu[0] as Action).run();
+    expect(onNewerSide.run).toHaveBeenCalledWith({ side: 'additions', lineNumber: 52 });
+  });
+
+  it("isn't offered on lines the place doesn't take", () => {
+    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: onNewerSide }))).toEqual(['Copy line']);
+  });
+
+  it('names the older side as the diff does', () => {
+    expect(lineActionTarget({ side: 'old', first: 3, last: 7 })).toEqual({ side: 'deletions', lineNumber: 7 });
   });
 });

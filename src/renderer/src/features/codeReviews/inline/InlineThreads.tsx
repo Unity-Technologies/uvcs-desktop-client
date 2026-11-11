@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { pluralize } from '../../../lib/text';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
@@ -19,16 +19,23 @@ interface InlineThreadsProps {
   /** Folds the line back into its marker, while comments are hidden in the code. */
   onClose?: () => void;
   onSeeInContext?: SeeInContext;
+  /** After the threads: a new comment being written on the line. */
+  children?: ReactNode;
 }
 
 /** Shows a thread in context, on a view (`ReviewComments.seeInContext`). */
 type SeeInContext = (thread: LineThread, startsOn?: ContextView) => void;
 
+/** A row under a line of code, holding the line's threads or a comment being written on it. */
+export function ThreadsRow({ children }: { children: ReactNode }) {
+  return <div className={styles.row}>{children}</div>;
+}
+
 /** The threads at a line, under it: each as the conversation shows it, without the file it's at. */
-export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }: InlineThreadsProps) {
+export function InlineThreads({ comments, line, focus, onClose, onSeeInContext, children }: InlineThreadsProps) {
   const hide = onClose && { label: hideLabel(line.threads.length), onHide: onClose };
   return (
-    <div className={styles.row}>
+    <ThreadsRow>
       {line.threads.map(({ thread, earlier }) => (
         <ThreadInRow
           key={thread.root.id}
@@ -44,7 +51,8 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
           }}
         />
       ))}
-    </div>
+      {children}
+    </ThreadsRow>
   );
 }
 

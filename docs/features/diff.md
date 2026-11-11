@@ -4,7 +4,10 @@ Everything a text or image diff does (`features/diff`, `features/review`), which
 their own doc: `model-diff.md`.
 
 A Unity asset's `.meta` is listed with it; the `.meta` button in the diff's toolbar shows the meta's diff
-(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`").
+(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"). A place asking for the meta (a review going to a comment
+on it, `DiffFocusRequest`) gets its asset's row with the meta shown (`pairedEntryAt`, as a link's `pairedFocus`), and
+a place's mark on the meta shows on its asset's row, so a review's "Commented" keeps it (`withMetaMarks`: "1 comment on
+its .meta").
 
 A side of any diff that the workspace holds unchanged (the side before of the newest change of a file, the side after
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
@@ -594,7 +597,8 @@ so: "Full screen" names the OS's.
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
-Pierre's line selection). Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
+Pierre's line selection). The number under the pointer isn't filled (`lineHoverHighlight: 'disabled'`): its cursor and
+tip say it selects, and the fill fought with a review's "+" beside it. Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
 `DiffBrowser`, which says so through `LineLinksContext`), a history's annotations (`HistoryPage`), a file browsed at a
 changeset (Browse repository, its newer side) and an unchanged file of the Files view (`useFilesItemLinks`, while no
 page covers it) are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
@@ -903,6 +907,14 @@ docs/features/code-reviews.md "Comments in the code"):
   empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
   buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
   whose row is empty, and a buffer under a changed line on the other side may take its tint too.
+  Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
+  a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
+  after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
+  does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
+  line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
+  its slot from line to line, which restarts an animation, a flicker on every line. The action is also the first entry
+  of the lines' menu, on the last of the lines selected
+  (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 

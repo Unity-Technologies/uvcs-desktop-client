@@ -4,6 +4,7 @@ import { lazyComponent } from '../../lib/lazyComponent';
 import { isModPressed } from '../../lib/shortcuts';
 import { CommentFocusGroup, FocusGroupContext } from './CommentFocusGroup';
 import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
+import { withinText } from './fieldSelection';
 import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
 import { isOwnFocusGroup } from './focusMode';
@@ -70,6 +71,21 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, lab
     focusAtStart: () => {
       field.current?.focus();
       field.current?.setSelectionRange(0, 0);
+    },
+    selection: () => {
+      const input = field.current;
+      if (!input || document.activeElement !== input) return null;
+      const backward = input.selectionDirection === 'backward';
+      const [from, to] = [input.selectionStart ?? 0, input.selectionEnd ?? 0];
+      return backward ? { anchor: to, head: from } : { anchor: from, head: to };
+    },
+    focusAtSelection: (selection) => {
+      const input = field.current;
+      if (!input) return false;
+      const within = withinText(selection, value.length);
+      input.focus();
+      input.setSelectionRange(Math.min(within.anchor, within.head), Math.max(within.anchor, within.head), within.head < within.anchor ? 'backward' : 'forward');
+      return true;
     },
   }));
   const remember = (): void => {

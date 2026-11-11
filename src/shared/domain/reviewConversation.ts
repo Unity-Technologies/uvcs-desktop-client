@@ -31,6 +31,20 @@ export interface ReviewComment {
   appliedInChangeset?: number;
 }
 
+/** The kinds a comment on a line is written as: the reviewer picks one, and it can't change once posted. */
+export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'question' | 'comment'>;
+
+/**
+ * Where a new comment on a line goes, and as what: a line (1-based) of the revision the review's diff shows (the newer
+ * side's, or a deleted file's last one), and the changeset whose diff it's written in, changeset by changeset.
+ */
+export interface NewLineComment {
+  revisionId: number;
+  line: number;
+  kind: LineCommentKind;
+  changesetId?: number;
+}
+
 /** What the server notes on its own as a review goes (a status, a rename, the reviewers asked), by whom and when. */
 export type ReviewEvent = { id: number; author: string; date: string } & ReviewEventChange;
 

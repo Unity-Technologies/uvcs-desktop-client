@@ -20,7 +20,8 @@ import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
 import { ownerExchange } from './ownerSync';
 import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
-import type { CommentFieldProps } from './commentFieldProps';
+import type { CommentFieldProps, FieldSelection } from './commentFieldProps';
+import { withinText } from './fieldSelection';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { fieldFocused, focusEditor } from './editorFocus';
 import { editorRootOf } from './editorRoot';
@@ -93,7 +94,10 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     };
     editor.contentDOM.addEventListener('keydown', keepTaken);
     const caret = initialFocus.current?.at;
-    if (caret !== undefined || autoFocus) {
+    // Made anew as its larger editor's panel moves (`CommentFocusGroup`), the group places the caret, if any: taking the
+    // focus here would pull it back from wherever the user put it.
+    const movedByGroup = group?.moving() ?? false;
+    if (caret !== undefined || (autoFocus && !movedByGroup)) {
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
       focusEditor(editor);
     }
@@ -124,6 +128,14 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       focus: () => view && focusEditor(view),
       focusAtEnd: () => focusAt(view, view?.state.doc.length ?? 0),
       focusAtStart: () => focusAt(view, 0),
+      selection: () => (view?.hasFocus ? { anchor: view.state.selection.main.anchor, head: view.state.selection.main.head } : null),
+      focusAtSelection: (selection: FieldSelection) => {
+        if (!view) return false;
+        const within = withinText(selection, view.state.doc.length);
+        view.dispatch({ selection: within, scrollIntoView: true });
+        focusEditor(view);
+        return true;
+      },
     }),
     [view],
   );

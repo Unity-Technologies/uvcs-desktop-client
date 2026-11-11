@@ -14,3 +14,8 @@ export function isSendable(text: string, initialText: string, allowEmpty: boolea
   if (text === initialText) return false;
   return allowEmpty || text.trim() !== '';
 }
+
+/** Whether Cancel asks first: a comment that took words to write, where closing it would lose them (`asksBeforeDiscarding`). */
+export function cancelAsks(text: string, asksBeforeDiscarding: boolean): boolean {
+  return asksBeforeDiscarding && text.trim() !== '';
+}
