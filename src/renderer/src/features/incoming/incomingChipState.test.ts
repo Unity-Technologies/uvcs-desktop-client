@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BranchIncoming, BranchIncomingChanges, PartialIncoming, PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import type { Changeset } from '@shared/domain/changeset';
-import { cardChangesets, cardCheck, cardItems, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
+import { cardChangesets, cardCheck, cardItems, cardFailed, cardReadsNewest, chipCount, chipLabel, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 
 const summary = (changesetCount: number, countCapped = false): BranchIncoming => ({
   branch: '/main',
@@ -225,5 +225,19 @@ describe('in a partial workspace', () => {
 
   it('keeps the check as the known summary', () => {
     expect(knownIncomingSummary(partialSummary(3), partialChanges([item('a')]))).toEqual(partialSummary(3));
+  });
+});
+
+describe("the chip's words", () => {
+  it("counts changesets, at least the check's when it stopped counting, and names the conflicts", () => {
+    expect(chipLabel({ kind: 'incoming', branch: '/main', count: 2, countCapped: false, checked: true })).toBe('2 new changesets');
+    expect(chipCount({ kind: 'incoming', branch: '/main', count: 100, countCapped: true, checked: false })).toBe('100+');
+    expect(chipLabel({ kind: 'conflicts', branch: '/main', count: 3, countCapped: false, conflictCount: 1, mergeCount: 1, blockedCount: 0 })).toBe('3 new changesets, 1 conflict');
+  });
+
+  it('counts items in a partial workspace, and those changed locally too', () => {
+    expect(chipLabel({ kind: 'items', branch: '/main', count: 1, conflictCount: 0 })).toBe('1 incoming item');
+    expect(chipLabel({ kind: 'items', branch: '/main', count: 4, conflictCount: 2 })).toBe('4 incoming items, 2 conflicts');
+    expect(chipCount({ kind: 'items', branch: '/main', count: 4, conflictCount: 2 })).toBe('4');
   });
 });
