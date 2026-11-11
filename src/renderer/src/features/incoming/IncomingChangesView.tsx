@@ -9,6 +9,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
+import { PartialIncomingSession } from './PartialIncomingSession';
 import { incomingDiffs, incomingHeaderSubtitle, incomingViewState } from './incomingViewState';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { useIncomingChanges } from './useIncomingChanges';
@@ -84,5 +85,6 @@ export function IncomingChangesView() {
     );
   }
 
+  if (state.kind === 'partial') return <PartialIncomingSession key={state.incoming.headChangeset} workspacePath={workspacePath} incoming={state.incoming} header={headerSaying} />;
   return <IncomingSession key={state.incoming.headChangeset} workspacePath={workspacePath} incoming={state.incoming} header={headerSaying} />;
 }

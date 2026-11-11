@@ -1,0 +1,75 @@
+/* A partial workspace's incoming items, grouped by what the branch did to them (`partialItemGroups`). */
+.list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-1);
+  overflow: auto;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2) var(--space-2) 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.count {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 6px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+}
+
+.item:hover {
+  background: var(--bg-hover);
+}
+
+.item:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+  outline: none;
+}
+
+.item[data-selected='true'] {
+  background: var(--bg-selected-strong);
+}
+
+.icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

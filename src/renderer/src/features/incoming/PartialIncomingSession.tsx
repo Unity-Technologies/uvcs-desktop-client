@@ -1,0 +1,94 @@
+import { ArrowDownToLine } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import type { PartialIncomingChanges } from '@shared/domain/incoming';
+import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { ItemIcon } from '../../components/ItemIcon';
+import { PathLabel } from '../../components/PathLabel';
+import { branchLabel } from '../../lib/branchLabels';
+import { fileNameOf, pluralize } from '../../lib/text';
+import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/EmptyState';
+import { IncomingFileDiff } from './IncomingDetail';
+import { IncomingPanes } from './IncomingPanes';
+import { updatePartialToIncoming } from './updateOperations';
+import { partialItemDetail, partialItemDiffEntry, partialItemGroups, partialUpdateMessage } from './partialIncomingItems';
+import styles from './PartialIncomingSession.module.css';
+import barStyles from './UpdateBar.module.css';
+
+interface PartialIncomingSessionProps {
+  workspacePath: string;
+  incoming: PartialIncomingChanges;
+  /** The view's header, saying the words given. */
+  header: (subtitle: string) => ReactNode;
+}
+
+/**
+ * Incoming in a partial workspace: it loads no one changeset, so it lists the items the branch head would change,
+ * grouped by what the branch did to them, with each item's diff, and updates to them all at once.
+ */
+export function PartialIncomingSession({ workspacePath, incoming, header }: PartialIncomingSessionProps) {
+  const repository = useWorkspaceInfo().data?.repository;
+  const groups = partialItemGroups(incoming.items);
+  const [selectedPath, setSelectedPath] = useState<string | null>(groups[0]?.items[0]?.path ?? null);
+  const [updating, setUpdating] = useState(false);
+  const selected = incoming.items.find((item) => item.path === selectedPath);
+  const selectedDiff = selected ? partialItemDiffEntry(selected, repository) : null;
+  const canUpdate = incoming.items.some((item) => !item.conflict);
+
+  const update = async () => {
+    setUpdating(true);
+    try {
+      await updatePartialToIncoming(workspacePath, incoming);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <>
+      {header(`${pluralize(incoming.items.length, 'item')} from ${branchLabel(incoming.branch)}`)}
+      <div className={barStyles.bar}>
+        <ArrowDownToLine size={15} className={barStyles.icon} />
+        <span className={barStyles.text}>{partialUpdateMessage(incoming)}</span>
+        {canUpdate && (
+          <Button variant="primary" loading={updating} onClick={() => void update()}>
+            Update workspace
+          </Button>
+        )}
+      </div>
+      <IncomingPanes
+        list={
+          <div className={styles.list}>
+            {groups.map((group) => (
+              <section key={group.title}>
+                <h3 className={styles.title}>
+                  {group.title} <span className={styles.count}>{group.items.length}</span>
+                </h3>
+                {group.items.map((item) => (
+                  <button key={item.path} type="button" className={styles.item} data-selected={item.path === selectedPath} onClick={() => setSelectedPath(item.path)}>
+                    <span className={styles.icon}>
+                      <ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={fileNameOf(item.path)} />
+                    </span>
+                    <span className={styles.text}>
+                      <span className={styles.path}>
+                        <PathLabel path={item.path} oldPath={item.oldPath} />
+                      </span>
+                      <span className={styles.meta}>{partialItemDetail(item)}</span>
+                    </span>
+                  </button>
+                ))}
+              </section>
+            ))}
+          </div>
+        }
+        detail={
+          selectedDiff ? (
+            <IncomingFileDiff key={selectedDiff.path} workspacePath={workspacePath} file={selectedDiff} />
+          ) : (
+            <EmptyState title={selected?.isDirectory ? 'A folder has no diff' : 'Select an item'} />
+          )
+        }
+      />
+    </>
+  );
+}
