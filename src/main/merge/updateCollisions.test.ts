@@ -40,6 +40,11 @@ describe('findUpdateConflicts', () => {
     expect(findUpdateConflicts([incoming('src/a.txt', 'changed')], [local('src/a.txt', ['moved'])])).toEqual([]);
   });
 
+  it('ignores incoming files whose permissions alone changed: their content is the one loaded', () => {
+    const onlyPermissions: DiffEntry = { ...incoming('tools/build.sh', 'changed'), baseRevisionId: 20, permissionsChange: { before: '-rw-r--r--', after: '-rwxr-xr-x' } };
+    expect(findUpdateConflicts([onlyPermissions], [local('tools/build.sh', ['checkedOut', 'changed'])])).toEqual([]);
+  });
+
   it('ignores incoming additions and directories', () => {
     expect(findUpdateConflicts([incoming('new.txt', 'added'), incoming('src', 'changed', 'directory')], [local('src', ['changed'])])).toEqual([]);
   });

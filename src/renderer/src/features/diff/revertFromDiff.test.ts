@@ -71,6 +71,12 @@ describe("a diff's file menu", () => {
     }
   });
 
+  it('offers no revert for a file whose permissions alone changed: its content has nothing to go back to', () => {
+    const onlyPermissions: DiffEntry = { ...entry(), baseRevisionId: 40, permissionsChange: { before: '-rw-r--r--', after: '-rwxr-xr-x' } };
+
+    expect(revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [onlyPermissions], { workspaceRepository: repository }))).toBeUndefined();
+  });
+
   it("offers no revert for a file of an xlinked repository, nor while the workspace's repository isn't known", () => {
     expect(revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [entry('changed', 'file', 'thirdparty@local')], { workspaceRepository: repository }))).toBeUndefined();
     expect(revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [entry()]))).toBeUndefined();
