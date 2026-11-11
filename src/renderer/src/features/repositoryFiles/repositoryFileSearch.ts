@@ -30,6 +30,18 @@ export function searchesFor(query: string): boolean {
   return query.trim() !== '';
 }
 
+/** When the repository's whole tree is listed: as the search shows, or only once something is typed in it. */
+export type TreeListing = 'onOpen' | 'onSearch';
+
+/**
+ * Whether the changeset's whole tree is listed now (`prepareRepositoryPaths`). Go to file lists it as it opens
+ * (`'onOpen'`), so its seconds pass while the query is typed; a search beside a tree the user may never search (Choose
+ * what to download) lists it only once something is typed (`'onSearch'`): the listing is the server's heaviest read.
+ */
+export function listsTreeNow(changesetId: number | null, listing: TreeListing, query: string): boolean {
+  return changesetId !== null && (listing === 'onOpen' || searchesFor(query));
+}
+
 /**
  * The search after `event`. A new search keeps the results before it on screen until its own come; what an older search
  * tells, one a newer query replaced, is ignored.

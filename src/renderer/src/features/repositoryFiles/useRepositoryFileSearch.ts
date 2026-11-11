@@ -3,13 +3,10 @@ import type { RepositoryPlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { nextRepositoryFileSearch, searchesFor, type RepositoryFileSearch } from './repositoryFileSearch';
+import { listsTreeNow, nextRepositoryFileSearch, searchesFor, type RepositoryFileSearch, type TreeListing } from './repositoryFileSearch';
 
 /** How long typing pauses before a search runs: each keystroke would scan the tree again. */
 const SEARCH_DELAY_MS = 150;
-
-/** When the repository's whole tree is listed: as the search shows, or only once something is typed in it. */
-export type TreeListing = 'onOpen' | 'onSearch';
 
 /**
  * Searches a repository's files at a changeset by name as the query settles (`explorer.findRepositoryPaths`): the best
@@ -30,10 +27,10 @@ export function useRepositoryFileSearch(
   const [search, dispatch] = useReducer(nextRepositoryFileSearch, { kind: 'empty' });
 
   // `prepareRepositoryPaths` lists the tree unless it is listed or listing, so calling it again costs nothing.
-  const wanted = listing === 'onOpen' || searchesFor(query);
+  const listsTree = listsTreeNow(changesetId, listing, query);
   useEffect(() => {
-    if (changesetId !== null && wanted) void api.explorer.prepareRepositoryPaths(place, changesetId);
-  }, [place, changesetId, wanted]);
+    if (listsTree && changesetId !== null) void api.explorer.prepareRepositoryPaths(place, changesetId);
+  }, [place, changesetId, listsTree]);
 
   useUvcsEvent('repositoryPathsFound', ({ searchId, paths, source }) => dispatch({ kind: 'progress', searchId, paths, source }));
 
