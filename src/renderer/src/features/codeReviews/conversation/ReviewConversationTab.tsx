@@ -12,7 +12,7 @@ import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
 import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
-import { openItemsOf, pickedScrollBehavior, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
@@ -57,7 +57,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
-    if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView({ block: 'center', behavior: pickedScrollBehavior(pick) });
+    if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView(pickedScrollOf(pick));
   }, [read, pick]);
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;

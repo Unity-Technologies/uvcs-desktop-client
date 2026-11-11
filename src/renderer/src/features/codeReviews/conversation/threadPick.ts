@@ -41,9 +41,13 @@ export function threadMarkOf(threadId: number, pick: ThreadPick | undefined): { 
   return { highlight: picked ? pick.seq : undefined, selected: picked };
 }
 
-/** How the conversation brings the picked thread into view: gliding to one picked in Open, at once when it opens at one. */
-export function pickedScrollBehavior(pick: ThreadPick): ScrollBehavior {
-  return pick.by === 'rail' ? 'smooth' : 'auto';
+/**
+ * How the conversation brings the picked thread into view. One picked in Open glides only as far as it must: on screen
+ * it stays where it is (its light says which), off screen it comes to the nearest edge, as an answer gone to does
+ * (`ReviewCommentView`). The page opened at one shows it centered, at once.
+ */
+export function pickedScrollOf(pick: ThreadPick): ScrollIntoViewOptions {
+  return pick.by === 'rail' ? { block: 'nearest', behavior: 'smooth' } : { block: 'center', behavior: 'auto' };
 }
 
 /** An entry of the rail's Open: what the thread says, in a line, and whether it's the current one. */
