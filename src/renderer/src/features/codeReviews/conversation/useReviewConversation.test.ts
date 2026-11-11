@@ -5,7 +5,7 @@ import { workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../../api/queryKeys';
 import { createQueryClient } from '../../../app/queryClient';
 import { showOnce, showQuery } from '../../../testing/queryProbes';
-import { conversationReadSince, SHOWN_BY_THE_PAGE } from './useReviewConversation';
+import { conversationReadAt, conversationReadSince, SHOWN_BY_THE_PAGE } from './useReviewConversation';
 
 let client: QueryClient;
 beforeEach(() => {
@@ -71,5 +71,25 @@ describe('conversationReadSince', () => {
     const query = client.getQueryCache().find({ queryKey: KEY })!;
     query.setState({ ...query.state, errorUpdatedAt: 300, status: 'error' });
     await expect(waiting).resolves.toBeUndefined();
+  });
+});
+
+describe('conversationReadAt', () => {
+  it('is when the conversation was last read, a read that finished during the write included, so only a later one counts', async () => {
+    const { client } = shownConversation(100);
+    client.setQueryData(KEY, 'read while writing', { updatedAt: 150 });
+    const since = conversationReadAt(PLACE, 41, client);
+    expect(since).toBe(150);
+
+    let done = false;
+    const waiting = conversationReadSince(PLACE, 41, since, client).then(() => (done = true));
+    await Promise.resolve();
+    expect(done).toBe(false);
+    client.setQueryData(KEY, 'read after the write', { updatedAt: 151 });
+    await waiting;
+  });
+
+  it('is 0 when the conversation was never read', () => {
+    expect(conversationReadAt(PLACE, 41, createQueryClient())).toBe(0);
   });
 });

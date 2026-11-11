@@ -8,7 +8,7 @@ import { CommentComposer } from '../conversation/CommentComposer';
 import { addLineComment } from '../conversation/reviewCommentOperations';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import { threadKindName } from '../conversation/threadBadges';
-import { conversationReadSince } from '../conversation/useReviewConversation';
+import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
 import { focusOnRequest, LINE_COMMENT_KINDS, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import styles from './NewLineCommentCard.module.css';
@@ -71,10 +71,9 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
           autoFocus={mountedFor.current !== null}
           asksBeforeDiscarding
           onSubmit={async (text) => {
-            const writtenAt = Date.now();
             const sent = await addLineComment(place, spot.reviewId, spot.comment, text);
             if (!sent) return false;
-            await conversationReadSince(place, spot.reviewId, writtenAt);
+            await conversationReadSince(place, spot.reviewId, conversationReadAt(place, spot.reviewId));
             close(spot.key);
             onSent();
             return true;
