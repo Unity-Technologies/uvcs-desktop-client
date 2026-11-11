@@ -1,26 +1,46 @@
 import type { FoundPath, FoundPathsSource } from '@shared/domain/explorer';
+import { goToFileKey } from '../../components/goToFileKeys';
+import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
+
+/** Results on screen and the query they answer: a new search keeps the ones before it until its own come. */
+export interface FoundFor {
+  query: string;
+  paths: FoundPath[];
+}
 
 /** Where a search of a repository's files stands (`useRepositoryFileSearch`). */
 export type RepositoryFileSearch =
   | { kind: 'empty' }
-  | { kind: 'searching'; searchId: string; paths: FoundPath[]; source: FoundPathsSource | null }
-  | { kind: 'found'; paths: FoundPath[] }
+  | { kind: 'searching'; searchId: string; query: string; results: FoundFor | null; source: FoundPathsSource | null }
+  | { kind: 'found'; results: FoundFor }
   | { kind: 'failed'; message: string };
 
-/** What happens to a search: the query emptied, a search started, its best results so far, its end. */
+/** What happens to a search: the query emptied, a search of `query` started, its best results so far, its end. */
 export type RepositoryFileSearchEvent =
   | { kind: 'empty' }
-  | { kind: 'started'; searchId: string }
+  | { kind: 'started'; searchId: string; query: string }
   | { kind: 'progress'; searchId: string; paths: FoundPath[]; source: FoundPathsSource }
   | { kind: 'found'; searchId: string; paths: FoundPath[] }
   | { kind: 'failed'; searchId: string; message: string };
 
-/** What the dialog shows of a search: its results, whether it waits for the first, and what it says (`repositoryFileSearchView`). */
+/** One result as it's drawn: its path, its icon and the characters the query matched. */
+export interface RepositoryFileSearchRow {
+  path: string;
+  itemType: 'file' | 'directory';
+  matches: number[];
+}
+
+/** What a search shows: its rows, whether it waits for the first, what it says (`repositoryFileSearchView`). */
 export interface RepositoryFileSearchView {
-  paths: FoundPath[];
+  rows: RepositoryFileSearchRow[];
   loading: boolean;
   note: string | null;
+  /** Whether the rows answer the query typed, not one it replaced while it settles: only then can Enter pick one. */
+  current: boolean;
 }
+
+/** What a key in the search's field does: move the highlight, or pick a result's path. */
+export type RepositoryFileSearchKey = { kind: 'highlight'; index: number } | { kind: 'pick'; path: string };
 
 /**
  * Whether a query searches: from its first character, spaces aside. Any query costs one read of the tree's file, its
@@ -47,36 +67,55 @@ export function nextRepositoryFileSearch(search: RepositoryFileSearch, event: Re
     case 'empty':
       return { kind: 'empty' };
     case 'started':
-      return { kind: 'searching', searchId: event.searchId, paths: resultsOf(search), source: null };
+      return { kind: 'searching', searchId: event.searchId, query: event.query, results: resultsOf(search), source: null };
     default:
       if (search.kind !== 'searching' || search.searchId !== event.searchId) return search;
-      if (event.kind === 'progress') return { ...search, paths: event.paths, source: event.source };
-      if (event.kind === 'found') return { kind: 'found', paths: event.paths };
+      if (event.kind === 'progress') return { ...search, results: { query: search.query, paths: event.paths }, source: event.source };
+      if (event.kind === 'found') return { kind: 'found', results: { query: search.query, paths: event.paths } };
       return { kind: 'failed', message: event.message };
   }
 }
 
-/** What the dialog shows of the search of `query` in `branch`. */
+/** What the search shows while `query` is typed, of the tree called `branch`. */
 export function repositoryFileSearchView(search: RepositoryFileSearch, query: string, branch: string): RepositoryFileSearchView {
-  const paths = resultsOf(search);
-  return { paths, loading: search.kind === 'searching' && paths.length === 0, note: repositoryFileSearchNote(search, query, branch) };
+  const results = resultsOf(search);
+  const paths = results?.paths ?? [];
+  return {
+    rows: paths.map((found) => ({ path: found.path, itemType: found.isDirectory ? 'directory' : 'file', matches: fuzzyMatchPositions(found.path, query) })),
+    loading: search.kind === 'searching' && paths.length === 0,
+    note: repositoryFileSearchNote(search, query, branch),
+    current: results?.query === query,
+  };
 }
 
-function resultsOf(search: RepositoryFileSearch): FoundPath[] {
-  return search.kind === 'searching' || search.kind === 'found' ? search.paths : [];
+/**
+ * What `key` does in the search's field with the `highlighted` row: arrows move the highlight, Enter picks it. Enter
+ * picks nothing while the rows answer an older query (`current`), so it never opens what the user typed past.
+ */
+export function repositoryFileSearchKey(key: string, highlighted: number, view: RepositoryFileSearchView): RepositoryFileSearchKey | null {
+  const count = view.rows.length;
+  if (key === 'Enter' && !view.current) return null;
+  const effect = goToFileKey(key, Math.min(highlighted, Math.max(0, count - 1)), count);
+  if (effect?.kind === 'pick') return { kind: 'pick', path: view.rows[effect.index]!.path };
+  return effect;
 }
 
-/** What the dialog says under its field, beside the results (none when there are results to show). */
+function resultsOf(search: RepositoryFileSearch): FoundFor | null {
+  if (search.kind === 'found') return search.results;
+  return search.kind === 'searching' ? search.results : null;
+}
+
+/** What the search says under its field, beside the results (none when there are results to show). */
 function repositoryFileSearchNote(search: RepositoryFileSearch, query: string, branch: string): string | null {
   switch (search.kind) {
     case 'empty':
       return `Type a name to find a file in ${branch}.`;
     case 'searching':
-      if (search.paths.length > 0) return null;
+      if (search.results && search.results.paths.length > 0) return null;
       // The first search of a changeset lists its whole tree from the server: say so, it takes seconds.
       return search.source === 'disk' ? 'Searching…' : `Reading the files of ${branch} from the server…`;
     case 'found':
-      return search.paths.length === 0 ? `No files match “${query.trim()}”.` : null;
+      return search.results.paths.length === 0 ? `No files match “${query.trim()}”.` : null;
     case 'failed':
       return `Couldn't search the files: ${search.message}`;
   }

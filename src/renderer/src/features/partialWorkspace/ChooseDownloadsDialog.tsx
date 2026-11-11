@@ -7,11 +7,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
-import { goToFileKey } from '../../components/goToFileKeys';
-import { GoToFileList } from '../../components/GoToFileList';
 import { ItemIcon } from '../../components/ItemIcon';
-import { ItemPathRow } from '../../components/ItemPathRow';
-import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { ItemRow } from '../../components/ItemRow';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -21,7 +17,8 @@ import { SearchField } from '../../ui/SearchField';
 import { Spinner } from '../../ui/Spinner';
 import { branchQuery } from '../branches/useBranches';
 import { repositoryListingQuery } from '../browseRepository/repositoryListing';
-import { repositoryFileSearchView, searchesFor } from '../repositoryFiles/repositoryFileSearch';
+import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor } from '../repositoryFiles/repositoryFileSearch';
+import { RepositoryFileSearchList } from '../repositoryFiles/RepositoryFileSearchList';
 import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
@@ -79,7 +76,6 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
   const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query), query, searchOf?.name ?? '');
   const searching = searchesFor(query);
-  const foundDirectories = new Set(search.paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 
   // The repository side: what the workspace's changeset (or branch) holds, folder by folder.
   const repositoryFolders = [ROOT, ...expanded];
@@ -161,11 +157,11 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   };
 
   const onSearchKeyDown = (event: KeyboardEvent): void => {
-    const key = goToFileKey(event.key, highlighted, search.paths.length);
+    const key = repositoryFileSearchKey(event.key, highlighted, search);
     if (!key) return;
     event.preventDefault();
     if (key.kind === 'highlight') setHighlighted(key.index);
-    else reveal(search.paths[key.index]!.path);
+    else reveal(key.path);
   };
 
   const apply = async (): Promise<void> => {
@@ -212,15 +208,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       )}
       {status === 'ready' && searching && (
         <div className={styles.found}>
-          <GoToFileList
-            paths={search.paths.map((found) => found.path)}
-            highlighted={highlighted}
-            onHighlight={setHighlighted}
-            onPick={reveal}
-            loading={search.loading}
-            note={search.note}
-            row={(path) => <ItemPathRow path={path} itemType={foundDirectories.has(path) ? 'directory' : 'file'} matches={fuzzyMatchPositions(path, query)} />}
-          />
+          <RepositoryFileSearchList view={search} highlighted={highlighted} onHighlight={setHighlighted} onPick={reveal} />
         </div>
       )}
       {status === 'ready' && (

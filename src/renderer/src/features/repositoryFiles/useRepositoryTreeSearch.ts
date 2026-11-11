@@ -1,9 +1,8 @@
-import { useCallback, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
-import { goToFileKey } from '../../components/goToFileKeys';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
-import { repositoryFileSearchView, searchesFor, type RepositoryFileSearchView } from './repositoryFileSearch';
+import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor, type RepositoryFileSearchView } from './repositoryFileSearch';
 import { useGoToFileCommand } from './useGoToFileCommand';
 import { useRepositoryFileSearch } from './useRepositoryFileSearch';
 
@@ -22,6 +21,10 @@ export interface RepositoryTreeSearch {
   setQuery: (query: string) => void;
   /** Whether the results show in place of the tree. */
   searching: boolean;
+  /** Whether there's a tree to search: the field is greyed until its changeset is known. */
+  enabled: boolean;
+  /** The results' element id, for the field's `aria-controls`. */
+  resultsId: string;
   view: RepositoryFileSearchView;
   highlighted: number;
   setHighlighted: (index: number) => void;
@@ -41,6 +44,7 @@ export function useRepositoryTreeSearch({ place, changesetId, name, onReveal }: 
   const [query, setQueryState] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsId = useId();
   const view = repositoryFileSearchView(useRepositoryFileSearch(place, changesetId, query), query, name);
 
   const focus = useCallback(() => {
@@ -60,12 +64,12 @@ export function useRepositoryTreeSearch({ place, changesetId, name, onReveal }: 
     onReveal(path);
   };
   const onKeyDown = (event: KeyboardEvent): void => {
-    const key = goToFileKey(event.key, highlighted, view.paths.length);
+    const key = repositoryFileSearchKey(event.key, highlighted, view);
     if (!key) return;
     event.preventDefault();
     if (key.kind === 'highlight') setHighlighted(key.index);
-    else pick(view.paths[key.index]!.path);
+    else pick(key.path);
   };
 
-  return { query, setQuery, searching: searchesFor(query), view, highlighted, setHighlighted, pick, onKeyDown, inputRef, focus };
+  return { query, setQuery, searching: searchesFor(query), enabled, resultsId, view, highlighted, setHighlighted, pick, onKeyDown, inputRef, focus };
 }

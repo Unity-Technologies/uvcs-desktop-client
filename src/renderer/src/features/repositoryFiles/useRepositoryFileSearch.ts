@@ -39,7 +39,7 @@ export function useRepositoryFileSearch(
     }
     // Unique across windows: the main process tells searches apart by it, whichever window asked.
     const searchId = crypto.randomUUID();
-    dispatch({ kind: 'started', searchId });
+    dispatch({ kind: 'started', searchId, query: settled });
     api.explorer.findRepositoryPaths(place, changesetId, settled, searchId).then(
       (paths) => dispatch({ kind: 'found', searchId, paths }),
       (error: unknown) => dispatch({ kind: 'failed', searchId, message: error instanceof Error ? error.message : String(error) }),
