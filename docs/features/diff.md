@@ -890,7 +890,9 @@ docs/features/code-reviews.md "Comments in the code"):
   Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
   a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
   after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
-  does (over the number alone it hid it), and the first entry of the lines' menu, on the last of the lines selected
+  does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
+  line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
+  its slot from line to line, which restarts an animation, a flicker on every line. And the first entry of the lines' menu, on the last of the lines selected
   (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
