@@ -7,29 +7,31 @@ import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { SearchField } from '../../ui/SearchField';
+import { goToFileWording, type GoToFileScope } from './goToFileScope';
 import { repositoryFileSearchView } from './repositoryFileSearch';
 import { useRepositoryFileSearch } from './useRepositoryFileSearch';
 
 interface RepositoryGoToFileOptions {
   place: RepositoryPlace;
-  /** The changeset whose tree is searched: the latest of the branch Files shows. */
+  /** The changeset whose tree is searched: the latest of the branch Files shows, or the one Browse repository shows. */
   changesetId: number;
-  /** The branch, as the dialog names it. */
-  branch: string;
+  /** What the dialog says it searches. */
+  scope: GoToFileScope;
 }
 
 /**
  * Finds a file or folder of a repository explored without a workspace by name, as Go to file finds a workspace's
- * (docs/features/explore-repository.md, "Finding a file"). Resolves the path picked, for Files to reveal.
+ * (docs/features/explore-repository.md, "Finding a file"). Resolves the path picked, for the tree to reveal.
  */
 export function goToRepositoryFile(options: RepositoryGoToFileOptions): Promise<string | undefined> {
   return askDialog<string>((finish) => <RepositoryGoToFileDialog {...options} finish={finish} />);
 }
 
-function RepositoryGoToFileDialog({ place, changesetId, branch, finish }: RepositoryGoToFileOptions & { finish: (path: string | undefined) => void }) {
+function RepositoryGoToFileDialog({ place, changesetId, scope, finish }: RepositoryGoToFileOptions & { finish: (path: string | undefined) => void }) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
-  const { paths, loading, note } = repositoryFileSearchView(useRepositoryFileSearch(place, changesetId, query), query, branch);
+  const wording = goToFileWording(scope);
+  const { paths, loading, note } = repositoryFileSearchView(useRepositoryFileSearch(place, changesetId, query), query, wording.name);
   const directories = new Set(paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -41,7 +43,7 @@ function RepositoryGoToFileDialog({ place, changesetId, branch, finish }: Reposi
   };
 
   return (
-    <Dialog title="Go to file" description={`In the latest of ${branch}`} width={620} onClose={() => finish(undefined)}>
+    <Dialog title="Go to file" description={wording.description} width={620} onClose={() => finish(undefined)}>
       <div onKeyDown={onKeyDown}>
         <SearchField
           value={query}

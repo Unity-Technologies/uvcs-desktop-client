@@ -61,7 +61,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   // Finds a file of the branch shown by name (`goToRepositoryFile`), revealed in the tree once picked.
   const openGoToFile = useCallback(() => {
     if (!shown) return;
-    void goToRepositoryFile({ place, changesetId: shown.headChangeset, branch: shown.name }).then((path) => path && useFilesViewStore.getState().requestReveal(place, path));
+    void goToRepositoryFile({ place, changesetId: shown.headChangeset, scope: { kind: 'branch', branch: shown.name } }).then((path) => path && useFilesViewStore.getState().requestReveal(place, path));
   }, [place, shown?.headChangeset, shown?.name]);
   useGoToFileCommand(shown ? openGoToFile : null);
   useShortcut(hotkey('filesGoToFile'), openGoToFile, shown !== null);
