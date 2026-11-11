@@ -46,3 +46,17 @@
 .segment[aria-checked='true']:focus-visible {
   box-shadow: var(--focus-ring-visible);
 }
+
+/* Small: lower, lighter text, no track behind the segments but the checked one's own. */
+.control[data-small] {
+  padding: 0;
+  background: transparent;
+}
+
+.control[data-small] > .segment {
+  gap: 3px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
