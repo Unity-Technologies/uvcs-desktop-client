@@ -96,18 +96,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # macOS and Windows: the signing repo's Sign workflow builds, signs and uploads them to the same draft; this job
-  # starts it and fails when it does. SIGNING_REPO_TOKEN may only start and read that repository's workflows (Actions:
-  # read and write); the release environment keeps it to runs from main.
+  # starts it and fails when it does. It reaches that repository as the Unity-Technologies org's GitHub App
+  # uvcs-desktop-release, installed only on the two repositories: its token, minted for this run and revoked when the
+  # job ends, may only start and read that repository's workflows (Actions: read and write). The release environment
+  # keeps the App's key (RELEASE_APP_PRIVATE_KEY) and Client ID (RELEASE_APP_CLIENT_ID) to runs from main.
   sign:
     needs: prepare
     runs-on: ubuntu-latest
     environment: release
     env:
       SIGNING_REPO: Unity-Technologies/uvcs-desktop-client-release-signing
-      GH_TOKEN: ${{ secrets.SIGNING_REPO_TOKEN }}
     steps:
+      - name: Get a token for the signing repository
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          repositories: uvcs-desktop-client-release-signing
+          permission-actions: write
       # The run is found by its title, which ends with this run's id: two releases never pick each other's.
       - name: Build and sign macOS and Windows in the signing repository
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           REQUEST="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh workflow run sign-release.yml --repo "$SIGNING_REPO" -f tag="${{ needs.prepare.outputs.tag }}" -f request="$REQUEST"
