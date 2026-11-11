@@ -178,18 +178,20 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
   repositories reach each other as the org's GitHub App `uvcs-desktop-release`, installed only on them (Actions and
   Contents read and write), never through a person's token: each job mints a token for the run with
   `actions/create-github-app-token`, limited to the one repository and permission it needs, from the App's Client ID
-  (the `RELEASE_APP_CLIENT_ID` variable) and private key (the `RELEASE_APP_PRIVATE_KEY` secret), which this
-  repository keeps in its `release` environment and the signing repository keeps too. Rotating the key means
-  generating a new one in the App's Credentials, setting both secrets, then deleting the old key. Unity's signing
-  certificates are in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it may
-  serve only private repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag with
-  this repository's config and sign hook, and uploads to the same draft; its README lists its secrets. This
-  repository holds no signing secret. The draft's description is what What's New shows: edit it before publishing. Its pull requests are
-  those whose merge commits ("Merge pull request #N from <owner>/…", which needs the merge method and its default
-  message) are on main since the last release tag, not GitHub's pick: GitHub starts from the newest tag in the new
-  tag's history, and no release tag is there (its bump commit never reaches main), so the notes would repeat every
-  earlier release's changes. Publishing the draft makes the update reach every running app within the hour. Never
-  bump the version by hand.
+  (the `RELEASE_APP_CLIENT_ID` variable) and private key (the `RELEASE_APP_PRIVATE_KEY` secret), which both
+  repositories keep in a `release` environment open only to runs from main. A token lasts an hour and a Sign run
+  can take longer (one took 72 minutes), so the `sign` job waits in rounds of at most 50 minutes, each with a new
+  token (`.github/actions/watch-signing-run`), up to 150 minutes. Rotating the key means generating a new one in the
+  App's Credentials, setting `RELEASE_APP_PRIVATE_KEY` in both repositories, then deleting the old key. Unity's
+  signing certificates are in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it
+  may serve only private repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag
+  with this repository's config and sign hook, and uploads to the same draft; its README lists its secrets. This
+  repository holds no signing secret. The draft's description is what What's New shows: edit it before publishing.
+  Its pull requests are those whose merge commits ("Merge pull request #N from <owner>/…", which needs the merge
+  method and its default message) are on main since the last release tag, not GitHub's pick: GitHub starts from the
+  newest tag in the new tag's history, and no release tag is there (its bump commit never reaches main), so the notes
+  would repeat every earlier release's changes. Publishing the draft makes the update reach every running app within
+  the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs. The macOS targets name no architecture, so a run builds
