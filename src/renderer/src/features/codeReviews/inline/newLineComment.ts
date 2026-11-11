@@ -51,18 +51,20 @@ export function newLineCommentSpot(reviewId: number, path: string, side: ThreadS
 }
 
 /**
- * The comments being written in the diff shown: the review's, on the file, in the mode it's in, each on the revision the
- * file shows now. A branch's newest revision changes as its author checks in, and the reviews read again: the comment
- * stays under its line, and goes on the revision now shown, never on one the diff no longer shows (where it would read
- * outdated at once), nor hidden away with its text.
+ * The comments being written in the diff shown: the review's, on the file, in the mode it's in, each on the revision and
+ * side the file shows now. A branch's newest revision changes as its author checks in, and the reviews read again: the
+ * comment stays at its line number (the code there may have changed: it's the reviewer's to see) and goes on the
+ * revision now shown, on the side `cm` comments on (a file deleted since has only its last revision), never on one the
+ * diff no longer shows, where it would read outdated at once. A file moved since, or now shorter than the line, shows it
+ * no more: its text stays kept, and the comment shows again if the file comes back to it.
  */
 export function newLineCommentsIn(spots: readonly NewLineCommentSpot[], reviewId: number, view: ReviewDiffView, file: ShownFile): NewLineCommentSpot[] {
   const changesetId = view.kind === 'changeset' ? view.changesetId : undefined;
   const side = topSideOf(file);
   const revisionId = side === 'additions' ? file.modifiedRevision : file.originalRevision;
   return spots
-    .filter((spot) => spot.reviewId === reviewId && spot.path === file.path && spot.comment.changesetId === changesetId && spot.side === side)
-    .map((spot) => (spot.comment.revisionId === revisionId ? spot : { ...spot, comment: { ...spot.comment, revisionId } }));
+    .filter((spot) => spot.reviewId === reviewId && spot.path === file.path && spot.comment.changesetId === changesetId)
+    .map((spot) => (spot.comment.revisionId === revisionId && spot.side === side ? spot : { ...spot, side, comment: { ...spot.comment, revisionId } }));
 }
 
 /**
