@@ -84,7 +84,7 @@ export function permissionsNote(entry: DiffEntry): string | null {
 
 function describePermissionsChange(change: PermissionsChange): string {
   const changed = 'Only the file permissions changed';
-  if (!change.before && !change.after) return `${changed}.`;
+  if (change.before === null && change.after === null) return `${changed}.`;
   return `${changed}, from ${unbroken(change.before) ?? NOT_SET} to ${unbroken(change.after) ?? NOT_SET}.`;
 }
 
