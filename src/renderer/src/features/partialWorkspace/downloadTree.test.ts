@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import { toggled } from './downloadSelection';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { toggled } from './downloadSelection';
 import {
   downloadKey,
   downloadRows,
-  downloadSearchChangeset,
-  downloadSearchName,
+  downloadSearchOf,
   downloadTreeOf,
   downloadTreePoint,
   foldersToReadLoaded,
@@ -228,33 +227,28 @@ describe('revealedDownload', () => {
     expect(revealed.selected).toBe('Assets/Textures');
   });
 
+  it('adds nothing when the folders above the item are open already', () => {
+    const revealed = revealedDownload('Assets/a.png', new Set(['Assets']));
+    expect([...revealed.expanded]).toEqual(['Assets']);
+    expect(revealed.selected).toBe('Assets/a.png');
+  });
+
   it('selects an item of the root without opening anything', () => {
     expect(revealedDownload('readme.md', new Set())).toEqual({ expanded: new Set(), selected: 'readme.md' });
   });
 });
 
-describe('downloadSearchChangeset', () => {
-  it("searches the changeset the tree shows", () => {
-    expect(downloadSearchChangeset({ kind: 'changeset', changeset: 12 }, undefined)).toBe(12);
+describe('downloadSearchOf', () => {
+  it('searches the changeset the tree shows, and names it so', () => {
+    expect(downloadSearchOf({ kind: 'changeset', changeset: 12 }, undefined)).toEqual({ changeset: 12, name: 'changeset 12' });
   });
 
-  it("searches a branch's head once it is read, and nothing before", () => {
-    expect(downloadSearchChangeset({ kind: 'branch', branch: '/main/task' }, 40)).toBe(40);
-    expect(downloadSearchChangeset({ kind: 'branch', branch: '/main/task' }, undefined)).toBeNull();
+  it("searches a branch's head once it is read, named by the branch, and nothing before", () => {
+    expect(downloadSearchOf({ kind: 'branch', branch: '/main/task' }, 40)).toEqual({ changeset: 40, name: '/main/task' });
+    expect(downloadSearchOf({ kind: 'branch', branch: '/main/task' }, undefined)).toBeNull();
   });
 
   it('searches nothing without a tree', () => {
-    expect(downloadSearchChangeset(null, 40)).toBeNull();
-  });
-});
-
-describe('downloadSearchName', () => {
-  it("names the branch or label the workspace is on, as the search's notes say it", () => {
-    expect(downloadSearchName({ kind: 'branch', name: '/main/task' })).toBe('/main/task');
-    expect(downloadSearchName({ kind: 'label', name: 'BL100' })).toBe('BL100');
-  });
-
-  it('names a changeset by its number', () => {
-    expect(downloadSearchName({ kind: 'changeset', name: '12' })).toBe('changeset 12');
+    expect(downloadSearchOf(null, 40)).toBeNull();
   });
 });
