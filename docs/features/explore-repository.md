@@ -53,6 +53,11 @@ folder of the branch Files shows by name, as a workspace's does (`goToRepository
 the changeset's whole tree is listed once (`RepositoryPathSearch`), as Go to file opens (`prepareRepositoryPaths`):
 opening it says a search is coming, and the listing's seconds pass while the query is typed.
 
+Browse repository (a repository at a changeset or label, `BrowseRepositoryPage`) has the same Go to file: the search
+button in its header, ⌘P, `/` in the tree and the palette. It searches the changeset the page shows (`GoToFileScope`
+`changeset`), and a pick opens the tree on the item (`browseOpening`, the tree remounted by `reveals`). Its filter
+still narrows only the folders already open.
+
 - **One `cm ls / -R --tree=cs:<head>@<repository> --format={type}␟{path}␞`** (`repositoryPathsArgs`), in a process of
   its own (`executeRecords`): cancellable, and it never holds a pooled shell for its seconds. Its records are read as
   they arrive, each written to a file of the session's (`SessionFolder`, `uvcs-trees-<pid>-…`) and offered to the
