@@ -1,0 +1,22 @@
+/* A comment being written under a line: framed as the line's threads are in the code, its kind in the header band. */
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.body {
+  padding: var(--space-3);
+}
