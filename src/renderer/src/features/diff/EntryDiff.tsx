@@ -3,12 +3,11 @@ import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
-import { describeDiffEntry, diffEntrySources, diffEntryStatus } from './diffEntrySources';
+import { describeDiffEntry, diffEntrySources, diffEntryStatus, identicalDescriptionOf } from './diffEntrySources';
 import { EntryAnnotatorContext, type AnnotatedEntry } from './entryAnnotator';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
-import { ONLY_MOVED } from './viewer/movedFrom';
 import { XlinkDiff } from './XlinkDiff';
 
 interface EntryDiffProps {
@@ -54,7 +53,7 @@ export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks, 
         modified={compared?.modified ?? sources.modified}
         fileName={entry.path}
         title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
-        identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
+        identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : identicalDescriptionOf(entry)}
         compareControls={
           (reviewedToOffer !== null || metaToggle || controls) && (
             <>

@@ -1,11 +1,12 @@
 import type { ContentSource } from '@shared/domain/content';
-import type { DiffEntry } from '@shared/domain/diff';
+import type { DiffEntry, PermissionsChange } from '@shared/domain/diff';
 import { revisionIn, type RevisionRef } from '@shared/domain/revision';
 import { statusTones } from '../../components/changeFilter';
 import { statusGroup, type StatusGroup } from '../../components/statusGroups';
 import type { GroupedFileListFacts } from '../../components/useGroupedFileTree';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
+import { ONLY_MOVED } from './viewer/movedFrom';
 
 const EMPTY: ContentSource = { kind: 'empty' };
 
@@ -40,8 +41,16 @@ const LABELS: Record<DiffEntry['status'], string> = {
   moved: 'Moved',
 };
 
+/** What an item whose file permissions alone changed (`DiffEntry.permissionsChange`) is called, as its FS badge says. */
+const ONLY_PERMISSIONS = 'Only permissions changed';
+
+/** An entry's status: a change of the file permissions alone is one of its own, as reviewers can pass over it. */
 export function diffEntryTone(entry: DiffEntry): StatusTone {
-  return TONES[entry.status];
+  return entry.permissionsChange ? 'permissions' : TONES[entry.status];
+}
+
+function diffEntryLabel(entry: DiffEntry): string {
+  return entry.permissionsChange ? ONLY_PERMISSIONS : LABELS[entry.status];
 }
 
 /**
@@ -58,10 +67,27 @@ export function diffEntryTones(entry: DiffEntry): readonly StatusTone[] {
 /** An entry's status letter, a moved file that changed with a C before its M; the M's tooltip shows the move itself. */
 export function diffEntryStatus(entry: DiffEntry): StatusMark {
   if (isMovedAndChanged(entry)) return { tone: 'moved', label: LABELS.moved, changedLabel: LABELS.changed };
-  return { tone: diffEntryTone(entry), label: LABELS[entry.status] };
+  return { tone: diffEntryTone(entry), label: diffEntryLabel(entry) };
 }
 
 export function describeDiffEntry(entry: DiffEntry): string {
   if (isMovedAndChanged(entry)) return 'Moved and changed';
-  return entry.oldPath ? `${LABELS[entry.status]} from ${entry.oldPath}` : LABELS[entry.status];
+  return entry.oldPath ? `${LABELS[entry.status]} from ${entry.oldPath}` : diffEntryLabel(entry);
+}
+
+/**
+ * Why an entry's diff shows its content the same on both sides, when the entry tells: only its file permissions
+ * changed, or it was only moved. Undefined leaves the viewer's own words.
+ */
+export function identicalDescriptionOf(entry: DiffEntry): string | undefined {
+  if (entry.permissionsChange) return describePermissionsChange(entry.permissionsChange);
+  return entry.oldPath ? ONLY_MOVED : undefined;
+}
+
+function describePermissionsChange({ before, after }: PermissionsChange): string {
+  const changed = 'Only the file permissions changed';
+  if (before && after) return `${changed}, from ${before} to ${after}.`;
+  if (after) return `${changed}: they are now ${after}.`;
+  if (before) return `${changed}: they were ${before}.`;
+  return `${changed}.`;
 }
