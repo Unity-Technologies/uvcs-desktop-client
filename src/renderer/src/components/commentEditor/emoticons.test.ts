@@ -12,15 +12,14 @@ describe('EMOTICON_EMOJI', () => {
     expect(EMOTICON_EMOJI[':O']).toBe('😮');
     expect(EMOTICON_EMOJI[':-|']).toBe('😐');
     expect(EMOTICON_EMOJI[':-/']).toBe('😕');
-    expect(EMOTICON_EMOJI['B-)']).toBe('😎');
   });
 
   it('gives each one emoji of one character, which Backspace takes whole and every client shows', () => {
     for (const emoji of Object.values(EMOTICON_EMOJI)) expect([...emoji]).toHaveLength(1);
   });
 
-  it('leaves out what a comment means as written: a path, a word, a comparison, a list item, a table', () => {
-    for (const text of [':/', 'XD', '<3', '8)', ':|']) expect(EMOTICON_EMOJI[text]).toBeUndefined();
+  it('leaves out what a comment means as written: a path, a word, a comparison, list items, a table', () => {
+    for (const text of [':/', 'XD', '<3', '8)', 'B-)', ':|']) expect(EMOTICON_EMOJI[text]).toBeUndefined();
   });
 });
 
@@ -42,7 +41,7 @@ describe('emoticonEnding', () => {
   });
 
   it('finds none inside a word, a path or an address', () => {
-    for (const text of ['a:-)', 'http://host:8080', 'https://example.com/:-)', 'C:D', 'fn(x:)', 'Plan:P', 'xB-)']) {
+    for (const text of ['a:-)', 'http://host:8080', 'https://example.com/:-)', 'C:D', 'fn(x:)', 'Plan:P', 'x:-D']) {
       expect(emoticonEnding(text)).toBeNull();
     }
   });

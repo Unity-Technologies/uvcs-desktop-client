@@ -40,8 +40,12 @@ describe('emoticonAfterTyping', () => {
 
   it('turns one after an opening bracket or at a line start', () => {
     expect(typed('(', ':-) ')).toBe('(🙂 ‸');
-    expect(typed('First\n', 'B-) ')).toBe('First\n😎 ‸');
+    expect(typed('First\n', ':-/ ')).toBe('First\n😕 ‸');
     expect(typed('- ', ':P ')).toBe('- 😛 ‸');
+  });
+
+  it("leaves a lettered list's items", () => {
+    expect(typed('A-) Build\n', 'B-) ')).toBe('A-) Build\nB-) ‸');
   });
 
   it('leaves text that only ends like one: a word, an address, a port', () => {
