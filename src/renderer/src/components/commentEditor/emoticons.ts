@@ -1,8 +1,8 @@
 /**
  * The emoticons a comment field turns into their emoji as they're typed (docs/features/rich-comments.md, "Emoticons"),
  * each to the emoji Slack and GitHub show for it. Left out on purpose, as text a comment means as written: `:/` (a
- * path's start), `XD` (a word: Adobe XD), `<3` (a comparison: `n <3`), `8)` (a numbered list's item), `:|` (a
- * table's alignment).
+ * path's start), `XD` (a word: Adobe XD), `<3` (a comparison: `n <3`), `8)` and `B-)` (a numbered or lettered
+ * list's item), `:|` (a table's alignment).
  */
 export const EMOTICON_EMOJI: Readonly<Record<string, string>> = {
   ':-)': '\u{1F642}',
@@ -24,7 +24,6 @@ export const EMOTICON_EMOJI: Readonly<Record<string, string>> = {
   ':o': '\u{1F62E}',
   ':-|': '\u{1F610}',
   ':-/': '\u{1F615}',
-  'B-)': '\u{1F60E}',
 };
 
 /** An emoticon found at the end of a text: where it starts in that text, and its emoji. */
