@@ -2,7 +2,7 @@ import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incomin
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { updateCommand } from '../cm/updateArgs';
 import { toAbsolutePaths } from '../files/workspacePaths';
-import { readIncomingChanges } from '../merge/incoming';
+import { readChangesetIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import { shelvedContents } from './pendingSnapshot';
@@ -30,7 +30,7 @@ export async function shelveBlockedAndUpdate(
   context: OperationContext,
 ): Promise<ShelvedForUpdate> {
   const { cm, records } = deps;
-  const incoming = await readIncomingChanges(cm, workspacePath);
+  const incoming = await readChangesetIncomingChanges(cm, workspacePath);
   if (incoming.blockedPaths.length === 0) throw new Error('Nothing blocks the update anymore: update from Incoming.');
 
   const workspace = await readWorkspaceIdentity(cm, workspacePath);

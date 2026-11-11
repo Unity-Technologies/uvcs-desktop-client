@@ -10,7 +10,7 @@ import { waitForNextSecond } from '../files/nextSecond';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
 import type { OperationContext } from '../operations/OperationTracker';
-import { readIncomingChanges } from './incoming';
+import { readChangesetIncomingChanges } from './incoming';
 import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type LocalVersions } from './localVersions';
 
 /**
@@ -29,7 +29,7 @@ export async function updateWithMerge(
   backupsRoot: string,
   context: OperationContext,
 ): Promise<UpdateResult> {
-  const { conflicts, blockedPaths } = await readIncomingChanges(cm, workspacePath);
+  const { conflicts, blockedPaths } = await readChangesetIncomingChanges(cm, workspacePath);
   if (blockedPaths.length > 0) throw new Error(`Check in, shelve or undo your changes to ${blockedPaths.join(', ')} first: the branch deleted or moved them.`);
   return updateMergingConflicts(cm, workspacePath, kind, conflicts, resolutions, backupsRoot, context);
 }
