@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { checkStateOf, downloadRules, isFolderRead, toggled, type DownloadTree, type DownloadedChoices } from './downloadSelection';
+import { checkStateOf, downloadRules, isFolderRead, toggled, type DownloadItem, type DownloadTree, type DownloadedChoices } from './downloadSelection';
 
-const file = (path: string) => ({ path, isDirectory: false });
-const folder = (path: string) => ({ path, isDirectory: true });
+const file = (path: string): DownloadItem => ({ path, isDirectory: false, iconType: 'file' });
+const folder = (path: string): DownloadItem => ({ path, isDirectory: true, iconType: 'directory' });
 
 /** A repository holding `Assets/{Textures/{a.png,b.png},hero.fbx}`, `Code/main.cs` and `readme.md`. */
 function tree(loadedIn: Record<string, string[]>, read: string[] = ['', 'Assets', 'Assets/Textures', 'Code']): DownloadTree {
-  const items: Record<string, { path: string; isDirectory: boolean }[]> = {
+  const items: Record<string, DownloadItem[]> = {
     '': [folder('Assets'), folder('Code'), file('readme.md')],
     Assets: [folder('Assets/Textures'), file('Assets/hero.fbx')],
     'Assets/Textures': [file('Assets/Textures/a.png'), file('Assets/Textures/b.png')],

@@ -1,3 +1,4 @@
+import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PartialRule } from '@shared/domain/workspace';
 import type { CheckState } from '../../ui/Checkbox';
 import { parentOf } from '../../lib/paths';
@@ -6,6 +7,8 @@ import { parentOf } from '../../lib/paths';
 export interface DownloadItem {
   path: string;
   isDirectory: boolean;
+  /** What its icon draws, as Files draws it (`iconTypeOf`). */
+  iconType: ItemType;
 }
 
 /**
