@@ -65,6 +65,28 @@ describe('incoming in a partial workspace', () => {
     expect(lines().filter((line) => line.startsWith('ls /'))).toHaveLength(2);
   });
 
+  it('lists a loaded folder the head moved at its new path, and reads its changes there', async () => {
+    const rootWithSrc = [['3', '40', 'dir', '/', '3'], ['20', '42', 'dir', '/Audio', '3'], ['22', '41', 'dir', '/Src', '3']];
+    const srcOnHead = CODE_ON_HEAD.map(([id, rev, type, path, cs]) => [id, rev, type, path.replace(/^\/Code/, '/Src'), cs]);
+    const answer: CmAnswer = ({ args }) => {
+      if (args.includes('/Code')) return cmFails(`${formatOutput(...rootWithSrc)}Can't resolve the selector for the item /Code\n`);
+      return args.includes('/Src') ? formatOutput(...srcOnHead) : formatOutput(...rootWithSrc);
+    };
+    const { cm, commands } = partialWorkspace(answer);
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({
+      items: [
+        item({ kind: 'moved', path: 'Src', oldPath: 'Code', isDirectory: true, loadedRevisionId: 23, headRevisionId: 41 }),
+        item({ kind: 'added', path: 'Src/Hull.cs', headRevisionId: 38 }),
+        item({ kind: 'changed', path: 'Src/Ship.cs', conflict: true, loadedRevisionId: 16, headRevisionId: 34 }),
+      ],
+    });
+    const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args[1] !== '-R');
+    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src']]);
+  });
+
   it('rethrows a failure that names no folder', async () => {
     const { cm } = partialWorkspace(cmFails('The server is unreachable'));
 
