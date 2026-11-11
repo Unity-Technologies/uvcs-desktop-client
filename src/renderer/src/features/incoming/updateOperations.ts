@@ -1,9 +1,10 @@
-import type { BranchIncomingChanges, IncomingSummary, UpdateResolutions } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, IncomingSummary, PartialIncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import { ApiError, api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
+import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 import { useToastStore } from '../../ui/toast/toastStore';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
@@ -28,6 +29,28 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
     onFailure: explainUpdateConflicts,
   });
   if (updated === true) showUpdatedMoment(workspacePath, incoming);
+  return updated === true;
+}
+
+/**
+ * Updates a partial workspace to the items its branch head changes (`cm partial update`: an item changed both locally
+ * and on the branch stops it, and leads to Incoming), then says how many came. Resolves to whether it updated.
+ */
+export async function updatePartialToIncoming(workspacePath: string, incoming: PartialIncomingChanges): Promise<boolean> {
+  const itemCount = incoming.items.length;
+  const updated = await runOperation({
+    title: 'Updating workspace',
+    workspacePath,
+    kind: 'update',
+    run: async (operationId) => {
+      await api.workspaces.update(workspacePath, operationId);
+      return true;
+    },
+    affects: isAffectedByCheckinOrUpdate,
+    success: () => ({ title: `Updated ${pluralize(itemCount, 'item')} from ${branchLabel(incoming.branch)}` }),
+    onFailure: explainUpdateConflicts,
+  });
+  if (updated === true) showUpdatedMoment(workspacePath, { branch: incoming.branch, partial: true, headChangeset: incoming.headChangeset, itemCount });
   return updated === true;
 }
 
