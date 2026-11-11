@@ -3,6 +3,7 @@ import type { BranchIncoming, BranchIncomingChanges, IncomingChanges, IncomingSu
 import { describeProgressBriefly } from '../../app/operations/describeProgress';
 import { ringValue } from '../../app/operations/progressBar';
 import type { RunningOperation } from '../../app/operations/runningOperationsStore';
+import { formatCountAtLeast, pluralize, pluralizeAtLeast } from '../../lib/text';
 
 export type IncomingChipState =
   /** `ring`: how full the progress ring is, null to spin. */
@@ -49,6 +50,25 @@ export function incomingChipState(
   return conflictCount > 0
     ? { kind: 'conflicts', branch, count, countCapped, conflictCount, mergeCount, blockedCount }
     : { kind: 'incoming', branch, count, countCapped, checked: true };
+}
+
+type CountedChipState = Exclude<IncomingChipState, { kind: 'updating' }>;
+
+/** How many conflicts the chip flags next to its count: none while there are none, or the check hasn't read them. */
+export function chipConflictCount(state: CountedChipState): number {
+  return state.kind === 'incoming' ? 0 : state.conflictCount;
+}
+
+/** The number the chip shows: changesets ("100+" once the check stopped counting), or a partial workspace's items. */
+export function chipCount(state: CountedChipState): string {
+  return state.kind === 'items' ? String(state.count) : formatCountAtLeast(state.count, state.countCapped);
+}
+
+/** What the chip reads as to a screen reader: what is incoming, and how many of those conflict. */
+export function chipLabel(state: CountedChipState): string {
+  const incoming = state.kind === 'items' ? pluralize(state.count, 'incoming item') : pluralizeAtLeast(state.count, state.countCapped, 'new changeset');
+  const conflicts = chipConflictCount(state);
+  return conflicts > 0 ? `${incoming}, ${pluralize(conflicts, 'conflict')}` : incoming;
 }
 
 /** The check's summary of a workspace on a branch that loads one changeset; undefined for a partial one or none. */
