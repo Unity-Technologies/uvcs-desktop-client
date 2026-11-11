@@ -1,6 +1,8 @@
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import type { CheckState } from '../../ui/Checkbox';
-import { partialItemKey } from './partialIncomingItems';
+import { branchLabel } from '../../lib/branchLabels';
+import { pluralize } from '../../lib/text';
+import { partialConflictNote, partialItemKey } from './partialIncomingItems';
 
 /**
  * Which of a partial workspace's incoming items Update brings. Items start checked, so the view keeps the keys
@@ -90,4 +92,21 @@ function isWithin(path: string, folder: string): boolean {
 function parentOf(path: string): string {
   const slash = path.lastIndexOf('/');
   return slash < 0 ? '' : path.slice(0, slash);
+}
+
+/**
+ * What the update bar says: how many items Update brings from the branch, the unchecked ones a folder update brings
+ * along, and the conflicts it leaves alone (`cm partial update` keeps the local version until the change is checked
+ * in, shelved or undone).
+ */
+export function partialUpdateMessage(branch: string, selection: PartialUpdateSelection, unchecked: UncheckedItems): string {
+  if (selection.brought.length === 0) return 'Check the items to bring.';
+  const conflictCount = selection.brought.filter((item) => item.conflict).length;
+  const bringCount = selection.brought.length - conflictCount;
+  const alongCount = selection.brought.filter((item) => !item.conflict && !partialItemChecked(item, unchecked)).length;
+  const brings = bringCount > 0 ? `Updating brings ${pluralize(bringCount, 'item')} from ${branchLabel(branch)}.` : '';
+  const along = alongCount === 0 ? '' : `That includes ${pluralize(alongCount, 'item')} you unchecked, in a folder it updates.`;
+  const them = conflictCount === 1 ? 'it' : 'them';
+  const kept = conflictCount === 0 ? '' : `${partialConflictNote(conflictCount)} until you check ${them} in, shelve ${them} or undo ${them}.`;
+  return [brings, along, kept].filter(Boolean).join(' ');
 }

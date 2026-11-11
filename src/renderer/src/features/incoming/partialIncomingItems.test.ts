@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
-import { canUpdatePartial, firstPartialItemKey, morePartialItems, partialConflictNote, partialItemDetail, partialItemDiffEntry, partialItemGroups, partialItemKey, partialSelectionDetail, partialUpdateMessage } from './partialIncomingItems';
+import type { PartialIncomingItem } from '@shared/domain/incoming';
+import { canUpdatePartial, firstPartialItemKey, morePartialItems, partialConflictNote, partialItemDetail, partialItemDiffEntry, partialItemGroups, partialItemKey, partialSelectionDetail } from './partialIncomingItems';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -11,8 +11,6 @@ const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<Pa
   headRevisionId: kind === 'removed' ? null : 2,
   ...extra,
 });
-
-const incoming = (...items: PartialIncomingItem[]): PartialIncomingChanges => ({ branch: '/main/task', partial: true, headChangeset: 12, items });
 
 describe('partialItemGroups', () => {
   it('puts conflicts first, then what changed, moved, was removed and was added, leaving out empty groups', () => {
@@ -49,24 +47,6 @@ describe('partialItemDetail', () => {
     expect(partialItemDetail(item('removed', 'Ship.cs'))).toBe('Removed');
     expect(partialItemDetail(item('added', 'Ship.cs'))).toBe('Added');
     expect(partialItemDetail(item('changed', 'Ship.cs'))).toBe('Changed');
-  });
-});
-
-describe('partialUpdateMessage', () => {
-  it('says how many items updating brings from the branch', () => {
-    expect(partialUpdateMessage(incoming(item('changed', 'a.txt'), item('added', 'b.txt')))).toBe('Updating brings 2 items from task.');
-  });
-
-  it('says the items changed here too keep the local version', () => {
-    expect(partialUpdateMessage(incoming(item('changed', 'a.txt'), item('changed', 'b.txt', { conflict: true })))).toBe(
-      'Updating brings 1 item from task. 1 item you changed keeps your version until you check it in, shelve it or undo it.',
-    );
-  });
-
-  it('says when every item collides with a local change', () => {
-    expect(partialUpdateMessage(incoming(item('changed', 'a.txt', { conflict: true }), item('changed', 'b.txt', { conflict: true })))).toBe(
-      '2 items you changed keep your version until you check them in, shelve them or undo them.',
-    );
   });
 });
 

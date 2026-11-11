@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { partialItemKey } from './partialIncomingItems';
-import { partialGroupCheckState, partialItemChecked, partialUpdateSelection, withItemsChecked } from './partialIncomingSelection';
+import { partialGroupCheckState, partialItemChecked, partialUpdateMessage, partialUpdateSelection, withItemsChecked } from './partialIncomingSelection';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -106,5 +106,34 @@ describe('partialUpdateSelection', () => {
     const ship = item('changed', 'Code/Ship.cs');
     const tool = item('changed', 'CodeGen/Tool.cs');
     expect(partialUpdateSelection([ship, tool], uncheckedOf(tool))).toEqual({ paths: ['Code/Ship.cs'], brought: [ship] });
+  });
+});
+
+describe('partialUpdateMessage', () => {
+  const message = (items: PartialIncomingItem[], unchecked: ReadonlySet<string> = new Set()): string =>
+    partialUpdateMessage('/main/task', partialUpdateSelection(items, unchecked), unchecked);
+
+  it('counts what updating brings from the branch', () => {
+    expect(message([item('changed', 'Code/Ship.cs'), item('added', 'Art/new.png')])).toBe('Updating brings 2 items from task.');
+  });
+
+  it('counts only the checked items, and names unchecked ones a folder update brings along', () => {
+    const ship = item('changed', 'Code/Ship.cs');
+    const sky = item('changed', 'Art/sky.png');
+    expect(message([ship, sky], uncheckedOf(sky))).toBe('Updating brings 1 item from task.');
+    const hull = item('added', 'Code/Hull.cs');
+    expect(message([hull, ship, sky], uncheckedOf(ship, sky))).toBe('Updating brings 2 items from task. That includes 1 item you unchecked, in a folder it updates.');
+  });
+
+  it('says a conflict keeps the local version', () => {
+    const items = [item('changed', 'Code/Ship.cs'), item('changed', 'Art/sky.png', { conflict: true })];
+    expect(message(items)).toBe('Updating brings 1 item from task. 1 item you changed keeps your version until you check it in, shelve it or undo it.');
+    const conflicts = [item('changed', 'Code/Ship.cs', { conflict: true }), item('changed', 'Art/sky.png', { conflict: true })];
+    expect(message(conflicts)).toBe('2 items you changed keep your version until you check them in, shelve them or undo them.');
+  });
+
+  it('asks to check items when none is', () => {
+    const ship = item('changed', 'Code/Ship.cs');
+    expect(message([ship], uncheckedOf(ship))).toBe('Check the items to bring.');
   });
 });

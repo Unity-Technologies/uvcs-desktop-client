@@ -1,7 +1,6 @@
-import type { PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
+import type { PartialIncomingItem } from '@shared/domain/incoming';
 import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import { comparePaths } from '@shared/pathOrder';
-import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 
 /** Items a partial workspace's Incoming lists under one title. */
@@ -32,19 +31,6 @@ export function partialItemDetail(item: PartialIncomingItem): string {
   if (item.conflict) return 'Changed here and on the branch';
   if (item.kind === 'moved' && item.oldPath) return `Moved from ${item.oldPath}`;
   return TITLES[item.kind];
-}
-
-/**
- * What the update bar says: how many items updating brings from the branch, and how many it leaves alone because they
- * were changed locally too (`cm partial update` keeps the local version until the change is checked in, shelved or undone).
- */
-export function partialUpdateMessage(incoming: PartialIncomingChanges): string {
-  const conflictCount = incoming.items.filter((item) => item.conflict).length;
-  const bringCount = incoming.items.length - conflictCount;
-  const brings = bringCount > 0 ? `Updating brings ${pluralize(bringCount, 'item')} from ${branchLabel(incoming.branch)}.` : '';
-  const them = conflictCount === 1 ? 'it' : 'them';
-  const kept = conflictCount === 0 ? '' : `${partialConflictNote(conflictCount)} until you check ${them} in, shelve ${them} or undo ${them}.`;
-  return [brings, kept].filter(Boolean).join(' ');
 }
 
 /** What the incoming card notes about the items changed both here and on the branch: updating leaves them alone. */
