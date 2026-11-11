@@ -45,11 +45,20 @@ describe('downloadTreeOf', () => {
   it('takes folders as folders and everything else, xlinks included, as items downloaded whole', () => {
     const tree = downloadTreeOf(listings, new Map([['', []]]));
     expect(tree.items.get('')).toEqual([
-      { path: 'Assets', isDirectory: true },
-      { path: 'Lib', isDirectory: false },
-      { path: 'readme.md', isDirectory: false },
+      { path: 'Assets', isDirectory: true, iconType: 'directory' },
+      { path: 'Lib', isDirectory: false, iconType: 'xlink' },
+      { path: 'readme.md', isDirectory: false, iconType: 'file' },
     ]);
     expect(tree.loadedIn.get('')).toEqual([]);
+  });
+
+  it('takes a folder `cm ls` lists with an xlink target as an xlink, downloaded whole', () => {
+    const xlinked: TreeItem = {
+      ...item('Lib', 'directory'),
+      xlink: { writable: false, path: '/', changeset: 12, repository: 'lib', server: 'local' },
+    };
+    const tree = downloadTreeOf(new Map([['', [xlinked]]]), new Map([['', []]]));
+    expect(tree.items.get('')).toEqual([{ path: 'Lib', isDirectory: false, iconType: 'xlink' }]);
   });
 });
 
@@ -81,6 +90,11 @@ describe('downloadRows', () => {
       'Lib [ ]',
       'readme.md [ ]',
     ]);
+  });
+
+  it('gives each row the icon Files draws for it', () => {
+    const rows = downloadRows(nothingLoaded, new Map(), new Set(['Assets']), new Map());
+    expect(rows.map((row) => row.iconType)).toEqual(['directory', 'directory', 'binaryFile', 'xlink', 'file']);
   });
 
   it('shows an open folder’s items below it, and its check from them', () => {
