@@ -84,10 +84,18 @@ export function identicalDescriptionOf(entry: DiffEntry): string | undefined {
   return entry.oldPath ? ONLY_MOVED : undefined;
 }
 
-function describePermissionsChange({ before, after }: PermissionsChange): string {
+function describePermissionsChange(change: PermissionsChange): string {
+  const [before, after] = [unbroken(change.before), unbroken(change.after)];
   const changed = 'Only the file permissions changed';
   if (before && after) return `${changed}, from ${before} to ${after}.`;
   if (after) return `${changed}: they are now ${after}.`;
   if (before) return `${changed}: they were ${before}.`;
   return `${changed}.`;
+}
+
+const NON_BREAKING_HYPHEN = '\u2011';
+
+/** Permissions as one word: a line would otherwise break at their hyphens, leaving `-r--r-` on one line and `-r--` on the next. */
+function unbroken(permissions: string | null): string | null {
+  return permissions && permissions.replaceAll('-', NON_BREAKING_HYPHEN);
 }
