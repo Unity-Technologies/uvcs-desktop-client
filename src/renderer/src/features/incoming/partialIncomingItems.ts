@@ -70,3 +70,40 @@ export function partialItemDiffEntry(item: PartialIncomingItem, repository: stri
     repository,
   };
 }
+
+/**
+ * Names one item in the list. A path alone isn't enough: the branch can remove an item and add another at its path,
+ * and both are listed.
+ */
+export function partialItemKey(item: PartialIncomingItem): string {
+  return `${item.kind}:${item.path}`;
+}
+
+/** The item selected when Incoming opens: the first listed. */
+export function firstPartialItemKey(groups: readonly PartialItemGroup[]): string | null {
+  const first = groups[0]?.items[0];
+  return first ? partialItemKey(first) : null;
+}
+
+/** What the detail pane shows for the selected item: its diff, or why there is none. */
+export type PartialSelectionDetail = { kind: 'diff'; entry: DiffEntry } | { kind: 'empty'; title: string };
+
+export function partialSelectionDetail(items: readonly PartialIncomingItem[], selectedKey: string | null, repository: string | undefined): PartialSelectionDetail {
+  const selected = items.find((item) => partialItemKey(item) === selectedKey);
+  const entry = selected ? partialItemDiffEntry(selected, repository) : null;
+  if (entry) return { kind: 'diff', entry };
+  return { kind: 'empty', title: selected?.isDirectory ? 'A folder has no diff' : 'Select an item' };
+}
+
+/**
+ * Whether updating brings anything: an item changed here and on the branch keeps its local version, so when every
+ * item is one of those, Update has nothing to do and isn't offered. Incoming and the incoming card both ask this.
+ */
+export function canUpdatePartial(itemCount: number, conflictCount: number): boolean {
+  return itemCount > conflictCount;
+}
+
+/** How many items the incoming card leaves out ("and N more"): none while its items load. */
+export function morePartialItems(count: number, listed: readonly PartialIncomingItem[] | undefined): number {
+  return listed && listed.length > 0 ? Math.max(0, count - listed.length) : 0;
+}
