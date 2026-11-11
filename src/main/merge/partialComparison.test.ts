@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCalls } from '@shared/testing/countCalls';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { compareWithHead, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
@@ -93,6 +94,15 @@ describe('what the branch head brings a partial workspace', () => {
     ]);
   });
 
+  it('names a moved folder alone, and what it held only where it changed or moved on its own', () => {
+    const codeMovedToSrc = head('3|40|dir|/|3', '22|41|dir|/Src|3', '22|41|dir|/Src|3', '27|15|txt|/Src/Core.cs|1', '28|34|txt|/Src/Ship.cs|2');
+    expect(compareWithHead(SANDBOX_LOADED, codeMovedToSrc, new Set(['Code/Ship.cs']))).toEqual([
+      item({ kind: 'moved', path: 'Src', oldPath: 'Code', isDirectory: true, loadedRevisionId: 23, headRevisionId: 41 }),
+      item({ kind: 'moved', path: 'Src/Core.cs', oldPath: 'Code/Engine.cs', loadedRevisionId: 15, headRevisionId: 15 }),
+      item({ kind: 'changed', path: 'Src/Ship.cs', conflict: true, loadedRevisionId: 16, headRevisionId: 34 }),
+    ]);
+  });
+
   it('names a removed item, and a removed folder alone, not each item it held', () => {
     const withoutCode = head('3|40|dir|/|3');
     expect(compareWithHead(SANDBOX_LOADED, withoutCode, new Set())).toEqual([
@@ -127,8 +137,38 @@ describe('what the branch head brings a partial workspace', () => {
     expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([]);
   });
 
+  it('does work in step with the workspace, however many local changes, removed folders and xlinks it holds', () => {
+    // Doubling the workspace doubles the checks of whether a path lies under another, instead of quadrupling them:
+    // a workspace of hundreds of thousands of items would otherwise take minutes.
+    expect(pathChecksFor(2_000) / pathChecksFor(1_000)).toBeLessThan(2.5);
+  });
+
   it('brings nothing when the head is what the workspace loaded', () => {
     const same = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1');
     expect(compareWithHead(SANDBOX_LOADED, same, new Set(['Code/Engine.cs']))).toEqual([]);
   });
 });
+
+/**
+ * How many prefix and set checks comparing a workspace of `size` folders takes: one file in each, a tenth of the folders
+ * removed on the head and changed locally, a tenth of the files changed on both sides, and a tenth as many xlinks.
+ */
+function pathChecksFor(size: number): number {
+  const loadedItems: LoadedTreeItem[] = [{ itemId: 1, revisionId: 1, isDirectory: true, path: '', changeset: 1 }];
+  const headItems: HeadItem[] = [{ itemId: 1, revisionId: 1, isDirectory: true, path: '', changeset: 1 }];
+  const locallyChanged = new Set<string>();
+  for (let index = 0; index < size; index++) {
+    const folder = { itemId: 10 + 2 * index, revisionId: 1, isDirectory: true, path: `F${index}`, changeset: 1 };
+    const file = { itemId: 11 + 2 * index, revisionId: 1, isDirectory: false, path: `F${index}/a.cs`, changeset: 1 };
+    loadedItems.push(folder, file);
+    if (index % 10 === 0) locallyChanged.add(file.path);
+    else headItems.push(folder, index % 10 === 1 ? { ...file, revisionId: 2 } : file);
+    if (index % 10 === 1) locallyChanged.add(file.path);
+    if (index % 10 === 2) loadedItems.push({ itemId: 10 * size + index, revisionId: 1, isDirectory: true, path: `X${index}`, changeset: 1, xlink: true });
+  }
+  let checks = 0;
+  const prefixChecks = countCalls(String.prototype, 'startsWith', () => {
+    checks = countCalls(Set.prototype, 'has', () => compareWithHead(loadedItems, headItems, locallyChanged)).calls;
+  }).calls;
+  return checks + prefixChecks;
+}
