@@ -295,10 +295,8 @@ try {
   }
   await step("A repository's file found by name", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Files/ }).click();
-    await main.getByRole('button', { name: 'Go to file' }).click();
-    const dialog = window.getByRole('dialog', { name: 'Go to file' });
-    await dialog.locator('input').fill('player');
-    await dialog.getByText('player.cs', { exact: false }).first().click();
+    await main.getByPlaceholder('Find files and folders by name').fill('player');
+    await main.getByRole('button', { name: /player\.cs/ }).first().click();
     await main.getByRole('row', { name: /player\.cs/ }).first().waitFor();
   });
   await step("A repository's changeset diff, in a new window too", async () => {
