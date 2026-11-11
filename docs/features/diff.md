@@ -138,10 +138,11 @@ A file whose content changed too is a plain change; one moved too is a move.
 
 - Its row is lettered FS (`diffEntryTone`), found by the "Only filesystem permissions" chip and grouped under it when
   the list groups by status, after the files that changed.
-- Its diff shows the file the same on both sides, with what changed in the note above it ("Only the file permissions
-  changed, from -rw-r--r-- to -rwxr-xr-x.", `identicalDescriptionOf`), as a file only moved does.
+- Its diff says which permissions changed in place of the content, which is the same on both sides and isn't read
+  ("Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.", `permissionsNote`): a text, a binary, an image
+  and a folder alike. The permissions never break across lines (non-breaking hyphens).
 - It has no content to revert (`canRevertFromDiff`), and updating with local changes never merges it
-  (`findUpdateConflicts`).
+  (`findUpdateConflicts`): Incoming, whose list is a diff's, never counts it among the conflicts with local changes.
 
 ## A purged version
 
