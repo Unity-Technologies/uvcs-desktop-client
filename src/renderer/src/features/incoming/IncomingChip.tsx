@@ -148,32 +148,32 @@ export function IncomingChip() {
               }
             />
           ) : (
-          <IncomingCard
-            state={state}
-            changesets={cardChangesets(summary, changes, newest.data)}
-            failed={cardFailed(summary, changes, card, { changes: changesFailed, newest: newest.isError })}
-            check={cardCheck(summary, changes, card, changesFailed)}
-            actions={
-              <>
-                <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>
-                  {conflicts ? 'Resolve in Incoming…' : 'Review in Incoming'}
-                </Button>
-                {!conflicts && (
-                  <Button
-                    size="small"
-                    variant="primary"
-                    icon={<ArrowDownToLine size={13} />}
-                    loading={verifying}
-                    data-tip="Download them; your local changes stay as they are"
-                    data-tip-sub="cm update"
-                    onClick={() => void update()}
-                  >
-                    Update
+            <IncomingCard
+              state={state}
+              changesets={cardChangesets(summary, changes, newest.data)}
+              failed={cardFailed(summary, changes, card, { changes: changesFailed, newest: newest.isError })}
+              check={cardCheck(summary, changes, card, changesFailed)}
+              actions={
+                <>
+                  <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>
+                    {conflicts ? 'Resolve in Incoming…' : 'Review in Incoming'}
                   </Button>
-                )}
-              </>
-            }
-          />
+                  {!conflicts && (
+                    <Button
+                      size="small"
+                      variant="primary"
+                      icon={<ArrowDownToLine size={13} />}
+                      loading={verifying}
+                      data-tip="Download them; your local changes stay as they are"
+                      data-tip-sub="cm update"
+                      onClick={() => void update()}
+                    >
+                      Update
+                    </Button>
+                  )}
+                </>
+              }
+            />
           )}
         </Popover.Content>
       </Popover.Portal>
