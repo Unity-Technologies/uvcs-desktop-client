@@ -577,7 +577,8 @@ so: "Full screen" names the OS's.
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
-Pierre's line selection). Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
+Pierre's line selection). The number under the pointer isn't filled (`lineHoverHighlight: 'disabled'`): its cursor and
+tip say it selects, and the fill fought with a review's "+" beside it. Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
 `DiffBrowser`, which says so through `LineLinksContext`), a history's annotations (`HistoryPage`), a file browsed at a
 changeset (Browse repository, its newer side) and an unchanged file of the Files view (`useFilesItemLinks`, while no
 page covers it) are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
@@ -886,6 +887,11 @@ docs/features/code-reviews.md "Comments in the code"):
   empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
   buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
   whose row is empty, and a buffer under a changed line on the other side may take its tint too.
+  Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
+  a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
+  after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
+  does (over the number alone it hid it), and the first entry of the lines' menu, on the last of the lines selected
+  (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 

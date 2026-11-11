@@ -141,7 +141,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   accent's tint, apart from the comments' neutral ones, saying who "wrote the description" or "opened the review",
   `descriptionHeader`; edited in place;
   an emptied one clears it, `cm codereview -e --descriptionfile`), then the threads and the events by when each
-  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Oldest first
+  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`; one on a line is written from the code, see "Comments in the code"). Oldest first
   is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
   scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
   a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
@@ -346,6 +346,24 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
   it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
   list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
+- **Writing from the code.** A line of the revision the diff comments on takes a comment: the newer side's (context
+  lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
+  nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
+  xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
+  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" in the gutter of the line under the
+  pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
+  the code's menu (on the last of the lines selected: `cm` names one line). No key: a review's diff has no caret, so no
+  line is "current". The comment opens under the line (`NewLineCommentCard`), after the line's threads, the line
+  outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
+  as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
+  request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
+  ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
+  codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
+  changeset by changeset, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
+  thread, opened even while comments are hidden. Cancel or Esc drop it, asking first once words were written
+  (`asksBeforeDiscarding`). Comments being written are kept while the window lives (`useNewLineCommentsStore`, their
+  text in `useCommentDraftStore`), so going to another file, mode or tab and back finds them under their lines:
+  nothing asks to save one on the way, as the official client's Yes/No/Cancel did.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
