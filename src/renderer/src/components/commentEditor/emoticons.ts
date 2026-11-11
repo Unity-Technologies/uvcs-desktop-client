@@ -55,7 +55,9 @@ export function endsEmoticon(typed: string): boolean {
 /**
  * Whether a line's text, up to where it ends, is inside an inline code span still being typed: a run of backticks
  * no run of the same length has closed yet (as Markdown pairs them). The syntax tree can't tell: until it's closed,
- * a backtick reads as text.
+ * a backtick reads as text. Its limits: an escaped backtick (`\``) counts as any, so an emoticon after one stays as
+ * typed; and it reads one line, so in a span opened on a line before and still unclosed, an emoticon turns (rare: a
+ * span is a few words, and once closed, `isInCode` sees it whole).
  */
 export function insideOpenCodeSpan(text: string): boolean {
   let open: number | null = null;

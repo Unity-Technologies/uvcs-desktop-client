@@ -63,7 +63,8 @@ export function themed(name: string): Extension {
 
 /**
  * Everything a comment field's editor is (docs/features/rich-comments.md, "Writing"): Markdown drawn as it reads
- * around the caret, chips, Slack's keys and emoticons, rich paste, undo. The decisions are the pure modules'; this wires them.
+ * around the caret, chips, Slack's keys and emoticons, rich paste, undo. The decisions are the pure modules'; this
+ * wires them.
  */
 export function commentEditorExtensions(options: CommentEditorOptions, enabled: boolean, codeThemeName: string): Extension {
   const formats = formatsOf(options.singleLine);
