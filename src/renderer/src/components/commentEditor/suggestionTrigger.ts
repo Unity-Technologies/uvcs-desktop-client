@@ -1,5 +1,6 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
+import { EMOTICON_EMOJI } from './emoticons';
 import { isInCode } from './formatCommands';
 import { issueReferences } from './issueReferencesFacet';
 import { suggestionPicked } from './justPicked';
@@ -53,7 +54,8 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   if (!match) return null;
   const [, trigger = '', text = ''] = match;
   const kind = SUGGESTION_TRIGGERS[trigger]!;
-  if (kind === 'emoji' && !EMOJI_NAME.test(text)) return null;
+  // An emoticon (`:-p`) opens no list: its Enter would pick an emoji named like it, not turn it into its own (`emoticonTyping`).
+  if (kind === 'emoji' && (!EMOJI_NAME.test(text) || Object.hasOwn(EMOTICON_EMOJI, `:${text}`))) return null;
   if (kind === 'person' && !PERSON_NAME.test(text)) return null;
   // `#` is plain text where the place has no tracker: no list, no hint.
   if (kind === 'issue' && (!ISSUE_TEXT.test(text) || !state.facet(issueReferences))) return null;
