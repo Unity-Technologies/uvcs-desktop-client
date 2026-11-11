@@ -103,6 +103,9 @@ export async function readIncomingChanges(cm: CmClient, workspacePath: string): 
   return changesetIncomingChangesOf(cm, workspacePath, load);
 }
 
+// The head is read here, alongside the items, rather than taken from the chip's polled `branchHead`: it names the
+// changeset these items were compared at, which keys the view and says what Update brings. One `limit 1` find, run in
+// parallel with the listings, keeps the two in step without the renderer passing a head that may already be stale.
 async function readPartialIncomingChanges(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingChanges> {
   const [head, items] = await Promise.all([readBranchHead(cm, workspacePath, branch), readPartialIncomingItems(cm, workspacePath, branch)]);
   return { branch, partial: true, headChangeset: head ?? 0, items };
