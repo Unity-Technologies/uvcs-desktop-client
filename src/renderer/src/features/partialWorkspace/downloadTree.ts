@@ -4,6 +4,7 @@ import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
 import type { CheckState } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
+import { ancestorsOf } from '../files/fileTreeRows';
 import { iconTypeOf } from '../files/xlinkItem';
 import { checkStateOf, isFolderRead, isLoaded, type DownloadItem, type DownloadTree, type DownloadedChoices } from './downloadSelection';
 
@@ -162,5 +163,23 @@ export function rootStatus(tree: DownloadTree, failures: ReadonlyMap<string, str
 export function downloadTreePoint({ selector, loadedChangeset }: Pick<WorkspaceInfo, 'selector' | 'loadedChangeset'>): RepositoryTreePoint | null {
   if (loadedChangeset != null) return { kind: 'changeset', changeset: loadedChangeset };
   if (selector.kind === 'branch') return { kind: 'branch', branch: selector.name };
+  return null;
+}
+
+/**
+ * The tree once a search's pick is shown: every folder above it opened, those already open kept, and the pick
+ * selected. A folder picked stays closed, as Files shows one it goes to.
+ */
+export function revealedDownload(path: string, expanded: ReadonlySet<string>): { expanded: Set<string>; selected: string } {
+  return { expanded: new Set([...expanded, ...ancestorsOf(path)]), selected: path };
+}
+
+/**
+ * The changeset a search of the tree looks in: the one the tree shows or, on a branch, its head once it is read
+ * (`branchHead`). Null while there's none to search, so the search waits.
+ */
+export function downloadSearchChangeset(point: RepositoryTreePoint | null, branchHead: number | undefined): number | null {
+  if (point?.kind === 'changeset') return point.changeset;
+  if (point?.kind === 'branch') return branchHead ?? null;
   return null;
 }
