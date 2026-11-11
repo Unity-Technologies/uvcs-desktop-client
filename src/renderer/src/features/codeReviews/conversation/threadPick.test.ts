@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { openItemsOf, pickedScrollBehavior, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
+import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -41,6 +42,24 @@ describe('pickOnFocus', () => {
 
     expect(pickOnFocus(picked, undefined)).toBe(picked);
     expect(pickOnFocus(undefined, undefined)).toBeUndefined();
+  });
+});
+
+describe('a pick in Open and the page opened at a thread', () => {
+  it('a rail pick after a page focus, then a page focus on the earlier thread, picks it again', () => {
+    // Opened at 7 (Show in conversation), 9 picked in Open, then Show in conversation at 7 again (from See in context).
+    const openedAt = { kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7 } as const;
+    const railPicked = pickThread(pickOnFocus(undefined, conversationFocus(openedAt)), 9);
+    const afterPick = pageAfterOpenPick(openedAt);
+    const kept = pickOnFocus(railPicked, conversationFocus(afterPick));
+    expect(threadMarkOf(9, kept).selected).toBe(true);
+
+    // The tab sees the thread asked for again only as a change of what the page names.
+    const askedAgain = { ...afterPick, focusThread: 7 };
+    expect(conversationFocus(askedAgain)).not.toBe(conversationFocus(afterPick));
+    const again = pickOnFocus(kept, conversationFocus(askedAgain));
+    expect(threadMarkOf(7, again)).toEqual({ highlight: again!.seq, selected: true });
+    expect(threadMarkOf(9, again).selected).toBe(false);
   });
 });
 

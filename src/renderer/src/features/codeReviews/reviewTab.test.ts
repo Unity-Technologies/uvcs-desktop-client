@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
+import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 
 describe('reviewTabShown', () => {
   it('shows the tab the page opens on and hides the other, which keeps its keys off', () => {
@@ -56,5 +56,16 @@ describe('changesFocusAskedFor', () => {
     expect(changesFocusAskedFor(moved, moved)).toBeUndefined();
     expect(changesFocusAskedFor(moved, { tab: 'changes' })).toBeUndefined();
     expect(changesFocusAskedFor(moved, { tab: 'conversation', focusThread: 51 })).toBeUndefined();
+  });
+});
+
+describe('pageAfterOpenPick', () => {
+  it('forgets the thread the conversation was opened at, so going to it again reaches the conversation', () => {
+    expect(pageAfterOpenPick({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7 })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: undefined });
+  });
+
+  it('leaves the page as it is when the conversation names no thread', () => {
+    const page = { kind: 'codeReview', reviewId: 41, tab: 'conversation' } as const;
+    expect(pageAfterOpenPick(page)).toBe(page);
   });
 });
