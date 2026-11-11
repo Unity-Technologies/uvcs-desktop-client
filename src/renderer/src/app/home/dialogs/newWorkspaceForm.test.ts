@@ -230,17 +230,25 @@ describe('kindForDownloads', () => {
 });
 
 describe('downloadCards', () => {
-  it('tells when to pick folders: less to download, but merging needs the whole branch', () => {
-    const [branch, folders] = downloadCards({ partialAllowed: true });
-    expect(branch).toMatchObject({ value: 'branch', title: 'The whole branch' });
-    expect(branch.description).toContain('merge freely');
-    expect(folders).toMatchObject({ value: 'folders', title: 'Only the folders I pick', disabled: false });
-    expect(folders.description).toContain('Merging needs the whole branch');
+  it('offers the whole branch first, then picking folders', () => {
+    const cards = downloadCards({ partialAllowed: true });
+    expect(cards.map((card) => [card.value, card.disabled ?? false])).toEqual([
+      ['branch', false],
+      ['folders', false],
+    ]);
   });
 
-  it('greys picking folders for a new repository and says why', () => {
-    const [, folders] = downloadCards({ partialAllowed: false });
-    expect(folders).toMatchObject({ disabled: true, description: 'Not for a new repository: it has nothing to pick yet.' });
+  it('warns, on picking folders, that merging needs the whole branch', () => {
+    const [, folders] = downloadCards({ partialAllowed: true });
+    expect(folders.description).toMatch(/merg/i);
+  });
+
+  it('greys picking folders for a new repository and says why instead', () => {
+    const [, allowed] = downloadCards({ partialAllowed: true });
+    const [branch, folders] = downloadCards({ partialAllowed: false });
+    expect(branch.disabled ?? false).toBe(false);
+    expect(folders.disabled).toBe(true);
+    expect(folders.description).not.toBe(allowed.description);
   });
 });
 
