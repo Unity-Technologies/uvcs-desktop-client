@@ -86,12 +86,20 @@ describe('an item whose file permissions alone changed', () => {
     expect(original).toEqual(modified);
   });
 
+  // The permissions are written with non-breaking hyphens, which a line never breaks at: read here as plain ones.
+  const plainHyphens = (text: string | undefined) => text?.replaceAll('\u2011', '-');
+
   it('says, where its content shows the same, which permissions changed', () => {
-    expect(identicalDescriptionOf(onlyPermissions)).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
-    const permissions = (before: string | null, after: string | null) => identicalDescriptionOf({ ...onlyPermissions, permissionsChange: { before, after } });
+    expect(plainHyphens(identicalDescriptionOf(onlyPermissions))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
+    const permissions = (before: string | null, after: string | null) => plainHyphens(identicalDescriptionOf({ ...onlyPermissions, permissionsChange: { before, after } }));
     expect(permissions(null, '-rwxr-xr-x')).toBe('Only the file permissions changed: they are now -rwxr-xr-x.');
     expect(permissions('-r--r--r--', null)).toBe('Only the file permissions changed: they were -r--r--r--.');
     expect(permissions(null, null)).toBe('Only the file permissions changed.');
+  });
+
+  it('keeps each permissions string on one line', () => {
+    expect(identicalDescriptionOf(onlyPermissions)).toContain('\u2011rw\u2011r\u2011\u2011r\u2011\u2011');
+    expect(identicalDescriptionOf(onlyPermissions)).not.toMatch(/[rwx]-/);
   });
 
   it('leaves a moved file saying it was only moved, and any other file to the viewer', () => {
