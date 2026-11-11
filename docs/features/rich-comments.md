@@ -281,7 +281,13 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was
-  dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left. It is the same
+  dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left.
+  From a comment in a diff's code (a review's new comment or reply, slotted into Pierre's rows), the panel moves to
+  the window while open (`panelParent`, through a portal): Pierre lays its code out as a container
+  (`container-type: inline-size`), which would hold a fixed panel inside it, clipped. Moved, the editor is made anew,
+  so the caret and the selection go with it there and back (`CommentFieldHandle.selection`, `focusAtSelection`,
+  `withinText`), the text with its owner; the undo history starts over. Closed from outside (a press around it, the
+  focus gone elsewhere), it leaves the focus where the user put it. Elsewhere it is the same
   editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
   focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
   in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under

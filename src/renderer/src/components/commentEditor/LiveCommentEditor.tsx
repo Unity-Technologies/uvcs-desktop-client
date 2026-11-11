@@ -20,7 +20,8 @@ import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
 import { ownerExchange } from './ownerSync';
 import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
-import type { CommentFieldProps } from './commentFieldProps';
+import type { CommentFieldProps, FieldSelection } from './commentFieldProps';
+import { withinText } from './fieldSelection';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { fieldFocused, focusEditor } from './editorFocus';
 import { editorRootOf } from './editorRoot';
@@ -124,6 +125,14 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       focus: () => view && focusEditor(view),
       focusAtEnd: () => focusAt(view, view?.state.doc.length ?? 0),
       focusAtStart: () => focusAt(view, 0),
+      selection: () => (view?.hasFocus ? { anchor: view.state.selection.main.anchor, head: view.state.selection.main.head } : null),
+      focusAtSelection: (selection: FieldSelection) => {
+        if (!view) return false;
+        const within = withinText(selection, view.state.doc.length);
+        view.dispatch({ selection: within, scrollIntoView: true });
+        focusEditor(view);
+        return true;
+      },
     }),
     [view],
   );
