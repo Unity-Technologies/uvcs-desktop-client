@@ -146,8 +146,17 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
   a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
-  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open, a click
-  scrolling to each (`ReviewSideRail`).
+  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open
+  (`ReviewSideRail`, `openItemsOf`).
+- **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
+  conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
+  into view (gliding from Open, at once when the page opens at it: `pickedScrollBehavior`), unfolded, lit for a moment
+  and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
+  `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
+  thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view
+  seemed to do nothing. A tab picked keeps the current thread. At the end of an entry on a line, under the pointer or
+  once a key reaches it, a button shows the thread in Changes ("Show in Changes", its file in the tooltip), going where
+  its card's file link goes (`commentLocationPage`). It sits in Open only: on the cards it was rejected (see below).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client deleted
   starts a thread of its own. One on a line shows its file first, the whole path a link to it in the Changes tab, on the
   same page as a tab moves (a place in the review on top replaces it, never stacks a second page of it:
