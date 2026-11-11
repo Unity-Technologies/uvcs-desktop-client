@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -98,5 +98,17 @@ describe('fileThreadCount', () => {
   it('counts none on a file without threads, by its path or the one it moved from', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
+  });
+});
+
+describe('openedOnSend', () => {
+  it('opens the line a comment was sent on while comments are hidden, after the others', () => {
+    expect(openedOnSend(['additions:3'], 'additions:9', false)).toEqual(['additions:3', 'additions:9']);
+  });
+
+  it('changes nothing while comments show in the code, or when the line is open already', () => {
+    const opened = ['additions:9'];
+    expect(openedOnSend(opened, 'additions:9', false)).toBe(opened);
+    expect(openedOnSend(opened, 'additions:3', true)).toBe(opened);
   });
 });

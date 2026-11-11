@@ -1,5 +1,6 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent, type Ref } from 'react';
 import { CommentField } from '../../../components/commentEditor/CommentField';
+import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { Button } from '../../../ui/Button';
@@ -30,10 +31,12 @@ interface CommentComposerProps {
   inPopover?: boolean;
   /** Cancel asks before losing what was written: a new comment, which nothing else holds. */
   asksBeforeDiscarding?: boolean;
+  /** Its field, to focus it again once open (a new comment's "+" pressed again). */
+  fieldRef?: Ref<CommentFieldHandle>;
 }
 
 /** The rich editor of a review's comments, as every comment in the app is written; ⌘↵ sends. */
-export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover, asksBeforeDiscarding = false }: CommentComposerProps) {
+export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover, asksBeforeDiscarding = false, fieldRef }: CommentComposerProps) {
   const draft = useCommentDraftStore((state) => state.drafts[draftKey]);
   const keep = useCommentDraftStore((state) => state.keep);
   const forget = useCommentDraftStore((state) => state.forget);
@@ -65,6 +68,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
   return (
     <div className={styles.composer} onKeyDown={onKeyDown}>
       <CommentField
+        ref={fieldRef}
         className={styles.field}
         value={text}
         onChange={(written) => keep(draftKey, { summary: '', description: written })}

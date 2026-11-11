@@ -35,7 +35,7 @@ export function ThreadsRow({ children }: { children: ReactNode }) {
 export function InlineThreads({ comments, line, focus, onClose, onSeeInContext, children }: InlineThreadsProps) {
   const hide = onClose && { label: hideLabel(line.threads.length), onHide: onClose };
   return (
-    <div className={styles.row}>
+    <ThreadsRow>
       {line.threads.map(({ thread, earlier }) => (
         <ThreadInRow
           key={thread.root.id}
@@ -52,7 +52,7 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext, 
         />
       ))}
       {children}
-    </div>
+    </ThreadsRow>
   );
 }
 

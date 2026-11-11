@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { lineCommentAt, newLineCommentKey, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, LINE_COMMENT_KINDS, lineCommentAt, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -8,10 +8,10 @@ const CHANGED: ShownFile = { path: 'src/Player.cs', originalRevision: 10, modifi
 const ADDED: ShownFile = { path: 'src/New.cs', originalRevision: -1, modifiedRevision: 31 };
 const DELETED: ShownFile = { path: 'src/Old.cs', originalRevision: 12, modifiedRevision: -1 };
 
-const spot = (fields: Partial<NewLineCommentSpot['comment']> & { reviewId?: number; side?: NewLineCommentSpot['side'] } = {}): NewLineCommentSpot => {
-  const { reviewId = 41, side = 'additions', ...comment } = fields;
-  const full = { revisionId: 30, line: 7, kind: 'changeRequest' as const, ...comment };
-  return { key: newLineCommentKey(reviewId, full), reviewId, side, comment: full };
+const spot = (fields: Partial<NewLineCommentSpot['comment']> & { reviewId?: number; side?: NewLineCommentSpot['side']; path?: string } = {}): NewLineCommentSpot => {
+  const { reviewId = 41, side = 'additions', path = CHANGED.path, kind = 'changeRequest', ...at } = fields;
+  const made = newLineCommentSpot(reviewId, path, side, { revisionId: 30, line: 7, ...at });
+  return { ...made, comment: { ...made.comment, kind } };
 };
 
 describe('lineCommentAt', () => {
@@ -39,28 +39,45 @@ describe('lineCommentAt', () => {
 });
 
 describe('newLineCommentKey', () => {
-  it('tells apart lines, revisions, modes and reviews', () => {
+  it('tells apart lines, files, modes and reviews', () => {
     const keys = [
-      newLineCommentKey(41, { revisionId: 30, line: 7 }),
-      newLineCommentKey(41, { revisionId: 30, line: 8 }),
-      newLineCommentKey(41, { revisionId: 31, line: 7 }),
-      newLineCommentKey(41, { revisionId: 30, line: 7, changesetId: 8 }),
-      newLineCommentKey(42, { revisionId: 30, line: 7 }),
+      newLineCommentKey(41, 'src/Player.cs', { line: 7 }),
+      newLineCommentKey(41, 'src/Player.cs', { line: 8 }),
+      newLineCommentKey(41, 'src/Enemy.cs', { line: 7 }),
+      newLineCommentKey(41, 'src/Player.cs', { line: 7, changesetId: 8 }),
+      newLineCommentKey(42, 'src/Player.cs', { line: 7 }),
     ];
     expect(new Set(keys).size).toBe(keys.length);
   });
 });
 
+describe('newLineCommentSpot', () => {
+  it('starts as the default kind, a change request', () => {
+    expect(spot().comment.kind).toBe(DEFAULT_LINE_COMMENT_KIND);
+    expect(DEFAULT_LINE_COMMENT_KIND).toBe('changeRequest');
+  });
+
+  it('offers the default kind first, then a question and a comment', () => {
+    expect(LINE_COMMENT_KINDS).toEqual(['changeRequest', 'question', 'comment']);
+  });
+});
+
 describe('newLineCommentsIn', () => {
-  it("keeps those of the review, on the file's revision, in the mode shown", () => {
+  it("keeps those of the review, on the file, in the mode shown", () => {
     const here = spot();
-    const spots = [here, spot({ reviewId: 42 }), spot({ revisionId: 31 }), spot({ changesetId: 8 })];
+    const spots = [here, spot({ reviewId: 42 }), spot({ path: 'src/Enemy.cs' }), spot({ changesetId: 8 })];
     expect(newLineCommentsIn(spots, 41, WHOLE, CHANGED)).toEqual([here]);
     expect(newLineCommentsIn(spots, 41, CHANGESET_8, CHANGED)).toEqual([spots[3]]);
   });
 
+  it("keeps a comment being written under its line once the file's newest revision changed, on the revision shown now", () => {
+    const written = spot({ revisionId: 30 });
+    const checkedInSince = { ...CHANGED, modifiedRevision: 35 };
+    expect(newLineCommentsIn([written], 41, WHOLE, checkedInSince)).toEqual([{ ...written, comment: { ...written.comment, revisionId: 35 } }]);
+  });
+
   it("finds a deleted file's on its older side", () => {
-    const onDeleted = spot({ revisionId: 12, side: 'deletions' });
+    const onDeleted = spot({ revisionId: 12, side: 'deletions', path: DELETED.path });
     expect(newLineCommentsIn([onDeleted], 41, WHOLE, DELETED)).toEqual([onDeleted]);
   });
 });
@@ -86,5 +103,23 @@ describe('withNewLineCommentBands', () => {
 
   it("marks a line with threads once, in the accent, while a comment is written on it", () => {
     expect(withNewLineCommentBands([threadsAt9], [spot({ line: 9 })])).toEqual([{ ...threadsAt9, selected: true }]);
+  });
+});
+
+describe('lineRowContent', () => {
+  const lineAt9 = { key: 'additions:9' };
+
+  it("holds the line's threads, then the comment written there", () => {
+    const written = spot({ line: 9 });
+    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spot: written });
+  });
+
+  it('holds only the comment written on a line whose threads are hidden', () => {
+    const written = spot({ line: 9 });
+    expect(lineRowContent('additions:9', [], [written])).toEqual({ line: undefined, spot: written });
+  });
+
+  it('holds nothing for a row of neither', () => {
+    expect(lineRowContent('additions:4', [lineAt9], [spot({ line: 9 })])).toEqual({ line: undefined, spot: undefined });
   });
 });

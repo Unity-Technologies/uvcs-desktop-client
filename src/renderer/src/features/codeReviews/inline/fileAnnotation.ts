@@ -45,6 +45,16 @@ export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lin
   return [...opened, lineKey];
 }
 
+/**
+ * The lines opened while comments are hidden, once a comment written on one is sent: its line opens, so the new thread
+ * shows where it was written rather than folding into a marker. Unchanged when comments show in the code, or the line
+ * is open already.
+ */
+export function openedOnSend(opened: readonly string[], lineKey: string, inCode: boolean): readonly string[] {
+  if (inCode || opened.includes(lineKey)) return opened;
+  return [...opened, lineKey];
+}
+
 /** Whether the outdated threads above the code open: when one of them is gone to. */
 export function outdatedOpensFor(focus: ThreadFocus | null, outdated: readonly EarlierThread[]): boolean {
   return focus !== null && outdated.some((entry) => entry.thread.root.id === focus.threadId);

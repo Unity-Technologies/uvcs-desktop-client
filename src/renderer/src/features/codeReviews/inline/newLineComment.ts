@@ -15,12 +15,17 @@ export interface NewLineCommentSpot {
   /** Names it among the review's (`newLineCommentKey`), and its draft. */
   key: string;
   reviewId: number;
+  /** The file's, as the diff names it: what finds it again once the file's newest revision changed. */
+  path: string;
   side: ThreadSide;
   comment: NewLineComment;
 }
 
 /** What a new comment on a line starts as: a change request, the kind a reviewer writes most, as the official client does. */
 export const DEFAULT_LINE_COMMENT_KIND: LineCommentKind = 'changeRequest';
+
+/** The kinds a new comment on a line is offered as, in the order its switch shows them: the default first. */
+export const LINE_COMMENT_KINDS: readonly LineCommentKind[] = ['changeRequest', 'question', 'comment'];
 
 /**
  * The comment a line of a review's file takes, or none where `cm` takes none: only the revision the diff comments on
@@ -35,28 +40,52 @@ export function lineCommentAt(view: ReviewDiffView, file: ShownFile, line: Chang
   return { revisionId, line: line.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
 }
 
-/** Names a comment being written: one per line of a revision, in one mode. */
-export function newLineCommentKey(reviewId: number, comment: Omit<NewLineComment, 'kind'>): string {
-  return [reviewId, comment.revisionId, comment.changesetId ?? 'whole', comment.line].join(':');
+/** Names a comment being written: one per line of a file, in one mode. */
+export function newLineCommentKey(reviewId: number, path: string, comment: Omit<NewLineComment, 'kind' | 'revisionId'>): string {
+  return [reviewId, comment.changesetId ?? 'whole', path, comment.line].join(':');
 }
 
-/** The comments being written in the diff shown: the review's, on the revision the file shows, in the mode it's in. */
+/** A new comment on a line of a file of a review, in a mode, the line's own kind of comment (`lineCommentAt`). */
+export function newLineCommentSpot(reviewId: number, path: string, side: ThreadSide, at: Omit<NewLineComment, 'kind'>): NewLineCommentSpot {
+  return { key: newLineCommentKey(reviewId, path, at), reviewId, path, side, comment: { ...at, kind: DEFAULT_LINE_COMMENT_KIND } };
+}
+
+/**
+ * The comments being written in the diff shown: the review's, on the file, in the mode it's in, each on the revision the
+ * file shows now. A branch's newest revision changes as its author checks in, and the reviews read again: the comment
+ * stays under its line, and goes on the revision now shown, never on one the diff no longer shows (where it would read
+ * outdated at once), nor hidden away with its text.
+ */
 export function newLineCommentsIn(spots: readonly NewLineCommentSpot[], reviewId: number, view: ReviewDiffView, file: ShownFile): NewLineCommentSpot[] {
   const changesetId = view.kind === 'changeset' ? view.changesetId : undefined;
   const side = topSideOf(file);
   const revisionId = side === 'additions' ? file.modifiedRevision : file.originalRevision;
-  return spots.filter((spot) => spot.reviewId === reviewId && spot.comment.revisionId === revisionId && spot.comment.changesetId === changesetId && spot.side === side);
+  return spots
+    .filter((spot) => spot.reviewId === reviewId && spot.path === file.path && spot.comment.changesetId === changesetId && spot.side === side)
+    .map((spot) => (spot.comment.revisionId === revisionId ? spot : { ...spot, comment: { ...spot.comment, revisionId } }));
 }
 
 /**
  * Pierre's rows with those of the comments being written: one under each line that shows no row yet, after the rest,
  * as rows that come later go (`annotationRowsOf`). A line already showing its threads takes the new comment in its row.
  */
-export function withNewLineCommentRows(rows: readonly DiffLineAnnotation<string>[], spots: readonly NewLineCommentSpot[]): DiffLineAnnotation<string>[] {
+export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots: readonly NewLineCommentSpot[]): DiffLineAnnotation<string>[] {
   const added = spots
     .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.line, metadata: lineKey(spot.side, spot.comment.line) }))
     .filter((row) => !rows.some((shown) => shown.metadata === row.metadata));
-  return added.length === 0 ? [...rows] : [...rows, ...added];
+  return added.length === 0 ? rows : [...rows, ...added];
+}
+
+/**
+ * What a row under a line holds (`withNewLineCommentRows`'s and the threads'): the line's threads when they show (all
+ * of them while comments show in the code; opened from their marker while hidden), then the comment being written
+ * there, if any. While hidden, a comment written on a line whose threads aren't opened shows alone, under their marker.
+ */
+export function lineRowContent<Line extends { key: string }>(rowKey: string, shownLines: readonly Line[], spots: readonly NewLineCommentSpot[]): { line?: Line; spot?: NewLineCommentSpot } {
+  return {
+    line: shownLines.find((line) => line.key === rowKey),
+    spot: spots.find((spot) => lineKey(spot.side, spot.comment.line) === rowKey),
+  };
 }
 
 /** What the composer of a new comment says for each kind: its placeholder, and its button's verb. */

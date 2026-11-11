@@ -8,7 +8,7 @@ import { DiffAnnotationsContext, type DiffAnnotations, type LineAction, type Lin
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, openedOnFocus } from './fileAnnotation';
+import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -16,13 +16,13 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { DEFAULT_LINE_COMMENT_KIND, lineCommentAt, lineCommentLabel, newLineCommentKey, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
 import { markerTip } from './markerTip';
 import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
-import { lineKey, markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
+import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
 
@@ -95,7 +95,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       label: lineCommentLabel,
       run: (line: ChangedLine) => {
         const at = lineCommentAt(view, file, line);
-        if (at) openSpot({ key: newLineCommentKey(reviewId, at), reviewId, side: line.side, comment: { ...at, kind: DEFAULT_LINE_COMMENT_KIND } });
+        if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at));
       },
     };
   }, [reviewId, threads !== undefined, fileKey, openSpot]);
@@ -123,13 +123,12 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     if (outdated) markers.push(outdatedLineMarker(outdated, topSide, () => setOpened({ path: entry.path, keys: outdated.opens })));
     const { seeInContext } = comments;
     const onSeeInContext = seeInContext && ((thread: LineThread, startsOn?: ContextView) => seeInContext(thread, { startsOn, onScreen: { view, entry } }));
-    // Sent while comments are hidden, the line opens, so the new thread shows where it was written.
-    const onSent = (key: string): void => {
-      if (!inCode && !openedKeys.includes(key)) openLine(key);
-    };
-    const shownLines = new Set(shown.rows.map((line) => line.key));
+    // Sent while comments are hidden, the line opens, so the new thread shows where it was written. From the lines open
+    // then: others may have opened while it was sent.
+    const onSent = (key: string): void =>
+      setOpened((now) => (now.path === entry.path ? { path: entry.path, keys: openedOnSend(now.keys, key, inCode) } : now));
     const render = (row: DiffLineAnnotation<string>) =>
-      renderRow(row, { comments, fileComments, focus, textOf, shownLines, spots, onSent, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
+      renderRow(row, { comments, fileComments, focus, textOf, shownLines: shown.rows, spots, onSent, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
     const bands = withNewLineCommentBands(lineBandsOf(fileComments.lines, focus), spots);
     const rows = withNewLineCommentRows(annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), spots);
@@ -171,7 +170,7 @@ interface RowContext {
   focus: ReviewComments['focus'];
   textOf: (revisionId: number) => VersionText;
   /** The lines whose threads show (opened, while comments are hidden): a line being commented on may show only the new one. */
-  shownLines: ReadonlySet<string>;
+  shownLines: readonly LineThreads[];
   /** The comments being written in the file, each under its line. */
   spots: readonly NewLineCommentSpot[];
   onSent: (lineKey: string) => void;
@@ -197,8 +196,7 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
       />
     );
   }
-  const line = context.shownLines.has(row.metadata) ? fileComments.lines.find((candidate) => candidate.key === row.metadata) : undefined;
-  const spot = context.spots.find((candidate) => lineKey(candidate.side, candidate.comment.line) === row.metadata);
+  const { line, spot } = lineRowContent(row.metadata, context.shownLines, context.spots);
   const newComment = spot && <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />;
   if (!line) return newComment ? <ThreadsRow>{newComment}</ThreadsRow> : null;
   return (
