@@ -12,7 +12,9 @@ I pick** (partial). Each card says when to choose it (`downloadCards` in `newWor
 window for both kinds where the official client had a separate app for partial workspaces: the whole branch switches
 and merges freely; picked folders download less and update file by file, but `cm` refuses to merge into a partial
 workspace and switches it only to branches. The cards show from the start, before a repository is named; picking
-folders is greyed for a new repository, which holds nothing to pick (`partialAllowed`). Choosing a card sets the kind
+folders is greyed for a new repository, which holds nothing to pick (`partialAllowed`). The kind chosen stays partial
+meanwhile (`kindChosen`): the dialog shows the whole branch, and naming an existing repository brings the folders back
+without the user picking them again. Choosing a card sets the kind
 (`kindForDownloads`); picking folders greys the dynamic checkbox (`dynamicDisabled`, ticked with `toggledKind`), since
 a dynamic workspace has the whole branch. The request carries the kind
 (`CreateWorkspaceRequest.kind`).
