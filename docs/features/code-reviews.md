@@ -361,14 +361,17 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
   changeset by changeset, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
   thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read
-  again holds it (`conversationReadSince`, which waits for the read the write asked for and reads nothing itself), so
-  the line never shows nothing in between. Cancel or Esc drop it, asking first once words were written
+  again holds it (`conversationReadSince`, which waits for a read after the write, `conversationReadAt`, the one the
+  write asked for, and reads nothing itself), so the line never shows nothing in between. Cancel or Esc drop it, asking first once words were written
   (`asksBeforeDiscarding`). Comments being written are kept while the window lives (`useNewLineCommentsStore`, their
   text in `useCommentDraftStore`), so going to another file, mode or tab and back finds them under their lines:
   nothing asks to save one on the way, as the official client's Yes/No/Cancel did. One takes the focus only when
-  opened (`focusRequest`): shown again as its file is, it leaves the focus where the user is (going through the files).
-  It's kept by its file and line, not the revision: a branch's newest revision changes as its author checks in, and
-  the comment stays under its line, going on the revision shown then (`newLineCommentsIn`), never hidden with its text.
+  opened (`focusRequest`, `focusOnRequest`): shown again as its file is, it leaves the focus where the user is (going
+  through the files). It's kept by its file and line number, not the revision: a branch's newest revision changes as
+  its author checks in, and the comment stays at its line number, going on the revision and side shown then (a file
+  deleted since, on its last revision: `newLineCommentsIn`). The code at that line may have changed meanwhile: the
+  reviewer sees it before sending, and following the line through the change would need the versions read for every
+  comment being written. A file moved since, or now shorter than the line, shows it no more; its text stays kept.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
