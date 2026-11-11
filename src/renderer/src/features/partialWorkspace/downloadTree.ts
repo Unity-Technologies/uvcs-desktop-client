@@ -1,6 +1,6 @@
 import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
+import type { PartialRule, WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CheckState } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
@@ -182,4 +182,9 @@ export function downloadSearchChangeset(point: RepositoryTreePoint | null, branc
   if (point?.kind === 'changeset') return point.changeset;
   if (point?.kind === 'branch') return branchHead ?? null;
   return null;
+}
+
+/** What the search's notes say it looks in: the branch or label the workspace is on, or its changeset. */
+export function downloadSearchName(selector: WorkspaceSelector): string {
+  return selector.kind === 'changeset' ? `changeset ${selector.name}` : selector.name;
 }

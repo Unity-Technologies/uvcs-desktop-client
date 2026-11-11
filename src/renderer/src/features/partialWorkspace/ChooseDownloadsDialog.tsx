@@ -1,22 +1,42 @@
-import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { RepositoryTreePoint } from '@shared/domain/explorer';
-import { workspacePlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
+import { goToFileKey } from '../../components/goToFileKeys';
+import { GoToFileList } from '../../components/GoToFileList';
 import { ItemIcon } from '../../components/ItemIcon';
+import { ItemPathRow } from '../../components/ItemPathRow';
+import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { ItemRow } from '../../components/ItemRow';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
+import { SearchField } from '../../ui/SearchField';
 import { Spinner } from '../../ui/Spinner';
+import { branchQuery } from '../branches/useBranches';
 import { repositoryListingQuery } from '../browseRepository/repositoryListing';
+import { repositoryFileSearchView, searchesFor } from '../repositoryFiles/repositoryFileSearch';
+import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
-import { downloadKey, downloadRows, downloadTreeOf, downloadTreePoint, foldersToReadLoaded, rootStatus, rulesSummary } from './downloadTree';
+import {
+  downloadKey,
+  downloadRows,
+  downloadSearchChangeset,
+  downloadSearchName,
+  downloadTreeOf,
+  downloadTreePoint,
+  foldersToReadLoaded,
+  revealedDownload,
+  rootStatus,
+  rulesSummary,
+} from './downloadTree';
 import { canApply, dataByFolder, downloadTreeReads, type FolderRead } from './downloadTreeReads';
 import styles from './ChooseDownloadsDialog.module.css';
 
@@ -41,11 +61,26 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const queryClient = useQueryClient();
   const info = useWorkspaceInfoOf(workspacePath).data;
   const treePoint = info ? downloadTreePoint(info) : null;
-  const place = workspacePlace(workspacePath);
+  const place = useMemo(() => workspacePlace(workspacePath), [workspacePath]);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const [selected, setSelected] = useState(ROOT);
   const [choices, setChoices] = useState<DownloadedChoices>(() => new Map());
   const [applying, setApplying] = useState(false);
+  const [query, setQuery] = useState('');
+  const [highlighted, setHighlighted] = useState(0);
+
+  // The search finds an item anywhere in the tree, as Files' Go to file does. It lists the whole tree only once the user
+  // types (`'onSearch'`): most choose by opening folders, and the listing is the server's heaviest read.
+  const branchHead = useQuery({
+    ...branchQuery(place, treePoint?.kind === 'branch' ? treePoint.branch : ''),
+    ...SLOW_CHANGING_QUERY,
+    enabled: treePoint?.kind === 'branch',
+  }).data?.headChangeset;
+  const searchChangeset = downloadSearchChangeset(treePoint, branchHead);
+  const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
+  const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchChangeset, query, 'onSearch'), query, info ? downloadSearchName(info.selector) : '');
+  const searching = searchesFor(query);
+  const foundDirectories = new Set(search.paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 
   // The repository side: what the workspace's changeset (or branch) holds, folder by folder.
   const repositoryFolders = [ROOT, ...expanded];
@@ -93,7 +128,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   // The selection moved by the keyboard stays in sight in a tree taller than the dialog.
   useEffect(() => {
     treeRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
-  }, [selected]);
+  }, [selected, selectedIndex, searching]);
 
   const toggleExpanded = (path: string): void =>
     setExpanded((open) => {
@@ -110,6 +145,22 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
     if (outcome.select !== undefined) setSelected(outcome.select);
     if (outcome.expand !== undefined) toggleExpanded(outcome.expand);
     if (outcome.check !== undefined) toggleChecked(outcome.check);
+  };
+
+  // A pick shows the item in the tree: its folders open as they're read, and the tree takes the keyboard back.
+  const reveal = (path: string): void => {
+    const revealed = revealedDownload(path, expanded);
+    setExpanded(revealed.expanded);
+    setSelected(revealed.selected);
+    setQuery('');
+  };
+
+  const onSearchKeyDown = (event: KeyboardEvent): void => {
+    const key = goToFileKey(event.key, highlighted, search.paths.length);
+    if (!key) return;
+    event.preventDefault();
+    if (key.kind === 'highlight') setHighlighted(key.index);
+    else reveal(search.paths[key.index]!.path);
   };
 
   const apply = async (): Promise<void> => {
@@ -141,7 +192,33 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       )}
       {status === 'failed' && <div className={styles.message}>{failures.get(ROOT)}</div>}
       {status === 'empty' && <div className={styles.message}>This repository holds no files yet.</div>}
-      {status === 'ready' && (
+      {status === 'ready' && searchChangeset !== null && (
+        <div className={styles.search} onKeyDown={onSearchKeyDown}>
+          <SearchField
+            value={query}
+            onChange={(value) => {
+              setQuery(value);
+              setHighlighted(0);
+            }}
+            placeholder="Find files and folders by name"
+            width="100%"
+          />
+        </div>
+      )}
+      {status === 'ready' && searching && (
+        <div className={styles.found}>
+          <GoToFileList
+            paths={search.paths.map((found) => found.path)}
+            highlighted={highlighted}
+            onHighlight={setHighlighted}
+            onPick={reveal}
+            loading={search.loading}
+            note={search.note}
+            row={(path) => <ItemPathRow path={path} itemType={foundDirectories.has(path) ? 'directory' : 'file'} matches={fuzzyMatchPositions(path, query)} />}
+          />
+        </div>
+      )}
+      {status === 'ready' && !searching && (
         <div
           ref={treeRef}
           className={styles.tree}
