@@ -33,10 +33,12 @@ interface CommentComposerProps {
   asksBeforeDiscarding?: boolean;
   /** Its field, to focus it again once open (a new comment's "+" pressed again). */
   fieldRef?: Ref<CommentFieldHandle>;
+  /** Added to its field's class: a place sizing the field its own way. */
+  fieldClassName?: string;
 }
 
 /** The rich editor of a review's comments, as every comment in the app is written; ⌘↵ sends. */
-export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover, asksBeforeDiscarding = false, fieldRef }: CommentComposerProps) {
+export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover, asksBeforeDiscarding = false, fieldRef, fieldClassName }: CommentComposerProps) {
   const draft = useCommentDraftStore((state) => state.drafts[draftKey]);
   const keep = useCommentDraftStore((state) => state.keep);
   const forget = useCommentDraftStore((state) => state.forget);
@@ -69,7 +71,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
     <div className={styles.composer} onKeyDown={onKeyDown}>
       <CommentField
         ref={fieldRef}
-        className={styles.field}
+        className={fieldClassName ? `${styles.field} ${fieldClassName}` : styles.field}
         value={text}
         onChange={(written) => keep(draftKey, { summary: '', description: written })}
         placeholder={placeholder}

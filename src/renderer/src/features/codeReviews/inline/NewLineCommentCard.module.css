@@ -1,8 +1,9 @@
-/* A comment being written under a line: framed as the line's threads are in the code, its kind in the header band. */
+/* A comment being written under a line: framed in the accent, its kind a quiet switch above the field. */
 .card {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
   border: 1px solid var(--accent);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
@@ -11,12 +12,9 @@
 .header {
   display: flex;
   align-items: center;
-  min-height: 36px;
-  padding: 4px var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-subtle);
 }
 
-.body {
-  padding: var(--space-3);
+/* Room for a few lines: a comment on code often says what and why. Beats the composer's own `.field` (one class). */
+.card .field {
+  min-height: calc(5 * 1.55em + 12px);
 }

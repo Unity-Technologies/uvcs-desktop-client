@@ -20,7 +20,7 @@ const KIND_SEGMENTS = LINE_COMMENT_KINDS.map((kind) => {
     value: kind,
     label: (
       <>
-        <Icon size={13} aria-hidden />
+        <Icon size={12} aria-hidden />
         {name}
       </>
     ),
@@ -59,11 +59,12 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <SegmentedControl value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
+        <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
       </div>
-      <div className={styles.body}>
+      <div>
         <CommentComposer
           fieldRef={field}
+          fieldClassName={styles.field}
           draftKey={commentDraftKey(placeId(place), 'reviewLineComment', spot.key)}
           placeholder={words.placeholder}
           label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.line })}
