@@ -43,6 +43,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
       open,
       // Reads `layout` and `movedTo` from its render: the group is made anew as either changes.
       toggle: () => {
+        cancelNextFrame();
         const opening = layout === null;
         const parent = opening ? panelParent(container.current) : null;
         moving.current = parent !== null || movedTo !== null ? movingFrom(opening) : null;
@@ -50,6 +51,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
         setLayout(opening ? focusModeLayout() : null);
       },
       close: () => {
+        cancelNextFrame();
         moving.current = movedTo !== null ? movingFrom(false) : null;
         setMovedTo(null);
         setLayout(null);
@@ -83,16 +85,19 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
     nextFrame.current = null;
   };
   useEffect(() => cancelNextFrame, []);
+  // Where the focus went, as `blurOutcome` reads it: one description for the blur and the look a frame later.
+  const focusAt = (element: Element | null) => element && { inside: container.current?.contains(element) ?? false, inMenu: element.closest('[role="menu"]') !== null };
   const onBlur = (event: FocusEvent): void => {
     if (!open) return;
-    const to = event.relatedTarget instanceof Element ? event.relatedTarget : null;
-    const outcome = blurOutcome(to && { inside: container.current?.contains(to) ?? false, inMenu: to.closest('[role="menu"]') !== null });
+    const outcome = blurOutcome(focusAt(event.relatedTarget instanceof Element ? event.relatedTarget : null));
     cancelNextFrame();
     if (outcome === 'close') group.close();
     if (outcome !== 'nextFrame') return;
     nextFrame.current = requestAnimationFrame(() => {
       nextFrame.current = null;
-      if (container.current && !container.current.contains(document.activeElement)) group.close();
+      // Still nowhere a frame later (the body), it's gone: `blurOutcome` of where it is now, nowhere counting as out.
+      const now = focusAt(document.activeElement) ?? { inside: false, inMenu: false };
+      if (container.current && blurOutcome(now) === 'close') group.close();
     });
   };
   const panel = (

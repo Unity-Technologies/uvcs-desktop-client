@@ -25,11 +25,11 @@ export function groupMove(field: GroupField, key: GroupKey, at: { atEnd: boolean
 }
 
 /**
- * Whether the focus moving to `to` leaves the group's focus mode: anywhere outside its fields, or nowhere, except a
- * menu one of its fields opened (Recent comments), which renders apart from it, over the page.
+ * Whether the focus moving to `to` leaves the group's focus mode: anywhere outside its fields, except a menu one of its
+ * fields opened (Recent comments), which renders apart from it, over the page. Going nowhere is `blurOutcome`'s.
  */
-export function focusLeavesGroup(to: { inside: boolean; inMenu: boolean } | null): boolean {
-  return !to || (!to.inside && !to.inMenu);
+export function focusLeavesGroup(to: { inside: boolean; inMenu: boolean }): boolean {
+  return !to.inside && !to.inMenu;
 }
 
 /** A caret past any text: brought within the text as it's placed (`withinText`), it's the text's end. */

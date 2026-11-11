@@ -38,9 +38,8 @@ describe('focusLeavesGroup', () => {
     expect(focusLeavesGroup({ inside: false, inMenu: true })).toBe(false);
   });
 
-  it('closes as the focus goes anywhere else, or nowhere', () => {
+  it('closes as the focus goes anywhere else', () => {
     expect(focusLeavesGroup({ inside: false, inMenu: false })).toBe(true);
-    expect(focusLeavesGroup(null)).toBe(true);
   });
 });
 

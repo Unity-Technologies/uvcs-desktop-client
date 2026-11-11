@@ -293,7 +293,7 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   the focus isn't back in the panel (`blurOutcome`): switching apps leaves the larger editor open. Elsewhere it is the same
   editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
   focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
-  in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
+  in, and as the focus leaves the editor (`blurOutcome`: a question the check-in asks, Tab), and it lies under
   the dialogs it opens (z 790): a question it raises never shows behind it, nor does Tab walk the dimmed view. Its
   entry points: the check-in's summary (⇧⌘F) and description, Edit comment, a details panel's editor (a changeset's
   title and description; a branch's, label's or attribute's description; a long attribute value), New branch, New
