@@ -83,13 +83,13 @@ export function permissionsNote(entry: DiffEntry): string | null {
 }
 
 function describePermissionsChange(change: PermissionsChange): string {
-  const [before, after] = [unbroken(change.before), unbroken(change.after)];
   const changed = 'Only the file permissions changed';
-  if (before && after) return `${changed}, from ${before} to ${after}.`;
-  if (after) return `${changed}: they are now ${after}.`;
-  if (before) return `${changed}: they were ${before}.`;
-  return `${changed}.`;
+  if (change.before === null && change.after === null) return `${changed}.`;
+  return `${changed}, from ${unbroken(change.before) ?? NOT_SET} to ${unbroken(change.after) ?? NOT_SET}.`;
 }
+
+/** What a side with no permissions (`cm` prints none) is called, so the note always names both sides. */
+const NOT_SET = 'not set';
 
 const NON_BREAKING_HYPHEN = '\u2011';
 

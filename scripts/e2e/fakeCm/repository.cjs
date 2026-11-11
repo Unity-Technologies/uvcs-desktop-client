@@ -155,10 +155,10 @@ const REVISIONS = {
 
 /**
  * What `cm diff` finds changed, whatever it compares: its fields named as `--format` names them. README.md changed only
- * its permissions, which `cm` prints with no base revision.
+ * its permissions, which `cm` prints with no base revision: it had none set before, as a file checked in from Windows.
  */
 const DIFFERENCES = [
-  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-r--r--r--"' },
+  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '""', fsprotection: '"-r--r--r--"' },
   { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"' },
 ];
 

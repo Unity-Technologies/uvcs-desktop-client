@@ -143,7 +143,8 @@ A file whose content changed too is a plain change; one moved too is a move.
   the list groups by status; its chip and group come after Added's.
 - Its diff says which permissions changed in place of the content, which is the same on both sides and isn't read
   ("Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.", `permissionsNote`): a text, a binary, an image
-  and a folder alike. The permissions never break across lines (non-breaking hyphens).
+  and a folder alike. A side with no permissions reads "not set" ("from not set to -r--r--r--"); with none on either
+  side it only says they changed. The permissions never break across lines (non-breaking hyphens).
 - It has no content to revert (`canRevertFromDiff`), and updating with local changes never merges it
   (`findUpdateConflicts`): Incoming, whose list is a diff's, never counts it among the conflicts with local changes.
 
