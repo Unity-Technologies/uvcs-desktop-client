@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { browseOpening } from './browseOpening';
+import { browseOpening, goToFileOpening } from './browseOpening';
 
 const LINES = { side: 'new', first: 120, last: 121 } as const;
 
@@ -24,5 +24,14 @@ describe('browseOpening', () => {
 
   it('ignores lines without an item', () => {
     expect(browseOpening({ focusLines: LINES }).focus).toBeNull();
+  });
+});
+
+describe('goToFileOpening', () => {
+  it('opens the tree on the item picked and clears the filter, which could hide it', () => {
+    expect(goToFileOpening('src/ui/a.ts')).toEqual({
+      opening: { selected: 'src/ui/a.ts', expand: ['src', 'src/ui'], focus: null, fileView: null, showsDetails: false },
+      filter: '',
+    });
   });
 });
