@@ -26,8 +26,19 @@ export interface PairedFocus {
  * opens on the asset's row, showing the meta; anything else as `entryToFocus` finds it.
  */
 export function pairedFocus(pairs: MetaPairs<DiffEntry>, focusPath?: string): PairedFocus {
-  const assetPath = focusPath === undefined ? null : assetOfMeta(focusPath);
-  const asset = assetPath === null ? undefined : pairs.shown.find((entry) => entry.path === assetPath && pairs.metaOf(entry)?.path === focusPath);
+  const found = focusPath === undefined ? null : pairedEntryAt(pairs, focusPath);
+  return found ?? { entry: pairs.shown[0], metaShownFor: null };
+}
+
+/**
+ * The row of a file asked for in a diff whose `.meta`s joined their assets: a `.meta` that joined its asset is on the
+ * asset's row, shown in its place; any other file on its own (`entryAt`); none when the diff hasn't the file. What a
+ * place asking for a file again (a review going to a comment, `DiffFocusRequest`) selects.
+ */
+export function pairedEntryAt(pairs: MetaPairs<DiffEntry>, path: string): (PairedFocus & { entry: DiffEntry }) | null {
+  const assetPath = assetOfMeta(path);
+  const asset = assetPath === null ? undefined : pairs.shown.find((entry) => entry.path === assetPath && pairs.metaOf(entry)?.path === path);
   if (asset) return { entry: asset, metaShownFor: asset.path };
-  return { entry: entryToFocus(pairs.shown, focusPath), metaShownFor: null };
+  const entry = entryAt(pairs.shown, path);
+  return entry ? { entry, metaShownFor: null } : null;
 }

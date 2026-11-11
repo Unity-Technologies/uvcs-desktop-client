@@ -23,7 +23,7 @@ import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
-import { entryAt, pairedFocus } from './diffFocus';
+import { pairedEntryAt, pairedFocus } from './diffFocus';
 import { DiffFocusRequestContext } from './diffFocusRequest';
 import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
@@ -138,8 +138,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // The place asks for a file again (a review's Comments panel going to a thread): select it, where the diff has it.
   const focusRequest = useContext(DiffFocusRequestContext);
   useEffect(() => {
-    const requested = focusRequest && entryAt(entries, focusRequest.path);
-    if (requested) setSelection(singleSelection(diffEntryKey(requested)));
+    const requested = focusRequest && pairedEntryAt(pairs, focusRequest.path);
+    if (!requested) return;
+    setSelection(singleSelection(diffEntryKey(requested.entry)));
+    // A `.meta` asked for shows on its asset's row; anything else shows itself, its asset's meta put away.
+    setMetaShownFor(requested.metaShownFor);
   }, [focusRequest?.seq, reading]);
 
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
