@@ -7,9 +7,18 @@ stays partial.
 
 ## Creating one
 
-The Create workspace dialog offers "Download only the folders and files I choose" for a repository that exists
-(`offersPartial` in `newWorkspaceForm.ts`): a new repository holds nothing to choose from. Partial and dynamic exclude
-each other (`toggledKind`). The request carries the kind (`CreateWorkspaceRequest.kind`).
+The Create workspace dialog asks "What to download": **The whole branch** (standard, the default) or **Only the folders
+I pick** (partial). Each card says when to choose it (`downloadCards` in `newWorkspaceForm.ts`), since the app has one
+window for both kinds where the official client had a separate app for partial workspaces: the whole branch switches
+and merges freely; picked folders download less and update file by file, but `cm` refuses to merge into a partial
+workspace and switches it only to branches. The cards show from the start, before a repository is named; picking
+folders is greyed for a new repository, which holds nothing to pick (`partialAllowed`). Choosing a card sets the kind
+(`kindForDownloads`); picking folders greys the dynamic checkbox (`dynamicDisabled`, ticked with `toggledKind`), since
+a dynamic workspace has the whole branch. The request carries the kind
+(`CreateWorkspaceRequest.kind`).
+
+The cards don't say the choice can change later: the app doesn't convert a workspace between partial and standard.
+Only which folders a partial workspace holds changes later.
 
 `workspaces.create` makes the workspace, then runs `cm partial update --silent` in it (`EMPTY_PARTIAL_UPDATE_ARGS`),
 through `execute()` since it changes the workspace's files. An update of no paths downloads nothing but marks the

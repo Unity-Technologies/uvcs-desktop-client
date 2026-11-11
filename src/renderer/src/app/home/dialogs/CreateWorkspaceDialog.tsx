@@ -6,6 +6,7 @@ import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
+import { OptionCards } from '../../../ui/OptionCards';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
 import { useCanCreateDynamicWorkspaces, useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
@@ -14,7 +15,17 @@ import { createNewWorkspace } from './createNewWorkspace';
 import styles from './HomeDialogs.module.css';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, toggledKind, type NamedRepository } from './newWorkspaceForm';
+import {
+  DYNAMIC_WORKSPACES_URL,
+  downloadCards,
+  initialRepositoryName,
+  kindForDownloads,
+  newWorkspaceFormOf,
+  repositoriesToName,
+  serverToList,
+  toggledKind,
+  type NamedRepository,
+} from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: NamedRepository;
@@ -109,16 +120,21 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         autoFocus={Boolean(initialRepository)}
       />
       <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
-      {form.offersPartial && (
-        <Checkbox
-          label="Download only the folders and files I choose"
-          checked={form.partial}
-          onChange={(checked) => setKindChosen((current) => toggledKind(current, 'partial', checked))}
-        />
-      )}
+      <OptionCards
+        label="What to download"
+        heading
+        cards={downloadCards(form)}
+        value={form.downloads}
+        onChange={(choice) => setKindChosen((current) => kindForDownloads(current, choice))}
+      />
       {form.offersDynamic && (
         <div className={styles.choiceRow}>
-          <Checkbox label="Make this workspace dynamic (alpha)" checked={form.dynamic} onChange={(checked) => setKindChosen((current) => toggledKind(current, 'dynamic', checked))} />
+          <Checkbox
+            label="Make this workspace dynamic (alpha)"
+            checked={form.dynamic}
+            disabled={form.dynamicDisabled}
+            onChange={(checked) => setKindChosen((current) => toggledKind(current, 'dynamic', checked))}
+          />
           <Button variant="ghost" size="small" onClick={() => void api.system.openExternal(DYNAMIC_WORKSPACES_URL)}>
             Learn more
           </Button>
