@@ -20,6 +20,7 @@ import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
 import { formatsOf } from './formatActions';
+import { emoticonTyping } from './emoticonTyping';
 import { typingAt } from './typingAt';
 import { indentLines, outdentLines } from './focusModeTab';
 import { justPicked } from './justPicked';
@@ -62,7 +63,7 @@ export function themed(name: string): Extension {
 
 /**
  * Everything a comment field's editor is (docs/features/rich-comments.md, "Writing"): Markdown drawn as it reads
- * around the caret, chips, Slack's keys, rich paste, undo. The decisions are the pure modules'; this wires them.
+ * around the caret, chips, Slack's keys and emoticons, rich paste, undo. The decisions are the pure modules'; this wires them.
  */
 export function commentEditorExtensions(options: CommentEditorOptions, enabled: boolean, codeThemeName: string): Extension {
   const formats = formatsOf(options.singleLine);
@@ -85,6 +86,8 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.perLineTextDirection.of(true),
     placeholderText.of(placeholder(options.placeholder)),
     EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
+    // Before the keys below: an emoticon becomes its emoji before Enter goes on to start the line.
+    emoticonTyping(options.singleLine),
     Prec.highest(
       keymap.of([
         {
