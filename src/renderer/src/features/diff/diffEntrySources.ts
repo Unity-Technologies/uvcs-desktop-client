@@ -6,7 +6,6 @@ import { statusGroup, type StatusGroup } from '../../components/statusGroups';
 import type { GroupedFileListFacts } from '../../components/useGroupedFileTree';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
-import { ONLY_MOVED } from './viewer/movedFrom';
 
 const EMPTY: ContentSource = { kind: 'empty' };
 
@@ -42,7 +41,7 @@ const LABELS: Record<DiffEntry['status'], string> = {
 };
 
 /** What an item whose file permissions alone changed (`DiffEntry.permissionsChange`) is called, as its FS badge says. */
-const ONLY_PERMISSIONS = 'Only permissions changed';
+const ONLY_PERMISSIONS = 'Only file permissions changed';
 
 /** An entry's status: a change of the file permissions alone is one of its own, as reviewers can pass over it. */
 export function diffEntryTone(entry: DiffEntry): StatusTone {
@@ -76,12 +75,11 @@ export function describeDiffEntry(entry: DiffEntry): string {
 }
 
 /**
- * Why an entry's diff shows its content the same on both sides, when the entry tells: only its file permissions
- * changed, or it was only moved. Undefined leaves the viewer's own words.
+ * What a diff shows, in place of its content, for an item whose file permissions alone changed: which changed. The
+ * same for a text, a binary, an image or a folder, whose content is the same on both sides. Null for any other item.
  */
-export function identicalDescriptionOf(entry: DiffEntry): string | undefined {
-  if (entry.permissionsChange) return describePermissionsChange(entry.permissionsChange);
-  return entry.oldPath ? ONLY_MOVED : undefined;
+export function permissionsNote(entry: DiffEntry): string | null {
+  return entry.permissionsChange ? describePermissionsChange(entry.permissionsChange) : null;
 }
 
 function describePermissionsChange(change: PermissionsChange): string {
