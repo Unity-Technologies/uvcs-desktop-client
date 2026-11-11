@@ -102,13 +102,19 @@ describe('fileThreadCount', () => {
 });
 
 describe('openedOnSend', () => {
+  const inFile = (keys: string[]) => ({ path: 'src/Player.cs', keys });
+
   it('opens the line a comment was sent on while comments are hidden, after the others', () => {
-    expect(openedOnSend(['additions:3'], 'additions:9', false)).toEqual(['additions:3', 'additions:9']);
+    expect(openedOnSend(inFile(['additions:3']), 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:3', 'additions:9']));
+  });
+
+  it("opens it in a file shown after another whose lines were open: those were the other file's", () => {
+    expect(openedOnSend({ path: 'src/Enemy.cs', keys: ['additions:3'] }, 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:9']));
   });
 
   it('changes nothing while comments show in the code, or when the line is open already', () => {
-    const opened = ['additions:9'];
-    expect(openedOnSend(opened, 'additions:9', false)).toBe(opened);
-    expect(openedOnSend(opened, 'additions:3', true)).toBe(opened);
+    const opened = inFile(['additions:9']);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:9', false)).toBe(opened);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:3', true)).toBe(opened);
   });
 });
