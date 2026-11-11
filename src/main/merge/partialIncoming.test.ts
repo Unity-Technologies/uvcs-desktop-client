@@ -94,6 +94,34 @@ describe('incoming in a partial workspace', () => {
     await expect(readIncomingChanges(cm, WORKSPACE)).rejects.toThrow(/unreachable/);
   });
 
+  it('reads every listing of a workspace whose folders overflow one command line, and finds what the last one holds', async () => {
+    const folders = Array.from({ length: 2_000 }, (_, index) => `Assets/Folder number ${index}`);
+    const loaded = formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ...folders.map((path, index) => [String(100 + index), String(5_000 + index), '-1', 'dir', path, '1', '']));
+    const headRowOf = (path: string) => (path === '/' ? ['3', '5', 'dir', '/', '3'] : (() => {
+      const index = folders.indexOf(path.slice(1));
+      return [String(100 + index), String(5_000 + index), 'dir', path, '1'];
+    })());
+    const lastFolder = `/${folders[folders.length - 1]}`;
+    const { cm, commands } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: -1 }),
+      'status --controlledchanged --changed': pendingStatus(WORKSPACE),
+      'ls -R': loaded,
+      ls: ({ args }) => {
+        const listed = args.filter((arg) => arg.startsWith('/'));
+        const added = listed.includes(lastFolder) ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
+        return formatOutput(...listed.map(headRowOf), ...added);
+      },
+      'find changeset': formatOutput([3]),
+    });
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({ items: [item({ kind: 'added', path: `${folders[folders.length - 1]}/New.cs`, headRevisionId: 9001 })] });
+    const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args[1] !== '-R');
+    expect(headListings.length).toBeGreaterThan(1);
+    expect(headListings.flatMap((command) => command.args.filter((arg) => arg.startsWith('/'))).sort()).toEqual(['/', ...folders.map((path) => `/${path}`)].sort());
+  });
+
   it('splits the folders across listings when they would overflow one command line', () => {
     const folders = Array.from({ length: 2_000 }, (_, index) => `/Assets/Folder number ${index}`);
     const batches = headListingArgs(folders, '/main');
