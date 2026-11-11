@@ -28,7 +28,7 @@ type SelectionCallback = (range: SelectedLineRange | null) => void;
 /** Pierre's options for selecting lines and hinting how, the same for a diff (`FileDiff`) and a file (`File`). */
 export interface LineSelectionOptions {
   enableLineSelection?: boolean;
-  lineHoverHighlight?: 'number';
+  lineHoverHighlight?: 'disabled';
   onLineSelectionStart?: SelectionCallback;
   onLineSelectionChange?: SelectionCallback;
   onLineSelectionEnd?: SelectionCallback;
@@ -67,8 +67,9 @@ export function useLineLinks({ path, selectable, containerRef, shown, scrollTo }
   useScrollToFocus(shown ? focusLines : undefined, containerRef, scrollTo);
 
   const hint = useLineNumberHint();
+  // No fill on the number under the pointer: its cursor and tip say it selects, and a review's "+" sits beside it.
   const options = useMemo<LineSelectionOptions>(
-    () => (selectable ? { enableLineSelection: true, lineHoverHighlight: 'number', onLineSelectionChange: select, onLineSelected: select, ...hint } : {}),
+    () => (selectable ? { enableLineSelection: true, lineHoverHighlight: 'disabled', onLineSelectionChange: select, onLineSelected: select, ...hint } : {}),
     [selectable, select, hint],
   );
   return { options, selectedLines: selectable ? range : undefined, range: selectable ? range : null, select, publishes, focusLines };
