@@ -28,8 +28,7 @@ import { downloadRules, toggled, type DownloadedChoices } from './downloadSelect
 import {
   downloadKey,
   downloadRows,
-  downloadSearchChangeset,
-  downloadSearchName,
+  downloadSearchOf,
   downloadTreeOf,
   downloadTreePoint,
   foldersToReadLoaded,
@@ -77,9 +76,9 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
     ...SLOW_CHANGING_QUERY,
     enabled: treePoint?.kind === 'branch',
   }).data?.headChangeset;
-  const searchChangeset = downloadSearchChangeset(treePoint, branchHead);
+  const searchOf = downloadSearchOf(treePoint, branchHead);
   const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
-  const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchChangeset, query, 'onSearch'), query, info ? downloadSearchName(info.selector) : '');
+  const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query, 'onSearch'), query, searchOf?.name ?? '');
   const searching = searchesFor(query);
   const foundDirectories = new Set(search.paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 
@@ -199,7 +198,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       )}
       {status === 'failed' && <div className={styles.message}>{failures.get(ROOT)}</div>}
       {status === 'empty' && <div className={styles.message}>This repository holds no files yet.</div>}
-      {status === 'ready' && searchChangeset !== null && (
+      {status === 'ready' && searchOf !== null && (
         <div className={styles.search} onKeyDown={onSearchKeyDown}>
           <SearchField
             value={query}

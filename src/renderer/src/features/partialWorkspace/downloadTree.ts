@@ -1,6 +1,6 @@
 import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import type { PartialRule, WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
+import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
 import type { CheckState } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
@@ -175,16 +175,15 @@ export function revealedDownload(path: string, expanded: ReadonlySet<string>): {
 }
 
 /**
- * The changeset a search of the tree looks in: the one the tree shows or, on a branch, its head once it is read
- * (`branchHead`). Null while there's none to search, so the search waits.
+ * What a search of the tree looks in, and what its notes call it: the changeset the tree shows or, on a branch, its
+ * head once it is read (`branchHead`), named by the branch. Taken from the tree's own point, so the search never names
+ * one thing and lists another. Null while there's none to search, so the search waits.
  */
-export function downloadSearchChangeset(point: RepositoryTreePoint | null, branchHead: number | undefined): number | null {
-  if (point?.kind === 'changeset') return point.changeset;
-  if (point?.kind === 'branch') return branchHead ?? null;
+export function downloadSearchOf(
+  point: RepositoryTreePoint | null,
+  branchHead: number | undefined,
+): { changeset: number; name: string } | null {
+  if (point?.kind === 'changeset') return { changeset: point.changeset, name: `changeset ${point.changeset}` };
+  if (point?.kind === 'branch' && branchHead !== undefined) return { changeset: branchHead, name: point.branch };
   return null;
-}
-
-/** What the search's notes say it looks in: the branch or label the workspace is on, or its changeset. */
-export function downloadSearchName(selector: WorkspaceSelector): string {
-  return selector.kind === 'changeset' ? `changeset ${selector.name}` : selector.name;
 }
