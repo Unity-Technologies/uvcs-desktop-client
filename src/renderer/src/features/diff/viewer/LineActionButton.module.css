@@ -1,0 +1,33 @@
+/* Fills the hovered line's number cell, the button at its end, by the code: where a line is commented on. */
+.slot {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-inline: 2px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  box-shadow: var(--shadow-md);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.button:hover {
+  background: var(--accent-fill-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    animation: none;
+  }
+}

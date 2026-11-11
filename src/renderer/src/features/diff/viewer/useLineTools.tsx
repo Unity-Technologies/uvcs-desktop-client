@@ -9,6 +9,7 @@ import { contextMenuSelection, copiedLinesWord, lineChipAnchor, linesText, lineU
 import { LineLinkChip } from './LineLinkChip';
 import { LineLinksContext } from './lineLinks';
 import { linkedLinesOf } from './linkedLines';
+import type { LineAction } from './diffAnnotations';
 import { lineMenuEntries } from './lineMenu';
 import type { LineRange } from './lineSelection';
 import { rowUnderPointer } from './pierreDom';
@@ -26,6 +27,8 @@ interface LineToolsOptions {
   publishes: boolean;
   /** The text of a side, to copy lines from it. */
   textOf: (side: FocusedLines['side']) => string;
+  /** The place's own action on a line (`DiffAnnotations.lineAction`), in the menu. */
+  lineAction?: LineAction;
 }
 
 /**
@@ -33,7 +36,7 @@ interface LineToolsOptions {
  * code's right-click menu (`lineMenuEntries`, joined by `useCodeMenu`), the right-click first selecting the line
  * clicked when it isn't selected.
  */
-export function useLineTools({ containerRef, layout, range, select, selectable, publishes, textOf }: LineToolsOptions): {
+export function useLineTools({ containerRef, layout, range, select, selectable, publishes, textOf, lineAction }: LineToolsOptions): {
   chip: ReactNode;
   menu: { enabled: boolean; pickLines: (event: MouseEvent) => FocusedLines | null; lineEntries: () => (GroupedEntry | false | undefined)[] };
 } {
@@ -63,6 +66,7 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
       copyLink: linkable ? link.copy : undefined,
       copyLines: () => copyToClipboard(linesText(textOf(lines.side), lines), copiedLinesWord(lines)),
       annotate: annotateAt && (() => annotateAt(lines)),
+      lineAction,
     });
   };
 
