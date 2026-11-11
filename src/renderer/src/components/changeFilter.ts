@@ -11,8 +11,9 @@ export interface ChangeFilter {
 }
 
 // The order of the status chips, and of the groups and the sort by status: the one the Plastic desktop GUI lists
-// change categories in.
-const TONE_ORDER: StatusTone[] = ['changed', 'moved', 'deleted', 'permissions', 'added', 'private', 'conflict', 'muted'];
+// change categories in, but for the files whose permissions alone changed, which come after the ones added: a reviewer
+// rarely looks at them.
+const TONE_ORDER: StatusTone[] = ['changed', 'moved', 'deleted', 'added', 'permissions', 'private', 'conflict', 'muted'];
 
 /** What each status chip, and each group of files by status, is called. */
 export const TONE_LABELS: Record<StatusTone, string> = {

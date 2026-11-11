@@ -137,7 +137,7 @@ filesystem permissions changed" group does. `cm` gives such a change no base rev
 A file whose content changed too is a plain change; one moved too is a move.
 
 - Its row is lettered FS (`diffEntryTone`), found by the "Only filesystem permissions" chip and grouped under it when
-  the list groups by status, after the files that changed.
+  the list groups by status; its chip and group come after Added's.
 - Its diff says which permissions changed in place of the content, which is the same on both sides and isn't read
   ("Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.", `permissionsNote`): a text, a binary, an image
   and a folder alike. The permissions never break across lines (non-breaking hyphens).
