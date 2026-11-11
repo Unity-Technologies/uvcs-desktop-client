@@ -3,7 +3,18 @@ import type { TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { toggled } from './downloadSelection';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
-import { downloadKey, downloadRows, downloadTreeOf, downloadTreePoint, foldersToReadLoaded, rootStatus, rulesSummary, type DownloadRow } from './downloadTree';
+import {
+  downloadKey,
+  downloadRows,
+  downloadSearchChangeset,
+  downloadTreeOf,
+  downloadTreePoint,
+  foldersToReadLoaded,
+  revealedDownload,
+  rootStatus,
+  rulesSummary,
+  type DownloadRow,
+} from './downloadTree';
 
 function item(path: string, itemType: ItemType): TreeItem {
   return {
@@ -200,5 +211,38 @@ describe('downloadTreePoint', () => {
 
   it('shows nothing on a shelve, whose tree is no changeset of the repository', () => {
     expect(downloadTreePoint(on({ kind: 'shelve', name: '7' }, null))).toBeNull();
+  });
+});
+
+describe('revealedDownload', () => {
+  it('opens every folder above a found item and selects it', () => {
+    const revealed = revealedDownload('Assets/Textures/a.png', new Set());
+    expect([...revealed.expanded].sort()).toEqual(['Assets', 'Assets/Textures']);
+    expect(revealed.selected).toBe('Assets/Textures/a.png');
+  });
+
+  it('keeps the folders already open, and leaves a found folder itself closed', () => {
+    const revealed = revealedDownload('Assets/Textures', new Set(['Lib']));
+    expect([...revealed.expanded].sort()).toEqual(['Assets', 'Lib']);
+    expect(revealed.selected).toBe('Assets/Textures');
+  });
+
+  it('selects an item of the root without opening anything', () => {
+    expect(revealedDownload('readme.md', new Set())).toEqual({ expanded: new Set(), selected: 'readme.md' });
+  });
+});
+
+describe('downloadSearchChangeset', () => {
+  it("searches the changeset the tree shows", () => {
+    expect(downloadSearchChangeset({ kind: 'changeset', changeset: 12 }, undefined)).toBe(12);
+  });
+
+  it("searches a branch's head once it is read, and nothing before", () => {
+    expect(downloadSearchChangeset({ kind: 'branch', branch: '/main/task' }, 40)).toBe(40);
+    expect(downloadSearchChangeset({ kind: 'branch', branch: '/main/task' }, undefined)).toBeNull();
+  });
+
+  it('searches nothing without a tree', () => {
+    expect(downloadSearchChangeset(null, 40)).toBeNull();
   });
 });
