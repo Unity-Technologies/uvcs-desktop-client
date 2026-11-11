@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { placeKey } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
-import type { PageProps, ReviewTab } from '../../app/navigation/pages';
+import type { PageOf, PageProps, ReviewTab } from '../../app/navigation/pages';
 import { isShownByCodeReviewPage } from '../../app/refresh/refreshScopes';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { MENU_WORDS } from '../../components/menuWords';
@@ -29,7 +29,7 @@ import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
 import { ViewShownContext } from '../../lib/viewShown';
-import { conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
+import { conversationFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import styles from './CodeReviewPage.module.css';
 
@@ -82,7 +82,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       {mounted.includes('conversation') && (
         <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
           <ViewShownContext.Provider value={reviewTabShown(page, 'conversation')}>
-            <ReviewConversationTab review={review} focusThread={conversationFocus(page)} />
+            <ReviewConversationTab review={review} focusThread={conversationFocus(page)} onPickedInOpen={() => forgetFocus(page)} />
           </ViewShownContext.Provider>
         </div>
       )}
@@ -99,6 +99,12 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       )}
     </div>
   );
+}
+
+/** A thread picked in Open: the page forgets the one it was opened at (`pageAfterOpenPick`). */
+function forgetFocus(page: PageOf<'codeReview'>): void {
+  const next = pageAfterOpenPick(page);
+  if (next !== page) navigation.replacePage(next);
 }
 
 /** The review's header while it's read: its two rows at their heights, a placeholder where each one's words go. */

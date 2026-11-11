@@ -25,7 +25,15 @@ import styles from './ReviewConversation.module.css';
  * replies among what the server noted (requests, statuses, renames), then a field to say something. Beside it, the
  * reviewers and what's still open.
  */
-export function ReviewConversationTab({ review, focusThread }: { review: CodeReview; focusThread?: number }) {
+interface ReviewConversationTabProps {
+  review: CodeReview;
+  /** The thread the page was opened at (Show in conversation, from the code): gone to, lit and ringed. */
+  focusThread?: number;
+  /** A thread picked in Open: the page forgets the one it was opened at, so going to it again goes to it. */
+  onPickedInOpen: () => void;
+}
+
+export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: ReviewConversationTabProps) {
   const place = usePlace();
   const user = usePlaceUser();
   // "Show in conversation" from the dialog moves this page to the thread, in place (`showInConversation`).
@@ -97,7 +105,10 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
             />
           </div>
         </div>
-        <ReviewSideRail review={review} open={openItems} onPick={(threadId) => setPick((previous) => pickThread(previous, threadId))} />
+        <ReviewSideRail review={review} open={openItems} onPick={(threadId) => {
+            setPick((previous) => pickThread(previous, threadId));
+            onPickedInOpen();
+          }} />
       </div>
     </div>
   );
