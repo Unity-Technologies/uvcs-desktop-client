@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand/vanilla';
 import type { ChangedLine } from './changeBlocks';
 import { lineActionLabel } from './discardAction';
+import { keepPointerDownToItself } from './pierreDom';
 import styles from './LineDiscardButton.module.css';
 
 /** The changed line under the pointer, if any. */
@@ -27,7 +28,6 @@ export function LineDiscardButton({ hovered, picked, onPreview, onDiscard }: Lin
     <div className={styles.slot}>
       <button
         type="button"
-        // The diff picks the line pressed in its gutter: pressing the button isn't picking.
         ref={keepPointerDownToItself}
         className={styles.button}
         data-kind={line.side === 'additions' ? 'remove' : 'restore'}
@@ -41,12 +41,4 @@ export function LineDiscardButton({ hovered, picked, onPreview, onDiscard }: Lin
       </button>
     </div>
   );
-}
-
-/** Native, since the diff listens in its shadow root, before React sees the event. */
-function keepPointerDownToItself(button: HTMLButtonElement | null): (() => void) | undefined {
-  if (!button) return undefined;
-  const stop = (event: PointerEvent): void => event.stopPropagation();
-  button.addEventListener('pointerdown', stop);
-  return () => button.removeEventListener('pointerdown', stop);
 }
