@@ -94,7 +94,10 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     };
     editor.contentDOM.addEventListener('keydown', keepTaken);
     const caret = initialFocus.current?.at;
-    if (caret !== undefined || autoFocus) {
+    // Made anew as its larger editor's panel moves (`CommentFocusGroup`), the group places the caret, if any: taking the
+    // focus here would pull it back from wherever the user put it.
+    const movedByGroup = group?.moving() ?? false;
+    if (caret !== undefined || (autoFocus && !movedByGroup)) {
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
       focusEditor(editor);
     }

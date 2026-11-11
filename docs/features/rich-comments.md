@@ -286,8 +286,11 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   the window while open (`panelParent`, through a portal): Pierre lays its code out as a container
   (`container-type: inline-size`), which would hold a fixed panel inside it, clipped. Moved, the editor is made anew,
   so the caret and the selection go with it there and back (`CommentFieldHandle.selection`, `focusAtSelection`,
-  `withinText`), the text with its owner; the undo history starts over. Closed from outside (a press around it, the
-  focus gone elsewhere), it leaves the focus where the user put it. Elsewhere it is the same
+  `withinText`, `caretAfterMove`), the text with its owner; the undo history starts over. Made anew, the field doesn't
+  take the focus as it mounts (`FocusGroup.moving`): closed as the focus went elsewhere, it leaves it there. A press
+  around the panel goes back to the field with the caret where it was, moved or not (the backdrop keeps the focus). A
+  blur going nowhere (the window losing the focus, an editor made anew) looks again a frame later and closes only if
+  the focus isn't back in the panel (`blurOutcome`): switching apps leaves the larger editor open. Elsewhere it is the same
   editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
   focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
   in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
