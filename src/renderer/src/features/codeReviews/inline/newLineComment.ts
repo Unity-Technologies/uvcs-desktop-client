@@ -1,6 +1,7 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
 import type { ChangedLine } from '../../diff/viewer/changeBlocks';
+import type { LineBand } from '../../diff/viewer/diffAnnotations';
 import { topSideOf } from './fileComments';
 import type { ReviewDiffView, ShownFile, ThreadSide } from './fileThreads';
 import { lineKey } from './threadRows';
@@ -72,4 +73,17 @@ const LINE_COMMENT_WORDS: Record<LineCommentKind, { placeholder: string; submit:
 /** The "+" in the gutter and the code menu's entry: what they do to the line. */
 export function lineCommentLabel(line: ChangedLine): string {
   return `Comment on line ${line.lineNumber}`;
+}
+
+/**
+ * The lines' outlines with those being commented on: in the accent, as the card being written is, a line with threads
+ * too, so the line a comment goes on is plain while it's written.
+ */
+export function withNewLineCommentBands(bands: readonly LineBand[], spots: readonly NewLineCommentSpot[]): LineBand[] {
+  const commented = new Set(spots.map((spot) => lineKey(spot.side, spot.comment.line)));
+  const marked = bands.map((band) => (commented.has(band.key) ? { ...band, selected: true } : band));
+  const added = spots
+    .map((spot): LineBand => ({ key: lineKey(spot.side, spot.comment.line), side: spot.side, lineNumber: spot.comment.line, selected: true }))
+    .filter((band) => !bands.some((shown) => shown.key === band.key));
+  return [...marked, ...added];
 }

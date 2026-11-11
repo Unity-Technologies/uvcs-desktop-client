@@ -16,7 +16,7 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { DEFAULT_LINE_COMMENT_KIND, lineCommentAt, lineCommentLabel, newLineCommentKey, newLineCommentsIn, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, lineCommentAt, lineCommentLabel, newLineCommentKey, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
@@ -131,7 +131,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     const render = (row: DiffLineAnnotation<string>) =>
       renderRow(row, { comments, fileComments, focus, textOf, shownLines, spots, onSent, opened: inCode ? undefined : openedKeys, onClose: inCode ? undefined : closeLine, onSeeInContext });
     const mapTickTip = (keys: readonly string[]): string => commentMapTip(fileComments, keys);
-    const bands = lineBandsOf(fileComments.lines, focus);
+    const bands = withNewLineCommentBands(lineBandsOf(fileComments.lines, focus), spots);
     const rows = withNewLineCommentRows(annotationRowsOf(shown, fileComments.outdated, topSide, inCode ? undefined : openedKeys), spots);
     return { rows, render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands, lineAction };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow, spots, lineAction]);

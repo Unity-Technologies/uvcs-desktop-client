@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { lineCommentAt, newLineCommentKey, newLineCommentsIn, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { lineCommentAt, newLineCommentKey, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -74,5 +74,17 @@ describe('withNewLineCommentRows', () => {
 
   it('adds none for a line already showing its threads: the new comment goes in that row', () => {
     expect(withNewLineCommentRows([threadsAt9], [spot({ line: 9 })])).toEqual([threadsAt9]);
+  });
+});
+
+describe('withNewLineCommentBands', () => {
+  const threadsAt9 = { key: 'additions:9', side: 'additions', lineNumber: 9, selected: false } as const;
+
+  it('outlines the line being commented on in the accent', () => {
+    expect(withNewLineCommentBands([threadsAt9], [spot({ line: 3 })])).toEqual([threadsAt9, { key: 'additions:3', side: 'additions', lineNumber: 3, selected: true }]);
+  });
+
+  it("marks a line with threads once, in the accent, while a comment is written on it", () => {
+    expect(withNewLineCommentBands([threadsAt9], [spot({ line: 9 })])).toEqual([{ ...threadsAt9, selected: true }]);
   });
 });
