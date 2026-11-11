@@ -1,13 +1,19 @@
 import type { CodeReview } from '@shared/domain/codeReview';
-import { commentLineText } from '../../../lib/comments/commentText';
 import { ReviewersSection } from './ReviewersSection';
-import { threadElementId } from './ReviewThreadCard';
-import type { ReviewThread } from './reviewThreads';
+import type { OpenItem } from './threadPick';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import styles from './ReviewConversation.module.css';
 
+interface ReviewSideRailProps {
+  review: CodeReview;
+  /** The change requests and questions still open, the one gone to last current (`openItemsOf`). */
+  open: readonly OpenItem[];
+  /** Goes to a thread in the conversation: scrolled to, lit and ringed (`pickThread`). */
+  onPick: (threadId: number) => void;
+}
+
 /** Beside the conversation: who reviews it and the status each gave, and the change requests and questions still open. */
-export function ReviewSideRail({ review, open }: { review: CodeReview; open: readonly ReviewThread[] }) {
+export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
   return (
     <aside className={styles.rail}>
       <ReviewersSection review={review} />
@@ -17,11 +23,11 @@ export function ReviewSideRail({ review, open }: { review: CodeReview; open: rea
         </h2>
         {open.length === 0 && <p className={styles.railEmpty}>Nothing left to answer</p>}
         <ul className={styles.openItems}>
-          {open.map(({ root }) => (
-            <li key={root.id}>
-              <button type="button" className={styles.openItem} onClick={() => scrollToThread(root.id)}>
-                <ThreadKindIcon root={root} />
-                <span className={styles.openText}>{commentLineText(root.text)}</span>
+          {open.map((item) => (
+            <li key={item.threadId} className={styles.openItem} data-current={item.current || undefined}>
+              <button type="button" className={styles.openItemPick} aria-current={item.current || undefined} onClick={() => onPick(item.threadId)}>
+                <ThreadKindIcon root={item.thread.root} />
+                <span className={styles.openText}>{item.text}</span>
               </button>
             </li>
           ))}
@@ -29,8 +35,4 @@ export function ReviewSideRail({ review, open }: { review: CodeReview; open: rea
       </section>
     </aside>
   );
-}
-
-function scrollToThread(commentId: number): void {
-  document.getElementById(threadElementId(commentId))?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }

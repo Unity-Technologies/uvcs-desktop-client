@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -12,6 +12,7 @@ import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
 import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
+import { openItemsOf, pickedScrollBehavior, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
@@ -36,11 +37,20 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
   const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
-  // Opened on a thread (Show in conversation, from the code): brought into view once read, and lit.
+  // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
+  const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread));
+  const [pickedFocus, setPickedFocus] = useState(focusThread);
+  if (focusThread !== pickedFocus) {
+    setPickedFocus(focusThread);
+    setPick(pickOnFocus(pick, focusThread));
+  }
+  const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
+
+  // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
-    if (read && focusThread !== undefined) document.getElementById(threadElementId(focusThread))?.scrollIntoView({ block: 'center' });
-  }, [read, focusThread]);
+    if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView({ block: 'center', behavior: pickedScrollBehavior(pick) });
+  }, [read, pick]);
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
 
@@ -68,7 +78,7 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
                         review={review}
                         thread={entry.thread}
                         user={user}
-                        highlight={entry.thread.root.id === focusThread ? 1 : undefined}
+                        {...threadMarkOf(entry.thread.root.id, pick)}
                         onSeeApplied={seeAppliedOf(entry.thread)}
                       />
                     )}
@@ -87,7 +97,7 @@ export function ReviewConversationTab({ review, focusThread }: { review: CodeRev
             />
           </div>
         </div>
-        <ReviewSideRail review={review} open={open} />
+        <ReviewSideRail review={review} open={openItems} onPick={(threadId) => setPick((previous) => pickThread(previous, threadId))} />
       </div>
     </div>
   );
