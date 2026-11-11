@@ -141,7 +141,7 @@ export function MergeHeader({
 function BehindHeadNotice() {
   const workspacePath = useWorkspacePath();
   const incoming = useKnownIncomingSummary();
-  if (!incoming?.changesetCount) return null;
+  if (!incoming?.branch || 'partial' in incoming || !incoming.changesetCount) return null;
 
   return (
     <div className={styles.notice}>
