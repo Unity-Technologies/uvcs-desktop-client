@@ -118,3 +118,14 @@ export function withNewLineCommentBands(bands: readonly LineBand[], spots: reado
     .filter((band) => !bands.some((shown) => shown.key === band.key));
   return [...marked, ...added];
 }
+
+/**
+ * What a comment being written does when asked for the focus (`focusRequest`'s `seq`, none when nothing asks), given the
+ * request it mounted with: none asked; the one it mounted with, which its field took as it mounted (`taken`); a newer
+ * one, its "+" pressed again while it shows, which it takes now (`focus`). A comment kept while its file wasn't shown
+ * mounts with none, so showing it again takes nothing from where the user is.
+ */
+export function focusOnRequest(mountedWith: number | null, request: number | null): 'none' | 'taken' | 'focus' {
+  if (request === null) return 'none';
+  return request === mountedWith ? 'taken' : 'focus';
+}

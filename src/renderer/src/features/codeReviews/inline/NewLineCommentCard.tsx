@@ -9,7 +9,7 @@ import { addLineComment } from '../conversation/reviewCommentOperations';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import { threadKindName } from '../conversation/threadBadges';
 import { conversationReadSince } from '../conversation/useReviewConversation';
-import { LINE_COMMENT_KINDS, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
+import { focusOnRequest, LINE_COMMENT_KINDS, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import styles from './NewLineCommentCard.module.css';
 
@@ -49,9 +49,9 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   // Opened just now, the field takes the focus as it mounts; opened again while shown, it's focused here.
   const mountedFor = useRef(focusSeq);
   useEffect(() => {
-    if (focusSeq === null) return;
-    if (focusSeq !== mountedFor.current) field.current?.focusAtEnd();
-    focusTaken(focusSeq);
+    const focus = focusOnRequest(mountedFor.current, focusSeq);
+    if (focus === 'focus') field.current?.focusAtEnd();
+    if (focus !== 'none' && focusSeq !== null) focusTaken(focusSeq);
   }, [focusSeq, focusTaken]);
   const { kind } = spot.comment;
   const words = lineCommentWords(kind);

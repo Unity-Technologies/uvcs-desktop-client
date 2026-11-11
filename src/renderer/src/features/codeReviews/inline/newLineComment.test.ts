@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { DEFAULT_LINE_COMMENT_KIND, LINE_COMMENT_KINDS, lineCommentAt, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -127,5 +127,24 @@ describe('lineRowContent', () => {
 
   it('holds nothing for a row of neither', () => {
     expect(lineRowContent('additions:4', [lineAt9], [spot({ line: 9 })])).toEqual({ line: undefined, spot: undefined });
+  });
+});
+
+describe('focusOnRequest', () => {
+  it('opened just now: its field took the focus as it mounted', () => {
+    expect(focusOnRequest(1, 1)).toBe('taken');
+  });
+
+  it('kept, then shown again with its file: takes nothing from where the user is', () => {
+    expect(focusOnRequest(null, null)).toBe('none');
+  });
+
+  it('its "+" pressed again while it shows: takes the focus now', () => {
+    expect(focusOnRequest(1, 2)).toBe('focus');
+    expect(focusOnRequest(null, 3)).toBe('focus');
+  });
+
+  it('asked once, answered once: after the request is taken, running again does nothing (StrictMode)', () => {
+    expect(focusOnRequest(1, null)).toBe('none');
   });
 });
