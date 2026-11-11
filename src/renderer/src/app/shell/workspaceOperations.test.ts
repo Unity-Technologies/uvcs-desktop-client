@@ -192,6 +192,26 @@ describe('updateUnlessUpToDate', () => {
     expect(showUpdatedMoment).toHaveBeenCalledWith(ws, summary(2));
   });
 
+  it('says a partial workspace is up to date when the branch head changes none of its items', async () => {
+    vi.mocked(recheckIncoming).mockResolvedValue({ branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+
+    await updateUnlessUpToDate(ws);
+
+    expect(fakeApi.methods()).not.toContain('workspaces.update');
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on main.' }]);
+  });
+
+  it('updates a partial workspace whose items the branch head changes', async () => {
+    const partial: IncomingSummary = { branch: '/main', partial: true, headChangeset: 7, itemCount: 2 };
+    vi.mocked(recheckIncoming).mockResolvedValue(partial);
+    fakeApi.answer('workspaces.update', () => undefined);
+
+    await updateUnlessUpToDate(ws);
+
+    expect(fakeApi.methods()).toContain('workspaces.update');
+    expect(showUpdatedMoment).toHaveBeenCalledWith(ws, partial);
+  });
+
   it('still updates when the server could not be asked first', async () => {
     vi.mocked(recheckIncoming).mockRejectedValue(new Error('offline'));
     fakeApi.answer('workspaces.update', () => undefined);

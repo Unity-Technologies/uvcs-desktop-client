@@ -5,7 +5,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { useRunningOperationsStore } from '../../app/operations/runningOperationsStore';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs, type WorkspaceArea } from '../../testing/operationOutcome';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
-import { explainUpdateConflicts, shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
+import { explainUpdateConflicts, shelveBlockedAndUpdate, showUpdatedMoment, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 
 const ws = '/ws';
 const CONFLICTS = 'The update operation detected conflicts. Please, run the update from the GUI.';
@@ -170,5 +170,19 @@ describe('updateResolvingConflicts', () => {
     await updateResolvingConflicts(ws, twoIn, {});
 
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated to cs:12 · 2 changesets from Ana, Bob' }]);
+  });
+});
+
+describe('showUpdatedMoment', () => {
+  it('tells how many items an update brought a partial workspace, and the head it came from', () => {
+    showUpdatedMoment(ws, { branch: '/main', partial: true, headChangeset: 7, itemCount: 2 });
+
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 7, detail: '2 items' });
+  });
+
+  it('shows nothing when a partial update brought no item', () => {
+    showUpdatedMoment(ws, { branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+
+    expect(moment()).toBeUndefined();
   });
 });
