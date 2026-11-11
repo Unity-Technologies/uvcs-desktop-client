@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextRepositoryFileSearch, repositoryFileSearchView, searchesFor, type RepositoryFileSearch } from './repositoryFileSearch';
+import { listsTreeNow, nextRepositoryFileSearch, repositoryFileSearchView, searchesFor, type RepositoryFileSearch } from './repositoryFileSearch';
 
 const player = { path: 'Assets/Player.cs', isDirectory: false };
 const readme = { path: 'README.md', isDirectory: false };
@@ -10,6 +10,24 @@ describe('searchesFor', () => {
     expect(searchesFor('  ')).toBe(false);
     expect(searchesFor('p')).toBe(true);
     expect(searchesFor(' p ')).toBe(true);
+  });
+});
+
+describe('listsTreeNow', () => {
+  it('lists the tree as Go to file opens, whatever is typed', () => {
+    expect(listsTreeNow(12, 'onOpen', '')).toBe(true);
+    expect(listsTreeNow(12, 'onOpen', 'p')).toBe(true);
+  });
+
+  it('lists the tree beside one the user may never search only once something is typed', () => {
+    expect(listsTreeNow(12, 'onSearch', '')).toBe(false);
+    expect(listsTreeNow(12, 'onSearch', '   ')).toBe(false);
+    expect(listsTreeNow(12, 'onSearch', 'p')).toBe(true);
+  });
+
+  it('lists nothing while there is no changeset to search', () => {
+    expect(listsTreeNow(null, 'onOpen', 'p')).toBe(false);
+    expect(listsTreeNow(null, 'onSearch', 'p')).toBe(false);
   });
 });
 
