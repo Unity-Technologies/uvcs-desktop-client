@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { placeId } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
@@ -9,7 +9,6 @@ import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { EmptyState } from '../../ui/EmptyState';
-import { HighlightQuery } from '../../ui/Highlight';
 import type { FileView } from '../annotate/fileView';
 import { LineLinksContext, type LineLinks } from '../diff/viewer/lineLinks';
 import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
@@ -24,14 +23,18 @@ import { openRevision } from '../history/revisionOperations';
 import type { BrowseOpening } from './browseOpening';
 import { repositoryListingQuery } from './repositoryListing';
 import { revisionMenu } from './revisionMenu';
+import styles from './RepositoryTree.module.css';
 
 interface RepositoryTreeProps {
   /** The changeset whose tree it shows; every listing of it is read once, and kept (`repositoryListingQuery`). */
   changesetId: number;
   /** What it opens on: an item selected, its folders open, the lines a link names (`browseOpening`). */
   opening: BrowseOpening;
-  /** Filters the open folders' rows. */
-  filter: string;
+  /**
+   * The search's results while the user searches the whole tree (`RepositoryTreeSearch`): they take the tree's place,
+   * and the tree stays mounted behind them, its folders and selection as they were.
+   */
+  search?: ReactNode;
   /** Where the tree's width and whether its details are hidden are kept, one per place it shows in. */
   detailsKey: string;
   /** The item selected now, for the link its host copies (Browse repository's page). */
@@ -43,7 +46,7 @@ interface RepositoryTreeProps {
    * in Browse repository, whose page names the lines.
    */
   linkOrigin?: Parameters<typeof useFilesItemLinks>[0];
-  /** Opens Go to file from the tree's keys, as a workspace's tree does (Files' `goToRepositoryFile`). */
+  /** Moves to the search from the tree's keys (`/`), as a workspace's tree opens Go to file. */
   onGoToFile?: () => void;
 }
 
@@ -52,14 +55,12 @@ interface RepositoryTreeProps {
  * the Files view of a repository explored without a workspace (`RepositoryFilesView`). Folders are listed as they
  * open, each once (`cm ls` of that folder at the changeset).
  */
-export function RepositoryTree({ changesetId, opening, filter, detailsKey, onShownItem, treeId: ownTreeId, linkOrigin, onGoToFile }: RepositoryTreeProps) {
+export function RepositoryTree({ changesetId, opening, search, detailsKey, onShownItem, treeId: ownTreeId, linkOrigin, onGoToFile }: RepositoryTreeProps) {
   const place = usePlace();
   const repository = usePlaceRepository();
   const treeId = ownTreeId ?? `${placeId(place)}#cs:${changesetId}`;
   const expanded = useExpandedDirectories(treeId);
   const toggle = useExpandedDirectoriesStore((state) => state.toggle);
-  // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
-  const shownFilter = useDeferredValue(filter);
   const [selection, setSelection] = useState<SelectionState>(() => (opening.selected ? singleSelection(opening.selected) : EMPTY_SELECTION));
   const linkFocus = useFocusUntilMoved(opening.focus, selection.anchor ?? undefined);
   const [ownFileView, setOwnFileView] = useState<FileView | null>(opening.fileView);
@@ -69,7 +70,7 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
   }, []);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, { kind: 'changeset', changeset: changesetId }, directory), expanded);
-  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
+  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded }), [childrenByDirectory, expanded]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   // Expanded, the file's diff in the details ends with the file: deleted, or the selection cleared by a refresh.
   useCollapseWithHost(selectedFileDiffs({ read: !isLoadingRoot, selected: selection.anchor !== null, itemType: focused?.itemType }));
@@ -92,7 +93,9 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
       sized="list"
       diffInDetails
       list={
-          <HighlightQuery query={shownFilter}>
+        <>
+          {search}
+          <div className={styles.tree} hidden={search != null}>
             <FileTreeTable
               rows={rows}
               selection={selection}
@@ -103,7 +106,8 @@ export function RepositoryTree({ changesetId, opening, filter, detailsKey, onSho
               revealPath={revealPath}
               onGoToFile={onGoToFile}
             />
-          </HighlightQuery>
+          </div>
+        </>
       }
       details={
         focused ? (

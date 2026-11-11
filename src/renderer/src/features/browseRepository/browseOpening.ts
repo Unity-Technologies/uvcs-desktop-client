@@ -29,8 +29,3 @@ export function browseOpening({ focusPath, focusLines }: Pick<PageOf<'browseRepo
     showsDetails: focusLines !== undefined,
   };
 }
-
-/** What a pick in the page's search does: the tree opens on the item, and the filter clears, since it could hide it. */
-export function goToFileOpening(path: string): { opening: BrowseOpening; filter: string } {
-  return { opening: browseOpening({ focusPath: path }), filter: '' };
-}

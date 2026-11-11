@@ -47,23 +47,26 @@ its Files then shows the workspace's disk. Switching it to the branch is the wor
 
 ## Finding a file
 
-Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or
-folder of the branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from the first character
-(`searchesFor`: any query costs one read of the tree's file, whatever its length). `cm` filters no tree by name, so
-the changeset's whole tree is listed once (`RepositoryPathSearch`), as Go to file opens (`prepareRepositoryPaths`):
-opening it says a search is coming, and the listing's seconds pass while the query is typed.
+Files and Browse repository (a repository at a changeset or label, `BrowseRepositoryPage`) have one search above
+their tree (`useRepositoryTreeSearch`, `RepositoryTreeSearchField`): it finds a file or folder anywhere in the tree by
+name, not just in the folders open, from the first character (`searchesFor`: any query costs one read of the tree's
+file, whatever its length). While something is typed its results take the tree's place
+(`RepositoryTreeSearchResults`); the tree stays mounted behind them, its folders and selection as they were. A pick
+shows the item in the tree and clears the query: Files asks its reveal (`requestReveal`), Browse repository reopens
+the tree on it (`browseOpening`, the tree remounted by `reveals`). ⌘P (Ctrl+P off Mac), `/` in the tree and the
+palette's "Go to file…" bring the keyboard to the field. Files searches the head of the branch it shows, Browse
+repository the changeset it shows. Choose what to download searches the same way (docs/features/partial-workspaces.md).
 
-Browse repository (a repository at a changeset or label, `BrowseRepositoryPage`) has the same Go to file: the search
-button in its header, ⌘P (Ctrl+P off Mac), `/` in the tree and the palette. It searches the changeset the page shows (`GoToFileScope`
-`changeset`), and a pick opens the tree on the item (`goToFileOpening`, the tree remounted by `reveals`). Its filter
-narrows only the folders already open, so a pick clears it: it could hide the item.
+`cm` filters no tree by name, so the changeset's whole tree is listed once (`RepositoryPathSearch`), on the first
+keystroke (`listsTreeNow`, `prepareRepositoryPaths`): a tree the user only browses never costs the server that
+listing, and the listing's seconds pass while the rest of the query is typed.
 
 - **One `cm ls / -R --tree=cs:<head>@<repository> --format={type}␟{path}␞`** (`repositoryPathsArgs`), in a process of
   its own (`executeRecords`): cancellable, and it never holds a pooled shell for its seconds. Its records are read as
   they arrive, each written to a file of the session's (`SessionFolder`, `uvcs-trees-<pid>-…`) and offered to the
   searches waiting, and nothing is kept: a search keeps its best 60 alone (`BestPaths`, ranked as the renderer's lists
   rank, `shared/fuzzyScore`). The searches asked meanwhile join it (`repositoryPathsFound` tells each the best so far);
-  the dialog says it reads the files from the server meanwhile (`repositoryFileSearchView`).
+  the search says it reads the files from the server meanwhile (`repositoryFileSearchView`).
 - **Every later search of that changeset reads the file**, never the server: on a large repository (79,000 items, 6.7 MB) about
   120 ms. The file is written as `.partial` and renamed once whole, so a listing that failed or stopped leaves none.
 - **A repository keeps the 3 trees searched last** (`TREES_KEPT`): a window or two going back and forth between
@@ -77,8 +80,8 @@ narrows only the folders already open, so a pick clears it: it could hide the it
   xlink as a folder.
 
 `cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository
-about 10 s from opening Go to file, 5 of them `cm ls` resolving each item's owner one by one, even with a format that
-prints no owner. Closing Go to file leaves the listing running, for the next one.
+about 10 s from the first keystroke, 5 of them `cm ls` resolving each item's owner one by one, even with a format that
+prints no owner. Clearing the search leaves the listing running, for the next one.
 
 ## What it offers, and what it doesn't
 
@@ -109,7 +112,7 @@ window shows a workspace now and stops counting it as exploring (`WorkspaceWindo
 ## Tried and dropped
 
 - A temporary workspace for each repository explored, the official client's way: ARCHITECTURE.md "Places".
-- Asking `cm` to filter a tree by name, for Go to file: it can't. `cm find revision` takes an `item` but no pattern
+- Asking `cm` to filter a tree by name, for the search: it can't. `cm find revision` takes an `item` but no pattern
   ("Integer operator like is not currently supported for item"), and there is no `cm find item`; hence one whole
   listing per changeset ("Finding a file").
 - Keeping a repository's whole tree in memory to search it, as a workspace's Go to file keeps its paths: tens of MB of
