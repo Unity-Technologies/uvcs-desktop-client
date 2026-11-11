@@ -69,8 +69,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const [highlighted, setHighlighted] = useState(0);
   const [treeFocusAsked, setTreeFocusAsked] = useState(0);
 
-  // The search finds an item anywhere in the tree, as Files' Go to file does. It lists the whole tree only once the user
-  // types (`'onSearch'`): most choose by opening folders, and the listing is the server's heaviest read.
+  // The search finds an item anywhere in the tree, as Files' search does, listing the whole tree only once the user types.
   const branchHead = useQuery({
     ...branchQuery(place, treePoint?.kind === 'branch' ? treePoint.branch : ''),
     ...SLOW_CHANGING_QUERY,
@@ -78,7 +77,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   }).data?.headChangeset;
   const searchOf = downloadSearchOf(treePoint, branchHead);
   const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
-  const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query, 'onSearch'), query, searchOf?.name ?? '');
+  const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query), query, searchOf?.name ?? '');
   const searching = searchesFor(query);
   const foundDirectories = new Set(search.paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 

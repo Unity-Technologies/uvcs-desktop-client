@@ -14,20 +14,14 @@ describe('searchesFor', () => {
 });
 
 describe('listsTreeNow', () => {
-  it('lists the tree as Go to file opens, whatever is typed', () => {
-    expect(listsTreeNow(12, 'onOpen', '')).toBe(true);
-    expect(listsTreeNow(12, 'onOpen', 'p')).toBe(true);
-  });
-
-  it('lists the tree beside one the user may never search only once something is typed', () => {
-    expect(listsTreeNow(12, 'onSearch', '')).toBe(false);
-    expect(listsTreeNow(12, 'onSearch', '   ')).toBe(false);
-    expect(listsTreeNow(12, 'onSearch', 'p')).toBe(true);
+  it('lists the tree only once something is typed', () => {
+    expect(listsTreeNow(12, '')).toBe(false);
+    expect(listsTreeNow(12, '   ')).toBe(false);
+    expect(listsTreeNow(12, 'p')).toBe(true);
   });
 
   it('lists nothing while there is no changeset to search', () => {
-    expect(listsTreeNow(null, 'onOpen', 'p')).toBe(false);
-    expect(listsTreeNow(null, 'onSearch', 'p')).toBe(false);
+    expect(listsTreeNow(null, 'p')).toBe(false);
   });
 });
 

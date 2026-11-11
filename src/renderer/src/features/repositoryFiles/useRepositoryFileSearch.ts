@@ -3,7 +3,7 @@ import type { RepositoryPlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { listsTreeNow, nextRepositoryFileSearch, searchesFor, type RepositoryFileSearch, type TreeListing } from './repositoryFileSearch';
+import { listsTreeNow, nextRepositoryFileSearch, searchesFor, type RepositoryFileSearch } from './repositoryFileSearch';
 
 /** How long typing pauses before a search runs: each keystroke would scan the tree again. */
 const SEARCH_DELAY_MS = 150;
@@ -13,21 +13,19 @@ const SEARCH_DELAY_MS = 150;
  * found so far as they come (`repositoryPathsFound`), then all of them (`nextRepositoryFileSearch`). A newer query stops
  * the search before it (`stopFindingRepositoryPaths`). Waits while there's no changeset to search (`changesetId` null).
  *
- * The whole tree is listed once per changeset: Go to file lists it as it opens (`'onOpen'`), so its seconds pass while
- * the query is typed; a search beside a tree the user may never search (Choose what to download) lists it only on the
- * first keystroke (`'onSearch'`), sparing the server a listing nobody asked for.
+ * The whole tree is listed once per changeset, on the first keystroke (`listsTreeNow`): a tree the user only browses
+ * never costs the server that listing.
  */
 export function useRepositoryFileSearch(
   place: RepositoryPlace,
   changesetId: number | null,
   query: string,
-  listing: TreeListing = 'onOpen',
 ): RepositoryFileSearch {
   const settled = useDebouncedValue(query, SEARCH_DELAY_MS);
   const [search, dispatch] = useReducer(nextRepositoryFileSearch, { kind: 'empty' });
 
   // `prepareRepositoryPaths` lists the tree unless it is listed or listing, so calling it again costs nothing.
-  const listsTree = listsTreeNow(changesetId, listing, query);
+  const listsTree = listsTreeNow(changesetId, query);
   useEffect(() => {
     if (listsTree && changesetId !== null) void api.explorer.prepareRepositoryPaths(place, changesetId);
   }, [place, changesetId, listsTree]);

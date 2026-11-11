@@ -66,8 +66,8 @@ Its decisions are pure and tested:
 An xlink is downloaded whole, like a file: its own repository's folders aren't chosen here.
 
 Items draw as Files draws them (`ItemIcon`, `iconTypeOf`). A search above the tree finds a file or folder anywhere in
-it, as Files' Go to file does (`useRepositoryFileSearch` with `'onSearch'`, `repositoryFileSearchView`): it lists the
-whole tree only once the user types, since most choose by opening folders and that listing is the server's heaviest
+it, as Files' and Browse repository's search does (`useRepositoryFileSearch`, `repositoryFileSearchView`): it lists the
+whole tree only once the user types (`listsTreeNow`), since most choose by opening folders and that listing is the server's heaviest
 read. It searches what the tree shows, and its notes name it so (`downloadSearchOf`): the tree's changeset or, on a
 branch, the branch's head, named by the branch. A pick opens the folders above it and selects it in the tree (`revealedDownload`). A workspace on a shelve has no search, as it has no tree.
 
