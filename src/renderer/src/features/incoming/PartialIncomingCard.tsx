@@ -41,8 +41,8 @@ export function PartialIncomingCard({ state, items, actions }: PartialIncomingCa
         )}
         {items?.map((item) => (
           <li key={item.path} className={styles.changeset}>
-            <span className={styles.text}>
-              <span className={styles.comment}>
+            <span className={styles.itemText}>
+              <span className={styles.itemPath}>
                 <PathLabel path={item.path} oldPath={item.oldPath} />
               </span>
               <span className={styles.meta}>{partialItemDetail(item)}</span>
