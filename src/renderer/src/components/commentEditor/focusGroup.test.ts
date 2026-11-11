@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { focusLeavesGroup, focusModeFields, groupMove } from './focusGroup';
+import { blurOutcome, caretAfterMove, focusLeavesGroup, focusModeFields, groupMove } from './focusGroup';
+import { withinText } from './fieldSelection';
 
 const at = { atEnd: false, onFirstLine: false };
 
@@ -40,5 +41,35 @@ describe('focusLeavesGroup', () => {
   it('closes as the focus goes anywhere else, or nowhere', () => {
     expect(focusLeavesGroup({ inside: false, inMenu: false })).toBe(true);
     expect(focusLeavesGroup(null)).toBe(true);
+  });
+});
+
+describe('caretAfterMove', () => {
+  const caret = { anchor: 5, head: 5 };
+
+  it('takes the caret and selection it had, going in and coming back', () => {
+    expect(caretAfterMove({ opening: true, selection: caret })).toEqual(caret);
+    expect(caretAfterMove({ opening: false, selection: { anchor: 8, head: 2 } })).toEqual({ anchor: 8, head: 2 });
+  });
+
+  it("opened with no caret in it (its button), takes the focus at the text's end", () => {
+    const end = caretAfterMove({ opening: true, selection: null });
+    expect(end && withinText(end, 12)).toEqual({ anchor: 12, head: 12 });
+  });
+
+  it('closed with no caret in it (the focus gone elsewhere), leaves the focus where it went', () => {
+    expect(caretAfterMove({ opening: false, selection: null })).toBeNull();
+  });
+});
+
+describe('blurOutcome', () => {
+  it('closes as the focus goes out of the group, but not into a menu it opened', () => {
+    expect(blurOutcome({ inside: false, inMenu: false })).toBe('close');
+    expect(blurOutcome({ inside: false, inMenu: true })).toBe('stay');
+    expect(blurOutcome({ inside: true, inMenu: false })).toBe('stay');
+  });
+
+  it('going nowhere (the window left, or an editor made anew as the panel moved), looks again a frame later', () => {
+    expect(blurOutcome(null)).toBe('nextFrame');
   });
 });
