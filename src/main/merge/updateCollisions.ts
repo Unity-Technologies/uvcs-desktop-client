@@ -13,14 +13,17 @@ export function findUpdateBlockers(incoming: DiffEntry[], local: PendingChange[]
     .filter((path) => localPaths.has(path));
 }
 
-/** Files whose content changed both locally and on the branch: updating has to merge them. */
+/**
+ * Files whose content changed both locally and on the branch: updating has to merge them. A file whose permissions
+ * alone changed on the branch brings no content to merge.
+ */
 export function findUpdateConflicts(incoming: DiffEntry[], local: PendingChange[]): UpdateConflict[] {
   const locallyChanged = new Set(
     local.filter((change) => change.kinds.some((kind) => LOCAL_CONTENT_CHANGES.has(kind))).map((change) => change.path),
   );
 
   return incoming
-    .filter((entry) => entry.status === 'changed' && entry.itemType !== 'directory' && locallyChanged.has(entry.path))
+    .filter((entry) => entry.status === 'changed' && !entry.permissionsChange && entry.itemType !== 'directory' && locallyChanged.has(entry.path))
     .map((entry) => ({
       path: entry.path,
       isBinary: entry.itemType === 'binaryFile',
