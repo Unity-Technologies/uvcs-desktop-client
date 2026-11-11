@@ -115,6 +115,18 @@ describe('what the branch head brings a partial workspace', () => {
     expect(compareWithHead(SANDBOX_LOADED, withFolder, new Set())).toEqual([item({ kind: 'added', path: 'Code/AI', isDirectory: true, headRevisionId: 51 })]);
   });
 
+  it('marks a removed folder a conflict when something it held changed locally', () => {
+    expect(compareWithHead(SANDBOX_LOADED, head('3|40|dir|/|3'), new Set(['Code/Ship.cs']))).toEqual([
+      item({ kind: 'removed', path: 'Code', isDirectory: true, conflict: true, loadedRevisionId: 23 }),
+    ]);
+  });
+
+  it("leaves out an xlink's items, which belong to another repository with ids of its own", () => {
+    const withXlink = loaded(...['3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '30|31|-1|xlink|Lib|1|', '5|9|-1|txt|Lib\\Math.cs|1|']);
+    const headWithXlink = head('3|40|dir|/|3', '22|41|dir|/Code|3', '30|31|xlink|/Lib|1', '5|12|txt|/Lib/Math.cs|7', '60|61|txt|/Lib/New.cs|8');
+    expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([]);
+  });
+
   it('brings nothing when the head is what the workspace loaded', () => {
     const same = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1');
     expect(compareWithHead(SANDBOX_LOADED, same, new Set(['Code/Engine.cs']))).toEqual([]);
