@@ -1,4 +1,4 @@
-import type { IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, LoadedBranch, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
+import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
 import type { DecidedMerge, DirectoryDecision, MergePlan, MergeRequest, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
@@ -28,8 +28,16 @@ export interface MergeApi {
    * One light `cm find` for the newest changesets on `loaded.branch` after the loaded one, at most 100 of them however
    * far behind the workspace is (`countCapped` beyond); polled, so it reads nothing else.
    */
-  incomingSummary(workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary>;
-  /** What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what collides locally. */
+  incomingSummary(workspacePath: string, loaded: BranchAtChangeset | null): Promise<IncomingSummary>;
+  /**
+   * The newest changeset of `branch`, null when it has none: what a partial workspace's check polls, one light
+   * `cm find`, comparing its items again (`incomingChanges`) only when the head moved.
+   */
+  branchHead(workspacePath: string, branch: string): Promise<number | null>;
+  /**
+   * What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what
+   * collides locally; in a partial workspace, its items the head changes (`PartialIncomingChanges`).
+   */
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;
   /** One page of the incoming changesets: the incoming card's newest few, or Incoming's older ones. */
   incomingChangesets(workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage>;
