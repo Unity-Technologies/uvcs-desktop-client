@@ -219,6 +219,25 @@ describe('update', () => {
     expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['partial', 'update', '--dontmerge'], options: { cwd: WORKSPACE } });
   });
 
+  it('updates only the items asked for in a partial workspace, with one cm partial update for them', async () => {
+    const { service, commands } = workspaces({ partial: '' });
+
+    await service.update(WORKSPACE, 'op-1', ['Code/Ship.cs', 'Code']);
+
+    expect(commands).toMatchObject([{ via: 'execute', args: ['partial', 'update', 'Code/Ship.cs', 'Code', '--dontmerge'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('updates the items asked for in as many cm partial updates as their paths need', async () => {
+    const { service, commands } = workspaces({ partial: '' });
+    const paths = Array.from({ length: 2_000 }, (_, index) => `Assets/Folder number ${index}/Texture.png`);
+
+    await service.update(WORKSPACE, 'op-1', paths);
+
+    expect(commands.length).toBeGreaterThan(1);
+    expect(commands.every((command) => command.via === 'execute' && command.args.at(-1) === '--dontmerge')).toBe(true);
+    expect(commands.flatMap((command) => command.args.slice(2, -1))).toEqual(paths);
+  });
+
   it('explains an update stopped by local changes that collide with incoming ones', async () => {
     const { service } = workspaces({
       ...WORKSPACE_NAMES,
