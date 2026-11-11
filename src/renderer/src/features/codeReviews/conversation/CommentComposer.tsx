@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent, type Ref } from 'react';
 import { CommentField } from '../../../components/commentEditor/CommentField';
 import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
+import { classNames } from '../../../lib/classNames';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { Button } from '../../../ui/Button';
 import { Kbd } from '../../../ui/Kbd';
@@ -71,7 +72,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
     <div className={styles.composer} onKeyDown={onKeyDown}>
       <CommentField
         ref={fieldRef}
-        className={fieldClassName ? `${styles.field} ${fieldClassName}` : styles.field}
+        className={classNames(styles.field, fieldClassName)}
         value={text}
         onChange={(written) => keep(draftKey, { summary: '', description: written })}
         placeholder={placeholder}
