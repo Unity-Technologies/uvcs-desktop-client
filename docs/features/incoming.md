@@ -52,3 +52,28 @@ conflicts resolve with the merge page's panel and runs (docs/features/merge.md).
 workspace had loaded: its text as read, or, for a binary, the file undoing the conflicting files writes back, copied
 before updating (`saveBasesKept`; downloaded by `cm cat` only where undoing left no file). A base that can't be saved
 stops the update and puts the local versions back. Sandbox: `scripts/sandboxes/incoming.sh`.
+
+## A partial workspace
+
+A partial workspace loads no one changeset (docs/features/shelves-and-switching.md), so Incoming can't list the
+changesets between the loaded one and the head: it lists the items the branch head would change in what the workspace
+loaded, as `cm partial update` would bring them.
+
+- **The check** (`checkPartialIncoming` in `useIncomingSummary`) reads the branch head (`readBranchHead`: one `cm find
+  changeset … order by changesetid desc limit 1`) and, only when the head moved or an operation refreshed it, the
+  comparison Incoming shows (`incomingChangesKey`); it counts items, never changesets (`PartialIncoming.itemCount`).
+- **The comparison** (`readPartialIncomingItems`) is two listings and a status, whatever the head's distance: what the
+  workspace loaded (`cm ls -R`, `LOADED_TREE_FORMAT`) with its local changes (`readPendingChanges`), then the head's
+  version of the loaded folders (`cm ls <folders…> --tree=br:<branch>`, `HEAD_TREE_FORMAT`, batched by `fitsCommandLine`).
+  `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
+  changes too. Xlinks and what they hold are left out (`loadedFolders`).
+- **The view** (`PartialIncomingSession`) lists the items by group (`partialItemGroups`: conflicts first, then changed,
+  moved, removed, added) with the line under each (`partialItemDetail`), and diffs the loaded revision against the
+  head's (`partialItemDiffEntry`; a folder has none).
+- **The chip** shows the 'items' state (`incomingChipState`) and its card the first items (`cardItems`,
+  `PartialIncomingCard`).
+- **Updating** (`updatePartialToIncoming`) runs `cm partial update`. An item changed locally keeps the local version
+  until it is checked in, shelved or undone (`partialUpdateMessage`); the update bar offers Update only while some item
+  doesn't conflict, and an update stopped by a conflict leads to Incoming (`explainUpdateConflicts`).
+
+Sandbox: `scripts/sandboxes/partial-operations.sh`.

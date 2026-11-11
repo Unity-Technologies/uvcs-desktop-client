@@ -66,8 +66,9 @@ and a switch's toast says to merge it in a standard workspace instead of offerin
 A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
 update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
 (`loadedChangesetOf`: -1 only on a branch, any other number below zero stays unexpected output), as on a shelve, and
-tells the two apart by the selector's kind, never by `loadedChangeset`. So nothing comes in (`NothingIncoming`), no
-branch is made from the workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
+tells the two apart by the selector's kind, never by `loadedChangeset`. So Incoming lists the items the branch head
+changes rather than changesets (docs/features/incoming.md "A partial workspace"), no branch is made from the
+workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
