@@ -356,7 +356,8 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, or `#` where the place
 has an issue tracker (docs/features/issue-trackers.md "Suggesting issues"), after a space, a line's start, a bracket
 or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
-(`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
+(`suggestionsShownAt`), so a field opened with its caret after a reference opens none. An emoticon (`:-p`, `:-o`)
+opens no list, so its Enter turns it into its own emoji ("Emoticons"); `:-1` still opens one. The list is a listbox the
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
 (`suggestionKeyAction`); with nothing to pick, the arrows move the caret. Enter picks the highlighted suggestion,
 or a row the user moved to; it never runs "Search all changesets" the list merely starts at, so Enter after a
