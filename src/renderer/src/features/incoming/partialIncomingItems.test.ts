@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
-import { partialConflictNote, partialItemDetail, partialItemDiffEntry, partialItemGroups, partialUpdateMessage } from './partialIncomingItems';
+import { canUpdatePartial, firstPartialItemKey, morePartialItems, partialConflictNote, partialItemDetail, partialItemDiffEntry, partialItemGroups, partialItemKey, partialSelectionDetail, partialUpdateMessage } from './partialIncomingItems';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -100,5 +100,64 @@ describe('partialItemDiffEntry', () => {
   it('has no diff for a directory, nor before the repository is known', () => {
     expect(partialItemDiffEntry(item('added', 'Art', { isDirectory: true }), repository)).toBeNull();
     expect(partialItemDiffEntry(item('changed', 'Code/Ship.cs'), undefined)).toBeNull();
+  });
+});
+
+describe('partialItemKey', () => {
+  it('tells apart a removed and an added item at the same path', () => {
+    expect(partialItemKey(item('removed', 'Code/Ship.cs'))).not.toEqual(partialItemKey(item('added', 'Code/Ship.cs')));
+  });
+});
+
+describe('firstPartialItemKey', () => {
+  it('selects the first item listed, conflicts first', () => {
+    const groups = partialItemGroups([item('added', 'a.txt'), item('changed', 'z.txt', { conflict: true })]);
+
+    expect(firstPartialItemKey(groups)).toEqual(partialItemKey(item('changed', 'z.txt')));
+  });
+
+  it('selects nothing when nothing comes', () => {
+    expect(firstPartialItemKey([])).toBeNull();
+  });
+});
+
+describe('partialSelectionDetail', () => {
+  const items = [item('changed', 'Code/Ship.cs'), item('moved', 'Src', { isDirectory: true, oldPath: 'Code' })];
+
+  it('shows the diff of the selected file', () => {
+    const detail = partialSelectionDetail(items, partialItemKey(items[0]!), 'game@local');
+
+    expect(detail).toEqual({ kind: 'diff', entry: partialItemDiffEntry(items[0]!, 'game@local') });
+  });
+
+  it('says a folder has no diff', () => {
+    expect(partialSelectionDetail(items, partialItemKey(items[1]!), 'game@local')).toEqual({ kind: 'empty', title: 'A folder has no diff' });
+  });
+
+  it('asks to select an item when none is, or the selected one is gone', () => {
+    expect(partialSelectionDetail(items, null, 'game@local')).toEqual({ kind: 'empty', title: 'Select an item' });
+    expect(partialSelectionDetail(items, partialItemKey(item('added', 'gone.txt')), 'game@local')).toEqual({ kind: 'empty', title: 'Select an item' });
+  });
+});
+
+describe('canUpdatePartial', () => {
+  it('updates while any item comes without colliding with a local change', () => {
+    expect(canUpdatePartial(3, 2)).toBe(true);
+  });
+
+  it('has nothing to update when every item collides, or none comes', () => {
+    expect(canUpdatePartial(2, 2)).toBe(false);
+    expect(canUpdatePartial(0, 0)).toBe(false);
+  });
+});
+
+describe('morePartialItems', () => {
+  it('counts the items past those the card lists', () => {
+    expect(morePartialItems(12, [item('added', 'a.txt'), item('added', 'b.txt')])).toBe(10);
+  });
+
+  it('counts none while the items load, or when the card lists them all', () => {
+    expect(morePartialItems(12, undefined)).toBe(0);
+    expect(morePartialItems(1, [item('added', 'a.txt')])).toBe(0);
   });
 });
