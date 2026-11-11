@@ -4,7 +4,8 @@ import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { Button } from '../../../ui/Button';
 import { Kbd } from '../../../ui/Kbd';
-import { composerText, isSendable } from './composerText';
+import { confirm } from '../../../ui/dialog/confirm';
+import { cancelAsks, composerText, isSendable } from './composerText';
 import styles from './CommentComposer.module.css';
 
 interface CommentComposerProps {
@@ -27,10 +28,12 @@ interface CommentComposerProps {
   danger?: boolean;
   /** In a popover: no larger editor (`isOwnFocusGroup`). */
   inPopover?: boolean;
+  /** Cancel asks before losing what was written: a new comment, which nothing else holds. */
+  asksBeforeDiscarding?: boolean;
 }
 
 /** The rich editor of a review's comments, as every comment in the app is written; ⌘↵ sends. */
-export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover }: CommentComposerProps) {
+export function CommentComposer({ draftKey, initialText = '', placeholder, label, submitLabel, onSubmit, onCancel, allowEmpty = false, optional = false, autoFocus, danger, inPopover, asksBeforeDiscarding = false }: CommentComposerProps) {
   const draft = useCommentDraftStore((state) => state.drafts[draftKey]);
   const keep = useCommentDraftStore((state) => state.keep);
   const forget = useCommentDraftStore((state) => state.forget);
@@ -46,7 +49,8 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
     if (sent) forget(draftKey);
   };
 
-  const cancel = (): void => {
+  const cancel = async (): Promise<void> => {
+    if (cancelAsks(text, asksBeforeDiscarding) && !(await confirm({ title: 'Discard this comment?', message: "What you wrote isn't kept.", confirmLabel: 'Discard', danger: true }))) return;
     forget(draftKey);
     onCancel?.();
   };
@@ -55,7 +59,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape' || !onCancel) return;
     event.stopPropagation();
-    cancel();
+    void cancel();
   };
 
   return (
@@ -76,7 +80,7 @@ export function CommentComposer({ draftKey, initialText = '', placeholder, label
           <Kbd keys={hotkey('saveComment')} /> to send
         </span>
         {onCancel && (
-          <Button size="small" variant="ghost" onClick={cancel} disabled={sending}>
+          <Button size="small" variant="ghost" onClick={() => void cancel()} disabled={sending}>
             Cancel
           </Button>
         )}
