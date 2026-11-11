@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
@@ -141,9 +141,13 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
 
   // The place asks for a file again (a review's Comments panel going to a thread): select it, where the diff has it.
   const focusRequest = useContext(DiffFocusRequestContext);
+  // Once per request, as soon as the files are read: a diff read again leaves the file and its `.meta` toggle as they are.
+  const appliedRequest = useRef<number | null>(null);
   useEffect(() => {
-    const requested = focusRequest && pairedEntryAt(pairs, focusRequest.path);
+    if (!focusRequest || appliedRequest.current === focusRequest.seq) return;
+    const requested = pairedEntryAt(pairs, focusRequest.path);
     if (!requested) return;
+    appliedRequest.current = focusRequest.seq;
     setSelection(singleSelection(diffEntryKey(requested.entry)));
     // A `.meta` asked for shows on its asset's row; anything else shows itself, its asset's meta put away.
     setMetaShownFor(requested.metaShownFor);
