@@ -895,7 +895,8 @@ docs/features/code-reviews.md "Comments in the code"):
   after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
   does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
   line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
-  its slot from line to line, which restarts an animation, a flicker on every line. And the first entry of the lines' menu, on the last of the lines selected
+  its slot from line to line, which restarts an animation, a flicker on every line. The action is also the first entry
+  of the lines' menu, on the last of the lines selected
   (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
