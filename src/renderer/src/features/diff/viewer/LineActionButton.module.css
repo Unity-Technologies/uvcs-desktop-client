@@ -1,4 +1,7 @@
-/* Fills the hovered line's row, the button on the edge between its number and its code (`GUTTER_CSS`). */
+/*
+ * Fills the hovered line's row, the button on the edge between its number and its code (`GUTTER_CSS`). No pop-in: Pierre
+ * moves the slot from line to line, and a node moved restarts its animation, so it flickered on every line.
+ */
 .slot {
   display: flex;
   align-items: center;
@@ -19,15 +22,8 @@
   box-shadow: var(--shadow-md);
   color: var(--accent-contrast);
   cursor: pointer;
-  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
 .button:hover {
   background: var(--accent-fill-hover);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .button {
-    animation: none;
-  }
 }

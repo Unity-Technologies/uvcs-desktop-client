@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useMemo, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { FileDiffOptions } from '@pierre/diffs/react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
@@ -28,18 +28,31 @@ const GUTTER_CSS = '[data-gutter-utility-slot]{right:-21px;z-index:3}';
 export function useLineActionButton(action: LineAction | undefined, hovers: LineHoverOptions, containerRef: RefObject<HTMLElement | null>): { options: LineActionOptions; renderGutterUtility?: () => ReactNode } {
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
   useShadowStyle(containerRef, action ? GUTTER_CSS : '');
+  // Leaving a line clears the button a frame later, unless another line is entered meanwhile: moving from line to line,
+  // it stays, never gone for a frame in between.
+  const clearing = useRef<number | null>(null);
+  const keep = (): void => {
+    if (clearing.current !== null) cancelAnimationFrame(clearing.current);
+    clearing.current = null;
+  };
+  useEffect(() => keep, []);
   const options = useMemo<LineActionOptions>(() => {
     if (!action) return {};
     return {
       enableGutterUtility: true,
       onLineEnter: (props) => {
         hovers.onLineEnter?.(props);
+        keep();
         const line = { side: props.annotationSide, lineNumber: props.lineNumber };
         hovered.setState(action.offers(line) ? line : null, true);
       },
       onLineLeave: (props) => {
         hovers.onLineLeave?.(props);
-        hovered.setState(null, true);
+        keep();
+        clearing.current = requestAnimationFrame(() => {
+          clearing.current = null;
+          hovered.setState(null, true);
+        });
       },
     };
   }, [action, hovers, hovered]);
