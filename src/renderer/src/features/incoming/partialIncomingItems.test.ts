@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
-import { partialItemDetail, partialItemGroups, partialUpdateMessage } from './partialIncomingItems';
+import { partialConflictNote, partialItemDetail, partialItemDiffEntry, partialItemGroups, partialUpdateMessage } from './partialIncomingItems';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -67,5 +67,38 @@ describe('partialUpdateMessage', () => {
     expect(partialUpdateMessage(incoming(item('changed', 'a.txt', { conflict: true }), item('changed', 'b.txt', { conflict: true })))).toBe(
       '2 items you changed keep your version until you check them in, shelve them or undo them.',
     );
+  });
+});
+
+describe('partialConflictNote', () => {
+  it('says the items changed here too keep the local version', () => {
+    expect(partialConflictNote(1)).toBe('1 item you changed keeps your version');
+    expect(partialConflictNote(3)).toBe('3 items you changed keep your version');
+  });
+});
+
+describe('partialItemDiffEntry', () => {
+  const repository = 'game@local';
+
+  it('compares a changed or moved file from the loaded revision to the head’s', () => {
+    expect(partialItemDiffEntry(item('changed', 'Code/Ship.cs'), repository)).toEqual({
+      status: 'changed',
+      path: 'Code/Ship.cs',
+      itemType: 'file',
+      baseRevisionId: 1,
+      revisionId: 2,
+      repository,
+    });
+    expect(partialItemDiffEntry(item('moved', 'Code/Hull.cs', { oldPath: 'Hull.cs' }), repository)).toMatchObject({ status: 'moved', path: 'Code/Hull.cs', oldPath: 'Hull.cs' });
+  });
+
+  it('shows an added file against nothing, and a removed one as it was', () => {
+    expect(partialItemDiffEntry(item('added', 'Art/new.png'), repository)).toMatchObject({ status: 'added', baseRevisionId: -1, revisionId: 2 });
+    expect(partialItemDiffEntry(item('removed', 'Old/gone.txt'), repository)).toMatchObject({ status: 'deleted', baseRevisionId: 1, revisionId: -1 });
+  });
+
+  it('has no diff for a directory, nor before the repository is known', () => {
+    expect(partialItemDiffEntry(item('added', 'Art', { isDirectory: true }), repository)).toBeNull();
+    expect(partialItemDiffEntry(item('changed', 'Code/Ship.cs'), undefined)).toBeNull();
   });
 });
