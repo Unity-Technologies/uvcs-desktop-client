@@ -68,6 +68,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const [applying, setApplying] = useState(false);
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
+  const [treeFocusAsked, setTreeFocusAsked] = useState(0);
 
   // The search finds an item anywhere in the tree, as Files' Go to file does. It lists the whole tree only once the user
   // types (`'onSearch'`): most choose by opening folders, and the listing is the server's heaviest read.
@@ -129,6 +130,11 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   useEffect(() => {
     treeRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [selected, selectedIndex, searching]);
+  // A pick gives the tree the keyboard once the search's results make way for it. The tree stays mounted while the
+  // results show (hidden), so clearing the search by hand leaves the keyboard in the search field.
+  useEffect(() => {
+    if (treeFocusAsked > 0) treeRef.current?.focus();
+  }, [treeFocusAsked]);
 
   const toggleExpanded = (path: string): void =>
     setExpanded((open) => {
@@ -153,6 +159,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
     setExpanded(revealed.expanded);
     setSelected(revealed.selected);
     setQuery('');
+    setTreeFocusAsked((asked) => asked + 1);
   };
 
   const onSearchKeyDown = (event: KeyboardEvent): void => {
@@ -218,9 +225,10 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
           />
         </div>
       )}
-      {status === 'ready' && !searching && (
+      {status === 'ready' && (
         <div
           ref={treeRef}
+          hidden={searching}
           className={styles.tree}
           role="tree"
           aria-label="Choose what to download"
