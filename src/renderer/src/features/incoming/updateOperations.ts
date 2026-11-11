@@ -33,7 +33,13 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
 
 /** Changes shows what the update brought until the next change, as it does after a check-in. */
 export function showUpdatedMoment(workspacePath: string, summary: IncomingSummary): void {
-  if (!summary.branch || summary.changesetCount === 0) return;
+  if (!summary.branch) return;
+  if ('partial' in summary) {
+    // A partial workspace loads no one changeset: the update brought items, not a range of changesets.
+    if (summary.itemCount > 0) useSuccessMomentStore.getState().show(workspacePath, { verb: 'Updated to', changesetId: summary.headChangeset, detail: pluralize(summary.itemCount, 'item') });
+    return;
+  }
+  if (summary.changesetCount === 0) return;
   const { loadedChangeset, headChangeset, changesetCount, countCapped, authors } = summary;
   useSuccessMomentStore.getState().show(workspacePath, {
     verb: 'Updated to',
