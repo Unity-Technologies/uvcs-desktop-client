@@ -120,14 +120,17 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           repositories: uvcs-desktop-client-release-signing
           permission-actions: write
-      # The run is found by its title, which ends with this run's id: two releases never pick each other's.
+      # The run is found by its title, which ends with this run's id: two releases never pick each other's. `--ref main`
+      # is required: without it `gh` asks for the repository's default branch, which the token, limited to Actions,
+      # can't read.
       - name: Build and sign macOS and Windows in the signing repository
         id: start
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           REQUEST="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh workflow run sign-release.yml --repo "$SIGNING_REPO" -f tag="${{ needs.prepare.outputs.tag }}" -f request="$REQUEST"
+          gh workflow run sign-release.yml --repo "$SIGNING_REPO" --ref main \
+            -f tag="${{ needs.prepare.outputs.tag }}" -f request="$REQUEST"
           for attempt in $(seq 1 24); do
             RUN_ID="$(gh run list --repo "$SIGNING_REPO" --workflow sign-release.yml --limit 20 --json databaseId,displayTitle \
               --jq ".[] | select(.displayTitle | endswith(\"($REQUEST)\")) | .databaseId" | head -n 1)"
