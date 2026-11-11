@@ -20,8 +20,8 @@ interface LineMenuContext {
 
 /**
  * The entries of lines of code, in the code's right-click menu (`codeMenu`): what the place does with a line (a review
- * comments on it), who last changed them (the newer side's
- * lines only: that's the revision annotated), a link to them, and their text.
+ * comments on it), who last changed them (the newer side's lines only: that's the revision annotated), a link to them,
+ * and their text.
  */
 export function lineMenuEntries({ lines, copyLink, copyLines, annotate, lineAction }: LineMenuContext): (GroupedEntry | false | undefined)[] {
   const one = lines.first === lines.last;

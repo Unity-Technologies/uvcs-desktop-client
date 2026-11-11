@@ -357,6 +357,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     fileDiff={fileDiff}
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
+                    // A workspace file's diff discards from its gutter; a committed one (a review's) acts on a line there.
                     renderGutterUtility={discard.renderGutterUtility ?? lineAction.renderGutterUtility}
                     lineAnnotations={annotations?.rows}
                     renderAnnotation={annotations?.render}
