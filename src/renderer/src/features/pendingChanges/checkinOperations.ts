@@ -86,7 +86,8 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection | null): Promise<boolean> {
   const { workspacePath, changes } = options;
   const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
-  if (!incoming?.branch) return false;
+  // A partial workspace checks in without catching up (`behindBranch`), and `cm` never asks it to merge first.
+  if (!incoming?.branch || 'partial' in incoming) return false;
   // Someone updated the workspace since the incoming check: nothing to catch up with.
   if (!rejection && incoming.changesets.length === 0) return checkinChanges(options);
 
