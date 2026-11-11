@@ -1,5 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import type { BranchIncoming } from '@shared/domain/incoming';
+import type { BranchIncoming, PartialIncoming } from '@shared/domain/incoming';
 import { branchLabel } from '../../lib/branchLabels';
 import { commentLineText } from '../../lib/comments/commentText';
 import { formatCountAtLeast } from '../../lib/text';
@@ -15,7 +15,9 @@ export interface NewChangesets {
  * The changesets new since the `before` check. Counts stop at the check's limit: past it, only a lower bound is known,
  * and when both stopped, only that some came in (the head moved).
  */
-export function newChangesetCount(before: BranchIncoming, after: BranchIncoming): NewChangesets {
+export function newChangesetCount(before: BranchIncoming | PartialIncoming, after: BranchIncoming | PartialIncoming): NewChangesets {
+  // A partial workspace's check counts the items the head brings, not changesets: only the newest is known.
+  if ('partial' in before || 'partial' in after) return { count: 1, countCapped: false };
   return { count: Math.max(1, after.changesetCount - before.changesetCount), countCapped: after.countCapped };
 }
 
