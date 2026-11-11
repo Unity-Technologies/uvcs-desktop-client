@@ -76,6 +76,12 @@ describe('newLineCommentsIn', () => {
     expect(newLineCommentsIn([written], 41, WHOLE, checkedInSince)).toEqual([{ ...written, comment: { ...written.comment, revisionId: 35 } }]);
   });
 
+  it("keeps a comment being written on a file deleted since, on its last revision, the one side it has", () => {
+    const written = spot({ revisionId: 30, path: 'src/Player.cs' });
+    const deletedSince: ShownFile = { path: 'src/Player.cs', originalRevision: 30, modifiedRevision: -1 };
+    expect(newLineCommentsIn([written], 41, WHOLE, deletedSince)).toEqual([{ ...written, side: 'deletions', comment: { ...written.comment, revisionId: 30 } }]);
+  });
+
   it("finds a deleted file's on its older side", () => {
     const onDeleted = spot({ revisionId: 12, side: 'deletions', path: DELETED.path });
     expect(newLineCommentsIn([onDeleted], 41, WHOLE, DELETED)).toEqual([onDeleted]);
