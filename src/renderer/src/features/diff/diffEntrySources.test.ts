@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { DIFF_ENTRY_FACTS, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, identicalDescriptionOf } from './diffEntrySources';
-import { ONLY_MOVED } from './viewer/movedFrom';
+import { DIFF_ENTRY_FACTS, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
 
 describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
@@ -75,10 +74,10 @@ describe('an item whose file permissions alone changed', () => {
   };
 
   it('is lettered FS, found by its own chip and grouped apart from the files that changed', () => {
-    expect(diffEntryStatus(onlyPermissions)).toEqual({ tone: 'permissions', label: 'Only permissions changed' });
+    expect(diffEntryStatus(onlyPermissions)).toEqual({ tone: 'permissions', label: 'Only file permissions changed' });
     expect(diffEntryTones(onlyPermissions)).toEqual(['permissions']);
     expect(DIFF_ENTRY_FACTS.toneOf(onlyPermissions)).toBe('permissions');
-    expect(describeDiffEntry(onlyPermissions)).toBe('Only permissions changed');
+    expect(describeDiffEntry(onlyPermissions)).toBe('Only file permissions changed');
   });
 
   it('shows the same revision on both sides', () => {
@@ -87,23 +86,29 @@ describe('an item whose file permissions alone changed', () => {
   });
 
   // The permissions are written with non-breaking hyphens, which a line never breaks at: read here as plain ones.
-  const plainHyphens = (text: string | undefined) => text?.replaceAll('\u2011', '-');
+  const plainHyphens = (text: string | null) => text?.replaceAll('\u2011', '-');
 
-  it('says, where its content shows the same, which permissions changed', () => {
-    expect(plainHyphens(identicalDescriptionOf(onlyPermissions))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
-    const permissions = (before: string | null, after: string | null) => plainHyphens(identicalDescriptionOf({ ...onlyPermissions, permissionsChange: { before, after } }));
+  it('shows, in place of a diff of the same content, which permissions changed', () => {
+    expect(plainHyphens(permissionsNote(onlyPermissions))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
+    const permissions = (before: string | null, after: string | null) => plainHyphens(permissionsNote({ ...onlyPermissions, permissionsChange: { before, after } }));
     expect(permissions(null, '-rwxr-xr-x')).toBe('Only the file permissions changed: they are now -rwxr-xr-x.');
     expect(permissions('-r--r--r--', null)).toBe('Only the file permissions changed: they were -r--r--r--.');
     expect(permissions(null, null)).toBe('Only the file permissions changed.');
   });
 
   it('keeps each permissions string on one line', () => {
-    expect(identicalDescriptionOf(onlyPermissions)).toContain('\u2011rw\u2011r\u2011\u2011r\u2011\u2011');
-    expect(identicalDescriptionOf(onlyPermissions)).not.toMatch(/[rwx]-/);
+    expect(permissionsNote(onlyPermissions)).toContain('\u2011rw\u2011r\u2011\u2011r\u2011\u2011');
+    expect(permissionsNote(onlyPermissions)).not.toMatch(/[rwx]-/);
   });
 
-  it('leaves a moved file saying it was only moved, and any other file to the viewer', () => {
-    expect(identicalDescriptionOf({ ...onlyPermissions, permissionsChange: undefined, status: 'moved', oldPath: 'build.sh' })).toBe(ONLY_MOVED);
-    expect(identicalDescriptionOf({ ...onlyPermissions, permissionsChange: undefined, baseRevisionId: 40 })).toBeUndefined();
+  it('is the same for a binary or a folder, which have no text to show it beside', () => {
+    for (const itemType of ['binaryFile', 'directory'] as const) {
+      expect(plainHyphens(permissionsNote({ ...onlyPermissions, itemType }))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
+    }
+  });
+
+  it('is none for an item whose content changed, or that was only moved', () => {
+    expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, baseRevisionId: 40 })).toBeNull();
+    expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, status: 'moved', oldPath: 'build.sh' })).toBeNull();
   });
 });
