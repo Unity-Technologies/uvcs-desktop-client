@@ -96,18 +96,35 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # macOS and Windows: the signing repo's Sign workflow builds, signs and uploads them to the same draft; this job
-  # starts it and fails when it does. SIGNING_REPO_TOKEN may only start and read that repository's workflows (Actions:
-  # read and write); the release environment keeps it to runs from main.
+  # starts it and fails when it does. It reaches that repository as the Unity-Technologies org's GitHub App
+  # uvcs-desktop-release, installed only on the two repositories: each token, minted for this job and revoked when it
+  # ends, may only start and read that repository's workflows (Actions: read and write). A token lasts an hour and a
+  # Sign run can take longer, so the job watches in rounds of at most 50 minutes, each with a new token
+  # (.github/actions/watch-signing-run), up to 150 minutes. The release environment keeps the App's key
+  # (RELEASE_APP_PRIVATE_KEY) and Client ID (RELEASE_APP_CLIENT_ID) to runs from main.
   sign:
     needs: prepare
     runs-on: ubuntu-latest
     environment: release
     env:
       SIGNING_REPO: Unity-Technologies/uvcs-desktop-client-release-signing
-      GH_TOKEN: ${{ secrets.SIGNING_REPO_TOKEN }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+      - name: Get a token for the signing repository
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          repositories: uvcs-desktop-client-release-signing
+          permission-actions: write
       # The run is found by its title, which ends with this run's id: two releases never pick each other's.
       - name: Build and sign macOS and Windows in the signing repository
+        id: start
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           REQUEST="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh workflow run sign-release.yml --repo "$SIGNING_REPO" -f tag="${{ needs.prepare.outputs.tag }}" -f request="$REQUEST"
@@ -122,4 +139,32 @@ jobs:
             exit 1
           fi
           echo "Signing: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID" | tee -a "$GITHUB_STEP_SUMMARY"
-          gh run watch "$RUN_ID" --repo "$SIGNING_REPO" --exit-status --interval 30 > /dev/null
+          echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
+      - name: Wait for the signing run (first 50 minutes)
+        id: watch-1
+        uses: ./.github/actions/watch-signing-run
+        with:
+          run-id: ${{ steps.start.outputs.run-id }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Wait for the signing run (up to 100 minutes)
+        id: watch-2
+        if: steps.watch-1.outputs.finished == 'false'
+        uses: ./.github/actions/watch-signing-run
+        with:
+          run-id: ${{ steps.start.outputs.run-id }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Wait for the signing run (up to 150 minutes)
+        id: watch-3
+        if: steps.watch-2.outputs.finished == 'false'
+        uses: ./.github/actions/watch-signing-run
+        with:
+          run-id: ${{ steps.start.outputs.run-id }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - name: Fail if the signing run is still going
+        if: steps.watch-3.outputs.finished == 'false'
+        run: |
+          echo "::error::The signing run is still going after 150 minutes, and may still upload to the draft: https://github.com/$SIGNING_REPO/actions/runs/${{ steps.start.outputs.run-id }}"
+          exit 1

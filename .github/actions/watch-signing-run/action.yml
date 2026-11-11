@@ -1,0 +1,51 @@
+name: Watch the signing run
+description: Watch a run of the signing repository's Sign workflow for at most 50 minutes, with a token of its own from the release App.
+
+# A token from the release App (uvcs-desktop-release) lasts an hour, and a Sign run can take longer (Unity's macOS
+# runners queue, notarization waits on Apple): one took 72 minutes. So the Release workflow's sign job watches in
+# rounds, each minting a token and watching for less than its hour, until the run ends.
+
+inputs:
+  run-id:
+    description: The Sign run to watch.
+    required: true
+  client-id:
+    description: The release App's Client ID.
+    required: true
+  private-key:
+    description: The release App's private key.
+    required: true
+
+outputs:
+  finished:
+    description: "'true' when the run ended (the step fails if it failed), 'false' when this round ran out first."
+    value: ${{ steps.watch.outputs.finished }}
+
+runs:
+  using: composite
+  steps:
+    - id: app-token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{ inputs.client-id }}
+        private-key: ${{ inputs.private-key }}
+        repositories: uvcs-desktop-client-release-signing
+        permission-actions: write
+    - id: watch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        RUN_ID: ${{ inputs.run-id }}
+      # `timeout` ends the watch with 124 when the round runs out; any other status is the run's own outcome.
+      run: |
+        set +e
+        timeout 50m gh run watch "$RUN_ID" --repo Unity-Technologies/uvcs-desktop-client-release-signing \
+          --exit-status --interval 30 > /dev/null
+        status=$?
+        set -e
+        if [ "$status" -eq 124 ]; then
+          echo "finished=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        echo "finished=true" >> "$GITHUB_OUTPUT"
+        exit "$status"
