@@ -403,6 +403,25 @@ marks the words as the lists do (`HighlightQuery`, `Highlight`), and a summary w
 row's room starts later, after an ellipsis, so the match shows (`matchWindow`, `suggestionDetail`; the comment's
 body on one line when only it holds the words).
 
+### Emoticons
+
+An emoticon typed alone (`:-)`, `;)`, `:D`, `:(`, `:'(`, `:P`, `:O`, `:-|`, `:-/`, `B-)`: `EMOTICON_EMOJI` in
+`emoticons.ts`) becomes its emoji as a space or a sentence's punctuation (`.` `,` `!` `?`) is typed after it, and
+before Enter starts a line in a field of many lines (a one-line field's Enter leaves the field, the emoticon as typed),
+as Slack does (`emoticonTyping`). Alone means at a line's start, or after a space or an opening bracket
+(`emoticonEnding`): `a:-)`, `http://host:8080` and `/:-)` stay. Never in code, a code span still being typed
+included (`insideOpenCodeSpan`: until its closing backtick the syntax tree reads it as text), a link's text, an
+image's description or an address (`emoticonReplacement`). Only typing turns one: a paste, a text composed with an
+input method, and comments already written stay as they are. The replacement is a step of its own in the history:
+⌘Z, or Backspace right after it (`revertEmoticon`, while `justReplacedEmoticon` holds), brings back what was typed,
+for someone who meant the characters. Left out of the list, as text a comment means as written: `:/` (a path's start),
+`XD` (a word), `<3` (a comparison), `8)` (a numbered list's item), `:|` (a table's alignment).
+
+It writes the emoji as the character, as a picked emoji suggestion does: `cm log`, the official desktop client, the
+Unity plugin and the web show it as it is. Writing `:slightly_smiling_face:` was rejected: other clients show the
+name. So was turning emoticons into emoji only where a comment shows: `:-)` in a code sample or a path would change,
+and other clients would show something else.
+
 ## Checking it on screen
 
 The flows that broke before, as steps to follow in a development build (StrictMode) against
@@ -468,3 +487,6 @@ checked in both themes when it draws something.
     Cancel ask; another row and back opens the editor again with the draft.
 27. **The wheel over the Branch Explorer's card.** Over a long comment's card the wheel scrolls the comment, not the
     graph; a pinch still zooms the graph.
+28. **Emoticons.** In the check-in's description type `Done :-) `: it shows `Done 🙂 `; Backspace brings back
+    `Done :-) `, and so does ⌘Z after typing it again. In a code span, a code block and `http://host:8080 ` nothing
+    changes; a pasted `:-) ` stays.
