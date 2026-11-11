@@ -91,8 +91,8 @@ describe('an item whose file permissions alone changed', () => {
   it('shows, in place of a diff of the same content, which permissions changed', () => {
     expect(plainHyphens(permissionsNote(onlyPermissions))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
     const permissions = (before: string | null, after: string | null) => plainHyphens(permissionsNote({ ...onlyPermissions, permissionsChange: { before, after } }));
-    expect(permissions(null, '-rwxr-xr-x')).toBe('Only the file permissions changed: they are now -rwxr-xr-x.');
-    expect(permissions('-r--r--r--', null)).toBe('Only the file permissions changed: they were -r--r--r--.');
+    expect(permissions(null, '-rwxr-xr-x')).toBe('Only the file permissions changed, from not set to -rwxr-xr-x.');
+    expect(permissions('-r--r--r--', null)).toBe('Only the file permissions changed, from -r--r--r-- to not set.');
     expect(permissions(null, null)).toBe('Only the file permissions changed.');
   });
 
