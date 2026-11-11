@@ -6,15 +6,26 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { queryClient } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { formatCountAtLeast, pluralize, pluralizeAtLeast } from '../../lib/text';
 import { useHoverCard } from '../../lib/useHoverCard';
 import { Button } from '../../ui/Button';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { Spinner } from '../../ui/Spinner';
 import { toast } from '../../ui/toast/toastStore';
 import { IncomingCard } from './IncomingCard';
-import { cardChangesets, cardCheck, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState } from './incomingChipState';
-import { updateToIncoming } from './updateOperations';
+import {
+  cardChangesets,
+  cardCheck,
+  cardFailed,
+  cardItems,
+  cardReadsNewest,
+  chipConflictCount,
+  chipCount,
+  chipLabel,
+  chipReadsIncomingChanges,
+  incomingChipState,
+} from './incomingChipState';
+import { PartialIncomingCard } from './PartialIncomingCard';
+import { updatePartialToIncoming, updateToIncoming } from './updateOperations';
 import { incomingChangesKey, useIncomingChanges } from './useIncomingChanges';
 import { useNewestIncomingChangesets } from './useIncomingChangesets';
 import { useKnownIncomingSummary } from './useKnownIncomingSummary';
@@ -47,14 +58,21 @@ export function IncomingChip() {
   };
 
   // Local changes may have changed since the last check: look again right before updating, and never update blindly.
+  // A partial workspace's update never merges (it keeps the local version of an item changed on both sides), so it
+  // updates to the items its check already compared.
   const update = async (): Promise<void> => {
     card.close();
+    if (changes && 'partial' in changes) {
+      void updatePartialToIncoming(workspacePath, changes);
+      return;
+    }
     setVerifying(true);
     try {
       const fresh = await api.merge.incomingChanges(workspacePath);
       queryClient.setQueryData(incomingChangesKey(workspacePath), fresh);
+      if (!fresh.branch || 'partial' in fresh) return;
       if (fresh.conflicts.length + fresh.blockedPaths.length > 0) navigation.goToView('incoming');
-      else if (fresh.branch) void updateToIncoming(workspacePath, fresh);
+      else void updateToIncoming(workspacePath, fresh);
     } catch (error) {
       toast.error("Couldn't check the incoming changes", error);
     } finally {
@@ -78,11 +96,7 @@ export function IncomingChip() {
       <Popover.Trigger asChild>
         <button
           className={styles.chip}
-          aria-label={
-            conflicts
-              ? `${pluralizeAtLeast(state.count, state.countCapped, 'new changeset')}, ${pluralize(state.conflictCount, 'conflict')}`
-              : pluralizeAtLeast(state.count, state.countCapped, 'new changeset')
-          }
+          aria-label={chipLabel(state)}
           {...card.hoverProps}
           onClick={(event: MouseEvent) => {
             event.preventDefault();
@@ -90,11 +104,11 @@ export function IncomingChip() {
           }}
         >
           {verifying ? <Spinner size={13} /> : <ArrowDownToLine size={14} className={styles.icon} />}
-          <span className={styles.count}>{formatCountAtLeast(state.count, state.countCapped)}</span>
-          {conflicts && (
+          <span className={styles.count}>{chipCount(state)}</span>
+          {chipConflictCount(state) > 0 && (
             <span className={styles.conflicts}>
               <AlertTriangle size={13} className={styles.icon} />
-              <span className={styles.count}>{state.conflictCount}</span>
+              <span className={styles.count}>{chipConflictCount(state)}</span>
             </span>
           )}
         </button>
@@ -111,6 +125,29 @@ export function IncomingChip() {
           }}
           onCloseAutoFocus={(event) => !tookFocus.current && event.preventDefault()}
         >
+          {state.kind === 'items' ? (
+            <PartialIncomingCard
+              state={state}
+              items={cardItems(summary, changes)}
+              actions={
+                <>
+                  <Button size="small" variant="secondary" onClick={review}>
+                    Review in Incoming
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    icon={<ArrowDownToLine size={13} />}
+                    data-tip="Download them; files you changed keep your version"
+                    data-tip-sub="cm partial update"
+                    onClick={() => void update()}
+                  >
+                    Update
+                  </Button>
+                </>
+              }
+            />
+          ) : (
           <IncomingCard
             state={state}
             changesets={cardChangesets(summary, changes, newest.data)}
@@ -137,6 +174,7 @@ export function IncomingChip() {
               </>
             }
           />
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

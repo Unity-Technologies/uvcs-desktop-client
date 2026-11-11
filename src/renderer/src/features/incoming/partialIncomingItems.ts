@@ -1,4 +1,5 @@
 import type { PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
+import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import { comparePaths } from '@shared/pathOrder';
 import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
@@ -41,11 +42,31 @@ export function partialUpdateMessage(incoming: PartialIncomingChanges): string {
   const conflictCount = incoming.items.filter((item) => item.conflict).length;
   const bringCount = incoming.items.length - conflictCount;
   const brings = bringCount > 0 ? `Updating brings ${pluralize(bringCount, 'item')} from ${branchLabel(incoming.branch)}.` : '';
-  const kept =
-    conflictCount === 0
-      ? ''
-      : conflictCount === 1
-        ? '1 item you changed keeps your version until you check it in, shelve it or undo it.'
-        : `${pluralize(conflictCount, 'item')} you changed keep your version until you check them in, shelve them or undo them.`;
+  const them = conflictCount === 1 ? 'it' : 'them';
+  const kept = conflictCount === 0 ? '' : `${partialConflictNote(conflictCount)} until you check ${them} in, shelve ${them} or undo ${them}.`;
   return [brings, kept].filter(Boolean).join(' ');
+}
+
+/** What the incoming card notes about the items changed both here and on the branch: updating leaves them alone. */
+export function partialConflictNote(conflictCount: number): string {
+  return conflictCount === 1 ? '1 item you changed keeps your version' : `${pluralize(conflictCount, 'item')} you changed keep your version`;
+}
+
+const DIFF_STATUS: Record<PartialIncomingItem['kind'], DiffStatus> = { changed: 'changed', moved: 'moved', removed: 'deleted', added: 'added' };
+
+/**
+ * What the diff pane compares for an item: the revision the workspace loaded against the branch head's (nothing on the
+ * side where the item doesn't exist). None for a directory, or before the workspace's repository is known.
+ */
+export function partialItemDiffEntry(item: PartialIncomingItem, repository: string | undefined): DiffEntry | null {
+  if (item.isDirectory || !repository) return null;
+  return {
+    status: DIFF_STATUS[item.kind],
+    path: item.path,
+    ...(item.oldPath ? { oldPath: item.oldPath } : {}),
+    itemType: 'file',
+    baseRevisionId: item.loadedRevisionId ?? -1,
+    revisionId: item.headRevisionId ?? -1,
+    repository,
+  };
 }
