@@ -519,8 +519,8 @@ button.pill:hover {
 }
 
 /*
- * An entry of Open: the thread in the conversation. The one gone to last keeps a bar on its left, as the Comments
- * panel marks the thread the code shows.
+ * An entry of Open: the thread in the conversation, and at its end, under the pointer or once a key reaches it, the
+ * thread in Changes. The one gone to last keeps a bar on its left, as the Comments panel marks the thread the code shows.
  */
 .openItem {
   display: flex;
@@ -560,6 +560,39 @@ button.pill:hover {
 .openItemPick svg {
   flex: none;
   color: var(--status-changed);
+}
+
+.openItemChanges {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.openItem:hover .openItemChanges,
+.openItemChanges:focus-visible {
+  opacity: 1;
+}
+
+.openItemChanges:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.openText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eventRun {

@@ -1,4 +1,6 @@
+import { FileDiff } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import { navigation } from '../../../app/navigation/navigationStore';
 import { ReviewersSection } from './ReviewersSection';
 import type { OpenItem } from './threadPick';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -29,10 +31,20 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
                 <ThreadKindIcon root={item.thread.root} />
                 <span className={styles.openText}>{item.text}</span>
               </button>
+              {item.inChanges && <ShowInChangesButton inChanges={item.inChanges} />}
             </li>
           ))}
         </ul>
       </section>
     </aside>
+  );
+}
+
+/** At an entry's end, under the pointer or once a key reaches it: the thread in the Changes tab, as its file link goes. */
+function ShowInChangesButton({ inChanges }: { inChanges: NonNullable<OpenItem['inChanges']> }) {
+  return (
+    <button type="button" className={styles.openItemChanges} aria-label="Show in Changes" data-tip="Show in Changes" data-tip-sub={inChanges.path} onClick={() => navigation.openPage(inChanges.page)}>
+      <FileDiff size={13} aria-hidden />
+    </button>
   );
 }
