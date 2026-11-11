@@ -19,6 +19,17 @@ export interface DiffEntry {
    * one, whose ids mean other revisions in the diffed repository.
    */
   repository: string;
+  /**
+   * Set only on a changed item whose file permissions changed and whose content didn't: both sides are then the same
+   * revision. An item whose content changed too is a plain change.
+   */
+  permissionsChange?: PermissionsChange;
+}
+
+/** An item's file permissions on each side, as `cm` prints them (`-rw-r--r--`); null on a side that sets none. */
+export interface PermissionsChange {
+  before: string | null;
+  after: string | null;
 }
 
 /** Two points in history to compare. */

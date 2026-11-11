@@ -185,7 +185,14 @@ Files (`askForCheckinComment` in `CheckinCommentDialog`), New branch,
 New label and New attribute (`CommentArea`: a press on its label puts the caret in the editor, which a `<label
 htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) a new code review's title
 (`CreateCodeReviewDialog`), a review's title edited in place (`ReviewTitle`), and its conversation's description, comments,
-replies and discards (`CommentComposer`: ⌘↵ sends, its draft kept per place, docs/features/code-reviews.md). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
+replies and discards (`CommentComposer`: ⌘↵ sends, its draft kept per place, docs/features/code-reviews.md). A long attribute value (release notes, a description:
+Markdown, most often) is a comment too, written as a branch's (`AttributeTextEditor`, chosen by `attributeEditorFor`:
+many lines, or past 90 characters); a short one keeps its quick field, where Enter saves and the values used
+elsewhere are offered, and moves on to the comment editor, its draft kept, once it gains a second line (⇧↵, a paste:
+`outgrowsQuickField`). What hovering an attribute chip shows is `chipHover`'s: a short value's tooltip, text
+only, reads without its marks; a long one shows whole in a card, its Markdown drawn (`AttributeValueCard`), which the
+pointer can move onto to scroll it and select its text (`AnchoredCard`'s `scrollWith`, `hoverStep`), and which a click on the chip
+closes, as the value opens under the chips. Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
 A changeset's or a shelve's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
 panels' editor open it in its parts (`editingParts`: its title and the rest when it has one; whole in the description
@@ -274,13 +281,23 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was
-  dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left. It is the same
+  dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left.
+  From a comment in a diff's code (a review's new comment or reply, slotted into Pierre's rows), the panel moves to
+  the window while open (`panelParent`, through a portal): Pierre lays its code out as a container
+  (`container-type: inline-size`), which would hold a fixed panel inside it, clipped. Moved, the editor is made anew,
+  so the caret and the selection go with it there and back (`CommentFieldHandle.selection`, `focusAtSelection`,
+  `withinText`, `caretAfterMove`), the text with its owner; the undo history starts over. Made anew, the field doesn't
+  take the focus as it mounts (`FocusGroup.moving`): closed as the focus went elsewhere, it leaves it there. A press
+  around the panel goes back to the field with the caret where it was, moved or not (the backdrop keeps the focus). A
+  blur going nowhere (the window losing the focus, an editor made anew) looks again a frame later and closes only if
+  the focus isn't back in the panel (`blurOutcome`): switching apps leaves the larger editor open. Elsewhere it is the same
   editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
   focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
-  in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
+  in, and as the focus leaves the editor (`blurOutcome`: a question the check-in asks, Tab), and it lies under
   the dialogs it opens (z 790): a question it raises never shows behind it, nor does Tab walk the dimmed view. Its
   entry points: the check-in's summary (⇧⌘F) and description, Edit comment, a details panel's editor (a changeset's
-  title and description; a branch's, label's or attribute's description), New branch, New label and New attribute.
+  title and description; a branch's, label's or attribute's description; a long attribute value), New branch, New
+  label and New attribute.
   A merge's comment and a code review's title are one line and have none. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
   undo, caret and suggestions would start over.
@@ -348,7 +365,8 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, or `#` where the place
 has an issue tracker (docs/features/issue-trackers.md "Suggesting issues"), after a space, a line's start, a bracket
 or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
-(`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
+(`suggestionsShownAt`), so a field opened with its caret after a reference opens none. An emoticon (`:-p`, `:-o`)
+opens no list, so its Enter turns it into its own emoji ("Emoticons"); `:-1` still opens one. The list is a listbox the
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
 (`suggestionKeyAction`); with nothing to pick, the arrows move the caret. Enter picks the highlighted suggestion,
 or a row the user moved to; it never runs "Search all changesets" the list merely starts at, so Enter after a
@@ -394,6 +412,25 @@ when the Changesets list keeps it (`suggestionMatching.test.ts`; a changeset's l
 marks the words as the lists do (`HighlightQuery`, `Highlight`), and a summary whose first match would fall past the
 row's room starts later, after an ellipsis, so the match shows (`matchWindow`, `suggestionDetail`; the comment's
 body on one line when only it holds the words).
+
+### Emoticons
+
+An emoticon typed alone (`:-)`, `;)`, `:D`, `:(`, `:'(`, `:P`, `:O`, `:-|`, `:-/`: `EMOTICON_EMOJI` in
+`emoticons.ts`) becomes its emoji as a space or a sentence's punctuation (`.` `,` `!` `?`) is typed after it, and
+before Enter starts a line in a field of many lines (a one-line field's Enter leaves the field, the emoticon as typed),
+as Slack does (`emoticonTyping`). Alone means at a line's start, or after a space or an opening bracket
+(`emoticonEnding`): `a:-)`, `http://host:8080` and `/:-)` stay. Never in code, a code span still being typed
+included (`insideOpenCodeSpan`: until its closing backtick the syntax tree reads it as text), a link's text, an
+image's description, an address or a table's alignment row (`emoticonReplacement`, `isTableDelimiterRow`). Only typing turns one: a paste, a text composed with an
+input method, and comments already written stay as they are. The replacement is a step of its own in the history:
+⌘Z, or Backspace right after it (`revertEmoticon`, while `justReplacedEmoticon` holds), brings back what was typed,
+for someone who meant the characters. Left out of the list, as text a comment means as written: `:/` (a path's start),
+`XD` (a word), `<3` (a comparison), `8)` and `B-)` (a numbered or lettered list's item), `:|` (a table's alignment).
+
+It writes the emoji as the character, as a picked emoji suggestion does: `cm log`, the official desktop client, the
+Unity plugin and the web show it as it is. Writing `:slightly_smiling_face:` was rejected: other clients show the
+name. So was turning emoticons into emoji only where a comment shows: `:-)` in a code sample or a path would change,
+and other clients would show something else.
 
 ## Checking it on screen
 
@@ -460,3 +497,6 @@ checked in both themes when it draws something.
     Cancel ask; another row and back opens the editor again with the draft.
 27. **The wheel over the Branch Explorer's card.** Over a long comment's card the wheel scrolls the comment, not the
     graph; a pinch still zooms the graph.
+28. **Emoticons.** In the check-in's description type `Done :-) `: it shows `Done 🙂 `; Backspace brings back
+    `Done :-) `, and so does ⌘Z after typing it again. In a code span, a code block and `http://host:8080 ` nothing
+    changes; a pasted `:-) ` stays.

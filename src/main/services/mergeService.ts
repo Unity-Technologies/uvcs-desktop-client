@@ -9,11 +9,13 @@ import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
+import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createMergeService({ cm, operations, workspaceCopies, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
   const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
+  const kindOf = kindFromHeaders(headers);
 
   return {
     preview: async (workspacePath, request) => {
@@ -39,14 +41,10 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     incomingChangesets: (workspacePath, request) => readIncomingChangesetPage(cm, workspacePath, request),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
-      operations.run(operationId, async (context) => {
-        // A plain update would load everything and make a partial workspace standard.
-        const { kind } = await headers.names(workspacePath);
-        return updateWithMerge(cm, workspacePath, kind, resolutions, backupsRoot, context);
-      }),
+      operations.run(operationId, async (context) => updateWithMerge(cm, workspacePath, await kindOf(workspacePath), resolutions, backupsRoot, context)),
     shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) =>
-        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),
+        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot, kindOf }, workspacePath, resolutions, context),
       ),
   };
 }

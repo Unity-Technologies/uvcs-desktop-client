@@ -21,6 +21,7 @@ import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
 import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
+import { shelveCreateArgs } from '../cm/shelveCreateArgs';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempDirectory, withTempFile } from '../files/tempFile';
 import { moveArgs } from '../files/moveItems';
@@ -31,30 +32,33 @@ import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
 import { listNarrowingDown } from '../workspace/listNarrowingDown';
 import { measureMoveSimilarities, type FileGlance } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
+import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
-export function createPendingChangesService({ cm, operations, revisionCat }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
-  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
+export function createPendingChangesService({ cm, operations, revisionCat, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+  const kindOf = kindFromHeaders(headers);
+  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf };
 
   function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
     return readPendingChanges(cm, workspacePath, pendingChangesStatusOptions(filter), { diskDetails: true });
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
-    return operations.run(operationId, ({ signal, progressOf }) =>
-      withTempFile(request.comment, async (commentsFile) => {
+    return operations.run(operationId, async ({ signal, progressOf }) => {
+      const kind = await kindOf(workspacePath);
+      return withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
-          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate), {
+          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate, kind), {
             cwd: workspacePath,
             signal,
             onOutputLine: progressOf(readCheckinProgress),
           }),
         );
         return readCheckinOutput(output);
-      }),
-    );
+      });
+    });
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {
@@ -118,10 +122,12 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   function shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number> {
     return operations.run(operationId, ({ reportProgress }) =>
       withTempFile(comment, async (commentsFile) => {
-        // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow.
         reportProgress('Uploading your changes');
-        // `--dependencies`: the added folders above a path, as a check-in takes them (`checkinArgs`).
-        const args = ['shelveset', 'create', ...toAbsolutePaths(workspacePath, paths), '--all', '--dependencies', `-commentsfile=${commentsFile}`, '--summaryformat'];
+        const kind = await kindOf(workspacePath);
+        // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow. `cm partial`
+        // has no such option and prints "Created shelve sh:12@…", which `createdShelveId` reads as well.
+        const summary = kind === 'partial' ? [] : ['--summaryformat'];
+        const args = [...shelveCreateArgs(toAbsolutePaths(workspacePath, paths), commentsFile, kind), ...summary];
         return createdShelveId(await cm.execute(args, { cwd: workspacePath }));
       }),
     );
@@ -171,7 +177,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   };
 }
 
-/** The shelve `cm shelveset create --summaryformat` made: `sh:12@repo@server`. */
+/** The shelve `cm shelveset create --summaryformat` (`sh:12@repo@server`) or `cm partial shelveset create` made. */
 function createdShelveId(output: string): number {
   const created = /sh:(\d+)/.exec(output);
   if (!created) throw new Error('The shelve finished but no shelve id was reported.');

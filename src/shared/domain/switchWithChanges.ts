@@ -16,6 +16,9 @@ export type BringDisabledReason = 'label' | 'shelve' | 'otherRepository';
 /** Why the changes can't stay behind. */
 export type LeaveDisabledReason = 'shelveSource';
 
+/** Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch of its own repository. */
+export type PartialSwitchDisabledReason = 'notBranch' | 'otherRepository';
+
 /** What the app knows about the workspace before switching it, to decide what to offer. */
 export interface SwitchPreflight {
   /** What the workspace is on now, e.g. `/main/t1`, `changeset 12` or `label v1`. */
@@ -43,8 +46,11 @@ export type SwitchResult = (
   | { kind: 'brought' }
   /** The changes were undone before switching, as the user chose: they are gone. */
   | { kind: 'discarded'; count: number; restored?: RestoredChanges }
-  /** Switched, but the changes wait in the shelve until the user resolves how they merge on the target. */
-  | { kind: 'bringPending'; shelveId: number; conflictCount: number }
+  /**
+   * Switched, but the changes wait in the shelve until the user resolves how they merge on the target. `mergesHere` is
+   * false in a partial workspace, which can't take a merge: the shelve merges in a standard workspace.
+   */
+  | { kind: 'bringPending'; shelveId: number; conflictCount: number; mergesHere: boolean }
 ) & { renamedPrivates?: RenamedPrivateFile[] };
 
 /** A private file in the way of a file the switch wrote: `cm` kept it next to it, under another name. */

@@ -56,6 +56,7 @@ import {
   Merge,
   MessageSquare,
   MessageSquareCode,
+  MessageSquarePlus,
   MessageSquareText,
   Minus,
   MoveRight,
@@ -207,6 +208,8 @@ export const MENU_WORDS = {
   newWorkspace: word('create', FolderPlus, 'New workspace…'),
   newTaskWorkspace: word('create', FolderGit2, 'New workspace for a task…'),
   newWindow: word('create', AppWindow, 'New window'),
+  // A place's own action on a line of code (`lineMenu`, `DiffAnnotations.lineAction`): a review's "Comment on line 42".
+  lineAction: word('create', MessageSquarePlus),
 
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),

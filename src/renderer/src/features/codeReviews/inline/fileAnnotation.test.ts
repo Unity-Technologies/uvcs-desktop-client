@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -39,15 +39,22 @@ describe('hasComments', () => {
 });
 
 describe('openedOnFocus', () => {
+  const goneTo = { threadId: 1, seq: 2 };
+
   it('opens the line of a thread gone to while comments are hidden, after the others', () => {
-    expect(openedOnFocus(['additions:2'], 'additions:9', false)).toEqual(['additions:2', 'additions:9']);
+    expect(openedOnFocus(['additions:2'], goneTo, 'additions:9', false)).toEqual(['additions:2', 'additions:9']);
   });
 
   it('opens nothing in the code, for a thread at no line, or one already open', () => {
     const opened = ['additions:2'];
-    expect(openedOnFocus(opened, 'additions:9', true)).toBe(opened);
-    expect(openedOnFocus(opened, undefined, false)).toBe(opened);
-    expect(openedOnFocus(opened, 'additions:2', false)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, 'additions:9', true)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, undefined, false)).toBe(opened);
+    expect(openedOnFocus(opened, goneTo, 'additions:2', false)).toBe(opened);
+  });
+
+  it("doesn't open again a line whose card was picked in place: its Hide, which picks it too, folded it", () => {
+    const opened = ['additions:2'];
+    expect(openedOnFocus(opened, { threadId: 1, seq: 3, inPlace: true }, 'additions:9', false)).toBe(opened);
   });
 });
 
@@ -91,5 +98,23 @@ describe('fileThreadCount', () => {
   it('counts none on a file without threads, by its path or the one it moved from', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
+  });
+});
+
+describe('openedOnSend', () => {
+  const inFile = (keys: string[]) => ({ path: 'src/Player.cs', keys });
+
+  it('opens the line a comment was sent on while comments are hidden, after the others', () => {
+    expect(openedOnSend(inFile(['additions:3']), 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:3', 'additions:9']));
+  });
+
+  it("opens it in a file shown after another whose lines were open: those were the other file's", () => {
+    expect(openedOnSend({ path: 'src/Enemy.cs', keys: ['additions:3'] }, 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:9']));
+  });
+
+  it('changes nothing while comments show in the code, or when the line is open already', () => {
+    const opened = inFile(['additions:9']);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:9', false)).toBe(opened);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:3', true)).toBe(opened);
   });
 });

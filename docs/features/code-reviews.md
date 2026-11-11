@@ -141,13 +141,25 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   accent's tint, apart from the comments' neutral ones, saying who "wrote the description" or "opened the review",
   `descriptionHeader`; edited in place;
   an emptied one clears it, `cm codereview -e --descriptionfile`), then the threads and the events by when each
-  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`). Oldest first
+  started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`; one on a line is written from the code, see "Comments in the code"). Oldest first
   is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
   scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
   a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
-  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open, a click
-  scrolling to each (`ReviewSideRail`).
+  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open
+  (`ReviewSideRail`, `openItemsOf`).
+- **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
+  conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
+  into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off
+  screen gliding to the nearest edge; when the page opens at it, centered at once. It's unfolded, lit for a moment
+  and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
+  `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
+  thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view
+  seemed to do nothing. A pick in Open makes the page forget the thread it was opened at (`pageAfterOpenPick`), so Show
+  in conversation at that thread again goes to it. A tab picked keeps the current thread. At the end of the entry of a
+  comment on a file's line, under the pointer or once a key reaches it, a button shows the thread in Changes ("Show in
+  Changes", its file in the tooltip), going where its card's file link goes (`commentLocationPage`). It sits in Open
+  only: on the cards it was rejected (see below).
 - A thread (`threadsOf`, `ReviewThreadCard`) is a comment and its replies. A reply whose comment another client deleted
   starts a thread of its own. One on a line shows its file first, the whole path a link to it in the Changes tab, on the
   same page as a tab moves (a place in the review on top replaces it, never stacks a second page of it:
@@ -226,7 +238,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   while it's selected (`appliedFilesHeading`). When that changeset didn't change the commented file at all (the request
   applied elsewhere: a missing test added, a sibling fixed), How it was applied lists its files alone, the first
   selected, the thread above them, folded to its first words (`contextBodyOf`, which picks it over the thread alone;
-  unfolded, it takes at most 40% of the height), so the request and its fix read together; the subtitle
+  unfolded, it takes at most 40% of the height, its border whole and its comments scrolling inside it under its header
+  band, `data-thread-body`: the box scrolling the card cut its border off, and the card shrunk alone clipped a long
+  thread with nothing to scroll), so the request and its fix read together; the subtitle
   says the changeset applied it in other files, and the view switch stays, leading back to When commented. It says
   "applied", even for a request marked applied by hand there: what the review records can't tell the two apart, and
   the files beside it show what that changeset did. No list for a fix of that file alone. The list costs no command:
@@ -234,7 +248,11 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   would leave the review, and that page knows nothing of the comment. The dialog is as wide as the window allows, up to
   1680 px: two versions of code side by side, and the files beside them. Its diff
   is 66vh tall, less where the window leaves the dialog less, so the dialog never scrolls as a whole (a window of
-  1000×800 or 900×700). It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
+  1000×800 or 900×700). Its diff's comments button hides the thread from the code, to read the code alone, as the
+  review's diff does: a marker on its line, a click showing it again (`useThreadRow`, `contextThreadParts`,
+  `CommentsInCodeButton`); its line keeps its outline in the accent, the thread being what the dialog is about. It
+  shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it.
+  It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
   while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
@@ -319,10 +337,53 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   last glide goes), and the focus a card held goes along to the current one, drawn without a ring: left behind, the key
   would draw it on a comment no longer current. The panel's filter is kept by the Changes tab for that
   (`ReviewChangesTab`), and stays on what it opened on as threads settle (`shownCommentsFilter`). In the code, the
-  thread gone to keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
+  thread selected keeps its ring until another one is: among the outdated ones, stacked alike, the eye finds it again. A
   diff opened to go to a thread (from the conversation, `commentLocationPage`) opens at it, not at its first change,
   even before an earlier version is read to place it (`holdsThread`, `DiffAnnotations.opensAtRow`); one on a version
   that can't be read (purged, or its read failed) is among the outdated ones, above the code, and opens there.
+- **What a comment is about.** In the code, each line with threads is outlined across its pane, open or hidden behind
+  its marker (`lineBandsOf`, through `DiffAnnotations.bands`), in its card's border color (`--border-comment`, a step
+  stronger in the dark theme, where the default border disappears over the added and removed tints): a border, never
+  a fill, so the diff's tints keep meaning added and removed only. The line's corners are slightly rounded
+  (`--radius-sm`), softer than a selection, a line's and not a card's: the card's radius on one line reads as a pill.
+  A row under an added or removed line takes its tint (docs/features/diff.md "Rows under lines"). The outline was
+  tried joined to the card as one shape (the line its first row, or its sides running into the card): the card keeps a
+  reading width, so where the line is wider the shape read as broken, and a card stretched to the line read worse.
+- **The thread selected** has its card and its line outlined in the accent, and its entry in the Comments panel marked.
+  Gone to (from the panel, the arrows, N, the conversation), it's scrolled to, unfolded and lit. Picked in the code, it's
+  only selected (`ReviewComments.selectThread`, `ThreadFocus.inPlace`, `selectedInPlace`): a click anywhere in its card
+  or the focus entering it (Reply, Tab), its controls still doing what they do, or opening its line from the marker
+  (the line's first thread, `threadOpenedFrom`). It's on screen already, so the diff stays where it is
+  (`scrollsToFocus`), the card is ringed but neither unfolded nor lit (`cardFocusOf`: unfolding it would undo the
+  chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
+  it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
+  list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
+- **Writing from the code.** A line of the revision the diff comments on takes a comment: the newer side's (context
+  lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
+  nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
+  xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
+  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" in the gutter of the line under the
+  pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
+  the code's menu (on the last of the lines selected: `cm` names one line). No key: a review's diff has no caret, so no
+  line is "current". The comment opens under the line (`NewLineCommentCard`), after the line's threads, the line
+  outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
+  as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
+  request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
+  ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
+  codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
+  changeset by changeset, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
+  thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read
+  again holds it (`conversationReadSince`, which waits for a read after the write, `conversationReadAt`, the one the
+  write asked for, and reads nothing itself), so the line never shows nothing in between. Cancel or Esc drop it, asking first once words were written
+  (`asksBeforeDiscarding`). Comments being written are kept while the window lives (`useNewLineCommentsStore`, their
+  text in `useCommentDraftStore`), so going to another file, mode or tab and back finds them under their lines:
+  nothing asks to save one on the way, as the official client's Yes/No/Cancel did. One takes the focus only when
+  opened (`focusRequest`, `focusOnRequest`): shown again as its file is, it leaves the focus where the user is (going
+  through the files). It's kept by its file and line number, not the revision: a branch's newest revision changes as
+  its author checks in, and the comment stays at its line number, going on the revision and side shown then (a file
+  deleted since, on its last revision: `newLineCommentsIn`). The code at that line may have changed meanwhile: the
+  reviewer sees it before sending, and following the line through the change would need the versions read for every
+  comment being written. A file moved since, or now shorter than the line, shows it no more; its text stays kept.
 - In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,

@@ -8,6 +8,16 @@ export interface CommentFieldHandle {
   focusAtEnd: () => void;
   /** The caret at the text's start. */
   focusAtStart: () => void;
+  /** Where the caret and selection are, as offsets in the text: none while the field has no focus. */
+  selection: () => FieldSelection | null;
+  /** The caret and selection back where they were (`selection`), within the text as it is now; false while the field can't take them yet (its editor still being made). */
+  focusAtSelection: (selection: FieldSelection) => boolean;
+}
+
+/** A caret, or a selection from `anchor` to `head`, as offsets in a field's text. */
+export interface FieldSelection {
+  anchor: number;
+  head: number;
 }
 
 /** A comment field: the text in and out as stored, never converted (docs/features/rich-comments.md, "Writing"). */

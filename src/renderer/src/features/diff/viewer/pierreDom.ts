@@ -67,6 +67,17 @@ export function moveGutterUtilityTo(numberCell: HTMLElement, knownSlot: Element 
 }
 
 /**
+ * For a button in the diff's gutter: the diff picks or selects the line pressed in its gutter, and pressing the button
+ * isn't that. Native, since the diff listens in its shadow root, before React sees the event.
+ */
+export function keepPointerDownToItself(button: HTMLButtonElement | null): (() => void) | undefined {
+  if (!button) return undefined;
+  const stop = (event: PointerEvent): void => event.stopPropagation();
+  button.addEventListener('pointerdown', stop);
+  return () => button.removeEventListener('pointerdown', stop);
+}
+
+/**
  * Hovers what is under a still pointer anew, as if it had moved: Pierre only follows the pointer, so lines sliding
  * under it (after a discard) would stay unhovered. It's told the pointer left first, as the line it knew may be gone
  * or another.

@@ -38,7 +38,7 @@ export async function shelveAndUndo(
 
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
   context.beginStep('Shelving your changes', 1, 2);
-  const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, context, request?.targets);
+  const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, await deps.kindOf(workspacePath), context, request?.targets);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'shelve', objectRef: '', target: NO_TARGET });
   records.save(record);
 

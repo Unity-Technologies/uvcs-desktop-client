@@ -8,7 +8,7 @@ import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { runsLong } from '../cm/longCommands';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
-import { change, pendingStatus, recordsOutput } from '../cm/testing/cmOutput';
+import { change, formatOutput, pendingStatus, recordsOutput, WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
@@ -29,6 +29,10 @@ function pendingChanges(answers: Record<string, CmAnswer>, operations?: Operatio
   const context = serviceContext(fake.cm, operations ? { operations } : {});
   return { ...fake, service: createPendingChangesService(context, {} as SwitchContext), operations: context.operations };
 }
+
+// How `cm getworkspacefrompath` names the workspace: its type says which `cm` checks in (`checkinArgs`).
+const STANDARD = { getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID, 'regular', 'static']) };
+const PARTIAL = { getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID, 'partial', 'static']) };
 
 // As the server formats ITEMS_ALREADY_LOCKED: the header, then one line per item.
 const LOCKED_OUTPUT = 'These items are exclusively checked out by: \n/art/Hero.fbx (wk:ana-wk owner:ana)\n';
@@ -98,13 +102,14 @@ describe('pending changes list', () => {
 describe('checkin', () => {
   it('checks the paths in with one cm checkin of its own process, the comment in a file deleted afterwards', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', 'CI_START\nCHANGESET cs:43@br:/main/task1@game@local\n');
-    const { service, commands } = pendingChanges({ checkin: answer });
+    const { service, commands } = pendingChanges({ ...STANDARD, checkin: answer });
 
     const result = await service.checkin(WORKSPACE, { paths: ['src/player.cs', 'assets/hero.png'], comment: 'Jump higher\n\nTuned for the new level', addsPrivate: true }, 'op-1');
 
     expect(result).toEqual({ kind: 'created', changesetId: 43, branch: '/main/task1' });
-    expect(commands).toHaveLength(1);
-    expect(commands[0]).toMatchObject({
+    expect(commands).toHaveLength(2);
+    expect(commands[0]).toMatchObject({ via: 'query', args: ['getworkspacefrompath', WORKSPACE, expect.any(String)] });
+    expect(commands[1]).toMatchObject({
       via: 'execute',
       args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--dependencies', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
       options: { cwd: WORKSPACE },
@@ -113,22 +118,36 @@ describe('checkin', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('checks a partial workspace in with cm partial checkin, read as a regular checkin', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', 'CI_START\nCHANGESET cs:44@br:/main/task1@game@local\n');
+    const { service, commands } = pendingChanges({ ...PARTIAL, partial: answer });
+
+    const result = await service.checkin(WORKSPACE, { paths: ['src/player.cs'], comment: 'Jump', addsPrivate: false }, 'op-1');
+
+    expect(result).toEqual({ kind: 'created', changesetId: 44, branch: '/main/task1' });
+    expect(commands.at(-1)).toMatchObject({
+      via: 'execute',
+      args: ['partial', 'checkin', at('src', 'player.cs'), '--all', '--dependencies', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
+      options: { cwd: WORKSPACE },
+    });
+  });
+
   it('reports a checkin that found nothing left to record', async () => {
-    const { service } = pendingChanges({ checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
+    const { service } = pendingChanges({ ...STANDARD, checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
 
     expect(await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1')).toEqual({ kind: 'noChanges' });
   });
 
   it('deletes the comment file when the checkin fails', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The server is unreachable.'));
-    const { service } = pendingChanges({ checkin: answer });
+    const { service } = pendingChanges({ ...STANDARD, checkin: answer });
 
     await expect(service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1')).rejects.toThrow('The server is unreachable.');
     expect(existsSync(seen.file)).toBe(false);
   });
 
   it('names who holds the lock when a checkin meets items locked by someone else', async () => {
-    const { service } = pendingChanges({ checkin: cmFails(LOCKED_OUTPUT) });
+    const { service } = pendingChanges({ ...STANDARD, checkin: cmFails(LOCKED_OUTPUT) });
 
     const error = await service.checkin(WORKSPACE, { paths: ['art/Hero.fbx'], comment: 'c', addsPrivate: false }, 'op-1').catch((caught: unknown) => caught);
 
@@ -138,6 +157,7 @@ describe('checkin', () => {
 
   it("stops the checkin's process when the operation is cancelled", async () => {
     const { service, operations } = pendingChanges({
+      ...STANDARD,
       checkin: runsUntilCancelled('Operation aborted'),
     });
 
@@ -152,6 +172,7 @@ describe('checkin', () => {
     const operations = new OperationTracker((_id, report) => progress.push(report), () => undefined);
     const { service } = pendingChanges(
       {
+        ...STANDARD,
         checkin: ({ options }) => {
           ['CI_START', 'STAGE Uploading file data 1 MB/4 MB'].forEach((line) => options.onOutputLine?.(line));
           return 'CHANGESET cs:43@br:/main@game@local\n';
@@ -336,20 +357,32 @@ describe('how alike the items of a move are', () => {
 describe('shelve', () => {
   it('shelves the paths with one cm shelveset of its own process and returns the new shelve', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', 'sh:12@game@local\n');
-    const { service, commands } = pendingChanges({ 'shelveset create': answer });
+    const { service, commands } = pendingChanges({ ...STANDARD, 'shelveset create': answer });
 
     const shelveId = await service.shelve(WORKSPACE, ['src/a.cs'], 'Half done', 'op-1');
 
     expect(shelveId).toBe(12);
-    expect(commands).toMatchObject([
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
       { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', '--dependencies', `-commentsfile=${seen.file}`, '--summaryformat'] },
     ]);
     expect(seen.content).toBe('Half done');
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('shelves a partial workspace with cm partial, which refuses the regular command', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', "Created shelve sh:12@game@local (mount:'/')\n");
+    const { service, commands } = pendingChanges({ ...PARTIAL, 'partial shelveset create': answer });
+
+    const shelveId = await service.shelve(WORKSPACE, ['src/a.cs'], 'Half done', 'op-1');
+
+    expect(shelveId).toBe(12);
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
+      { via: 'execute', args: ['partial', 'shelveset', 'create', at('src', 'a.cs'), '--applychanged', `-commentsfile=${seen.file}`] },
+    ]);
+  });
+
   it('fails when cm reports no shelve', async () => {
-    const { service } = pendingChanges({ 'shelveset create': '\n' });
+    const { service } = pendingChanges({ ...STANDARD, 'shelveset create': '\n' });
 
     await expect(service.shelve(WORKSPACE, ['src/a.cs'], 'c', 'op-1')).rejects.toThrow('no shelve id was reported');
   });

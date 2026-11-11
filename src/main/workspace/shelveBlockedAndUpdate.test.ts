@@ -47,6 +47,10 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     if (args.includes('--merge')) return '';
     return mergePreviewOutput(['APPLY', 'ADD', '/src/old.txt'], ...(putBackConflicts ? [['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'x', 'Modified /src/old.txt', 'Deleted /src/old.txt', '29', 'False', 'CHG', '/src/old.txt', 'RM', '/src/old.txt']] : []));
   };
+  const createShelve: CmAnswer = async ({ args }) => {
+    shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');
+    return shelvesCreated({ id: 12 });
+  };
   const fake = fakeCmClient({
     'status --header --xml': statusHeader('/main/task1'),
     getworkspacefrompath: partial ? formatOutput(['work', WORKSPACE_GUID, 'partial', 'static']) : WORKSPACE_NAMES,
@@ -56,10 +60,8 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'status --controlledchanged --changed': pendingChanges,
     'status --iscochanged': pendingChanges,
     'status --checkout': pendingStatus(workspacePath),
-    'shelveset create': async ({ args }) => {
-      shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');
-      return shelvesCreated({ id: 12 });
-    },
+    'shelveset create': createShelve,
+    'partial shelveset create': createShelve,
     'diff sh:12': diffRecord('C', 'src/old.txt', { base: 11, revision: 50 }),
     undo: ({ args }) => {
       pending = pending.filter((path) => !args.includes(join(workspacePath, path)));
@@ -77,7 +79,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   });
   const records = new SwitchShelveRecords(memorySettings());
   const finish = vi.fn(async () => {});
-  const deps = { cm: fake.cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups') };
+  const deps = { cm: fake.cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups'), kindOf: async () => (partial ? ('partial' as const) : ('standard' as const)) };
   return { ...fake, deps, records, finish, shelveComment: () => shelveComment };
 }
 

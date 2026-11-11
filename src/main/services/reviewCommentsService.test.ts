@@ -61,6 +61,31 @@ describe('writing on a review', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('adds a change request on a line of the revision the diff shows, by its revision id', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = reviewComments({ 'codereview comment add': answer });
+
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 42, kind: 'changeRequest' }, 'Rename this.');
+
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['codereview', 'comment', 'add', '41', `-commentsfile=${seen.file}`, '--revision=revid:812', '--line=42', '--type=Change'] },
+    ]);
+    expect(seen.content).toBe('Rename this.');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it("writes a question or a comment as cm types them, in the diff of the changeset it's written in", async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'question', changesetId: 9 }, 'Why?');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'comment' }, 'Nice.');
+
+    expect(commands.map(({ args }) => args.slice(5))).toEqual([
+      ['--revision=revid:812', '--line=1', '--type=Question', '--changeset=cs:9'],
+      ['--revision=revid:812', '--line=1', '--type=Comment'],
+    ]);
+  });
+
   it('replies to a comment', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment reply': answer });
@@ -112,12 +137,13 @@ describe('writing on a review', () => {
     const { service, commands } = reviewComments({ codereview: '' });
 
     await service.add(ON_REPOSITORY, 41, 'a');
+    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, line: 3, kind: 'comment' }, 'a');
     await service.reply(ON_REPOSITORY, 'c1', 'b');
     await service.edit(ON_REPOSITORY, 'c1', 'c');
     await service.remove(ON_REPOSITORY, 'c1');
     await service.setDescription(ON_REPOSITORY, 41, 'd');
 
-    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(5).fill('--repository=game@local'));
+    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(6).fill('--repository=game@local'));
     expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
   });
 });

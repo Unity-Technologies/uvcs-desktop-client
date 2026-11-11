@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { pluralize } from '../../../lib/text';
 import { ReviewThreadCard, type ThreadInCode } from '../conversation/ReviewThreadCard';
 import { earlierTagOf } from './earlierTag';
@@ -7,6 +7,7 @@ import type { ContextView } from './commentContext';
 import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread, VersionText } from './fileThreads';
 import { snippetOf } from './outdatedSnippet';
+import { cardFocusOf } from './threadSelection';
 import type { ReviewComments } from './reviewComments';
 import { hideLabel, type LineThreads } from './threadRows';
 import styles from './InlineThreads.module.css';
@@ -18,16 +19,23 @@ interface InlineThreadsProps {
   /** Folds the line back into its marker, while comments are hidden in the code. */
   onClose?: () => void;
   onSeeInContext?: SeeInContext;
+  /** After the threads: a new comment being written on the line. */
+  children?: ReactNode;
 }
 
 /** Shows a thread in context, on a view (`ReviewComments.seeInContext`). */
 type SeeInContext = (thread: LineThread, startsOn?: ContextView) => void;
 
+/** A row under a line of code, holding the line's threads or a comment being written on it. */
+export function ThreadsRow({ children }: { children: ReactNode }) {
+  return <div className={styles.row}>{children}</div>;
+}
+
 /** The threads at a line, under it: each as the conversation shows it, without the file it's at. */
-export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }: InlineThreadsProps) {
+export function InlineThreads({ comments, line, focus, onClose, onSeeInContext, children }: InlineThreadsProps) {
   const hide = onClose && { label: hideLabel(line.threads.length), onHide: onClose };
   return (
-    <div className={styles.row}>
+    <ThreadsRow>
       {line.threads.map(({ thread, earlier }) => (
         <ThreadInRow
           key={thread.root.id}
@@ -43,7 +51,8 @@ export function InlineThreads({ comments, line, focus, onClose, onSeeInContext }
           }}
         />
       ))}
-    </div>
+      {children}
+    </ThreadsRow>
   );
 }
 
@@ -116,11 +125,19 @@ interface ThreadInRowProps {
   onSeeInContext?: SeeInContext;
 }
 
-/** A thread in the code; its "Applied" pill shows how the change request was applied, in context. */
+/**
+ * A thread in the code; its "Applied" pill shows how the change request was applied, in context. Clicked anywhere, or
+ * focused (a reply typed, a key's Tab), it's selected (`selectThread`), its controls still doing what they do.
+ */
 function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: ThreadInRowProps) {
-  const highlight = focus?.threadId === thread.root.id ? focus.seq : undefined;
+  const { highlight, selected } = cardFocusOf(focus, thread.root.id);
   const onSeeApplied = onSeeInContext && (() => onSeeInContext(thread, 'since'));
-  return <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} onSeeApplied={onSeeApplied} />;
+  const select = (): void => comments.selectThread(thread);
+  return (
+    <div className={styles.thread} onClickCapture={select} onFocusCapture={select}>
+      <ReviewThreadCard review={comments.review} thread={thread} user={comments.user} inCode={inCode} highlight={highlight} selected={selected} onSeeApplied={onSeeApplied} />
+    </div>
+  );
 }
 
 /** The lines an outdated thread was written on, the one it's on marked. */

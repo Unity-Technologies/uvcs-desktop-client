@@ -16,10 +16,3 @@ export const EMPTY_PARTIAL_UPDATE_ARGS: readonly string[] = ['partial', 'update'
 export function partialConfigureArgs(rules: readonly PartialRule[]): string[] {
   return ['partial', 'configure', ...rules.map(({ path, load }) => `${load ? '+' : '-'}/${path}`), '--silent'];
 }
-
-/**
- * Updates a partial workspace (run in it) and keeps it partial: it brings what it holds up to date, new items in its
- * folders too, and downloads nothing else. It prints no line per file, so its progress can't be shown. `--dontmerge`
- * stops it, as `UPDATE_ARGS` does, when local changes collide with incoming ones.
- */
-export const PARTIAL_UPDATE_ARGS: readonly string[] = ['partial', 'update', '--dontmerge'];

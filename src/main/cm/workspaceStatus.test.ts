@@ -75,17 +75,25 @@ describe('parseWorkspaceStatus', () => {
     expect(() => parseWorkspaceStatus(onShelve.replace('<Changeset>-3', '<Changeset>3'))).toThrow(/cm status/);
   });
 
-  // `cm status --header --xml` of a partial workspace on a branch (cm 11.0.16, a local server), even after it updates.
-  const partialOnBranch = `<?xml version="1.0" encoding="utf-8"?>
+  // `cm status --header --xml` of a partial workspace after `cm partial configure "+/Code"` (a local server).
+  const partial = `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>partial-demo</Name></RepSpec><Changeset>-1</Changeset></Status></WorkspaceStatus>
+  <WorkspaceStatus>
+    <Status>
+      <RepSpec>
+        <Server>local</Server>
+        <Name>partial-operations</Name>
+      </RepSpec>
+      <Changeset>-1</Changeset>
+    </Status>
+  </WorkspaceStatus>
   <WkConfigType>Branch</WkConfigType>
-  <WkConfigName>/main@partial-demo@local</WkConfigName>
+  <WkConfigName>/main@partial-operations@local</WkConfigName>
 </StatusOutput>`;
 
-  it('reads a partial workspace on a branch as loading no single changeset: cm reports changeset -1', () => {
-    expect(parseWorkspaceStatus(partialOnBranch)).toEqual({
-      repositoryName: 'partial-demo',
+  it('reads a partial workspace as on its branch with no one changeset loaded: cm reports changeset -1', () => {
+    expect(parseWorkspaceStatus(partial)).toEqual({
+      repositoryName: 'partial-operations',
       printedServer: 'local',
       selector: { kind: 'branch', name: '/main' },
       loadedChangeset: null,
@@ -93,8 +101,8 @@ describe('parseWorkspaceStatus', () => {
   });
 
   it('fails on changeset -1 on a label or a changeset, which loads one changeset', () => {
-    const onLabel = partialOnBranch.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
-    const onChangeset = partialOnBranch.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
+    const onLabel = partial.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
+    const onChangeset = partial.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
     expect(() => parseWorkspaceStatus(onLabel)).toThrow(/cm status/);
     expect(() => parseWorkspaceStatus(onChangeset)).toThrow(/cm status/);
   });
@@ -116,5 +124,12 @@ describe('loadedChangesetOf', () => {
     expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
     expect(loadedChangesetOf(-5, { kind: 'changeset', name: '-5' })).toBeUndefined();
     expect(loadedChangesetOf(Number.NaN, { kind: 'shelve', name: '3' })).toBeUndefined();
+  });
+
+  it("takes -1 on a branch as a partial workspace's, which has no one changeset, but on no other selector", () => {
+    expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
+    expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
+    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
+    expect(loadedChangesetOf(-1, { kind: 'changeset', name: '-1' })).toBeUndefined();
   });
 });

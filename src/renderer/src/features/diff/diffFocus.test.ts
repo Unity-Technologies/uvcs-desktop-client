@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { entryAt, entryToFocus, pairedFocus } from './diffFocus';
+import { entryAt, entryToFocus, pairedEntryAt, pairedFocus } from './diffFocus';
 import { pairDiffMetas } from './diffMetaPairs';
 
 const entry = (path: string, status: DiffEntry['status'] = 'changed', oldPath?: string): DiffEntry => ({
@@ -68,5 +68,24 @@ describe('pairedFocus', () => {
   it('falls back to the first row, as entryToFocus does', () => {
     expect(pairedFocus(pairs, 'missing.ts')).toEqual({ entry: asset, metaShownFor: null });
     expect(pairedFocus(pairs)).toEqual({ entry: asset, metaShownFor: null });
+  });
+});
+
+describe('pairedEntryAt', () => {
+  const asset = entry('Art/Hero.png');
+  const meta = entry('Art/Hero.png.meta');
+  const pairs = pairDiffMetas([asset, meta, entry('b.ts', 'moved', 'old.ts')]);
+
+  it("finds a .meta that joined its asset on the asset's row, showing the meta: a comment on it is gone to there", () => {
+    expect(pairedEntryAt(pairs, 'Art/Hero.png.meta')).toEqual({ entry: asset, metaShownFor: 'Art/Hero.png' });
+  });
+
+  it('finds any other file on its own row, by its path or the one it moved from', () => {
+    expect(pairedEntryAt(pairs, 'Art/Hero.png')).toEqual({ entry: asset, metaShownFor: null });
+    expect(pairedEntryAt(pairs, 'old.ts')?.entry.path).toBe('b.ts');
+  });
+
+  it('finds nothing for a file the diff has not: the selection stays', () => {
+    expect(pairedEntryAt(pairs, 'missing.ts')).toBeNull();
   });
 });

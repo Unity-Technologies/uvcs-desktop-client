@@ -17,11 +17,13 @@ interface SegmentedControlProps<Value extends string> {
   onChange: (value: Value) => void;
   /** Fills the width it is given, sharing it equally between the segments. */
   stretch?: boolean;
+  /** Smaller and quieter, for a choice that sits inside a card rather than leading a view (a new comment's kind). */
+  small?: boolean;
   label?: string;
 }
 
 /** A radio group: one Tab stop (the checked segment), ← → pick the others. */
-export function SegmentedControl<Value extends string>({ value, segments, onChange, stretch = false, label }: SegmentedControlProps<Value>) {
+export function SegmentedControl<Value extends string>({ value, segments, onChange, stretch = false, small = false, label }: SegmentedControlProps<Value>) {
   const controlRef = useRef<HTMLDivElement>(null);
 
   const pickWithArrows = (event: KeyboardEvent): void => {
@@ -37,7 +39,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
   };
 
   return (
-    <div ref={controlRef} className={styles.control} role="radiogroup" aria-label={label} data-stretch={stretch} onKeyDown={pickWithArrows}>
+    <div ref={controlRef} className={styles.control} role="radiogroup" aria-label={label} data-stretch={stretch} data-small={small || undefined} onKeyDown={pickWithArrows}>
       {segments.map((segment, index) => (
         <button
           key={segment.value}

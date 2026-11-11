@@ -68,6 +68,7 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   codereview: (args) => (args[1] === 'reviewer' && (args[2] === 'list' || args[2] === 'ls') ? 'list' : 'operation'),
   label: 'operation',
   move: 'operation',
+  // A partial workspace's update, switch and checkin: `cm partial <command>`.
   partial: 'operation',
   pull: 'operation',
   push: 'operation',

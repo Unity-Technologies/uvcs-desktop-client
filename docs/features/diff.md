@@ -4,7 +4,10 @@ Everything a text or image diff does (`features/diff`, `features/review`), which
 their own doc: `model-diff.md`.
 
 A Unity asset's `.meta` is listed with it; the `.meta` button in the diff's toolbar shows the meta's diff
-(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`").
+(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"). A place asking for the meta (a review going to a comment
+on it, `DiffFocusRequest`) gets its asset's row with the meta shown (`pairedEntryAt`, as a link's `pairedFocus`), and
+a place's mark on the meta shows on its asset's row, so a review's "Commented" keeps it (`withMetaMarks`: "1 comment on
+its .meta").
 
 A side of any diff that the workspace holds unchanged (the side before of the newest change of a file, the side after
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
@@ -126,6 +129,24 @@ re-read as the server lists are (`SLOW_CHANGING_QUERY`).
 Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prints, and only for a workspace's own
 xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
 reader of the diff needs.
+
+## Only the permissions changed
+
+A file whose file permissions changed and whose content didn't (`chmod +x`, or permissions first set on a file checked
+in from Windows) is rarely what a reviewer looks for, so a diff tells it apart, as the official client's "Only
+filesystem permissions changed" group does. `cm` gives such a change no base revision: `cm diff` prints it as `C` with
+`baserevid` -1, which `readDiffEntry` reads as the one revision on both sides with its permissions before and after
+(`{srcfsprotection}`, `{fsprotection}` in `DIFF_FORMAT`, nothing where none is set) in `DiffEntry.permissionsChange`.
+A file whose content changed too is a plain change; one moved too is a move.
+
+- Its row is lettered FS (`diffEntryTone`), found by the "Only filesystem permissions" chip and grouped under it when
+  the list groups by status; its chip and group come after Added's.
+- Its diff says which permissions changed in place of the content, which is the same on both sides and isn't read
+  ("Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.", `permissionsNote`): a text, a binary, an image
+  and a folder alike. A side with no permissions reads "not set" ("from not set to -r--r--r--"); with none on either
+  side it only says they changed. The permissions never break across lines (non-breaking hyphens).
+- It has no content to revert (`canRevertFromDiff`), and updating with local changes never merges it
+  (`findUpdateConflicts`): Incoming, whose list is a diff's, never counts it among the conflicts with local changes.
 
 ## A purged version
 
@@ -577,7 +598,8 @@ so: "Full screen" names the OS's.
 ## Lines for links
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
-Pierre's line selection). Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
+Pierre's line selection). The number under the pointer isn't filled (`lineHoverHighlight: 'disabled'`): its cursor and
+tip say it selects, and the fill fought with a review's "+" beside it. Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
 `DiffBrowser`, which says so through `LineLinksContext`), a history's annotations (`HistoryPage`), a file browsed at a
 changeset (Browse repository, its newer side) and an unchanged file of the Files view (`useFilesItemLinks`, while no
 page covers it) are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
@@ -863,7 +885,10 @@ docs/features/code-reviews.md "Comments in the code"):
   `lineNumber: 0` marks the code's first row, whatever it is, never a row under a line, and nothing while the file's top
   is scrolled out of what Pierre renders, `topRowOf`; markers on one row sit side by side, `markerSpots`; it measures
   again when the code panes resize, as Pierre's host, at least as tall as the view, doesn't grow in a short file when a
-  row goes in above the code), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a line whose
+  row goes in above the code), outlines around the lines its rows and markers are about (`bands`, `LineBands`,
+  `bandRect`: a 1px border across the pane's code, never a fill, which muddied the added and removed tints under it;
+  the one `selected` in the accent), ticks in the change map (`mapTicks`, `mapTickTip`: "The change map"), and a
+  line whose
   row to scroll to (`scrollToAnnotationRow`): the line and its row, or the part of the row marked `ROW_FOCUS_ATTRIBUTE`
   (one thread of several), read with context: the line a third of the way down, its row below; a row taller than the
   room below scrolls on just enough to fit, keeping three lines above the line; a line near the top stays at the top,
@@ -877,7 +902,20 @@ docs/features/code-reviews.md "Comments in the code"):
   goes to one of its rows (`opensAtRow`), the diff doesn't open at its first change (`openingStep`'s `opensOnLines`),
   which would scroll past the row once placed. Every row's and marker's line is unfolded from a folded unchanged region
   (`linesToReveal`, Pierre's `revealLine`), at each render: Pierre lays a diff out anew at times (its highlighted text
-  replacing the plain one), folding its regions again, and a line already shown unfolds nothing.
+  replacing the plain one), folding its regions again, and a line already shown unfolds nothing. A row under an added
+  or removed line takes that line's tint, and its gutter the change bar, on the side holding it only (Pierre's
+  `unsafeCSS` in `pierreDiffOptions`: a row whose content holds a `slot`; side by side, the other side's row is an
+  empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
+  buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
+  whose row is empty, and a buffer under a changed line on the other side may take its tint too.
+  Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
+  a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
+  after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
+  does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
+  line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
+  its slot from line to line, which restarts an animation, a flicker on every line. The action is also the first entry
+  of the lines' menu, on the last of the lines selected
+  (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 

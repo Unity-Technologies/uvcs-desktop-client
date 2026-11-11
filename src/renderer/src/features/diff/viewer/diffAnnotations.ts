@@ -17,7 +17,9 @@ import type { MapTick } from './mapTicks';
  * - `scrollTo`: the line whose row to bring into view, line and row whole and high in the view, once each time it's a
  *   new object (the thread a link or a list went to); `lineNumber: 0`, the rows above the code;
  * - `opensAtRow`: the place goes to one of its rows, now or once it knows where (a thread on a version still read), so
- *   the diff doesn't open at its first change, which would scroll past it.
+ *   the diff doesn't open at its first change, which would scroll past it;
+ * - `lineAction`: what the place does with a line (a review comments on it): a button in the gutter of the line under
+ *   the pointer, and an entry in the code's menu.
  */
 export interface DiffAnnotations {
   rows: DiffLineAnnotation<string>[];
@@ -27,6 +29,28 @@ export interface DiffAnnotations {
   mapTickTip?: (keys: readonly string[]) => string;
   scrollTo: ChangedLine | null;
   opensAtRow: boolean;
+  /** The lines rows or markers are about, outlined (`LineBands`); the one gone to in the accent, as its card is. */
+  bands?: readonly LineBand[];
+  lineAction?: LineAction;
+}
+
+/**
+ * What a place does with one line of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the
+ * gutter of the one under the pointer (`useLineActionButton`) and in the code's menu (`lineMenuEntries`).
+ */
+export interface LineAction {
+  /** The lines it takes: a review comments only on the revisions its diff names. */
+  offers: (line: ChangedLine) => boolean;
+  /** What it does to a line, as its button's tooltip and its menu entry say it ("Comment on line 42"). */
+  label: (line: ChangedLine) => string;
+  run: (line: ChangedLine) => void;
+}
+
+/** A line a row or a marker is about. */
+export interface LineBand extends ChangedLine {
+  key: string;
+  /** What it's about is the one gone to: outlined in the accent, as its card is. */
+  selected: boolean;
 }
 
 /** A mark on a line, at the end of its pane; `lineNumber: 0`, on the code's first row (`topRowOf`), for what's above it. */
@@ -69,6 +93,11 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
 /** What names a set of rows, to tell a new one from the same rows built anew. */
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
+}
+
+/** Where a line's outline is drawn (`LineBands`): its row, across its pane's code, from the gutter to the pane's end. */
+export function bandRect(box: LineBox): { top: number; left: number; width: number; height: number } {
+  return { top: box.top, left: box.contentLeft, width: box.paneRight - box.contentLeft, height: box.bottom - box.top };
 }
 
 /** The room between a line's marker and the right edge of its pane. */

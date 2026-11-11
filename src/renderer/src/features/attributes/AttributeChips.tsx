@@ -9,6 +9,8 @@ import { Markdown } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { AttributeChip } from './AttributeChip';
+import { AttributeTextEditor } from './AttributeTextEditor';
+import { attributeEditorFor } from './attributeValues';
 import { AttributeValueEditor } from './AttributeValueEditor';
 import { useAttributeSuggestions, useAttributeTypes, useAttributeValues } from './useAttributes';
 import styles from './AttributeChips.module.css';
@@ -46,9 +48,18 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
     setAdding(null);
   };
 
+  const setValue = async (attribute: string, value: string): Promise<boolean> => {
+    const set = async (): Promise<true> => {
+      await api.attributes.setValue(place, objectSpec, attribute, value);
+      return true;
+    };
+    return (await runAction(place, `Couldn't set ${attribute}`, set, isAffectedByAttributes)) === true;
+  };
+
+  // A quick value closes as it saves; a text stays open until it's saved, so a failure leaves it to try again.
   const save = async (attribute: string, value: string): Promise<void> => {
     close();
-    await runAction(place, `Couldn't set ${attribute}`, () => api.attributes.setValue(place, objectSpec, attribute, value), isAffectedByAttributes);
+    await setValue(attribute, value);
   };
 
   const remove = (attribute: string): void => {
@@ -91,7 +102,13 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
         <div className={styles.opened}>
           <span className={styles.openedName}>{openedRow.name}</span>
           {opened.mode === 'edit' ? (
-            <OpenedEditor key={openedRow.name} attribute={openedRow} onSave={(value) => void save(openedRow.name, value)} onCancel={close} />
+            <OpenedEditor
+              key={openedRow.name}
+              attribute={openedRow}
+              onSave={(value) => void save(openedRow.name, value)}
+              onSaveText={(value) => setValue(openedRow.name, value)}
+              onCancel={close}
+            />
           ) : (
             <>
               <Markdown text={openedRow.value} />
@@ -111,7 +128,18 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
   );
 }
 
-function OpenedEditor({ attribute, onSave, onCancel }: { attribute: AttributeValue; onSave: (value: string) => void; onCancel: () => void }) {
-  const suggestions = useAttributeSuggestions(attribute.name, true);
-  return <AttributeValueEditor initialValue={attribute.value} suggestions={suggestions} onSave={onSave} onCancel={onCancel} />;
+interface OpenedEditorProps {
+  attribute: AttributeValue;
+  onSave: (value: string) => void;
+  /** Resolves to whether it saved. */
+  onSaveText: (value: string) => Promise<boolean>;
+  onCancel: () => void;
+}
+
+/** A value's editor (`attributeEditorFor`): the quick field, or the comment editor, which a quick draft can move on to. */
+function OpenedEditor({ attribute, onSave, onSaveText, onCancel }: OpenedEditorProps) {
+  const [textDraft, setTextDraft] = useState(() => (attributeEditorFor(attribute.value) === 'text' ? attribute.value.trim() : null));
+  const suggestions = useAttributeSuggestions(attribute.name, textDraft === null);
+  if (textDraft !== null) return <AttributeTextEditor attribute={attribute.name} original={attribute.value} initialDraft={textDraft} onSave={onSaveText} onClose={onCancel} />;
+  return <AttributeValueEditor initialValue={attribute.value} suggestions={suggestions} onSave={onSave} onCancel={onCancel} onOutgrown={setTextDraft} />;
 }

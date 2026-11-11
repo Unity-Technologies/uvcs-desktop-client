@@ -1,5 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
-import type { DiffEntry } from '@shared/domain/diff';
+import type { DiffEntry, PermissionsChange } from '@shared/domain/diff';
 import { revisionIn, type RevisionRef } from '@shared/domain/revision';
 import { statusTones } from '../../components/changeFilter';
 import { statusGroup, type StatusGroup } from '../../components/statusGroups';
@@ -40,8 +40,16 @@ const LABELS: Record<DiffEntry['status'], string> = {
   moved: 'Moved',
 };
 
+/** What an item whose file permissions alone changed (`DiffEntry.permissionsChange`) is called, as its FS badge says. */
+const ONLY_PERMISSIONS = 'Only file permissions changed';
+
+/** An entry's status: a change of the file permissions alone is one of its own, as reviewers can pass over it. */
 export function diffEntryTone(entry: DiffEntry): StatusTone {
-  return TONES[entry.status];
+  return entry.permissionsChange ? 'permissions' : TONES[entry.status];
+}
+
+function diffEntryLabel(entry: DiffEntry): string {
+  return entry.permissionsChange ? ONLY_PERMISSIONS : LABELS[entry.status];
 }
 
 /**
@@ -58,10 +66,34 @@ export function diffEntryTones(entry: DiffEntry): readonly StatusTone[] {
 /** An entry's status letter, a moved file that changed with a C before its M; the M's tooltip shows the move itself. */
 export function diffEntryStatus(entry: DiffEntry): StatusMark {
   if (isMovedAndChanged(entry)) return { tone: 'moved', label: LABELS.moved, changedLabel: LABELS.changed };
-  return { tone: diffEntryTone(entry), label: LABELS[entry.status] };
+  return { tone: diffEntryTone(entry), label: diffEntryLabel(entry) };
 }
 
 export function describeDiffEntry(entry: DiffEntry): string {
   if (isMovedAndChanged(entry)) return 'Moved and changed';
-  return entry.oldPath ? `${LABELS[entry.status]} from ${entry.oldPath}` : LABELS[entry.status];
+  return entry.oldPath ? `${LABELS[entry.status]} from ${entry.oldPath}` : diffEntryLabel(entry);
+}
+
+/**
+ * What a diff shows, in place of its content, for an item whose file permissions alone changed: which changed. The
+ * same for a text, a binary, an image or a folder, whose content is the same on both sides. Null for any other item.
+ */
+export function permissionsNote(entry: DiffEntry): string | null {
+  return entry.permissionsChange ? describePermissionsChange(entry.permissionsChange) : null;
+}
+
+function describePermissionsChange(change: PermissionsChange): string {
+  const changed = 'Only the file permissions changed';
+  if (change.before === null && change.after === null) return `${changed}.`;
+  return `${changed}, from ${unbroken(change.before) ?? NOT_SET} to ${unbroken(change.after) ?? NOT_SET}.`;
+}
+
+/** What a side with no permissions (`cm` prints none) is called, so the note always names both sides. */
+const NOT_SET = 'not set';
+
+const NON_BREAKING_HYPHEN = '\u2011';
+
+/** Permissions as one word: a line would otherwise break at their hyphens, leaving `-r--r-` on one line and `-r--` on the next. */
+function unbroken(permissions: string | null): string | null {
+  return permissions && permissions.replaceAll('-', NON_BREAKING_HYPHEN);
 }

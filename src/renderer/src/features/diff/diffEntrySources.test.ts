@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
 
 describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
@@ -59,5 +59,56 @@ describe('diffEntryTones', () => {
     expect(diffEntryTones({ ...base, status: 'moved', oldPath: 'src/lib/b.ts' })).toEqual(['changed', 'moved']);
     expect(diffEntryTones({ ...base, status: 'moved', oldPath: 'src/lib/b.ts', revisionId: 4 })).toEqual(['moved']);
     expect(diffEntryTones({ ...base, status: 'added' })).toEqual(['added']);
+  });
+});
+
+describe('an item whose file permissions alone changed', () => {
+  const onlyPermissions: DiffEntry = {
+    status: 'changed',
+    path: 'tools/build.sh',
+    itemType: 'file',
+    baseRevisionId: 41,
+    revisionId: 41,
+    repository: 'game@local',
+    permissionsChange: { before: '-rw-r--r--', after: '-rwxr-xr-x' },
+  };
+
+  it('is lettered FS, found by its own chip and grouped apart from the files that changed', () => {
+    expect(diffEntryStatus(onlyPermissions)).toEqual({ tone: 'permissions', label: 'Only file permissions changed' });
+    expect(diffEntryTones(onlyPermissions)).toEqual(['permissions']);
+    expect(DIFF_ENTRY_FACTS.toneOf(onlyPermissions)).toBe('permissions');
+    expect(describeDiffEntry(onlyPermissions)).toBe('Only file permissions changed');
+  });
+
+  it('shows the same revision on both sides', () => {
+    const { original, modified } = diffEntrySources(onlyPermissions);
+    expect(original).toEqual(modified);
+  });
+
+  // The permissions are written with non-breaking hyphens, which a line never breaks at: read here as plain ones.
+  const plainHyphens = (text: string | null) => text?.replaceAll('\u2011', '-');
+
+  it('shows, in place of a diff of the same content, which permissions changed', () => {
+    expect(plainHyphens(permissionsNote(onlyPermissions))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
+    const permissions = (before: string | null, after: string | null) => plainHyphens(permissionsNote({ ...onlyPermissions, permissionsChange: { before, after } }));
+    expect(permissions(null, '-rwxr-xr-x')).toBe('Only the file permissions changed, from not set to -rwxr-xr-x.');
+    expect(permissions('-r--r--r--', null)).toBe('Only the file permissions changed, from -r--r--r-- to not set.');
+    expect(permissions(null, null)).toBe('Only the file permissions changed.');
+  });
+
+  it('keeps each permissions string on one line', () => {
+    expect(permissionsNote(onlyPermissions)).toContain('\u2011rw\u2011r\u2011\u2011r\u2011\u2011');
+    expect(permissionsNote(onlyPermissions)).not.toMatch(/[rwx]-/);
+  });
+
+  it('is the same for a binary or a folder, which have no text to show it beside', () => {
+    for (const itemType of ['binaryFile', 'directory'] as const) {
+      expect(plainHyphens(permissionsNote({ ...onlyPermissions, itemType }))).toBe('Only the file permissions changed, from -rw-r--r-- to -rwxr-xr-x.');
+    }
+  });
+
+  it('is none for an item whose content changed, or that was only moved', () => {
+    expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, baseRevisionId: 40 })).toBeNull();
+    expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, status: 'moved', oldPath: 'build.sh' })).toBeNull();
   });
 });

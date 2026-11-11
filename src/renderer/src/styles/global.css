@@ -65,6 +65,15 @@ textarea:focus-visible {
   height: var(--scrollbar-size);
 }
 
+/* A styled scrollbar takes its element's cursor: over selectable text (`.selectable`, a code block) it showed an
+   I-beam, as if it held text. Its thumb and track each need it: set on the scrollbar alone, the thumb kept the I-beam. */
+::-webkit-scrollbar,
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  cursor: default;
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--border-default);
   border: 3px solid transparent;

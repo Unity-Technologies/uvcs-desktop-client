@@ -20,7 +20,8 @@ The left pane is the incoming changesets above the files, as every list of chang
   head that Incoming reads anyway. The files that collide with local changes (changed on both sides, or changed
   locally and deleted or moved on the branch: `collidesWithLocal`) are a group of their own, "Conflicts with your
   changes", before "Changes to apply" (`incomingFileContent`), in the merge page's words: an update with conflicts is
-  a merge. With no conflicts there are no groups. The line under the header says what updating does to the workspace:
+  a merge. A file whose permissions alone changed on the branch has no content to merge, so it is never a conflict
+  (diff.md "Only the permissions changed"). With no conflicts there are no groups. The line under the header says what updating does to the workspace:
   "1 conflict with your changes · 13 to apply", or "14 changes to apply · Your local changes stay as they are"
   (`incomingFilesSummary`). The "!" chip filters the conflicts ("Conflicts with your changes", `INCOMING_TONE_LABELS`).
 - **A changeset** lists the files it changed and shows its details as History does (`ChangesetDetails` without its

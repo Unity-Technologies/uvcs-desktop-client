@@ -24,6 +24,8 @@ export function CommentArea({ label, hint, error, tall = false, singleLine, ref,
     focus: () => handle.current?.focus(),
     focusAtEnd: () => handle.current?.focusAtEnd(),
     focusAtStart: () => handle.current?.focusAtStart(),
+    selection: () => handle.current?.selection() ?? null,
+    focusAtSelection: (selection) => handle.current?.focusAtSelection(selection) ?? false,
   }));
   return (
     <FieldFrame id={id} labelId={labelId} onLabelPress={() => handle.current?.focusAtEnd()} label={label} hint={hint} error={error}>

@@ -1,5 +1,6 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
 import { onLinksThemselves } from '../cm/symlinkArgs';
+import { updateCommand } from '../cm/updateArgs';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
@@ -11,7 +12,6 @@ import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import { describeSelector } from './switchSelectors';
-import { updateWorkspace } from './updateWorkspace';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
@@ -34,6 +34,7 @@ export async function shelveBlockedAndUpdate(
   if (incoming.blockedPaths.length === 0) throw new Error('Nothing blocks the update anymore: update from Incoming.');
 
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
+  const kind = await deps.kindOf(workspacePath);
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so nothing was shelved.`);
 
@@ -42,7 +43,7 @@ export async function shelveBlockedAndUpdate(
   const changes = snapshot.changes.filter((change) => blocked.has(change.path));
 
   context.beginStep('Shelving the blocking files', 1, 2);
-  const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
+  const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, kind, context, incoming.blockedPaths);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'update', objectRef, target: NO_TARGET });
   records.save(record);
   const result = { shelveId: shelve.id, count: record.paths.length };
@@ -55,9 +56,10 @@ export async function shelveBlockedAndUpdate(
     context.beginStep('Updating', 2, 2);
     if (incoming.conflicts.length > 0) {
       // The blocking files are undone: what came in, read before shelving, is all the update has to merge.
-      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, workspace.kind, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
+      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, kind, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
     }
-    await updateWorkspace(cm, workspacePath, workspace.kind, context);
+    const { args, readProgress } = updateCommand(kind);
+    await cm.execute(args, { cwd: workspacePath, onOutputLine: context.progressOf(readProgress) });
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
     throw await changesPutBackError(deps, workspacePath, record, `Couldn't update: ${failureReason(error)}`, context);

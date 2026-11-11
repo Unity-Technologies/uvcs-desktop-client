@@ -518,28 +518,75 @@ button.pill:hover {
   white-space: nowrap;
 }
 
+/*
+ * An entry of Open: the thread in the conversation, and at its end, under the pointer or once a key reaches it, the
+ * thread in Changes. The one gone to last keeps a bar on its left, as the Comments panel marks the thread the code shows.
+ */
 .openItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: 3px var(--space-1);
-  border: none;
+  border-left: 2px solid transparent;
   border-radius: var(--radius-sm);
-  background: none;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: left;
 }
 
-.openItem:hover {
+.openItem:hover:not([data-current]) {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.openItem svg {
+.openItem[data-current] {
+  border-left-color: var(--accent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background: var(--bg-selected);
+  color: var(--text-primary);
+}
+
+.openItemPick {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 3px var(--space-1);
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.openItemPick svg {
   flex: none;
   color: var(--status-changed);
+}
+
+.openItemChanges {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.openItem:hover .openItemChanges,
+.openItemChanges:focus-visible {
+  opacity: 1;
+}
+
+.openItemChanges:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .openText {
@@ -707,10 +754,19 @@ button.earlierTag:hover {
 }
 
 /*
- * In the code, the thread gone to keeps its ring until another is: among several alike (the outdated ones, stacked
- * above the code), the eye finds it again after the light fades.
+ * In the code, a card's border is its line's outline color (`LineBands`): over the diff's added and removed tints, the
+ * subtle border the conversation uses all but disappears.
  */
-.thread[data-in-code][data-highlight] {
+.thread[data-in-code] {
+  border-color: var(--border-comment);
+}
+
+/*
+ * The thread selected keeps its ring until another is, so the eye finds it again after the light fades: in the code,
+ * gone to or picked there (`cardFocusOf`), among several alike (the outdated ones, stacked above the code); in the
+ * conversation, gone to from Open or opened at (`threadMarkOf`).
+ */
+.thread[data-selected] {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }

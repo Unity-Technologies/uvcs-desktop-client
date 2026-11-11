@@ -1,15 +1,15 @@
 import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { UpdateConflict, UpdateResolutions, UpdateResult } from '@shared/domain/incoming';
-import type { WorkspaceKind } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
+import { updateCommand } from '../cm/updateArgs';
 import { waitForNextSecond } from '../files/nextSecond';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
 import type { OperationContext } from '../operations/OperationTracker';
-import { updateWorkspace } from '../workspace/updateWorkspace';
 import { readIncomingChanges } from './incoming';
 import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type LocalVersions } from './localVersions';
 
@@ -20,12 +20,12 @@ import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type 
  * 3. Write each file's resolution (in a later second than `cm` wrote them: `waitForNextSecond`) and check out again
  *    the files that were checked out.
  * If undoing, saving a base or updating fails, the local versions are put back as they were. A partial workspace stays
- * partial (`updateWorkspace`).
+ * partial (`updateCommand`).
  */
 export async function updateWithMerge(
   cm: CmClient,
   workspacePath: string,
-  kind: WorkspaceKind | undefined,
+  kind: WorkspaceKind,
   resolutions: UpdateResolutions,
   backupsRoot: string,
   context: OperationContext,
@@ -42,13 +42,14 @@ export async function updateWithMerge(
 export async function updateMergingConflicts(
   cm: CmClient,
   workspacePath: string,
-  kind: WorkspaceKind | undefined,
+  kind: WorkspaceKind,
   conflicts: UpdateConflict[],
   resolutions: UpdateResolutions,
   backupsRoot: string,
   context: OperationContext,
 ): Promise<UpdateResult> {
-  const update = (): Promise<string> => updateWorkspace(cm, workspacePath, kind, context);
+  const { args, readProgress } = updateCommand(kind);
+  const update = (): Promise<string> => cm.execute(args, { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readProgress) });
 
   if (conflicts.length === 0) {
     await update();

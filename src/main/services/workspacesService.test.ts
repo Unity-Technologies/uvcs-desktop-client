@@ -8,7 +8,7 @@ import { loadedItemsArgs } from '../cm/loadedItems';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
-import { UPDATE_ARGS } from '../cm/updateArgs';
+import { updateCommand } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
@@ -235,28 +235,16 @@ describe('update', () => {
 
     await service.update(WORKSPACE, 'op-1');
 
-    const started = commands.filter((command) => command.via === 'execute');
-    expect(started).toMatchObject([{ via: 'execute', args: UPDATE_ARGS, options: { cwd: WORKSPACE } }]);
-    expect(started[0]?.args).toContain('--dontmerge');
+    expect(commands).toMatchObject([{ via: 'query', args: ['getworkspacefrompath', WORKSPACE, expect.any(String)] }, { via: 'execute', args: updateCommand('standard').args, options: { cwd: WORKSPACE } }]);
+    expect(commands[1]?.args).toContain('--dontmerge');
   });
 
-  it('keeps a partial workspace partial: a partial update of what it holds, never one that loads everything', async () => {
-    const { service, commands } = workspaces({ getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']), 'partial update': '' });
+  it('updates a partial workspace with cm partial update, which never merges either', async () => {
+    const { service, commands } = workspaces({ getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']), partial: '' });
 
     await service.update(WORKSPACE, 'op-1');
 
-    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([
-      { via: 'execute', args: ['partial', 'update', '--dontmerge'], options: { cwd: WORKSPACE } },
-    ]);
-  });
-
-  it('explains a partial update stopped by local changes that collide with incoming ones', async () => {
-    const { service } = workspaces({
-      getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']),
-      'partial update': cmFails('The update operation detected conflicts. The operation cannot continue since it was run with the --dontmerge option.'),
-    });
-
-    await expect(service.update(WORKSPACE, 'op-1')).rejects.toThrow('Some of your local changes collide with incoming ones.');
+    expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['partial', 'update', '--dontmerge'], options: { cwd: WORKSPACE } });
   });
 
   it('explains an update stopped by local changes that collide with incoming ones', async () => {
@@ -293,11 +281,11 @@ describe('update', () => {
 
 describe('a new workspace for a task', () => {
   it('switches the empty workspace with one plain cm switch of its own process', async () => {
-    const { service, commands } = workspaces({ switch: '' });
+    const { service, commands } = workspaces({ ...WORKSPACE_NAMES, switch: '' });
 
     await service.switchNewWorkspace(WORKSPACE, 'br:/main/task2', 'op-1');
 
-    expect(commands).toMatchObject([{ via: 'execute', args: ['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } }]);
+    expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } });
   });
 });
 

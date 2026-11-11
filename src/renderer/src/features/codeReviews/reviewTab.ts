@@ -24,6 +24,15 @@ export function conversationFocus(page: Pick<PageOf<'codeReview'>, 'tab' | 'focu
 }
 
 /**
+ * The page once a thread is picked in the conversation's Open: it no longer names the thread it was opened at
+ * (`conversationFocus`), so Show in conversation at that thread again changes the page and goes to it (`pickOnFocus`).
+ * Replaced in place, never stacked. The same page when it names none.
+ */
+export function pageAfterOpenPick(page: PageOf<'codeReview'>): PageOf<'codeReview'> {
+  return conversationFocus(page) === undefined ? page : { ...page, focusThread: undefined };
+}
+
+/**
  * The thread the review's changes go to as its page moves (`movesWithinTop`: a comment's file gone to from the
  * conversation): the changes, mounted already, read their page's thread only as they mount. None for the same page, a
  * tab picked, or a thread the conversation goes to.

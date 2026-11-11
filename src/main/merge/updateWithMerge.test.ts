@@ -206,25 +206,12 @@ describe('updateWithMerge', () => {
     expect(update.options.signal).toBe(context.signal);
   });
 
-  it('keeps a partial workspace partial, cancellably, when nothing needs merging', async () => {
-    const { cm, commands, ran } = updatingCm(workspacePath, { incoming: diffRecord('A', 'src/new.txt') });
-    const { context } = recordingContext();
-
-    await updateWithMerge(cm, workspacePath, 'partial', {}, backupsRoot, context);
-    const update = commands.find((command) => command.args[0] === 'partial')!;
-    expect(update.args).toEqual(['partial', 'update', '--dontmerge']);
-    expect(update.via).toBe('execute');
-    expect(update.options.signal).toBe(context.signal);
-    expect(ran('update')).toBe(false);
-  });
-
-  it('keeps a partial workspace partial while merging what both sides changed', async () => {
-    const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch });
+  it('updates a partial workspace with its own command, merging the same way', async () => {
+    const { cm, commands } = updatingCm(workspacePath, { incoming: changedOnBranch });
 
     await updateWithMerge(cm, workspacePath, 'partial', resolved, backupsRoot, recordingContext().context);
-
+    expect(commands.find((command) => command.args[0] === 'partial')?.args).toEqual(['partial', 'update', '--dontmerge']);
+    expect(commands.some((command) => command.args[0] === 'update')).toBe(false);
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['combined\n', 'mine b.txt\n', 'incoming c.txt\n']);
-    expect(ran('partial update')).toBe(true);
-    expect(ran('update')).toBe(false);
   });
 });

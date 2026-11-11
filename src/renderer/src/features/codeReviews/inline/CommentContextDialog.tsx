@@ -192,6 +192,7 @@ function ThreadCard({ review, thread, user, showInConversation, onClose, unlit =
       thread={thread}
       user={user}
       highlight={unlit ? undefined : 0}
+      selected={!unlit}
       inCode={{
         inContext: true,
         showInConversation: () => {
@@ -216,14 +217,14 @@ export type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
 /** One view of the commented file alone: its two versions, the thread under its line, scrolled to it. */
 function ViewDiff(props: ViewProps) {
   const state = useContextComparison(props);
-  const annotations = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
+  const { annotations, controls } = useThreadRow({ ...props, comparison: state.kind === 'comparison' ? state.comparison : null });
   if (state.kind !== 'comparison') return <ContextViewPending state={state} />;
   // None only without a comparison.
   if (!annotations) return null;
   const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
-      <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} />
+      <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} compareControls={controls} />
     </DiffAnnotationsContext.Provider>
   );
 }

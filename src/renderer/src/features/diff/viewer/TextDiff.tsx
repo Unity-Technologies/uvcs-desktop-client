@@ -21,12 +21,14 @@ import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { scrollToAnnotationRow } from './annotationRowScroll';
+import { LineBands } from './LineBands';
 import { lineToReveal } from './lineToReveal';
 import type { ChangedLine } from './changeBlocks';
 import { LineMarkers } from './LineMarkers';
 import { useDiffAnnotations } from './useDiffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
+import { useLineActionButton } from './LineActionButton';
 import { useCodeMenu } from './useCodeMenu';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
@@ -237,7 +239,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     selectable: lineLinks.selectedLines !== undefined,
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
+    lineAction: annotations?.lineAction,
   });
+  // What the place does with a line (a review's comment on it), in the gutter of the line under the pointer.
+  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container);
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
@@ -262,9 +267,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
       useTokenTransformer: editable,
       onPostRender,
       ...lineLinks.options,
+      ...lineAction.options,
       ...discard.options,
     }),
-    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, lineLinks.options, discard.options],
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, lineLinks.options, lineAction.options, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
@@ -351,7 +357,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     fileDiff={fileDiff}
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
-                    renderGutterUtility={discard.renderGutterUtility}
+                    // A workspace file's diff discards from its gutter; a committed one (a review's) acts on a line there.
+                    renderGutterUtility={discard.renderGutterUtility ?? lineAction.renderGutterUtility}
                     lineAnnotations={annotations?.rows}
                     renderAnnotation={annotations?.render}
                     edit={edit}
@@ -367,6 +374,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           <PaneScrollbars containerRef={container} />
           {discard.overlay}
           {lineTools.chip}
+          {annotations?.bands && annotations.bands.length > 0 && <LineBands containerRef={container} bands={annotations.bands} layout={layout} />}
           {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
         </div>

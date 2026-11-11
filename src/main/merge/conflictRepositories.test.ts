@@ -6,7 +6,7 @@ import { recordsIn, recordsOutput, statusHeader } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
 const treeItemsIn = (output: string) => recordsIn(output, readTreeItem);
-import { conflictListingArgs, destinationTree, withConflictRepositories, withRepositories } from './conflictRepositories';
+import { conflictListingArgs, destinationTree, noLoadedTreeMessage, withConflictRepositories, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
 const OWN = '/01project/src/client/cm/commands/merge/MergePrinter.cs';
@@ -28,6 +28,13 @@ const LISTING = recordsOutput(
   { name: 'MergePrinter.cs', wkpath: OWN, type: 'txt', size: 4211, changeset: 276520, repspec: 'rep:acme@acme@cloud', revid: 31259533, itemid: 420525 },
   { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 30889126, changeset: 276611, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 },
 );
+
+describe('noLoadedTreeMessage', () => {
+  it('says what to do on a shelve and in a partial workspace, neither of which has one changeset loaded', () => {
+    expect(noLoadedTreeMessage({ kind: 'shelve', name: '3' })).toMatch(/shelve.*Switch it to a branch/);
+    expect(noLoadedTreeMessage({ kind: 'branch', name: '/main' })).toMatch(/partial workspace.*standard workspace/);
+  });
+});
 
 describe('destinationTree', () => {
   it('is the destination contributor, else the branch merged into, else the workspace tells', () => {
@@ -197,12 +204,12 @@ describe('withConflictRepositories when cm printed no contributors', () => {
     expect(lines().at(-1)).toContain('--tree=cs:278648');
   });
 
-  it("lists in the branch a partial workspace is on, which loaded no one changeset (cm prints -1)", async () => {
-    const { cm, lines } = fakeCmClient({ 'status --header --xml': statusHeader('/main', { changeset: -1 }), ls: LISTING });
+  it("refuses a merge into a partial workspace, which loaded no one changeset (cm prints -1)", async () => {
+    const { cm } = fakeCmClient({ 'status --header --xml': statusHeader('/main', { changeset: -1 }) });
 
-    await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined });
-
-    expect(lines().at(-1)).toContain('--tree=br:/main');
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined })).rejects.toThrow(
+      "partial workspace can't take a merge",
+    );
   });
 
   it("refuses a merge into a workspace on a shelve, whose tree can't be listed", async () => {

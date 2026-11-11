@@ -130,7 +130,7 @@ function github(url, init) {
   }
   if (url.host === 'github.com' && path === '/login/oauth/access_token') {
     devicePolls++;
-    return answer(200, devicePolls < 4 ? { error: 'authorization_pending' } : { access_token: `gho_${'f'.repeat(36)}`, token_type: 'bearer', scope: 'repo' });
+    return answer(200, devicePolls < 4 ? { error: 'authorization_pending' } : { access_token: `ghu_${'f'.repeat(36)}`, token_type: 'bearer', scope: '' });
   }
   if (tokenOf(init.headers).includes('bad')) return answer(401, { message: 'Bad credentials' });
   if (path === '/user') return answer(200, { login: 'ana-diaz', name: 'Ana Díaz' });

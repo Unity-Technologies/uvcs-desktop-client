@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, partialSwitchDisabledReason, selectorPlace } from './switchSelectors';
 
 describe('parseSelectorSpec', () => {
   it('reads the kind, name and repository of a spec', () => {
@@ -45,5 +45,23 @@ describe('leaveDisabledReason', () => {
     expect(leaveDisabledReason({ kind: 'branch', name: '/main' })).toBeUndefined();
     expect(leaveDisabledReason({ kind: 'label', name: 'v1' })).toBeUndefined();
     expect(leaveDisabledReason({ kind: 'shelve', name: '4' })).toBe('shelveSource');
+  });
+});
+
+describe('partialSwitchDisabledReason', () => {
+  it('lets a partial workspace switch to a branch of its own repository, named or bare', () => {
+    expect(partialSwitchDisabledReason('br:/main/t2', 'game')).toBeUndefined();
+    expect(partialSwitchDisabledReason('br:/main/t2@game@local', 'game')).toBeUndefined();
+    expect(partialSwitchDisabledReason('/main/t3', 'game')).toBeUndefined();
+  });
+
+  it('refuses a changeset, a label and a shelve', () => {
+    expect(partialSwitchDisabledReason('cs:12', 'game')).toBe('notBranch');
+    expect(partialSwitchDisabledReason('lb:v1', 'game')).toBe('notBranch');
+    expect(partialSwitchDisabledReason('sh:4', 'game')).toBe('notBranch');
+  });
+
+  it('refuses a branch of another repository', () => {
+    expect(partialSwitchDisabledReason('br:/main@other@local', 'game')).toBe('otherRepository');
   });
 });

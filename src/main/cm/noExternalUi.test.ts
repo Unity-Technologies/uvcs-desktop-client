@@ -73,8 +73,13 @@ describe('cm commands never open an external tool', () => {
   });
 
   it('never applies shelves with `cm shelveset apply`, which opens the merge tool on conflicts', () => {
-    const applies = allSources.filter(({ source }) => /'shelveset',\s*'apply'/.test(source)).map(({ file }) => file);
+    const applies = allSources.filter(({ source }) => /(?<!'partial',\s*)'shelveset',\s*'apply'/.test(source)).map(({ file }) => file);
     expect(applies).toEqual([]);
+  });
+
+  it('applies a shelve with `cm partial shelveset apply` only where it first checks no merge is needed', () => {
+    const applies = allSources.filter(({ source }) => /'partial',\s*'shelveset',\s*'apply'/.test(source)).map(({ file }) => relative(file));
+    expect(applies).toEqual(['workspace/applyShelveCleanly.ts']);
   });
 
   it('never checks in with --update, which merges with the merge tool', () => {

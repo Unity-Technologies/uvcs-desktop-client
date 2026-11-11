@@ -36,11 +36,31 @@ export function hasComments(comments: Pick<FileComments, 'lines' | 'outdated'> |
 
 /**
  * The lines opened while comments are hidden, once a thread on one is gone to: its line opens, after the others (the
- * order rows keep, `annotationRowsOf`). Unchanged when comments show in the code, or the thread is at no line.
+ * order rows keep, `annotationRowsOf`). Unchanged when comments show in the code, the thread is at no line, or it was
+ * picked in place (`ThreadFocus.inPlace`): it's on screen already, and its card's Hide, whose click picks it too, has
+ * just folded its line.
  */
-export function openedOnFocus(opened: readonly string[], lineKey: string | undefined, inCode: boolean): readonly string[] {
-  if (inCode || lineKey === undefined || opened.includes(lineKey)) return opened;
+export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lineKey: string | undefined, inCode: boolean): readonly string[] {
+  if (inCode || focus.inPlace || lineKey === undefined || opened.includes(lineKey)) return opened;
   return [...opened, lineKey];
+}
+
+/** The lines opened while comments are hidden, in the file they were opened in (`ReviewFileAnnotator` stays as files change). */
+export interface OpenedLines {
+  path: string;
+  keys: readonly string[];
+}
+
+/**
+ * The lines opened while comments are hidden, once a comment written on one of `path` is sent: its line opens, so the
+ * new thread shows where it was written rather than folding into a marker; lines opened in another file aren't this
+ * one's. Unchanged when comments show in the code (read as it's sent: they may have been hidden meanwhile), or the line
+ * is open already.
+ */
+export function openedOnSend(opened: OpenedLines, path: string, lineKey: string, inCode: boolean): OpenedLines {
+  const keys = opened.path === path ? opened.keys : [];
+  if (inCode || keys.includes(lineKey)) return opened;
+  return { path, keys: [...keys, lineKey] };
 }
 
 /** Whether the outdated threads above the code open: when one of them is gone to. */

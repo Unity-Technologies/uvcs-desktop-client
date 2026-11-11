@@ -42,6 +42,33 @@ right (`StartingPointPicker`, the dialog's `headerAction`), which names the chos
 `chosenStartingPoint`), opens them as explained cards in a popover, so the body reads the same with one starting point
 or several.
 
+### A partial workspace
+
+A partial workspace (its kind read by `kindOf`, from `cm getworkspacefrompath`, a local read) is updated, switched
+and checked in with `cm partial`: `updateCommand`, `switchCommand` (`cm/updateArgs.ts`) and `checkinArgs` choose the
+command by kind, everywhere the app updates, switches or checks in (Incoming, the switch with its pending changes,
+the update that shelves blocking changes, Changes, merges). Standard and dynamic workspaces keep `cm update`,
+`cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
+rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
+`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`): a changeset,
+label or shelve ("A partial workspace can only switch to a branch."), or a branch of another repository ("… of its own
+repository.").
+
+A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
+(Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`
+(`shelveCreateArgs`). It has no `--dependencies`: it takes each path with everything under it. Nor can a partial
+workspace merge, so a shelve comes back with `cm partial shelveset apply` (`applyShelveCleanly`), which has no preview
+and waits for the merge tool on a conflict: it runs only on a workspace with no pending changes whose loaded items
+are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwise the changes stay on the shelve,
+and a switch's toast says to merge it in a standard workspace instead of offering the merge page (`mergesHere` on
+`bringPending`), which refuses a partial workspace (`conflictRepositories`).
+
+A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
+update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
+(`loadedChangesetOf`: -1 only on a branch, any other number below zero stays unexpected output), as on a shelve, and
+tells the two apart by the selector's kind, never by `loadedChangeset`. So nothing comes in (`NothingIncoming`), no
+branch is made from the workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
+
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
 "Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,

@@ -1,4 +1,5 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
@@ -19,12 +20,16 @@ import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord } from './shelveRecord';
 import { switchApproach } from './switchApproach';
-import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, partialSwitchDisabledReason, selectorPlace } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
+const PARTIAL_REFUSED = {
+  notBranch: 'A partial workspace can only switch to a branch.',
+  otherRepository: 'A partial workspace can only switch to a branch of its own repository.',
+} as const;
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
   /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */
@@ -49,15 +54,26 @@ export async function switchWithChanges(
   context: OperationContext,
 ): Promise<SwitchResult> {
   const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
+  const kind = await deps.kindOf(workspacePath);
+  assertPartialCanSwitch(kind, targetSpec, workspace);
   const snapshot = await readPendingSnapshot(deps.cm, workspacePath);
-  const result = await switchFrom(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
+  const result = await switchFrom(deps, workspacePath, { ...workspace, kind }, snapshot, targetSpec, action, context);
   return { ...result, renamedPrivates: await privatesRenamedBySwitch(deps.cm, workspacePath, snapshot) };
+}
+
+/** What the switch knows of the workspace: where it is, and how it holds its files (which `cm` switches it). */
+type SwitchingWorkspace = WorkspaceIdentity & { kind: WorkspaceKind };
+
+function assertPartialCanSwitch(kind: WorkspaceKind, targetSpec: string, workspace: WorkspaceIdentity): void {
+  if (kind !== 'partial') return;
+  const reason = partialSwitchDisabledReason(targetSpec, workspace.repositoryName);
+  if (reason) throw new Error(PARTIAL_REFUSED[reason]);
 }
 
 async function switchFrom(
   deps: SwitchDependencies,
   workspacePath: string,
-  workspace: WorkspaceIdentity,
+  workspace: SwitchingWorkspace,
   snapshot: PendingChangesSnapshot,
   targetSpec: string,
   action: SwitchChangesAction | undefined,
@@ -67,16 +83,16 @@ async function switchFrom(
   const summary = summarizePending(snapshot.changes);
   switch (switchApproach(summary)) {
     case 'switchAsIs':
-      await runSwitch(cm, workspacePath, targetSpec, context);
+      await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
       return { kind: 'switched', restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'refuseMerge':
       throw new Error(IN_MERGE);
     case 'undoUnchangedCheckouts':
       await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-      await runSwitch(cm, workspacePath, targetSpec, context);
+      await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
       return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'shelveChanges':
-      if (action === 'discard') return discardChanges(deps, workspacePath, summary.pendingCount, targetSpec, context);
+      if (action === 'discard') return discardChanges(deps, workspacePath, workspace.kind, summary.pendingCount, targetSpec, context);
       return shelveChanges(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
   }
 }
@@ -86,7 +102,7 @@ async function switchFrom(
  * private files, as Undo in Changes leaves them (one the target has at the same path is renamed by `cm switch`).
  * With no shelve, a failure can't put anything back: its error says what is already undone instead.
  */
-async function discardChanges(deps: SwitchDependencies, workspacePath: string, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
+async function discardChanges(deps: SwitchDependencies, workspacePath: string, kind: WorkspaceKind, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
   const { cm } = deps;
   if (context.signal.aborted) throw new Error('The switch was cancelled.');
   const committed = withoutStop(context);
@@ -101,7 +117,7 @@ async function discardChanges(deps: SwitchDependencies, workspacePath: string, c
 
   committed.beginStep('Switching', 2, 2);
   try {
-    await runSwitch(cm, workspacePath, targetSpec, committed);
+    await runSwitch(cm, workspacePath, targetSpec, kind, committed);
   } catch (error) {
     throw new Error(`${failureReason(error)}. Your changes were undone, as you chose, but the switch didn't finish.`);
   }
@@ -112,7 +128,7 @@ async function discardChanges(deps: SwitchDependencies, workspacePath: string, c
 async function shelveChanges(
   deps: SwitchDependencies,
   workspacePath: string,
-  workspace: WorkspaceIdentity,
+  workspace: SwitchingWorkspace,
   snapshot: PendingChangesSnapshot,
   targetSpec: string,
   action: PendingChangesAction | undefined,
@@ -144,7 +160,7 @@ function assertAllowed(action: PendingChangesAction, targetSpec: string, workspa
 async function shelveAndSwitch(
   deps: SwitchDependencies,
   workspacePath: string,
-  workspace: WorkspaceIdentity,
+  workspace: SwitchingWorkspace,
   snapshot: PendingChangesSnapshot,
   targetSpec: string,
   mode: PendingChangesAction,
@@ -154,7 +170,7 @@ async function shelveAndSwitch(
   const steps = mode === 'bring' ? 4 : 3;
   context.beginStep('Shelving your changes', 1, steps);
   const objectRef = await sourceObjectRef(cm, workspacePath, workspace);
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, workspace.kind, context);
   const target = selectorPlace(parseSelectorSpec(targetSpec).selector);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode, objectRef, target });
   records.save(record);
@@ -168,7 +184,7 @@ async function shelveAndSwitch(
     await assertClean(cm, workspacePath);
 
     context.beginStep('Switching', 3, steps);
-    await runSwitch(cm, workspacePath, targetSpec, context);
+    await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
   } catch (error) {
     throw await rollBackSwitch(deps, workspacePath, record, error, context);
   }
@@ -194,15 +210,17 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
 
 async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {
   context.beginStep('Bringing your changes', 4, 4);
+  const kind = await deps.kindOf(workspacePath);
+  const mergesHere = kind !== 'partial';
   try {
-    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
+    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, kind, context);
     if (outcome.kind === 'applied') {
       await deps.leftChanges.finish(workspacePath, record);
       return { kind: 'brought' };
     }
-    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: outcome.kind === 'conflicts' ? outcome.count : 0 };
+    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: outcome.kind === 'conflicts' ? outcome.count : 0, mergesHere };
   } catch {
     // The switch is done and the changes are safe in the shelve; the merge view explains what went wrong.
-    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: 0 };
+    return { kind: 'bringPending', shelveId: record.shelveId, conflictCount: 0, mergesHere };
   }
 }

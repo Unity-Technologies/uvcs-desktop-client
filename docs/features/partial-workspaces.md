@@ -83,8 +83,8 @@ thousands of items is still one command, past the command-line limit, rather tha
 
 ## Staying partial
 
-Every update the app runs on a partial workspace is `cm partial update --dontmerge` (`PARTIAL_UPDATE_ARGS`), chosen
-by the workspace's kind in `updateWorkspace`: Incoming's update, the update that merges the user's resolutions
+Every update the app runs on a partial workspace is `cm partial update --dontmerge`, chosen by the workspace's kind
+in `updateCommand` (`main/cm/updateArgs.ts`): Incoming's update, the update that merges the user's resolutions
 (`updateWithMerge`) and the one after shelving what blocked it (`shelveBlockedAndUpdate`). It brings what the workspace
-holds up to date, new items in its folders too, and downloads nothing else. It prints no line per file, so its progress
-can't be shown.
+holds up to date, new items in its folders too, and downloads nothing else. Its progress is read by
+`readPartialUpdateProgress`.

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
+import type { GitHubApp } from '@shared/issueTrackers/signInMethods';
 import { IssueTrackers } from './IssueTrackers';
 import { IssueTrackerStore } from './IssueTrackerStore';
 import type { Wait } from './signIn/deviceFlow';
@@ -29,7 +30,7 @@ const SIGNED_IN: TrackerAnswers = {
 /** A wait that never ends by itself, only when canceled: the poll it holds back is never sent. */
 const waitUntilCanceled: Wait = (_ms, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('canceled'))));
 
-function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, consentWith = undefined as ((server: string, kind: string) => boolean) | undefined, consentAsync = undefined as ((server: string) => Promise<boolean>) | undefined, cipher = plainCipher, clientIds = { 'github.com': '' }, wait = (async () => undefined) as Wait } = {}) {
+function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (server: string) => boolean, consentWith = undefined as ((server: string, kind: string) => boolean) | undefined, consentAsync = undefined as ((server: string) => Promise<boolean>) | undefined, cipher = plainCipher, githubApps = { 'github.com': { clientId: '' } } as Readonly<Record<string, GitHubApp>>, wait = (async () => undefined) as Wait } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'trackers-'));
   const tracker = fakeTrackerHttp(answers);
   const announced: IssueTrackerSetup[] = [];
@@ -43,7 +44,7 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
     newId: () => `id${++ids}`,
     now: () => 0,
     wait,
-    oauthClientIds: clientIds,
+    githubApps,
     openExternal: (url) => opened.push(url),
     askHostConsent: consentAsync ?? (async (server, kind) => (consentWith ? consentWith(server, kind) : consent(server))),
   });
@@ -392,20 +393,37 @@ describe('IssueTrackers', () => {
     ]);
   });
 
-  it('signs in with GitHub’s device flow where an app is registered', async () => {
+  it('signs in with GitHub’s device flow where an app is registered, asking for no scope: the GitHub App’s permissions say what it reads', async () => {
     const { engine, tracker } = trackers(
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': [{ json: { error: 'authorization_pending' } }, { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } }],
+        'POST https://github.com/login/oauth/access_token': [{ json: { error: 'authorization_pending' } }, { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } }],
       },
-      { clientIds: { 'github.com': 'Iv1.app' } },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
     expect(engine.setup().deviceFlowHosts).toEqual(['github.com']);
     const started = await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     expect(started).toEqual({ flowId: 'id1', userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device', expiresAt: 900_000 });
+    expect(tracker.requests[0]!.form).toEqual({ client_id: 'Iv1.app' });
     expect(await engine.finishDeviceSignIn('id1')).toMatchObject({ kind: 'signedIn', connection: { signInMethod: 'deviceCode', scope: '*' } });
-    expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer gho_token');
+    expect(tracker.requests.find((request) => request.url.endsWith('/user'))!.headers.Authorization).toBe('Bearer ghu_token');
+  });
+
+  it('offers to install the GitHub App when its sign-in can’t read the project: a private one is read only where it’s installed', async () => {
+    const installPage = 'https://github.com/apps/acme-desktop/installations/new';
+    const { engine } = trackers(
+      {
+        ...SIGNED_IN,
+        [GRAPHQL]: { json: { data: { repository: null, search: { issueCount: 0 } }, errors: [{ type: 'NOT_FOUND', path: ['repository'] }] } },
+        'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'WDJB-MJHT', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_token', token_type: 'bearer' } },
+      },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app', installPage } } },
+    );
+    await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
+    expect(await engine.finishDeviceSignIn('id1')).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game', installPage } });
+    expect(await engine.useConnection({ repository: REPOSITORY, link: LINK, connectionId: 'id2' })).toEqual({ kind: 'failed', failure: { reason: 'projectUnreadable', project: 'acme/game', installPage } });
   });
 
   it('signs a connection in again with the device flow, keeping its bindings', async () => {
@@ -413,15 +431,15 @@ describe('IssueTrackers', () => {
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_again', token_type: 'bearer', scope: 'repo' } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_again', token_type: 'bearer', scope: '' } },
       },
-      { clientIds: { 'github.com': 'Iv1.app' } },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
     const started = await engine.startDeviceSignIn({ connectionId: 'id1' });
     expect(started).toMatchObject({ userCode: 'C' });
     expect(await engine.finishDeviceSignIn((started as { flowId: string }).flowId)).toMatchObject({ kind: 'signedIn', connection: { id: 'id1', credential: 'kept', signInMethod: 'deviceCode' } });
-    expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer gho_again');
+    expect(tracker.requests.at(-1)!.headers.Authorization).toBe('Bearer ghu_again');
     expect(engine.setup().bindings).toHaveLength(1);
   });
 
@@ -430,7 +448,7 @@ describe('IssueTrackers', () => {
       {
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
       },
-      { clientIds: { 'github.com': 'Iv1.app' }, wait: waitUntilCanceled },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } }, wait: waitUntilCanceled },
     );
     await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     engine.cancelDeviceSignIn('id1');
@@ -444,10 +462,10 @@ describe('IssueTrackers', () => {
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
         'POST https://github.com/login/oauth/access_token': () => {
           cancel();
-          return { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } };
+          return { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } };
         },
       },
-      { clientIds: { 'github.com': 'Iv1.app' } },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
     cancel = () => engine.cancelDeviceSignIn('id1');
     await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
@@ -462,9 +480,9 @@ describe('IssueTrackers', () => {
       {
         ...SIGNED_IN,
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
-        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'gho_token', token_type: 'bearer', scope: 'repo' } },
+        'POST https://github.com/login/oauth/access_token': { json: { access_token: 'ghu_token', token_type: 'bearer', scope: '' } },
       },
-      { clientIds: { 'github.com': 'Iv1.app' } },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } } },
     );
     await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK });
     await new Promise((resolve) => setImmediate(resolve));
@@ -477,7 +495,7 @@ describe('IssueTrackers', () => {
       {
         'POST https://github.com/login/device/code': { json: { device_code: 'dev', user_code: 'C', verification_uri: 'https://github.com/login/device', expires_in: 900, interval: 5 } },
       },
-      { clientIds: { 'github.com': 'Iv1.app' }, wait: waitUntilCanceled },
+      { githubApps: { 'github.com': { clientId: 'Iv1.app' } }, wait: waitUntilCanceled },
     );
     await engine.startDeviceSignIn({ repository: REPOSITORY, link: LINK }, 7);
     engine.windowClosed(7);

@@ -1,10 +1,12 @@
 import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import { automaticShelveComment, parseCreatedShelves, type CreatedShelve } from '../cm/automaticShelve';
 import type { CmClient, CmRunOptions } from '../cm/CmClient';
 import { queryDiffEntries } from '../cm/diffEntries';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
+import { shelveCreateArgs } from '../cm/shelveCreateArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -21,10 +23,11 @@ export function createAutomaticShelve(
   workspacePath: string,
   changes: PendingChange[],
   objectRef: string,
+  kind: WorkspaceKind,
   context: OperationContext,
   onlyPaths?: string[],
 ): Promise<CreatedShelve> {
-  return createVerifiedShelve(cm, workspacePath, changes, automaticShelveComment(objectRef), context, onlyPaths);
+  return createVerifiedShelve(cm, workspacePath, changes, automaticShelveComment(objectRef), kind, context, onlyPaths);
 }
 
 /**
@@ -36,14 +39,13 @@ export async function createVerifiedShelve(
   workspacePath: string,
   changes: PendingChange[],
   comment: string,
+  kind: WorkspaceKind,
   context: OperationContext,
   onlyPaths?: string[],
 ): Promise<CreatedShelve> {
   const targets = onlyPaths ? toAbsolutePaths(workspacePath, onlyPaths) : [];
-  // Given paths, `--dependencies` takes the added folders above them too, as a check-in does (`checkinArgs`).
-  const dependencies = onlyPaths ? ['--dependencies'] : [];
   const output = await withTempFile(comment, (commentsFile) =>
-    cm.execute(['shelveset', 'create', ...targets, '--all', ...dependencies, `-commentsfile=${commentsFile}`], {
+    cm.execute(shelveCreateArgs(targets, commentsFile, kind), {
       cwd: workspacePath,
       onOutputLine: context.progressOf(readShelveProgress),
     }),

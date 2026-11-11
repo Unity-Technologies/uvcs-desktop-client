@@ -1,4 +1,5 @@
 import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
@@ -90,7 +91,7 @@ function sameItemKey(conflict: PrintedFileConflict): string {
 
 /**
  * The tree the merge goes into: its destination contributor, else the branch merged into. Null for a workspace merge
- * whose contributors `cm` didn't print: what the workspace loaded is its destination then (`loadedTree`).
+ * whose contributors `cm` didn't print: the workspace's loaded changeset is its destination then.
  */
 export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): string | null {
   const destination = plan.contributors?.destination.changesetId;
@@ -99,13 +100,20 @@ export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): 
 }
 
 /**
- * The workspace's loaded changeset, or its branch when it loaded no one changeset (a partial workspace on a branch:
- * `cm` prints -1). A workspace on a shelve takes no merges: `cm` finds no branch to check out on.
+ * The workspace's loaded changeset. A workspace on a shelve takes no merges: `cm` finds no branch to check out on. A
+ * partial workspace has no one changeset whose files the conflicts could be listed from (`loadedChangesetOf`).
  */
 async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> {
   const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
-  if (selector.kind === 'shelve') throw new Error("A workspace on a shelve can't take a merge. Switch it to a branch first.");
-  return loadedChangeset === null ? spec.branch(selector.name) : spec.changeset(loadedChangeset);
+  if (loadedChangeset === null) throw new Error(noLoadedTreeMessage(selector));
+  return spec.changeset(loadedChangeset);
+}
+
+/** Why a workspace with no loaded changeset can't take a merge. */
+export function noLoadedTreeMessage(selector: WorkspaceSelector): string {
+  return selector.kind === 'shelve'
+    ? "A workspace on a shelve can't take a merge. Switch it to a branch first."
+    : "A partial workspace can't take a merge. Update it, or merge in a standard workspace.";
 }
 
 /** `cm ls` of the conflicting files in `tree`. */

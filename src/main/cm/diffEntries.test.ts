@@ -79,6 +79,42 @@ describe('reading diff entries', () => {
     ]);
   });
 
+  it('reads an item whose file permissions alone changed as the same revision on both sides, with its permissions', () => {
+    // `cm` gives a change without a content change no base revision: `baserevid` is -1, as for an added item.
+    const [entry] = diffEntriesIn(formatOutput(['C', '"/tools/build.sh"', '""', '-1', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']));
+    expect(entry).toEqual({
+      status: 'changed',
+      path: 'tools/build.sh',
+      oldPath: undefined,
+      itemType: 'file',
+      baseRevisionId: 41,
+      revisionId: 41,
+      repository: 'game@local',
+      permissionsChange: { before: '-rw-r--r--', after: '-rwxr-xr-x' },
+    });
+  });
+
+  it('reads no permissions on a side that sets none', () => {
+    // `cm` prints nothing for permissions never set, as on an item first checked in from Windows.
+    const [entry] = diffEntriesIn(formatOutput(['C', '"/src/GitCredentials.cs"', '""', '-1', '41', 'F', GAME, '"-r--r--r--"', '""']));
+    expect(entry?.permissionsChange).toEqual({ before: '-r--r--r--', after: null });
+  });
+
+  it('reads an item whose content and permissions changed as a plain change', () => {
+    const [entry] = diffEntriesIn(formatOutput(['C', '"/tools/build.sh"', '""', '40', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']));
+    expect(entry).toMatchObject({ status: 'changed', baseRevisionId: 40, revisionId: 41 });
+    expect(entry?.permissionsChange).toBeUndefined();
+  });
+
+  it('reads an item moved whose permissions alone changed as only moved', () => {
+    const output =
+      formatOutput(['C', '"/tools/build.sh"', '""', '-1', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']) +
+      formatOutput(['M', '"/tools/build.sh"', '"/build.sh"', '-1', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']);
+    expect(diffEntriesIn(output)).toEqual([
+      { status: 'moved', path: 'tools/build.sh', oldPath: 'build.sh', itemType: 'file', baseRevisionId: 41, revisionId: 41, repository: 'game@local' },
+    ]);
+  });
+
   it('reads a big diff in one pass: doubling it about doubles the work, sorting included', () => {
     const diffOf = (size: number) => formatOutput(...Array.from({ length: size }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % size}.ts"`, '""', '12', '13', 'F', GAME]));
     const charactersReadFor = (size: number) => countCharactersRead(() => diffEntriesIn(diffOf(size))).charactersRead;

@@ -24,6 +24,7 @@ import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { failureReason } from '../workspace/putShelvedChangesBack';
 import { loadXlink, type XlinkLoad } from '../workspace/loadXlink';
+import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const filesOf = (load: XlinkLoad): LoadedXlinkFiles => (load.kind === 'changesWaiting' ? { changesWaitIn: load.shelveId } : {});
@@ -32,9 +33,10 @@ const filesOf = (load: XlinkLoad): LoadedXlinkFiles => (load.kind === 'changesWa
  * Xlinks created and edited. Creating one checks it in and loads its files, an operation; every other command is a
  * quick one, as none moves files (`xlinkArgs`).
  */
-export function createXlinksService({ cm, operations }: Pick<ServiceContext, 'cm' | 'operations'>, { switchShelves, leftChanges }: SwitchContext): XlinksApi {
+export function createXlinksService({ cm, operations, headers }: Pick<ServiceContext, 'cm' | 'operations' | 'headers'>, { switchShelves, leftChanges }: SwitchContext): XlinksApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
-  const shelveFlow = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
+  const kindOf = kindFromHeaders(headers);
+  const shelveFlow = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf };
 
   async function rules(workspacePath: string, path: string) {
     const output = await cm.query(showXlinkArgs(toAbsolutePath(workspacePath, path)), inWorkspace(workspacePath));
@@ -72,7 +74,8 @@ export function createXlinksService({ cm, operations }: Pick<ServiceContext, 'cm
   /** Checks in the xlink and nothing else: the folder holding it, and the added folders above, go in with it (`checkinArgs`). */
   function checkInAlone(workspacePath: string, absolutePath: string, comment: string): Promise<number> {
     return withTempFile(comment, async (commentsFile) => {
-      const checkin = readCheckinOutput(await cm.execute(checkinArgs([absolutePath], commentsFile, false), inWorkspace(workspacePath)));
+      const kind = await kindOf(workspacePath);
+      const checkin = readCheckinOutput(await cm.execute(checkinArgs([absolutePath], commentsFile, false, kind), inWorkspace(workspacePath)));
       if (checkin.kind === 'noChanges') throw new Error('Nothing was checked in');
       return checkin.changesetId;
     });
