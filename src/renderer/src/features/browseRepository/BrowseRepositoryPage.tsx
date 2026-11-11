@@ -16,7 +16,7 @@ import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { GO_TO_FILE_SHORTCUT } from '../files/useFileCommands';
 import { goToRepositoryFile } from '../repositoryFiles/RepositoryGoToFileDialog';
 import { useGoToFileCommand } from '../repositoryFiles/useGoToFileCommand';
-import { browseOpening } from './browseOpening';
+import { browseOpening, goToFileOpening } from './browseOpening';
 import { RepositoryTree } from './RepositoryTree';
 import { publishShownBrowseItem } from './shownBrowseItem';
 
@@ -47,7 +47,9 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
     if (!searchPlace) return;
     void goToRepositoryFile({ place: searchPlace, changesetId: page.changesetId, scope: { kind: 'changeset', changeset: page.changesetId } }).then((path) => {
       if (!path) return;
-      setOpening(browseOpening({ focusPath: path }));
+      const picked = goToFileOpening(path);
+      setOpening(picked.opening);
+      setFilter(picked.filter);
       setReveals((count) => count + 1);
     });
   }, [searchPlace, page.changesetId]);
