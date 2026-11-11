@@ -17,7 +17,7 @@ const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'd
 
 /**
  * The items `cm diff` tells changed between `specs` (two changesets, a branch, a shelve), read as they arrive: a
- * changeset touching most of a big tree prints about 100 bytes a file.
+ * changeset touching most of a big tree prints about 130 bytes a file.
  */
 export async function queryDiffEntries(cm: Pick<CmClient, 'queryRecords'>, specs: string[], options: CmRecordsOptions): Promise<DiffEntry[]> {
   return mergedDiffEntries(await cm.queryRecords(['diff', ...specs, '--repositorypaths', `--format=${DIFF_FORMAT}`], readDiffEntry, options));
