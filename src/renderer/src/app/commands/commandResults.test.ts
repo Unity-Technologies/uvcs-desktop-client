@@ -13,6 +13,20 @@ describe('paletteCommands', () => {
 
     expect(paletteCommands(byOwner).map((each) => each.id)).toEqual(['app.settings', 'changes.checkin']);
   });
+
+  it("offers a command once when a page over a view registers its id too, the page's own", () => {
+    const files = command({ id: 'files.goTo', group: 'Files', label: 'Go to file…' });
+    const browse = command({ id: 'files.goTo', group: 'Files', label: 'Go to file…' });
+    const byOwner = new Map([
+      ['files', [files]],
+      ['app', [command()]],
+      ['browse', [browse]],
+    ]);
+
+    const offered = paletteCommands(byOwner);
+    expect(offered.map((each) => each.id)).toEqual(['app.settings', 'files.goTo']);
+    expect(offered[1]).toBe(browse);
+  });
 });
 
 describe('commandResult', () => {

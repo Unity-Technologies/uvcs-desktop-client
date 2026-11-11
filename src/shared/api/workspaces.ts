@@ -1,15 +1,15 @@
 import type { SwitchChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, PartialRule, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
   path: string;
   repository: string;
   /**
-   * A dynamic workspace: its files are fetched from the server as they're opened, instead of downloaded by an update.
-   * Only where `canCreateDynamic` says so.
+   * How it holds its files; standard when not given. A dynamic workspace fetches its files from the server as they're
+   * opened, instead of downloading them with an update: only where `canCreateDynamic` says so.
    */
-  dynamic?: boolean;
+  kind?: WorkspaceKind;
 }
 
 /**
@@ -55,7 +55,10 @@ export interface WorkspacesApi {
    * file system serves their files. One local process listing, no `cm` call.
    */
   canCreateDynamic(): Promise<boolean>;
-  /** Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update. */
+  /**
+   * Creates a workspace on /main. A dynamic one is mounted before this answers, ready to open, with nothing to update;
+   * a partial one has nothing loaded until `configurePartial` loads what the user chooses.
+   */
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */
@@ -79,6 +82,17 @@ export interface WorkspacesApi {
   checkNewFolder(path: string): Promise<NewFolderCheck>;
   /** Loads `targetSpec` in a workspace just created (nothing pending, nothing loaded): a plain `cm switch`. */
   switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
+  /**
+   * Changes what a partial workspace has loaded, all at once or not at all: each rule downloads or removes a file or a
+   * folder and everything below it, as it's configured, so no update follows. One `cm partial configure`.
+   */
+  configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void>;
+  /**
+   * The children of `folder` (from the root, forward slashes, '' for the root) a workspace has loaded, as paths from
+   * the root; a folder counts as loaded when anything below it is. One `cm ls` of the folder, which reads the
+   * workspace's metadata; only for a folder that is loaded, since `cm` fails on one that isn't.
+   */
+  loadedIn(workspacePath: string, folder: string): Promise<string[]>;
   /**
    * Undoes the creation of a workspace that failed halfway: unregisters it, and deletes its folder when `create`
    * made it (it didn't exist or was empty), so nothing of the user's goes.

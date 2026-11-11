@@ -1,3 +1,4 @@
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { useState } from 'react';
 import { api } from '../../../api/client';
 import { splitRepositorySpec } from '../../../lib/servers';
@@ -5,6 +6,7 @@ import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
+import { OptionCards } from '../../../ui/OptionCards';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
 import { useCanCreateDynamicWorkspaces, useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
@@ -13,7 +15,17 @@ import { createNewWorkspace } from './createNewWorkspace';
 import styles from './HomeDialogs.module.css';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { DYNAMIC_WORKSPACES_URL, initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NamedRepository } from './newWorkspaceForm';
+import {
+  DYNAMIC_WORKSPACES_URL,
+  downloadCards,
+  initialRepositoryName,
+  kindForDownloads,
+  newWorkspaceFormOf,
+  repositoriesToName,
+  serverToList,
+  toggledKind,
+  type NamedRepository,
+} from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: NamedRepository;
@@ -35,7 +47,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
-  const [dynamicChosen, setDynamicChosen] = useState(false);
+  const [kindChosen, setKindChosen] = useState<WorkspaceKind>('standard');
   const [creating, setCreating] = useState(false);
   const { data: dynamicAvailable = false } = useCanCreateDynamicWorkspaces();
   const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
@@ -53,14 +65,14 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     chosenPath,
     root,
     dynamicAvailable,
-    dynamicChosen,
+    kindChosen,
     creating,
   });
 
   const create = async (): Promise<void> => {
     if (!form.canCreate || !form.repository) return;
     setCreating(true);
-    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository, dynamic: form.dynamic }, (createdPath) => {
+    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository, kind: form.kind }, (createdPath) => {
       onClose();
       onCreated(createdPath);
     });
@@ -108,9 +120,21 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         autoFocus={Boolean(initialRepository)}
       />
       <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
+      <OptionCards
+        label="What to download"
+        heading
+        cards={downloadCards(form)}
+        value={form.downloads}
+        onChange={(choice) => setKindChosen((current) => kindForDownloads(current, choice))}
+      />
       {form.offersDynamic && (
         <div className={styles.choiceRow}>
-          <Checkbox label="Make this workspace dynamic (alpha)" checked={dynamicChosen} onChange={setDynamicChosen} />
+          <Checkbox
+            label="Make this workspace dynamic (alpha)"
+            checked={form.dynamic}
+            disabled={form.dynamicDisabled}
+            onChange={(checked) => setKindChosen((current) => toggledKind(current, 'dynamic', checked))}
+          />
           <Button variant="ghost" size="small" onClick={() => void api.system.openExternal(DYNAMIC_WORKSPACES_URL)}>
             Learn more
           </Button>

@@ -19,7 +19,8 @@ import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type 
  * 2. Undo those files so the update can proceed, keep a copy of the bases kept (`saveBasesKept`), and update.
  * 3. Write each file's resolution (in a later second than `cm` wrote them: `waitForNextSecond`) and check out again
  *    the files that were checked out.
- * If undoing, saving a base or updating fails, the local versions are put back as they were.
+ * If undoing, saving a base or updating fails, the local versions are put back as they were. A partial workspace stays
+ * partial (`updateCommand`).
  */
 export async function updateWithMerge(
   cm: CmClient,

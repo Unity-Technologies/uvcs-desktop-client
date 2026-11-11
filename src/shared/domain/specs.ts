@@ -1,3 +1,4 @@
+import type { RepositoryTreePoint } from './explorer';
 import type { RevisionRef } from './revision';
 import type { SelectorKind, WorkspaceSelector } from './workspace';
 
@@ -19,6 +20,11 @@ export const spec = {
   itemAt: (itemId: number, pointSpec: string, repository: string): string => `itemid:${itemId}#${pointSpec}@${repository}`,
   serverPathAt: (serverPath: string, pointSpec: string): string => `serverpath:${serverPath}#${pointSpec}`,
 };
+
+/** `{ kind: 'changeset', changeset: 12 }` → `cs:12`; `{ kind: 'branch', branch: '/main' }` → `br:/main`. */
+export function treePointSpec(point: RepositoryTreePoint): string {
+  return point.kind === 'changeset' ? spec.changeset(point.changeset) : spec.branch(point.branch);
+}
 
 const SELECTOR_PREFIXES: Record<SelectorKind, string> = { branch: 'br', changeset: 'cs', label: 'lb', shelve: 'sh' };
 

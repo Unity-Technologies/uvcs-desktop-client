@@ -4,8 +4,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
-import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
+import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
+import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
+import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
 import { switchCommand, updateCommand } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
@@ -61,11 +63,25 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     const madeHere = (await checkNewWorkspaceFolder(request.path)) === 'available';
     const args = workspaceCreateArgs(request);
     // A dynamic workspace's create waits for its file system to mount it (up to 30 s): a process, not a pooled shell.
-    await (request.dynamic ? cm.execute(args) : cm.query(args));
+    await (request.kind === 'dynamic' ? cm.execute(args) : cm.query(args));
     if (madeHere) createdFolders.add(request.path);
+    if (request.kind === 'partial') await markPartial(request.path);
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);
     return created;
+  }
+
+  /**
+   * An update of the workspace's files, so a process of its own in it, as every partial command runs. If it fails, the
+   * workspace would be a standard one with nothing downloaded, whose name and folder block creating it again: it goes.
+   */
+  async function markPartial(workspacePath: string): Promise<void> {
+    try {
+      await cm.execute([...EMPTY_PARTIAL_UPDATE_ARGS], { cwd: workspacePath });
+    } catch (error) {
+      await discardNew(workspacePath).catch(() => undefined);
+      throw error;
+    }
   }
 
   async function rename(workspacePath: string, newName: string): Promise<void> {
@@ -112,6 +128,18 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
+  function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
+    return operations.run(operationId, async ({ signal }) => {
+      await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
+    });
+  }
+
+  async function loadedIn(workspacePath: string, folder: string): Promise<string[]> {
+    const items = await cm.queryRecords(loadedItemsArgs([join(workspacePath, folder)]), readLoadedItem, { cwd: workspacePath });
+    // `cm ls` lists the folder itself first.
+    return items.filter((item) => item.path !== folder).map((item) => item.path);
+  }
+
   async function discardNew(workspacePath: string): Promise<void> {
     await cm.query(['workspace', 'delete', workspacePath]);
     if (!createdFolders.delete(workspacePath)) return;
@@ -146,6 +174,8 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     glance: (workspacePath) => readWorkspaceGlance(cm, workspacePath),
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
+    configurePartial,
+    loadedIn,
     discardNew,
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>

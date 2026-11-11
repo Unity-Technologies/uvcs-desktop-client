@@ -17,6 +17,7 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['partial', 'update', '--dontmerge'])).toBe(true);
     expect(changesWorkspace(['partial', 'switch', 'br:/main/task', '--noinput'])).toBe(true);
     expect(changesWorkspace(['partial', 'checkin', '/ws/a.txt', '--machinereadable'])).toBe(true);
+    expect(changesWorkspace(['partial', 'configure', '+/src', '-/art', '--silent'])).toBe(true);
   });
 
   it('leaves out reads and previews', () => {

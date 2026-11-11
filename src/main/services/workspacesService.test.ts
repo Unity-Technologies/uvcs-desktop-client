@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
+import { loadedItemsArgs } from '../cm/loadedItems';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -151,16 +152,43 @@ describe('creating a workspace', () => {
     const path = await emptyFolder();
     const { service, commands } = workspaces({ 'workspace create': '', 'workspace list': formatOutput(['game', path, 'g1']) });
 
-    expect(await service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(await service.create({ name: 'game', path, repository: 'game@local', kind: 'dynamic' })).toEqual({ name: 'game', path, guid: 'g1' });
     expect(commands[0]).toMatchObject({ via: 'execute', args: ['workspace', 'create', 'game', path, '--dynamic', '--tree=br:/main@game@local'] });
+  });
+
+  it('creates a partial workspace with nothing loaded: a regular one, then an empty partial update run in it', async () => {
+    const path = await emptyFolder();
+    const { service, commands } = workspaces({ 'workspace create': '', 'partial update': '', 'workspace list': formatOutput(['game', path, 'g1']) });
+
+    expect(await service.create({ name: 'game', path, repository: 'game@local', kind: 'partial' })).toEqual({ name: 'game', path, guid: 'g1' });
+    expect(commands.slice(0, 2)).toMatchObject([
+      { via: 'query', args: ['workspace', 'create', 'game', path, 'game@local'] },
+      { via: 'execute', args: ['partial', 'update', '--silent'], options: { cwd: path } },
+    ]);
   });
 
   it('fails as cm reported when a dynamic workspace is not created, and lists nothing after it', async () => {
     const path = await emptyFolder();
     const { service, lines } = workspaces({ 'workspace create': cmFails('Error: The workspace could not be mounted.') });
 
-    await expect(service.create({ name: 'game', path, repository: 'game@local', dynamic: true })).rejects.toThrow('The workspace could not be mounted.');
+    await expect(service.create({ name: 'game', path, repository: 'game@local', kind: 'dynamic' })).rejects.toThrow('The workspace could not be mounted.');
     expect(lines()).toEqual([`workspace create game ${path} --dynamic --tree=br:/main@game@local`]);
+  });
+
+  it("removes a partial workspace whose partial update failed, and the folder it made, so creating it again works", async () => {
+    const path = await emptyFolder();
+    const { service, lines } = workspaces({
+      'workspace create': async () => {
+        await mkdir(path);
+        return '';
+      },
+      'partial update': cmFails('Error: The server is not reachable.'),
+      'workspace delete': '',
+    });
+
+    await expect(service.create({ name: 'game', path, repository: 'game@local', kind: 'partial' })).rejects.toThrow('The server is not reachable.');
+    expect(lines().at(-1)).toBe(`workspace delete ${path}`);
+    expect(existsSync(path)).toBe(false);
   });
 
   it("fails when the new workspace isn't listed", async () => {
@@ -258,6 +286,33 @@ describe('a new workspace for a task', () => {
     await service.switchNewWorkspace(WORKSPACE, 'br:/main/task2', 'op-1');
 
     expect(commands.at(-1)).toMatchObject({ via: 'execute', args: ['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } });
+  });
+});
+
+describe('a partial workspace', () => {
+  it('loads and unloads what changed with one cm partial configure of its own process, run in the workspace', async () => {
+    const { service, commands } = workspaces({ 'partial configure': '' });
+
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }, { path: 'Docs', load: false }], 'op-1');
+
+    expect(commands).toMatchObject([{ via: 'execute', args: ['partial', 'configure', '+/Assets', '-/Docs', '--silent'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
+    // `cm ls <folder>` lists the folder itself first, then the children the workspace has loaded, with the OS's separator.
+    const { service, commands } = workspaces({
+      ls: formatOutput(['Assets', 'dir', 4, ''], ['Assets\\Textures', 'dir', 4, ''], ['Assets\\hero ñ.png', 'bin', 9, ''], ['Assets\\notes.txt', 'txt', '', '']),
+    });
+
+    expect(await service.loadedIn(WORKSPACE, 'Assets')).toEqual(['Assets/Textures', 'Assets/hero ñ.png']);
+    expect(commands).toMatchObject([{ via: 'query', readsRecords: true, args: loadedItemsArgs([join(WORKSPACE, 'Assets')]), options: { cwd: WORKSPACE } }]);
+  });
+
+  it("tells what the root has loaded: nothing in a partial workspace just created", async () => {
+    const { service, commands } = workspaces({ ls: formatOutput(['', 'dir', 0, '']) });
+
+    expect(await service.loadedIn(WORKSPACE, '')).toEqual([]);
+    expect(commands).toMatchObject([{ args: loadedItemsArgs([WORKSPACE]) }]);
   });
 });
 

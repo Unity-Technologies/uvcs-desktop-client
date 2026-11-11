@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileConflict } from '@shared/domain/merge';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
 import { cmFails, fakeCmClient, optionValue } from '../cm/testing/fakeCmClient';
-import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
+import { recordsIn, recordsOutput, statusHeader } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
 const treeItemsIn = (output: string) => recordsIn(output, readTreeItem);
@@ -192,5 +192,29 @@ describe('withConflictRepositories after a directory decision', () => {
     await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, plan([MOVED]), undefined, [completed]);
 
     expect(commands).toEqual([]);
+  });
+});
+
+describe('withConflictRepositories when cm printed no contributors', () => {
+  it("lists in the workspace's loaded changeset", async () => {
+    const { cm, lines } = fakeCmClient({ 'status --header --xml': statusHeader('/main', { changeset: 278648 }), ls: LISTING });
+
+    await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined });
+
+    expect(lines().at(-1)).toContain('--tree=cs:278648');
+  });
+
+  it("refuses a merge into a partial workspace, which loaded no one changeset (cm prints -1)", async () => {
+    const { cm } = fakeCmClient({ 'status --header --xml': statusHeader('/main', { changeset: -1 }) });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined })).rejects.toThrow(
+      "partial workspace can't take a merge",
+    );
+  });
+
+  it("refuses a merge into a workspace on a shelve, whose tree can't be listed", async () => {
+    const { cm } = fakeCmClient({ 'status --header --xml': statusHeader('7', { type: 'Shelve', changeset: -7 }) });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined })).rejects.toThrow('on a shelve');
   });
 });

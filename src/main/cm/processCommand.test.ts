@@ -41,6 +41,8 @@ describe('processCommand', () => {
       ['shelveset', 'create', '/wk/a.cs', '--all', '-commentsfile=/tmp/c.txt'],
       ['sync', 'game@local', 'git', 'https://example.com/game.git'],
       ['push', 'br:/main@game@local', 'game@cloud'],
+      ['partial', 'update', '--dontmerge'],
+      ['partial', 'configure', '+/src', '-/art', '--silent'],
     ];
     for (const platform of ['darwin', 'linux', 'win32'] as const) {
       for (const args of operations) {

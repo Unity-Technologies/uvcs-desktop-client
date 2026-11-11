@@ -33,7 +33,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
   const openWorkspace = useOpenWorkspace();
   const openIn = workspaceOpener(openWorkspace);
   const returnFocus = useReturnFocus(open);
-  const workspaceName = useWorkspaceInfo().data?.name;
+  const workspace = useWorkspaceInfo().data;
   const apps = useExternalApps();
   const editor = defaultEditor(apps);
   const terminal = defaultTerminal(apps);
@@ -46,7 +46,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <ActionContextMenu entries={() => (currentPath === null ? [] : currentWorkspaceMenu(currentPath, workspaceName))}>
+      <ActionContextMenu entries={() => (currentPath === null ? [] : currentWorkspaceMenu(currentPath, workspace))}>
         <Popover.Trigger asChild>{children}</Popover.Trigger>
       </ActionContextMenu>
       <Popover.Portal>
