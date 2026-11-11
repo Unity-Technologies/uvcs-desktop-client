@@ -11,7 +11,15 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingPanes } from './IncomingPanes';
 import { updatePartialToIncoming } from './updateOperations';
-import { partialItemDetail, partialItemDiffEntry, partialItemGroups, partialUpdateMessage } from './partialIncomingItems';
+import {
+  canUpdatePartial,
+  firstPartialItemKey,
+  partialItemDetail,
+  partialItemGroups,
+  partialItemKey,
+  partialSelectionDetail,
+  partialUpdateMessage,
+} from './partialIncomingItems';
 import styles from './PartialIncomingSession.module.css';
 import barStyles from './UpdateBar.module.css';
 
@@ -29,11 +37,11 @@ interface PartialIncomingSessionProps {
 export function PartialIncomingSession({ workspacePath, incoming, header }: PartialIncomingSessionProps) {
   const repository = useWorkspaceInfo().data?.repository;
   const groups = partialItemGroups(incoming.items);
-  const [selectedPath, setSelectedPath] = useState<string | null>(groups[0]?.items[0]?.path ?? null);
+  const [selectedKey, setSelectedKey] = useState(() => firstPartialItemKey(groups));
   const [updating, setUpdating] = useState(false);
-  const selected = incoming.items.find((item) => item.path === selectedPath);
-  const selectedDiff = selected ? partialItemDiffEntry(selected, repository) : null;
-  const canUpdate = incoming.items.some((item) => !item.conflict);
+  const detail = partialSelectionDetail(incoming.items, selectedKey, repository);
+  const conflicts = incoming.items.filter((item) => item.conflict).length;
+  const canUpdate = canUpdatePartial(incoming.items.length, conflicts);
 
   const update = async () => {
     setUpdating(true);
@@ -64,28 +72,31 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
                 <h3 className={styles.title}>
                   {group.title} <span className={styles.count}>{group.items.length}</span>
                 </h3>
-                {group.items.map((item) => (
-                  <button key={item.path} type="button" className={styles.item} data-selected={item.path === selectedPath} onClick={() => setSelectedPath(item.path)}>
-                    <span className={styles.icon}>
-                      <ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={fileNameOf(item.path)} />
-                    </span>
-                    <span className={styles.text}>
-                      <span className={styles.path}>
-                        <PathLabel path={item.path} oldPath={item.oldPath} />
+                {group.items.map((item) => {
+                  const key = partialItemKey(item);
+                  return (
+                    <button key={key} type="button" className={styles.item} data-selected={key === selectedKey} onClick={() => setSelectedKey(key)}>
+                      <span className={styles.icon}>
+                        <ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={fileNameOf(item.path)} />
                       </span>
-                      <span className={styles.meta}>{partialItemDetail(item)}</span>
-                    </span>
-                  </button>
-                ))}
+                      <span className={styles.text}>
+                        <span className={styles.path}>
+                          <PathLabel path={item.path} oldPath={item.oldPath} />
+                        </span>
+                        <span className={styles.meta}>{partialItemDetail(item)}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </section>
             ))}
           </div>
         }
         detail={
-          selectedDiff ? (
-            <IncomingFileDiff key={selectedDiff.path} workspacePath={workspacePath} file={selectedDiff} />
+          detail.kind === 'diff' ? (
+            <IncomingFileDiff key={detail.entry.path} workspacePath={workspacePath} file={detail.entry} />
           ) : (
-            <EmptyState title={selected?.isDirectory ? 'A folder has no diff' : 'Select an item'} />
+            <EmptyState title={detail.title} />
           )
         }
       />

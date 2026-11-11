@@ -25,6 +25,7 @@ import {
   incomingChipState,
 } from './incomingChipState';
 import { PartialIncomingCard } from './PartialIncomingCard';
+import { canUpdatePartial } from './partialIncomingItems';
 import { updatePartialToIncoming, updateToIncoming } from './updateOperations';
 import { incomingChangesKey, useIncomingChanges } from './useIncomingChanges';
 import { useNewestIncomingChangesets } from './useIncomingChangesets';
@@ -134,16 +135,18 @@ export function IncomingChip() {
                   <Button size="small" variant="secondary" onClick={review}>
                     Review in Incoming
                   </Button>
-                  <Button
-                    size="small"
-                    variant="primary"
-                    icon={<ArrowDownToLine size={13} />}
-                    data-tip="Download them; files you changed keep your version"
-                    data-tip-sub="cm partial update"
-                    onClick={() => void update()}
-                  >
-                    Update
-                  </Button>
+                  {canUpdatePartial(state.count, state.conflictCount) && (
+                    <Button
+                      size="small"
+                      variant="primary"
+                      icon={<ArrowDownToLine size={13} />}
+                      data-tip="Download them; files you changed keep your version"
+                      data-tip-sub="cm partial update"
+                      onClick={() => void update()}
+                    >
+                      Update
+                    </Button>
+                  )}
                 </>
               }
             />

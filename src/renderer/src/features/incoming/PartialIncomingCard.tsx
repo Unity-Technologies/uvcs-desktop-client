@@ -4,7 +4,7 @@ import { PathLabel } from '../../components/PathLabel';
 import { pluralize } from '../../lib/text';
 import { Spinner } from '../../ui/Spinner';
 import type { IncomingChipState } from './incomingChipState';
-import { partialConflictNote, partialItemDetail } from './partialIncomingItems';
+import { morePartialItems, partialConflictNote, partialItemDetail, partialItemKey } from './partialIncomingItems';
 import styles from './IncomingCard.module.css';
 
 interface PartialIncomingCardProps {
@@ -16,7 +16,7 @@ interface PartialIncomingCardProps {
 
 /** A partial workspace's incoming items at a glance: which, what the branch did to them, and which you changed too. */
 export function PartialIncomingCard({ state, items, actions }: PartialIncomingCardProps) {
-  const more = state.count - (items?.length ?? 0);
+  const more = morePartialItems(state.count, items);
 
   return (
     <div className={styles.card}>
@@ -40,7 +40,7 @@ export function PartialIncomingCard({ state, items, actions }: PartialIncomingCa
           </li>
         )}
         {items?.map((item) => (
-          <li key={item.path} className={styles.changeset}>
+          <li key={partialItemKey(item)} className={styles.changeset}>
             <span className={styles.itemText}>
               <span className={styles.itemPath}>
                 <PathLabel path={item.path} oldPath={item.oldPath} />
@@ -49,7 +49,7 @@ export function PartialIncomingCard({ state, items, actions }: PartialIncomingCa
             </span>
           </li>
         ))}
-        {items && items.length > 0 && more > 0 && <li className={styles.more}>and {more} more</li>}
+        {more > 0 && <li className={styles.more}>and {more} more</li>}
       </ul>
       <footer className={styles.footer}>{actions}</footer>
     </div>
