@@ -44,6 +44,11 @@ describe('emoticonAfterTyping', () => {
     expect(typed('- ', ':P ')).toBe('- 😛 ‸');
   });
 
+  it("leaves a table's alignment row, and turns one on a line under a paragraph", () => {
+    expect(typed('| a | b |\n| ', ':-| ')).toBe('| a | b |\n| :-| ‸');
+    expect(typed('Hmm\n', ':-| ')).toBe('Hmm\n😐 ‸');
+  });
+
   it("leaves a lettered list's items", () => {
     expect(typed('A-) Build\n', 'B-) ')).toBe('A-) Build\nB-) ‸');
   });

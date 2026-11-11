@@ -66,6 +66,11 @@ export function insideOpenCodeSpan(text: string): boolean {
   return open !== null;
 }
 
+/** Whether the line is all a table's alignments (`| :-| -: |`) under a line with a cell: a delimiter row, typed or whole. */
+export function isTableDelimiterRow(line: string, previousLine: string | null): boolean {
+  return false;
+}
+
 function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMOTICON_EMOJI, emoticonEnding, endsEmoticon, insideOpenCodeSpan } from './emoticons';
+import { EMOTICON_EMOJI, emoticonEnding, endsEmoticon, insideOpenCodeSpan, isTableDelimiterRow } from './emoticons';
 
 describe('EMOTICON_EMOJI', () => {
   it('gives each emoticon the emoji people expect', () => {
@@ -77,5 +77,19 @@ describe('insideOpenCodeSpan', () => {
     expect(insideOpenCodeSpan('run `x` :-)')).toBe(false);
     expect(insideOpenCodeSpan('a ``b ` c`` :)')).toBe(false);
     expect(insideOpenCodeSpan('no code :)')).toBe(false);
+  });
+});
+
+describe('isTableDelimiterRow', () => {
+  it("is a row of a table's alignments under its header, typed or whole", () => {
+    expect(isTableDelimiterRow('| :-| ', '| a | b |')).toBe(true);
+    expect(isTableDelimiterRow(':-| -:', 'a | b')).toBe(true);
+    expect(isTableDelimiterRow('|:--|--:|', '|a|b|')).toBe(true);
+  });
+
+  it('is no line under a line without a cell, nor one holding text', () => {
+    expect(isTableDelimiterRow(':-| ', 'Hi')).toBe(false);
+    expect(isTableDelimiterRow(':-| ', null)).toBe(false);
+    expect(isTableDelimiterRow('ok :-| ', '| a | b |')).toBe(false);
   });
 });
