@@ -2,7 +2,7 @@ import { undo } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
 import { Prec, StateEffect, StateField, type EditorState, type Extension, type StateCommand, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { emoticonEnding, endsEmoticon, insideOpenCodeSpan } from './emoticons';
+import { emoticonEnding, endsEmoticon, insideOpenCodeSpan, isTableDelimiterRow } from './emoticons';
 import { isInCode } from './formatCommands';
 import { ownStep } from './ownStep';
 
@@ -27,7 +27,8 @@ const LINKS = new Set(['Link', 'Image', 'URL', 'Autolink']);
 /**
  * The change that turns the emoticon ending at `end` into its emoji (docs/features/rich-comments.md, "Emoticons"), or
  * null when there's none there or it's written where text means what it says: code (a block, a span, or a span still
- * being typed), a link or an address. A step of its own in the history, so undo brings the emoticon back.
+ * being typed), a link or an address, a table's alignment row. A step of its own in the history, so undo brings the
+ * emoticon back.
  */
 export function emoticonReplacement(state: EditorState, end: number): TransactionSpec | null {
   if (state.selection.ranges.length > 1) return null;
@@ -35,6 +36,7 @@ export function emoticonReplacement(state: EditorState, end: number): Transactio
   const before = line.text.slice(0, end - line.from);
   const found = emoticonEnding(before);
   if (!found || insideOpenCodeSpan(before.slice(0, found.from))) return null;
+  if (isTableDelimiterRow(line.text, line.number > 1 ? state.doc.line(line.number - 1).text : null)) return null;
   const from = line.from + found.from;
   if (isInCode(state, from + 1) || isInLink(state, from + 1)) return null;
   return {

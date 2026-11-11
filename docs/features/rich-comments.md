@@ -412,7 +412,7 @@ before Enter starts a line in a field of many lines (a one-line field's Enter le
 as Slack does (`emoticonTyping`). Alone means at a line's start, or after a space or an opening bracket
 (`emoticonEnding`): `a:-)`, `http://host:8080` and `/:-)` stay. Never in code, a code span still being typed
 included (`insideOpenCodeSpan`: until its closing backtick the syntax tree reads it as text), a link's text, an
-image's description or an address (`emoticonReplacement`). Only typing turns one: a paste, a text composed with an
+image's description, an address or a table's alignment row (`emoticonReplacement`, `isTableDelimiterRow`). Only typing turns one: a paste, a text composed with an
 input method, and comments already written stay as they are. The replacement is a step of its own in the history:
 ⌘Z, or Backspace right after it (`revertEmoticon`, while `justReplacedEmoticon` holds), brings back what was typed,
 for someone who meant the characters. Left out of the list, as text a comment means as written: `:/` (a path's start),

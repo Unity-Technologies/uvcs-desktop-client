@@ -66,9 +66,12 @@ export function insideOpenCodeSpan(text: string): boolean {
   return open !== null;
 }
 
-/** Whether the line is all a table's alignments (`| :-| -: |`) under a line with a cell: a delimiter row, typed or whole. */
+/**
+ * Whether the line is all a table's alignments (`| :-| -: |`) under a line with cells: its delimiter row, typed or
+ * whole. The syntax tree can't tell while it's typed: until its cells match the header's, it reads as a paragraph.
+ */
 export function isTableDelimiterRow(line: string, previousLine: string | null): boolean {
-  return false;
+  return /^[\s|:-]*\|[\s|:-]*$/.test(line) && previousLine !== null && previousLine.includes('|');
 }
 
 function escaped(text: string): string {
