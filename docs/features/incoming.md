@@ -66,7 +66,10 @@ loaded, as `cm partial update` would bring them.
   workspace loaded (`cm ls -R`, `LOADED_TREE_FORMAT`) with its local changes (`readPendingChanges`), then the head's
   version of the loaded folders (`cm ls <folders…> --tree=br:<branch>`, `HEAD_TREE_FORMAT`, batched by `fitsCommandLine`).
   `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
-  changes too. Xlinks and what they hold are left out (`loadedFolders`).
+  changes too. Xlinks and what they hold are left out (`loadedFolders`). A loaded folder the head no longer has fails
+  its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
+  moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
+  reads as removed.
 - **The view** (`PartialIncomingSession`) lists the items by group (`partialItemGroups`: conflicts first, then changed,
   moved, removed, added) with the line under each (`partialItemDetail`), and diffs the loaded revision against the
   head's (`partialItemDiffEntry`; a folder has none).
