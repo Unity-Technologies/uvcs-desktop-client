@@ -23,11 +23,33 @@
   font-variant-numeric: tabular-nums;
 }
 
-.item {
+/* A row holds the checkbox that says whether Update brings the item, and the button that shows its diff. */
+.row {
   display: flex;
   align-items: flex-start;
+  border-radius: var(--radius-sm);
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-selected='true'] {
+  background: var(--bg-selected-strong);
+}
+
+/* Lines the checkbox up with the item's icon. */
+.check {
+  flex: none;
+  padding: 6px 0 0 var(--space-2);
+}
+
+.item {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
   gap: 6px;
-  width: 100%;
+  min-width: 0;
   padding: 6px var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
@@ -35,17 +57,9 @@
   text-align: left;
 }
 
-.item:hover {
-  background: var(--bg-hover);
-}
-
 .item:focus-visible {
   box-shadow: var(--focus-ring-inset);
   outline: none;
-}
-
-.item[data-selected='true'] {
-  background: var(--bg-selected-strong);
 }
 
 .icon {

@@ -7,19 +7,20 @@ import { PathLabel } from '../../components/PathLabel';
 import { branchLabel } from '../../lib/branchLabels';
 import { fileNameOf, pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
+import { Checkbox } from '../../ui/Checkbox';
 import { EmptyState } from '../../ui/EmptyState';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingPanes } from './IncomingPanes';
 import { updatePartialToIncoming } from './updateOperations';
+import { canUpdatePartial, firstPartialItemKey, partialItemDetail, partialItemGroups, partialItemKey, partialSelectionDetail } from './partialIncomingItems';
 import {
-  canUpdatePartial,
-  firstPartialItemKey,
-  partialItemDetail,
-  partialItemGroups,
-  partialItemKey,
-  partialSelectionDetail,
+  partialGroupCheckState,
+  partialItemChecked,
   partialUpdateMessage,
-} from './partialIncomingItems';
+  partialUpdateSelection,
+  withItemsChecked,
+  type UncheckedItems,
+} from './partialIncomingSelection';
 import styles from './PartialIncomingSession.module.css';
 import barStyles from './UpdateBar.module.css';
 
@@ -32,7 +33,7 @@ interface PartialIncomingSessionProps {
 
 /**
  * Incoming in a partial workspace: it loads no one changeset, so it lists the items the branch head would change,
- * grouped by what the branch did to them, with each item's diff, and updates to them all at once.
+ * grouped by what the branch did to them, with each item's diff, and updates to the items checked.
  */
 export function PartialIncomingSession({ workspacePath, incoming, header }: PartialIncomingSessionProps) {
   const repository = useWorkspaceInfo().data?.repository;
@@ -40,13 +41,14 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
   const [selectedKey, setSelectedKey] = useState(() => firstPartialItemKey(groups));
   const [updating, setUpdating] = useState(false);
   const detail = partialSelectionDetail(incoming.items, selectedKey, repository);
-  const conflicts = incoming.items.filter((item) => item.conflict).length;
-  const canUpdate = canUpdatePartial(incoming.items.length, conflicts);
+  const [unchecked, setUnchecked] = useState<UncheckedItems>(() => new Set());
+  const selection = partialUpdateSelection(incoming.items, unchecked);
+  const canUpdate = canUpdatePartial(selection.brought.length, selection.brought.filter((item) => item.conflict).length);
 
   const update = async () => {
     setUpdating(true);
     try {
-      await updatePartialToIncoming(workspacePath, incoming);
+      await updatePartialToIncoming(workspacePath, incoming, selection);
     } finally {
       setUpdating(false);
     }
@@ -57,7 +59,7 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
       {header(`${pluralize(incoming.items.length, 'item')} from ${branchLabel(incoming.branch)}`)}
       <div className={barStyles.bar}>
         <ArrowDownToLine size={15} className={barStyles.icon} />
-        <span className={barStyles.text}>{partialUpdateMessage(incoming)}</span>
+        <span className={barStyles.text}>{partialUpdateMessage(incoming.branch, selection, unchecked)}</span>
         {canUpdate && (
           <Button variant="primary" loading={updating} onClick={() => void update()}>
             Update workspace
@@ -70,22 +72,36 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
             {groups.map((group) => (
               <section key={group.title}>
                 <h3 className={styles.title}>
+                  <Checkbox
+                    checked={partialGroupCheckState(group.items, unchecked)}
+                    ariaLabel={`Bring every item in ${group.title}`}
+                    onChange={(checked) => setUnchecked(withItemsChecked(unchecked, group.items, checked))}
+                  />
                   {group.title} <span className={styles.count}>{group.items.length}</span>
                 </h3>
                 {group.items.map((item) => {
                   const key = partialItemKey(item);
                   return (
-                    <button key={key} type="button" className={styles.item} data-selected={key === selectedKey} onClick={() => setSelectedKey(key)}>
-                      <span className={styles.icon}>
-                        <ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={fileNameOf(item.path)} />
+                    <div key={key} className={styles.row} data-selected={key === selectedKey}>
+                      <span className={styles.check}>
+                        <Checkbox
+                          checked={partialItemChecked(item, unchecked)}
+                          ariaLabel={`Bring ${item.path}`}
+                          onChange={(checked) => setUnchecked(withItemsChecked(unchecked, [item], checked))}
+                        />
                       </span>
-                      <span className={styles.text}>
-                        <span className={styles.path}>
-                          <PathLabel path={item.path} oldPath={item.oldPath} />
+                      <button type="button" className={styles.item} onClick={() => setSelectedKey(key)}>
+                        <span className={styles.icon}>
+                          <ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={fileNameOf(item.path)} />
                         </span>
-                        <span className={styles.meta}>{partialItemDetail(item)}</span>
-                      </span>
-                    </button>
+                        <span className={styles.text}>
+                          <span className={styles.path}>
+                            <PathLabel path={item.path} oldPath={item.oldPath} />
+                          </span>
+                          <span className={styles.meta}>{partialItemDetail(item)}</span>
+                        </span>
+                      </button>
+                    </div>
                   );
                 })}
               </section>
