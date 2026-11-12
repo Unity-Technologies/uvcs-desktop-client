@@ -65,11 +65,11 @@ export function itemLinkText(workspacePath: string, item: TreeItem): string | nu
   return workspace && target && isWritable(target) ? repositoryLinkTo(workspace.repository, target) : null;
 }
 
-/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's info. */
-function xlinkSurroundingsOf(workspacePath: string, item: TreeItem): XlinkSurroundings {
+/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's repository. */
+function xlinkSurroundingsOf(workspacePath: string, item: TreeItem, workspaceRepository: string | undefined): XlinkSurroundings {
   return {
     underXlink: isUnderXlink(item.path, (directory) => listedItems(workspacePath, directory)),
-    workspaceRepository: queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey)?.repository,
+    workspaceRepository,
   };
 }
 
@@ -93,12 +93,12 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const { privateItems, checkoutCandidates, checkinable, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
-  const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
+  const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
+  const surroundings = single && xlinkSurroundingsOf(workspacePath, single, workspace?.repository);
   const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   const unloadedXlink =
     single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
-  const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
   const choosesDownloads =
     single && surroundings && choosesDownloadsFor({ ...single, added: isAdded(pendingChanges, single.path) }, surroundings, workspace?.kind, workspace?.selector);
   // The workspace root can't be renamed or deleted from here.
