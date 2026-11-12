@@ -77,6 +77,26 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     expect(ratio(tokens, '--text-inverse', fill)).toBeGreaterThanOrEqual(3);
   });
 
+  it('checks a folder to download in --text-inverse on --status-added at 3:1', () => {
+    // `Checkbox`'s `tone="added"`: Choose what to download's rows for what Apply will download.
+    expect(ratio(tokens, '--text-inverse', '--status-added')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('borders a folder to remove in --status-deleted at 3:1 on the box and the dialog', () => {
+    // `Checkbox`'s `tone="removed"`: an unchecked box Apply will remove, inside `--bg-input` on the dialog's surface.
+    expect(ratio(tokens, '--status-deleted', '--bg-input')).toBeGreaterThanOrEqual(3);
+    expect(ratio(tokens, '--status-deleted', '--bg-surface-raised')).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(['--positive-text', '--danger-text'])('names what Choose what to download changes in %s at 4.5:1, plain or selected', (text) => {
+    // `ChooseDownloadsDialog`'s rows sit on the dialog's `--bg-surface-raised`, under `--bg-selected` when focused.
+    const dialog = parseColor(tokens['--bg-surface-raised']!).rgb;
+    const selected = composite(parseColor(tokens['--bg-selected']!), dialog);
+    const foreground = parseColor(tokens[text]!);
+    expect(contrastRatio(composite(foreground, dialog), dialog)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(composite(foreground, selected), selected)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['--icon-folder', '--icon-file'])('draws item icons in %s at 3:1 on every surface', (icon) => {
     for (const surface of SURFACES) expect(ratio(tokens, icon, surface), surface).toBeGreaterThanOrEqual(3);
   });
