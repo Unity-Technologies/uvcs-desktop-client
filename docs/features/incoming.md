@@ -72,12 +72,14 @@ loaded, as `cm partial update` would bring them.
   its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
   moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
   reads as removed.
-- **The view** (`PartialIncomingSession`) lists the items by group (`partialItemGroups`: conflicts first, then changed,
-  moved, removed, added) with the line under each (`partialItemDetail`), and diffs the loaded revision against the
-  head's (`partialItemDiffEntry`; a folder has none).
+- **The view** (`PartialIncomingSession`) is the shared list of changed files (`FileTreeList`: a list or a tree,
+  filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
+  added; `partialItemTreeGroups`). Each row ends with its letter (`partialItemStatus`, its `partialItemDetail` line as
+  the tooltip), and a file selected diffs the loaded revision against the head's (`partialItemDiffEntry`; a folder has
+  none).
 - **The chip** shows the 'items' state (`incomingChipState`) and its card the first items (`cardItems`,
   `PartialIncomingCard`).
-- **Choosing what to bring**: every item and group has a checkbox, all checked to start (`partialItemChecked`,
+- **Choosing what to bring**: every item, folder and group has a checkbox, all checked to start (`partialItemChecked`,
   `partialGroupCheckState`, `withItemsChecked`; the view keeps the unchecked keys, `UncheckedItems`).
   `partialUpdateSelection` turns the checked items into the paths `cm partial update` takes: a changed or removed item
   by its loaded path, a moved one at its loaded path and in the folder it moves into, an added one through its parent
