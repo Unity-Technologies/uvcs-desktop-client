@@ -1,24 +1,39 @@
-import type { CodeReview, CodeReviewFilter } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewFilter, CodeReviewSummary } from '@shared/domain/codeReview';
 import { pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { userFilterTexts } from '../../lib/userName';
-import type { StatusFilter } from './codeReviewsViewStore';
+import type { ReviewerFilter, StatusFilter } from './codeReviewsViewStore';
 import { describeTarget } from './reviewTarget';
+import { waitingForMe } from './waitingForMe';
 
 interface CodeReviewsQueryFilters {
   since: SincePreset;
   /** Who created them, once picking paused (`PICKING_PAUSE_MS`). */
   people: PeoplePick;
   status: StatusFilter;
-  reviewerIsMe: boolean;
+  reviewer: ReviewerFilter;
 }
 
 /**
  * What Code reviews asks `cm find review` for: who created them, whether the user is asked to review them, the status
- * and the time range; the text is matched locally.
+ * and the time range; the text is matched locally. Waiting for me asks for every review, as no reviewer filter does
+ * (one query key and one `cm find`), and keeps its rows locally (`matchesReviewer`): it takes the user's own reviews
+ * too, which `reviewer = 'me'` leaves out, and it goes by each reviewer's own status, which the query can't ask for.
  */
-export function codeReviewsQuery({ since, people, status, reviewerIsMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
-  return { owners: pickedOwners(people), reviewerIsMe, status: status === 'any' ? undefined : status, sinceDate: sinceDateFor(since, today) };
+export function codeReviewsQuery({ since, people, status, reviewer }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+  return { owners: pickedOwners(people), reviewerIsMe: reviewer === 'me', status: status === 'any' ? undefined : status, sinceDate: sinceDateFor(since, today) };
+}
+
+/** The reviewer menu's choices, the first one not filtering. */
+export const REVIEWER_CHOICES: { value: ReviewerFilter; label: string }[] = [
+  { value: 'anyone', label: 'Any reviewer' },
+  { value: 'me', label: "I'm a reviewer" },
+  { value: 'waitingForMe', label: 'Waiting for me' },
+];
+
+/** Whether a review read shows under the reviewer filter: only Waiting for me narrows locally (`codeReviewsQuery`). */
+export function matchesReviewer(review: Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>, reviewer: ReviewerFilter, user: string | undefined): boolean {
+  return reviewer !== 'waitingForMe' || waitingForMe(review, user) !== undefined;
 }
 
 /** What the row shows, which its filter looks through: its number, title, what it reviews, its author and its reviewers. */

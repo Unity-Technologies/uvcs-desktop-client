@@ -30,13 +30,12 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { ToggleChip } from '../../ui/ToggleChip';
-import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type ReviewerFilter, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
+import { codeReviewsQuery, matchesReviewer, REVIEWER_CHOICES, reviewFilterTexts } from './codeReviewFilters';
 
 const ownerOf = (review: CodeReview): string => review.owner;
 
@@ -44,17 +43,20 @@ export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, reviewerIsMe, update } = filters;
+  const { text: search, people, since, status, reviewer, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewerIsMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewer }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
   const visible = useMemo(
-    () => (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search)),
-    [reviews, people, me, search],
+    () =>
+      (reviews ?? []).filter(
+        (review) => matchesPeople(people, me, review.owner) && matchesReviewer(review, reviewer, me) && matchesWordFilter(reviewFilterTexts(review), search),
+      ),
+    [reviews, people, me, reviewer, search],
   );
   // The same columns while the user stays the same: the table sorts its rows again only when they change.
   const columns = useMemo(() => codeReviewColumns(me), [me]);
@@ -94,9 +96,13 @@ export function CodeReviewsView() {
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
           <>
-            <ToggleChip pressed={reviewerIsMe} icon={<UserCheck size={13} />} onChange={(value) => update({ reviewerIsMe: value })}>
-              I'm a reviewer
-            </ToggleChip>
+            <ChoiceChip<ReviewerFilter>
+              value={reviewer}
+              onChange={(value) => update({ reviewer: value })}
+              icon={<UserCheck size={13} />}
+              neutralValue="anyone"
+              choices={REVIEWER_CHOICES}
+            />
             <ChoiceChip<StatusFilter>
               value={status}
               onChange={(value) => update({ status: value })}
