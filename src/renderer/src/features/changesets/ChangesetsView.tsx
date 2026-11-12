@@ -6,6 +6,7 @@ import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ObjectListView } from '../../components/ObjectListView';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EmptyState } from '../../ui/EmptyState';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -66,7 +67,7 @@ export function ChangesetsView() {
   // The text is matched locally; only the other filters trigger a new `cm find`.
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queryFilter = useMemo(() => toQueryFilter({ since, people: queriedPeople }, branch, new Date()), [since, queriedPeople, branch]);
-  const { data: changesets, isPending, error } = useChangesets(queryFilter);
+  const { data: changesets, isPending, isFetching, error } = useChangesets(queryFilter);
 
   const labelsByChangeset = useLabelsByChangeset();
   const offered = usePeopleSeen('changesets', changesets, ownerOf);
@@ -101,7 +102,7 @@ export function ChangesetsView() {
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
   const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
-    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap} detailsToggle={<DetailsToggleButton detailsKey="changesets" />}>
+    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap} detailsToggle={<DetailsToggleButton detailsKey="changesets" />} actions={<ViewRefreshButton fetching={isFetching} />}>
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
         people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}
