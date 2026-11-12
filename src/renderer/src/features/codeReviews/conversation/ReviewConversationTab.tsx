@@ -164,7 +164,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   );
 }
 
-/** The "Since last review" line's element, which the conversation opens scrolled to. */
+/** The "New since your last review" line's element, which the conversation opens scrolled to. */
 const SINCE_LINE_ID = 'review-since-last-review';
 
 function entryKey(entry: ConversationEntry): string {
