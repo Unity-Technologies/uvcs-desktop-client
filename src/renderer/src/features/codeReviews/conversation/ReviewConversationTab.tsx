@@ -24,7 +24,8 @@ import { RoundMarker } from '../rounds/RoundMarker';
 import { conversationBlocksOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
-import { useReviewChangesets } from '../rounds/useReviewChangesets';
+import { newChangesetsSpan } from '../rounds/newChangesetsSpan';
+import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
 import styles from './ReviewConversation.module.css';
 
 /**
@@ -50,7 +51,9 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
     seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
   // A branch's changesets place its check-ins and say where each reviewer left off (`conversationBlocksOf`).
-  const { changesets, settled: changesetsSettled } = useReviewChangesets(review);
+  const { changesets, checkpoint, settled: changesetsSettled } = useReviewCheckpoint(review);
+  // "See the changes": what was checked in since the user's last review, selected together in Changes as one diff.
+  const newSpan = newChangesetsSpan(changesets, checkpoint);
   const blocks = useMemo(
     () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date }) : []),
     [conversation, user, changesets, review.date],
@@ -111,7 +114,11 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
       case 'since':
         return (
           <li key="since">
-            <SinceLine id={SINCE_LINE_ID} date={block.date} />
+            <SinceLine
+              id={SINCE_LINE_ID}
+              date={block.date}
+              onSeeChanges={newSpan && (() => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangesets: newSpan }))}
+            />
           </li>
         );
       case 'entry':
