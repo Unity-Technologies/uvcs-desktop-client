@@ -261,7 +261,7 @@ one read serves both), say what was checked in when (`reviewRounds`).
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
   ("Daniel checked in 3 changesets"), the words folding the list under them. They start
-  listed only under the "Since last review" line, what a reviewer comes back to check; anywhere else folded to that line
+  listed only under the "New since your last review" line, what a reviewer comes back to check; anywhere else folded to that line
   (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
   without the fill) with its comment's first line, and opens in Changes on it. Past five, the
   first ones and "N more" (`shownCheckins`). Changesets from before the review are left to Changes: a long branch would
@@ -275,7 +275,7 @@ one read serves both), say what was checked in when (`reviewRounds`).
   under it new (`changesetMark`), and the reviewed ones a step quieter; no dot on each new one (docs/features/diff.md).
   At the line's end, **Show the 3 new** selects the new ones together, one diff (`ReviewedSeparator.showNew`); no New
   toggle keeps only them, the line says it. Several changesets selected show as one diff (docs/features/diff.md "A
-  branch's diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
+  branch's diff"); **See the changes**, on the "New since your last review" line, opens Changes with the new ones selected together
   (`newChangesetsSpan`, `focusChangesets`). A span is never part of a link: what's new to one reviewer isn't new to
   whoever opens it. A page moved to while Changes shows already (a check-in, Show in Changes, See the changes) reaches
   it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a

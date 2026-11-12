@@ -24,11 +24,11 @@ function lineThread(fields: Partial<ReviewComment> = {}): LineThread {
 describe('contextStepsOf', () => {
   const groups = [
     { threadIds: [2, 4], scope: 'Round 1' },
-    { threadIds: [5, 1, 3], scope: 'New since last review' },
+    { threadIds: [5, 1, 3], scope: 'New since your last review' },
   ];
 
   it('says where the thread is among those settled in its part of the conversation, and which come before and after', () => {
-    expect(contextStepsOf(groups, 1)).toEqual({ position: 'New since last review · 2 of 3', previous: 5, next: 3 });
+    expect(contextStepsOf(groups, 1)).toEqual({ position: 'New since your last review · 2 of 3', previous: 5, next: 3 });
     expect(contextStepsOf(groups, 2)).toEqual({ position: 'Round 1 · 1 of 2', previous: undefined, next: 4 });
   });
 

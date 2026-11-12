@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -102,14 +102,17 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   const renderBlock = (block: ConversationBlock) => {
     switch (block.kind) {
       case 'round': {
-        // The marker, then what the round held while unfolded, at the timeline's own indent.
+        // The marker, then what the round held while unfolded, at the timeline's own indent. One keyed fragment per
+        // round: a round inserted as a status is given keeps the others' entries mounted (an open "N more" stays open).
         const open = roundIsOpen(block.round, toggledRounds, pickedRound);
-        return [
-          <li key={`round-${block.round.number}`}>
-            <RoundMarker round={block.round} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
-          </li>,
-          ...(open ? block.entries.map(renderEntry) : []),
-        ];
+        return (
+          <Fragment key={`round-${block.round.number}`}>
+            <li>
+              <RoundMarker round={block.round} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
+            </li>
+            {open && block.entries.map(renderEntry)}
+          </Fragment>
+        );
       }
       case 'since':
         return (
@@ -164,7 +167,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   );
 }
 
-/** The "Since last review" line's element, which the conversation opens scrolled to. */
+/** The "New since your last review" line's element, which the conversation opens scrolled to. */
 const SINCE_LINE_ID = 'review-since-last-review';
 
 function entryKey(entry: ConversationEntry): string {

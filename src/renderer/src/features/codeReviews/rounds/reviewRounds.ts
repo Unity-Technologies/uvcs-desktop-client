@@ -123,7 +123,7 @@ export interface CheckinsEntry {
   /** Oldest first, as the timeline reads. */
   changesets: Changeset[];
   /**
-   * Whether it starts listing its changesets: under the "Since last review" line, what the reviewer comes back to check,
+   * Whether it starts listing its changesets: under the "New since your last review" line, what the reviewer comes back to check,
    * yes; anywhere else (a closed round, the author's view, a first review) folded to its line, which says what happened
    * while Changes lists them all: a long branch's first batch would push the conversation out of sight.
    */
@@ -135,7 +135,7 @@ export type ConversationEntry = TimelineEntry | CheckinsEntry;
 
 /**
  * A round that closed: the status that closed it, and where the threads started in it stand, those settled since the
- * reviewer's last status (shown under the "Since last review" line) too.
+ * reviewer's last status (shown under the "New since your last review" line) too.
  */
 export interface ReviewRound {
   number: number;
@@ -152,7 +152,7 @@ export interface ReviewRound {
   folds: boolean;
 }
 
-/** What the conversation shows, in order: closed rounds, the "Since last review" line, and the entries after them. */
+/** What the conversation shows, in order: closed rounds, the "New since your last review" line, and the entries after them. */
 export type ConversationBlock =
   | { kind: 'round'; round: ReviewRound; entries: ConversationEntry[] }
   | { kind: 'since'; date: string }
@@ -172,7 +172,7 @@ type Placed = { at: number; order: number; item: TimelineItem | CheckinsEntry };
 
 /**
  * The conversation in blocks. Each round the user's statuses closed (everyone's, for the author) folds to a line once
- * nothing started in it is open; the latest entries stay as they are. For a reviewer, a "Since last review" line
+ * nothing started in it is open; the latest entries stay as they are. For a reviewer, a "New since your last review" line
  * follows their last status when anything came after it, and a thread from an earlier round settled since (applied,
  * answered, discarded) moves under it, when it settled: that's what they come back to check.
  */
@@ -253,7 +253,7 @@ function roundOf(number: number, closing: ClosingStatus, threads: readonly Revie
 
 /**
  * The timeline's own folding (reviewer changes in a row) within a run of entries, check-ins kept apart, listing their
- * changesets from the start only under the "Since last review" line (`underSince`).
+ * changesets from the start only under the "New since your last review" line (`underSince`).
  */
 function entriesOf(placed: readonly Placed[], underSince: boolean): ConversationEntry[] {
   const entries: ConversationEntry[] = [];
@@ -272,7 +272,7 @@ function entriesOf(placed: readonly Placed[], underSince: boolean): Conversation
   return entries;
 }
 
-/** The threads "How it was applied" steps through together, and where they are: "Round 1", "New since last review". */
+/** The threads "How it was applied" steps through together, and where they are: "Round 1", "New since your last review". */
 export interface StepGroup {
   threadIds: number[];
   /** Where in the conversation, said before the position ("Round 1 · 2 of 4"); empty before any round closed. */
@@ -293,7 +293,7 @@ export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] 
   const last = rounds.at(-1);
   const since = blocks.some((block) => block.kind === 'since');
   const after = settledIn(blocks.flatMap((block) => (block.kind === 'entry' ? [block.entry] : [])));
-  groups.push({ threadIds: after, scope: since ? 'New since last review' : last ? `After round ${last.round.number}` : '' });
+  groups.push({ threadIds: after, scope: since ? 'New since your last review' : last ? `After round ${last.round.number}` : '' });
   return groups.filter((group) => group.threadIds.length > 0);
 }
 

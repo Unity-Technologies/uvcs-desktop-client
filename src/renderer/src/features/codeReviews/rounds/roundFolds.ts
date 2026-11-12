@@ -25,7 +25,7 @@ export function toggledRound(toggled: ReadonlySet<number>, number: number): Set<
 }
 
 /**
- * Whether the conversation opens scrolled to its "Since last review" line: when it has one, and the page wasn't opened
+ * Whether the conversation opens scrolled to its "New since your last review" line: when it has one, and the page wasn't opened
  * at a thread (Show in conversation), which it goes to instead.
  */
 export function opensAtSince(blocks: readonly ConversationBlock[], focusThread: number | undefined): boolean {

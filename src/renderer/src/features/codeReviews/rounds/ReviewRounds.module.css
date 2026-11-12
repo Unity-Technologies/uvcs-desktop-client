@@ -1,4 +1,4 @@
-/* Review rounds in the conversation: a round's line, the "Since last review" line, and check-ins. Quiet: a round
+/* Review rounds in the conversation: a round's line, the "New since your last review" line, and check-ins. Quiet: a round
    reads as one line of the timeline, never a card. */
 
 /* A round's line, as an event's (`.eventLine`): what the round was, when, and its fold; the whole line folds it. */

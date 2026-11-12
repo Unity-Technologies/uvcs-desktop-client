@@ -6,6 +6,7 @@ import { useShortcut } from '../../lib/useShortcut';
 import { changesetListChoice, type ChangesetListChoice } from './changesetListChoice';
 import {
   ALL_CHANGES_KEY,
+  appliesFocus,
   changesetListRowKey,
   changesetListRows,
   changesetListSelection,
@@ -15,6 +16,7 @@ import {
   focusSelection,
   oldestFirst,
   selectedChangesetIds,
+  type AppliedFocus,
   type ChangesetListFocus,
   type ChangesetListRow,
 } from './changesetStepListModel';
@@ -74,12 +76,11 @@ export function useChangesetStepList({ changesets, focus, onSelect, allApart = f
     onSelect?.(kept);
   };
 
-  // Each focus once, and a span's again once the changesets are read: only then are the changesets inside it known.
+  // Each focus once, and a span's again once the changesets are read (`appliesFocus`).
   const read = changesets !== undefined;
-  const applied = useRef<{ focus: ChangesetListFocus; read: boolean } | null>(null);
+  const applied = useRef<AppliedFocus | null>(null);
   useEffect(() => {
-    const last = applied.current;
-    if (last?.focus === focus && (last.read || !read || focus.kind !== 'span')) return;
+    if (!appliesFocus(applied.current, focus, read)) return;
     applied.current = { focus, read };
     setSelection(focusSelection(focus, changesets));
     setRevealKey(focusRevealKey(focus));

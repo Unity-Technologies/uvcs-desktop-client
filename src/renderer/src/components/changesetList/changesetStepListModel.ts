@@ -114,6 +114,22 @@ export function changesetStep(listed: readonly Changeset[], shown: readonly Chan
 /** What the place around the list asks it to select: everything combined, one changeset, or a span of them. */
 export type ChangesetListFocus = { kind: 'all' } | { kind: 'changeset'; changesetId: number } | { kind: 'span'; span: ChangesetSpan };
 
+/** The focus last applied to the list's selection, and whether the changesets were read then. */
+export interface AppliedFocus {
+  focus: ChangesetListFocus;
+  read: boolean;
+}
+
+/**
+ * Whether the list selects what `focus` asks for: each focus the place asks for once (a new object each time), and a
+ * span's again once the changesets are read (`read`), since only then are the changesets inside it known. Otherwise
+ * the user's own selection stays.
+ */
+export function appliesFocus(last: AppliedFocus | null, focus: ChangesetListFocus, read: boolean): boolean {
+  if (last?.focus !== focus) return true;
+  return !last.read && read && focus.kind === 'span';
+}
+
 /**
  * The selection a focus asks for: the combined row, a changeset, or every changeset of the span (the newest the
  * anchor), so they show as one diff. While the changesets are read, a span's ends, which show the same diff.

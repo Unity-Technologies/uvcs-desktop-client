@@ -186,10 +186,10 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
 
 /**
  * The changesets above the files, under the row that stands for them all, "All changes on task", which folds them
- * (its end, "Changesets ⌄", a word that stays as they're read; how many is the filter's, once open): who reviews the whole branch sees that row only, selected, as the old "Whole branch"
- * said, with "3 new" on a review's page (`folded`). The row stays in its place as the list opens under it,
- * and stands apart from the list (`allApart`), so the filter never hides it. The list mounts only open, so folded it
- * reads nothing.
+ * (its end, "Changesets ⌄", a word that stays as they're read; how many is the filter's, once open): who reviews the
+ * whole branch sees that row only, selected while the diff shows all the changes, with "3 new" on a review's page
+ * (`folded`). The row stays in its place as the list opens under it, and stands apart from the list (`allApart`), so
+ * the filter never hides it. The list mounts only open, so folded it reads nothing.
  */
 function ChangesetFold(props: {
   allChanges: { label: string; tip: string };
