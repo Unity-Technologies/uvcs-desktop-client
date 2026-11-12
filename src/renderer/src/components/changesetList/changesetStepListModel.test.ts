@@ -15,6 +15,7 @@ import {
   changesetRowTip,
   changesetStep,
   filterChangesets,
+  appliesFocus,
   focusRevealKey,
   focusSelection,
   oldestFirst,
@@ -253,5 +254,25 @@ describe('oldestFirst', () => {
     const read = [changeset(3), changeset(1), changeset(2)];
     expect(ids(oldestFirst(read))).toEqual([1, 2, 3]);
     expect(ids(read)).toEqual([3, 1, 2]);
+  });
+});
+
+describe('appliesFocus', () => {
+  const span = { kind: 'span', span: { oldest: 5, newest: 9 } } as const;
+  const one = { kind: 'changeset', changesetId: 5 } as const;
+
+  it('applies a focus the first time, and each new one the place asks for', () => {
+    expect(appliesFocus(null, one, false)).toBe(true);
+    expect(appliesFocus({ focus: one, read: true }, { kind: 'changeset', changesetId: 5 }, true)).toBe(true);
+  });
+
+  it('applies a span again once the changesets are read: only then are those inside it known', () => {
+    expect(appliesFocus({ focus: span, read: false }, span, true)).toBe(true);
+    expect(appliesFocus({ focus: span, read: true }, span, true)).toBe(false);
+  });
+
+  it("doesn't apply a focus again otherwise: the user's own selection stays", () => {
+    expect(appliesFocus({ focus: one, read: false }, one, true)).toBe(false);
+    expect(appliesFocus({ focus: span, read: false }, span, false)).toBe(false);
   });
 });
