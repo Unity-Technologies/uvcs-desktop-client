@@ -234,6 +234,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **What a reviewer said with their status** sits under its event in a soft tint, no bar beside it (the rail is the
+  timeline's one vertical line: a bar beside it read as two), folded past four lines with "Show more"
+  (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
   ("Daniel checked in 3 changesets"), the words folding the list under them. They start
