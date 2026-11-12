@@ -83,7 +83,9 @@
 }
 
 .stepPosition {
+  margin-inline-end: var(--space-1);
   color: var(--text-secondary);
+  text-align: end;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

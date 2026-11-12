@@ -32,3 +32,16 @@ export function showInChangesPage(reviewId: number, target: CodeReviewTarget, th
   const page = commentLocationPage(reviewId, thread.root);
   return target.kind === 'branch' && thread.state.kind === 'applied' ? { ...page, focusChangeset: thread.state.changesetId } : page;
 }
+
+/**
+ * The dialog's one way out to the code: a request applied on a branch opens its changeset in the review's Changes, at
+ * the thread ("Open changeset 5", `showInChangesPage`); any other thread shows where it was written there ("Show in
+ * Changes"). A changeset applying a request on a review of no branch isn't among its changes: it opens on its own page.
+ */
+export type ContextFooterAction = { kind: 'changes'; label: string } | { kind: 'changesetPage'; label: string; changesetId: number };
+
+export function contextFooterAction(target: CodeReviewTarget, thread: LineThread): ContextFooterAction {
+  if (thread.state.kind !== 'applied') return { kind: 'changes', label: 'Show in Changes' };
+  const label = `Open changeset ${thread.state.changesetId}`;
+  return target.kind === 'branch' ? { kind: 'changes', label } : { kind: 'changesetPage', label, changesetId: thread.state.changesetId };
+}

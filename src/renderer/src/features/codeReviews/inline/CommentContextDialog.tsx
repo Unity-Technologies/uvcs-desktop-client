@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import { samePlace as isSamePlace, type Place } from '@shared/domain/place';
@@ -24,7 +24,7 @@ import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
 import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBodyOf, type AppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
-import { contextStepsOf, showInChangesPage, type ContextSteps } from './contextSteps';
+import { contextFooterAction, contextStepsOf, showInChangesPage, type ContextSteps } from './contextSteps';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { showInConversation } from './reviewComments';
 import { ContextViewSwitch } from './ContextViewSwitch';
@@ -113,7 +113,8 @@ function ThreadInContext(props: DialogProps) {
   }
   const { thread } = live;
   const files = appliedFilesOf(thread, applied.data);
-  return <ThreadDialog {...props} key={threadId} threadId={threadId} onScreen={onScreen} stepping={contextStepsOf(steps, threadId)} onStep={stepTo} thread={thread} view={view} onViewChange={setView} files={files} commentedSelected={commentedSelected} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentedSelected} />;
+  // Not keyed by the thread: a step changes what the dialog shows, never opens it again (its animation flickered).
+  return <ThreadDialog {...props} threadId={threadId} onScreen={onScreen} stepping={contextStepsOf(steps, threadId)} onStep={stepTo} thread={thread} view={view} onViewChange={setView} files={files} commentedSelected={commentedSelected} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentedSelected} />;
 }
 
 type ThreadDialogProps = DialogProps & {
@@ -137,11 +138,12 @@ type ThreadDialogProps = DialogProps & {
  * changeset applied it in other files), or the thread alone and why.
  */
 function ThreadDialog(props: ThreadDialogProps) {
-  const { review, thread, view, onViewChange: setView, files, commentedSelected, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, stepping, onStep, onClose } = props;
+  const { review, thread, view, onViewChange: setView, files, commentedSelected, applied, appliedTarget, onCommentShown: setCommentShown, stepping, onStep, onClose } = props;
   const state = useContextComparison(props);
   const notInChangeset = state.kind === 'notInChangeset';
   const body = contextBodyOf(files, view, state.kind);
   const heading = appliedFilesHeading(files, view, commentedSelected);
+  const footer = contextFooterAction(review.target, thread);
   return (
     <Dialog
       title={contextTitle(thread)}
@@ -164,25 +166,18 @@ function ThreadDialog(props: ThreadDialogProps) {
           <Button
             onClick={() => {
               onClose();
-              navigation.openPage(showInChangesPage(review.id, review.target, thread));
+              if (footer.kind === 'changes') navigation.openPage(showInChangesPage(review.id, review.target, thread));
+              else openChangesetDiff({ id: footer.changesetId });
             }}
           >
-            Show in Changes
+            {footer.label}
           </Button>
-          {appliedIn !== undefined && (
-            <Button
-              onClick={() => {
-                onClose();
-                openChangesetDiff({ id: appliedIn });
-              }}
-            >
-              Open changeset {appliedIn}
-            </Button>
-          )}
           <CloseButton onClose={onClose} />
         </>
       }
     >
+      {/* Keyed by the thread: a step starts its view afresh (the file selected, the comment shown), the dialog stays. */}
+      <Fragment key={thread.root.id}>
       {body === 'threadAboveFiles' && applied.data && appliedTarget ? (
         // The changeset didn't change the commented file: its files, the thread above them, folded to its first words.
         <div className={styles.elsewhere}>
@@ -212,6 +207,7 @@ function ThreadDialog(props: ThreadDialogProps) {
           )}
         </div>
       )}
+      </Fragment>
     </Dialog>
   );
 }
@@ -221,13 +217,16 @@ function ThreadDialog(props: ThreadDialogProps) {
  * lit (`unlit`, above the changeset's files, where the code is what the user came to see), when an applied thread
  * starts folded to its first words as settled ones do (`startsFolded`).
  */
-/** Previous and next among the threads settled in its part of the conversation, and where this one is: "2 of 4 in round 1". */
+/**
+ * Where this one is among the threads settled in its part of the conversation ("2 of 4 in round 1"), then the arrows to
+ * the previous and next, side by side: the words before them, right-aligned, so stepping never moves an arrow.
+ */
 function ContextStepper({ steps, onStep }: { steps: ContextSteps; onStep: (threadId: number) => void }) {
   const { previous, next } = steps;
   return (
     <span className={styles.stepper}>
-      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
       <span className={styles.stepPosition}>{steps.position}</span>
+      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
       <IconButton size="small" icon={<ChevronRight size={14} />} label="Next comment" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
     </span>
   );
