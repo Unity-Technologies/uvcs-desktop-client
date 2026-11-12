@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { waitingForMe, waitingForMeTip } from './waitingForMe';
+import { waitingCount, waitingForMe, waitingForMeTip } from './waitingForMe';
 
 describe('whether a review waits for the user', () => {
   it('waits for a reviewer whose own status is Under review, whatever the review as a whole says', () => {
@@ -47,5 +47,17 @@ describe('what the waiting dot says', () => {
     expect(waitingForMeTip({ kind: 'review' })).toBe('Waiting for your review');
     expect(waitingForMeTip({ kind: 'rework', openIssues: 3 })).toBe('Rework: 3 open');
     expect(waitingForMeTip({ kind: 'rework', openIssues: 1 })).toBe('Rework: 1 open');
+  });
+});
+
+describe('how many reviews wait for the user', () => {
+  it('counts those waiting for their review and their own in rework with something open', () => {
+    const reviews = [
+      codeReviewSummary({ id: 1, reviewers: [{ name: 'ana', status: 'Under review' }] }),
+      codeReviewSummary({ id: 2, owner: 'ana', status: 'Rework required', openIssueCount: 2 }),
+      codeReviewSummary({ id: 3, reviewers: [{ name: 'ana', status: 'Reviewed' }] }),
+    ];
+    expect(waitingCount(reviews, 'ana')).toBe(2);
+    expect(waitingCount(reviews, undefined)).toBe(0);
   });
 });

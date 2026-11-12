@@ -6,7 +6,7 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, matchesReviewer, reviewFilterTexts } from './codeReviewFilters';
+import { codeReviewsQuery, matchesReviewer, reviewFilterTexts, reviewerChipDot, reviewerChoices } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewerFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
@@ -86,5 +86,24 @@ describe("Code reviews' Clear filters", () => {
     const { text, people, status, reviewer, since } = store.getState();
     expect({ text, people, status, reviewer, since }).toEqual({ text: '', people: EVERYONE, status: 'any', reviewer: 'anyone', since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(false);
+  });
+});
+
+describe('reviewerChoices', () => {
+  it('counts the reviews waiting for the user beside Waiting for me', () => {
+    expect(reviewerChoices(2).map((choice) => choice.label)).toEqual(['Any reviewer', "I'm a reviewer", 'Waiting for me · 2']);
+    expect(reviewerChoices(0).at(-1)?.label).toBe('Waiting for me');
+  });
+});
+
+describe('reviewerChipDot', () => {
+  it('marks the reviewer chip while reviews wait for the user and another choice shows', () => {
+    expect(reviewerChipDot('anyone', 2)).toBe('2 reviews waiting for you');
+    expect(reviewerChipDot('me', 1)).toBe('1 review waiting for you');
+  });
+
+  it('marks nothing when none waits, or Waiting for me shows them already', () => {
+    expect(reviewerChipDot('anyone', 0)).toBeUndefined();
+    expect(reviewerChipDot('waitingForMe', 2)).toBeUndefined();
   });
 });
