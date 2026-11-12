@@ -82,6 +82,20 @@ describe('threadsOf', () => {
     expect([inChangeset?.state, otherRepository?.state]).toEqual([{ kind: 'answered', changesetId: 281301 }, { kind: 'answered' }]);
   });
 
+  it("answers it in a changeset of the review's branch only, when the branch's changesets are known: another the answer names isn't the fix", () => {
+    const [onMain, alsoOnBranch] = threadsOf(
+      [
+        comment(1, { kind: 'question', anchor: ON_LINE }),
+        reply(2, 1, { text: 'Same as we did in cs:120 on main.' }),
+        comment(3, { kind: 'question', anchor: ON_LINE }),
+        reply(4, 3, { text: 'As in cs:120, fixed in cs:281301.' }),
+      ],
+      new Set([281301]),
+    );
+
+    expect([onMain?.state, alsoOnBranch?.state]).toEqual([{ kind: 'answered' }, { kind: 'answered', changesetId: 281301 }]);
+  });
+
   it('never opens a plain or a general comment', () => {
     expect(threadsOf([comment(1), comment(2, { kind: 'comment', anchor: ON_LINE })]).map((thread) => thread.state)).toEqual([{ kind: 'none' }, { kind: 'none' }]);
   });
