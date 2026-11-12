@@ -46,6 +46,17 @@ describe('restoredFilters', () => {
     expect(restoredFilters({ since: 'fortnight' }, DEFAULTS)).toEqual({ since: 'lastMonth' });
   });
 
+  it("keeps what today's store remembers as it is, so a new version reads every view's filters again harmlessly", () => {
+    const remembered = rememberedFilters({ ...DEFAULTS, people: MINE, since: 'anyTime', status: 'Open', layout: 'tree' });
+    expect(restoredFilters(remembered, DEFAULTS)).toEqual(remembered);
+  });
+
+  it('reads a filter the view renamed as its upgrade says, checked like the rest', () => {
+    const upgrade = (old: Record<string, unknown>) => (old.legacyStatus === true ? { status: 'Open' } : {});
+    expect(restoredFilters({ legacyStatus: true, layout: 'tree' }, DEFAULTS, upgrade)).toEqual({ status: 'Open', layout: 'tree' });
+    expect(restoredFilters({ legacyStatus: false, status: 'Done' }, DEFAULTS, upgrade)).toEqual({ status: 'Done' });
+  });
+
   it('never restores people picked by name', () => {
     expect(restoredFilters({ people: { mine: false, others: ['ana'] } }, DEFAULTS)).toEqual({ people: EVERYONE });
     expect(restoredFilters(null, DEFAULTS)).toEqual({});
