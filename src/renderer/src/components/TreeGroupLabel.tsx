@@ -35,7 +35,7 @@ export function TreeGroupLabel({ label, icon, collapsed, before, count, progress
       <span className={styles.groupLabel} data-tip={tip}>
         {label}
       </span>
-      <span className={styles.count} data-tip={progress?.tip}>
+      <span className={styles.groupCount} data-tip={progress?.tip}>
         {progress ? progress.count : formatCount(count)}
       </span>
     </>
