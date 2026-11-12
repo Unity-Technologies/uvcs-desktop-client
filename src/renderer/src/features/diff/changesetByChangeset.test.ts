@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, selectedChangesetIds, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -166,5 +166,21 @@ describe('spanSelection', () => {
 
   it('selects one changeset for a span of one', () => {
     expect(keys(spanSelection(branch, { oldest: 280535, newest: 280535 }))).toEqual(['280535']);
+  });
+});
+
+describe('selectedChangesetIds', () => {
+  it('is the changesets selected', () => {
+    expect(selectedChangesetIds({ selected: new Set(['15', '17']), anchor: '17' }).sort()).toEqual([15, 17]);
+  });
+
+  // A Cmd/Ctrl-click on a selected row takes it out and leaves it the anchor: the others show, not it.
+  it('leaves out the anchor a Cmd/Ctrl-click took out of the selection', () => {
+    expect(selectedChangesetIds({ selected: new Set(['15']), anchor: '17' })).toEqual([15]);
+  });
+
+  it('is the anchor when nothing is selected, and none without one', () => {
+    expect(selectedChangesetIds({ selected: new Set(), anchor: '17' })).toEqual([17]);
+    expect(selectedChangesetIds({ selected: new Set(), anchor: null })).toEqual([]);
   });
 });
