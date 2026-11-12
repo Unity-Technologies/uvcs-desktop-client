@@ -148,3 +148,15 @@
 .table:focus-visible:has(.row[data-focused='true']) {
   box-shadow: none;
 }
+
+/* A line between two rows that is no row (`separator`): its words, in the rows' inset, never selected or hovered. */
+.separator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  margin: 0 var(--space-1);
+  padding: 0 var(--space-3);
+  min-width: 0;
+}
