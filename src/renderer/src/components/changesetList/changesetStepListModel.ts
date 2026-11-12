@@ -131,6 +131,12 @@ export function focusRevealKey(focus: ChangesetListFocus): string {
   return String(focus.kind === 'changeset' ? focus.changesetId : focus.span.newest);
 }
 
+/** How many places the list's rows take: every row, and the line between two of them when its row shows. */
+export function changesetListPlaces(rows: readonly ChangesetListRow[], separatorBeforeKey: string | undefined): number {
+  const separates = separatorBeforeKey !== undefined && rows.some((row) => changesetListRowKey(row) === separatorBeforeKey);
+  return rows.length + (separates ? 1 : 0);
+}
+
 /** A row's height: one line, as a commit picker lists them. */
 export const CHANGESET_ROW_HEIGHT = 28;
 
@@ -138,11 +144,11 @@ export const CHANGESET_ROW_HEIGHT = 28;
 const ROWS_INSET = 8;
 
 /**
- * How tall the list's rows are drawn: every place (the rows, and a line between two of them) up to `fewest` and
- * `most`, those past it scrolling inside, so the files under the list keep their room. While the changesets are read
- * (`places` undefined), its tallest, which the rows then rarely leave.
+ * How tall the list's rows are drawn: every place (the rows, and a line between two of them) up to `most`, those past
+ * it scrolling inside, so the files under the list keep their room. Its tallest while the changesets are read
+ * (`places` undefined), which the rows then rarely leave, and with none, for the filter's "No matching changesets".
  */
-export function changesetRowsHeight(places: number | undefined, { fewest = 1, most }: { fewest?: number; most: number }): number {
-  const shown = places === undefined ? most : Math.min(Math.max(places, fewest), most);
+export function changesetRowsHeight(places: number | undefined, most: number): number {
+  const shown = places === undefined || places === 0 ? most : Math.min(places, most);
   return shown * CHANGESET_ROW_HEIGHT + ROWS_INSET;
 }

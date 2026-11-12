@@ -7,6 +7,7 @@ import {
   ALL_CHANGES_SELECTION,
   CHANGESET_ROW_HEIGHT,
   changesetFilterPlaceholder,
+  changesetListPlaces,
   changesetListRowKey,
   changesetListRows,
   changesetListSelection,
@@ -18,7 +19,7 @@ import {
   focusSelection,
   oldestFirst,
   selectedChangesetIds,
-} from './changesetStepList';
+} from './changesetStepListModel';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -200,19 +201,25 @@ describe('focusRevealKey', () => {
   });
 });
 
+describe('changesetListPlaces', () => {
+  const rows = changesetListRows(oldestFirst(branch), '');
+
+  it('counts the rows, and the line between two of them while its row shows', () => {
+    expect(changesetListPlaces(rows, undefined)).toBe(5);
+    expect(changesetListPlaces(rows, '280535')).toBe(6);
+    expect(changesetListPlaces(rows, '99')).toBe(5);
+  });
+});
+
 describe('changesetRowsHeight', () => {
   it('is as tall as the rows, up to the most shown, the rest scrolling', () => {
-    expect(changesetRowsHeight(3, { most: 6 })).toBe(3 * CHANGESET_ROW_HEIGHT + 8);
-    expect(changesetRowsHeight(400, { most: 6 })).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+    expect(changesetRowsHeight(3, 6)).toBe(3 * CHANGESET_ROW_HEIGHT + 8);
+    expect(changesetRowsHeight(400, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
   });
 
-  it('keeps room for the fewest rows, a notice or a placeholder where there are none', () => {
-    expect(changesetRowsHeight(0, { most: 6 })).toBe(CHANGESET_ROW_HEIGHT + 8);
-    expect(changesetRowsHeight(1, { fewest: 4, most: 6 })).toBe(4 * CHANGESET_ROW_HEIGHT + 8);
-  });
-
-  it('is its tallest while the changesets are read', () => {
-    expect(changesetRowsHeight(undefined, { most: 6 })).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+  it('is its tallest while the changesets are read, and with no row, for the notice that none matches', () => {
+    expect(changesetRowsHeight(undefined, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+    expect(changesetRowsHeight(0, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
   });
 });
 
