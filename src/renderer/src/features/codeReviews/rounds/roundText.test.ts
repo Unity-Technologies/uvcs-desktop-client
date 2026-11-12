@@ -46,8 +46,8 @@ describe('sinceText', () => {
 
 describe('checkinsText', () => {
   it('says who checked in how many changesets', () => {
-    expect(checkinsText({ kind: 'checkins', owner: 'dani', changesets: [changeset(15), changeset(16)] })).toBe('checked in 2 changesets');
-    expect(checkinsText({ kind: 'checkins', owner: 'dani', changesets: [changeset(15)] })).toBe('checked in a changeset');
+    expect(checkinsText({ changesets: [changeset(15), changeset(16)] })).toBe('checked in 2 changesets');
+    expect(checkinsText({ changesets: [changeset(15)] })).toBe('checked in a changeset');
   });
 });
 
