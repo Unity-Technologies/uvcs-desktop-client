@@ -19,7 +19,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* One line per changeset, as a commit picker lists them: the comment takes what the number and the age leave. */
+/* One line per changeset, as a commit picker lists them: the comment takes what the age leaves. */
 .row {
   display: flex;
   flex: 1;
@@ -44,15 +44,7 @@
   color: inherit;
 }
 
-.number {
-  flex: none;
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-}
-
-/* A fixed column, so the numbers line up whatever the age says ("now", "12m", "Oct 2025"). */
+/* A fixed column, so the comments end in one place whatever the age says ("now", "12m", "Oct 2025"). */
 .age {
   flex: none;
   width: 52px;

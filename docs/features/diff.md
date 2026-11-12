@@ -41,10 +41,11 @@ same common-ancestor calculation `--integration` already makes inside its one co
 files don't move as the mode switches. The page's header names the branch in both modes (`BranchDescription`); the
 selected changeset's summary sits above its diff (`TargetDiff`'s `pageDescription`), since its height follows its
 comment, and over the whole page it would move the lists being clicked at each step. Each changeset is one line of
-28 px, as a commit picker lists them: a small avatar, the comment's first line (the rest of the width), the number in
-tabular monospace and a short age in a fixed column ("now", "12m", "3h", "2d", "Oct 14": `formatShortAge`); its
-tooltip says the rest (`changesetRowTip`: the comment's first line, who, the full date, cs:N). Why not History's
-two-line `RecordRow`: the list sits above the files, and two lines and a big avatar per changeset left room for few.
+28 px, as a commit picker lists them: a small avatar, the comment's first line (the rest of the width) and a short
+age in a fixed column ("now", "12m", "3h", "2d", "Oct 14": `formatShortAge`); its tooltip says the rest
+(`changesetRowTip`: the comment's first line, who, the full date, cs:N). Why not History's two-line `RecordRow`: the
+list sits above the files, and two lines and a big avatar per changeset left room for few. Why no number on the row:
+on every one it said little and took the comment's room; the tooltip has it, and the filter finds it.
 Its filter matches every word typed in a changeset's number, comment or author's name over the list already read
 (`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. A changeset the
 filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes

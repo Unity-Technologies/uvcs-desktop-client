@@ -9,7 +9,7 @@ import { focusMainNear } from '../../lib/mainFocus';
 import type { SelectionState } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Avatar } from '../../ui/Avatar';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { NoMatches } from '../../ui/NoMatches';
 import { SearchField } from '../../ui/SearchField';
@@ -28,8 +28,9 @@ const CHANGESET_ROW_HEIGHT = 28;
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
 /**
- * Each changeset in one line: the author's avatar, the comment's first line, the number and how long ago, the rest in
- * its tooltip (`changesetRowTip`). With the user's review (`reviewedUpTo`), a dot marks what's new since; what they
+ * Each changeset in one line: the author's avatar, the comment's first line and how long ago, the rest in its tooltip
+ * (`changesetRowTip`: its number too, which the filter still finds; on every row it said little and took the comment's
+ * room). With the user's review (`reviewedUpTo`), a dot marks what's new since; what they
  * reviewed reads a step quieter.
  */
 function changesetColumns(reviewedUpTo: ReviewedUpTo | undefined, now: number): Column<Changeset>[] {
@@ -45,9 +46,6 @@ function changesetColumns(reviewedUpTo: ReviewedUpTo | undefined, now: number): 
             <Avatar user={changeset.owner} size={16} tip={null} />
             <span className={styles.comment}>
               <RecordComment comment={changeset.comment} />
-            </span>
-            <span className={styles.number}>
-              <Highlight text={String(changeset.id)} />
             </span>
             <span className={styles.age}>{formatShortAge(changeset.date, now)}</span>
           </span>
