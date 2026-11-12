@@ -1,5 +1,6 @@
 import { GitCommitHorizontal } from 'lucide-react';
 import { useState } from 'react';
+import { CHIP_ICONS } from '../../../components/comments/chipIcons';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
@@ -12,6 +13,8 @@ import styles from './ReviewRounds.module.css';
  * Changesets checked in one after another, as the timeline shows them: who checked in how many, when, then each
  * changeset's number and its comment's first line, a link to its diff in the review's Changes.
  */
+const ChangesetIcon = CHIP_ICONS.changeset;
+
 export function CheckinsRow({ entry, onOpenChangeset }: { entry: CheckinsEntry; onOpenChangeset: (changesetId: number) => void }) {
   const [showsAll, setShowsAll] = useState(false);
   const { shown, more } = shownCheckins(entry.changesets, showsAll);
@@ -29,7 +32,11 @@ export function CheckinsRow({ entry, onOpenChangeset }: { entry: CheckinsEntry; 
           {shown.map((changeset) => (
             <li key={changeset.id}>
               <button type="button" className={styles.checkin} data-tip="Show in Changes" onClick={() => onOpenChangeset(changeset.id)}>
-                <span className={styles.checkinId}>cs:{changeset.id}</span>
+                {/* Named as a comment's chip names a changeset (`ReferenceChip`), without its fill: the row is the link. */}
+                <span className={styles.checkinId}>
+                  <ChangesetIcon size={13} strokeWidth={2.25} aria-hidden />
+                  {changeset.id}
+                </span>
                 <span className={styles.checkinComment}>{checkinCommentText(changeset)}</span>
               </button>
             </li>

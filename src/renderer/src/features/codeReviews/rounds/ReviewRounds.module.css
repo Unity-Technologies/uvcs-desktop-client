@@ -144,10 +144,14 @@
   box-shadow: var(--focus-ring-inset);
 }
 
+/* A changeset as a comment's chip shows one (`ReferenceChip`): its icon and number in the accent, without the fill. */
 .checkinId {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--accent-text);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
 }
 
 .checkinComment {

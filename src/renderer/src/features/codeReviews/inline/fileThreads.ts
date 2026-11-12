@@ -65,7 +65,8 @@ export interface FileThreads {
  * - on a line of a revision either side shows, at that line: the newer side's, or the older one's (a file the review
  *   deletes is commented on its last revision, which its older side shows);
  * - on another revision of the file, an earlier one, to place by where its line went (`placeEarlier`).
- * A changeset's diff shows the threads written in it; the whole review's those written in it, and those written
+ * A changeset's diff shows the threads written in it and the change requests it applied, so the fix reads beside what
+ * asked for it; the whole review's those written in it, and those written
  * changeset by changeset whose revision it shows or whose line it still has, so an open change
  * request never hides behind the mode it was written in.
  */
@@ -75,13 +76,19 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
   for (const thread of threads) {
     if (!isLineThread(thread) || !isOfFile(thread.root.anchor, file)) continue;
     const written = writtenIn(review, thread);
-    if (view.kind === 'changeset' && (written.kind !== 'changeset' || written.changesetId !== view.changesetId)) continue;
+    if (view.kind === 'changeset' && !belongsToChangeset(thread, written, view.changesetId)) continue;
     const { revisionId, line } = thread.root.anchor;
     if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', line });
     else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', line });
     else earlier.push({ thread, revisionId });
   }
   return { placed, earlier };
+}
+
+/** Whether a thread shows in a changeset's diff: written there, or a change request that changeset applied. */
+function belongsToChangeset(thread: ReviewThread, written: ReviewDiffView, changesetId: number): boolean {
+  if (written.kind === 'changeset' && written.changesetId === changesetId) return true;
+  return thread.state.kind === 'applied' && thread.state.changesetId === changesetId;
 }
 
 export function isLineThread(thread: ReviewThread): thread is LineThread {

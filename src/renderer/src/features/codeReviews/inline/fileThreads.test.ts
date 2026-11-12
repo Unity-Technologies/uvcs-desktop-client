@@ -64,6 +64,13 @@ describe('threadsOfFile', () => {
     expect(earlier).toEqual([]);
   });
 
+  it('shows in a changeset\'s diff the change requests it applied, on the version they were written on', () => {
+    // Written on the whole branch at revision 10, applied by changeset 12, whose diff shows 10 on its older side.
+    const threads = threadsOf([onLine(1, 10, 3, { kind: 'changeRequest', appliedInChangeset: 12 }), onLine(2, 10, 4, { kind: 'changeRequest', appliedInChangeset: 13 })]);
+    const { placed } = threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([[1, 'deletions', 3]]);
+  });
+
   it('places a thread on the older revision on the older side: a deleted file, or the revision commented on', () => {
     const deleted: ShownFile = { path: 'src/Player.cs', originalRevision: 10, modifiedRevision: -1 };
     const { placed } = threadsOfFile(threadsOf([onLine(1, 10, 3)]), BRANCH, WHOLE, deleted);
