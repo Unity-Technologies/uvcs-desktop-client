@@ -73,3 +73,18 @@
   margin: 0;
   color: var(--text-secondary);
 }
+
+/* Stepping through what settled since the last review, before the view switch: quiet, the position between arrows. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-end: var(--space-3);
+}
+
+.stepPosition {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

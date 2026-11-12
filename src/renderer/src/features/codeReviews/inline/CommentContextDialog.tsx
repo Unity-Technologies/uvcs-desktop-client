@@ -5,7 +5,10 @@ import { samePlace as isSamePlace, type Place } from '@shared/domain/place';
 import { navigatedSince, type WindowWhere } from '../../../app/navigation/navigatedSince';
 import { useNavigation } from '../../../app/navigation/navigationStore';
 import { useSession } from '../../../app/workspace/sessionStore';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { navigation } from '../../../app/navigation/navigationStore';
 import { Button } from '../../../ui/Button';
+import { IconButton } from '../../../ui/IconButton';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -21,6 +24,8 @@ import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
 import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBodyOf, type AppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
+import { contextStepsOf, showInChangesPage, type ContextSteps } from './contextSteps';
+import { showInConversation } from './reviewComments';
 import { ContextViewSwitch } from './ContextViewSwitch';
 import type { LineThread } from './fileThreads';
 import { ContextViewPending } from './ContextViewPending';
@@ -40,7 +45,11 @@ export interface CommentInContext {
   onScreen: OnScreen | null;
   /** The view it opens on: what was done since, from a change request's "Applied" pill. */
   startsOn?: ContextView;
-  showInConversation: () => void;
+  /**
+   * The threads settled since the user's last review (`settledSinceIds`), in the conversation's order: opened at one of
+   * them, the dialog steps through them (`contextStepsOf`).
+   */
+  steps?: readonly number[];
 }
 
 /** As wide as the window allows, up to this: two versions of code side by side, and the changeset's files beside them. */
@@ -74,10 +83,18 @@ function CommentContextDialog(props: DialogProps) {
 
 /** The thread as the conversation has it now: a reply, an edit or a discard made here shows at once. */
 function ThreadInContext(props: DialogProps) {
-  const { review, threadId, startsOn = 'commented', onClose } = props;
+  const { review, startsOn = 'commented', steps, onClose } = props;
+  // The thread shown: the one it was opened at, until a step goes to another settled since the last review, which
+  // shows how it was settled, away from the file's diff it was opened from.
+  const [{ threadId, onScreen }, setShown] = useState({ threadId: props.threadId, onScreen: props.onScreen });
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
   const [commentedSelected, setCommentedSelected] = useState(true);
+  const stepTo = (next: number): void => {
+    setShown({ threadId: next, onScreen: null });
+    setView('since');
+    setCommentedSelected(true);
+  };
   const threads = useReviewThreads(review.id, SHOWN_BY_THE_PAGE);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
@@ -95,11 +112,14 @@ function ThreadInContext(props: DialogProps) {
   }
   const { thread } = live;
   const files = appliedFilesOf(thread, applied.data);
-  return <ThreadDialog {...props} thread={thread} view={view} onViewChange={setView} files={files} commentedSelected={commentedSelected} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentedSelected} />;
+  return <ThreadDialog {...props} key={threadId} threadId={threadId} onScreen={onScreen} stepping={contextStepsOf(steps, threadId)} onStep={stepTo} thread={thread} view={view} onViewChange={setView} files={files} commentedSelected={commentedSelected} appliedIn={appliedIn} applied={applied} appliedTarget={appliedTarget} onCommentShown={setCommentedSelected} />;
 }
 
 type ThreadDialogProps = DialogProps & {
   thread: LineThread;
+  /** Where it is among the threads settled since the last review, when it's one of them. */
+  stepping: ContextSteps | undefined;
+  onStep: (threadId: number) => void;
   view: ContextView;
   onViewChange: (view: ContextView) => void;
   /** What the dialog shows of the changeset that applied it (`appliedFilesOf`). */
@@ -116,7 +136,7 @@ type ThreadDialogProps = DialogProps & {
  * changeset applied it in other files), or the thread alone and why.
  */
 function ThreadDialog(props: ThreadDialogProps) {
-  const { thread, view, onViewChange: setView, files, commentedSelected, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, onClose } = props;
+  const { review, thread, view, onViewChange: setView, files, commentedSelected, appliedIn, applied, appliedTarget, onCommentShown: setCommentShown, stepping, onStep, onClose } = props;
   const state = useContextComparison(props);
   const notInChangeset = state.kind === 'notInChangeset';
   const body = contextBodyOf(files, view, state.kind);
@@ -130,9 +150,24 @@ function ThreadDialog(props: ThreadDialogProps) {
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
       // switch or the dialog itself after a click in the code.
       marks={STEP_FRAME}
-      headerAction={heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
+      headerAction={
+        (stepping || heading.offersViews) && (
+          <>
+            {stepping && <ContextStepper steps={stepping} onStep={onStep} />}
+            {heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
+          </>
+        )
+      }
       footer={
         <>
+          <Button
+            onClick={() => {
+              onClose();
+              navigation.openPage(showInChangesPage(review.id, review.target, thread));
+            }}
+          >
+            Show in Changes
+          </Button>
           {appliedIn !== undefined && (
             <Button
               onClick={() => {
@@ -185,7 +220,19 @@ function ThreadDialog(props: ThreadDialogProps) {
  * lit (`unlit`, above the changeset's files, where the code is what the user came to see), when an applied thread
  * starts folded to its first words as settled ones do (`startsFolded`).
  */
-function ThreadCard({ review, thread, user, showInConversation, onClose, unlit = false }: ViewProps & { unlit?: boolean }) {
+/** Previous and next among the threads settled since the last review, and where this one is: "1 of 3 since last review". */
+function ContextStepper({ steps, onStep }: { steps: ContextSteps; onStep: (threadId: number) => void }) {
+  const { previous, next } = steps;
+  return (
+    <span className={styles.stepper}>
+      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous settled since last review" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
+      <span className={styles.stepPosition}>{steps.position}</span>
+      <IconButton size="small" icon={<ChevronRight size={14} />} label="Next settled since last review" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
+    </span>
+  );
+}
+
+function ThreadCard({ review, thread, user, onClose, unlit = false }: ViewProps & { unlit?: boolean }) {
   return (
     <ReviewThreadCard
       review={review}
@@ -197,7 +244,7 @@ function ThreadCard({ review, thread, user, showInConversation, onClose, unlit =
         inContext: true,
         showInConversation: () => {
           onClose();
-          showInConversation();
+          showInConversation(review.id, thread.root.id);
         },
       }}
     />

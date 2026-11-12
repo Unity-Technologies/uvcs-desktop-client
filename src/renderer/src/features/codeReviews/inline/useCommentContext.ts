@@ -5,7 +5,7 @@ import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspac
 import type { ContextRequest } from './commentContext';
 import { openCommentContextDialog } from './CommentContextDialog';
 import type { LineThread } from './fileThreads';
-import { showInConversation } from './reviewComments';
+import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
 
 /**
  * Opens a review's threads in context (`openCommentContextDialog`), from wherever they show: the code, the Comments
@@ -15,6 +15,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
   const place = usePlace();
   const user = usePlaceUser();
   const repository = usePlaceRepository();
+  const { settledSince } = useReviewCheckpoint(review);
   return useMemo(() => {
     if (repository === undefined) return undefined;
     return (thread: LineThread, { startsOn, onScreen }: ContextRequest = {}) =>
@@ -26,7 +27,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
         repository: onScreen?.entry.repository ?? repository,
         onScreen: onScreen ?? null,
         startsOn,
-        showInConversation: () => showInConversation(review.id, thread.root.id),
+        steps: settledSince,
       });
-  }, [place, review, user, repository]);
+  }, [place, review, user, repository, settledSince]);
 }
