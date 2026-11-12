@@ -199,8 +199,8 @@ describe('stepGroupsOf', () => {
 
     // cs:15 at 9:00 applied 7, then 5 was discarded at 11:00.
     expect(stepGroupsOf(blocks)).toEqual([
-      { threadIds: [1, 2], scope: 'in round 1' },
-      { threadIds: [7, 5], scope: 'since last review' },
+      { threadIds: [1, 2], scope: 'Round 1' },
+      { threadIds: [7, 5], scope: 'New since last review' },
     ]);
   });
 
@@ -214,8 +214,8 @@ describe('stepGroupsOf', () => {
     const none = conversationBlocksOf({ conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' })], []), user: 'dani', changesets: undefined, reviewDate: at(7, 7) });
 
     expect(stepGroupsOf(after)).toEqual([
-      { threadIds: [1], scope: 'in round 1' },
-      { threadIds: [4], scope: 'after round 1' },
+      { threadIds: [1], scope: 'Round 1' },
+      { threadIds: [4], scope: 'After round 1' },
     ]);
     expect(stepGroupsOf(none)).toEqual([{ threadIds: [1], scope: '' }]);
   });

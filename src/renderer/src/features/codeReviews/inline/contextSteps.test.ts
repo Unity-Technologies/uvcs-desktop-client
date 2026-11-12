@@ -23,13 +23,13 @@ function lineThread(fields: Partial<ReviewComment> = {}): LineThread {
 
 describe('contextStepsOf', () => {
   const groups = [
-    { threadIds: [2, 4], scope: 'in round 1' },
-    { threadIds: [5, 1, 3], scope: 'since last review' },
+    { threadIds: [2, 4], scope: 'Round 1' },
+    { threadIds: [5, 1, 3], scope: 'New since last review' },
   ];
 
   it('says where the thread is among those settled in its part of the conversation, and which come before and after', () => {
-    expect(contextStepsOf(groups, 1)).toEqual({ position: '2 of 3 since last review', previous: 5, next: 3 });
-    expect(contextStepsOf(groups, 2)).toEqual({ position: '1 of 2 in round 1', previous: undefined, next: 4 });
+    expect(contextStepsOf(groups, 1)).toEqual({ position: 'New since last review · 2 of 3', previous: 5, next: 3 });
+    expect(contextStepsOf(groups, 2)).toEqual({ position: 'Round 1 · 1 of 2', previous: undefined, next: 4 });
   });
 
   it('says only where it is when the conversation has no rounds', () => {
@@ -38,7 +38,7 @@ describe('contextStepsOf', () => {
 
   it('steps nowhere for a thread that settled nothing, or a lone one', () => {
     expect(contextStepsOf(groups, 9)).toBeUndefined();
-    expect(contextStepsOf([{ threadIds: [5], scope: 'in round 1' }], 5)).toBeUndefined();
+    expect(contextStepsOf([{ threadIds: [5], scope: 'Round 1' }], 5)).toBeUndefined();
     expect(contextStepsOf(undefined, 5)).toBeUndefined();
   });
 });
