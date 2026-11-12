@@ -259,6 +259,33 @@ describe('conversationBlocksOf', () => {
     expect(first?.kind === 'entry' && startsOpen(first.entry)).toBe(false);
   });
 
+  it('moves a request discarded and a question answered since the last review under the line, when they settled', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation(
+        [request(1, at(7, 9)), reply(4, 1, at(10, 11), { kind: 'discard' }), question(2, at(7, 9)), reply(5, 2, at(10, 10)), question(3, at(7, 9))],
+        [status(6, 'vio', 'Rework required', at(9, 16))],
+      ),
+      user: 'vio',
+      changesets: undefined,
+      reviewDate: at(7, 8),
+    });
+
+    // Question 3 is still open: its round shows unfolded, holding it where it was asked.
+    expect(shapeOf(blocks)).toEqual(['round 1: thread 3, event 6', 'since', 'thread 2', 'thread 1']);
+  });
+
+  it('keeps in the round what was said at the very second of its status before it, and puts after it what came after', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation([comment(1, at(9, 16))], [status(5, 'vio', 'Rework required', at(9, 16)), askedAgain(7, at(9, 16))]),
+      user: 'vio',
+      changesets: undefined,
+      reviewDate: at(7, 8),
+    });
+
+    // The comment is the status's moment and before it in the round; event 7, written after the status's own note, is news.
+    expect(shapeOf(blocks)).toEqual(['round 1 (folded): thread 1, event 5', 'since', 'event 7']);
+  });
+
   it('counts in its round a thread settled since, though it shows under the line', () => {
     const blocks = conversationBlocksOf({
       conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [status(2, 'vio', 'Rework required', at(9, 16))]),
