@@ -289,12 +289,18 @@ export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] 
   const settledIn = (entries: readonly ConversationEntry[]): number[] =>
     entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
   const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
-  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: roundName(block.round.number, rounds.length) ?? '' }));
+  const roundCount = roundCountOf(blocks);
+  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: roundName(block.round.number, roundCount) ?? '' }));
   const last = rounds.at(-1);
   const since = blocks.some((block) => block.kind === 'since');
   const after = settledIn(blocks.flatMap((block) => (block.kind === 'entry' ? [block.entry] : [])));
-  groups.push({ threadIds: after, scope: since ? 'New since your last review' : last ? afterRoundScope(last.round.number, rounds.length) : '' });
+  groups.push({ threadIds: after, scope: since ? 'New since your last review' : last ? afterRoundScope(last.round.number, roundCount) : '' });
   return groups.filter((group) => group.threadIds.length > 0);
+}
+
+/** How many closed rounds the conversation shows: whether they're named (`roundName`). */
+export function roundCountOf(blocks: readonly ConversationBlock[]): number {
+  return blocks.filter((block) => block.kind === 'round').length;
 }
 
 /**

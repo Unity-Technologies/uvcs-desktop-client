@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -174,6 +174,20 @@ describe('newThreadIds', () => {
     const threads = threadsOf([request(1, at(8, 10), { appliedInChangeset: 20 }), request(2, at(8, 11), { appliedInChangeset: 3 })]);
 
     expect([...newThreadIds(threads, checkpoint, 'vio', branch)]).toEqual([1]);
+  });
+});
+
+describe('roundCountOf', () => {
+  it('counts the closed rounds the conversation shows, not the line or the entries after them', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' }), request(4, at(8, 8))], [status(3, 'vio', 'Reviewed', at(7, 10)), status(5, 'vio', 'Rework required', at(8, 10))]),
+      user: 'dani',
+      changesets: undefined,
+      reviewDate: at(7, 7),
+    });
+
+    expect(roundCountOf(blocks)).toBe(2);
+    expect(roundCountOf([])).toBe(0);
   });
 });
 

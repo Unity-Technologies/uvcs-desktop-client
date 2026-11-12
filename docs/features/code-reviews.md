@@ -249,10 +249,11 @@ one read serves both), say what was checked in when (`reviewRounds`).
 - **The conversation** (`conversationBlocksOf`) reads as one timeline, oldest first: a rail runs down through the
   events' icons, behind the cards. Each closed round starts at a line of its own, "Round 1 ·
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
-  started in it, as one more event. Rounds are numbered only among others (`roundName`): a review's only round reads
-  "**Reviewed** by Alvaro · 1 request applied", its status bold where the name would be, since a lone "Round 1" hints at rounds that never came; a second round
-  numbers both. Its mark on the rail is the status that closed it (Reviewed's thumbs-up, Rework
-  required's flag, in their colors), and while folded what the reviewer said with it shows under the line, folded past
+  started in it, as one more event. Rounds are numbered only among others (`roundName`, `roundCountOf`): a review's
+  only round reads "**Reviewed** by Alvaro · 1 request applied", its status bold where the name would be, since a lone
+  "Round 1" hints at rounds that never came; a second round numbers both. Its mark on the rail is the status that
+  closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), and while folded what the reviewer said
+  with it shows under the line, folded past
   four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
   under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded

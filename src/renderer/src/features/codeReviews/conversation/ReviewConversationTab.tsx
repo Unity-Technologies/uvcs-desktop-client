@@ -21,7 +21,7 @@ import { useReviewConversation } from './useReviewConversation';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CheckinsRow } from '../rounds/CheckinsRow';
 import { RoundMarker } from '../rounds/RoundMarker';
-import { conversationBlocksOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { conversationBlocksOf, roundCountOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
 import { newChangesetsSpan } from '../../diff/branchChangesetRows';
@@ -71,7 +71,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
   const pickedRound = pick && roundHolding(blocks, pick.threadId);
-  const roundCount = blocks.filter((block) => block.kind === 'round').length;
+  const roundCount = roundCountOf(blocks);
 
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
