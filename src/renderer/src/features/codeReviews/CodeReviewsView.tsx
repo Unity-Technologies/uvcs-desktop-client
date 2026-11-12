@@ -12,7 +12,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { ChoiceChip } from '../../ui/ChoiceChip';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { CODE_REVIEW_COLUMNS } from './codeReviewColumns';
+import { codeReviewColumns } from './codeReviewColumns';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
@@ -56,6 +56,8 @@ export function CodeReviewsView() {
     () => (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search)),
     [reviews, people, me, search],
   );
+  // The same columns while the user stays the same: the table sorts its rows again only when they change.
+  const columns = useMemo(() => codeReviewColumns(me), [me]);
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
   const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
@@ -132,7 +134,7 @@ export function CodeReviewsView() {
         }
         query={search}
         rows={visible}
-        columns={CODE_REVIEW_COLUMNS}
+        columns={columns}
         rowKey={reviewKey}
         selection={selection}
         onSelectionChange={setSelection}

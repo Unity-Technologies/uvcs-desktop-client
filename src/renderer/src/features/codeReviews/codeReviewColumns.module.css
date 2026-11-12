@@ -9,6 +9,16 @@
   white-space: nowrap;
 }
 
+/* A review waiting for the user (`waitingForMe`): a dot before its number, centered on the text's middle. */
+.waiting {
+  flex: none;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
 .titleText {
   overflow: hidden;
   text-overflow: ellipsis;
