@@ -18,6 +18,7 @@ import { threadKindName } from '../conversation/threadBadges';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import {
   commentPosition,
+  commentsFilterChoices,
   commentsPanelCounts,
   foldAllEntry,
   shownFolds,
@@ -34,6 +35,7 @@ import {
   threadKindChipLabel,
   threadKindCounts,
   type CommentsFilter,
+  type NewThreads,
   type CommentsSearch,
   type ThreadKind,
 } from './commentsPanel';
@@ -46,6 +48,8 @@ interface ReviewCommentsPanelProps {
   comments: ReviewComments;
   /** What it lists, kept by the Changes tab so the keys go through the same comments while it's hidden. */
   filter: CommentsFilter;
+  /** The threads new to the user since their last review, which New lists; none before they gave one. */
+  newIds: NewThreads;
   onFilterChange: (filter: CommentsFilter) => void;
   /** The words and kinds the filter row narrows it to, kept by the Changes tab too. */
   search: CommentsSearch;
@@ -80,8 +84,8 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, folded, onFoldedChange, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
-  const counts = commentsPanelCounts(threads);
+function PanelBody({ comments, threads, filter, newIds, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, folded, onFoldedChange, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+  const counts = commentsPanelCounts(threads, newIds);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
@@ -96,15 +100,12 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
           label="Comments to list"
           value={filter}
           onChange={onFilterChange}
-          segments={[
-            { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
-            { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
-          ]}
+          segments={commentsFilterChoices(counts, newIds)}
         />
         {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
         <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
       </header>
-      {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter)} />}
+      {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter, newIds)} />}
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current, groups)}</span>

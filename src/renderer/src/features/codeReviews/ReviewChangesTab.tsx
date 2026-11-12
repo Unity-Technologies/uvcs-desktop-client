@@ -24,6 +24,7 @@ import { useReviewCommentsStore } from './inline/reviewCommentsStore';
 import { selectedInPlace } from './inline/threadSelection';
 import { useCommentContext } from './inline/useCommentContext';
 import { changesFocusAskedFor } from './reviewTab';
+import { useReviewCheckpoint } from './rounds/useReviewCheckpoint';
 import { COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH, useCommentsPanelStart } from './useCommentsPanelStart';
 import styles from './CodeReviewPage.module.css';
 
@@ -45,21 +46,23 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review.id);
+  const { newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
   const [request, setRequest] = useState<DiffFocusRequest | null>(null);
 
-  // The panel's filter, here so the keys go through what the panel lists while it's hidden too: it opens on what's
-  // still open, when anything is, decided at the first read and kept (`shownCommentsFilter`), until one is picked.
+  // The panel's filter, here so the keys go through what the panel lists while it's hidden too: it opens on what's new
+  // to a reviewer back for another round, else on what's still open, when anything is, decided once the threads and
+  // where the user left off are read, and kept (`shownCommentsFilter`), until one is picked.
   const [pickedFilter, setFilter] = useState<CommentsFilter | null>(null);
   const [openedOn, setOpenedOn] = useState<CommentsFilter | null>(null);
-  if (threads && openedOn === null) setOpenedOn(initialCommentsFilter(threads));
+  if (threads && checkpointSettled && openedOn === null) setOpenedOn(initialCommentsFilter(threads, newIds));
   const filter = shownCommentsFilter(pickedFilter, openedOn);
   const order = useReviewCommentsStore((state) => state.panelOrder);
   const setOrder = useReviewCommentsStore((state) => state.setPanelOrder);
-  const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all', NO_COMMENTS_SEARCH, order) : []), [threads, order]);
+  const all = useMemo(() => (threads ? commentsPanelThreads(threads, 'all', NO_COMMENTS_SEARCH, order, newIds) : []), [threads, order, newIds]);
   const [search, setSearch] = useState<CommentsSearch>(NO_COMMENTS_SEARCH);
-  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search, order) : []), [threads, filter, search, order]);
+  const listed = useMemo(() => (threads ? commentsPanelThreads(threads, filter, search, order, newIds) : []), [threads, filter, search, order, newIds]);
   const groups = useMemo(() => commentsByFile(listed, order), [listed, order]);
   // Kept here, as the filter is: N unfolds the file of the comment it goes to with the panel hidden too.
   const [folded, setFolded] = useState<FoldedFiles>(NO_FOLDED_FILES);
@@ -136,6 +139,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                   <ReviewCommentsPanel
                     comments={comments}
                     filter={filter}
+                    newIds={newIds}
                     onFilterChange={setFilter}
                     search={search}
                     onSearchChange={setSearch}
