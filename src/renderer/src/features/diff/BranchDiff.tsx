@@ -11,7 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { branchDiffShownFor, branchStartOfChangesets, changesetStep, shownBranchChangesets, selectedChangesetIds, showsChangesetList, spanSelection, type BranchDiffMode, type ChangesetToShow } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetStep, shownBranchChangesets, selectedChangesetIds, showsChangesetList, spanSelection, type BranchDiffMode, type ChangesetToShow, type SpanToShow } from './changesetByChangeset';
 import { newChangesetsOf, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchChangesetList } from './BranchChangesetList';
 import { BranchDescription } from './BranchDescription';
@@ -43,18 +43,17 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
   const [mode, setMode] = useState<BranchDiffMode>(focusChangeset === undefined && focusChangesets === undefined ? 'wholeBranch' : 'byChangeset');
   // The changeset asked for, again each time it's asked (`seq`): the user may have stepped elsewhere meanwhile.
   const [stepTo, setStepTo] = useState<ChangesetToShow | undefined>(focusChangeset === undefined ? undefined : { changesetId: focusChangeset, seq: 0 });
-  // The place asks for a file in a mode (a review's comment, in the mode it was written in): switch to it.
+  const [spanTo, setSpanTo] = useState<SpanToShow | undefined>(focusChangesets === undefined ? undefined : { changesets: focusChangesets, seq: 0 });
+  // The place asks for a mode, with a file or not (a review's comment, in the mode it was written in; a check-in; what's
+  // new since the user's review): switch to it.
   const focusRequest = useContext(DiffFocusRequestContext);
   useEffect(() => {
     const shown = branchDiffShownFor(focusRequest);
     if (!shown) return;
     setMode(shown.mode);
     if (shown.changeset) setStepTo(shown.changeset);
+    if (shown.span) setSpanTo(shown.span);
   }, [focusRequest?.seq]);
-  // A span asked for while the diff shows already (a review's "See the changes"): changeset by changeset, on it.
-  useEffect(() => {
-    if (focusChangesets) setMode('byChangeset');
-  }, [focusChangesets?.oldest, focusChangesets?.newest]);
   const modeToggle = (
     <>
       <SegmentedControl<BranchDiffMode>
@@ -76,7 +75,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
       toolbar={modeToggle}
       focusPath={focusRequest?.path ?? focusPath}
       focusChangeset={stepTo}
-      focusChangesets={focusChangesets}
+      focusChangesets={spanTo}
       reviewedUpTo={reviewedUpTo}
     />
   );
@@ -92,7 +91,7 @@ interface ChangesetByChangesetProps {
   /** The changeset to show, selected as it opens and each time it's asked for. */
   focusChangeset?: ChangesetToShow;
   /** The span to show, its changesets selected as it opens and each time another is asked for. */
-  focusChangesets?: ChangesetSpan;
+  focusChangesets?: SpanToShow;
   reviewedUpTo?: ReviewedUpTo;
 }
 
@@ -131,9 +130,9 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
   const read = changesets !== undefined;
   useEffect(() => {
     if (focusChangesets === undefined) return;
-    setSelection(spanSelection(changesets, focusChangesets));
-    setRevealKey(String(focusChangesets.newest));
-  }, [focusChangesets?.oldest, focusChangesets?.newest, read]);
+    setSelection(spanSelection(changesets, focusChangesets.changesets));
+    setRevealKey(String(focusChangesets.changesets.newest));
+  }, [focusChangesets?.seq, read]);
 
   const stepsTo = (step: 1 | -1): number | null => (changesets ? changesetStep(changesets, shown, selectedId, step) : null);
   const stepTo = (step: 1 | -1): void => {
@@ -205,8 +204,8 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
   );
 }
 
-function initialSelection(changesets: readonly Changeset[] | undefined, focusChangeset: ChangesetToShow | undefined, focusChangesets: ChangesetSpan | undefined): SelectionState {
-  if (focusChangesets) return spanSelection(changesets, focusChangesets);
+function initialSelection(changesets: readonly Changeset[] | undefined, focusChangeset: ChangesetToShow | undefined, focusChangesets: SpanToShow | undefined): SelectionState {
+  if (focusChangesets) return spanSelection(changesets, focusChangesets.changesets);
   return focusChangeset === undefined ? EMPTY_SELECTION : singleSelection(String(focusChangeset.changesetId));
 }
 

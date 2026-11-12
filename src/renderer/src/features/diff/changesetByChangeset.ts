@@ -83,11 +83,20 @@ export interface ChangesetToShow {
   seq: number;
 }
 
+/** A span of a branch's changesets a branch's diff is asked to show, the how-many-th time (`DiffFocusRequest.seq`). */
+export interface SpanToShow {
+  changesets: ChangesetSpan;
+  seq: number;
+}
+
 /**
- * What a branch's diff switches to when its place asks for a file in a mode (`DiffFocusRequest`): the whole branch, or
- * a changeset stepped to; nothing when the request leaves the mode as it is.
+ * What a branch's diff switches to when its place asks for a mode (`DiffFocusRequest`): the whole branch, a changeset
+ * stepped to, or a span of changesets selected together; nothing when the request leaves the mode as it is.
  */
-export function branchDiffShownFor(request: Pick<DiffFocusRequest, 'changesetId' | 'seq'> | null): { mode: BranchDiffMode; changeset?: ChangesetToShow } | null {
+export function branchDiffShownFor(
+  request: Pick<DiffFocusRequest, 'changesetId' | 'changesets' | 'seq'> | null,
+): { mode: BranchDiffMode; changeset?: ChangesetToShow; span?: SpanToShow } | null {
+  if (request?.changesets) return { mode: 'byChangeset', span: { changesets: request.changesets, seq: request.seq } };
   if (!request || request.changesetId === undefined) return null;
   if (request.changesetId === null) return { mode: 'wholeBranch' };
   return { mode: 'byChangeset', changeset: { changesetId: request.changesetId, seq: request.seq } };
