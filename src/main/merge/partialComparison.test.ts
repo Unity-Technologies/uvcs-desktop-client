@@ -120,6 +120,19 @@ describe('what the branch head brings a partial workspace', () => {
     expect(added.map((change) => change.path)).toEqual(['Code/Hull.cs']);
   });
 
+  it("doesn't take a new item for an added one in a folder the workspace loaded only in part", () => {
+    // The root holds Art and Audio, which existed before what the workspace loaded and it left out: it loaded the root
+    // in part, so Big, new on the head, is another item it leaves out. Code, loaded whole, still gets Hull.cs.
+    const withBig = head(...['3|40|dir|/|3', '18|19|dir|/Art|1', '20|42|dir|/Audio|3', '60|61|dir|/Big|5', '22|41|dir|/Code|3'], '43|38|txt|/Code/Hull.cs|3');
+    const added = compareWithHead(SANDBOX_LOADED, withBig, new Set()).filter((change) => change.kind === 'added');
+    expect(added.map((change) => change.path)).toEqual(['Code/Hull.cs']);
+  });
+
+  it('names a new item in the root when the workspace loaded all of it', () => {
+    const withNew = head('3|40|dir|/|3', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '60|61|txt|/README.md|5');
+    expect(compareWithHead(SANDBOX_LOADED, withNew, new Set())).toEqual([item({ kind: 'added', path: 'README.md', headRevisionId: 61 })]);
+  });
+
   it('names a new folder as a folder', () => {
     const withFolder = head(...['3|40|dir|/|3', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '50|51|dir|/Code/AI|4']);
     expect(compareWithHead(SANDBOX_LOADED, withFolder, new Set())).toEqual([item({ kind: 'added', path: 'Code/AI', isDirectory: true, headRevisionId: 51 })]);
