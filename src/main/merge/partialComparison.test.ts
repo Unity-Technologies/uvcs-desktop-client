@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
-import { compareWithHead, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import { compareWithHead, foldersWithNewItems, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
 // `cm ls -R --format={itemid}|{revid}|{parentrevid}|{type}|{wkpath}|{changeset}|{checkout}` in the workspace: what it
 // has loaded. The sandbox's (`partial-operations.sh`): the root and Code, two files.
@@ -136,6 +136,33 @@ describe('what the branch head brings a partial workspace', () => {
   it('names a new folder as a folder', () => {
     const withFolder = head(...['3|40|dir|/|3', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '50|51|dir|/Code/AI|4']);
     expect(compareWithHead(SANDBOX_LOADED, withFolder, new Set())).toEqual([item({ kind: 'added', path: 'Code/AI', isDirectory: true, headRevisionId: 51 })]);
+  });
+
+  describe('an item that looks new but existed when the folder was loaded', () => {
+    // Big (item 60) was created after everything the workspace loaded, then the workspace loaded the root at a later
+    // changeset and left Big out: by id and changeset it looks new, but the root's listing at its loaded changeset has it.
+    const withBig = head('3|40|dir|/|5', '60|61|dir|/Big|5', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '70|71|txt|/README.md|6');
+
+    it('is not added, and its folder counts as loaded in part, so nothing new in it is added', () => {
+      expect(compareWithHead(SANDBOX_LOADED, withBig, new Set(), new Set([60]))).toEqual([]);
+    });
+
+    it('leaves what is new in other folders added', () => {
+      const withHull = [...withBig, ...head('43|38|txt|/Code/Hull.cs|3')];
+      const added = compareWithHead(SANDBOX_LOADED, withHull, new Set(), new Set([60])).filter((change) => change.kind === 'added');
+      expect(added.map((change) => change.path)).toEqual(['Code/Hull.cs']);
+    });
+
+    it('is looked for only in the folders that look whole and hold something that looks new', () => {
+      expect(foldersWithNewItems(SANDBOX_LOADED, withBig).map((folder) => folder.path)).toEqual(['']);
+      expect(foldersWithNewItems(SANDBOX_LOADED, SANDBOX_HEAD).map((folder) => folder.path)).toEqual(['Code']);
+      expect(foldersWithNewItems(SANDBOX_LOADED, head('3|40|dir|/|3', '22|41|dir|/Code|3'))).toEqual([]);
+    });
+
+    it('is not looked for in a checked-out folder, which has no loaded changeset to list it at', () => {
+      const checkedOut = loaded('3|-1|5|dir||-1|CO', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\Engine.cs|1|', '28|16|-1|txt|Code\Ship.cs|1|');
+      expect(foldersWithNewItems(checkedOut, withBig)).toEqual([]);
+    });
   });
 
   it('marks a removed folder a conflict when something it held changed locally', () => {
