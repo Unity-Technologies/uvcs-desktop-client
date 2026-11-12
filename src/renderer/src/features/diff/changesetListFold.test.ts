@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askedOpen, changesetFoldCount, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
 
 describe('listIsOpen', () => {
   it('is folded unless the user left it open or the page asked for changesets', () => {
@@ -29,21 +29,8 @@ describe('toggledFold', () => {
 });
 
 describe('changesetFoldLabel', () => {
-  it('names the changesets, and counts them once read', () => {
-    expect(changesetFoldLabel(undefined)).toBe('Changesets');
-    expect(changesetFoldLabel(13)).toBe('13 changesets');
-    expect(changesetFoldLabel(1)).toBe('1 changeset');
-  });
-});
-
-describe('changesetFoldLabel, at the limit', () => {
-  it('says there are more when the read was cut at its limit', () => {
-    expect(changesetFoldLabel(4, 4)).toBe('4+ changesets');
-  });
-});
-
-describe('changesetFoldCount', () => {
-  it('is the number alone on the row, the words until read', () => {
-    expect([changesetFoldCount(undefined), changesetFoldCount(13), changesetFoldCount(4, 4)]).toEqual(['Changesets', '13', '4+']);
+  it('names what the fold does, whether the changesets are read or not: it never turns into a number as they arrive', () => {
+    expect(changesetFoldLabel(false)).toBe('Show the changesets');
+    expect(changesetFoldLabel(true)).toBe('Hide the changesets');
   });
 });
