@@ -102,3 +102,12 @@ export function spanSelection(changesets: readonly Changeset[] | undefined, { ol
   const inSpan = (changesets ?? []).filter((changeset) => changeset.id >= oldest && changeset.id <= newest).map((changeset) => String(changeset.id));
   return { selected: new Set([String(oldest), String(newest), ...inSpan]), anchor: String(newest) };
 }
+
+/**
+ * The changesets the list's selection shows (`branchChangesetPane`), by number: those selected, or the one last
+ * clicked when a Cmd/Ctrl-click took the last one out, so the pane never goes blank.
+ */
+export function selectedChangesetIds(selection: SelectionState): number[] {
+  if (selection.selected.size > 0) return [...selection.selected].map(Number);
+  return selection.anchor === null ? [] : [Number(selection.anchor)];
+}
