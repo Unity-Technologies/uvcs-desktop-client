@@ -7,8 +7,8 @@ const parseRepositoryListing = (output: string, server: string, options: { withP
 const ORGANIZATION = 'racing_studio@unity';
 
 describe('repositoryListArgs', () => {
-  it("asks a server for its repositories' names, server and owner", () => {
-    expect(repositoryListArgs('acme@cloud', { withProjects: false })).toEqual(['repository', 'list', 'acme@cloud', '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001e']);
+  it("asks a server for its repositories' names, server, owner, type and GUID", () => {
+    expect(repositoryListArgs('acme@cloud', { withProjects: false })).toEqual(['repository', 'list', 'acme@cloud', '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001f{reptype}\u001f{repguid}\u001e']);
   });
 
   it("asks for every type, each one's type and GUID, to list projects in the same command", () => {
@@ -66,6 +66,7 @@ describe('parseRepositoryListing', () => {
     expect(parseRepositoryListing(listed, ORGANIZATION, { withProjects: true })).toEqual({
       repositories: [{ id: '4', name: 'Racing/Game', server: ORGANIZATION, owner: 'bob', spec: `Racing/Game@${ORGANIZATION}` }],
       projects: [],
+      deletedRepositories: [],
     });
   });
 
@@ -78,12 +79,62 @@ describe('parseRepositoryListing', () => {
         { id: '4', name: 'tools', server: 'acme@cloud', owner: 'bob', spec: 'tools@acme@cloud' },
       ],
       projects: [],
+      deletedRepositories: [],
     });
   });
 
   it('reads an empty listing as nothing, with CRLF line ends too', () => {
-    expect(parseRepositoryListing('', ORGANIZATION, { withProjects: true })).toEqual({ repositories: [], projects: [] });
+    expect(parseRepositoryListing('', ORGANIZATION, { withProjects: true })).toEqual({ repositories: [], projects: [], deletedRepositories: [] });
     expect(parseRepositoryListing(ORGANIZATION_LISTED.replaceAll('\n', '\r\n'), ORGANIZATION, { withProjects: true }).projects).toHaveLength(3);
+  });
+});
+
+describe('deleted repositories', () => {
+  const DELETED_GUID = 'd1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6';
+  const OTHER_DELETED_GUID = 'e2f3a4b5-c6d7-4e8f-90a1-b2c3d4e5f6a7';
+
+  it('lists them apart, under the name they had, each named by its GUID', () => {
+    const listed = formatOutput(
+      ['4', 'tools', 'acme@cloud', 'bob', 'VCS', CLOUD_GUID],
+      ['8', '__DELETED__old-tools', 'acme@cloud', 'ana', 'VCS', DELETED_GUID],
+      ['9', '__DELETED__art', 'acme@cloud', 'ana', 'VCS', OTHER_DELETED_GUID],
+    );
+
+    expect(parseRepositoryListing(listed, 'acme@cloud', { withProjects: false })).toEqual({
+      repositories: [{ id: '4', name: 'tools', server: 'acme@cloud', owner: 'bob', spec: 'tools@acme@cloud' }],
+      projects: [],
+      deletedRepositories: [
+        { id: '9', name: 'art', server: 'acme@cloud', owner: 'ana', spec: `${OTHER_DELETED_GUID}@acme@cloud`, deleted: true },
+        { id: '8', name: 'old-tools', server: 'acme@cloud', owner: 'ana', spec: `${DELETED_GUID}@acme@cloud`, deleted: true },
+      ],
+    });
+  });
+
+  it('keeps two deleted repositories that had one name, each by its own GUID', () => {
+    const listed = formatOutput(['8', '__DELETED__art', 'acme@cloud', 'ana', 'VCS', DELETED_GUID], ['9', '__DELETED__art', 'acme@cloud', 'bob', 'VCS', OTHER_DELETED_GUID]);
+
+    const specs = parseRepositoryListing(listed, 'acme@cloud', { withProjects: false }).deletedRepositories.map((repository) => repository.spec);
+    expect(specs.sort()).toEqual([`${DELETED_GUID}@acme@cloud`, `${OTHER_DELETED_GUID}@acme@cloud`].sort());
+  });
+
+  it('names one by its listed name when cm printed no GUID', () => {
+    const listed = formatOutput(['8', '__DELETED__art', 'acme@cloud', 'ana']);
+
+    expect(parseRepositoryListing(listed, 'acme@cloud', { withProjects: false }).deletedRepositories[0]?.spec).toBe('__DELETED__art@acme@cloud');
+  });
+
+  it("gives one its live project, and leaves a deleted project out of the projects", () => {
+    const listed = formatOutput(
+      ['3', 'Racing', ORGANIZATION, 'ana', 'Project', RACING_GUID],
+      ['8', '__DELETED__Racing/Old', ORGANIZATION, 'ana', 'VCS', DELETED_GUID],
+      ['5', '__DELETED__Archived', ORGANIZATION, 'ana', 'Project', ARCHIVED_GUID],
+    );
+
+    const listing = parseRepositoryListing(listed, ORGANIZATION, { withProjects: true });
+    expect(listing.projects).toEqual([{ name: 'Racing', guid: RACING_GUID }]);
+    expect(listing.deletedRepositories).toEqual([
+      { id: '8', name: 'Racing/Old', server: ORGANIZATION, owner: 'ana', spec: `${DELETED_GUID}@${ORGANIZATION}`, deleted: true, project: 'Racing' },
+    ]);
   });
 });
 
