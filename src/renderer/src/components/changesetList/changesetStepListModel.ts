@@ -27,12 +27,13 @@ export function changesetListRowKey(row: ChangesetListRow): string {
 
 /**
  * The rows for the changesets `shown` (oldest first): everything combined on top, then each changeset. While words are
- * typed in the filter only the changesets they match show, without the combined row, which no word matches; its diff
+ * typed in the filter only the changesets they match show, without the combined row, which no word matches (nor
+ * when the place shows it apart, `allApart`: a branch diff's row above the list, which folds the list under it); its diff
  * stays shown while selected, as a changeset the filter hides does.
  */
-export function changesetListRows(shown: readonly Changeset[], query: string): ChangesetListRow[] {
+export function changesetListRows(shown: readonly Changeset[], query: string, { allApart = false }: { allApart?: boolean } = {}): ChangesetListRow[] {
   const rows = shown.map((changeset): ChangesetListRow => ({ kind: 'changeset', changeset }));
-  return query.trim() ? rows : [ALL_ROW, ...rows];
+  return query.trim() || allApart ? rows : [ALL_ROW, ...rows];
 }
 
 /** The selection of the combined row alone: what the list opens on. */

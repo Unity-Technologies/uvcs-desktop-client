@@ -26,6 +26,8 @@ interface ChangesetStepListOptions {
   focus: ChangesetListFocus;
   /** After the selection changes, however it does (a click, a key, a step): the place's own reset. */
   onSelect?: (selection: SelectionState) => void;
+  /** The place shows the combined row itself, above the list (`changesetListRows`). */
+  allApart?: boolean;
 }
 
 /** What `ChangesetStepList` draws and how it's driven. */
@@ -53,14 +55,14 @@ export interface ChangesetStepListState {
  * the place asks for, and again each time it asks), and the steps through it, from the buttons and from anywhere in
  * the view but a text field (⌥⇧↓ ⌥⇧↑, `nextChangeset`, `previousChangeset`: ⌥⇧ selects text to its ends on macOS).
  */
-export function useChangesetStepList({ changesets, focus, onSelect }: ChangesetStepListOptions): ChangesetStepListState {
+export function useChangesetStepList({ changesets, focus, onSelect, allApart = false }: ChangesetStepListOptions): ChangesetStepListState {
   const [query, setQuery] = useState('');
   const [selection, setSelection] = useState<SelectionState>(() => focusSelection(focus, changesets));
   const [revealKey, setRevealKey] = useState<string | null>(() => focusRevealKey(focus));
   // Oldest on top, as the changesets were checked in; the read stays newest first for what asks for the newest.
   const listed = useMemo(() => oldestFirst(changesets ?? []), [changesets]);
   const shown = useMemo(() => filterChangesets(listed, query), [listed, query]);
-  const rows = useMemo(() => changesetListRows(shown, query), [shown, query]);
+  const rows = useMemo(() => changesetListRows(shown, query, { allApart }), [shown, query, allApart]);
   const rowKeys = useMemo(() => rows.map(changesetListRowKey), [rows]);
 
   const select = (next: SelectionState, reveal: string | null = null): void => {

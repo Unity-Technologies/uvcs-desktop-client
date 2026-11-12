@@ -44,8 +44,11 @@ export interface ReviewedSeparator {
   beforeKey: string;
   label: string;
   tip: string;
-  /** "Show the 3 new": the link that selects the new changesets shown together, as one diff. */
-  showNew: { label: string; span: ChangesetSpan };
+  /**
+   * "Show the 3 new": the link that selects the new changesets shown together, as one diff; "3 new" (`short`) where
+   * the folded All changes row has room for a word only.
+   */
+  showNew: { label: string; short: string; span: ChangesetSpan };
 }
 
 /**
@@ -64,6 +67,6 @@ export function reviewedSeparator(shown: readonly Changeset[], reviewedUpTo: Rev
     beforeKey: String(first.id),
     label: `Reviewed by ${reviewedUpTo.by === undefined ? 'you' : displayName(reviewedUpTo.by)} · ${formatShortDay(reviewedUpTo.date, now, format)}`,
     tip: formatDateTime(reviewedUpTo.date),
-    showNew: { label: newCount === 1 ? 'Show the new one' : `Show the ${newCount} new`, span },
+    showNew: { label: newCount === 1 ? 'Show the new one' : `Show the ${newCount} new`, short: `${newCount} new`, span },
   };
 }

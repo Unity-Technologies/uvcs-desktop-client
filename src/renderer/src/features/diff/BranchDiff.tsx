@@ -1,5 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { Check, ChevronRight } from 'lucide-react';
+import { Check, ChevronDown, Layers } from 'lucide-react';
 import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ChangesetSpan, FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -16,7 +16,7 @@ import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
-import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { askedOpen, changesetFoldCount, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
 import { useChangesetListFoldStore } from './changesetListFoldStore';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
@@ -77,7 +77,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     setFocus(askedFocus);
     if (askedOpen(askedFocus)) setAsked(true);
   }, [focusRequest?.seq]);
-  const list = useChangesetStepList({ changesets, focus });
+  const list = useChangesetStepList({ changesets, focus, allApart: true });
 
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset. The whole branch read
   // tells where it starts, for the branch diff up to a changeset.
@@ -93,21 +93,32 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
 
   // Without its changesets, the branch's diff still shows all its changes, or one changeset asked for by its number.
   if (error && list.choice.kind === 'reading') return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
-  // "Show the 3 new": on the Reviewed line, and on the folded line too (a review's page has read its changesets).
-  const showNew = separator && (
-    <button
-      type="button"
-      className={styles.showNew}
-      onClick={() => {
-        setFocus({ kind: 'span', span: separator.showNew.span });
-        setAsked(true);
-      }}
-    >
-      {separator.showNew.label}
-    </button>
-  );
+  // "Show the 3 new" on the Reviewed line; "3 new" on the folded All changes row (a review's page has read its changesets).
+  const showNewButton = (label: string) =>
+    separator && (
+      <button
+        type="button"
+        className={styles.showNew}
+        data-tip={label === separator.showNew.label ? undefined : separator.showNew.label}
+        onClick={() => {
+          setFocus({ kind: 'span', span: separator.showNew.span });
+          setAsked(true);
+        }}
+      >
+        {label}
+      </button>
+    );
+  const showNew = separator && showNewButton(separator.showNew.label);
   const changesetList = !error && showsChangesetList(changesets) && (
-    <ChangesetFold label={changesetFoldLabel(changesets?.length)} open={open} onToggle={toggleFold} folded={showNew}>
+    <ChangesetFold
+      allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
+      selected={list.choice.kind === 'all'}
+      onSelectAll={() => setFocus({ kind: 'all' })}
+      count={{ text: changesetFoldCount(changesets?.length), label: changesetFoldLabel(changesets?.length) }}
+      open={open}
+      onToggle={toggleFold}
+      folded={separator && showNewButton(separator.showNew.short)}
+    >
       <ChangesetStepList
         list={list}
         allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
@@ -174,19 +185,35 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
 }
 
 /**
- * The changesets above the files, folding to one line ("Changesets · 13 ›") that opens them: who reviews the whole
- * branch sees that line only, with "Show the 3 new" at its end on a review's page (`folded`). The list mounts only
- * open, so folded it reads nothing.
+ * The changesets above the files, under the row that stands for them all, "All changes on task", which folds them
+ * (its end, "13 ⌄"): who reviews the whole branch sees that row only, selected, as the old "Whole branch"
+ * said, with "3 new" on a review's page (`folded`). The row stays in its place as the list opens under it,
+ * and stands apart from the list (`allApart`), so the filter never hides it. The list mounts only open, so folded it
+ * reads nothing.
  */
-function ChangesetFold({ label, open, onToggle, folded, children }: { label: string; open: boolean; onToggle: () => void; folded?: ReactNode; children: ReactNode }) {
+function ChangesetFold(props: {
+  allChanges: { label: string; tip: string };
+  selected: boolean;
+  onSelectAll: () => void;
+  count: { text: string; label: string };
+  open: boolean;
+  onToggle: () => void;
+  folded?: ReactNode;
+  children: ReactNode;
+}) {
+  const { allChanges, selected, onSelectAll, count, open, onToggle, folded, children } = props;
   return (
     <div className={styles.fold} data-open={open || undefined}>
-      <div className={styles.foldBar}>
-        <button type="button" className={styles.foldLine} aria-expanded={open} onClick={onToggle}>
-          <ChevronRight size={14} className={styles.foldChevron} aria-hidden />
-          {label}
+      <div className={styles.allRow} data-selected={selected || undefined}>
+        <button type="button" className={styles.allButton} aria-pressed={selected} data-tip={allChanges.tip} onClick={onSelectAll}>
+          <Layers size={14} className={styles.allIcon} aria-hidden />
+          <span className={styles.allLabel}>{allChanges.label}</span>
         </button>
         {!open && folded}
+        <button type="button" className={styles.foldToggle} aria-expanded={open} aria-label={count.label} data-tip={count.label} onClick={onToggle}>
+          {count.text}
+          <ChevronDown size={14} className={styles.foldChevron} aria-hidden />
+        </button>
       </div>
       {open && children}
     </div>

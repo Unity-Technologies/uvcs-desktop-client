@@ -1,4 +1,5 @@
 import type { ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { pluralize } from '../../lib/text';
 import { BRANCH_CHANGESETS_LIMIT } from './branchDiffChangesets';
 
 /**
@@ -30,8 +31,17 @@ export function toggledFold(fold: ChangesetListFold): { fold: ChangesetListFold;
   return { fold: { remembered: true, asked: fold.asked }, showsAll: false };
 }
 
-/** The fold's line: "Changesets", and how many once read ("Changesets · 13"; "1000+" when the read was cut there). */
+/** What the All changes row's fold shows: the number alone ("13", "1000+"), "Changesets" until read; `changesetFoldLabel` names it. */
+export function changesetFoldCount(count: number | undefined, limit = BRANCH_CHANGESETS_LIMIT): string {
+  if (count === undefined) return 'Changesets';
+  return count >= limit ? `${limit}+` : String(count);
+}
+
+/**
+ * What the All changes row's fold is named, for its tooltip and screen readers: "Changesets" until read, then how many ("13 changesets"; "1000+ changesets"
+ * when the read was cut at its limit).
+ */
 export function changesetFoldLabel(count: number | undefined, limit = BRANCH_CHANGESETS_LIMIT): string {
   if (count === undefined) return 'Changesets';
-  return `Changesets · ${count >= limit ? `${limit}+` : count}`;
+  return count >= limit ? `${limit}+ changesets` : pluralize(count, 'changeset');
 }
