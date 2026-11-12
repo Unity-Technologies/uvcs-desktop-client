@@ -27,10 +27,14 @@ function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<Worksp
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
   const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
-  return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
+  /** The workspaces the service said changed kind (`tellKindChanged`). */
+  const kindChanges: string[] = [];
+  const service = createWorkspacesService(context, {} as SwitchContext, (workspacePath) => kindChanges.push(workspacePath));
+  return { ...fake, operations: context.operations, service, kindChanges };
 }
 
 const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612', 'regular', 'static']) };
+const PARTIAL_WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612', 'partial', 'static']) };
 
 describe('workspace list', () => {
   it('lists the workspaces with one local read in any directory, each folder once', async () => {
@@ -296,6 +300,33 @@ describe('a partial workspace', () => {
     await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }, { path: 'Docs', load: false }], 'op-1');
 
     expect(commands).toMatchObject([{ via: 'execute', args: ['partial', 'configure', '+/Assets', '-/Docs', '--silent'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('keeps its kind: no window is told it changed', async () => {
+    const { service, kindChanges } = workspaces({ 'partial configure': '', ...PARTIAL_WORKSPACE_NAMES });
+
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }], 'op-1');
+
+    expect(kindChanges).toEqual([]);
+  });
+});
+
+describe('a standard workspace choosing what to download', () => {
+  it('becomes partial with the same cm partial configure, and every window is told its kind changed', async () => {
+    const { service, commands, kindChanges } = workspaces({ 'partial configure': '', ...WORKSPACE_NAMES });
+
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }, { path: 'Docs', load: false }], 'op-1');
+
+    expect(commands.map((command) => command.args.slice(0, 2))).toEqual([['getworkspacefrompath', WORKSPACE], ['partial', 'configure']]);
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('tells its kind may have changed even when cm partial configure fails, since it may have converted it before failing', async () => {
+    const { service, kindChanges } = workspaces({ 'partial configure': cmFails('Some items could not be downloaded.'), ...WORKSPACE_NAMES });
+
+    await expect(service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }], 'op-1')).rejects.toThrow('Some items could not be downloaded.');
+
+    expect(kindChanges).toEqual([WORKSPACE]);
   });
 
   it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
