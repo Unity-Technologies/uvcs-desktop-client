@@ -157,7 +157,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`; one on a line is written from the code, see "Comments in the code"). Oldest first
   is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
   scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
-  a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
+  a row (asked, asked again, removed) read as one line that lists each under it on a click, and folds them back on
+  another (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open
   (`ReviewSideRail`, `openItemsOf`).
@@ -220,9 +221,10 @@ one read serves both), say what was checked in when (`reviewRounds`).
   changeset's date, or by its number when the branch's list doesn't hold it; answered or discarded after it), or with
   something someone else said since. What they said themselves is no news to them.
 - **The conversation** (`conversationBlocksOf`) reads as one timeline, oldest first: a rail runs down through the
-  events' icons, behind the cards. Each closed round starts at a quiet marker line across the timeline, "Round 1 ·
+  events' icons, behind the cards. Each closed round starts at a line of its own, "Round 1 ·
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
-  started in it; a click folds what it held away and back, at the timeline's own indent. A round where nothing is open
+  started in it, as one more event: its mark on the rail, a check once nothing in it is open; a click on its line folds
+  what it held away and back, at the timeline's own indent. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
   (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
   reviewer's. Then, for a reviewer, the **Since last review** line (`SinceLine`, in the accent), when anything came after
@@ -231,11 +233,23 @@ one read serves both), say what was checked in when (`reviewRounds`).
   moves the line, never the page.
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
-  ("Daniel checked in 3 changesets"). Each changeset is named as a comment's chip names one (its icon and number,
+  ("Daniel checked in 3 changesets"), the words folding the list under them; a closed round's start folded, the
+  latest open (`CheckinsEntry.startsOpen`). Each changeset is named as a comment's chip names one (its icon and number,
   without the fill) with its comment's first line, and opens in Changes, changeset by changeset, on it. Past five, the
   first ones and "N more" (`shownCheckins`). Changesets from before the review are left to Changes: a long branch would
   push the conversation out of sight. The changesets list no merges, so a merge from the parent shows as any changeset
   (telling one would take a `cm find merge` more).
+- **In Changes**, "Changeset by changeset" marks the branch's changesets against where the user left off
+  (`useReviewCheckpoint`, `BranchDiff`'s `reviewedUpTo`): a small accent dot at the start of each one checked in since
+  (`changesetMark`), one "Reviewed by you · Nov 9" line with a check, in the Reviewed status's color, above the first one
+  they reviewed (`reviewedSeparator`; no row, `DataTable`'s `separator`: the arrows and the selection go past it), and
+  the reviewed ones a step quieter. While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
+  only them (`shownBranchChangesets`). Several changesets selected show as one diff (docs/features/diff.md "A branch's
+  diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
+  (`newChangesetsSpan`, `focusChangesets`). A span is never part of a link: what's new to one reviewer isn't new to
+  whoever opens it. A page moved to while Changes shows already (a check-in, Show in Changes, See the changes) reaches
+  it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
+  thread was written in.
 - **How it was applied** opened at a thread settled since steps through every one of them, in the order the
   conversation shows them under the line (`settledSinceIds`, `contextStepsOf`: "1 of 3 since last review", arrows before
   the view switch); a step shows the next one's own view of how it was settled, away from the file it was opened from.
@@ -251,7 +265,8 @@ reviewed; a third mode "Since last review" in Changes (several changesets select
 diff); a "New" chip in the files' filter bar (it's full); earlier rounds as scopes ("Since round 1": Whole branch covers
 going further back); Applied as a jump to Changes (it loses the reviewer's place; the dialog handles fixes in other
 files, "marked applied with no file" and reviews of no branch); a column in the list saying why a review waits; and
-rounds as boxes, indented, which broke the timeline into pieces: a marker line keeps it one timeline.
+rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
+ragged ends and broken rail read untidy: a round is one more event on the rail.
 
 ## Comments in the code
 
