@@ -289,12 +289,25 @@ export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] 
   const settledIn = (entries: readonly ConversationEntry[]): number[] =>
     entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
   const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
-  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: `Round ${block.round.number}` }));
+  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: roundName(block.round.number, rounds.length) ?? '' }));
   const last = rounds.at(-1);
   const since = blocks.some((block) => block.kind === 'since');
   const after = settledIn(blocks.flatMap((block) => (block.kind === 'entry' ? [block.entry] : [])));
-  groups.push({ threadIds: after, scope: since ? 'New since your last review' : last ? `After round ${last.round.number}` : '' });
+  groups.push({ threadIds: after, scope: since ? 'New since your last review' : last ? afterRoundScope(last.round.number, rounds.length) : '' });
   return groups.filter((group) => group.threadIds.length > 0);
+}
+
+/**
+ * What a round is called: "Round 2", numbered only among others. A review's only round has no name: a lone "Round 1"
+ * hints at rounds that never came, and its line already says what closed it. A second round names both.
+ */
+export function roundName(number: number, roundCount: number): string | undefined {
+  return roundCount > 1 ? `Round ${number}` : undefined;
+}
+
+/** Where the threads after every round are, for someone with no "New since" line: "After round 2", "After the review". */
+function afterRoundScope(number: number, roundCount: number): string {
+  return roundCount > 1 ? `After round ${number}` : 'After the review';
 }
 
 const SETTLED = new Set<ReviewThread['state']['kind']>(['applied', 'answered', 'discarded']);

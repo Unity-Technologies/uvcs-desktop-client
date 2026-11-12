@@ -71,6 +71,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
   const pickedRound = pick && roundHolding(blocks, pick.threadId);
+  const roundCount = blocks.filter((block) => block.kind === 'round').length;
 
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
@@ -108,7 +109,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
         return (
           <Fragment key={`round-${block.round.number}`}>
             <li>
-              <RoundMarker round={block.round} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
+              <RoundMarker round={block.round} roundCount={roundCount} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
             </li>
             {open && block.entries.map(renderEntry)}
           </Fragment>

@@ -3,13 +3,14 @@ import { commentLineText } from '../../../lib/comments/commentText';
 import type { DayFormat } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
 import { displayName, sameUser } from '../../../lib/userName';
-import type { CheckinsEntry, ReviewRound } from './reviewRounds';
+import { roundName, type CheckinsEntry, type ReviewRound } from './reviewRounds';
 
 /**
- * A round's line: its name, bold, then what closed it and what it settled: "Round 1", "Rework required by you · 5
- * requests applied, 2 questions answered".
+ * A round's line, its first words bold: its name, then what closed it and what it settled: "**Round 1** · Rework
+ * required by you · 5 requests applied, 2 questions answered". A review's only round has no name (`roundName`): its
+ * line starts at what closed it, bold, so it still reads as the round's heading: "**Reviewed** by you · 1 request applied".
  */
-export function roundText(round: ReviewRound, user: string | undefined): { name: string; detail: string } {
+export function roundText(round: ReviewRound, user: string | undefined, roundCount: number): { bold: string; rest: string } {
   const who = user !== undefined && sameUser(round.reviewer, user) ? 'you' : displayName(round.reviewer);
   const settled = [
     round.applied > 0 && `${pluralize(round.applied, 'request')} applied`,
@@ -17,7 +18,9 @@ export function roundText(round: ReviewRound, user: string | undefined): { name:
     round.answered > 0 && `${pluralize(round.answered, 'question')} answered`,
     round.open > 0 && `${round.open} open`,
   ].filter((part): part is string => typeof part === 'string');
-  return { name: `Round ${round.number}`, detail: [`${round.status} by ${who}`, ...(settled.length > 0 ? [settled.join(', ')] : [])].join(' · ') };
+  const counts = settled.length > 0 ? ` · ${settled.join(', ')}` : '';
+  const name = roundName(round.number, roundCount);
+  return name === undefined ? { bold: round.status, rest: ` by ${who}${counts}` } : { bold: name, rest: ` · ${round.status} by ${who}${counts}` };
 }
 
 /**

@@ -17,9 +17,22 @@ const ROUND_COMMENT_LINES = 4;
  * said with that status shows under the line, so the verdict and its words read at a glance; a click shows what the
  * round held under the line, the status's own event at its end, and folds it back.
  */
-export function RoundMarker({ round, user, open, onToggle }: { round: ReviewRound; user: string | undefined; open: boolean; onToggle: () => void }) {
+export function RoundMarker({
+  round,
+  roundCount,
+  user,
+  open,
+  onToggle,
+}: {
+  round: ReviewRound;
+  /** How many rounds the conversation shows: a review's only round goes unnamed (`roundName`). */
+  roundCount: number;
+  user: string | undefined;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const Mark = REVIEW_STATUS_ICONS[round.status];
-  const { name, detail } = roundText(round, user);
+  const { bold, rest } = roundText(round, user, roundCount);
   const comment = roundLineComment(round, open);
   return (
     <div className={conversation.event} data-icon={round.status}>
@@ -29,7 +42,8 @@ export function RoundMarker({ round, user, open, onToggle }: { round: ReviewRoun
       <div className={conversation.eventBody}>
         <button type="button" className={styles.roundLine} aria-expanded={open} onClick={onToggle}>
           <span className={styles.roundText}>
-            <b>{name}</b> · {detail}
+            <b>{bold}</b>
+            {rest}
           </span>
           <RelativeTime date={round.date} />
           <ChevronRight size={14} className={styles.chevron} aria-hidden />
