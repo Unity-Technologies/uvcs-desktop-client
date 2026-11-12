@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { partialItemKey } from './partialIncomingItems';
-import { partialGroupCheckState, partialItemChecked, partialUpdateMessage, partialUpdateSelection, withItemsChecked } from './partialIncomingSelection';
+import { canUpdateSelection, partialGroupCheckState, partialItemChecked, partialUpdateMessage, partialUpdateSelection, withItemsChecked } from './partialIncomingSelection';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -135,5 +135,21 @@ describe('partialUpdateMessage', () => {
   it('asks to check items when none is', () => {
     const ship = item('changed', 'Code/Ship.cs');
     expect(message([ship], uncheckedOf(ship))).toBe('Check the items to bring.');
+  });
+});
+
+describe('canUpdateSelection', () => {
+  it('updates when an item it brings does not conflict, even one a folder brings along', () => {
+    const hull = item('added', 'Code/Hull.cs', { conflict: true });
+    const ship = item('changed', 'Code/Ship.cs');
+    const sky = item('changed', 'Art/sky.png');
+    expect(canUpdateSelection(partialUpdateSelection([hull, ship, sky], uncheckedOf(ship)))).toBe(true);
+  });
+
+  it('does not update when every item it brings conflicts, or none is checked', () => {
+    const ship = item('changed', 'Code/Ship.cs', { conflict: true });
+    const sky = item('changed', 'Art/sky.png');
+    expect(canUpdateSelection(partialUpdateSelection([ship, sky], uncheckedOf(sky)))).toBe(false);
+    expect(canUpdateSelection(partialUpdateSelection([ship, sky], uncheckedOf(ship, sky)))).toBe(false);
   });
 });

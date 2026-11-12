@@ -12,8 +12,9 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingPanes } from './IncomingPanes';
 import { updatePartialToIncoming } from './updateOperations';
-import { canUpdatePartial, firstPartialItemKey, partialItemDetail, partialItemGroups, partialItemKey, partialSelectionDetail } from './partialIncomingItems';
+import { firstPartialItemKey, partialItemDetail, partialItemGroups, partialItemKey, partialSelectionDetail } from './partialIncomingItems';
 import {
+  canUpdateSelection,
   partialGroupCheckState,
   partialItemChecked,
   partialUpdateMessage,
@@ -43,7 +44,7 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
   const detail = partialSelectionDetail(incoming.items, selectedKey, repository);
   const [unchecked, setUnchecked] = useState<UncheckedItems>(() => new Set());
   const selection = partialUpdateSelection(incoming.items, unchecked);
-  const canUpdate = canUpdatePartial(selection.brought.length, selection.brought.filter((item) => item.conflict).length);
+  const canUpdate = canUpdateSelection(selection);
 
   const update = async () => {
     setUpdating(true);
