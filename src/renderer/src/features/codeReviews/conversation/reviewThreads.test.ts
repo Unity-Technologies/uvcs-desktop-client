@@ -69,6 +69,19 @@ describe('threadsOf', () => {
     expect([unanswered?.state, answered?.state]).toEqual([{ kind: 'open' }, { kind: 'answered' }]);
   });
 
+  it('answers a question in the changeset an answer names, as a change request is applied in one', () => {
+    // "Fixed in cs:281301": the fix is that changeset, which shows the question beside it.
+    const [inChangeset, otherRepository] = threadsOf([
+      comment(1, { kind: 'question', anchor: ON_LINE }),
+      reply(2, 1, { text: 'Good point.' }),
+      reply(3, 1, { text: 'Fixed in cs:281301, and cs:281302 tidies it.' }),
+      comment(4, { kind: 'question', anchor: ON_LINE }),
+      reply(5, 4, { text: 'Same as cs:12@other@cloud.' }),
+    ]);
+
+    expect([inChangeset?.state, otherRepository?.state]).toEqual([{ kind: 'answered', changesetId: 281301 }, { kind: 'answered' }]);
+  });
+
   it('never opens a plain or a general comment', () => {
     expect(threadsOf([comment(1), comment(2, { kind: 'comment', anchor: ON_LINE })]).map((thread) => thread.state)).toEqual([{ kind: 'none' }, { kind: 'none' }]);
   });

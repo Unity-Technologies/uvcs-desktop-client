@@ -70,6 +70,15 @@ describe('contextFooterAction', () => {
     expect(contextFooterAction(BRANCH, lineThread({ appliedInChangeset: 5 }))).toEqual({ kind: 'changes', label: 'Open changeset 5' });
   });
 
+  it('opens the changeset a question was answered in, as one that applied a request', () => {
+    const answered = threadsOf([
+      { ...lineThread({ kind: 'question' }).root },
+      { id: 53, guid: 'g53', author: 'dani', date: '2026-11-10T10:00:00+01:00', text: 'Fixed in cs:7', kind: 'comment', parentId: 52, anchor: { kind: 'review' } },
+    ])[0] as LineThread;
+    expect(contextFooterAction(BRANCH, answered)).toEqual({ kind: 'changes', label: 'Open changeset 7' });
+    expect(showInChangesPage(39, BRANCH, answered)).toEqual(expect.objectContaining({ focusChangeset: 7, focusThread: 52 }));
+  });
+
   it("shows anything else where it was written, in the review's Changes", () => {
     expect(contextFooterAction(BRANCH, lineThread())).toEqual({ kind: 'changes', label: 'Show in Changes' });
   });

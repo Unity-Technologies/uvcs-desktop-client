@@ -71,6 +71,12 @@ describe('threadsOfFile', () => {
     expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([[1, 'deletions', 3]]);
   });
 
+  it("shows in a changeset's diff the questions an answer says it fixed, as the change requests it applied", () => {
+    const threads = threadsOf([onLine(1, 10, 3, { kind: 'question' }), comment(2, { parentId: 1, kind: 'comment', anchor: { kind: 'review' }, text: 'Fixed in cs:12' })]);
+    const { placed } = threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, PLAYER);
+    expect(placed.map(({ thread, side }) => [thread.root.id, side])).toEqual([[1, 'deletions']]);
+  });
+
   it('places a thread on the older revision on the older side: a deleted file, or the revision commented on', () => {
     const deleted: ShownFile = { path: 'src/Player.cs', originalRevision: 10, modifiedRevision: -1 };
     const { placed } = threadsOfFile(threadsOf([onLine(1, 10, 3)]), BRANCH, WHOLE, deleted);
