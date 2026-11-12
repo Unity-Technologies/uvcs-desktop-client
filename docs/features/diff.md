@@ -37,7 +37,8 @@ not decide first whether the branch received merges (as the official client does
 same common-ancestor calculation `--integration` already makes inside its one command.
 
 Above the files, the branch's changesets (`ChangesetStepList`, `useChangesetStepList` in
-`components/changesetList`, one `cm find` for them all; Incoming lists its changesets with the same list), under a
+`components/changesetList`, one `cm find` for its newest `BRANCH_CHANGESETS_LIMIT`, `branchChangesetsFilter`, so a
+branch as long as /main never reads whole; Incoming lists its changesets with the same list), under a
 first row that stands for all of them: **All changes on <branch>** (the branch's name, `branchLabel`, whole in the
 tooltip). Selected, as the page opens unless it's asked for changesets, that row shows the diff above:
 `{ kind: 'branch' }`, `cm diff br:<branch> --integration`. One changeset selected shows its own diff; several show as

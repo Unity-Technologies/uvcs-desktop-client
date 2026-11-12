@@ -13,12 +13,28 @@ export function showsChangesetList(changesets: readonly Changeset[] | undefined)
 }
 
 /**
- * Where `branch` starts, from its changesets read whole, newest first (no limit): the oldest one, and its parent. So
- * the list's menus offer the branch diff up to a changeset with no command, and not on the first changeset. None while
- * the list still shows another branch's changesets, kept while the branch's own are read.
+ * How many of a branch's changesets its diff lists, the newest: every branch diff reads its list as it opens, and a
+ * branch as long as /main on a big server holds hundreds of thousands. All its changes stay one row away.
  */
-export function branchStartOfChangesets(branch: string, changesets: readonly Changeset[] | undefined): BranchStart | null {
+export const BRANCH_CHANGESETS_LIMIT = 1000;
+
+/**
+ * The read of a branch's changesets its diff lists, newest first. A review's conversation reads the same (one query
+ * key, one `cm find`, `useReviewChangesets`).
+ */
+export function branchChangesetsFilter(branch: string): { branch: string; limit: number } {
+  return { branch, limit: BRANCH_CHANGESETS_LIMIT };
+}
+
+/**
+ * Where `branch` starts, from its changesets read whole, newest first: the oldest one, and its parent. So the list's
+ * menus offer the branch diff up to a changeset with no command, and not on the first changeset. None while the list
+ * still shows another branch's changesets, kept while the branch's own are read, nor when it was cut at its `limit`,
+ * whose oldest changeset needn't be the branch's first.
+ */
+export function branchStartOfChangesets(branch: string, changesets: readonly Changeset[] | undefined, limit = BRANCH_CHANGESETS_LIMIT): BranchStart | null {
   const first = changesets?.at(-1);
+  if (!changesets || changesets.length >= limit) return null;
   return first && first.branch === branch ? { firstChangeset: first.id, base: first.parent } : null;
 }
 

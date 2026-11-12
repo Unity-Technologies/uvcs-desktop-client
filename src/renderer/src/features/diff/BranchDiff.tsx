@@ -13,7 +13,7 @@ import { branchLabel } from '../../lib/branchLabels';
 import { EmptyState } from '../../ui/EmptyState';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
+import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
@@ -51,7 +51,7 @@ const MOST_ROWS = 6;
 export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusChangeset, focusChangesets, reviewedUpTo, detailsToggle }: BranchDiffProps) {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
-  const filter = useMemo(() => ({ branch }), [branch]);
+  const filter = useMemo(() => branchChangesetsFilter(branch), [branch]);
   const { data: changesets, error } = useChangesets(filter);
   const [focus, setFocus] = useState<ChangesetListFocus>(() => initialBranchDiffFocus(focusChangeset, focusChangesets));
   // The place asks for changesets, with a file or not (a review's comment, where it was written; a check-in; what's
