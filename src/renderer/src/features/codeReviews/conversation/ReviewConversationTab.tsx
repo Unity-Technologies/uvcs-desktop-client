@@ -11,13 +11,20 @@ import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
-import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
+import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
 import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
+import { navigation } from '../../../app/navigation/navigationStore';
+import { CheckinsRow } from '../rounds/CheckinsRow';
+import { RoundBlock } from '../rounds/RoundBlock';
+import { conversationBlocksOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
+import { SinceLine } from '../rounds/SinceLine';
+import { useReviewChangesets } from '../rounds/useReviewChangesets';
 import styles from './ReviewConversation.module.css';
 
 /**
@@ -42,7 +49,13 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
     seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
-  const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
+  // A branch's changesets place its check-ins and say where each reviewer left off (`conversationBlocksOf`).
+  const { changesets, settled: changesetsSettled } = useReviewChangesets(review);
+  const blocks = useMemo(
+    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date }) : []),
+    [conversation, user, changesets, review.date],
+  );
+  const [toggledRounds, setToggledRounds] = useState<ReadonlySet<number>>(() => new Set());
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
   // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
@@ -54,11 +67,60 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   }
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
+  const pickedRound = pick && roundHolding(blocks, pick.threadId);
+
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
     if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView(pickedScrollOf(pick));
   }, [read, pick]);
+
+  // Opened where the reviewer left off, once: their own status set meanwhile moves the line, never the page.
+  const placed = read && changesetsSettled;
+  const [openedAtSince, setOpenedAtSince] = useState(false);
+  useEffect(() => {
+    if (!placed || openedAtSince) return;
+    setOpenedAtSince(true);
+    if (opensAtSince(blocks, focusThread)) document.getElementById(SINCE_LINE_ID)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [placed, openedAtSince, blocks, focusThread]);
+
+  const renderEntry = (entry: ConversationEntry) => (
+    <li key={entryKey(entry)}>
+      {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
+      {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
+      {entry.kind === 'checkins' && (
+        <CheckinsRow entry={entry} onOpenChangeset={(changesetId) => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangeset: changesetId })} />
+      )}
+      {entry.kind === 'thread' && (
+        <ReviewThreadCard review={review} thread={entry.thread} user={user} {...threadMarkOf(entry.thread.root.id, pick)} onSeeApplied={seeAppliedOf(entry.thread)} />
+      )}
+    </li>
+  );
+  const renderBlock = (block: ConversationBlock) => {
+    switch (block.kind) {
+      case 'round':
+        return (
+          <li key={`round-${block.round.number}`}>
+            <RoundBlock
+              round={block.round}
+              user={user}
+              open={roundIsOpen(block.round, toggledRounds, pickedRound)}
+              onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))}
+            >
+              <ol className={styles.timeline}>{block.entries.map(renderEntry)}</ol>
+            </RoundBlock>
+          </li>
+        );
+      case 'since':
+        return (
+          <li key="since">
+            <SinceLine id={SINCE_LINE_ID} date={block.date} />
+          </li>
+        );
+      case 'entry':
+        return renderEntry(block.entry);
+    }
+  };
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
 
@@ -76,23 +138,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
           ) : (
             <>
               <ReviewDescriptionCard review={review} description={conversation.description} />
-              <ol className={styles.timeline}>
-                {timeline.map((entry) => (
-                  <li key={entryKey(entry)}>
-                    {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
-                    {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                    {entry.kind === 'thread' && (
-                      <ReviewThreadCard
-                        review={review}
-                        thread={entry.thread}
-                        user={user}
-                        {...threadMarkOf(entry.thread.root.id, pick)}
-                        onSeeApplied={seeAppliedOf(entry.thread)}
-                      />
-                    )}
-                  </li>
-                ))}
-              </ol>
+              <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
             </>
           )}
           <div className={styles.newComment}>
@@ -114,7 +160,10 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   );
 }
 
-function entryKey(entry: TimelineEntry): string {
+/** The "Since last review" line's element, which the conversation opens scrolled to. */
+const SINCE_LINE_ID = 'review-since-last-review';
+
+function entryKey(entry: ConversationEntry): string {
   switch (entry.kind) {
     case 'event':
       return `event-${entry.event.id}`;
@@ -122,5 +171,7 @@ function entryKey(entry: TimelineEntry): string {
       return `events-${entry.events[0]!.id}`;
     case 'thread':
       return `thread-${entry.thread.root.id}`;
+    case 'checkins':
+      return `checkins-${entry.changesets[0]!.id}`;
   }
 }
