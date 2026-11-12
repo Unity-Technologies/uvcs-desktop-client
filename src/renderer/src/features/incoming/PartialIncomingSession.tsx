@@ -142,7 +142,7 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
             toggleCollapsed={toggleCollapsed}
             folding={folding}
             renderItem={renderItem}
-            groupBefore={(group, held) => checkboxFor(itemsIn(held), `Bring every item in ${group}`)}
+            groupBefore={(group, held) => checkboxFor(itemsIn(held), `Bring every item in ${group.title}`)}
             query={filter.query}
             filterBar={filter.bar}
             selection={selection}

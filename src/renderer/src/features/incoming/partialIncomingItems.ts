@@ -1,15 +1,23 @@
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import { comparePaths } from '@shared/pathOrder';
+import type { StatusTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 
 /** Items a partial workspace's Incoming lists under one title. */
 export interface PartialItemGroup {
   title: string;
+  /** The status its header's badge shows, as a status group's in every list of changed files. */
+  status: StatusTone;
   items: PartialIncomingItem[];
 }
 
-const TITLES: Record<PartialIncomingItem['kind'], string> = { changed: 'Changed', moved: 'Moved', removed: 'Removed', added: 'Added' };
+const KIND_GROUPS: Record<PartialIncomingItem['kind'], { title: string; status: StatusTone }> = {
+  changed: { title: 'Changed', status: 'changed' },
+  moved: { title: 'Moved', status: 'moved' },
+  removed: { title: 'Removed', status: 'deleted' },
+  added: { title: 'Added', status: 'added' },
+};
 
 /**
  * What Incoming lists in a partial workspace: the items changed here and on the branch first (updating keeps their
@@ -20,8 +28,8 @@ export function partialItemGroups(items: readonly PartialIncomingItem[]): Partia
   const conflicts = items.filter((item) => item.conflict);
   const rest = items.filter((item) => !item.conflict);
   const groups: PartialItemGroup[] = [
-    { title: 'Conflicts', items: conflicts },
-    ...(Object.keys(TITLES) as PartialIncomingItem['kind'][]).map((kind) => ({ title: TITLES[kind], items: rest.filter((item) => item.kind === kind) })),
+    { title: 'Conflicts', status: 'conflict', items: conflicts },
+    ...(Object.keys(KIND_GROUPS) as PartialIncomingItem['kind'][]).map((kind) => ({ ...KIND_GROUPS[kind], items: rest.filter((item) => item.kind === kind) })),
   ];
   return groups.filter((group) => group.items.length > 0).map((group) => ({ ...group, items: [...group.items].sort((a, b) => comparePaths(a.path, b.path)) }));
 }
@@ -30,7 +38,7 @@ export function partialItemGroups(items: readonly PartialIncomingItem[]): Partia
 export function partialItemDetail(item: PartialIncomingItem): string {
   if (item.conflict) return 'Changed here and on the branch';
   if (item.kind === 'moved' && item.oldPath) return `Moved from ${item.oldPath}`;
-  return TITLES[item.kind];
+  return KIND_GROUPS[item.kind].title;
 }
 
 /** What the incoming card notes about the items changed both here and on the branch: updating leaves them alone. */

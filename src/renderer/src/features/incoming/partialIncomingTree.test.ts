@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { isStatusGroup } from '../../components/statusGroups';
 import { wholeList } from '../../lib/itemRange';
 import { partialItemGroups, partialItemKey } from './partialIncomingItems';
-import { PARTIAL_ITEM_FACTS, partialItemAt, partialItemStatus, partialItemTones, partialItemTreeGroups } from './partialIncomingTree';
+import { PARTIAL_ITEM_FACTS, partialItemAt, partialItemStatus, partialItemTones, partialItemTreeGroups, type PartialTreeGroup } from './partialIncomingTree';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
   kind,
@@ -40,6 +41,16 @@ describe('partialItemStatus', () => {
 });
 
 describe('partialItemTreeGroups', () => {
+  it('makes each group a status group, so its header shows the badge of its status', () => {
+    const groups = partialItemTreeGroups(partialItemGroups([item('removed', 'c.txt'), item('changed', 'a.txt', { conflict: true }), item('moved', 'd.txt')]));
+    expect(groups.map((group) => group.group)).toEqual([
+      { status: 'conflict', title: 'Conflicts' },
+      { status: 'moved', title: 'Moved' },
+      { status: 'deleted', title: 'Removed' },
+    ]);
+    expect(groups.every((group) => isStatusGroup(group.group))).toBe(true);
+  });
+
   it('keeps the groups and their order, each holding its items', () => {
     const groups = partialItemTreeGroups(partialItemGroups([item('added', 'b.txt'), item('changed', 'a.txt', { conflict: true })]));
     expect(groups.map((group) => [group.key, group.label, group.sorted.map((each) => each.path)])).toEqual([
@@ -53,8 +64,8 @@ describe('partialItemAt', () => {
   const file = item('changed', 'Code/Ship.cs');
   const folder = item('moved', 'Art', { isDirectory: true, oldPath: 'Images' });
   const items = [file, folder];
-  const folderRow: GroupedTreeRow<PartialIncomingItem, string> = { type: 'folder', key: 'row:Art', path: 'Art', name: 'Art', depth: 0, item: folder, held: wholeList([folder]), collapsed: false };
-  const plainFolderRow: GroupedTreeRow<PartialIncomingItem, string> = { type: 'folder', key: 'row:Code', path: 'Code', name: 'Code', depth: 0, held: wholeList([file]), collapsed: false };
+  const folderRow: GroupedTreeRow<PartialIncomingItem, PartialTreeGroup> = { type: 'folder', key: 'row:Art', path: 'Art', name: 'Art', depth: 0, item: folder, held: wholeList([folder]), collapsed: false };
+  const plainFolderRow: GroupedTreeRow<PartialIncomingItem, PartialTreeGroup> = { type: 'folder', key: 'row:Code', path: 'Code', name: 'Code', depth: 0, held: wholeList([file]), collapsed: false };
   const rows = [folderRow, plainFolderRow];
 
   it('finds an item by its own key', () => {
