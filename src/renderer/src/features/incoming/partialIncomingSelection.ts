@@ -39,8 +39,9 @@ export function withItemsChecked(unchecked: UncheckedItems, items: readonly Part
 /**
  * `cm partial update <paths>` updates each path and everything under it, by where it is in the workspace. So an item's
  * head path is turned back into its workspace path (a folder the head moved is still at its old path), an added item
- * comes with its parent folder, and a moved one needs both the item and the folder it moves into. Bringing one item
- * may bring others under the same folder: `brought` says which, and the update counts those.
+ * comes with its parent folder, and a moved one needs both the item and the folder it moves into. A parent the head
+ * adds isn't in the workspace yet, so the update climbs to the first folder it already has. Bringing one item may
+ * bring others under the same folder: `brought` says which, and the update counts those.
  */
 export function partialUpdateSelection(items: readonly PartialIncomingItem[], unchecked: UncheckedItems): PartialUpdateSelection {
   const checked = items.filter((item) => partialItemChecked(item, unchecked));
@@ -48,26 +49,41 @@ export function partialUpdateSelection(items: readonly PartialIncomingItem[], un
   if (checked.length === items.length) return { paths: 'all', brought: items };
 
   const inWorkspace = workspacePathOf(items);
-  const needed = checked.flatMap((item) => pathsNeeded(item, inWorkspace));
+  const parentInWorkspace = existingParentOf(items, inWorkspace);
+  const needed = checked.flatMap((item) => pathsNeeded(item, inWorkspace, parentInWorkspace));
   if (needed.includes('')) return { paths: 'all', brought: items };
 
   const paths = outermostPaths(needed);
   const updated = new Set(paths);
-  const brought = items.filter((item) => pathsNeeded(item, inWorkspace).every((path) => isUpdated(path, updated)));
+  const brought = items.filter((item) => pathsNeeded(item, inWorkspace, parentInWorkspace).every((path) => isUpdated(path, updated)));
   return brought.length === items.length ? { paths: 'all', brought: items } : { paths, brought };
 }
 
-function pathsNeeded(item: PartialIncomingItem, inWorkspace: (headPath: string) => string): string[] {
+function pathsNeeded(
+  item: PartialIncomingItem,
+  inWorkspace: (headPath: string) => string,
+  parentInWorkspace: (headPath: string) => string,
+): string[] {
   switch (item.kind) {
     case 'removed':
       return [item.path];
     case 'changed':
       return [inWorkspace(item.path)];
     case 'added':
-      return [inWorkspace(parentOf(item.path))];
+      return [parentInWorkspace(item.path)];
     case 'moved':
-      return [item.oldPath ?? inWorkspace(item.path), inWorkspace(parentOf(item.path))];
+      return [item.oldPath ?? inWorkspace(item.path), parentInWorkspace(item.path)];
   }
+}
+
+/** The workspace path of the innermost folder holding a head path that the workspace already has: not one the head adds. */
+function existingParentOf(items: readonly PartialIncomingItem[], inWorkspace: (headPath: string) => string): (headPath: string) => string {
+  const addedFolders = new Set(items.filter((item) => item.kind === 'added' && item.isDirectory).map((item) => item.path));
+  return (headPath) => {
+    let parent = parentOf(headPath);
+    while (addedFolders.has(parent)) parent = parentOf(parent);
+    return inWorkspace(parent);
+  };
 }
 
 /** Turns a head path into where the item is in the workspace: under the innermost folder the head moved, its old path. */
