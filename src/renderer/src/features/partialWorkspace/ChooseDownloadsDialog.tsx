@@ -41,9 +41,12 @@ const ROOT = '';
 /** Stands in while there's no tree to list (the query is disabled then): a workspace on a shelve, or still loading. */
 const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
 
-/** Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. */
-export function openChooseDownloads(workspacePath: string): void {
-  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} close={close} />);
+/**
+ * Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. Opened
+ * from an item (Files' menu), it starts with that item selected and the folders above it open.
+ */
+export function openChooseDownloads(workspacePath: string, initialPath?: string): void {
+  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} initialPath={initialPath} close={close} />);
 }
 
 function loadedInKey(workspacePath: string, folder: string) {
@@ -54,13 +57,14 @@ function folderRead<T>(folder: string, query: { data: T | undefined; isError: bo
   return { folder, data: query.data, failed: query.isError };
 }
 
-function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string; close: () => void }) {
+function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspacePath: string; initialPath?: string; close: () => void }) {
   const queryClient = useQueryClient();
   const info = useWorkspaceInfoOf(workspacePath).data;
   const treePoint = info ? downloadTreePoint(info) : null;
   const place = useMemo(() => workspacePlace(workspacePath), [workspacePath]);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
-  const [selected, setSelected] = useState(ROOT);
+  const [initial] = useState(() => revealedDownload(initialPath ?? ROOT, new Set()));
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(initial.expanded);
+  const [selected, setSelected] = useState(initial.selected);
   const [choices, setChoices] = useState<DownloadedChoices>(() => new Map());
   const [applying, setApplying] = useState(false);
   const [query, setQuery] = useState('');
