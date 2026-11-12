@@ -75,9 +75,11 @@ and who checked them in: "3 changesets · cs:15 to cs:17 · Daniel" (`changesetS
 In a code review, a span's comments are placed by revision as the whole branch's are (`reviewDiffViewOf`: anything
 but one changeset is the whole review's view).
 
-A code review hands the list where the user left off (`reviewedUpTo`, the review's checkpoint): a dot at the start of
-each changeset new since (`changesetMark`: a number past the changeset reviewed up to), a "Reviewed by you · Nov 9"
-line above the first reviewed one shown (`reviewedSeparator`), and the reviewed ones a step quieter. The line is no
+A code review hands the list where the user left off (`reviewedUpTo`, the review's checkpoint): a "Reviewed by you ·
+Nov 9" line above the first reviewed one shown (`reviewedSeparator`), so what's above it is new since
+(`changesetMark`: a number past the changeset reviewed up to), and the reviewed ones a step quieter. No dot on each new
+one: it took a column of every row, indenting them all, and stayed lit after the changeset was read (the app keeps
+nothing of what was opened; the line says it once). The line is no
 row: `DataTable`'s `separator`, which the keys and the selection go past (`tableSeparator.ts`). New, beside the filter
 while any changeset is new, keeps only them (`shownBranchChangesets`). A merge isn't marked: telling one from the list
 would take another command per changeset.

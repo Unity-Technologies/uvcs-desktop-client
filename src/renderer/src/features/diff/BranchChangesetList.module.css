@@ -54,19 +54,6 @@
   text-align: right;
 }
 
-/* The room for the dot on every row once the user reviewed, so the avatars line up; the dot only on new ones. */
-.newDot {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  margin-right: -2px;
-  border-radius: var(--radius-full);
-}
-
-.row[data-mark='new'] .newDot {
-  background: var(--accent);
-}
-
 /* "Reviewed by you · Nov 9": in the Reviewed status's color (`REVIEW_STATUS_COLORS`), small, between the rows. */
 .reviewed {
   display: inline-flex;

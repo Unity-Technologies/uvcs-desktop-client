@@ -30,8 +30,8 @@ const changesetKey = (changeset: Changeset): string => String(changeset.id);
 /**
  * Each changeset in one line: the author's avatar, the comment's first line and how long ago, the rest in its tooltip
  * (`changesetRowTip`: its number too, which the filter still finds; on every row it said little and took the comment's
- * room). With the user's review (`reviewedUpTo`), a dot marks what's new since; what they
- * reviewed reads a step quieter.
+ * room). With the user's review (`reviewedUpTo`), what they reviewed reads a step quieter, under the line that says
+ * so: what's above it is new.
  */
 function changesetColumns(reviewedUpTo: ReviewedUpTo | undefined, now: number): Column<Changeset>[] {
   return [
@@ -42,7 +42,6 @@ function changesetColumns(reviewedUpTo: ReviewedUpTo | undefined, now: number): 
         const tip = changesetRowTip(changeset);
         return (
           <span className={styles.row} data-mark={changesetMark(changeset, reviewedUpTo) ?? undefined} data-tip={tip.text} data-tip-sub={tip.sub}>
-            {reviewedUpTo && <span className={styles.newDot} aria-hidden />}
             <Avatar user={changeset.owner} size={16} tip={null} />
             <span className={styles.comment}>
               <RecordComment comment={changeset.comment} />
