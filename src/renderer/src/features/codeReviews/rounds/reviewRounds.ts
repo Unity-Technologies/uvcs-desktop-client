@@ -2,7 +2,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { sameUser } from '../../../lib/userName';
-import { foldReviewerChanges, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
+import { foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
  * Review rounds: a reviewer's status (Reviewed or Rework required) closes a round. Everything up to it is reviewed for
@@ -123,7 +123,10 @@ export interface CheckinsEntry {
 /** An entry of the conversation: the timeline's, or a batch of check-ins. */
 export type ConversationEntry = TimelineEntry | CheckinsEntry;
 
-/** A round that closed: the status that closed it, and what it settled among the threads started in it. */
+/**
+ * A round that closed: the status that closed it, and where the threads started in it stand, those settled since the
+ * reviewer's last status (shown under the "Since last review" line) too.
+ */
 export interface ReviewRound {
   number: number;
   reviewer: string;
@@ -165,13 +168,17 @@ export function conversationBlocksOf({ conversation, user, changesets, reviewDat
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
   const placed = placedItems(conversation, checkpoint, changesets, reviewDate);
+  const threads = threadsOf(conversation.comments);
   const blocks: ConversationBlock[] = [];
   let next = 0;
   statuses.forEach((closing, index) => {
     const end = Date.parse(closing.date);
     const inRound: Placed[] = [];
     while (next < placed.length && (placed[next]!.at < end || (placed[next]!.at === end && !closesAfter(placed[next]!, closing)))) inRound.push(placed[next++]!);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, inRound), entries: entriesOf(inRound) });
+    const start = index === 0 ? -Infinity : Date.parse(statuses[index - 1]!.date);
+    // Every thread started in the round counts, one settled since and shown under the line too: it's what the round asked.
+    const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn), entries: entriesOf(inRound) });
   });
   const rest = placed.slice(next);
   if (whose === 'own' && rest.length > 0) blocks.push({ kind: 'since', date: checkpoint!.date });
@@ -225,8 +232,7 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
   return batched;
 }
 
-function roundOf(number: number, closing: ClosingStatus, placed: readonly Placed[]): ReviewRound {
-  const threads = placed.flatMap(({ item }) => (item.kind === 'thread' ? [item.thread] : []));
+function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[]): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
   return { number, reviewer: closing.reviewer, status: closing.status, date: closing.date, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
