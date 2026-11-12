@@ -1,6 +1,6 @@
 import type { RepositoriesApi } from '@shared/api/repositories';
 import { isUnityOrganization } from '@shared/domain/organizations';
-import type { RepositoryListing } from '@shared/domain/repository';
+import type { RepositoryListing, RepositorySummary } from '@shared/domain/repository';
 import { CmError } from '../cm/CmError';
 import { readFields } from '../cm/formatRecords';
 import { serverProfiles } from '../cm/profiles';
@@ -51,5 +51,11 @@ export function createRepositoriesService({ cm }: ServiceContext, { profiles }: 
     await cm.query(['repository', 'delete', repositorySpec]);
   }
 
-  return { servers, list, create, rename, remove };
+  /** `cm` refuses a name a live repository has; a new name restores it beside that one. */
+  async function restore(deleted: RepositorySummary, newName?: string): Promise<string> {
+    await cm.query(['repository', 'undelete', deleted.spec, ...(newName ? [newName] : [])]);
+    return `${newName ?? deleted.name}@${deleted.server}`;
+  }
+
+  return { servers, list, create, rename, remove, restore };
 }
