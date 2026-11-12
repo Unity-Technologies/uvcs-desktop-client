@@ -49,5 +49,5 @@ export function repositoryMenu(repository: RepositorySummary, createWorkspace: (
 
 /** A deleted repository's menu: restoring it is all it offers until then, besides copying the name it had. */
 export function deletedRepositoryMenu(repository: RepositorySummary): MenuEntry[] {
-  return groupedMenu([menuAction('restore', () => void restoreRepository(repository)), copySubmenu('Repository', { name: repository.name })]);
+  return groupedMenu([menuAction('restore', () => void restoreRepository(repository), { label: 'Restore' }), copySubmenu('Repository', { name: repository.name })]);
 }
