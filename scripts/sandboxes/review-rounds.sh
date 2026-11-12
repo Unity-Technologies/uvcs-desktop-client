@@ -4,7 +4,8 @@
 # asks again, the reviewer asks for rework once more (two change requests), then, after that status, the author applies
 # one, discards the other with a reply, merges main into the branch, comments and checks in once more. The reviewer is
 # the signed-in user, so the conversation shows their rounds folded, the "Since last review" line after their last
-# status, the check-ins, and Changes the changesets new since then.
+# status, the check-ins, and Changes the changesets new since then. A second review asks the user for a review, as
+# the Code reviews list marks one waiting for them.
 # Usage: scripts/sandboxes/review-rounds.sh [repo-name [workspace-folder]]   → repo review-rounds@local, workspace /tmp/uvcs-review-rounds
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -76,17 +77,26 @@ sleep 1
 cm cr comment reply "$WHY" -c="The pool comes next; this keeps the change small." >/dev/null
 status --re-request --users=me
 
-# Round 2: two more requests, then rework required again: the reviewer's checkpoint.
+# Round 2: two more requests and a question, then rework required again, said at length: the reviewer's checkpoint.
 TICK=$(on_review --path=/Assets/Waves/WaveSpawner.cs --line=5 --type=Change -c="Cap a single tick too: maxPerTick.")
 POOL=$(on_review --path=/Assets/Waves/EnemyPool.cs --line=1 --type=Change -c="Drop the pool, allocate per wave instead.")
-status --rework-required -c="Close, two things left."
+ORIGIN=$(on_review --path=/Assets/Waves/Wave.cs --line=1 --type=Question -c="Is the origin in world space or local to the spawner?")
+status --rework-required -commentsfile="$(text rework2 'Close, two things left.
 
-# Since the last review: one request applied, the other discarded, main merged in, a comment and one more changeset.
+1. A big wave still spawns everything in one tick: cap a single tick too.
+2. The pool: allocating per wave reads simpler, unless something else reuses it.
+
+And one question on the origin, see the comment on Wave.cs. The rest reads well.')"
+
+# Since the last review: one request applied, the other discarded, the question answered, main merged in, a run of
+# changesets (more than the conversation lists before "N more"), and a comment.
 w Assets/Waves/WaveSpawner.cs "$(spawner '        var count = Math.Min(Math.Min(wave.count, maxAlive), wave.maxPerTick);
         for (var i = 0; i < count; i++) Pool.Take().Spawn(wave.origin);')"
 checkin "$(text tick "Cap a single tick too [apply-change:${TICK:0:8}]")"
 sleep 1
 cm cr comment reply "$POOL" --discard -c="The boss wave reuses it; per wave doubles the GC spikes." >/dev/null
+sleep 1
+cm cr comment reply "$ORIGIN" -c="World space: the spawner places the wave, the wave doesn't move with it." >/dev/null
 
 cm switch main >/dev/null
 w README.md "# Waves
@@ -98,8 +108,19 @@ sleep 1
 cm merge br:/main --merge -c="Merge from /main" >/dev/null
 checkin "$(text merge 'Merge from /main')"
 
-on_review -c="Both done: the tick cap is in, and the pool stays (see the reply)." >/dev/null
-w Assets/Tests/WaveSpawnerTests.cs "public class WaveSpawnerTests { public void CapsATick() { } }"
-checkin "$(text tests 'Tests for the tick cap')"
+for step in "Tests for the tick cap" "Name the tick limit in the inspector" "Log a wave that hits the cap" \
+  "Spread a capped wave over the next ticks" "Keep the boss wave out of the cap" "Tests for spreading a wave" "Tidy the spawner's fields"; do
+  w "Assets/Tests/WaveSpawnerTests.cs" "public class WaveSpawnerTests { /* $step */ }"
+  checkin "$(text step "$step")"
+done
+on_review -c="All three done: the tick cap is in, the pool stays (see the reply), and the origin is answered." >/dev/null
 
-echo "Built $REPO in $WK: code review $REVIEW, two rounds of rework, then fixes since the last review"
+# A second review waiting for the reviewer, as the Code reviews list marks one.
+cm mkbr main/ladder -c="Fix ladder clipping" >/dev/null
+cm switch main/ladder >/dev/null
+w Assets/Player/Ladder.cs "public class Ladder { public float snap = 0.1f; }"
+checkin "$(text ladder 'Snap the player to the ladder')"
+cm cr br:/main/ladder "Fix ladder clipping" --users=me >/dev/null
+cm switch main/waves >/dev/null
+
+echo "Built $REPO in $WK: code review $REVIEW, two rounds of rework, then fixes since the last review; another review waits for you"
