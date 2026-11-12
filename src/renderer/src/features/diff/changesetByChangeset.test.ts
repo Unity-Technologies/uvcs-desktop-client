@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, oldestFirst, filterBranchChangesets, selectedChangesetIds, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -44,6 +44,26 @@ describe('filterBranchChangesets', () => {
 
   it('shows nothing when nothing matches', () => {
     expect(filterBranchChangesets(branch, 'nothing like this')).toEqual([]);
+  });
+});
+
+describe('shownBranchChangesets', () => {
+  const reviewedUpTo = { date: '2026-10-01T10:00:00Z', changesetId: 280532 };
+
+  it('keeps only the changesets new since the review while New is on', () => {
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, reviewedUpTo))).toEqual([280536, 280535]);
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: false }, reviewedUpTo))).toEqual([280536, 280535, 280532, 280530]);
+  });
+
+  it('filters the new ones by the words typed', () => {
+    expect(ids(shownBranchChangesets(branch, { query: 'marketplace', onlyNew: true }, reviewedUpTo))).toEqual([280535]);
+    expect(ids(shownBranchChangesets(branch, { query: 'crlf', onlyNew: true }, reviewedUpTo))).toEqual([]);
+  });
+
+  // New shows only while there are new changesets: once none is (the user reviewed again), it keeps nothing out.
+  it('shows every changeset when none is new, or before the user reviewed', () => {
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, { date: '2026-10-02T10:00:00Z', changesetId: 280536 }))).toEqual([280536, 280535, 280532, 280530]);
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, undefined))).toEqual([280536, 280535, 280532, 280530]);
   });
 });
 
@@ -123,8 +143,56 @@ describe('branchDiffShownFor', () => {
     expect(branchDiffShownFor({ changesetId: null, seq: 4 })).toEqual({ mode: 'wholeBranch' });
   });
 
+  it('switches to the span asked for, the how-many-th time it is asked', () => {
+    expect(branchDiffShownFor({ changesets: { oldest: 15, newest: 17 }, seq: 6 })).toEqual({ mode: 'byChangeset', span: { changesets: { oldest: 15, newest: 17 }, seq: 6 } });
+  });
+
   it('leaves the mode as it is when the request names none, or there is none', () => {
     expect(branchDiffShownFor({ seq: 4 })).toBeNull();
     expect(branchDiffShownFor(null)).toBeNull();
+  });
+});
+
+describe('spanSelection', () => {
+  const keys = (selection: { selected: ReadonlySet<string> }): string[] => [...selection.selected].sort();
+
+  it('selects every changeset of the span, from the newest', () => {
+    const selection = spanSelection(branch, { oldest: 280532, newest: 280536 });
+    expect(keys(selection)).toEqual(['280532', '280535', '280536']);
+    expect(selection.anchor).toBe('280536');
+  });
+
+  it('selects the ends while the changesets are read, which show the same diff', () => {
+    const selection = spanSelection(undefined, { oldest: 280532, newest: 280536 });
+    expect(keys(selection)).toEqual(['280532', '280536']);
+    expect(selection.anchor).toBe('280536');
+  });
+
+  it('selects one changeset for a span of one', () => {
+    expect(keys(spanSelection(branch, { oldest: 280535, newest: 280535 }))).toEqual(['280535']);
+  });
+});
+
+describe('selectedChangesetIds', () => {
+  it('is the changesets selected', () => {
+    expect(selectedChangesetIds({ selected: new Set(['15', '17']), anchor: '17' }).sort()).toEqual([15, 17]);
+  });
+
+  // A Cmd/Ctrl-click on a selected row takes it out and leaves it the anchor: the others show, not it.
+  it('leaves out the anchor a Cmd/Ctrl-click took out of the selection', () => {
+    expect(selectedChangesetIds({ selected: new Set(['15']), anchor: '17' })).toEqual([15]);
+  });
+
+  it('is the anchor when nothing is selected, and none without one', () => {
+    expect(selectedChangesetIds({ selected: new Set(), anchor: '17' })).toEqual([17]);
+    expect(selectedChangesetIds({ selected: new Set(), anchor: null })).toEqual([]);
+  });
+});
+
+describe('oldestFirst', () => {
+  it("lists a branch's changesets as it was built, oldest on top, as the conversation reads", () => {
+    const read = [changeset(3), changeset(1), changeset(2)];
+    expect(oldestFirst(read).map((changeset) => changeset.id)).toEqual([1, 2, 3]);
+    expect(read.map((changeset) => changeset.id)).toEqual([3, 1, 2]);
   });
 });

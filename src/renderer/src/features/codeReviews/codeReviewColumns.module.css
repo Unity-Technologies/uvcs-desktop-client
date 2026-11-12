@@ -9,6 +9,17 @@
   white-space: nowrap;
 }
 
+/* A review waiting for the user (`waitingForMe`): a dot in the cell's left padding, before its number, so the numbers
+   of the rows with and without one stay in line. Its margins take back its width. */
+.waiting {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 0 -9px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
 .titleText {
   overflow: hidden;
   text-overflow: ellipsis;

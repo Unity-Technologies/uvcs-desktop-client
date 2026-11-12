@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Info } from 'lucide-react';
 import { useState } from 'react';
 import { placeId } from '@shared/domain/place';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
@@ -60,7 +60,12 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
           </label>
         ))}
       </fieldset>
-      {button.joining && <p className={styles.joining}>You'll be added as a reviewer.</p>}
+      {button.joining && (
+        <p className={styles.formNote}>
+          <Info size={14} aria-hidden />
+          You'll be added as a reviewer.
+        </p>
+      )}
       <CommentComposer
         draftKey={commentDraftKey(placeId(place), 'reviewStatus', review.id)}
         placeholder="Comment (optional)"

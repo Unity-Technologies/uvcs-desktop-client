@@ -70,7 +70,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
             idPrefix={TABS_ID}
             value={tab}
             // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
-            onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusChangeset: undefined })}
+            onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusChangeset: undefined, focusChangesets: undefined })}
             tabs={[
               { value: 'conversation', label: 'Conversation', icon: <MessageSquare size={14} />, count: review.commentCount },
               { value: 'changes', label: 'Changes', icon: <FileDiff size={14} /> },

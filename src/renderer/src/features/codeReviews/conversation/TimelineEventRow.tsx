@@ -1,5 +1,5 @@
 import { Pencil, RotateCcw, UserMinus, UserPlus, type LucideIcon } from 'lucide-react';
-import { Markdown } from '../../../components/Markdown';
+import { FoldedComment } from '../../../components/FoldedComment';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
@@ -7,6 +7,9 @@ import { REVIEW_STATUS_ICONS } from '../reviewStatusIcons';
 import { reviewEventRow, type ReviewEventIcon } from './reviewEventText';
 import type { ShownEvent } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
+
+/** How many lines of what a reviewer said with their status show before "Show more". */
+const STATUS_COMMENT_LINES = 4;
 
 const ICONS: Record<ReviewEventIcon, LucideIcon> = {
   reviewRequested: UserPlus,
@@ -31,8 +34,9 @@ export function TimelineEventRow({ event }: { event: ShownEvent }) {
           <span className={styles.author}>{displayName(event.author)}</span> {row.text} <RelativeTime date={event.date} />
         </p>
         {row.comment && (
-          <div className={`${styles.eventComment} ${styles.markdown} selectable`}>
-            <Markdown text={row.comment} comment />
+          // Folded past a few lines, "Show more" opening it: a status can come with a wall of text.
+          <div className={`${styles.eventComment} ${styles.markdown}`}>
+            <FoldedComment titleClassName="" description={row.comment} titleLines={1} descriptionLines={STATUS_COMMENT_LINES} />
           </div>
         )}
       </div>

@@ -1,9 +1,12 @@
 import type { DiffFocusRequest } from './diffFocusRequest';
 import type { BranchStart } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
+import type { ChangesetSpan } from '../../app/navigation/pages';
+import type { SelectionState } from '../../lib/selection';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { pluralize } from '../../lib/text';
 import { userFilterTexts } from '../../lib/userName';
+import { newChangesetsOf, type ReviewedUpTo } from './branchChangesetRows';
 
 /**
  * The changesets a branch diff's "Changeset by changeset" list shows for its filter: every word in the number, the
@@ -15,10 +18,34 @@ export function filterBranchChangesets(changesets: readonly Changeset[], query: 
   return changesets.filter((changeset) => matchesWordFilter([String(changeset.id), changeset.comment, ...userFilterTexts(changeset.owner)], query));
 }
 
+/** The list's filters: the words typed, and New (only the changesets new since the user's review). */
+export interface BranchChangesetFilter {
+  query: string;
+  onlyNew: boolean;
+}
+
 /**
- * The changeset one `step` away from `selectedId` among the `shown` ones (1: the next row down, older; -1: up,
- * newer), or null at either end. `changesets` is the whole branch, newest first: a selected changeset the filter hides
- * keeps its place in it, so the step goes to the nearest shown one on that side.
+ * The changesets the list shows: with New on, those new since the user's review (`newChangesetsOf`), then those the
+ * words typed match (`filterBranchChangesets`). New shows only while some are new; when none is (before a review, or
+ * after another), it keeps nothing out.
+ */
+export function shownBranchChangesets(changesets: readonly Changeset[], { query, onlyNew }: BranchChangesetFilter, reviewedUpTo: ReviewedUpTo | undefined): readonly Changeset[] {
+  const newOnes = onlyNew ? newChangesetsOf(changesets, reviewedUpTo) : [];
+  return filterBranchChangesets(newOnes.length > 0 ? newOnes : changesets, query);
+}
+
+/**
+ * A branch's changesets as the list shows them: oldest on top, as the branch was built and as the review's
+ * conversation reads (`cm find` reads them newest first). As the official client lists them.
+ */
+export function oldestFirst(changesets: readonly Changeset[]): Changeset[] {
+  return [...changesets].sort((a, b) => a.id - b.id);
+}
+
+/**
+ * The changeset one `step` away from `selectedId` among the `shown` ones (1: the next row down; -1: up), or null at
+ * either end. `changesets` is the whole branch in the list's order (`oldestFirst`: down is newer): a selected changeset
+ * the filter hides keeps its place in it, so the step goes to the nearest shown one on that side.
  */
 export function changesetStep(changesets: readonly Changeset[], shown: readonly Changeset[], selectedId: number | null, step: 1 | -1): number | null {
   if (selectedId === null) return shown[0]?.id ?? null;
@@ -64,12 +91,40 @@ export interface ChangesetToShow {
   seq: number;
 }
 
+/** A span of a branch's changesets a branch's diff is asked to show, the how-many-th time (`DiffFocusRequest.seq`). */
+export interface SpanToShow {
+  changesets: ChangesetSpan;
+  seq: number;
+}
+
 /**
- * What a branch's diff switches to when its place asks for a file in a mode (`DiffFocusRequest`): the whole branch, or
- * a changeset stepped to; nothing when the request leaves the mode as it is.
+ * What a branch's diff switches to when its place asks for a mode (`DiffFocusRequest`): the whole branch, a changeset
+ * stepped to, or a span of changesets selected together; nothing when the request leaves the mode as it is.
  */
-export function branchDiffShownFor(request: Pick<DiffFocusRequest, 'changesetId' | 'seq'> | null): { mode: BranchDiffMode; changeset?: ChangesetToShow } | null {
+export function branchDiffShownFor(
+  request: Pick<DiffFocusRequest, 'changesetId' | 'changesets' | 'seq'> | null,
+): { mode: BranchDiffMode; changeset?: ChangesetToShow; span?: SpanToShow } | null {
+  if (request?.changesets) return { mode: 'byChangeset', span: { changesets: request.changesets, seq: request.seq } };
   if (!request || request.changesetId === undefined) return null;
   if (request.changesetId === null) return { mode: 'wholeBranch' };
   return { mode: 'byChangeset', changeset: { changesetId: request.changesetId, seq: request.seq } };
+}
+
+/**
+ * The list's selection for a span asked for (a review's changes opened on what's new, `focusChangesets`): every
+ * changeset in it, the newest the anchor, so they show as one diff (`branchChangesetPane`). While the changesets are
+ * read, its ends, which show the same diff.
+ */
+export function spanSelection(changesets: readonly Changeset[] | undefined, { oldest, newest }: ChangesetSpan): SelectionState {
+  const inSpan = (changesets ?? []).filter((changeset) => changeset.id >= oldest && changeset.id <= newest).map((changeset) => String(changeset.id));
+  return { selected: new Set([String(oldest), String(newest), ...inSpan]), anchor: String(newest) };
+}
+
+/**
+ * The changesets the list's selection shows (`branchChangesetPane`), by number: those selected, or the one last
+ * clicked when a Cmd/Ctrl-click took the last one out, so the pane never goes blank.
+ */
+export function selectedChangesetIds(selection: SelectionState): number[] {
+  if (selection.selected.size > 0) return [...selection.selected].map(Number);
+  return selection.anchor === null ? [] : [Number(selection.anchor)];
 }

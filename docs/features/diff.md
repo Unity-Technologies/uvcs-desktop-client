@@ -40,9 +40,17 @@ same common-ancestor calculation `--integration` already makes inside its one co
 (`BranchChangesetList`), one `cm find` for them all, so the diff keeps the width it has in "Whole branch" and the
 files don't move as the mode switches. The page's header names the branch in both modes (`BranchDescription`); the
 selected changeset's summary sits above its diff (`TargetDiff`'s `pageDescription`), since its height follows its
-comment, and over the whole page it would move the lists being clicked at each step. Each changeset reads as History
-reads a revision (`RecordRow`): its comment's first line across the list's width, then cs:N, author and date. Its
-filter matches every word typed in a changeset's number, comment or author's name over the list already read
+comment, and over the whole page it would move the lists being clicked at each step. Each changeset is one line of
+28 px, as a commit picker lists them: a small avatar, the comment's first line (the rest of the width) and a short
+age in a fixed column ("now", "12m", "3h", "2d", "Oct 14": `formatShortAge`); its tooltip says the rest
+(`changesetRowTip`: the comment's first line, who, the full date, cs:N). Why not History's two-line `RecordRow`: the
+list sits above the files, and two lines and a big avatar per changeset left room for few. Why no number on the row:
+on every one it said little and took the comment's room; the tooltip has it, and the filter finds it.
+The list is oldest on top (`oldestFirst`), as the branch was built, as a review's conversation reads and as the official
+client lists them; the newest, at its bottom, is selected first and brought into view, and stepping down goes on in
+time. Newest on top, as the app's other changeset lists are, was tried: stepping through a branch then went back in
+time, and the review's marks read upside down against its conversation.
+Its filter matches every word typed in a changeset's number, comment or author's name over the list already read
 (`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. A changeset the
 filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes
 on to the nearest changeset shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑
@@ -61,6 +69,30 @@ changeset stepped to; the header's Copy link (⇧⌘C) stays the branch's, what 
 keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
 under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
 (`useOfferSelectedObjectLink`).
+
+Several changesets selected (Shift or ⌘/Ctrl-click) show as one diff: from the oldest one's parent to the newest,
+`DiffTarget` `{ kind: 'range', fromSpec: 'cs:<parent>', toSpec: 'cs:<newest>' }` (`branchChangesetPane`'s `span`),
+read by one `cm diff cs:A cs:B`, immutable as every range (`isImmutableDiff`). A selection made apart shows the whole
+span between its ends, every changeset in it. Where one changeset's summary sits, the span's says how many, its ends
+and who checked them in: "3 changesets · cs:15 to cs:17 · Daniel" (`changesetSpanSummary`; `TargetDiff`'s
+`description`). Stepping from a span (the arrows, ⌥⇧↓ ⌥⇧↑) goes to the one changeset next to the selection's anchor.
+In a code review, a span's comments are placed by revision as the whole branch's are (`reviewDiffViewOf`: anything
+but one changeset is the whole review's view).
+
+A code review hands the list where the user left off (`reviewedUpTo`, the review's checkpoint): a "Reviewed by you ·
+Nov 9" line between what they reviewed, above, and the first one new since (`reviewedSeparator`), so what's under it is
+new (`changesetMark`: a number past the changeset reviewed up to), and the reviewed ones a step quieter. No dot on each new
+one: it took a column of every row, indenting them all, and stayed lit after the changeset was read (the app keeps
+nothing of what was opened; the line says it once). The line is no
+row: `DataTable`'s `separator`, which the keys and the selection go past (`tableSeparator.ts`). New, beside the filter
+while any changeset is new, keeps only them (`shownBranchChangesets`). A merge isn't marked: telling one from the list
+would take another command per changeset.
+
+The place around the diff can ask for a mode while it shows already (`DiffFocusRequest`, a file, a mode or both): a
+changeset (`changesetId`), the whole branch (`null`), or a span selected together (`changesets`, `spanSelection`). A
+review's page asks for it as it moves (`focusChangeset`, `focusChangesets`, `focusThread`: `changesFocusAskedFor`); as
+it mounts, `BranchDiff` takes them as its first selection. No link names a span: what's new to one reviewer isn't to
+whoever opens it.
 
 ### Up to a changeset
 

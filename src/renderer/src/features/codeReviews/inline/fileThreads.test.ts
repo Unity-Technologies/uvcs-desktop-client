@@ -26,6 +26,22 @@ describe('reviewDiffViewOf', () => {
     expect(reviewDiffViewOf(CHANGESET_REVIEW, { kind: 'changeset', changesetId: 8 })).toEqual(WHOLE);
     expect(reviewDiffViewOf({ kind: 'shelve', shelveId: 3 }, { kind: 'shelve', shelveId: 3 })).toEqual(WHOLE);
   });
+
+  // Several changesets selected in "Changeset by changeset" diff as a range: its threads are placed by revision, as
+  // the whole branch's are, those on its older revision on the left at their line.
+  it("is the whole review for a span of a branch review's changesets", () => {
+    expect(reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' })).toEqual(WHOLE);
+  });
+
+  it('places the threads a span shows by revision, written in any of its modes', () => {
+    const span = reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' });
+    const threads = threadsOf([onLine(1, 10, 3, { changesetId: 12 }), onLine(2, 30, 8)]);
+    const { placed } = threadsOfFile(threads, BRANCH, span, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([
+      [1, 'deletions', 3],
+      [2, 'additions', 8],
+    ]);
+  });
 });
 
 describe('writtenIn', () => {
@@ -46,6 +62,13 @@ describe('threadsOfFile', () => {
     const { placed, earlier } = threadsOfFile(threadsOf([onLine(1, 30, 12)]), BRANCH, WHOLE, PLAYER);
     expect(placed.map(({ side, line }) => [side, line])).toEqual([['additions', 12]]);
     expect(earlier).toEqual([]);
+  });
+
+  it('shows in a changeset\'s diff the change requests it applied, on the version they were written on', () => {
+    // Written on the whole branch at revision 10, applied by changeset 12, whose diff shows 10 on its older side.
+    const threads = threadsOf([onLine(1, 10, 3, { kind: 'changeRequest', appliedInChangeset: 12 }), onLine(2, 10, 4, { kind: 'changeRequest', appliedInChangeset: 13 })]);
+    const { placed } = threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([[1, 'deletions', 3]]);
   });
 
   it('places a thread on the older revision on the older side: a deleted file, or the revision commented on', () => {

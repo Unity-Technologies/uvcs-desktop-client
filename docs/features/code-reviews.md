@@ -85,8 +85,24 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
   changes, the author, when it was created (the list's order and its period go by it; hidden in a narrower window) and
   the last activity.
-- **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
-  doesn't list but the official client uses.
+- **A review waiting for the user** has a small accent dot before its number (`codeReviewColumns`, which takes the
+  user, `usePlaceUser`, and is built again only when the user changes, so the table keeps its columns while it sorts).
+  It waits (`waitingForMe`) when the user is a reviewer, by name (`sameUser`), whose own status is Under review
+  (tooltip "Waiting for your review"), or wrote it and it's in Rework required with something open,
+  `{unresolvedissues}` above zero (tooltip "Rework: 3 open"). It's decided from the list's own fields: a group the
+  user belongs to isn't told (its members would take a command per row), nor is a reviewer asked again told from one
+  who never looked (both are Under review). No column says why: the tooltip does.
+- **The reviewer menu** (`ChoiceChip`, `REVIEWER_CHOICES`, the store's `reviewer`): **Any reviewer** filters nothing;
+  **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
+  doesn't list but the official client uses; **Waiting for me** keeps the rows with the dot. Waiting for me asks the
+  server for the same reviews as Any reviewer (`codeReviewsQuery`: one query key, one `cm find`, shared with the
+  unfiltered list) and keeps its rows locally (`matchesReviewer`): it takes the user's own reviews, which `reviewer =
+  'me'` leaves out, and goes by each reviewer's own status, which the query can't ask for. Clear filters sets it back
+  to Any reviewer; the "I'm a reviewer" chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer
+  (`restoredReviewerFilter`, a `FilterUpgrade`). While any review read waits for the user, the chip shows the rows'
+  accent dot, "2 reviews waiting for you" in its tooltip (`reviewerChipDot`, `waitingCount`; `MenuChip`'s `dot`), and
+  its menu counts them, "Waiting for me · 2" (`reviewerChoices`): folded in a chip that reads "Any reviewer", Waiting
+  for me went unseen. The dot goes once Waiting for me shows them.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
   status, I'm a reviewer), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
@@ -144,7 +160,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   started (`timelineOf`), then a field for a comment on the whole review (`cm codereview comment add`; one on a line is written from the code, see "Comments in the code"). Oldest first
   is deliberate: replies and events only read in order (requested, commented, applied), and newest first would
   scatter them; what's new is reached from **Open** and by settled threads folding. Three or more reviewer changes in
-  a row (asked, asked again, removed) read as one line that lists each on a click (`foldReviewerChanges`). What its
+  a row (asked, asked again, removed) read as one line that lists each under it on a click, and folds them back on
+  another (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open
   (`ReviewSideRail`, `openItemsOf`).
@@ -190,6 +207,83 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
 
+## Rounds
+
+A review goes back and forth: the author checks in, a reviewer asks for rework, the author fixes and asks again. A
+reviewer's status (Reviewed or Rework required) closes a **round**: everything up to it is reviewed for them, what came
+after is new. Nothing is kept apart to know it: the server's note of each status says when it was given, and the
+branch's changesets, read by the one `cm find` its Changes tab lists them by (`useReviewChangesets`, the same query, so
+one read serves both), say what was checked in when (`reviewRounds`).
+
+- **Where a reviewer left off** (`checkpointOf`, `ReviewCheckpoint`): their newest status that closes a round, and the
+  newest changeset on the branch then. Under review (a request to review again) closes nothing. Each reviewer has their
+  own; a member of a reviewer group who sets a status is noted under their own name, as the server adds them. A
+  changeset checked in while the reviewer was still reading counts as reviewed: the server notes when a status was
+  given, not what was read. Dates compare as instants, across time zones.
+- **New to them** (`newThreadIds`): a thread settled since (applied in a changeset checked in after it, by the
+  changeset's date, or by its number when the branch's list doesn't hold it; answered or discarded after it), or with
+  something someone else said since. What they said themselves is no news to them.
+- **The conversation** (`conversationBlocksOf`) reads as one timeline, oldest first: a rail runs down through the
+  events' icons, behind the cards. Each closed round starts at a line of its own, "Round 1 ·
+  Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
+  started in it, as one more event: its mark on the rail is the status that closed it (Reviewed's thumbs-up, Rework
+  required's flag, in their colors), and while folded what the reviewer said with it shows under the line, folded past
+  four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
+  under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
+  starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
+  (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
+  reviewer's. Then, for a reviewer, the **New since last review · Nov 9** line (`SinceLine`, `sinceText`: in the
+  accent, words on a hairline fading out at its ends, **See the changes →** a link beside them; not one pill of two
+  halves, which read as a toggle), when anything came after
+  their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
+  check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
+  moves the line, never the page.
+- **What a reviewer said with their status** sits under its event in a soft tint, no bar beside it (the rail is the
+  timeline's one vertical line: a bar beside it read as two), folded past four lines with "Show more"
+  (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
+- **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
+  placed by date among what was said, one entry per run of one person's changesets with nothing said between them
+  ("Daniel checked in 3 changesets"), the words folding the list under them. They start
+  listed only under the "Since last review" line, what a reviewer comes back to check; anywhere else folded to that line
+  (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
+  without the fill) with its comment's first line, and opens in Changes, changeset by changeset, on it. Past five, the
+  first ones and "N more" (`shownCheckins`). Changesets from before the review are left to Changes: a long branch would
+  push the conversation out of sight. The changesets list no merges, so a merge from the parent shows as any changeset
+  (telling one would take a `cm find merge` more).
+- **In Changes**, "Changeset by changeset" marks the branch's changesets against where the user left off
+  (`useReviewCheckpoint`, `BranchDiff`'s `reviewedUpTo`), or, for anyone who gave no status (the author), where the
+  newest reviewer left off, naming them: "Reviewed by Miryam Gomez" (`reviewedUpToOf`, `ReviewedUpTo.by`, `newToggleTip`):
+  one "Reviewed by you · Nov 9" line with a check, in the Reviewed status's color, between what they
+  reviewed and the first one new since, the list oldest on top (`reviewedSeparator`; no row, `DataTable`'s `separator`: the arrows and the selection go past it), what's
+  under it new (`changesetMark`), and the reviewed ones a step quieter; no dot on each new one (docs/features/diff.md).
+  While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
+  only them (`shownBranchChangesets`). Several changesets selected show as one diff (docs/features/diff.md "A branch's
+  diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
+  (`newChangesetsSpan`, `focusChangesets`). A span is never part of a link: what's new to one reviewer isn't new to
+  whoever opens it. A page moved to while Changes shows already (a check-in, Show in Changes, See the changes) reaches
+  it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
+  thread was written in.
+- **How it was applied** opened at a settled thread steps through the others settled in the same part of the
+  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "Round 1 · 2 of 4", "New since last
+  review · 1 of 3", "After round 2" for someone with no line of their own, the position alone before any round; a pager
+  at the footer's start, its arrows first): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came
+  back to check. A step shows the next one's own view of how it was settled, away from the file it was opened from;
+  only the dialog's body changes, never the dialog (opened again, its animation flickered at each step). Beside the
+  header's view switch, whose label changes width ("How it was applied", "Since then"), the arrows moved at each step.
+  Its footer leaves the dialog for the review's Changes, at the thread (`showInChangesPage`, `contextFooterAction`):
+  **Open changeset N** for a request applied on a branch, whose diff shows it beside the fix; **Show in Changes** for
+  anything else, where it was written.
+Tried and dropped, so they aren't proposed again: banners under the header saying whose turn it is (they repeated what
+the conversation shows once it opens at its line, and read as stress); a band under the Changes header saying what's
+reviewed; a third mode "Since last review" in Changes (several changesets selected changeset by changeset give the same
+diff); a "New" chip in the files' filter bar (it's full); earlier rounds as scopes ("Since round 1": Whole branch covers
+going further back); Applied as a jump to Changes (it loses the reviewer's place; the dialog handles fixes in other
+files, "marked applied with no file" and reviews of no branch); a column in the list saying why a review waits; and
+a line in the Review popover saying what a status covers ("Covers everything up to changeset 17": it said little,
+and added noise to the popover); rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
+ragged ends and broken rail read untidy: a round is one more event on the rail; and a round shown by its status alone, what led to it opening above it (the
+verdict moved to the bottom as it opened: the round's line stays where it starts).
+
 ## Comments in the code
 
 The Changes tab (`ReviewChangesTab`) shows what was said on the code where it was said, from the conversation already
@@ -228,9 +322,14 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
   the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
   that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
-  code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
+  code, the Comments panel, the conversation) opens it on How it was applied, and every **Discarded** pill on Since
+  then, the request against the newest version beside the reply that discarded it (`HeaderPill`'s `context`); the tag
+  opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
-  something else. Its **Open changeset N** opens the changeset itself. When that changeset changed other files too, the
+  something else. Its one button leads to the code (`contextFooterAction`): **Open changeset N**, for a request applied on a branch,
+  opens that changeset in the review's Changes, at the thread, beside the fix; anything else, **Show in Changes**,
+  where it was written. A changeset applying a request on a review of no branch isn't among its changes, and opens on
+  its own page. Two buttons, one to the review's Changes and one to the changeset's own page, read as the same twice. When that changeset changed other files too, the
   dialog lists them all, as a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change
   types and tree, the commented file selected first; `appliedFilesOf`, `listsAppliedFiles`), so the reviewer sees what
   else the fix did and which file the comment is on. The commented file's diff is the comment's (an
@@ -262,7 +361,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
   review's "Whole branch" or one changeset of "Changeset by changeset" (`reviewDiffViewOf`). Going to one opens that
   mode and changeset (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
-  only the threads written in it; the whole branch's also shows those written changeset by changeset that are on a
+  the threads written in it and the change requests it applied, on the version they were written on, so the fix reads
+  beside what asked for it (`belongsToChangeset`); the whole branch's also shows those written changeset by changeset that are on a
   revision it shows, or whose line is still there in the newest one (an outdated one is left to its changeset's diff),
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
@@ -320,7 +420,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
     Grouping by file would cut the time order apart, so a time order never groups, and grouping is not a choice of its
     own.
 
-  It opens on Open when anything is open (`initialCommentsFilter`). A row under the header narrows it further: words
+  It opens on Open when anything is open (`initialCommentsFilter`). For a user back after a review of theirs, **New**
+  sits between Open and All (`commentsFilterChoices`): the threads new to them since their last review (see "Rounds",
+  `newThreadIds`), and the panel opens on it when anything is new, once where they left off is read
+  (`useReviewCheckpoint`'s `settled`), so it doesn't open on Open and stay there. A row under the header narrows it further: words
   found in what was said, replies too, who said it and the file (`matchesCommentsSearch`; a plain search field, as the
   view's ⌘F belongs to the files' filter), and a chip per kind, its icon and how many Open or All lists
   (`threadKindCounts`); a search finding nothing offers "Clear filters". While searching, a card shows the comment the

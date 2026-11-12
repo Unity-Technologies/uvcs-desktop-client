@@ -15,7 +15,7 @@ interface RecordRowProps {
 }
 
 /**
- * Recorded work in two lines, as the lists beside a diff read it (a file's revisions, a branch's changesets): the
+ * Recorded work in two lines, as the lists beside a diff read it (a file's revisions): the
  * author's avatar, the comment, then the details. The comment gets the list's whole width; one column of avatar,
  * number, comment and date would leave it a few words.
  */

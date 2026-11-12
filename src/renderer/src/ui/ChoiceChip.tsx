@@ -15,10 +15,12 @@ interface ChoiceChipProps<Value extends string> {
   icon?: ReactNode;
   /** The choice that doesn't filter anything, e.g. "Any status"; any other choice highlights the chip. */
   neutralValue?: Value;
+  /** A dot on the chip, these words in its tooltip: a choice in its menu has something for the user. */
+  dot?: string;
 }
 
 /** A compact filter that picks one of several values from a menu. */
-export function ChoiceChip<Value extends string>({ value, choices, onChange, icon, neutralValue }: ChoiceChipProps<Value>) {
+export function ChoiceChip<Value extends string>({ value, choices, onChange, icon, neutralValue, dot }: ChoiceChipProps<Value>) {
   const entries = choices.map((choice) => ({
     id: choice.value,
     label: choice.label,
@@ -29,7 +31,7 @@ export function ChoiceChip<Value extends string>({ value, choices, onChange, ico
 
   return (
     <ActionDropdownMenu entries={entries} align="start">
-      <MenuChip icon={icon} active={neutralValue !== undefined && value !== neutralValue}>
+      <MenuChip icon={icon} active={neutralValue !== undefined && value !== neutralValue} dot={dot}>
         {current?.label}
       </MenuChip>
     </ActionDropdownMenu>

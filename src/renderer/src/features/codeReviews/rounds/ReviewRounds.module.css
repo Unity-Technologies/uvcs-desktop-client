@@ -1,0 +1,217 @@
+/* Review rounds in the conversation: a round's line, the "Since last review" line, and check-ins. Quiet: a round
+   reads as one line of the timeline, never a card. */
+
+/* A round's line, as an event's (`.eventLine`): what the round was, when, and its fold; the whole line folds it. */
+.roundLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+.roundLine:hover {
+  color: var(--text-primary);
+}
+
+.roundLine:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.roundText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roundText b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.roundLine time {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.roundLine[aria-expanded='true'] .chevron,
+.checkinsToggle[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* "Since last review": an accent hairline across the timeline, fading out toward its ends, the words in its middle
+   and the way to the changes as a link beside them. */
+.since {
+  display: flex;
+  align-items: center;
+  margin-block: var(--space-3);
+  scroll-margin-top: var(--space-5);
+}
+
+.since::before,
+.since::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.since::after {
+  background: linear-gradient(to left, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.sinceMiddle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.sinceLabel {
+  font-weight: 600;
+}
+
+.sinceDay {
+  font-weight: 400;
+}
+
+/* A link, not a box: a soft tint under the pointer, its arrow nudging on. */
+.seeChanges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.seeChanges:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.seeChanges:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.seeChangesArrow {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.seeChanges:hover .seeChangesArrow {
+  transform: translateX(2px);
+}
+
+/* Check-ins: under the event's line, one row per changeset, a link to its diff. */
+.checkins {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Centered, not on a baseline: the number's icon makes its box taller than its text, which lifted it off the line. */
+.checkin {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 2px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+.checkin:hover {
+  background: var(--bg-hover);
+}
+
+.checkin:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+
+/* A changeset as a comment's chip shows one (`ReferenceChip`): its icon and number in the accent, without the fill. */
+.checkinId {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+}
+
+.checkinId > svg {
+  flex: none;
+}
+
+.checkinComment {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.more:hover {
+  color: var(--accent-text);
+}
+
+/* "checked in 3 changesets": the words fold the list under them, as a folded run of reviewer changes opens. */
+.checkinsToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+}
+
+.checkinsToggle:hover {
+  color: var(--text-primary);
+}
+
+.checkinsToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}

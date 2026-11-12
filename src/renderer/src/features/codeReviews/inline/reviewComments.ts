@@ -57,11 +57,13 @@ export function showInConversation(reviewId: number, threadId: number): void {
 /**
  * What the review's diff is asked for to go to a thread: its file (without the leading slash, as the diff names
  * files), in the mode it was written in: the changeset of a comment written changeset by changeset, or the whole
- * branch (`null`); a review of anything but a branch has one mode.
+ * branch (`null`); a review of anything but a branch has one mode. `inChangeset`, the changeset the page names (a
+ * change request shown where it was applied), wins over where it was written.
  */
-export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: LineThread, seq: number): DiffFocusRequest {
+export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: LineThread, seq: number, inChangeset?: number): DiffFocusRequest {
   const path = anchorPath(thread.root.anchor);
   if (review.target.kind !== 'branch') return { path, seq };
+  if (inChangeset !== undefined) return { path, changesetId: inChangeset, seq };
   const written = writtenIn(review.target, thread);
   return { path, changesetId: written.kind === 'changeset' ? written.changesetId : null, seq };
 }
