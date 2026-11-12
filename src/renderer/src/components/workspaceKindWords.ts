@@ -17,12 +17,21 @@ export function workspaceKindWords(kind: WorkspaceKind): WorkspaceKindWords {
   return WORKSPACE_KIND_WORDS[kind];
 }
 
+/** A kind a workspace's row or card marks, with a chip and its avatar's badge: every kind but standard. */
+export type MarkedWorkspaceKind = Exclude<WorkspaceKind, 'standard'>;
+
 /**
- * The chip a workspace's row or card shows for its kind: none for a standard workspace, the way most are, nor while
- * its kind is still unread, so only the workspaces that hold their files another way stand out.
+ * The kind a workspace's row or card marks: none for a standard workspace, the way most are, nor while its kind is
+ * still unread, so only the workspaces that hold their files another way stand out.
  */
+export function markedWorkspaceKind(kind: WorkspaceKind | undefined): MarkedWorkspaceKind | null {
+  return kind === undefined || kind === 'standard' ? null : kind;
+}
+
+/** The chip a workspace's row or card shows for its kind, when it marks it (`markedWorkspaceKind`). */
 export function workspaceKindChip(kind: WorkspaceKind | undefined): WorkspaceKindWords | null {
-  return kind === undefined || kind === 'standard' ? null : WORKSPACE_KIND_WORDS[kind];
+  const marked = markedWorkspaceKind(kind);
+  return marked && WORKSPACE_KIND_WORDS[marked];
 }
 
 /** The collapsed sidebar's tooltip of the workspace card: its name and repository, and its kind when not standard. */

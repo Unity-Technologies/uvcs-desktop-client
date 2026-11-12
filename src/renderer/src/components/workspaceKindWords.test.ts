@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { workspaceCardTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
+import { markedWorkspaceKind, workspaceCardTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
+
+describe('markedWorkspaceKind', () => {
+  it('marks a partial and a dynamic workspace, never a standard one nor one whose kind is still unread', () => {
+    expect(([undefined, 'standard', 'partial', 'dynamic'] as const).map(markedWorkspaceKind)).toEqual([null, null, 'partial', 'dynamic']);
+  });
+});
 
 describe('workspaceKindChip', () => {
   it('shows no chip for a standard workspace, nor one whose kind is still unread', () => {
