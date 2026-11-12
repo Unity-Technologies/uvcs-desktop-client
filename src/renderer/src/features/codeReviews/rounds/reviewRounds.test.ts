@@ -221,8 +221,6 @@ describe('stepGroupsOf', () => {
   });
 });
 
-});
-
 describe('conversationBlocksOf', () => {
   it('folds nothing and draws no line on a first review', () => {
     const blocks = conversationBlocksOf({ conversation: conversation([request(1, at(8, 10))], []), user: 'vio', changesets: undefined, reviewDate: at(7, 9) });
