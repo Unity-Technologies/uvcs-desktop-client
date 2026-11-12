@@ -51,9 +51,12 @@ Why no switch between two modes, the whole branch and its changesets one by one 
 changeset", tried): the branch's own diff is one more row of the list, so stepping into its changesets, and selecting
 several to read as one diff, is there from the start instead of behind a mode few found.
 
-The list folds to one line above the files, "Changesets · 13 ›" (`ChangesetFold` in `BranchDiff`, `changesetListFold`):
-folded, the page reads as the branch's whole diff did, with no list in the way and no `cm find` (the list mounts only
-open; a review's page has read the changesets for its rounds, so its line counts them and ends with "Show the 3 new").
+The list folds under its **All changes on <branch>** row, which stands apart above the list and its filter
+(`ChangesetFold` in `BranchDiff`, `changesetListFold`, the list's `allApart`) and ends in its fold, "13 ⌄"
+(`changesetFoldCount`): folded, the page reads as the branch's whole diff did, that row selected, with no list in
+the way and no `cm find` (the list mounts only open; a review's page has read the changesets for its rounds, so its
+row counts them and says "3 new", which selects them). A header line of its own, "Changesets · 13 ›", tried, read as
+a section's title, too quiet for what decides what the diff shows.
 It opens when the user opens it, remembered across branches and sessions (`useChangesetListFoldStore`), and when the
 page asks for changesets (what's new since a review, a changeset chip, where a comment was written). Folding it goes
 back to all the changes: a changeset selected out of sight would leave the diff showing what the line doesn't say.
