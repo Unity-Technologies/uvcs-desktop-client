@@ -365,6 +365,11 @@ describe('the menu grammar', () => {
     expect(kinds).toEqual(COPY_KINDS.filter((kind) => kinds.includes(kind)));
   });
 
+  // A word with no label of its own (`restore`) is named by its caller: one that forgets shows the word's id instead.
+  it.each(Object.entries(EVERY_MENU))('%s: every entry is named in words that start with a capital', (_name, build) => {
+    for (const entry of topEntries(build())) expect(entry.label, `${entry.id} has a label`).toMatch(/^\p{Lu}/u);
+  });
+
   it.each(Object.entries(EVERY_MENU))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
   });
