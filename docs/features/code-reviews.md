@@ -100,7 +100,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer (`restoredReviewersFilter`, a
   `FilterUpgrade`).
 - **Waiting for me** (a `ToggleChip`, the store's `waitingForMe`) keeps the rows with the dot, counting them,
-  "Waiting for me · 2" (`waitingChipLabel`, `waitingCount`). It narrows locally (`matchesWaiting`): it takes the user's
+  "Waiting for me · 2" (`waitingChipLabel`, `waitingCount`). It reads reviews of any date, whatever the time range says, as the official client's "Needs my
+  review" does (`codeReviewsQuery`): one left waiting for months is still the user's to do. It narrows locally
+  (`matchesWaiting`): it takes the user's
   own reviews in rework, which `reviewer = 'me'` leaves out, and goes by each reviewer's own status, which the query
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.

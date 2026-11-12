@@ -13,6 +13,8 @@ interface CodeReviewsQueryFilters {
   status: StatusFilter;
   /** Who is asked to review them: I'm a reviewer, people picked, both. */
   reviewers: PeoplePick;
+  /** Only those waiting for the user: of any date, as the official client's "Needs my review" reads them. */
+  waitingForMe: boolean;
 }
 
 /**
@@ -20,10 +22,11 @@ interface CodeReviewsQueryFilters {
  * and the time range; the text is matched locally. I'm a reviewer alone is the server's (`where reviewer = 'me'`);
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
- * me is local too (`matchesWaiting`).
+ * me is local too (`matchesWaiting`), over reviews of any date: one left waiting for months is still the user's to do.
  */
-export function codeReviewsQuery({ since, people, status, reviewers }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
-  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, sinceDate: sinceDateFor(since, today) };
+export function codeReviewsQuery({ since, people, status, reviewers, waitingForMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+  const sinceDate = waitingForMe ? undefined : sinceDateFor(since, today);
+  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, sinceDate };
 }
 
 /** Whether any reviewer picked is asked on the review (the user under I'm a reviewer, `me`); every review with none picked. */
