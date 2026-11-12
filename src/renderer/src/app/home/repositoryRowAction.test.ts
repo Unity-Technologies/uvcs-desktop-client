@@ -3,7 +3,7 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { repositoryRowActionOf } from './repositoryRowAction';
 
-const repository = (name: string, deleted?: boolean): RepositorySummary => ({ id: name, name, server: 'local', owner: 'ana', spec: `${name}@local`, deleted });
+const repository = (name: string, deleted?: true): RepositorySummary => ({ id: name, name, server: 'local', owner: 'ana', spec: `${name}@local`, deleted });
 const workspace = (name: string): WorkspaceSummary => ({ name, path: `/work/${name}`, guid: name });
 
 describe('repositoryRowActionOf', () => {
