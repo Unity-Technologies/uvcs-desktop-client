@@ -27,7 +27,8 @@ interface FileCommentsInput {
  * Where a file's threads show (`threadsOfFile`, `placeEarlier`): those on a version the diff shows at their line, those
  * on an earlier one at their line now when it's unchanged since, the rest outdated. A thread the diff's changeset
  * settled (`settledIn`) goes first where its line was before the fix, on the older side, as "How it was applied" shows
- * it: the fix changed that line, and the changesets between its version and the fix may have moved it. Until the
+ * it: the fix changed that line, and the changesets between its version and the fix may have moved it, or changed it
+ * too, when it goes where that change is (`toItsChange`): the fix is about it. Until the
  * versions are read or fail, their threads wait (none shows outdated, or at a line, only to move a moment later); a
  * side that can't be read places none there.
  */
@@ -39,7 +40,7 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
   const lineInOlder = typeof older === 'string' ? newerLineFinder(older) : null;
   const lineOf = (text: string, thread: LineThread): { side: ThreadSide; line: number } | null => {
     const { line } = thread.root.anchor;
-    const before = settledIn(thread, view) && lineInOlder ? lineInOlder(text, line) : null;
+    const before = settledIn(thread, view) && lineInOlder ? lineInOlder(text, line, 'toItsChange') : null;
     if (before !== null) return { side: 'deletions', line: before };
     const now = lineInNewer ? lineInNewer(text, line) : null;
     return now === null ? null : { side: 'additions', line: now };
