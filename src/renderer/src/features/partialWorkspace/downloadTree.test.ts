@@ -137,6 +137,24 @@ describe('downloadRows', () => {
     const tree = downloadTreeOf(listings, new Map([['', ['Assets']]]));
     expect(summary(downloadRows(tree, new Map(), new Set(['Assets']), new Map()))[0]).toBe('Assets [x] - …');
   });
+
+  it('says what Apply changes on each row: what it loads, unloads, keeps, leaves out, or changes in part', () => {
+    const changeOf = (rows: readonly DownloadRow[]) => Object.fromEntries(rows.map((row) => [row.path, row.change]));
+
+    const assetsLoaded = downloadTreeOf(listings, new Map([['', ['Assets']]]));
+    expect(changeOf(downloadRows(assetsLoaded, new Map(), new Set(), new Map()))).toEqual({ Assets: 'kept', Lib: 'none', 'readme.md': 'none' });
+    const swapped = toggled('readme.md', assetsLoaded, toggled('Assets', assetsLoaded, new Map()));
+    expect(changeOf(downloadRows(assetsLoaded, swapped, new Set(), new Map()))).toEqual({ Assets: 'unload', Lib: 'none', 'readme.md': 'load' });
+
+    const heroChosen = toggled('Assets/hero.fbx', nothingLoaded, new Map());
+    expect(changeOf(downloadRows(nothingLoaded, heroChosen, new Set(['Assets']), new Map()))).toEqual({
+      Assets: 'mixed',
+      'Assets/Textures': 'none',
+      'Assets/hero.fbx': 'load',
+      Lib: 'none',
+      'readme.md': 'none',
+    });
+  });
 });
 
 describe('downloadKey', () => {
