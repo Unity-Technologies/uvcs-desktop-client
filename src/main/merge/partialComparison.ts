@@ -65,9 +65,11 @@ function comparedItem(itemid: string, type: string, path: string): Omit<Compared
  * - moved: an item whose path differs (renamed, or moved within what the head lists). An item that only went along
  *   with its moved folder isn't named apart: the folder stands for it, and it reads as changed only if it changed.
  * - removed: an item the head doesn't have; a removed folder stands for everything it held.
- * - added: an item new on the head in a loaded folder, the only kind `cm partial update` loads. One the workspace
- *   left out exists since before what it loaded: item ids grow with each item created, so a new one has a greater id
- *   than every loaded item and comes in a changeset after every loaded revision.
+ * - added: an item new on the head in a folder the workspace loaded whole, the only kind `cm partial update` loads.
+ *   One the workspace left out exists since before what it loaded: item ids grow with each item created, so a new one
+ *   has a greater id than every loaded item and comes in a changeset after every loaded revision. A loaded folder
+ *   that also holds such an older item left out was loaded in part, and gets nothing added: the new items in it are
+ *   left out like the rest (a folder whose left-out items are all new can't be told apart, and reads as whole).
  * A change conflicts when the item also changed locally (`locallyChanged`, paths as the workspace has them).
  * `head` is the branch head's listing of the loaded folders and their children, a folder listed more than once kept
  * once. Items of xlinks belong to other repositories, with ids of their own, and are left out.
@@ -126,11 +128,15 @@ function addedItems(loaded: readonly LoadedTreeItem[], headById: ReadonlyMap<num
     newestChangeset = Math.max(newestChangeset, item.changeset ?? -1);
     greatestItemId = Math.max(greatestItemId, item.itemId);
   }
+  const isNew = (item: HeadItem) => item.itemId > greatestItemId && item.changeset > newestChangeset;
   const loadedIds = new Set(loaded.map((item) => item.itemId));
   const loadedFoldersOnHead = new Set(loaded.filter((item) => item.isDirectory).flatMap((item) => headById.get(item.itemId)?.path ?? []));
-  return [...headById.values()]
-    .filter((item) => !loadedIds.has(item.itemId) && item.itemId > greatestItemId && item.changeset > newestChangeset)
-    .filter((item) => item.path !== '' && loadedFoldersOnHead.has(parentOf(item.path)))
+  const unloadedChildren = [...headById.values()].filter((item) => !loadedIds.has(item.itemId) && item.path !== '' && loadedFoldersOnHead.has(parentOf(item.path)));
+  // A folder holding an item that existed while the workspace was loaded, and that it left out, was loaded in part:
+  // what's new in it is left out too.
+  const partlyLoaded = new Set(unloadedChildren.filter((item) => !isNew(item)).map((item) => parentOf(item.path)));
+  return unloadedChildren
+    .filter((item) => isNew(item) && !partlyLoaded.has(parentOf(item.path)))
     .map((item) => ({ kind: 'added', path: item.path, isDirectory: item.isDirectory, conflict: false, loadedRevisionId: null, headRevisionId: item.revisionId }));
 }
 
