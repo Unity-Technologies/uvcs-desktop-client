@@ -4,8 +4,7 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { useReviewConversation } from '../conversation/useReviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { isLineThread } from '../inline/fileThreads';
-import { checkpointOf, newThreadIds, reviewedUpToOf, settledSinceIds, type ReviewCheckpoint } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, newThreadIds, reviewedUpToOf, stepGroupsOf, type ReviewCheckpoint, type StepGroup } from './reviewRounds';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { useReviewChangesets } from './useReviewChangesets';
 
@@ -19,8 +18,8 @@ export interface ReviewCheckpointState {
   changesets: readonly Changeset[] | undefined;
   /** What Changes marks its changesets against (`reviewedUpToOf`): the user's checkpoint, else the newest reviewer's. */
   reviewedUpTo: ReviewedUpTo | undefined;
-  /** The threads on lines settled since (`settledSinceIds`), what "How it was applied" steps through. */
-  settledSince: readonly number[] | undefined;
+  /** What "How it was applied" steps through (`stepGroupsOf`): the threads settled in each round, and since. */
+  stepGroups: readonly StepGroup[] | undefined;
   /** Once what decides the checkpoint is read (or failed): before it, none doesn't yet mean there is none. */
   settled: boolean;
 }
@@ -34,8 +33,8 @@ export function useReviewCheckpoint(review: CodeReview): ReviewCheckpointState {
     const checkpoint = conversation && settled ? checkpointOf(conversation.events, user, changesets) : undefined;
     const threads = conversation ? threadsOf(conversation.comments) : [];
     const newIds = checkpoint && newThreadIds(threads, checkpoint, user, changesets);
-    const settledSince = checkpoint && settledSinceIds(threads.filter(isLineThread), checkpoint, changesets);
+    const stepGroups = conversation && settled ? stepGroupsOf(conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date })) : undefined;
     const reviewedUpTo = conversation && settled ? reviewedUpToOf(conversation.events, user, changesets) : undefined;
-    return { checkpoint, reviewedUpTo, newIds, settledSince, changesets, settled: settled && !isPending };
-  }, [conversation, isPending, settled, user, changesets]);
+    return { checkpoint, reviewedUpTo, newIds, stepGroups, changesets, settled: settled && !isPending };
+  }, [conversation, isPending, settled, user, changesets, review.date]);
 }

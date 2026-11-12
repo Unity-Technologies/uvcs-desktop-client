@@ -15,7 +15,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
   const place = usePlace();
   const user = usePlaceUser();
   const repository = usePlaceRepository();
-  const { settledSince } = useReviewCheckpoint(review);
+  const { stepGroups } = useReviewCheckpoint(review);
   return useMemo(() => {
     if (repository === undefined) return undefined;
     return (thread: LineThread, { startsOn, onScreen }: ContextRequest = {}) =>
@@ -27,7 +27,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
         repository: onScreen?.entry.repository ?? repository,
         onScreen: onScreen ?? null,
         startsOn,
-        steps: settledSince,
+        steps: stepGroups,
       });
-  }, [place, review, user, repository, settledSince]);
+  }, [place, review, user, repository, stepGroups]);
 }

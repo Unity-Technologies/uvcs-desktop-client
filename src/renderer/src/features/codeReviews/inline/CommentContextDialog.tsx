@@ -25,6 +25,7 @@ import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBo
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
 import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
 import { contextStepsOf, showInChangesPage, type ContextSteps } from './contextSteps';
+import type { StepGroup } from '../rounds/reviewRounds';
 import { showInConversation } from './reviewComments';
 import { ContextViewSwitch } from './ContextViewSwitch';
 import type { LineThread } from './fileThreads';
@@ -46,10 +47,10 @@ export interface CommentInContext {
   /** The view it opens on: what was done since, from a change request's "Applied" pill. */
   startsOn?: ContextView;
   /**
-   * The threads settled since the user's last review (`settledSinceIds`), in the conversation's order: opened at one of
-   * them, the dialog steps through them (`contextStepsOf`).
+   * The settled threads, part by part of the conversation (`stepGroupsOf`: each round's, and since the last review):
+   * opened at one, the dialog steps through those of its part (`contextStepsOf`).
    */
-  steps?: readonly number[];
+  steps?: readonly StepGroup[];
 }
 
 /** As wide as the window allows, up to this: two versions of code side by side, and the changeset's files beside them. */
@@ -84,8 +85,8 @@ function CommentContextDialog(props: DialogProps) {
 /** The thread as the conversation has it now: a reply, an edit or a discard made here shows at once. */
 function ThreadInContext(props: DialogProps) {
   const { review, startsOn = 'commented', steps, onClose } = props;
-  // The thread shown: the one it was opened at, until a step goes to another settled since the last review, which
-  // shows how it was settled, away from the file's diff it was opened from.
+  // The thread shown: the one it was opened at, until a step goes to another settled in its part of the conversation,
+  // which shows how it was settled, away from the file's diff it was opened from.
   const [{ threadId, onScreen }, setShown] = useState({ threadId: props.threadId, onScreen: props.onScreen });
   const [view, setView] = useState<ContextView>(startsOn);
   // Listing the changeset's files, whether the commented one is selected: its diff alone has the comment's two views.
@@ -117,7 +118,7 @@ function ThreadInContext(props: DialogProps) {
 
 type ThreadDialogProps = DialogProps & {
   thread: LineThread;
-  /** Where it is among the threads settled since the last review, when it's one of them. */
+  /** Where it is among the threads settled in its part of the conversation (its round, or since the last review). */
   stepping: ContextSteps | undefined;
   onStep: (threadId: number) => void;
   view: ContextView;
@@ -220,14 +221,14 @@ function ThreadDialog(props: ThreadDialogProps) {
  * lit (`unlit`, above the changeset's files, where the code is what the user came to see), when an applied thread
  * starts folded to its first words as settled ones do (`startsFolded`).
  */
-/** Previous and next among the threads settled since the last review, and where this one is: "1 of 3 since last review". */
+/** Previous and next among the threads settled in its part of the conversation, and where this one is: "2 of 4 in round 1". */
 function ContextStepper({ steps, onStep }: { steps: ContextSteps; onStep: (threadId: number) => void }) {
   const { previous, next } = steps;
   return (
     <span className={styles.stepper}>
-      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous settled since last review" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
+      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
       <span className={styles.stepPosition}>{steps.position}</span>
-      <IconButton size="small" icon={<ChevronRight size={14} />} label="Next settled since last review" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
+      <IconButton size="small" icon={<ChevronRight size={14} />} label="Next comment" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
     </span>
   );
 }

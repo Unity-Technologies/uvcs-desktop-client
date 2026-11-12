@@ -1,9 +1,10 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { PageOf } from '../../../app/navigation/pages';
 import { commentLocationPage } from '../conversation/threadBadges';
+import type { StepGroup } from '../rounds/reviewRounds';
 import type { LineThread } from './fileThreads';
 
-/** Where "How it was applied" is among the threads settled since the user's last review, and its neighbors. */
+/** Where "How it was applied" is among the threads settled in its part of the conversation, and its neighbors. */
 export interface ContextSteps {
   position: string;
   previous?: number;
@@ -11,13 +12,15 @@ export interface ContextSteps {
 }
 
 /**
- * Stepping through the threads settled since the last review (`settledSinceIds`, in the order the conversation shows
- * them), from one of them; none from any other thread, or when it's the only one, with nowhere to go.
+ * Stepping through the threads settled in the part of the conversation the thread is in (`stepGroupsOf`: its round,
+ * or since the last review): "2 of 4 in round 1". None for a thread that settled nothing, or the only one there.
  */
-export function contextStepsOf(steps: readonly number[] | undefined, threadId: number): ContextSteps | undefined {
-  const at = steps?.indexOf(threadId) ?? -1;
-  if (!steps || at === -1 || steps.length < 2) return undefined;
-  return { position: `${at + 1} of ${steps.length} since last review`, previous: steps[at - 1], next: steps[at + 1] };
+export function contextStepsOf(groups: readonly StepGroup[] | undefined, threadId: number): ContextSteps | undefined {
+  const group = groups?.find((candidate) => candidate.threadIds.includes(threadId));
+  if (!group || group.threadIds.length < 2) return undefined;
+  const at = group.threadIds.indexOf(threadId);
+  const position = `${at + 1} of ${group.threadIds.length}${group.scope ? ` ${group.scope}` : ''}`;
+  return { position, previous: group.threadIds[at - 1], next: group.threadIds[at + 1] };
 }
 
 /**

@@ -3,6 +3,7 @@ import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { sameUser } from '../../../lib/userName';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
+import { isLineThread } from '../inline/fileThreads';
 import { foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
@@ -102,19 +103,6 @@ function settledAfter(thread: ReviewThread, checkpoint: ReviewCheckpoint, change
   if (settled !== undefined) return Date.parse(settled) > Date.parse(checkpoint.date);
   // Changeset numbers grow with time in a repository: one past the checkpoint's came after it.
   return thread.state.kind === 'applied' && checkpoint.changesetId !== undefined && thread.state.changesetId > checkpoint.changesetId;
-}
-
-/**
- * The threads settled since the checkpoint (applied, answered, discarded), in the order the conversation shows them
- * under its "Since last review" line, by when each settled: what "How it was applied" steps through.
- */
-export function settledSinceIds(threads: readonly ReviewThread[], checkpoint: ReviewCheckpoint, changesets: readonly Changeset[] | undefined): number[] {
-  // Under the "Since last review" line each shows when it settled (`placedAt`); one whose moment isn't known, when it started.
-  const shownAt = (thread: ReviewThread): number => Date.parse(settledDateOf(thread, changesets) ?? thread.root.date);
-  return threads
-    .filter((thread) => settledAfter(thread, checkpoint, changesets))
-    .sort((a, b) => shownAt(a) - shownAt(b) || a.root.id - b.root.id)
-    .map((thread) => thread.root.id);
 }
 
 /**
@@ -283,6 +271,33 @@ function entriesOf(placed: readonly Placed[], underSince: boolean): Conversation
   endRun();
   return entries;
 }
+
+/** The threads "How it was applied" steps through together, and where they are: "in round 1", "since last review". */
+export interface StepGroup {
+  threadIds: number[];
+  /** Where in the conversation, said after the position ("2 of 4 in round 1"); empty before any round closed. */
+  scope: string;
+}
+
+/**
+ * The settled threads on lines (applied, answered, discarded) "How it was applied" steps through, part by part of the
+ * conversation, each in the order it shows them: a closed round's; after every round, those under the "New since last
+ * review" line for a reviewer, by when each settled, or those after the last round for anyone else. Stepping stays in
+ * the part the reviewer is reading: a round closed long ago doesn't mix with what they came back to check.
+ */
+export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] {
+  const settledIn = (entries: readonly ConversationEntry[]): number[] =>
+    entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
+  const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
+  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: `in round ${block.round.number}` }));
+  const last = rounds.at(-1);
+  const since = blocks.some((block) => block.kind === 'since');
+  const after = settledIn(blocks.flatMap((block) => (block.kind === 'entry' ? [block.entry] : [])));
+  groups.push({ threadIds: after, scope: since ? 'since last review' : last ? `after round ${last.round.number}` : '' });
+  return groups.filter((group) => group.threadIds.length > 0);
+}
+
+const SETTLED = new Set<ReviewThread['state']['kind']>(['applied', 'answered', 'discarded']);
 
 /** The round number holding a thread, to unfold it when the page goes there; none for one after every round. */
 export function roundHolding(blocks: readonly ConversationBlock[], threadId: number): number | undefined {
