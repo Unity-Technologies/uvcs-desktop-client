@@ -1,6 +1,7 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { sameUser } from '../../lib/userName';
 import { formatCount } from '../../lib/text';
+import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { ownStatus } from './reviewers';
 
 /** Why a review waits for the user: their review as a reviewer, or their rework as its author. */
@@ -20,7 +21,7 @@ export function waitingForMe(review: Pick<CodeReviewSummary, 'owner' | 'status' 
   return undefined;
 }
 
-/** How many of the reviews read wait for the user: the reviewer chip's dot and its menu say so. */
+/** How many of the reviews read wait for the user: Waiting for me and the sidebar count them. */
 export function waitingCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>[], user: string | undefined): number {
   return reviews.filter((review) => waitingForMe(review, user) !== undefined).length;
 }
@@ -28,4 +29,10 @@ export function waitingCount(reviews: readonly Pick<CodeReviewSummary, 'owner' |
 /** The waiting dot's tooltip. */
 export function waitingForMeTip(waiting: WaitingForMe): string {
   return waiting.kind === 'review' ? 'Waiting for your review' : `Rework: ${formatCount(waiting.openIssues)} open`;
+}
+
+/** The sidebar's count on Code reviews: the reviews read that wait for the user; none when none does, or none was read. */
+export function waitingBadge(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>[] | undefined, user: string | undefined): NavBadge | undefined {
+  const count = reviews ? waitingCount(reviews, user) : 0;
+  return count > 0 ? { count } : undefined;
 }

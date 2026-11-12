@@ -10,7 +10,8 @@ import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
-export function useCodeReviews(filter: CodeReviewFilter) {
+/** `enabled` false reads nothing, only what the list already read (the sidebar's count, `useWaitingForMeBadge`). */
+export function useCodeReviews(filter: CodeReviewFilter, { enabled = true }: { enabled?: boolean } = {}) {
   const place = usePlace();
   // Equivalent filters (no owners, not only assigned) share one cache entry and one `cm find`.
   const query = compactFilter(filter);
@@ -18,6 +19,7 @@ export function useCodeReviews(filter: CodeReviewFilter) {
     queryKey: queryKeys.inPlace(place, 'codeReviews', query),
     queryFn: () => api.codeReviews.list(place, query),
     placeholderData: (previous) => previous,
+    enabled,
   });
 }
 
