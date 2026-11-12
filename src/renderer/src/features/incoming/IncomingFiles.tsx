@@ -1,7 +1,5 @@
-import { commentLineText } from '../../lib/comments/commentText';
 import { FileSearch, X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
 import { FileTreeList } from '../../components/FileTreeList';
 import type { MenuEntry } from '../../lib/actions';
@@ -11,13 +9,14 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
+import type { IncomingFilesHeading } from './incomingFilesHeading';
 import { incomingGroupTip, type IncomingListGroup } from './incomingScope';
 import type { FileTreeFolding } from '../../components/fileTreeFolding';
 import styles from './IncomingFiles.module.css';
 
 interface IncomingFilesProps {
-  /** The changeset whose files show; none for the whole update. */
-  changeset?: Changeset;
+  /** What the files are: the whole update, a changeset's, or several changesets' (`incomingFilesHeading`). */
+  heading: IncomingFilesHeading;
   onShowAll: () => void;
   /** The scope's files; undefined until they are in. */
   files: DiffEntry[] | undefined;
@@ -41,15 +40,15 @@ interface IncomingFilesProps {
   noMatches?: ReactNode;
 }
 
-/** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, markOf, noMatches }: IncomingFilesProps) {
+/** Incoming's files: what the whole update brings, or what some changesets changed, as every list of changed files shows them. */
+export function IncomingFiles({ heading, onShowAll, files, summary, rows, tree, toggleCollapsed, folding, query, filterBar, selection, onSelectionChange, contextMenu, metaOf, markOf, noMatches }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
-        <span className={styles.title} data-tip={changeset ? commentLineText(changeset.comment) : undefined}>
-          {changeset ? `cs:${changeset.id} · ${commentLineText(changeset.comment) || 'No comment'}` : 'All incoming changes'}
+        <span className={styles.title} data-tip={heading.tip}>
+          {heading.title}
         </span>
-        {changeset && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
+        {heading.narrowed && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
       </div>
       {/* While the files are read, their summary, filter and rows hold their places. */}
       {(!files || files.length > 0) && <div className={styles.summary}>{files ? summary : <SkeletonBar width="160px" />}</div>}
@@ -68,7 +67,7 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
           selection={selection}
           onSelectionChange={onSelectionChange}
           contextMenu={contextMenu}
-          label={changeset ? `Files changed in cs:${changeset.id}` : 'Incoming files'}
+          label={heading.listLabel}
           loading={!files}
           noMatches={noMatches}
         />
