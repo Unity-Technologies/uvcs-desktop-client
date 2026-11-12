@@ -43,6 +43,7 @@ export const queryKeys = {
   everyWorkspaceHeads: ['workspaceHeads'] as const,
   /** Keyed by the workspace's path and guid: a workspace recreated in the same folder may hold its files another way. */
   workspaceKind: (path: string, guid: string) => ['workspaceKind', path, guid] as const,
+  workspaceKindsOf: (path: string) => ['workspaceKind', path] as const,
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,

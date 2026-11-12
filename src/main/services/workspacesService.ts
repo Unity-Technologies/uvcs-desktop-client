@@ -29,7 +29,15 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+/**
+ * `tellKindChanged` tells every window a workspace's kind changed, so the lists showing it read it again (the kind
+ * they read once is kept for good: `workspaceKindQuery`).
+ */
+export function createWorkspacesService(
+  { cm, operations, watchers, windows, settings, headers }: ServiceContext,
+  { switchShelves, leftChanges }: SwitchContext,
+  tellKindChanged: (workspacePath: string) => void,
+): WorkspacesApi {
   const kindOf = kindFromHeaders(headers);
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf };
   const lookUpRepository = workspaceRepositoryLookup(cm);
@@ -128,9 +136,23 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
+  /**
+   * The first `cm partial configure` on a standard workspace makes it partial. A failure may come after it converted
+   * it, so the windows are told its kind changed either way.
+   */
   function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal }) => {
-      await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
+      // The kind only decides whether to tell the window it may change (a local, cached read): a read that fails must
+      // not stop the user's choice, and telling once too often only makes the window read the kind again.
+      const converts = await kindOf(workspacePath).then(
+        (kind) => kind === 'standard',
+        () => true,
+      );
+      try {
+        await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
+      } finally {
+        if (converts) tellKindChanged(workspacePath);
+      }
     });
   }
 

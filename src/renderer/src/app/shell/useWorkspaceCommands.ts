@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openChooseDownloads } from '../../features/partialWorkspace/ChooseDownloadsDialog';
+import { choosesDownloads } from '../../features/partialWorkspace/workspaceDownloads';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -12,10 +13,11 @@ import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
 import { updateUnlessUpToDate } from './workspaceOperations';
 
-/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them and, in a partial one, choosing them. */
+/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them and choosing which it downloads (`choosesDownloads`). */
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
-  const kind = useWorkspaceInfo().data?.kind;
+  const workspace = useWorkspaceInfo().data;
+  const offersDownloads = choosesDownloads(workspace?.kind, workspace?.selector);
   const { autoRefresh } = useSettings();
   const updateSettings = useUpdateSettings();
   const apps = useExternalApps();
@@ -40,15 +42,15 @@ export function useWorkspaceCommands(): void {
         keywords: ['refresh', 'watch', 'live'],
         run: () => updateSettings({ autoRefresh: !autoRefresh }),
       },
-      // Only a partial workspace chooses its files: any other holds every file.
-      ...(kind === 'partial'
+      // A partial workspace chooses its files; a standard one on a branch too, and becomes partial.
+      ...(offersDownloads
         ? [
             {
               id: 'workspace.chooseDownloads',
               group: 'Workspace',
               label: 'Choose what to download…',
               icon: FolderDown,
-              keywords: ['partial', 'download', 'load', 'unload'],
+              keywords: ['partial', 'convert', 'download', 'load', 'unload'],
               run: () => openChooseDownloads(workspacePath),
             },
           ]
@@ -98,7 +100,7 @@ export function useWorkspaceCommands(): void {
         run: () => copyWorkspacePath(workspacePath),
       },
     ],
-    [workspacePath, kind, autoRefresh, updateSettings, editor, terminal],
+    [workspacePath, offersDownloads, autoRefresh, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

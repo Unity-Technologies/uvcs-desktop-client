@@ -21,8 +21,10 @@ import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor } from '
 import { RepositoryFileSearchList } from '../repositoryFiles/RepositoryFileSearchList';
 import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
+import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
+  downloadChangeLook,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -40,9 +42,12 @@ const ROOT = '';
 /** Stands in while there's no tree to list (the query is disabled then): a workspace on a shelve, or still loading. */
 const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
 
-/** Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. */
-export function openChooseDownloads(workspacePath: string): void {
-  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} close={close} />);
+/**
+ * Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. Opened
+ * from an item (Files' menu), it starts with that item selected and the folders above it open.
+ */
+export function openChooseDownloads(workspacePath: string, initialPath?: string): void {
+  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} initialPath={initialPath} close={close} />);
 }
 
 function loadedInKey(workspacePath: string, folder: string) {
@@ -53,13 +58,14 @@ function folderRead<T>(folder: string, query: { data: T | undefined; isError: bo
   return { folder, data: query.data, failed: query.isError };
 }
 
-function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string; close: () => void }) {
+function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspacePath: string; initialPath?: string; close: () => void }) {
   const queryClient = useQueryClient();
   const info = useWorkspaceInfoOf(workspacePath).data;
   const treePoint = info ? downloadTreePoint(info) : null;
   const place = useMemo(() => workspacePlace(workspacePath), [workspacePath]);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
-  const [selected, setSelected] = useState(ROOT);
+  const [initial] = useState(() => revealedDownload(initialPath ?? ROOT, new Set()));
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(initial.expanded);
+  const [selected, setSelected] = useState(initial.selected);
   const [choices, setChoices] = useState<DownloadedChoices>(() => new Map());
   const [applying, setApplying] = useState(false);
   const [query, setQuery] = useState('');
@@ -174,6 +180,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   return (
     <Dialog
       title="Choose what to download"
+      description={chooseDownloadsNote(info?.kind)}
       width={520}
       onClose={close}
       footer={
@@ -223,41 +230,52 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
           onKeyDown={onKeyDown}
           autoFocus
         >
-          {rows.map((row, index) => (
-            <div
-              key={row.path}
-              id={rowId(index)}
-              role="treeitem"
-              aria-selected={row.path === selected}
-              aria-expanded={row.expandable ? row.expanded : undefined}
-              aria-checked={row.check}
-              className={styles.row}
-              style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
-              onClick={() => setSelected(row.path)}
-              onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
-            >
-              {row.expandable ? (
-                <button
-                  className={styles.chevron}
-                  data-expanded={row.expanded}
-                  aria-label={row.expanded ? 'Collapse' : 'Expand'}
-                  tabIndex={-1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleExpanded(row.path);
-                  }}
-                >
-                  <ChevronRight size={13} />
-                </button>
-              ) : (
-                <span className={styles.chevronSpace} />
-              )}
-              <Checkbox checked={row.check} focusable={false} ariaLabel={row.name} onChange={() => toggleChecked(row.path)} />
-              <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
-              {row.note === 'loading' && <Spinner size={12} />}
-              {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
-            </div>
-          ))}
+          {rows.map((row, index) => {
+            const look = downloadChangeLook(row.change);
+            return (
+              <div
+                key={row.path}
+                id={rowId(index)}
+                role="treeitem"
+                aria-selected={row.path === selected}
+                aria-expanded={row.expandable ? row.expanded : undefined}
+                aria-checked={row.check}
+                className={styles.row}
+                data-tone={look.tone}
+                style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
+                onClick={() => setSelected(row.path)}
+                onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
+              >
+                {row.expandable ? (
+                  <button
+                    className={styles.chevron}
+                    data-expanded={row.expanded}
+                    aria-label={row.expanded ? 'Collapse' : 'Expand'}
+                    tabIndex={-1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleExpanded(row.path);
+                    }}
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                ) : (
+                  <span className={styles.chevronSpace} />
+                )}
+                <Checkbox
+                  checked={row.check}
+                  focusable={false}
+                  ariaLabel={row.name}
+                  tone={look.tone}
+                  onChange={() => toggleChecked(row.path)}
+                />
+                <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
+                {look.marker && <span className={styles.marker}>{look.marker}</span>}
+                {row.note === 'loading' && <Spinner size={12} />}
+                {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </Dialog>

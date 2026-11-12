@@ -51,6 +51,8 @@ export interface UvcsEvents {
   filesKeptAside: { workspacePath: string; files: KeptAsideFile[] };
   /** The workspace's watch broke once started: changes made outside the app no longer show by themselves. */
   workspaceWatchBroken: { workspacePath: string };
+  /** A workspace changed kind (choosing what to download made a standard one partial): every window reads its kind again. */
+  workspaceKindChanged: { workspacePath: string };
   operationProgress: OperationProgressEvent;
   /** The best paths a repository's search (`explorer.findRepositoryPaths`) found so far, as they change. */
   repositoryPathsFound: { searchId: string; paths: FoundPath[]; source: FoundPathsSource };

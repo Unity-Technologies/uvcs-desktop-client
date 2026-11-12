@@ -1,7 +1,7 @@
 import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
-import type { CheckState } from '../../ui/Checkbox';
+import type { CheckState, CheckboxTone } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
 import { ancestorsOf } from '../files/fileTreeRows';
@@ -40,6 +40,35 @@ export function foldersToReadLoaded(tree: DownloadTree, expanded: ReadonlySet<st
   return [...new Set([ROOT, ...expanded])].filter((folder) => isLoaded(folder, tree));
 }
 
+/**
+ * What Apply does to a row's item: downloads it (`load`), removes it (`unload`), keeps it (`kept`), leaves it out as
+ * it is (`none`), or, for a folder, changes some of what it holds (`mixed`).
+ */
+export type DownloadChange = 'load' | 'unload' | 'kept' | 'none' | 'mixed';
+
+/** What Apply does to an item ticked as `check`, from whether the workspace holds it now. */
+export function downloadChangeOf(check: CheckState, loaded: boolean): DownloadChange {
+  if (check === 'mixed') return 'mixed';
+  if (check) return loaded ? 'kept' : 'load';
+  return loaded ? 'unload' : 'none';
+}
+
+/** How a row shows its change: its check's tone, and a word beside its name. */
+export interface DownloadChangeLook {
+  tone?: CheckboxTone;
+  marker?: 'Download' | 'Remove';
+}
+
+/**
+ * Only what Apply downloads or removes stands out, so the user sees at a glance what applying changes; what it keeps,
+ * leaves out or changes in part looks like any checkbox.
+ */
+export function downloadChangeLook(change: DownloadChange): DownloadChangeLook {
+  if (change === 'load') return { tone: 'added', marker: 'Download' };
+  if (change === 'unload') return { tone: 'removed', marker: 'Remove' };
+  return {};
+}
+
 /** A row of the Choose what to download tree. Paths have forward slashes and no leading slash. */
 export interface DownloadRow {
   path: string;
@@ -53,6 +82,8 @@ export interface DownloadRow {
   /** Whether it may hold items: a folder, unless it is read and holds none. */
   expandable: boolean;
   check: CheckState;
+  /** What Apply does to it, shown on its check and name. */
+  change: DownloadChange;
   /** Shown beside an open folder still being read, or one that couldn't be. */
   note: 'loading' | 'failed' | undefined;
   /** Why it couldn't be read, once it failed. */
@@ -76,6 +107,7 @@ export function downloadRows(
     const expandable = item.isDirectory && !(read && children.length === 0);
     const isExpanded = expandable && expanded.has(item.path);
     const failure = isExpanded ? failures.get(item.path) : undefined;
+    const check = checkStateOf(item.path, tree, choices);
     rows.push({
       path: item.path,
       name: item.path.slice(item.path.lastIndexOf('/') + 1),
@@ -84,7 +116,8 @@ export function downloadRows(
       iconType: item.iconType,
       expanded: isExpanded,
       expandable,
-      check: checkStateOf(item.path, tree, choices),
+      check,
+      change: downloadChangeOf(check, isLoaded(item.path, tree)),
       note: failure !== undefined ? 'failed' : isExpanded && !read ? 'loading' : undefined,
       failure,
     });
