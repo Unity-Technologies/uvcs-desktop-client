@@ -119,8 +119,9 @@ export interface CheckinsEntry {
   /** Oldest first, as the timeline reads. */
   changesets: Changeset[];
   /**
-   * Whether it starts listing its changesets: after every round (what's new), yes; in a closed round, folded to its
-   * line, as what was reviewed already.
+   * Whether it starts listing its changesets: under the "Since last review" line, what the reviewer comes back to check,
+   * yes; anywhere else (a closed round, the author's view, a first review) folded to its line, which says what happened
+   * while Changes lists them all: a long branch's first batch would push the conversation out of sight.
    */
   startsOpen: boolean;
 }
@@ -186,8 +187,9 @@ export function conversationBlocksOf({ conversation, user, changesets, reviewDat
     blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
-  if (whose === 'own' && rest.length > 0) blocks.push({ kind: 'since', date: checkpoint!.date });
-  blocks.push(...entriesOf(rest, true).map((entry): ConversationBlock => ({ kind: 'entry', entry })));
+  const since = whose === 'own' && rest.length > 0;
+  if (since) blocks.push({ kind: 'since', date: checkpoint!.date });
+  blocks.push(...entriesOf(rest, since).map((entry): ConversationBlock => ({ kind: 'entry', entry })));
   return blocks;
 }
 
@@ -245,9 +247,9 @@ function roundOf(number: number, closing: ClosingStatus, threads: readonly Revie
 
 /**
  * The timeline's own folding (reviewer changes in a row) within a run of entries, check-ins kept apart, listing their
- * changesets from the start only after every round (`latest`).
+ * changesets from the start only under the "Since last review" line (`underSince`).
  */
-function entriesOf(placed: readonly Placed[], latest: boolean): ConversationEntry[] {
+function entriesOf(placed: readonly Placed[], underSince: boolean): ConversationEntry[] {
   const entries: ConversationEntry[] = [];
   let run: TimelineItem[] = [];
   const endRun = (): void => {
@@ -257,7 +259,7 @@ function entriesOf(placed: readonly Placed[], latest: boolean): ConversationEntr
   for (const { item } of placed) {
     if (item.kind === 'checkins') {
       endRun();
-      entries.push({ ...item, startsOpen: latest });
+      entries.push({ ...item, startsOpen: underSince });
     } else run.push(item);
   }
   endRun();

@@ -233,8 +233,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
   moves the line, never the page.
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
-  ("Daniel checked in 3 changesets"), the words folding the list under them; a closed round's start folded, the
-  latest open (`CheckinsEntry.startsOpen`). Each changeset is named as a comment's chip names one (its icon and number,
+  ("Daniel checked in 3 changesets"), the words folding the list under them. They start
+  listed only under the "Since last review" line, what a reviewer comes back to check; anywhere else folded to that line
+  (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
   without the fill) with its comment's first line, and opens in Changes, changeset by changeset, on it. Past five, the
   first ones and "N more" (`shownCheckins`). Changesets from before the review are left to Changes: a long branch would
   push the conversation out of sight. The changesets list no merges, so a merge from the parent shows as any changeset
