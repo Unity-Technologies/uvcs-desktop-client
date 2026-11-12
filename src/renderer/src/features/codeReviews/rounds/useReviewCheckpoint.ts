@@ -5,7 +5,8 @@ import { usePlaceUser } from '../../../app/account/accounts';
 import { useReviewConversation } from '../conversation/useReviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import { isLineThread } from '../inline/fileThreads';
-import { checkpointOf, newThreadIds, settledSinceIds, type ReviewCheckpoint } from './reviewRounds';
+import { checkpointOf, newThreadIds, reviewedUpToOf, settledSinceIds, type ReviewCheckpoint } from './reviewRounds';
+import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { useReviewChangesets } from './useReviewChangesets';
 
 /** Where the signed-in user left off on a review, and what's new to them since: from what the page reads anyway. */
@@ -16,6 +17,8 @@ export interface ReviewCheckpointState {
   newIds: ReadonlySet<number> | undefined;
   /** The branch's changesets, newest first; none for a review of a changeset or a shelve. */
   changesets: readonly Changeset[] | undefined;
+  /** What Changes marks its changesets against (`reviewedUpToOf`): the user's checkpoint, else the newest reviewer's. */
+  reviewedUpTo: ReviewedUpTo | undefined;
   /** The threads on lines settled since (`settledSinceIds`), what "How it was applied" steps through. */
   settledSince: readonly number[] | undefined;
   /** Once what decides the checkpoint is read (or failed): before it, none doesn't yet mean there is none. */
@@ -32,6 +35,7 @@ export function useReviewCheckpoint(review: CodeReview): ReviewCheckpointState {
     const threads = conversation ? threadsOf(conversation.comments) : [];
     const newIds = checkpoint && newThreadIds(threads, checkpoint, user, changesets);
     const settledSince = checkpoint && settledSinceIds(threads.filter(isLineThread), checkpoint, changesets);
-    return { checkpoint, newIds, settledSince, changesets, settled: settled && !isPending };
+    const reviewedUpTo = conversation && settled ? reviewedUpToOf(conversation.events, user, changesets) : undefined;
+    return { checkpoint, reviewedUpTo, newIds, settledSince, changesets, settled: settled && !isPending };
   }, [conversation, isPending, settled, user, changesets]);
 }

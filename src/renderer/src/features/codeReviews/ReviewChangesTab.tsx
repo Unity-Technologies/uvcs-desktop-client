@@ -46,7 +46,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review.id);
-  const { checkpoint, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
+  const { reviewedUpTo, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
   const [request, setRequest] = useState<DiffFocusRequest | null>(null);
@@ -137,7 +137,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                     page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
                     focusChangeset={page.focusChangeset}
                     focusChangesets={page.focusChangesets}
-                    reviewedUpTo={checkpoint}
+                    reviewedUpTo={reviewedUpTo}
                     pageAppliesShelve
                     detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
                   />

@@ -2,6 +2,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { sameUser } from '../../../lib/userName';
+import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
@@ -58,6 +59,19 @@ export function checkpointOf(events: readonly ReviewEvent[], user: string | unde
   const at = Date.parse(last.date);
   const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
   return { date: last.date, status: last.status, ...(changeset && { changesetId: changeset.id }) };
+}
+
+/**
+ * What Changes marks against: the user's own checkpoint once they gave a status; for anyone who gave none (the author,
+ * a bystander), the newest reviewer's, naming them, so they see what that reviewer has seen. None before anyone did.
+ */
+export function reviewedUpToOf(events: readonly ReviewEvent[], user: string | undefined, changesets: readonly Changeset[] | undefined): ReviewedUpTo | undefined {
+  const { whose, statuses } = roundStatusesOf(events, user);
+  const last = statuses.at(-1);
+  if (!last) return undefined;
+  const at = Date.parse(last.date);
+  const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
+  return { date: last.date, ...(changeset && { changesetId: changeset.id }), ...(whose === 'everyone' && { by: last.reviewer }) };
 }
 
 /**

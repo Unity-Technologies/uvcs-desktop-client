@@ -11,6 +11,8 @@ import { displayName } from '../../lib/userName';
 export interface ReviewedUpTo {
   date: string;
   changesetId?: number;
+  /** Whose review it is: none for the user's own; a reviewer's name when the user gave none (the author). */
+  by?: string;
 }
 
 /** How a changeset's row is marked: new to the user since they reviewed, reviewed by them, or not at all before. */
@@ -41,7 +43,12 @@ export interface ReviewedSeparator {
 export function reviewedSeparator(shown: readonly Changeset[], reviewedUpTo: ReviewedUpTo | undefined, now: number, format: DayFormat = {}): ReviewedSeparator | undefined {
   const first = shown.find((changeset) => changesetMark(changeset, reviewedUpTo) === 'reviewed');
   if (!first || !reviewedUpTo) return undefined;
-  return { beforeKey: String(first.id), label: `Reviewed by you · ${formatShortDay(reviewedUpTo.date, now, format)}`, tip: formatDateTime(reviewedUpTo.date) };
+  return { beforeKey: String(first.id), label: `Reviewed by ${reviewedUpTo.by === undefined ? 'you' : displayName(reviewedUpTo.by)} · ${formatShortDay(reviewedUpTo.date, now, format)}`, tip: formatDateTime(reviewedUpTo.date) };
+}
+
+/** What the New toggle keeps, in its tooltip: since whose last review. */
+export function newToggleTip(reviewedUpTo: Pick<ReviewedUpTo, 'by'>): string {
+  return `Only the changesets new since ${reviewedUpTo.by === undefined ? 'your' : `${displayName(reviewedUpTo.by)}'s`} last review`;
 }
 
 /** A row's tooltip: the comment's first line, then who, when (in full) and which changeset, which the row says shortly. */

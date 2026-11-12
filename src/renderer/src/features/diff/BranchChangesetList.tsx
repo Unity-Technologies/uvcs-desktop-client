@@ -17,7 +17,7 @@ import { ListSkeleton } from '../../ui/Skeleton';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
-import { changesetMark, changesetRowTip, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
+import { changesetMark, changesetRowTip, newToggleTip, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { changesetFilterPlaceholder } from './changesetByChangeset';
 import styles from './BranchChangesetList.module.css';
 
@@ -120,7 +120,7 @@ export function BranchChangesetList({
             }}
           />
           {newCount > 0 && (
-            <ToggleChip size="small" pressed={onlyNew} onChange={onOnlyNewChange} data-tip="Only the changesets new since your review">
+            <ToggleChip size="small" pressed={onlyNew} onChange={onOnlyNewChange} data-tip={reviewedUpTo && newToggleTip(reviewedUpTo)}>
               New <span className={styles.newCount}>{newCount}</span>
             </ToggleChip>
           )}
