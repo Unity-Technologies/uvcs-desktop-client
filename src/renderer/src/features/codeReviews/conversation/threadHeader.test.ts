@@ -138,6 +138,15 @@ describe('threadHeaderOf', () => {
       expect(headerOf(answered, { place: 'panel', showsAnswer: false }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'nothing' });
     });
 
+    it('leads an answered question in context where the card shows no replies but can show it, as Discarded and Applied do', () => {
+      expect(headerOf(answered, { place: 'panel', showsAnswer: false, seesHowApplied: true }).pill).toEqual({
+        label: 'Answered',
+        tone: 'resolved',
+        leadsTo: 'context',
+        tip: 'Answered: see it in context',
+      });
+    });
+
     it('shows none on a plain comment', () => {
       expect(headerOf(plainOnLine).pill).toBeNull();
     });
