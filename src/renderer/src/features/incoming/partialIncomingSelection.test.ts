@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { partialItemKey } from './partialIncomingItems';
+import { countCalls } from '@shared/testing/countCalls';
 import { canUpdateSelection, partialGroupCheckState, partialItemChecked, partialUpdateMessage, partialUpdateSelection, withItemsChecked } from './partialIncomingSelection';
 
 const item = (kind: PartialIncomingItem['kind'], path: string, extra: Partial<PartialIncomingItem> = {}): PartialIncomingItem => ({
@@ -151,5 +152,15 @@ describe('canUpdateSelection', () => {
     const sky = item('changed', 'Art/sky.png');
     expect(canUpdateSelection(partialUpdateSelection([ship, sky], uncheckedOf(sky)))).toBe(false);
     expect(canUpdateSelection(partialUpdateSelection([ship, sky], uncheckedOf(ship, sky)))).toBe(false);
+  });
+});
+
+describe('partialUpdateSelection at scale', () => {
+  it('compares paths a few times per item, not once per pair of items', () => {
+    const items = Array.from({ length: 3000 }, (_, index) => item(index % 3 === 0 ? 'added' : 'changed', `Folder${index % 301}/File${index}.cs`));
+    const unchecked = uncheckedOf(...items.filter((_, index) => index % 2 === 0));
+    const { result, calls } = countCalls(String.prototype, 'startsWith', () => partialUpdateSelection(items, unchecked));
+    expect(result.brought.length).toBeGreaterThan(unchecked.size);
+    expect(calls).toBeLessThan(items.length * 3);
   });
 });
