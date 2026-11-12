@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ownReviewButton } from './ownReview';
+import { ownReviewButton, statusCovers } from './ownReview';
 
 const review = { reviewers: [{ name: 'ana@acme.com', status: 'Rework required' as const }] };
 
@@ -14,5 +14,17 @@ describe('ownReviewButton', () => {
 
   it('reads Review, adding nobody, while who the user is is still read', () => {
     expect(ownReviewButton(review, undefined)).toEqual({ label: 'Review', joining: false, preselected: 'Reviewed' });
+  });
+});
+
+describe('statusCovers', () => {
+  it('says a status that closes a round covers the branch up to its newest changeset', () => {
+    expect(statusCovers('Reviewed', 17)).toBe('Covers everything up to changeset 17');
+    expect(statusCovers('Rework required', 17)).toBe('Covers everything up to changeset 17');
+  });
+
+  it('says nothing for Under review, which closes no round, or a review of no branch', () => {
+    expect(statusCovers('Under review', 17)).toBeUndefined();
+    expect(statusCovers('Reviewed', undefined)).toBeUndefined();
   });
 });
