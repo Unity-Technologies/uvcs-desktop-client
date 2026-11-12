@@ -26,7 +26,7 @@ export interface GroupProgress {
 }
 
 /** A group of a list of changed files (a merge's conflicts, Incoming's files changed on both sides): its chevron, name and count. */
-export function TreeGroupLabel({ label, icon, collapsed, count, progress, tip }: TreeGroupLabelProps) {
+export function TreeGroupLabel({ label, icon, collapsed, before, count, progress, tip }: TreeGroupLabelProps) {
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
