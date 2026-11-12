@@ -37,9 +37,9 @@ describe('repositories', () => {
         { id: '2', name: 'game', server: 'acme@cloud', owner: 'ana', spec: 'game@acme@cloud' },
         { id: '4', name: 'tools', server: 'acme@cloud', owner: 'bob', spec: 'tools@acme@cloud' },
       ],
-      projects: [],
+      projects: [],  deletedRepositories: [],
     });
-    expect(commands).toMatchObject([{ via: 'execute', args: ['repository', 'list', 'acme@cloud', '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001e'] }]);
+    expect(commands).toMatchObject([{ via: 'execute', args: ['repository', 'list', 'acme@cloud', '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001f{reptype}\u001f{repguid}\u001e'] }]);
     expect(commands[0]?.options.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -54,6 +54,7 @@ describe('repositories', () => {
     expect(await service.list('racing@unity')).toEqual({
       repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
       projects: [{ name: 'Racing', guid: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f' }],
+      deletedRepositories: [],
     });
     expect(lines()).toHaveLength(1);
   });
@@ -77,6 +78,7 @@ describe('repositories', () => {
     expect(await service.list('racing@unity')).toEqual({
       repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity' }],
       projects: [],
+      deletedRepositories: [],
     });
     expect(lines()).toHaveLength(2);
   });
@@ -118,6 +120,30 @@ describe('repositories', () => {
     await service.remove('tools@acme@cloud');
 
     expect(lines()).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
+  });
+
+  describe('restore', () => {
+    const DELETED = 'd1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6@acme@cloud';
+
+    it('restores a deleted repository by its GUID under the name it had, in one quick command', async () => {
+      const { service, commands } = repositories({ 'repository undelete': '' });
+
+      await service.restore(DELETED);
+      expect(commands).toMatchObject([{ via: 'query', args: ['repository', 'undelete', DELETED] }]);
+    });
+
+    it('restores one under a new name when another repository took its own', async () => {
+      const { service, lines } = repositories({ 'repository undelete': '' });
+
+      await service.restore(DELETED, 'art-restored');
+      expect(lines()).toEqual([`repository undelete ${DELETED} art-restored`]);
+    });
+
+    it('fails as cm reports it', async () => {
+      const { service } = repositories({ 'repository undelete': cmFails('You are not allowed to undelete repositories.') });
+
+      await expect(service.restore(DELETED)).rejects.toThrow('not allowed');
+    });
   });
 
   it('tells a rename by the repository’s spec before and after, so its issue tracker follows it', async () => {

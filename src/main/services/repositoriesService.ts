@@ -51,5 +51,10 @@ export function createRepositoriesService({ cm }: ServiceContext, { profiles }: 
     await cm.query(['repository', 'delete', repositorySpec]);
   }
 
-  return { servers, list, create, rename, remove };
+  /** `cm` refuses a name a live repository has; a new name restores it beside that one. */
+  async function restore(deletedSpec: string, newName?: string): Promise<void> {
+    await cm.query(['repository', 'undelete', deletedSpec, ...(newName ? [newName] : [])]);
+  }
+
+  return { servers, list, create, rename, remove, restore };
 }

@@ -18,7 +18,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { branchResult, changesetResult, codeReviewResult, labelResult, shelveResult, type ResultContext } from '../app/commands/objectResults';
-import { missingWorkspaceMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
+import { deletedRepositoryMenu, missingWorkspaceMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
 import { currentWorkspaceMenu } from '../app/shell/currentWorkspaceMenu';
 import { attributeTypeMenu } from '../features/attributes/attributeTypeMenu';
 import { graphMenu } from '../features/branchExplorer/graphMenu';
@@ -238,6 +238,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
+  deletedRepository: () => deletedRepositoryMenu({ id: '8', name: 'game', server: 'local', owner: '', spec: 'd1e2f3a4@local', deleted: true }),
   currentWorkspace: () => currentWorkspaceMenu(ws, { name: 'game', kind: 'partial' }),
   graphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, graphContext),
   graphBranch: () => graphMenu({ kind: 'branch', lane }, graphContext),
@@ -362,6 +363,11 @@ describe('the menu grammar', () => {
     expect(topEntries(build()).filter((entry) => !isSubmenu(entry) && entry.label.startsWith('Copy'))).toEqual([]);
     const kinds = (copies[0]?.entries ?? []).map((entry) => (entry as Action).id.replace('copy.', ''));
     expect(kinds).toEqual(COPY_KINDS.filter((kind) => kinds.includes(kind)));
+  });
+
+  // A word with no label of its own (`restore`) is named by its caller: one that forgets shows the word's id instead.
+  it.each(Object.entries(EVERY_MENU))('%s: every entry is named in words that start with a capital', (_name, build) => {
+    for (const entry of topEntries(build())) expect(entry.label, `${entry.id} has a label`).toMatch(/^\p{Lu}/u);
   });
 
   it.each(Object.entries(EVERY_MENU))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
@@ -598,6 +604,10 @@ describe('Copy', () => {
 
   it('copies a label as its name, spec, full spec and comment', async () => {
     expect(await copiedBy(labelMenu(workspacePlace(ws), [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+  });
+
+  it('copies a deleted repository as its name alone: its spec names it by an id no link opens', async () => {
+    expect(await copiedBy(deletedRepositoryMenu({ id: '8', name: 'game', server: 'local', owner: '', spec: 'd1e2f3a4@local', deleted: true }))).toEqual(['Repository name: game']);
   });
 
   it('copies a shelve as its number, spec, full spec, comment and GUID', async () => {

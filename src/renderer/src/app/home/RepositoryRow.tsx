@@ -11,8 +11,12 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { exploreRepository } from '../workspace/exploreRepository';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
-import { repositoryMenu } from './homeMenus';
+import { DeletedChip } from './DeletedChip';
+import { deletedRepositoriesTip } from './deletedRepositories';
+import { deletedRepositoryMenu, repositoryMenu } from './homeMenus';
+import { restoreRepository } from './homeOperations';
 import { repositoryLabels } from './repositoryProjects';
+import { repositoryRowActionOf } from './repositoryRowAction';
 import styles from './Home.module.css';
 
 interface RepositoryRowProps {
@@ -29,8 +33,9 @@ interface RepositoryRowProps {
 }
 
 export function RepositoryRow({ repository, project, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
-  const menu = () => repositoryMenu(repository, onCreateWorkspace);
-  const onlyWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
+  const deleted = repository.deleted ?? false;
+  const menu = () => (deleted ? deletedRepositoryMenu(repository) : repositoryMenu(repository, onCreateWorkspace));
+  const action = repositoryRowActionOf(repository, workspaces);
   const title = repositoryLabels(repository, project);
   const details = [
     workspaces.length > 0 && pluralize(workspaces.length, 'workspace'),
@@ -39,10 +44,10 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
 
   return (
     <ActionContextMenu entries={menu}>
-      <div className={styles.row}>
-        <button className={styles.rowMain} onClick={onToggle} aria-expanded={expanded} {...ROVING_ITEM}>
-          <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} />
-          <RepositoryAvatar repository={repository.spec} label={title.name} size={32} />
+      <div className={styles.row} data-deleted={deleted}>
+        <button className={styles.rowMain} onClick={deleted ? undefined : onToggle} aria-expanded={deleted ? undefined : expanded} {...ROVING_ITEM}>
+          <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} data-hidden={deleted} />
+          <RepositoryAvatar repository={repository.spec} label={title.name} size={32} className={styles.rowAvatar} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>
               {/* In a box of its own: the title's gap would open between the pieces a match splits the name into. */}
@@ -60,29 +65,34 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
               {details.join(' · ')}
             </span>
           </span>
+          {deleted && <DeletedChip tip={deletedRepositoriesTip(repository.server)} />}
         </button>
-        {onlyWorkspace ? (
-          <Button size="small" onClick={(event) => workspaceOpener(onOpen)(onlyWorkspace.path, windowAskedBy(event))}>
+        {action.kind === 'restore' && (
+          <Button size="small" onClick={() => void restoreRepository(repository)}>
+            Restore
+          </Button>
+        )}
+        {action.kind === 'open' && (
+          <Button size="small" onClick={(event) => workspaceOpener(onOpen)(action.workspace.path, windowAskedBy(event))}>
             Open
           </Button>
-        ) : (
-          // On every row it would read as a wall of buttons: it shows on the row under the pointer or the keyboard.
-          workspaces.length === 0 && (
-            <>
-              <Button
-                variant="ghost"
-                size="small"
-                className={styles.rowCreate}
-                data-tip="Browse its history without downloading it"
-                onClick={(event) => exploreRepository(repository.spec, windowAskedBy(event))}
-              >
-                Explore
-              </Button>
-              <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
-                New workspace
-              </Button>
-            </>
-          )
+        )}
+        {/* On every row they would read as a wall of buttons: they show on the row under the pointer or the keyboard. */}
+        {action.kind === 'create' && (
+          <>
+            <Button
+              variant="ghost"
+              size="small"
+              className={styles.rowCreate}
+              data-tip="Browse its history without downloading it"
+              onClick={(event) => exploreRepository(repository.spec, windowAskedBy(event))}
+            >
+              Explore
+            </Button>
+            <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
+              New workspace
+            </Button>
+          </>
         )}
         <ActionDropdownMenu entries={menu()}>
           <Button variant="ghost" size="small" className={styles.rowMenu} icon={<MoreHorizontal size={15} />} aria-label="Repository actions" />

@@ -9,4 +9,9 @@ export interface RepositoriesApi {
   create(server: string, name: string): Promise<string>;
   rename(repositorySpec: string, newName: string): Promise<void>;
   remove(repositorySpec: string): Promise<void>;
+  /**
+   * Restores one of the listing's `deletedRepositories` by its spec (`<guid>@<server>`): under the name it had, or
+   * `newName` when another repository took it.
+   */
+  restore(deletedSpec: string, newName?: string): Promise<void>;
 }

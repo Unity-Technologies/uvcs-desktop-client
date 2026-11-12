@@ -344,7 +344,9 @@
 }
 
 .row[data-missing='true'] .rowAvatar,
-.row[data-missing='true'] .rowText {
+.row[data-missing='true'] .rowText,
+.row[data-deleted='true'] .rowAvatar,
+.row[data-deleted='true'] .rowText {
   opacity: 0.55;
 }
 
@@ -363,6 +365,11 @@
   flex: none;
   color: var(--text-tertiary);
   transition: transform var(--duration-fast);
+}
+
+/* A deleted repository has no workspaces to show: its chevron keeps its room, so the names stay aligned. */
+.chevron[data-hidden='true'] {
+  visibility: hidden;
 }
 
 .chevron[data-expanded='true'] {

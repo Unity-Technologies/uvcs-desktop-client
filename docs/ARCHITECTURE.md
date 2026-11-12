@@ -537,6 +537,15 @@ by name, and never passes it to `cm`.
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
   app doesn't call: it shows the organization's name as `cm` takes it.
+- **Deleted repositories**: to a server's administrators, `cm repository list` also prints the deleted repositories
+  the server still keeps, each named with `__DELETED__` before its name. They come in that same listing, so showing
+  them costs no command: `repositoryListing.ts` sets them apart (`deletedRepositories`), under the name they had,
+  marked `deleted` and with a spec naming them by GUID, which no two share. The Repositories view lists them only when
+  the user asks (the Deleted toggle, offered only when the server lists some; `useDeletedRepositoriesStore`, kept
+  across sessions), among the live ones by name (`repositoriesShown`), tagged Deleted, with Restore in place of their
+  workspaces. Restore is one `cm repository undelete` by GUID, under the name it had, asking a new one only when a
+  live repository took it (`repositoryRestore`, typed inside its Unity project as Rename does). The toggle's tooltip
+  says Unity Cloud keeps them 7 days (`deletedRepositoriesTip`).
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
