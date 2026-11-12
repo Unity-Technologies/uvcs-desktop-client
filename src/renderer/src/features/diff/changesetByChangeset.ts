@@ -1,6 +1,8 @@
 import type { DiffFocusRequest } from './diffFocusRequest';
 import type { BranchStart } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
+import type { ChangesetSpan } from '../../app/navigation/pages';
+import type { SelectionState } from '../../lib/selection';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { pluralize } from '../../lib/text';
 import { userFilterTexts } from '../../lib/userName';
@@ -89,4 +91,14 @@ export function branchDiffShownFor(request: Pick<DiffFocusRequest, 'changesetId'
   if (!request || request.changesetId === undefined) return null;
   if (request.changesetId === null) return { mode: 'wholeBranch' };
   return { mode: 'byChangeset', changeset: { changesetId: request.changesetId, seq: request.seq } };
+}
+
+/**
+ * The list's selection for a span asked for (a review's changes opened on what's new, `focusChangesets`): every
+ * changeset in it, the newest the anchor, so they show as one diff (`branchChangesetPane`). While the changesets are
+ * read, its ends, which show the same diff.
+ */
+export function spanSelection(changesets: readonly Changeset[] | undefined, { oldest, newest }: ChangesetSpan): SelectionState {
+  const inSpan = (changesets ?? []).filter((changeset) => changeset.id >= oldest && changeset.id <= newest).map((changeset) => String(changeset.id));
+  return { selected: new Set([String(oldest), String(newest), ...inSpan]), anchor: String(newest) };
 }
