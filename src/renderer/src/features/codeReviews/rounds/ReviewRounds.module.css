@@ -1,59 +1,29 @@
 /* Review rounds in the conversation: a round's line, the "Since last review" line, and check-ins. Quiet: a round
    reads as one line of the timeline, never a card. */
 
-/* A round's marker: a hairline across the timeline with what the round was in its middle, quieter than the "Since
-   last review" line, which is the accent's. The whole line folds and unfolds the round. */
-.roundMarker {
+/* A round's line, as an event's (`.eventLine`): what the round was, when, and its fold; the whole line folds it. */
+.roundLine {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  margin-block: var(--space-1);
-  padding: 0;
-  border: none;
-  /* Over the timeline's rail, which breaks at it: a round's edge. */
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.roundMarker::before,
-.roundMarker::after {
-  content: '';
-  flex: 1;
-  min-width: var(--space-6);
-  border-top: 1px solid var(--border-default);
-}
-
-.roundMarker:hover {
-  color: var(--text-primary);
-}
-
-.roundMarker:focus-visible {
-  outline: none;
-}
-
-.roundMarker:focus-visible .roundLabel {
-  border-radius: var(--radius-sm);
-  box-shadow: var(--focus-ring-visible);
-}
-
-.roundLabel {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  max-width: 85%;
-  padding-inline: var(--space-1);
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: start;
 }
 
-.roundMark {
-  flex: none;
-  color: var(--text-tertiary);
+.roundLine:hover {
+  color: var(--text-primary);
 }
 
-.roundMarker[data-settled] .roundMark {
-  color: var(--status-added);
+.roundLine:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
 }
 
 .roundText {
@@ -63,17 +33,24 @@
   white-space: nowrap;
 }
 
-.roundLabel time {
+.roundText b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.roundLine time {
   flex: none;
   color: var(--text-tertiary);
 }
 
 .chevron {
   flex: none;
+  color: var(--text-tertiary);
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.roundMarker[aria-expanded='true'] .chevron {
+.roundLine[aria-expanded='true'] .chevron,
+.checkinsToggle[aria-expanded='true'] .chevron {
   transform: rotate(90deg);
 }
 
@@ -174,4 +151,26 @@
 
 .more:hover {
   color: var(--accent-text);
+}
+
+/* "checked in 3 changesets": the words fold the list under them, as a folded run of reviewer changes opens. */
+.checkinsToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+}
+
+.checkinsToggle:hover {
+  color: var(--text-primary);
+}
+
+.checkinsToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
 }

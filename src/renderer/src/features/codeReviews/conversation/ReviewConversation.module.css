@@ -430,6 +430,12 @@ button.pill:hover {
   color: var(--status-added);
 }
 
+/* A settled round's mark: a check in the color of Reviewed, as what it asked is done. */
+.event[data-round='settled'] .eventIcon {
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
+  color: var(--status-added);
+}
+
 .event[data-icon='Rework required'] .eventIcon {
   background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
   color: var(--status-changed);

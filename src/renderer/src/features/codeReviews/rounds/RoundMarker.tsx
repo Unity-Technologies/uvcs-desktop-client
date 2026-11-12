@@ -2,25 +2,29 @@ import { Check, ChevronRight, CircleDot } from 'lucide-react';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import type { ReviewRound } from './reviewRounds';
 import { roundText } from './roundText';
+import conversation from '../conversation/ReviewConversation.module.css';
 import styles from './ReviewRounds.module.css';
 
 /**
- * Where a closed round starts in the timeline: a quiet hairline across it, as the "Since last review" line is, with
- * what the round was in its middle (a check once everything in it settled, else a dot). A click folds what it held
- * away and back; folded, the line alone stands for the round. Not a box: the timeline stays one timeline, its entries
- * at one indent.
+ * Where a closed round starts, as one more event on the timeline: its mark on the rail (a check once everything in it
+ * settled, else a dot), then what the round was. A click folds what it held away and back; folded, the line alone
+ * stands for the round. Left-aligned with the events, never a box or a line across: the timeline stays one timeline.
  */
 export function RoundMarker({ round, user, open, onToggle }: { round: ReviewRound; user: string | undefined; open: boolean; onToggle: () => void }) {
   const Mark = round.folds ? Check : CircleDot;
+  const { name, detail } = roundText(round, user);
   return (
-    <button type="button" className={styles.roundMarker} data-settled={round.folds || undefined} aria-expanded={open} onClick={onToggle}>
-      <span className={styles.roundLabel}>
-        <Mark size={14} className={styles.roundMark} aria-hidden />
-        <span className={styles.roundText}>{roundText(round, user)}</span>
-        <span aria-hidden>·</span>
+    <div className={conversation.event} data-round={round.folds ? 'settled' : 'open'}>
+      <span className={conversation.eventIcon}>
+        <Mark size={14} aria-hidden />
+      </span>
+      <button type="button" className={styles.roundLine} aria-expanded={open} onClick={onToggle}>
+        <span className={styles.roundText}>
+          <b>{name}</b> · {detail}
+        </span>
         <RelativeTime date={round.date} />
         <ChevronRight size={14} className={styles.chevron} aria-hidden />
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }

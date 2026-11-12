@@ -194,6 +194,19 @@ describe('conversationBlocksOf', () => {
     expect(shapeOf(blocks)).toEqual(['round 1 (folded): thread 1, event 2', 'round 2 (folded): checkins 12, event 3, event 5', 'since', 'checkins 15', 'thread 4', 'thread 7']);
   });
 
+  it('lists the changesets of check-ins after every round, and folds those of a closed round to their line', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation([], [status(2, 'vio', 'Rework required', at(9, 16))]),
+      user: 'vio',
+      changesets: changesets([12, at(8, 8)], [15, at(10, 9)]),
+      reviewDate: at(7, 8),
+    });
+    const startsOpen = (entry: ConversationEntry | undefined): boolean | undefined => (entry?.kind === 'checkins' ? entry.startsOpen : undefined);
+
+    expect(blocks[0]?.kind === 'round' && startsOpen(blocks[0].entries[0])).toBe(false);
+    expect(blocks[2]?.kind === 'entry' && startsOpen(blocks[2].entry)).toBe(true);
+  });
+
   it('counts in its round a thread settled since, though it shows under the line', () => {
     const blocks = conversationBlocksOf({
       conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [status(2, 'vio', 'Rework required', at(9, 16))]),

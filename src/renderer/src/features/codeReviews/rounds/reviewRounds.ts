@@ -118,6 +118,11 @@ export interface CheckinsEntry {
   owner: string;
   /** Oldest first, as the timeline reads. */
   changesets: Changeset[];
+  /**
+   * Whether it starts listing its changesets: after every round (what's new), yes; in a closed round, folded to its
+   * line, as what was reviewed already.
+   */
+  startsOpen: boolean;
 }
 
 /** An entry of the conversation: the timeline's, or a batch of check-ins. */
@@ -178,11 +183,11 @@ export function conversationBlocksOf({ conversation, user, changesets, reviewDat
     const start = index === 0 ? -Infinity : Date.parse(statuses[index - 1]!.date);
     // Every thread started in the round counts, one settled since and shown under the line too: it's what the round asked.
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn), entries: entriesOf(inRound) });
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   if (whose === 'own' && rest.length > 0) blocks.push({ kind: 'since', date: checkpoint!.date });
-  blocks.push(...entriesOf(rest).map((entry): ConversationBlock => ({ kind: 'entry', entry })));
+  blocks.push(...entriesOf(rest, true).map((entry): ConversationBlock => ({ kind: 'entry', entry })));
   return blocks;
 }
 
@@ -202,7 +207,7 @@ function placedItems(
   const asked = Date.parse(reviewDate);
   const checkedIn = (changesets ?? []).filter((changeset) => Date.parse(changeset.date) > asked);
   // Check-ins come before what's said at the same moment: a fix, then the words about it.
-  placed.push(...checkedIn.map((changeset): Placed => ({ at: Date.parse(changeset.date), order: -changeset.id, item: { kind: 'checkins', owner: changeset.owner, changesets: [changeset] } })));
+  placed.push(...checkedIn.map((changeset): Placed => ({ at: Date.parse(changeset.date), order: -changeset.id, item: { kind: 'checkins', owner: changeset.owner, changesets: [changeset], startsOpen: true } })));
   placed.sort((a, b) => a.at - b.at || rank(a) - rank(b) || a.order - b.order);
   return batchedCheckins(placed);
 }
@@ -238,8 +243,11 @@ function roundOf(number: number, closing: ClosingStatus, threads: readonly Revie
   return { number, reviewer: closing.reviewer, status: closing.status, date: closing.date, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
 }
 
-/** The timeline's own folding (reviewer changes in a row) within a run of entries, check-ins kept apart. */
-function entriesOf(placed: readonly Placed[]): ConversationEntry[] {
+/**
+ * The timeline's own folding (reviewer changes in a row) within a run of entries, check-ins kept apart, listing their
+ * changesets from the start only after every round (`latest`).
+ */
+function entriesOf(placed: readonly Placed[], latest: boolean): ConversationEntry[] {
   const entries: ConversationEntry[] = [];
   let run: TimelineItem[] = [];
   const endRun = (): void => {
@@ -249,7 +257,7 @@ function entriesOf(placed: readonly Placed[]): ConversationEntry[] {
   for (const { item } of placed) {
     if (item.kind === 'checkins') {
       endRun();
-      entries.push(item);
+      entries.push({ ...item, startsOpen: latest });
     } else run.push(item);
   }
   endRun();
