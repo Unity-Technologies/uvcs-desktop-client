@@ -21,11 +21,11 @@ export function roundText(round: ReviewRound, user: string | undefined): { name:
 }
 
 /**
- * The line before what's new to a reviewer: "Since last review", and the day of it in the reader's time zone ("Nov 9"),
- * apart, to read a step quieter; no day when the date can't be read.
+ * The line before what's new to a reviewer: "New since last review", saying what's under it, and the day of it in the
+ * reader's time zone ("Nov 9"), apart, to read a step quieter; no day when the date can't be read.
  */
 export function sinceText(date: string, { locale, timeZone }: DayFormat = {}): { label: string; day?: string } {
-  const label = 'Since last review';
+  const label = 'New since last review';
   const at = new Date(date);
   if (Number.isNaN(at.getTime())) return { label };
   return { label, day: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone }).format(at) };

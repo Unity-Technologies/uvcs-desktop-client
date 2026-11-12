@@ -4,7 +4,7 @@ import styles from './ReviewRounds.module.css';
 
 /**
  * Where what's new to a reviewer starts: an accent hairline across the timeline, fading out at its ends, and in its
- * middle "Since last review · Nov 9" as words and "See the changes →" as a link. Not one pill of two halves: that read
+ * middle "New since last review · Nov 9" as words and "See the changes →" as a link. Not one pill of two halves: that read
  * as a toggle.
  */
 export function SinceLine({ id, date, onSeeChanges }: { id: string; date: string; onSeeChanges?: () => void }) {

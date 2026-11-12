@@ -232,7 +232,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
   under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
   (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
-  reviewer's. Then, for a reviewer, the **Since last review** line (`SinceLine`, in the accent), when anything came after
+  reviewer's. Then, for a reviewer, the **New since last review · Nov 9** line (`SinceLine`, `sinceText`: in the
+  accent, words on a hairline fading out at its ends, **See the changes →** a link beside them; not one pill of two
+  halves, which read as a toggle), when anything came after
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
