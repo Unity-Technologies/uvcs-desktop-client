@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundHolding, roundStatusesOf, settledSinceIds, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundHolding, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -146,7 +146,7 @@ describe('reviewedUpToOf', () => {
   });
 });
 
-describe('newThreadIds and settledSinceIds', () => {
+describe('newThreadIds', () => {
   const checkpoint = { date: at(9, 16), status: 'Rework required', changesetId: 14 } as const;
   const branch = changesets([14, at(9, 15)], [15, at(10, 9)]);
 
@@ -167,29 +167,60 @@ describe('newThreadIds and settledSinceIds', () => {
     const threads = threadsOf([request(1, at(8, 10), { appliedInChangeset: 15 }), request(2, at(8, 11), { appliedInChangeset: 14 })]);
 
     expect([...newThreadIds(threads, checkpoint, 'vio', branch)]).toEqual([1]);
-    expect(settledSinceIds(threads, checkpoint, branch)).toEqual([1]);
   });
 
   it('tells an applying changeset the branch list misses by its number against the checkpoint', () => {
     // Changeset numbers grow with time in a repository: one past the checkpoint's came after it.
     const threads = threadsOf([request(1, at(8, 10), { appliedInChangeset: 20 }), request(2, at(8, 11), { appliedInChangeset: 3 })]);
 
-    expect(settledSinceIds(threads, checkpoint, branch)).toEqual([1]);
+    expect([...newThreadIds(threads, checkpoint, 'vio', branch)]).toEqual([1]);
   });
+});
 
-  it('steps through threads settled since in the order the conversation shows them: by when each settled', () => {
-    const threads = threadsOf([
-      request(1, at(8, 10)),
-      reply(2, 1, at(10, 10), { kind: 'discard' }),
-      question(3, at(8, 9)),
-      reply(4, 3, at(10, 11)),
-      request(5, at(8, 12), { appliedInChangeset: 15 }),
-      request(6, at(8, 13)), // still open
+describe('stepGroupsOf', () => {
+  it('steps through the threads settled in each round, and those settled since the last review in the order the line shows them', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation(
+        [
+          request(1, at(7, 8), { appliedInChangeset: 12 }),
+          question(2, at(7, 8)),
+          reply(3, 2, at(7, 9)),
+          request(5, at(9, 10)),
+          reply(6, 5, at(10, 11), { kind: 'discard' }),
+          request(7, at(9, 11), { appliedInChangeset: 15 }),
+          question(8, at(9, 12)), // still open: nothing to step to
+        ],
+        [status(4, 'vio', 'Rework required', at(7, 10)), status(9, 'vio', 'Rework required', at(9, 16))],
+      ),
+      user: 'vio',
+      changesets: changesets([12, at(7, 9)], [15, at(10, 9)]),
+      reviewDate: at(7, 7),
+    });
+
+    // cs:15 at 9:00 applied 7, then 5 was discarded at 11:00.
+    expect(stepGroupsOf(blocks)).toEqual([
+      { threadIds: [1, 2], scope: 'in round 1' },
+      { threadIds: [7, 5], scope: 'since last review' },
     ]);
-
-    // Applied in cs:15 at 9:00, discarded at 10:00, answered at 11:00.
-    expect(settledSinceIds(threads, checkpoint, branch)).toEqual([5, 1, 3]);
   });
+
+  it("names the span after every round by the round it follows for someone with no line, and none before any round", () => {
+    const after = conversationBlocksOf({
+      conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' }), request(4, at(8, 8)), reply(5, 4, at(8, 9), { kind: 'discard' })], [status(3, 'vio', 'Reviewed', at(7, 10))]),
+      user: 'dani',
+      changesets: undefined,
+      reviewDate: at(7, 7),
+    });
+    const none = conversationBlocksOf({ conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' })], []), user: 'dani', changesets: undefined, reviewDate: at(7, 7) });
+
+    expect(stepGroupsOf(after)).toEqual([
+      { threadIds: [1], scope: 'in round 1' },
+      { threadIds: [4], scope: 'after round 1' },
+    ]);
+    expect(stepGroupsOf(none)).toEqual([{ threadIds: [1], scope: '' }]);
+  });
+});
+
 });
 
 describe('conversationBlocksOf', () => {
