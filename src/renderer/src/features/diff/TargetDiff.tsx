@@ -41,7 +41,7 @@ interface TargetDiffProps {
 
 export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles, pageDescription, description: describedAs }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
-  // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
+  // Keyed so another changeset (a branch diff's list) folds its own comment afresh (`FoldedComment`).
   const description = describedAs ?? <TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />;
 
   return (

@@ -6,9 +6,9 @@ import { BranchDiff } from './BranchDiff';
 import { TargetDiff } from './TargetDiff';
 
 interface DiffPageProps extends PageProps<'diff'> {
-  /** A branch's diff opens changeset by changeset, on this changeset: a review's page going to a comment written there. */
+  /** A branch's diff opens on this changeset: a review's page going to a comment written there. */
   focusChangeset?: number;
-  /** A branch's diff opens changeset by changeset, the changesets of this span selected: a review's new changesets. */
+  /** A branch's diff opens with the changesets of this span selected, as one diff: a review's new changesets. */
   focusChangesets?: ChangesetSpan;
   /** Where the user left off reviewing a branch (a code review's checkpoint): its changesets are marked new or reviewed. */
   reviewedUpTo?: ReviewedUpTo;

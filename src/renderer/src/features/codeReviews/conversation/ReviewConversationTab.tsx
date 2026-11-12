@@ -24,7 +24,7 @@ import { RoundMarker } from '../rounds/RoundMarker';
 import { conversationBlocksOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
-import { newChangesetsSpan } from '../rounds/newChangesetsSpan';
+import { newChangesetsSpan } from '../../diff/branchChangesetRows';
 import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
 import styles from './ReviewConversation.module.css';
 

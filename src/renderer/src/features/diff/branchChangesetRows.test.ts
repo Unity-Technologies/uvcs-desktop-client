@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import { formatDateTime } from '../../lib/formatDate';
-import { changesetMark, changesetRowTip, newChangesetsOf, newToggleTip, reviewedSeparator } from './branchChangesetRows';
+import { changesetMark, newChangesetsOf, newChangesetsSpan, reviewedSeparator } from './branchChangesetRows';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: `2026-11-${id}T10:00:00Z`, parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -42,7 +42,16 @@ describe('reviewedSeparator', () => {
   const listed = [...branch].reverse();
 
   it('goes between what was reviewed, above, and the first changeset new since, saying when', () => {
-    expect(reviewedSeparator(listed, reviewedUpTo15, now, format)).toEqual({ beforeKey: '16', label: 'Reviewed by you · Nov 15', tip: formatDateTime(reviewedUpTo15.date) });
+    expect(reviewedSeparator(listed, reviewedUpTo15, now, format)).toEqual({
+      beforeKey: '16',
+      label: 'Reviewed by you · Nov 15',
+      tip: formatDateTime(reviewedUpTo15.date),
+      showNew: { label: 'Show the 2 new', span: { oldest: 16, newest: 17 } },
+    });
+  });
+
+  it('offers the new changesets the filter leaves, a single one in words', () => {
+    expect(reviewedSeparator([changeset(14), changeset(17)], reviewedUpTo15, now, format)?.showNew).toEqual({ label: 'Show the new one', span: { oldest: 17, newest: 17 } });
   });
 
   it('goes before the first new one the filter leaves', () => {
@@ -61,22 +70,25 @@ describe('reviewedSeparator', () => {
   });
 });
 
-describe('changesetRowTip', () => {
-  it("is the comment's first line, then who, when and which changeset", () => {
-    expect(changesetRowTip(changeset(17, 'Fix the jump\n\nIt was too high', 'daniel.garcia@unity3d.com'))).toEqual({
-      text: 'Fix the jump',
-      sub: `Daniel Garcia · ${formatDateTime('2026-11-17T10:00:00Z')} · cs:17`,
-    });
+describe('newChangesetsSpan', () => {
+  const reviewedUpTo16 = { date: '2026-11-16T12:00:00Z', changesetId: 16 };
+
+  it('spans the changesets checked in since the review, oldest to newest, in any order given', () => {
+    expect(newChangesetsSpan(branch, { date: '2026-11-14T12:00:00Z', changesetId: 14 })).toEqual({ oldest: 15, newest: 17 });
+    expect(newChangesetsSpan([...branch].reverse(), { date: '2026-11-14T12:00:00Z', changesetId: 14 })).toEqual({ oldest: 15, newest: 17 });
   });
 
-  it('says there is no comment when there is none', () => {
-    expect(changesetRowTip(changeset(17, '  ')).text).toBe('No comment');
+  it('spans one changeset when only one came since', () => {
+    expect(newChangesetsSpan(branch, reviewedUpTo16)).toEqual({ oldest: 17, newest: 17 });
   });
-});
 
-describe('newToggleTip', () => {
-  it('says since whose last review the New toggle keeps changesets', () => {
-    expect(newToggleTip({})).toBe('Only the changesets new since your last review');
-    expect(newToggleTip({ by: 'miryam.gomez@unity3d.com' })).toBe("Only the changesets new since Miryam Gomez's last review");
+  it('spans the whole branch for a status given before its first changeset', () => {
+    expect(newChangesetsSpan(branch, { date: '2026-11-01T12:00:00Z' })).toEqual({ oldest: 13, newest: 17 });
+  });
+
+  it('is none when nothing came since, before a review, or while the changesets are read', () => {
+    expect(newChangesetsSpan(branch, { date: '2026-11-18T12:00:00Z', changesetId: 17 })).toBeUndefined();
+    expect(newChangesetsSpan(branch, undefined)).toBeUndefined();
+    expect(newChangesetsSpan(undefined, { date: '2026-11-01T12:00:00Z' })).toBeUndefined();
   });
 });
