@@ -42,6 +42,14 @@ describe('newerLineOf', () => {
     expect(newerLineOf(lines(...TEN), removed, 5)).toBeNull();
   });
 
+  it('takes, when asked, a changed line to where its change is: the first line that replaced it, or the line after one removed', () => {
+    const rewritten = lines(...TEN.slice(0, 3), 'lines 4 to 6 in one', ...TEN.slice(6));
+    expect([4, 5, 6].map((line) => newerLineOf(lines(...TEN), rewritten, line, 'toItsChange'))).toEqual([4, 4, 4]);
+    const removed = lines(...TEN.slice(0, 4), ...TEN.slice(5));
+    expect(newerLineOf(lines(...TEN), removed, 5, 'toItsChange')).toBe(5);
+    expect(newerLineOf(lines(...TEN), lines(...TEN), 11, 'toItsChange')).toBeNull();
+  });
+
   it('has no line past the earlier version, nor before its first', () => {
     expect(newerLineOf(lines(...TEN), lines(...TEN), 11)).toBeNull();
     expect(newerLineOf(lines(...TEN), lines(...TEN), 0)).toBeNull();
@@ -66,7 +74,8 @@ describe('newerLineFinder', () => {
     let diffs = 0;
     const counted = (earlier: string): VersionDiff => {
       diffs += 1;
-      return { hunks: [], earlierLineCount: earlier.split('\n').length - 1 };
+      const count = earlier.split('\n').length - 1;
+      return { hunks: [], earlierLineCount: count, newerLineCount: count };
     };
     const find = newerLineFinder(lines(...TEN), counted);
     expect([find(lines(...TEN), 1), find(lines(...TEN), 4), find(lines(...TEN.slice(1)), 2)]).toEqual([1, 4, 2]);

@@ -99,9 +99,16 @@ describe('fileCommentsOf, in the changeset that settled a thread', () => {
     expect([comments.lines, comments.outdated, comments.reading.length]).toEqual([[], [], 1]);
   });
 
-  it('shows it outdated, not hidden, when its line had changed before the fix too', () => {
-    const changedBefore = (revision: number): string | undefined => (revision === 25 ? text('new', 'a', 'b', 'c changed', 'd') : TEXTS.get(revision));
+  it('shows it where its line went when its line had changed before the fix too: the fix is about that change', () => {
+    const changedBefore = (revision: number): string | undefined => (revision === 25 ? text('new', 'a', 'b', 'c changed', 'and split', 'd') : TEXTS.get(revision));
     const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: changedBefore });
+    expect(comments.lines.map((line) => line.key)).toEqual(['deletions:4']);
+    expect(comments.outdated).toEqual([]);
+  });
+
+  it('shows it outdated, not hidden, when the version before the fix has no such line', () => {
+    const shorter = (revision: number): string | undefined => (revision === 25 ? text('a') : revision === 20 ? text('a', 'b', 'c', 'd') : TEXTS.get(revision));
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: shorter });
     expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([1]);
   });
 
