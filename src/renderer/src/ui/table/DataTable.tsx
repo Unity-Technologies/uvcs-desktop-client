@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
+import { focusAs, ringsOnClickFocus } from '../../lib/focusRing';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
@@ -173,6 +174,12 @@ export function DataTable<Row>({
   const onRowMouseDown = (key: string, event: MouseEvent): void => {
     // Right-clicking inside the selection keeps it, so the context menu acts on all selected rows.
     if (event.button === 2 && selection.selected.has(key)) return;
+    // Shift+click and Cmd/Ctrl+click would focus the table ringed (`ringsOnClickFocus`): it focuses ringless instead,
+    // and the click selects no text.
+    if (ringsOnClickFocus(event) && tableRef.current) {
+      event.preventDefault();
+      focusAs(tableRef.current, 'pointer');
+    }
     setFocusedKey(key);
     onSelectionChange(selectOnClick(selection, key, orderedKeys, { shift: event.shiftKey, toggle: isModPressed(event) }));
     if (event.button === 0 && !event.shiftKey && !isModPressed(event)) onRowPressed?.(rowsByKey.get(key)!);
