@@ -1,4 +1,4 @@
-import { memo, useMemo, type MouseEvent } from 'react';
+import { memo, useContext, useMemo, type MouseEvent } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
@@ -6,6 +6,7 @@ import { Avatar } from '../../ui/Avatar';
 import { IssueChip } from '../issues/IssueChip';
 import { usePlaceTracker } from '../issues/useIssueTrackers';
 import { cachedRecordOf, summaryOf } from './cachedSummary';
+import { ChipOpenerContext } from './chipOpener';
 import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
@@ -82,10 +83,13 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
   const summary = cached && summaryOf(cached);
   const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unread), [title, repository, cached, remote.unread]);
   const Icon = CHIP_ICONS[icon];
+  // The page it's on opens it first when it has a place for it (a review's Changes, `ChipOpenerContext`).
+  const pageOpens = useContext(ChipOpenerContext);
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.
     event.stopPropagation();
     event.preventDefault();
+    if (pageOpens?.(reference)) return;
     // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };

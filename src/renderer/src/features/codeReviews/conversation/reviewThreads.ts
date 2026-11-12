@@ -1,4 +1,5 @@
 import type { ReviewComment, ReviewConversation, ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { findReferences } from '../../../lib/comments/commentReferences';
 import { isShownEvent } from './reviewEventText';
 
 /** An event the timeline shows: one this version reads. */
@@ -8,7 +9,13 @@ export type ShownEvent = ReviewEvent & Exclude<ReviewEventChange, { kind: 'other
  * Where a thread stands, as the server counts it (its open items, `{unresolvedissues}`): a change request is open
  * until a changeset applies it or a reply discards it; a question until anyone replies. Other comments are never open.
  */
-export type ThreadState = { kind: 'none' } | { kind: 'open' } | { kind: 'answered' } | { kind: 'applied'; changesetId: number } | { kind: 'discarded' };
+export type ThreadState =
+  | { kind: 'none' }
+  | { kind: 'open' }
+  /** `changesetId`: the changeset an answer names ("Fixed in cs:281301"), the question's fix, as an applied request's. */
+  | { kind: 'answered'; changesetId?: number }
+  | { kind: 'applied'; changesetId: number }
+  | { kind: 'discarded' };
 
 /** A comment and its replies, oldest first. */
 export interface ReviewThread {
@@ -55,6 +62,18 @@ export function threadsOf(unordered: readonly ReviewComment[]): ReviewThread[] {
   });
 }
 
+/**
+ * The changeset an answer names, the first in the replies' order: "Fixed in cs:281301". Only one of the review's own
+ * repository (named with no `@repository`): another's isn't in its diffs.
+ */
+function answeringChangeset(replies: readonly ReviewComment[]): number | undefined {
+  for (const reply of replies) {
+    const named = findReferences(reply.text).find(({ reference }) => reference.kind === 'changeset' && reference.repository === undefined);
+    if (named?.reference.kind === 'changeset') return named.reference.id;
+  }
+  return undefined;
+}
+
 /** Whether anyone replied to `comment` itself, in its thread. */
 export function hasReplies(comment: ReviewComment, thread: ReviewThread): boolean {
   return thread.replies.some((reply) => reply.parentId === comment.id);
@@ -65,7 +84,11 @@ function threadState(root: ReviewComment, replies: readonly ReviewComment[]): Th
     if (root.appliedInChangeset !== undefined) return { kind: 'applied', changesetId: root.appliedInChangeset };
     return replies.some((reply) => reply.kind === 'discard') ? { kind: 'discarded' } : { kind: 'open' };
   }
-  if (root.kind === 'question') return replies.length > 0 ? { kind: 'answered' } : { kind: 'open' };
+  if (root.kind === 'question') {
+    if (replies.length === 0) return { kind: 'open' };
+    const changesetId = answeringChangeset(replies);
+    return changesetId === undefined ? { kind: 'answered' } : { kind: 'answered', changesetId };
+  }
   return { kind: 'none' };
 }
 

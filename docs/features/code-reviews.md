@@ -198,6 +198,15 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
   a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill: **Open** in the color
   of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral.
+- **A question answered in a changeset**: an answer naming a changeset of the review's repository ("Fixed in
+  cs:281301", the first one named in the replies, `answeringChangeset`) answers the question in it, as a changeset
+  applies a change request (`ThreadState`'s `answered.changesetId`, `settlingChangeset`): that changeset's diff shows
+  the question beside the fix (`belongsToChangeset`), **Answered** opens How it was answered on it where the card can
+  show it (the card still unfolds to the answer, its fold toggle), and the dialog's button opens that changeset. A
+  changeset another repository's (`cs:12@other`) isn't in the review's diffs, and answers nothing.
+- **Chips in a review's comments** open a changeset of its branch in its Changes, selected, where the reviewer is
+  (`reviewChipPage`, through `ChipOpenerContext`, which a page fills to open a chip first); anything else opens as every
+  chip does (docs/features/rich-comments.md).
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
   ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
   reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete

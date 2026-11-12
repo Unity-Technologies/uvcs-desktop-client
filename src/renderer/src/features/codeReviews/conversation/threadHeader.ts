@@ -101,6 +101,12 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
 function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {
   if (!badges.state) return null;
   const answer = showsAnswer ? answerOf(thread) : undefined;
+  // A question answered in a changeset ("Fixed in cs:281301") leads to how, as an applied request does.
+  if (thread.state.kind === 'answered' && thread.state.changesetId !== undefined) {
+    const { changesetId } = thread.state;
+    if (inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Answered in changeset ${changesetId}` };
+    if (seesHowApplied) return { ...badges.state, leadsTo: 'context', tip: `Answered in changeset ${changesetId}: see how it was answered` };
+  }
   if (answer) return { ...badges.state, leadsTo: 'answer', tip: answer.tip };
   if (badges.appliedIn !== undefined && inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
   if (badges.appliedIn !== undefined) return { ...badges.state, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };

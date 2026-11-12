@@ -2,6 +2,7 @@ import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { PageOf } from '../../../app/navigation/pages';
 import { commentLocationPage } from '../conversation/threadBadges';
 import type { StepGroup } from '../rounds/reviewRounds';
+import { settlingChangeset } from './commentContext';
 import type { LineThread } from './fileThreads';
 
 /** Where "How it was applied" is among the threads settled in its part of the conversation, and its neighbors. */
@@ -25,13 +26,14 @@ export function contextStepsOf(groups: readonly StepGroup[] | undefined, threadI
 }
 
 /**
- * Where "Show in Changes" leads: a request applied on a branch to the changeset that applied it, whose diff shows it
- * beside the fix (`threadsOfFile`); anything else where it was written (`commentLocationPage`). In the review's page,
+ * Where "Show in Changes" leads: a thread settled on a branch (a request applied, a question answered in a changeset) to
+ * that changeset, whose diff shows it beside the fix (`threadsOfFile`); anything else where it was written (`commentLocationPage`). In the review's page,
  * so the reviewer stays in the review.
  */
 export function showInChangesPage(reviewId: number, target: CodeReviewTarget, thread: LineThread): PageOf<'codeReview'> {
   const page = commentLocationPage(reviewId, thread.root);
-  return target.kind === 'branch' && thread.state.kind === 'applied' ? { ...page, focusChangeset: thread.state.changesetId } : page;
+  const settledIn = settlingChangeset(thread);
+  return target.kind === 'branch' && settledIn !== undefined ? { ...page, focusChangeset: settledIn } : page;
 }
 
 /**
@@ -42,7 +44,8 @@ export function showInChangesPage(reviewId: number, target: CodeReviewTarget, th
 export type ContextFooterAction = { kind: 'changes'; label: string } | { kind: 'changesetPage'; label: string; changesetId: number };
 
 export function contextFooterAction(target: CodeReviewTarget, thread: LineThread): ContextFooterAction {
-  if (thread.state.kind !== 'applied') return { kind: 'changes', label: 'Show in Changes' };
-  const label = `Open changeset ${thread.state.changesetId}`;
-  return target.kind === 'branch' ? { kind: 'changes', label } : { kind: 'changesetPage', label, changesetId: thread.state.changesetId };
+  const settledIn = settlingChangeset(thread);
+  if (settledIn === undefined) return { kind: 'changes', label: 'Show in Changes' };
+  const label = `Open changeset ${settledIn}`;
+  return target.kind === 'branch' ? { kind: 'changes', label } : { kind: 'changesetPage', label, changesetId: settledIn };
 }

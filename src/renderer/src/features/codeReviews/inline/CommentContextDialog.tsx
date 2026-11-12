@@ -23,7 +23,7 @@ import { useReviewThreads } from '../conversation/useReviewThreads';
 import { SHOWN_BY_THE_PAGE } from '../conversation/useReviewConversation';
 import { appliedFilesDescription, appliedFilesHeading, appliedFilesOf, contextBodyOf, type AppliedFiles } from './appliedFiles';
 import { AppliedChangesetFiles } from './AppliedChangesetFiles';
-import { appliedChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
+import { settlingChangeset, contextDescription, contextTitle, liveThreadOf, type ContextView, type OnScreen } from './commentContext';
 import { contextFooterAction, contextStepsOf, showInChangesPage, type ContextSteps } from './contextSteps';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { showInConversation } from './reviewComments';
@@ -98,7 +98,7 @@ function ThreadInContext(props: DialogProps) {
   };
   const threads = useReviewThreads(review.id, SHOWN_BY_THE_PAGE);
   const live = liveThreadOf(threads, threadId);
-  const appliedIn = live.kind === 'thread' ? appliedChangeset(live.thread) : undefined;
+  const appliedIn = live.kind === 'thread' ? settlingChangeset(live.thread) : undefined;
   // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.
   const appliedTarget = useMemo<DiffTarget | null>(() => (appliedIn === undefined ? null : { kind: 'changeset', changesetId: appliedIn }), [appliedIn]);
   const applied = useDiffEntries(appliedTarget);
