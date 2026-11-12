@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationBlock } from './reviewRounds';
-import { opensAtSince, roundIsOpen, toggledRound } from './roundFolds';
+import { opensAtSince, roundIsOpen, roundLineComment, toggledRound } from './roundFolds';
 
 describe('roundIsOpen', () => {
   it('starts a settled round folded and one with something open unfolded', () => {
@@ -19,6 +19,17 @@ describe('roundIsOpen', () => {
   it('keeps the round holding the thread gone to unfolded, whatever was clicked', () => {
     expect(roundIsOpen({ number: 1, folds: true }, new Set(), 1)).toBe(true);
     expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), 2)).toBe(true);
+  });
+});
+
+describe('roundLineComment', () => {
+  it("shows what the reviewer said under a folded round's line", () => {
+    expect(roundLineComment({ comment: 'Reviewed head 1acd180c' }, false)).toBe('Reviewed head 1acd180c');
+  });
+
+  it('leaves it to the status event of an unfolded round, and says nothing for a status given with none', () => {
+    expect(roundLineComment({ comment: 'Reviewed head 1acd180c' }, true)).toBeUndefined();
+    expect(roundLineComment({ comment: '  ' }, false)).toBeUndefined();
   });
 });
 

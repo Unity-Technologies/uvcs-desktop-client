@@ -67,8 +67,8 @@ describe('roundStatusesOf', () => {
     expect(roundStatusesOf(events, 'vio')).toEqual({
       whose: 'own',
       statuses: [
-        { eventId: 3, reviewer: 'VIO', status: 'Rework required', date: at(7, 10) },
-        { eventId: 9, reviewer: 'vio', status: 'Rework required', date: at(9, 16) },
+        { eventId: 3, reviewer: 'VIO', status: 'Rework required', date: at(7, 10), comment: '' },
+        { eventId: 9, reviewer: 'vio', status: 'Rework required', date: at(9, 16), comment: '' },
       ],
     });
   });
