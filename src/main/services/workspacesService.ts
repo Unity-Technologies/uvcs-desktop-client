@@ -142,7 +142,12 @@ export function createWorkspacesService(
    */
   function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal }) => {
-      const converts = (await kindOf(workspacePath)) === 'standard';
+      // The kind only decides whether to tell the window it may change (a local, cached read): a read that fails must
+    // not stop the user's choice, and telling once too often only makes the window read the kind again.
+    const converts = await kindOf(workspacePath).then(
+      (kind) => kind === 'standard',
+      () => true,
+    );
       try {
         await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
       } finally {
