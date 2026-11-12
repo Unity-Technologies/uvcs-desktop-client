@@ -12,7 +12,8 @@ interface RepositoryAvatarProps {
   /** Whose initial it shows: a workspace's own name, or the repository's; undefined while loading, a neutral square. */
   label: string | undefined;
   size: 24 | 28 | 32;
-  /** A workspace's kind, once read: a badge in the corner unless standard (`WorkspaceKindBadge`). */
+  /** A workspace's kind, once read: a badge in the corner unless standard (`WorkspaceKindBadge`). Only a workspace's
+   * avatar passes it; a repository's has no kind. */
   workspaceKind?: WorkspaceKind;
   className?: string;
 }
@@ -33,7 +34,7 @@ export function RepositoryAvatar({ repository, label, size, workspaceKind, class
       aria-hidden
     >
       {label !== undefined && <span className={styles.letter}>{initialOf(label)}</span>}
-      <WorkspaceKindBadge kind={workspaceKind} />
+      <WorkspaceKindBadge kind={workspaceKind} compact={size < 32} />
     </span>
   );
 }

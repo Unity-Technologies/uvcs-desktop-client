@@ -24,17 +24,15 @@
   fill: currentColor;
 }
 
-/* Smaller on the switcher's and the sidebar's avatars (`RepositoryAvatar`'s data-size), so it never hides the initial. */
-[data-size='24'] > .badge,
-[data-size='28'] > .badge {
+/* Smaller on the switcher's and the sidebar's avatars, so it never hides the initial. */
+.badge[data-compact='true'] {
   right: -3px;
   bottom: -3px;
   width: 12px;
   height: 12px;
 }
 
-[data-size='24'] > .badge .icon,
-[data-size='28'] > .badge .icon {
+.badge[data-compact='true'] .icon {
   width: 8px;
   height: 8px;
 }
