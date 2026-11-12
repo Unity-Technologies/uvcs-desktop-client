@@ -117,10 +117,12 @@ describe('deleted repositories', () => {
     expect(specs.sort()).toEqual([`${DELETED_GUID}@acme@cloud`, `${OTHER_DELETED_GUID}@acme@cloud`].sort());
   });
 
-  it('names one by its listed name when cm printed no GUID', () => {
-    const listed = formatOutput(['8', '__DELETED__art', 'acme@cloud', 'ana']);
+  it('leaves one out when cm printed no GUID, since only its GUID restores it', () => {
+    const listed = formatOutput(['4', 'tools', 'acme@cloud', 'bob'], ['8', '__DELETED__art', 'acme@cloud', 'ana']);
 
-    expect(parseRepositoryListing(listed, 'acme@cloud', { withProjects: false }).deletedRepositories[0]?.spec).toBe('__DELETED__art@acme@cloud');
+    const listing = parseRepositoryListing(listed, 'acme@cloud', { withProjects: false });
+    expect(listing.deletedRepositories).toEqual([]);
+    expect(listing.repositories.map((repository) => repository.name)).toEqual(['tools']);
   });
 
   it("gives one its live project, and leaves a deleted project out of the projects", () => {
