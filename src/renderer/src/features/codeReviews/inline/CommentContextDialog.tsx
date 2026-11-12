@@ -153,16 +153,11 @@ function ThreadDialog(props: ThreadDialogProps) {
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
       // switch or the dialog itself after a click in the code.
       marks={STEP_FRAME}
-      headerAction={
-        (stepping || heading.offersViews) && (
-          <>
-            {stepping && <ContextStepper steps={stepping} onStep={onStep} />}
-            {heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
-          </>
-        )
-      }
+      headerAction={heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
       footer={
         <>
+          {/* At the footer's start, where nothing beside it changes width as the views and threads do. */}
+          {stepping && <ContextStepper steps={stepping} onStep={onStep} />}
           <Button
             onClick={() => {
               onClose();
@@ -218,16 +213,16 @@ function ThreadDialog(props: ThreadDialogProps) {
  * starts folded to its first words as settled ones do (`startsFolded`).
  */
 /**
- * Where this one is among the threads settled in its part of the conversation ("2 of 4 in round 1"), then the arrows to
- * the previous and next, side by side: the words before them, right-aligned, so stepping never moves an arrow.
+ * A pager at the footer's start: the arrows to the previous and next thread settled in its part of the conversation,
+ * then where this one is, "Round 1 · 2 of 5". First in the footer, so stepping never moves an arrow.
  */
 function ContextStepper({ steps, onStep }: { steps: ContextSteps; onStep: (threadId: number) => void }) {
   const { previous, next } = steps;
   return (
     <span className={styles.stepper}>
-      <span className={styles.stepPosition}>{steps.position}</span>
       <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
       <IconButton size="small" icon={<ChevronRight size={14} />} label="Next comment" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
+      <span className={styles.stepPosition}>{steps.position}</span>
     </span>
   );
 }

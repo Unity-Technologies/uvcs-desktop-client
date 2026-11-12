@@ -272,10 +272,10 @@ function entriesOf(placed: readonly Placed[], underSince: boolean): Conversation
   return entries;
 }
 
-/** The threads "How it was applied" steps through together, and where they are: "in round 1", "since last review". */
+/** The threads "How it was applied" steps through together, and where they are: "Round 1", "New since last review". */
 export interface StepGroup {
   threadIds: number[];
-  /** Where in the conversation, said after the position ("2 of 4 in round 1"); empty before any round closed. */
+  /** Where in the conversation, said before the position ("Round 1 · 2 of 4"); empty before any round closed. */
   scope: string;
 }
 
@@ -289,11 +289,11 @@ export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] 
   const settledIn = (entries: readonly ConversationEntry[]): number[] =>
     entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
   const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
-  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: `in round ${block.round.number}` }));
+  const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: `Round ${block.round.number}` }));
   const last = rounds.at(-1);
   const since = blocks.some((block) => block.kind === 'since');
   const after = settledIn(blocks.flatMap((block) => (block.kind === 'entry' ? [block.entry] : [])));
-  groups.push({ threadIds: after, scope: since ? 'since last review' : last ? `after round ${last.round.number}` : '' });
+  groups.push({ threadIds: after, scope: since ? 'New since last review' : last ? `After round ${last.round.number}` : '' });
   return groups.filter((group) => group.threadIds.length > 0);
 }
 

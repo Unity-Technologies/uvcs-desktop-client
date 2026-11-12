@@ -264,12 +264,12 @@ one read serves both), say what was checked in when (`reviewRounds`).
   it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
   thread was written in.
 - **How it was applied** opened at a settled thread steps through the others settled in the same part of the
-  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "2 of 4 in round 1", "1 of 3 since last
-  review", "after round 2" for someone with no line of their own, the position alone before any round; arrows before the
-  view switch): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came
+  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "Round 1 · 2 of 4", "New since last
+  review · 1 of 3", "After round 2" for someone with no line of their own, the position alone before any round; a pager
+  at the footer's start, its arrows first): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came
   back to check. A step shows the next one's own view of how it was settled, away from the file it was opened from;
-  only the dialog's body changes, never the dialog (opened again, its animation flickered at each step), and the
-  position reads before the two arrows, right-aligned, so stepping never moves an arrow.
+  only the dialog's body changes, never the dialog (opened again, its animation flickered at each step). Beside the
+  header's view switch, whose label changes width ("How it was applied", "Since then"), the arrows moved at each step.
   Its footer leaves the dialog for the review's Changes, at the thread (`showInChangesPage`, `contextFooterAction`):
   **Open changeset N** for a request applied on a branch, whose diff shows it beside the fix; **Show in Changes** for
   anything else, where it was written.

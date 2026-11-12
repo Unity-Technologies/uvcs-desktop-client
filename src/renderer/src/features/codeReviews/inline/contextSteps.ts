@@ -13,13 +13,14 @@ export interface ContextSteps {
 
 /**
  * Stepping through the threads settled in the part of the conversation the thread is in (`stepGroupsOf`: its round,
- * or since the last review): "2 of 4 in round 1". None for a thread that settled nothing, or the only one there.
+ * or since the last review): "Round 1 · 2 of 4". None for a thread that settled nothing, or the only one there.
  */
 export function contextStepsOf(groups: readonly StepGroup[] | undefined, threadId: number): ContextSteps | undefined {
   const group = groups?.find((candidate) => candidate.threadIds.includes(threadId));
   if (!group || group.threadIds.length < 2) return undefined;
   const at = group.threadIds.indexOf(threadId);
-  const position = `${at + 1} of ${group.threadIds.length}${group.scope ? ` ${group.scope}` : ''}`;
+  const count = `${at + 1} of ${group.threadIds.length}`;
+  const position = group.scope ? `${group.scope} · ${count}` : count;
   return { position, previous: group.threadIds[at - 1], next: group.threadIds[at + 1] };
 }
 
