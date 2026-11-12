@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clickedWith, focusAs, settleClickFocus, showsFocusRing } from './focusRing';
+import { clickedWith, focusAs, ringsOnClickFocus, settleClickFocus, showsFocusRing } from './focusRing';
 
 /** An element that records how it was focused and blurred. */
 function element() {
@@ -70,5 +70,16 @@ describe('settleClickFocus', () => {
     vi.stubGlobal('document', { activeElement: null });
     settleClickFocus({ detail: 1, currentTarget: arrow as unknown as HTMLElement });
     expect(arrow.calls).toEqual([]);
+  });
+});
+
+describe('ringsOnClickFocus', () => {
+  it("is a click with a modifier held: Chromium takes the held Shift, Ctrl or Cmd for the keyboard and rings what it focuses", () => {
+    const click = { button: 0, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false };
+    expect(ringsOnClickFocus(click)).toBe(false);
+    expect(ringsOnClickFocus({ ...click, shiftKey: true })).toBe(true);
+    expect(ringsOnClickFocus({ ...click, metaKey: true })).toBe(true);
+    expect(ringsOnClickFocus({ ...click, ctrlKey: true })).toBe(true);
+    expect(ringsOnClickFocus({ ...click, button: 2, shiftKey: true })).toBe(false);
   });
 });
