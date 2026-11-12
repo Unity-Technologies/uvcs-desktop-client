@@ -122,7 +122,7 @@ describe('placeEarlier', () => {
   const threads = threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1), onLine(4, 20, 9, { changesetId: 5 })]);
   const { earlier } = threadsOfFile(threads, BRANCH, WHOLE, PLAYER);
   // Line 5 of revision 20 is line 7 now; line 9 changed since.
-  const lineOf = (_text: string, line: number): number | null => (line === 5 ? 7 : null);
+  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; line: number } | null => (thread.root.anchor.line === 5 ? { side: 'additions', line: 7 } : null);
   const writtenWhole = (thread: LineThread): boolean => thread.root.changesetId === undefined;
 
   it('places a thread whose line is unchanged since at its line now, saying where it was written', () => {

@@ -90,8 +90,13 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
  * question an answer says it fixed ("Fixed in cs:281301").
  */
 function belongsToChangeset(thread: ReviewThread, written: ReviewDiffView, changesetId: number): boolean {
-  if (written.kind === 'changeset' && written.changesetId === changesetId) return true;
-  return (thread.state.kind === 'applied' || thread.state.kind === 'answered') && thread.state.changesetId === changesetId;
+  return (written.kind === 'changeset' && written.changesetId === changesetId) || settledIn(thread, { kind: 'changeset', changesetId });
+}
+
+/** Whether `view` is the diff of the changeset that settled the thread: a request it applied, a question answered in it. */
+export function settledIn(thread: ReviewThread, view: ReviewDiffView): boolean {
+  if (view.kind !== 'changeset') return false;
+  return (thread.state.kind === 'applied' || thread.state.kind === 'answered') && thread.state.changesetId === view.changesetId;
 }
 
 export function isLineThread(thread: ReviewThread): thread is LineThread {
@@ -116,8 +121,8 @@ function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
 export type VersionText = string | null | undefined;
 
 /**
- * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on the newer side
- * when it is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
+ * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on a side where it
+ * is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
  * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
  * before another version arrives would be moved by it. One whose version's read failed is outdated, its line known
  * though not its text, and holds none of the others. A thread written changeset by changeset, in the whole review's
@@ -126,7 +131,7 @@ export type VersionText = string | null | undefined;
 export function placeEarlier(
   earlier: readonly EarlierThread[],
   textOf: (revisionId: number) => VersionText,
-  lineOf: (earlierText: string, line: number) => number | null,
+  lineOf: (earlierText: string, thread: LineThread) => { side: ThreadSide; line: number } | null,
   showsWhenOutdated: (thread: LineThread) => boolean,
 ): { placed: PlacedThread[]; outdated: EarlierThread[]; reading: EarlierThread[] } {
   const placed: PlacedThread[] = [];
@@ -134,8 +139,8 @@ export function placeEarlier(
   if (earlier.some((entry) => textOf(entry.revisionId) === undefined)) return { placed, outdated, reading: [...earlier] };
   for (const entry of earlier) {
     const text = textOf(entry.revisionId);
-    const line = typeof text === 'string' ? lineOf(text, entry.thread.root.anchor.line) : null;
-    if (line !== null) placed.push({ thread: entry.thread, side: 'additions', line, earlier: entry });
+    const at = typeof text === 'string' ? lineOf(text, entry.thread) : null;
+    if (at !== null) placed.push({ thread: entry.thread, ...at, earlier: entry });
     else if (showsWhenOutdated(entry.thread)) outdated.push(entry);
   }
   return { placed, outdated, reading: [] };
