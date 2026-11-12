@@ -20,6 +20,8 @@ export interface ClosingStatus {
   reviewer: string;
   status: RoundStatus;
   date: string;
+  /** What the reviewer said with it. */
+  comment: string;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface ReviewCheckpoint {
 
 export function roundStatusesOf(events: readonly ReviewEvent[], user: string | undefined): RoundStatuses {
   const closing = events.flatMap((event): ClosingStatus[] =>
-    event.kind === 'statusChanged' && event.status !== 'Under review' ? [{ eventId: event.id, reviewer: event.author, status: event.status, date: event.date }] : [],
+    event.kind === 'statusChanged' && event.status !== 'Under review' ? [{ eventId: event.id, reviewer: event.author, status: event.status, date: event.date, comment: event.comment }] : [],
   );
   closing.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.eventId - b.eventId);
   const own = user === undefined ? [] : closing.filter((status) => sameUser(status.reviewer, user));
@@ -152,6 +154,8 @@ export interface ReviewRound {
   reviewer: string;
   status: RoundStatus;
   date: string;
+  /** What the reviewer said with the status that closed it. */
+  comment: string;
   applied: number;
   discarded: number;
   answered: number;
@@ -256,7 +260,7 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
 function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[]): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
-  return { number, reviewer: closing.reviewer, status: closing.status, date: closing.date, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
+  return { number, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
 }
 
 /**

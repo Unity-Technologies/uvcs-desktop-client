@@ -226,8 +226,10 @@ one read serves both), say what was checked in when (`reviewRounds`).
 - **The conversation** (`conversationBlocksOf`) reads as one timeline, oldest first: a rail runs down through the
   events' icons, behind the cards. Each closed round starts at a line of its own, "Round 1 ·
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
-  started in it, as one more event: its mark on the rail, a check once nothing in it is open; a click on its line folds
-  what it held away and back, at the timeline's own indent. A round where nothing is open
+  started in it, as one more event: its mark on the rail is the status that closed it (Reviewed's thumbs-up, Rework
+  required's flag, in their colors), and while folded what the reviewer said with it shows under the line, folded past
+  four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
+  under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
   (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
   reviewer's. Then, for a reviewer, the **Since last review** line (`SinceLine`, in the accent), when anything came after
@@ -273,7 +275,8 @@ going further back); Applied as a jump to Changes (it loses the reviewer's place
 files, "marked applied with no file" and reviews of no branch); a column in the list saying why a review waits; and
 a line in the Review popover saying what a status covers ("Covers everything up to changeset 17": it said little,
 and added noise to the popover); rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
-ragged ends and broken rail read untidy: a round is one more event on the rail.
+ragged ends and broken rail read untidy: a round is one more event on the rail; and a round shown by its status alone, what led to it opening above it (the
+verdict moved to the bottom as it opened: the round's line stays where it starts).
 
 ## Comments in the code
 

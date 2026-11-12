@@ -9,6 +9,14 @@ export function roundIsOpen(round: { number: number; folds: boolean }, toggled: 
   return round.number === holdingPick || round.folds === toggled.has(round.number);
 }
 
+/**
+ * What a round's line shows under it: while folded, what its reviewer said with the status that closed it, so the
+ * verdict and its words read at a glance; unfolded, nothing, as the status's own event shows it at the round's end.
+ */
+export function roundLineComment(round: { comment: string }, open: boolean): string | undefined {
+  return !open && round.comment.trim() ? round.comment : undefined;
+}
+
 /** The rounds toggled after one more click on `number`'s line. */
 export function toggledRound(toggled: ReadonlySet<number>, number: number): Set<number> {
   const next = new Set(toggled);
