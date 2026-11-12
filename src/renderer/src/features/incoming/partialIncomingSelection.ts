@@ -52,7 +52,8 @@ export function partialUpdateSelection(items: readonly PartialIncomingItem[], un
   if (needed.includes('')) return { paths: 'all', brought: items };
 
   const paths = outermostPaths(needed);
-  const brought = items.filter((item) => pathsNeeded(item, inWorkspace).every((path) => paths.some((covering) => isWithin(path, covering))));
+  const updated = new Set(paths);
+  const brought = items.filter((item) => pathsNeeded(item, inWorkspace).every((path) => isUpdated(path, updated)));
   return brought.length === items.length ? { paths: 'all', brought: items } : { paths, brought };
 }
 
@@ -80,9 +81,25 @@ function workspacePathOf(items: readonly PartialIncomingItem[]): (headPath: stri
   };
 }
 
+/**
+ * The paths no other one holds. Each path looks up its own folders in a set, so the work grows with the paths' depth,
+ * not with every pair of paths (an update of thousands of items).
+ */
 function outermostPaths(paths: readonly string[]): string[] {
-  const sorted = [...new Set(paths)].sort();
-  return sorted.filter((path) => !sorted.some((other) => other !== path && isWithin(path, other)));
+  const unique = new Set(paths);
+  return [...unique].filter((path) => !foldersOf(path).some((folder) => unique.has(folder))).sort();
+}
+
+/** Whether `cm partial update` of these paths reaches this one: it is one of them or under one. */
+function isUpdated(path: string, updated: ReadonlySet<string>): boolean {
+  return updated.has(path) || foldersOf(path).some((folder) => updated.has(folder));
+}
+
+/** Every folder holding the path, innermost first: 'a/b/c' is in 'a/b' and 'a'. */
+function foldersOf(path: string): string[] {
+  const folders: string[] = [];
+  for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) folders.push(path.slice(0, slash));
+  return folders;
 }
 
 function isWithin(path: string, folder: string): boolean {
