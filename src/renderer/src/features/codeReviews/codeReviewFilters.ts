@@ -1,3 +1,4 @@
+import { pluralize } from '../../lib/text';
 import type { CodeReview, CodeReviewFilter, CodeReviewSummary } from '@shared/domain/codeReview';
 import { pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
@@ -30,6 +31,19 @@ export const REVIEWER_CHOICES: { value: ReviewerFilter; label: string }[] = [
   { value: 'me', label: "I'm a reviewer" },
   { value: 'waitingForMe', label: 'Waiting for me' },
 ];
+
+/** The reviewer menu's choices, Waiting for me with how many reviews read wait for the user: "Waiting for me · 2". */
+export function reviewerChoices(waiting: number): { value: ReviewerFilter; label: string }[] {
+  return REVIEWER_CHOICES.map((choice) => (choice.value === 'waitingForMe' && waiting > 0 ? { ...choice, label: `${choice.label} · ${waiting}` } : choice));
+}
+
+/**
+ * The reviewer chip's dot, and its words: while reviews wait for the user and the chip shows another choice, so Waiting
+ * for me, inside its menu, is found; none otherwise.
+ */
+export function reviewerChipDot(reviewer: ReviewerFilter, waiting: number): string | undefined {
+  return reviewer !== 'waitingForMe' && waiting > 0 ? `${pluralize(waiting, 'review')} waiting for you` : undefined;
+}
 
 /** Whether a review read shows under the reviewer filter: only Waiting for me narrows locally (`codeReviewsQuery`). */
 export function matchesReviewer(review: Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>, reviewer: ReviewerFilter, user: string | undefined): boolean {

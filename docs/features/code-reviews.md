@@ -99,7 +99,10 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   unfiltered list) and keeps its rows locally (`matchesReviewer`): it takes the user's own reviews, which `reviewer =
   'me'` leaves out, and goes by each reviewer's own status, which the query can't ask for. Clear filters sets it back
   to Any reviewer; the "I'm a reviewer" chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer
-  (`restoredReviewerFilter`, a `FilterUpgrade`).
+  (`restoredReviewerFilter`, a `FilterUpgrade`). While any review read waits for the user, the chip shows the rows'
+  accent dot, "2 reviews waiting for you" in its tooltip (`reviewerChipDot`, `waitingCount`; `MenuChip`'s `dot`), and
+  its menu counts them, "Waiting for me · 2" (`reviewerChoices`): folded in a chip that reads "Any reviewer", Waiting
+  for me went unseen. The dot goes once Waiting for me shows them.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
   status, I'm a reviewer), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,

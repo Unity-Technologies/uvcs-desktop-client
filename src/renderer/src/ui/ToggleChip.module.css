@@ -36,3 +36,12 @@
   margin-right: -2px;
   opacity: 0.7;
 }
+
+/* Something in the chip's menu waits for the user: the accent's dot, as a list row waiting for them has. */
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}

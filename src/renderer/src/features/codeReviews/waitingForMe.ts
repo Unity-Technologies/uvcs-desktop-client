@@ -20,6 +20,11 @@ export function waitingForMe(review: Pick<CodeReviewSummary, 'owner' | 'status' 
   return undefined;
 }
 
+/** How many of the reviews read wait for the user: the reviewer chip's dot and its menu say so. */
+export function waitingCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>[], user: string | undefined): number {
+  return reviews.filter((review) => waitingForMe(review, user) !== undefined).length;
+}
+
 /** The waiting dot's tooltip. */
 export function waitingForMeTip(waiting: WaitingForMe): string {
   return waiting.kind === 'review' ? 'Waiting for your review' : `Rework: ${formatCount(waiting.openIssues)} open`;

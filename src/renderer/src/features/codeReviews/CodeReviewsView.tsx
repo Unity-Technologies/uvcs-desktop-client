@@ -35,7 +35,8 @@ import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { codeReviewsQuery, matchesReviewer, REVIEWER_CHOICES, reviewFilterTexts } from './codeReviewFilters';
+import { waitingCount } from './waitingForMe';
+import { codeReviewsQuery, matchesReviewer, reviewerChipDot, reviewerChoices, reviewFilterTexts } from './codeReviewFilters';
 
 const ownerOf = (review: CodeReview): string => review.owner;
 
@@ -58,6 +59,8 @@ export function CodeReviewsView() {
       ),
     [reviews, people, me, reviewer, search],
   );
+  // The reviews read that wait for the user: the reviewer chip's dot and its menu's count say so (`reviewerChipDot`).
+  const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
   // The same columns while the user stays the same: the table sorts its rows again only when they change.
   const columns = useMemo(() => codeReviewColumns(me), [me]);
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
@@ -101,7 +104,8 @@ export function CodeReviewsView() {
               onChange={(value) => update({ reviewer: value })}
               icon={<UserCheck size={13} />}
               neutralValue="anyone"
-              choices={REVIEWER_CHOICES}
+              choices={reviewerChoices(waiting)}
+              dot={reviewerChipDot(reviewer, waiting)}
             />
             <ChoiceChip<StatusFilter>
               value={status}
