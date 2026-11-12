@@ -146,6 +146,7 @@ function ThreadDialog(props: ThreadDialogProps) {
   const footer = contextFooterAction(review.target, thread);
   return (
     <Dialog
+      eyebrow={stepping && <ContextStepper steps={stepping} onStep={onStep} />}
       title={contextTitle(thread)}
       description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread, files)}
       width={DIALOG_WIDTH}
@@ -156,8 +157,6 @@ function ThreadDialog(props: ThreadDialogProps) {
       headerAction={heading.offersViews && <ContextViewSwitch thread={thread} view={view} onChange={setView} />}
       footer={
         <>
-          {/* At the footer's start, where nothing beside it changes width as the views and threads do. */}
-          {stepping && <ContextStepper steps={stepping} onStep={onStep} />}
           <Button
             onClick={() => {
               onClose();
@@ -213,15 +212,16 @@ function ThreadDialog(props: ThreadDialogProps) {
  * starts folded to its first words as settled ones do (`startsFolded`).
  */
 /**
- * A pager at the footer's start: the arrows to the previous and next thread settled in its part of the conversation,
- * then where this one is, "Round 1 · 2 of 5". First in the footer, so stepping never moves an arrow.
+ * A pager above the title: the arrows to the previous and next thread settled in its part of the conversation, then
+ * where this one is, "Round 1 · 2 of 5". Above the title, it is seen first; at the line's start, stepping never moves
+ * an arrow (at the footer's start it went unseen, and beside the view switch it moved as the switch's width did).
  */
 function ContextStepper({ steps, onStep }: { steps: ContextSteps; onStep: (threadId: number) => void }) {
   const { previous, next } = steps;
   return (
     <span className={styles.stepper}>
-      <IconButton size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
-      <IconButton size="small" icon={<ChevronRight size={14} />} label="Next comment" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
+      <IconButton variant="secondary" size="small" icon={<ChevronLeft size={14} />} label="Previous comment" disabled={previous === undefined} onClick={() => previous !== undefined && onStep(previous)} />
+      <IconButton variant="secondary" size="small" icon={<ChevronRight size={14} />} label="Next comment" disabled={next === undefined} onClick={() => next !== undefined && onStep(next)} />
       <span className={styles.stepPosition}>{steps.position}</span>
     </span>
   );

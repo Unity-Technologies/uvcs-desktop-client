@@ -79,8 +79,7 @@
 .stepper {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  margin-inline-end: auto;
+  gap: var(--space-1);
 }
 
 .stepPosition {
