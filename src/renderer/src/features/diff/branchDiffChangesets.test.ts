@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
+import { BRANCH_CHANGESETS_LIMIT, branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 
 const changeset = (id: number): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment: '', owner: 'ana', date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 
@@ -26,6 +26,11 @@ describe('branchStartOfChangesets', () => {
   it("isn't known while the changesets are read, nor for a branch with none", () => {
     expect(branchStartOfChangesets('/main/task', undefined)).toBeNull();
     expect(branchStartOfChangesets('/main/task', [])).toBeNull();
+  });
+
+  it("isn't known when the list is cut at its limit: its oldest changeset needn't be the branch's first", () => {
+    expect(branchStartOfChangesets('/main/task', branch, branch.length)).toBeNull();
+    expect(branchStartOfChangesets('/main/task', branch, branch.length + 1)).toEqual({ firstChangeset: 280530, base: 280529 });
   });
 
   // The list keeps the previous branch's changesets while the next branch's are read.
@@ -60,5 +65,11 @@ describe('branchDiffFocusFor', () => {
   it('leaves the selection as it is when the request names none, or there is none', () => {
     expect(branchDiffFocusFor({})).toBeNull();
     expect(branchDiffFocusFor(null)).toBeNull();
+  });
+});
+
+describe('branchChangesetsFilter', () => {
+  it("reads a branch's newest changesets up to a limit: a branch as long as /main never reads whole", () => {
+    expect(branchChangesetsFilter('/main')).toEqual({ branch: '/main', limit: BRANCH_CHANGESETS_LIMIT });
   });
 });
