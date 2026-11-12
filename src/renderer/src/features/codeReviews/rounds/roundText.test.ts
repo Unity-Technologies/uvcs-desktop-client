@@ -15,22 +15,27 @@ function changeset(id: number): Changeset {
 
 describe('roundText', () => {
   it("names the round, whose status closed it, and what it settled, the user's own as 'you'", () => {
-    expect(roundText(round({ applied: 5, answered: 2 }), 'VIO')).toEqual({ name: 'Round 1', detail: 'Rework required by you · 5 requests applied, 2 questions answered' });
+    expect(roundText(round({ applied: 5, answered: 2 }), 'VIO', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you · 5 requests applied, 2 questions answered' });
   });
 
   it("names another reviewer by the name shown, and every count it has", () => {
-    expect(roundText(round({ number: 2, reviewer: 'ana.diaz@unity3d.com', status: 'Reviewed', applied: 1, discarded: 1, answered: 1 }), 'dani')).toEqual({
-      name: 'Round 2',
-      detail: 'Reviewed by Ana Diaz · 1 request applied, 1 discarded, 1 question answered',
+    expect(roundText(round({ number: 2, reviewer: 'ana.diaz@unity3d.com', status: 'Reviewed', applied: 1, discarded: 1, answered: 1 }), 'dani', 2)).toEqual({
+      bold: 'Round 2',
+      rest: ' · Reviewed by Ana Diaz · 1 request applied, 1 discarded, 1 question answered',
     });
   });
 
   it('says nothing was asked when the round held no request or question', () => {
-    expect(roundText(round(), 'vio')).toEqual({ name: 'Round 1', detail: 'Rework required by you' });
+    expect(roundText(round(), 'vio', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you' });
+  });
+
+  it("leaves a review's only round unnamed: its line starts at what closed it, bold", () => {
+    expect(roundText(round({ status: 'Reviewed', applied: 1 }), 'dani', 1)).toEqual({ bold: 'Reviewed', rest: ' by Vio · 1 request applied' });
+    expect(roundText(round(), 'vio', 1)).toEqual({ bold: 'Rework required', rest: ' by you' });
   });
 
   it('counts what is still open in a round that does not fold', () => {
-    expect(roundText(round({ applied: 1, open: 2, folds: false }), 'vio')).toEqual({ name: 'Round 1', detail: 'Rework required by you · 1 request applied, 2 open' });
+    expect(roundText(round({ applied: 1, open: 2, folds: false }), 'vio', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you · 1 request applied, 2 open' });
   });
 });
 

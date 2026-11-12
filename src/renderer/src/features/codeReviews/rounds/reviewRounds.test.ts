@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundHolding, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -177,6 +177,27 @@ describe('newThreadIds', () => {
   });
 });
 
+describe('roundCountOf', () => {
+  it('counts the closed rounds the conversation shows, not the line or the entries after them', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' }), request(4, at(8, 8))], [status(3, 'vio', 'Reviewed', at(7, 10)), status(5, 'vio', 'Rework required', at(8, 10))]),
+      user: 'dani',
+      changesets: undefined,
+      reviewDate: at(7, 7),
+    });
+
+    expect(roundCountOf(blocks)).toBe(2);
+    expect(roundCountOf([])).toBe(0);
+  });
+});
+
+describe('roundName', () => {
+  it("numbers a round only among others: a review's only round goes unnamed", () => {
+    expect(roundName(1, 1)).toBeUndefined();
+    expect([roundName(1, 2), roundName(2, 2)]).toEqual(['Round 1', 'Round 2']);
+  });
+});
+
 describe('stepGroupsOf', () => {
   it('steps through the threads settled in each round, and those settled since the last review in the order the line shows them', () => {
     const blocks = conversationBlocksOf({
@@ -204,7 +225,25 @@ describe('stepGroupsOf', () => {
     ]);
   });
 
-  it("names the span after every round by the round it follows for someone with no line, and none before any round", () => {
+  it('names each round once there are several, and the span after them by the last', () => {
+    const blocks = conversationBlocksOf({
+      conversation: conversation(
+        [request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' }), request(4, at(8, 8)), reply(5, 4, at(8, 9), { kind: 'discard' }), request(7, at(9, 8)), reply(8, 7, at(9, 9), { kind: 'discard' })],
+        [status(3, 'vio', 'Rework required', at(7, 10)), status(6, 'vio', 'Reviewed', at(8, 10))],
+      ),
+      user: 'dani',
+      changesets: undefined,
+      reviewDate: at(7, 7),
+    });
+
+    expect(stepGroupsOf(blocks)).toEqual([
+      { threadIds: [1], scope: 'Round 1' },
+      { threadIds: [4], scope: 'Round 2' },
+      { threadIds: [7], scope: 'After round 2' },
+    ]);
+  });
+
+  it("names the span after a review's only round for someone with no line, and none before any round", () => {
     const after = conversationBlocksOf({
       conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' }), request(4, at(8, 8)), reply(5, 4, at(8, 9), { kind: 'discard' })], [status(3, 'vio', 'Reviewed', at(7, 10))]),
       user: 'dani',
@@ -214,8 +253,8 @@ describe('stepGroupsOf', () => {
     const none = conversationBlocksOf({ conversation: conversation([request(1, at(7, 8)), reply(2, 1, at(7, 9), { kind: 'discard' })], []), user: 'dani', changesets: undefined, reviewDate: at(7, 7) });
 
     expect(stepGroupsOf(after)).toEqual([
-      { threadIds: [1], scope: 'Round 1' },
-      { threadIds: [4], scope: 'After round 1' },
+      { threadIds: [1], scope: '' },
+      { threadIds: [4], scope: 'After the review' },
     ]);
     expect(stepGroupsOf(none)).toEqual([{ threadIds: [1], scope: '' }]);
   });

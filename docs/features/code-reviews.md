@@ -249,8 +249,11 @@ one read serves both), say what was checked in when (`reviewRounds`).
 - **The conversation** (`conversationBlocksOf`) reads as one timeline, oldest first: a rail runs down through the
   events' icons, behind the cards. Each closed round starts at a line of its own, "Round 1 ·
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
-  started in it, as one more event: its mark on the rail is the status that closed it (Reviewed's thumbs-up, Rework
-  required's flag, in their colors), and while folded what the reviewer said with it shows under the line, folded past
+  started in it, as one more event. Rounds are numbered only among others (`roundName`, `roundCountOf`): a review's
+  only round reads "**Reviewed** by Alvaro · 1 request applied", its status bold where the name would be, since a lone
+  "Round 1" hints at rounds that never came; a second round numbers both. Its mark on the rail is the status that
+  closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), and while folded what the reviewer said
+  with it shows under the line, folded past
   four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
   under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
@@ -289,7 +292,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   thread was written in.
 - **How it was applied** opened at a settled thread steps through the others settled in the same part of the
   conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "Round 1 · 2 of 4", "New since last
-  review · 1 of 3", "After round 2" for someone with no line of their own, the position alone before any round; a pager
+  review · 1 of 3", "After round 2" for someone with no line of their own ("After the review" past a review's only
+  round, whose own threads show the position alone, as before any round); a pager
   above the title, its arrows first, where it is seen first and never moves): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came
   back to check. A step shows the next one's own view of how it was settled, away from the file it was opened from;
   only the dialog's body changes, never the dialog (opened again, its animation flickered at each step). Beside the
