@@ -1,9 +1,10 @@
+import { nameInProject, nameWithProject } from '@shared/domain/organizations';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { isRepositoryNameTaken } from './workspaceNaming';
 
 /**
- * The repositories a server's list shows: its live ones, and with `withDeleted` its deleted ones among them, each in
- * its place by name; a live one comes before a deleted one of the same name, the one people open.
+ * The repositories a server's list shows: the live ones, and with `withDeleted` its deleted ones among them by name,
+ * a live one first when they share a name.
  */
 export function repositoriesShown(live: readonly RepositorySummary[], deleted: readonly RepositorySummary[], withDeleted: boolean): RepositorySummary[] {
   if (!withDeleted || deleted.length === 0) return [...live];
@@ -11,9 +12,16 @@ export function repositoriesShown(live: readonly RepositorySummary[], deleted: r
 }
 
 /**
- * Whether a deleted repository needs a new name to be restored: `cm` refuses to restore one under the name a live
- * repository took since.
+ * Restoring a deleted repository: under the name it had, unless a live repository took it, when a new one is asked
+ * for. As a rename, the name is typed inside the repository's Unity project (`Old` for `Racing/Old`).
  */
-export function restoreNeedsNewName(deleted: RepositorySummary, liveNames: readonly string[]): boolean {
-  return isRepositoryNameTaken(deleted.name, liveNames);
+export function repositoryRestore(deleted: RepositorySummary, liveNames: readonly string[]) {
+  const project = deleted.project ?? null;
+  const newName = (typed: string): string => nameWithProject(typed.trim(), project);
+  return {
+    needsNewName: isRepositoryNameTaken(deleted.name, liveNames),
+    initialName: nameInProject(deleted.name, deleted.project),
+    newName,
+    isTaken: (typed: string): boolean => isRepositoryNameTaken(newName(typed), liveNames),
+  };
 }

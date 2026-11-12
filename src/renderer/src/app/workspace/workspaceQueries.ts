@@ -138,9 +138,15 @@ function repositoryListingQuery(server: string | null) {
 
 const repositoriesOf = (listing: RepositoryListing): RepositorySummary[] => listing.repositories;
 const projectsOf = (listing: RepositoryListing): UnityProject[] => listing.projects;
+const deletedRepositoriesOf = (listing: RepositoryListing): RepositorySummary[] => listing.deletedRepositories;
 
 export function useRepositories(server: string | null) {
   return useQuery({ ...repositoryListingQuery(server), select: repositoriesOf });
+}
+
+/** The deleted repositories the server still keeps, listed only to its administrators; read with its repositories. */
+export function useDeletedRepositories(server: string | null) {
+  return useQuery({ ...repositoryListingQuery(server), select: deletedRepositoriesOf });
 }
 
 /** A Unity organization's projects by name, empty ones too; none elsewhere. Read with its repositories. */
