@@ -9,22 +9,23 @@ import { diffEntryKey } from '../diff/DiffEntryList';
 import { listedEntries } from '../diff/listedEntries';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import { pairIncomingMetas } from './incomingMetaPairs';
-import { INCOMING_FILE_FACTS, INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeKey, type IncomingListGroup, type IncomingScope } from './incomingScope';
+import { INCOMING_FILE_FACTS, INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeDiffToRead, scopeKey, type IncomingListGroup, type IncomingScope } from './incomingScope';
 
 const NO_FILES: DiffEntry[] = [];
 const noMeta = (): DiffEntry | undefined => undefined;
 
 /**
  * The files Incoming lists for a scope, filtered and laid out as every list of changed files is. The whole update's
- * come with the incoming changes; a changeset's are its diff, read once its row stays selected (`useSettledValue`)
- * and kept for good, the very query its details panel elsewhere reads (`useDiffEntries`). A Unity asset's `.meta` rides
- * on its row (`pairIncomingMetas`, `metaOf`): `files` are the rows, undefined until the scope's files are in.
+ * come with the incoming changes; a changeset's are its diff, and several changesets' their range diff, read once the
+ * selection settles (`useSettledValue`) and kept for good, the very query a details panel elsewhere reads
+ * (`useDiffEntries`). A Unity asset's `.meta` rides on its row (`pairIncomingMetas`, `metaOf`): `files` are the rows,
+ * undefined until the scope's files are in.
  */
 export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[], collides: (file: DiffEntry) => boolean, selectedKey: string | null) {
   const workspacePath = useWorkspacePath();
   const settled = useSettledValue(scope, scopeKey(scope));
   const isSettled = scopeKey(settled) === scopeKey(scope);
-  const changesetTarget = settled.kind === 'changeset' ? ({ kind: 'changeset', changesetId: settled.id } as const) : null;
+  const changesetTarget = scopeDiffToRead(settled);
   const { data: changesetFiles } = useDiffEntries(changesetTarget);
   const allListed = useMemo(() => listedEntries(updateFiles), [updateFiles]);
   const changesetListed = useMemo(() => changesetFiles && listedEntries(changesetFiles), [changesetFiles]);
