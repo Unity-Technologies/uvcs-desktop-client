@@ -29,6 +29,8 @@ interface FileTreeListProps<T, G> {
   groupTip?: (group: G) => string | undefined;
   /** What a group's header says instead of its count, from the items it holds (`TreeGroupLabel`'s `progress`). */
   groupProgress?: (group: G, held: ItemRange<T>) => GroupProgress | undefined;
+  /** Between a group's chevron and its name, from the items it holds: a checkbox for all of them. */
+  groupBefore?: (group: G, held: ItemRange<T>) => ReactNode;
   /** The filter's text, marked in the rows. */
   query: string;
   /** Under the filter bar, e.g. the review bar: what its `actions` open, right beneath them. */
@@ -66,6 +68,7 @@ export function FileTreeList<T, G>({
   renderItem,
   groupTip,
   groupProgress,
+  groupBefore,
   query,
   belowFilterBar,
   filterBar,
@@ -88,7 +91,7 @@ export function FileTreeList<T, G>({
       render: (row) => (
         <RowGuidesContext.Provider value={rowGuides}>
           {row.type === 'group' ? (
-            <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.held)} />
+            <GroupRow row={row} level={levelOf(row)} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.held)} before={groupBefore?.(row.group, row.held)} />
           ) : (
             renderItem(row, levelOf(row))
           )}
@@ -142,13 +145,14 @@ export function FileTreeList<T, G>({
 }
 
 /** A group's header: a status group's leads with its status's badge, as its rows end with it. */
-function GroupRow<T, G>({ row, level, tip, progress }: { row: TreeGroupRow<T, G>; level: number; tip?: string; progress?: GroupProgress }) {
+function GroupRow<T, G>({ row, level, tip, progress, before }: { row: TreeGroupRow<T, G>; level: number; tip?: string; progress?: GroupProgress; before?: ReactNode }) {
   return (
     <FileTreeCell depth={level} tree folder>
       <TreeGroupLabel
         label={row.label}
         icon={isStatusGroup(row.group) ? <StatusGroupBadge tone={row.group.status} /> : undefined}
         collapsed={row.collapsed}
+        before={before}
         count={rangeLength(row.held)}
         progress={progress}
         tip={tip}

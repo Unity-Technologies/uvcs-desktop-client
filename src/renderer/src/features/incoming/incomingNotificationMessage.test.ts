@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BranchIncoming } from '@shared/domain/incoming';
+import type { BranchIncoming, PartialIncoming } from '@shared/domain/incoming';
 import { incomingNotificationMessage, newChangesetCount } from './incomingNotificationMessage';
 
 describe('incomingNotificationMessage', () => {
@@ -38,6 +38,11 @@ describe('newChangesetCount', () => {
 
   it('counts at least those past the last count once the check stopped counting', () => {
     expect(newChangesetCount(summary(3), summary(100, true))).toEqual({ count: 97, countCapped: true });
+  });
+
+  it('tells only the newest in a partial workspace, whose check counts items, not changesets', () => {
+    const partial = (headChangeset: number): PartialIncoming => ({ branch: '/main', partial: true, headChangeset, itemCount: 4 });
+    expect(newChangesetCount(partial(10), partial(13))).toEqual({ count: 1, countCapped: false });
   });
 
   it('knows only that some came in when both checks stopped counting', () => {

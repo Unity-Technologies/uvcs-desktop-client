@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
 import type { MergeRequest } from '@shared/domain/merge';
-import { readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
+import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
 import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
 import { previewMerge } from '../merge/previewMerge';
@@ -38,6 +38,7 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
       }),
     mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),
     incomingSummary: (workspacePath, loaded) => readIncomingSummary(cm, workspacePath, loaded),
+    branchHead: (workspacePath, branch) => readBranchHead(cm, workspacePath, branch),
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     incomingChangesets: (workspacePath, request) => readIncomingChangesetPage(cm, workspacePath, request),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>

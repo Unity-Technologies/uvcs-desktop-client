@@ -76,6 +76,20 @@
   white-space: nowrap;
 }
 
+/* A partial workspace's item fills the row: `PathLabel` takes its width from its container, and fits the path to it. */
+.itemText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.itemPath {
+  display: flex;
+  min-width: 0;
+}
+
 .meta {
   overflow: hidden;
   color: var(--text-tertiary);

@@ -1,13 +1,15 @@
 import type { Changeset } from '@shared/domain/changeset';
 import {
   INCOMING_CHANGESETS_PAGE,
+  type BranchAtChangeset,
   type BranchIncoming,
+  type ChangesetIncomingChanges,
   type IncomingChangesetPage,
   type IncomingChangesetsRequest,
   type IncomingChanges,
   type IncomingSummary,
-  type LoadedBranch,
   type NothingIncoming,
+  type PartialIncomingChanges,
 } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
@@ -17,6 +19,7 @@ import { equalsCondition, findArgs } from '../cm/findQuery';
 import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { readPendingChanges } from '../workspace/readPendingChanges';
+import { readPartialIncomingItems } from './partialIncoming';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, countCapped: false, authors: [] };
@@ -32,11 +35,25 @@ export const INCOMING_CHECK_LIMIT = 100;
  * a single `cm find` returning only the newest changeset numbers and owners; the renderer tells where the workspace
  * stands (its workspace info follows `.plastic`).
  */
-export async function readIncomingSummary(cm: CmClient, workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary> {
+export async function readIncomingSummary(cm: CmClient, workspacePath: string, loaded: BranchAtChangeset | null): Promise<IncomingSummary> {
   if (!loaded) return NOTHING_INCOMING;
   const { branch, loadedChangeset } = loaded;
   const newest = await cm.queryRecords(incomingChangesetsArgs(branch, loadedChangeset), ([id, owner = '']) => ({ id: Number(id), owner }), { cwd: workspacePath });
   return summarizeIncoming(branch, loadedChangeset, newest, INCOMING_CHECK_LIMIT);
+}
+
+/**
+ * The newest changeset of `branch`, or null when it has none. A partial workspace's check: its folders may each be at
+ * another changeset, so it counts no changesets, and its incoming items are read again only when the head moves.
+ */
+export async function readBranchHead(cm: CmClient, workspacePath: string, branch: string): Promise<number | null> {
+  const [head] = await cm.queryRecords(branchHeadArgs(branch), ([id]) => Number(id), { cwd: workspacePath });
+  return head ?? null;
+}
+
+/** The partial check's `cm find`: the branch's newest changeset number alone. */
+export function branchHeadArgs(branch: string): string[] {
+  return ['find', 'changeset', `where ${equalsCondition('branch', branch)} order by changesetid desc limit 1`, `--format=${recordFormat(['changesetid'])}`, '--nototal'];
 }
 
 /** The check's `cm find`: one more changeset than it counts, so that one tells there are more. */
@@ -76,10 +93,34 @@ function distinctAuthors(owners: string[]): string[] {
 
 /**
  * What updating brings: the newest page of incoming changesets (`readIncomingChangesetPage` reads the older ones), the
- * one diff from the loaded changeset to the head, and which local changes it collides with.
+ * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace isn't
+ * at a changeset: what it gets is the items its branch head changes in the folders it loaded (`readPartialIncomingItems`).
  */
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
-  const { summary, changesets, moreChangesets } = await readNewestIncomingChangesets(cm, workspacePath);
+  const load = await readWorkspaceLoad(cm, workspacePath);
+  const { selector, loadedChangeset } = load;
+  if (selector.kind === 'branch' && loadedChangeset === null) return readPartialIncomingChanges(cm, workspacePath, selector.name);
+  return changesetIncomingChangesOf(cm, workspacePath, load);
+}
+
+// The head is read here, alongside the items, rather than taken from the chip's polled `branchHead`: it names the
+// changeset these items were compared at, which keys the view and says what Update brings. One `limit 1` find, run in
+// parallel with the listings, keeps the two in step without the renderer passing a head that may already be stale.
+async function readPartialIncomingChanges(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingChanges> {
+  const [head, items] = await Promise.all([readBranchHead(cm, workspacePath, branch), readPartialIncomingItems(cm, workspacePath, branch)]);
+  return { branch, partial: true, headChangeset: head ?? 0, items };
+}
+
+/**
+ * What updating a workspace loaded from one changeset brings: what `cm update` merges, and so what an update that
+ * resolves conflicts or shelves blocking files works from.
+ */
+export async function readChangesetIncomingChanges(cm: CmClient, workspacePath: string): Promise<ChangesetIncomingChanges> {
+  return changesetIncomingChangesOf(cm, workspacePath, await readWorkspaceLoad(cm, workspacePath));
+}
+
+async function changesetIncomingChangesOf(cm: CmClient, workspacePath: string, load: WorkspaceLoad): Promise<ChangesetIncomingChanges> {
+  const { summary, changesets, moreChangesets } = await readNewestIncomingChangesets(cm, workspacePath, load);
   if (!summary.branch || changesets.length === 0) return { ...summary, changesets, moreChangesets, files: [], conflicts: [], blockedPaths: [] };
 
   const [files, { changes: local }] = await Promise.all([
@@ -90,14 +131,15 @@ export async function readIncomingChanges(cm: CmClient, workspacePath: string): 
   return { ...summary, changesets, moreChangesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
 }
 
+type WorkspaceLoad = Awaited<ReturnType<typeof readWorkspaceLoad>>;
+
 interface NewestIncoming {
-  summary: IncomingSummary;
+  summary: BranchIncoming | NothingIncoming;
   changesets: Changeset[];
   moreChangesets: boolean;
 }
 
-async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string): Promise<NewestIncoming> {
-  const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
+async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string, { selector, loadedChangeset }: WorkspaceLoad): Promise<NewestIncoming> {
   // Off a branch nothing comes in; a partial workspace has no one changeset to count from (`loadedChangesetOf`).
   if (selector.kind !== 'branch' || loadedChangeset === null) return { summary: NOTHING_INCOMING, changesets: [], moreChangesets: false };
 

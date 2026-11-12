@@ -62,3 +62,51 @@ conflicts resolve with the merge page's panel and runs (docs/features/merge.md).
 workspace had loaded: its text as read, or, for a binary, the file undoing the conflicting files writes back, copied
 before updating (`saveBasesKept`; downloaded by `cm cat` only where undoing left no file). A base that can't be saved
 stops the update and puts the local versions back. Sandbox: `scripts/sandboxes/incoming.sh`.
+
+## A partial workspace
+
+A partial workspace loads no one changeset (docs/features/shelves-and-switching.md), so Incoming can't list the
+changesets between the loaded one and the head: it lists the items the branch head would change in what the workspace
+loaded, as `cm partial update` would bring them.
+
+- **The check** (`checkPartialIncoming` in `useIncomingSummary`) reads the branch head (`readBranchHead`: one `cm find
+  changeset … order by changesetid desc limit 1`) and, only when the head moved or an operation refreshed it, the
+  comparison Incoming shows (`incomingChangesKey`); it counts items, never changesets (`PartialIncoming.itemCount`).
+- **The comparison** (`readPartialIncomingItems`) is two listings and a status, whatever the head's distance: what the
+  workspace loaded (`cm ls -R`, `LOADED_TREE_FORMAT`) with its local changes (`readPendingChanges`), then the head's
+  version of the loaded folders (`cm ls <folders…> --tree=br:<branch>`, `HEAD_TREE_FORMAT`, batched by `fitsCommandLine`).
+  `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
+  changes too. An item is added only when it's new (a greater item id than every loaded item, in a later changeset)
+  in a folder the workspace loaded whole: a folder that also holds an older item the workspace left out was loaded in
+  part, and an update leaves out what's new in it too. Ids and changesets miss an old folder created after the
+  workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder holding a new-looking
+  item (`foldersWithNewItems`) is listed as it was at its loaded changeset (`readItemsWhenLoaded`: `cm ls <folders…>
+  --tree=cs:<N>`, one per changeset, `treeListingArgs`): what it held then existed, so the folder was loaded in part
+  and nothing in it is added. Usually no folder needs it. Xlinks and what they hold are left out (`loadedFolders`). A loaded folder the head no longer has fails
+  its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
+  moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
+  reads as removed.
+- **The view** (`PartialIncomingSession`) is the shared list of changed files (`FileTreeList`: a list or a tree,
+  filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
+  added; `partialItemTreeGroups`). Each row ends with its letter (`partialItemStatus`, its `partialItemDetail` line as
+  the tooltip), and a file selected diffs the loaded revision against the head's (`partialItemDiffEntry`; a folder has
+  none). Up to date, it says so alone, with no changesets' heading: the workspace is at no one changeset
+  (`incomingViewState`'s `partial`).
+- **The chip** shows the 'items' state (`incomingChipState`) and its card the first items (`cardItems`,
+  `PartialIncomingCard`).
+- **Choosing what to bring**: every item, folder and group has a checkbox, all checked to start (`partialItemChecked`,
+  `partialGroupCheckState`, `withItemsChecked`; the view keeps the unchecked keys, `UncheckedItems`).
+  `partialUpdateSelection` turns the checked items into the paths `cm partial update` takes: a changed or removed item
+  by its loaded path, a moved one at its loaded path and in the folder it moves into, an added one through its parent
+  folder (the workspace doesn't load it yet; a parent the head adds too climbs to the first folder the workspace has,
+  `existingParentOf`), and only the outermost of nested paths. A folder brings everything changed under it, so the
+  update may bring unchecked items too: the selection lists what it brings (`brought`), and names no path (`'all'`)
+  when that is every item, or when an added or moved item lands at the top of the workspace.
+- **Updating** (`updatePartialToIncoming`) runs `cm partial update`, with the selection's paths or none. An item
+  changed locally keeps the local version until it is checked in, shelved or undone; the update bar says what updating
+  brings, and which unchecked items a folder brings along (`partialUpdateMessage`), offers Update only while some item
+  it brings doesn't conflict (`canUpdateSelection`), and an update stopped by a conflict leads to Incoming
+  (`explainUpdateConflicts`). The update's count leaves out the conflicts it brings, which keep the local version
+  (`conflictsIn`).
+
+Sandbox: `scripts/sandboxes/partial-operations.sh`.

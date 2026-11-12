@@ -8,7 +8,7 @@ import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domai
 import { recordFormat } from '../cm/formatRecords';
 import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
 import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
-import { switchCommand, updateCommand } from '../cm/updateArgs';
+import { partialUpdateCommands, switchCommand, updateCommand, type ProgressingCommand } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
@@ -102,11 +102,14 @@ export function createWorkspacesService(
     await cm.query(['workspace', 'delete', workspacePath]);
   }
 
-  function update(workspacePath: string, operationId: string): Promise<void> {
+  /** `paths` (a partial workspace's) update one batch after the other: a stop leaves the later batches as they were. */
+  function update(workspacePath: string, operationId: string, paths?: readonly string[]): Promise<void> {
     return operations.run(operationId, async ({ signal, progressOf }) => {
       try {
-        const { args, readProgress } = updateCommand(await kindOf(workspacePath));
-        await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
+        const commands: ProgressingCommand[] = paths ? partialUpdateCommands(paths) : [updateCommand(await kindOf(workspacePath))];
+        for (const { args, readProgress } of commands) {
+          await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
+        }
       } catch (error) {
         if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;

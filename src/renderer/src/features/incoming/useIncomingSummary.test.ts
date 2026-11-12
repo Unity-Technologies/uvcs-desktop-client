@@ -1,13 +1,14 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
-import type { IncomingSummary } from '@shared/domain/incoming';
+import type { IncomingChanges, IncomingSummary } from '@shared/domain/incoming';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { watchRefreshes } from '../../testing/operationOutcome';
 import { notifyIncoming } from './incomingNotifications';
+import { incomingChangesKey } from './useIncomingChanges';
 import { recheckIncoming } from './useIncomingSummary';
 
 const ws = '/ws';
@@ -87,6 +88,58 @@ describe('recheckIncoming', () => {
     await recheckIncoming(ws);
 
     expect(refreshed()).toEqual([]);
+  });
+});
+
+describe('recheckIncoming in a partial workspace', () => {
+  const partialOnMain = () => workspaceOn({ kind: 'branch', name: '/main' }, null);
+  const changes = (headChangeset: number, paths: string[]): IncomingChanges => ({
+    branch: '/main',
+    partial: true,
+    headChangeset,
+    items: paths.map((path) => ({ kind: 'changed', path, isDirectory: false, conflict: false, loadedRevisionId: 1, headRevisionId: 2 })),
+  });
+
+  it('compares its items with the branch head, and keeps the comparison for Incoming', async () => {
+    partialOnMain();
+    fakeApi.answer('merge.branchHead', () => 7);
+    fakeApi.answer('merge.incomingChanges', () => changes(7, ['Code/Ship.cs', 'Code/Hull.cs']));
+
+    expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 2 });
+
+    expect(fakeApi.argsOf('merge.branchHead')).toEqual([[ws, '/main']]);
+    expect(queryClient.getQueryData(incomingChangesKey(ws))).toEqual(changes(7, ['Code/Ship.cs', 'Code/Hull.cs']));
+  });
+
+  it('reads only the head while it stays where it was', async () => {
+    partialOnMain();
+    fakeApi.answer('merge.branchHead', () => 7);
+    fakeApi.answer('merge.incomingChanges', () => changes(7, ['Code/Ship.cs']));
+    await recheckIncoming(ws);
+
+    expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 1 });
+
+    expect(fakeApi.argsOf('merge.branchHead')).toHaveLength(2);
+    expect(fakeApi.argsOf('merge.incomingChanges')).toHaveLength(1);
+  });
+
+  it('compares again under the same head once an operation refreshed the comparison, as its own update does', async () => {
+    partialOnMain();
+    const answers = [changes(7, ['Code/Ship.cs']), changes(7, [])];
+    fakeApi.answer('merge.branchHead', () => 7);
+    fakeApi.answer('merge.incomingChanges', () => answers.shift());
+    await recheckIncoming(ws);
+    await queryClient.invalidateQueries({ queryKey: incomingChangesKey(ws) });
+
+    expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+  });
+
+  it('brings nothing from a branch with no changeset yet', async () => {
+    partialOnMain();
+    fakeApi.answer('merge.branchHead', () => null);
+
+    expect(await recheckIncoming(ws)).toEqual({ branch: null, changesetCount: 0, countCapped: false, authors: [] });
+    expect(fakeApi.methods()).toEqual(['merge.branchHead']);
   });
 });
 

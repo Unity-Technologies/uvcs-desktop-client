@@ -63,8 +63,11 @@ export interface WorkspacesApi {
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */
   remove(workspacePath: string): Promise<void>;
-  /** Downloads the latest changes of the loaded branch. */
-  update(workspacePath: string, operationId: string): Promise<void>;
+  /**
+   * Downloads the latest changes of the loaded branch. `paths`, in a partial workspace only: just those items and what
+   * they hold, relative to the workspace (Incoming's checked items); none updates everything it loads.
+   */
+  update(workspacePath: string, operationId: string, paths?: readonly string[]): Promise<void>;
   /**
    * The calling window now shows this workspace: it gets `workspaceChanged` events when the workspace changes on
    * disk, instead of the ones of the workspace it showed before. Windows showing the same workspace share a watcher.

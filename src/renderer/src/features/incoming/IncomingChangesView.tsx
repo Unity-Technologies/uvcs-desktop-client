@@ -9,6 +9,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
+import { PartialIncomingSession } from './PartialIncomingSession';
 import { incomingDiffs, incomingHeaderSubtitle, incomingViewState } from './incomingViewState';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { useIncomingChanges } from './useIncomingChanges';
@@ -76,13 +77,15 @@ export function IncomingChangesView() {
   }
 
   if (state.kind === 'upToDate') {
+    const upToDate = <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />;
     return (
       <>
         {header}
-        <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
+        {state.partial ? upToDate : <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={upToDate} />}
       </>
     );
   }
 
+  if (state.kind === 'partial') return <PartialIncomingSession key={state.incoming.headChangeset} workspacePath={workspacePath} incoming={state.incoming} header={headerSaying} />;
   return <IncomingSession key={state.incoming.headChangeset} workspacePath={workspacePath} incoming={state.incoming} header={headerSaying} />;
 }

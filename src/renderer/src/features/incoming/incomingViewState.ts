@@ -1,16 +1,18 @@
-import type { BranchIncomingChanges, IncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, IncomingChanges, PartialIncomingChanges } from '@shared/domain/incoming';
 import type { HostDiffs } from '../../components/diffExpansion';
 
 /**
  * What the Incoming view shows under its header: the panes' skeleton while it reads, why it couldn't check, that the
- * workspace isn't on a branch (nothing comes in), that it is up to date, or the incoming changesets and files.
+ * workspace isn't on a branch (nothing comes in), that it is up to date (a partial workspace, at no one changeset, without the changesets' heading), or the incoming changesets and files. A partial
+ * workspace loads no one changeset: it shows the loaded items the branch head would change instead.
  */
 export type IncomingViewState =
   | { kind: 'reading' }
   | { kind: 'failed' }
   | { kind: 'notOnBranch' }
-  | { kind: 'upToDate' }
-  | { kind: 'incoming'; incoming: BranchIncomingChanges };
+  | { kind: 'upToDate'; partial: boolean }
+  | { kind: 'incoming'; incoming: BranchIncomingChanges }
+  | { kind: 'partial'; incoming: PartialIncomingChanges };
 
 /**
  * `incoming`: what the query holds; `pending`: it has never answered; `failed`: its last read failed. A read that
@@ -20,13 +22,14 @@ export type IncomingViewState =
 export function incomingViewState(incoming: IncomingChanges | undefined, pending: boolean, failed: boolean): IncomingViewState {
   if (!incoming) return pending || !failed ? { kind: 'reading' } : { kind: 'failed' };
   if (!incoming.branch) return { kind: 'notOnBranch' };
-  return incoming.changesetCount === 0 ? { kind: 'upToDate' } : { kind: 'incoming', incoming };
+  if ('partial' in incoming) return incoming.items.length === 0 ? { kind: 'upToDate', partial: true } : { kind: 'partial', incoming };
+  return incoming.changesetCount === 0 ? { kind: 'upToDate', partial: false } : { kind: 'incoming', incoming };
 }
 
 /** The diffs Incoming can show, for an expanded diff to end once there are none (`collapsesWithHost`): up to date, say. */
 export function incomingDiffs(kind: IncomingViewState['kind']): HostDiffs {
   if (kind === 'reading') return 'reading';
-  return kind === 'incoming' ? 'some' : 'none';
+  return kind === 'incoming' || kind === 'partial' ? 'some' : 'none';
 }
 
 /**

@@ -3,7 +3,16 @@ import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { change, changesetsFound, diffRecord, formatOutput, foundLine, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
-import { incomingChangesetsArgs, INCOMING_CHECK_LIMIT, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
+import {
+  branchHeadArgs,
+  incomingChangesetsArgs,
+  INCOMING_CHECK_LIMIT,
+  readBranchHead,
+  readChangesetIncomingChanges,
+  readIncomingChangesetPage,
+  readIncomingSummary,
+  summarizeIncoming,
+} from './incoming';
 
 describe('the incoming summary', () => {
   it('asks only for the numbers and owners of the newest changesets after the loaded one on the branch, one more than it counts', () => {
@@ -53,6 +62,28 @@ describe('the incoming summary', () => {
   });
 });
 
+describe("a branch's head", () => {
+  it('asks only for the number of the newest changeset on the branch', () => {
+    const [find, object, where, format, ...rest] = branchHeadArgs('/main/task');
+    expect([find, object, where, rest]).toEqual(['find', 'changeset', "where branch = '/main/task' order by changesetid desc limit 1", ['--nototal']]);
+    expect(format).toMatch(/^--format=\{changesetid\}/);
+  });
+
+  it('is that changeset, read with one find as records', async () => {
+    const { cm, lines, commands } = fakeCmClient({ 'find changeset': formatOutput([43]) });
+
+    expect(await readBranchHead(cm, '/w', '/main')).toBe(43);
+    expect(lines()).toHaveLength(1);
+    expect(commands[0]?.readsRecords).toBe(true);
+  });
+
+  it('is null on a branch without changesets', async () => {
+    const { cm } = fakeCmClient({ 'find changeset': '' });
+
+    expect(await readBranchHead(cm, '/w', '/main/empty')).toBeNull();
+  });
+});
+
 describe('incoming off a branch', () => {
   // cm reports a workspace switched to shelve 3 as on changeset -3.
   const ON_SHELVE = statusHeader('3', { type: 'Shelve', changeset: -3, repository: 'sandbox' });
@@ -65,7 +96,7 @@ describe('incoming off a branch', () => {
 
   it('on a shelve reads only the status: no changeset query starts from the shelve', async () => {
     const { cm, lines } = fakeCmClient({ status: ON_SHELVE });
-    expect(await readIncomingChanges(cm, '/w')).toEqual({
+    expect(await readChangesetIncomingChanges(cm, '/w')).toEqual({
       branch: null,
       changesetCount: 0,
       countCapped: false,
@@ -80,7 +111,7 @@ describe('incoming off a branch', () => {
   });
 });
 
-describe('readIncomingChanges', () => {
+describe('readChangesetIncomingChanges', () => {
   const branchMovedOn = (changesets: string) =>
     fakeCmClient({
       'status --header --xml': statusHeader('/main', { changeset: 41 }),
@@ -97,13 +128,13 @@ describe('readIncomingChanges', () => {
       'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'tools/build.sh')),
     });
 
-    expect((await readIncomingChanges(cm, '/work')).conflicts).toEqual([]);
+    expect((await readChangesetIncomingChanges(cm, '/work')).conflicts).toEqual([]);
   });
 
   it('reads what came in with one find, one diff from the loaded changeset to the head, and the local changes', async () => {
     const { cm, lines } = branchMovedOn(changesetsFound('/main', { id: 43, owner: 'ana' }, { id: 42, owner: 'bob' }));
 
-    const changes = await readIncomingChanges(cm, '/work');
+    const changes = await readChangesetIncomingChanges(cm, '/work');
 
     expect(changes).toMatchObject({ branch: '/main', loadedChangeset: 41, headChangeset: 43, changesetCount: 2, countCapped: false, authors: ['ana', 'bob'], moreChangesets: false });
     expect(changes.conflicts.map((conflict) => conflict.path)).toEqual(['src/a.txt']);
@@ -122,7 +153,7 @@ describe('readIncomingChanges', () => {
       'status --controlledchanged --changed': pendingStatus('/work'),
     });
 
-    const changes = await readIncomingChanges(cm, '/work');
+    const changes = await readChangesetIncomingChanges(cm, '/work');
 
     expect(changes.changesets).toHaveLength(INCOMING_CHANGESETS_PAGE);
     expect(changes).toMatchObject({ headChangeset: 43 + INCOMING_CHANGESETS_PAGE, changesetCount: INCOMING_CHANGESETS_PAGE, countCapped: true, moreChangesets: true });
@@ -131,7 +162,7 @@ describe('readIncomingChanges', () => {
   it('asks nothing more once nothing came in', async () => {
     const { cm, lines } = branchMovedOn('');
 
-    expect(await readIncomingChanges(cm, '/work')).toMatchObject({ changesetCount: 0, files: [], conflicts: [], blockedPaths: [] });
+    expect(await readChangesetIncomingChanges(cm, '/work')).toMatchObject({ changesetCount: 0, files: [], conflicts: [], blockedPaths: [] });
     expect(lines().some((line) => line.startsWith('diff'))).toBe(false);
   });
 });

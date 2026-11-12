@@ -1,0 +1,155 @@
+import type { PartialIncomingItem } from '@shared/domain/incoming';
+import type { CheckState } from '../../ui/Checkbox';
+import { branchLabel } from '../../lib/branchLabels';
+import { pluralize } from '../../lib/text';
+import { canUpdatePartial, partialConflictNote, partialItemKey } from './partialIncomingItems';
+
+/**
+ * Which of a partial workspace's incoming items Update brings. Items start checked, so the view keeps the keys
+ * (`partialItemKey`) the user unchecked: an item the next check finds is checked without anyone adding it.
+ */
+export type UncheckedItems = ReadonlySet<string>;
+
+/** What `cm partial update` is given for the checked items, and every item it then brings. */
+export interface PartialUpdateSelection {
+  /** Workspace paths, relative and with '/'; 'all' when the update brings every item, so it names none. */
+  paths: readonly string[] | 'all';
+  brought: readonly PartialIncomingItem[];
+}
+
+export function partialItemChecked(item: PartialIncomingItem, unchecked: UncheckedItems): boolean {
+  return !unchecked.has(partialItemKey(item));
+}
+
+export function partialGroupCheckState(items: readonly PartialIncomingItem[], unchecked: UncheckedItems): CheckState {
+  const checkedCount = items.filter((item) => partialItemChecked(item, unchecked)).length;
+  if (checkedCount === 0) return false;
+  return checkedCount === items.length ? true : 'mixed';
+}
+
+export function withItemsChecked(unchecked: UncheckedItems, items: readonly PartialIncomingItem[], checked: boolean): UncheckedItems {
+  const next = new Set(unchecked);
+  for (const item of items) {
+    if (checked) next.delete(partialItemKey(item));
+    else next.add(partialItemKey(item));
+  }
+  return next;
+}
+
+/**
+ * `cm partial update <paths>` updates each path and everything under it, by where it is in the workspace. So an item's
+ * head path is turned back into its workspace path (a folder the head moved is still at its old path), an added item
+ * comes with its parent folder, and a moved one needs both the item and the folder it moves into. A parent the head
+ * adds isn't in the workspace yet, so the update climbs to the first folder it already has. Bringing one item may
+ * bring others under the same folder: `brought` says which, and the update counts those.
+ */
+export function partialUpdateSelection(items: readonly PartialIncomingItem[], unchecked: UncheckedItems): PartialUpdateSelection {
+  const checked = items.filter((item) => partialItemChecked(item, unchecked));
+  if (checked.length === 0) return { paths: [], brought: [] };
+  if (checked.length === items.length) return { paths: 'all', brought: items };
+
+  const inWorkspace = workspacePathOf(items);
+  const parentInWorkspace = existingParentOf(items, inWorkspace);
+  const needed = checked.flatMap((item) => pathsNeeded(item, inWorkspace, parentInWorkspace));
+  if (needed.includes('')) return { paths: 'all', brought: items };
+
+  const paths = outermostPaths(needed);
+  const updated = new Set(paths);
+  const brought = items.filter((item) => pathsNeeded(item, inWorkspace, parentInWorkspace).every((path) => isUpdated(path, updated)));
+  return brought.length === items.length ? { paths: 'all', brought: items } : { paths, brought };
+}
+
+function pathsNeeded(
+  item: PartialIncomingItem,
+  inWorkspace: (headPath: string) => string,
+  parentInWorkspace: (headPath: string) => string,
+): string[] {
+  switch (item.kind) {
+    case 'removed':
+      return [item.path];
+    case 'changed':
+      return [inWorkspace(item.path)];
+    case 'added':
+      return [parentInWorkspace(item.path)];
+    case 'moved':
+      return [item.oldPath ?? inWorkspace(item.path), parentInWorkspace(item.path)];
+  }
+}
+
+/** The workspace path of the innermost folder holding a head path that the workspace already has: not one the head adds. */
+function existingParentOf(items: readonly PartialIncomingItem[], inWorkspace: (headPath: string) => string): (headPath: string) => string {
+  const addedFolders = new Set(items.filter((item) => item.kind === 'added' && item.isDirectory).map((item) => item.path));
+  return (headPath) => {
+    let parent = parentOf(headPath);
+    while (addedFolders.has(parent)) parent = parentOf(parent);
+    return inWorkspace(parent);
+  };
+}
+
+/** Turns a head path into where the item is in the workspace: under the innermost folder the head moved, its old path. */
+function workspacePathOf(items: readonly PartialIncomingItem[]): (headPath: string) => string {
+  const movedFolders = items
+    .filter((item) => item.kind === 'moved' && item.isDirectory && item.oldPath !== undefined)
+    .sort((a, b) => b.path.length - a.path.length);
+  return (headPath) => {
+    const folder = movedFolders.find((each) => isWithin(headPath, each.path));
+    return folder?.oldPath === undefined ? headPath : folder.oldPath + headPath.slice(folder.path.length);
+  };
+}
+
+/**
+ * The paths no other one holds. Each path looks up its own folders in a set, so the work grows with the paths' depth,
+ * not with every pair of paths (an update of thousands of items).
+ */
+function outermostPaths(paths: readonly string[]): string[] {
+  const unique = new Set(paths);
+  return [...unique].filter((path) => !foldersOf(path).some((folder) => unique.has(folder))).sort();
+}
+
+/** Whether `cm partial update` of these paths reaches this one: it is one of them or under one. */
+function isUpdated(path: string, updated: ReadonlySet<string>): boolean {
+  return updated.has(path) || foldersOf(path).some((folder) => updated.has(folder));
+}
+
+/** Every folder holding the path, innermost first: 'a/b/c' is in 'a/b' and 'a'. */
+function foldersOf(path: string): string[] {
+  const folders: string[] = [];
+  for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) folders.push(path.slice(0, slash));
+  return folders;
+}
+
+function isWithin(path: string, folder: string): boolean {
+  return folder === '' || path === folder || path.startsWith(`${folder}/`);
+}
+
+function parentOf(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return slash < 0 ? '' : path.slice(0, slash);
+}
+
+/** How many of these items conflict with local changes. */
+export function conflictsIn(items: readonly PartialIncomingItem[]): number {
+  return items.filter((item) => item.conflict).length;
+}
+
+/** Whether Update brings something: some item it brings, checked or along, doesn't conflict. */
+export function canUpdateSelection(selection: PartialUpdateSelection): boolean {
+  return canUpdatePartial(selection.brought.length, conflictsIn(selection.brought));
+}
+
+/**
+ * What the update bar says: how many items Update brings from the branch, the unchecked ones a folder update brings
+ * along, and the conflicts it leaves alone (`cm partial update` keeps the local version until the change is checked
+ * in, shelved or undone).
+ */
+export function partialUpdateMessage(branch: string, selection: PartialUpdateSelection, unchecked: UncheckedItems): string {
+  if (selection.brought.length === 0) return 'Check the items to bring.';
+  const conflictCount = conflictsIn(selection.brought);
+  const bringCount = selection.brought.length - conflictCount;
+  const alongCount = selection.brought.filter((item) => !item.conflict && !partialItemChecked(item, unchecked)).length;
+  const brings = bringCount > 0 ? `Updating brings ${pluralize(bringCount, 'item')} from ${branchLabel(branch)}.` : '';
+  const along = alongCount === 0 ? '' : `That includes ${pluralize(alongCount, 'item')} you unchecked, in a folder it updates.`;
+  const them = conflictCount === 1 ? 'it' : 'them';
+  const kept = conflictCount === 0 ? '' : `${partialConflictNote(conflictCount)} until you check ${them} in, shelve ${them} or undo ${them}.`;
+  return [brings, along, kept].filter(Boolean).join(' ');
+}

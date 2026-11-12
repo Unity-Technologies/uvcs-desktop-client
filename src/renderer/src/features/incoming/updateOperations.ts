@@ -1,14 +1,16 @@
-import type { BranchIncomingChanges, IncomingSummary, UpdateResolutions } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, IncomingSummary, PartialIncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import { ApiError, api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
+import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 import { useToastStore } from '../../ui/toast/toastStore';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
 import { changesetsFrom, updatedMessage } from './updatedMessage';
 import { updateStoppedByConflicts } from './updateFailure';
+import { conflictsIn, type PartialUpdateSelection } from './partialIncomingSelection';
 
 /**
  * Updates to the incoming changesets (known not to collide with local changes), then says what came in and offers
@@ -31,9 +33,42 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
   return updated === true;
 }
 
+/**
+ * Updates a partial workspace to the items its branch head changes (`cm partial update`: an item changed both locally
+ * and on the branch stops it, and leads to Incoming), then says how many came. Given a `selection`, it updates just
+ * the paths it names (`partialUpdateSelection`) and counts what they bring; without one, every item. Conflicts
+ * aren't counted: they keep the local version.
+ * Resolves to whether it updated.
+ */
+export async function updatePartialToIncoming(workspacePath: string, incoming: PartialIncomingChanges, selection?: PartialUpdateSelection): Promise<boolean> {
+  const brought = selection?.brought ?? incoming.items;
+  const itemCount = brought.length - conflictsIn(brought);
+  const paths = selection === undefined || selection.paths === 'all' ? undefined : selection.paths;
+  const updated = await runOperation({
+    title: 'Updating workspace',
+    workspacePath,
+    kind: 'update',
+    run: async (operationId) => {
+      await api.workspaces.update(workspacePath, operationId, paths);
+      return true;
+    },
+    affects: isAffectedByCheckinOrUpdate,
+    success: () => ({ title: `Updated ${pluralize(itemCount, 'item')} from ${branchLabel(incoming.branch)}` }),
+    onFailure: explainUpdateConflicts,
+  });
+  if (updated === true) showUpdatedMoment(workspacePath, { branch: incoming.branch, partial: true, headChangeset: incoming.headChangeset, itemCount });
+  return updated === true;
+}
+
 /** Changes shows what the update brought until the next change, as it does after a check-in. */
 export function showUpdatedMoment(workspacePath: string, summary: IncomingSummary): void {
-  if (!summary.branch || summary.changesetCount === 0) return;
+  if (!summary.branch) return;
+  if ('partial' in summary) {
+    // A partial workspace loads no one changeset: the update brought items, not a range of changesets.
+    if (summary.itemCount > 0) useSuccessMomentStore.getState().show(workspacePath, { verb: 'Updated to', changesetId: summary.headChangeset, detail: pluralize(summary.itemCount, 'item') });
+    return;
+  }
+  if (summary.changesetCount === 0) return;
   const { loadedChangeset, headChangeset, changesetCount, countCapped, authors } = summary;
   useSuccessMomentStore.getState().show(workspacePath, {
     verb: 'Updated to',

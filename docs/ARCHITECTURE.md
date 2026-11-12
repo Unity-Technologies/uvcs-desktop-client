@@ -187,8 +187,10 @@ and many people use the same server. Every `cm` command other than local reads (
   limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
   branch and loaded changeset from the workspace info, which follows `.plastic`, instead of asking `cm status`. It
   counts at most `INCOMING_CHECK_LIMIT` (100) changesets, the 101st telling there are more (`countCapped`, shown as
-  "100+", `pluralizeAtLeast`): a workspace 100,000 changesets behind costs the server what one 100 behind does. Nothing
-  else polls: left changes, locks and lists wait for an event, a focus or an operation.
+  "100+", `pluralizeAtLeast`): a workspace 100,000 changesets behind costs the server what one 100 behind does. A partial
+  workspace's check reads only its branch head (`limit 1`), comparing its items again only when the head moved
+  (docs/features/incoming.md "A partial workspace"). Nothing else polls: left changes, locks and lists wait for an
+  event, a focus or an operation.
 - **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
   and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
   native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
