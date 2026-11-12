@@ -638,6 +638,14 @@ button.pill:hover {
   color: var(--accent-text);
 }
 
+.eventRunToggle > svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.eventRunToggle[aria-expanded='true'] > svg {
+  transform: rotate(90deg);
+}
+
 .foldedLine .author {
   flex: none;
   white-space: nowrap;
