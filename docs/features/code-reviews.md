@@ -92,19 +92,24 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   `{unresolvedissues}` above zero (tooltip "Rework: 3 open"). It's decided from the list's own fields: a group the
   user belongs to isn't told (its members would take a command per row), nor is a reviewer asked again told from one
   who never looked (both are Under review). No column says why: the tooltip does.
-- **The reviewer menu** (`ChoiceChip`, `REVIEWER_CHOICES`, the store's `reviewer`): **Any reviewer** filters nothing;
-  **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
-  doesn't list but the official client uses; **Waiting for me** keeps the rows with the dot. Waiting for me asks the
-  server for the same reviews as Any reviewer (`codeReviewsQuery`: one query key, one `cm find`, shared with the
-  unfiltered list) and keeps its rows locally (`matchesReviewer`): it takes the user's own reviews, which `reviewer =
-  'me'` leaves out, and goes by each reviewer's own status, which the query can't ask for. Clear filters sets it back
-  to Any reviewer; the "I'm a reviewer" chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer
-  (`restoredReviewerFilter`, a `FilterUpgrade`). While any review read waits for the user, the chip shows the rows'
-  accent dot, "2 reviews waiting for you" in its tooltip (`reviewerChipDot`, `waitingCount`; `MenuChip`'s `dot`), and
-  its menu counts them, "Waiting for me · 2" (`reviewerChoices`): folded in a chip that reads "Any reviewer", Waiting
-  for me went unseen. The dot goes once Waiting for me shows them.
+- **Reviewers** are picked as the authors are (`PeopleFilter`, the store's `reviewers`, a `PeoplePick`): **I'm a
+  reviewer**, one click, and beside it a picker of the reviewers the list showed (`usePeopleSeen`). I'm a reviewer alone
+  is the server's, `where reviewer = 'me'`, which `cm find`'s help doesn't list but the official client uses
+  (`codeReviewsQuery`); with others picked the query asks for every review, the same query key as no reviewer filter,
+  and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. The "I'm a reviewer"
+  chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer (`restoredReviewersFilter`, a
+  `FilterUpgrade`).
+- **Waiting for me** (a `ToggleChip`, the store's `waitingForMe`) keeps the rows with the dot, counting them,
+  "Waiting for me · 2" (`waitingChipLabel`, `waitingCount`). It narrows locally (`matchesWaiting`): it takes the user's
+  own reviews in rework, which `reviewer = 'me'` leaves out, and goes by each reviewer's own status, which the query
+  can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
+  me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
+  The sidebar counts the same reviews on **Code reviews** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
+  view read, by its filters, reading nothing itself: no `cm find` runs for a sidebar, so the count shows once the view
+  was opened. Presets in the sidebar ("Needs my review", "Opened by me", as the official client lists them) were left
+  out: two more rows for what one count and a chip say, and Mine is "opened by me" already.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
-  status, I'm a reviewer), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
+  status, I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
   and "No matching code reviews" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
