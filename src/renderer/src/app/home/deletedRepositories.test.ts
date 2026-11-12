@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { repositoriesShown, repositoryRestore } from './deletedRepositories';
+import { deletedRepositoriesTip, repositoriesShown, repositoryRestore } from './deletedRepositories';
 
 const live = (name: string): RepositorySummary => ({ id: name, name, server: 'acme@cloud', owner: 'ana', spec: `${name}@acme@cloud` });
 const deleted = (name: string, guid: string, project?: string): RepositorySummary => ({
@@ -51,5 +51,13 @@ describe('repositoryRestore', () => {
     expect(restore.initialName).toBe('Game');
     expect(restore.newName('Game2')).toBe('Racing/Game2');
     expect(restore.isTaken('Tools')).toBe(true);
+  });
+});
+
+describe('deletedRepositoriesTip', () => {
+  it('tells the 7 days Unity Cloud keeps them, and none on a server of its own', () => {
+    expect(deletedRepositoriesTip('acme@cloud')).toContain('7 days');
+    expect(deletedRepositoriesTip('acme@unity')).toContain('7 days');
+    expect(deletedRepositoriesTip('local')).not.toContain('7 days');
   });
 });

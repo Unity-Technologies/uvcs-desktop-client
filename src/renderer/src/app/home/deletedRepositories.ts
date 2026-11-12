@@ -1,5 +1,6 @@
 import { nameInProject, nameWithProject } from '@shared/domain/organizations';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { isCloudServer } from '../../lib/servers';
 import { isRepositoryNameTaken } from './workspaceNaming';
 
 /**
@@ -24,4 +25,11 @@ export function repositoryRestore(deleted: RepositorySummary, liveNames: readonl
     newName,
     isTaken: (typed: string): boolean => isRepositoryNameTaken(newName(typed), liveNames),
   };
+}
+
+/** How long a server keeps what's deleted, told where deleted repositories show: Unity Cloud keeps them 7 days. */
+export function deletedRepositoriesTip(server: string): string {
+  return isCloudServer(server)
+    ? 'Deleted repositories are kept for 7 days, and can be restored until then'
+    : 'Deleted repositories can be restored';
 }
