@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { contextStepsOf, showInChangesPage } from './contextSteps';
+import { contextFooterAction, contextStepsOf, showInChangesPage } from './contextSteps';
 import type { LineThread } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/waves' };
@@ -62,5 +62,19 @@ describe('showInChangesPage', () => {
 
   it('opens a review of a changeset at the thread, as it has one diff', () => {
     expect(showInChangesPage(39, { kind: 'changeset', changesetId: 8 }, lineThread({ appliedInChangeset: 9 }))).not.toHaveProperty('focusChangeset');
+  });
+});
+
+describe('contextFooterAction', () => {
+  it("opens a request applied on a branch in the review's Changes, named by its changeset", () => {
+    expect(contextFooterAction(BRANCH, lineThread({ appliedInChangeset: 5 }))).toEqual({ kind: 'changes', label: 'Open changeset 5' });
+  });
+
+  it("shows anything else where it was written, in the review's Changes", () => {
+    expect(contextFooterAction(BRANCH, lineThread())).toEqual({ kind: 'changes', label: 'Show in Changes' });
+  });
+
+  it('opens a changeset of a review of no branch on its own page, where it is', () => {
+    expect(contextFooterAction({ kind: 'changeset', changesetId: 8 }, lineThread({ appliedInChangeset: 9 }))).toEqual({ kind: 'changesetPage', label: 'Open changeset 9', changesetId: 9 });
   });
 });
