@@ -329,6 +329,15 @@ describe('a standard workspace choosing what to download', () => {
     expect(kindChanges).toEqual([WORKSPACE]);
   });
 
+  it('still chooses what to download when its kind cannot be read, and tells its kind may have changed', async () => {
+    const { service, commands, kindChanges } = workspaces({ 'partial configure': '', getworkspacefrompath: cmFails('The workspace could not be read.') });
+
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }], 'op-1');
+
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([{ args: ['partial', 'configure', '+/Assets', '--silent'] }]);
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
   it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
     // `cm ls <folder>` lists the folder itself first, then the children the workspace has loaded, with the OS's separator.
     const { service, commands } = workspaces({
