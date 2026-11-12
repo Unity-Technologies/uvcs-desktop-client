@@ -26,15 +26,17 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       header: 'Title',
       grow: 3,
       render: (review) => (
-        <span className={styles.title}>
+        <>
           <WaitingDot review={review} user={user} />
-          <span className={styles.id}>
-            #<Highlight text={String(review.id)} />
+          <span className={styles.title}>
+            <span className={styles.id}>
+              #<Highlight text={String(review.id)} />
+            </span>
+            <span className={styles.titleText}>
+              <CommentLine comment={review.title} />
+            </span>
           </span>
-          <span className={styles.titleText}>
-            <CommentLine comment={review.title} />
-          </span>
-        </span>
+        </>
       ),
       sortValue: (review) => review.title.toLowerCase(),
     },
