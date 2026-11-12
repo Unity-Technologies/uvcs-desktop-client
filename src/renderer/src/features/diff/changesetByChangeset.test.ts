@@ -143,6 +143,10 @@ describe('branchDiffShownFor', () => {
     expect(branchDiffShownFor({ changesetId: null, seq: 4 })).toEqual({ mode: 'wholeBranch' });
   });
 
+  it('switches to the span asked for, the how-many-th time it is asked', () => {
+    expect(branchDiffShownFor({ changesets: { oldest: 15, newest: 17 }, seq: 6 })).toEqual({ mode: 'byChangeset', span: { changesets: { oldest: 15, newest: 17 }, seq: 6 } });
+  });
+
   it('leaves the mode as it is when the request names none, or there is none', () => {
     expect(branchDiffShownFor({ seq: 4 })).toBeNull();
     expect(branchDiffShownFor(null)).toBeNull();
