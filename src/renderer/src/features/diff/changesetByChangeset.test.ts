@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, shownBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -146,5 +146,25 @@ describe('branchDiffShownFor', () => {
   it('leaves the mode as it is when the request names none, or there is none', () => {
     expect(branchDiffShownFor({ seq: 4 })).toBeNull();
     expect(branchDiffShownFor(null)).toBeNull();
+  });
+});
+
+describe('spanSelection', () => {
+  const keys = (selection: { selected: ReadonlySet<string> }): string[] => [...selection.selected].sort();
+
+  it('selects every changeset of the span, from the newest', () => {
+    const selection = spanSelection(branch, { oldest: 280532, newest: 280536 });
+    expect(keys(selection)).toEqual(['280532', '280535', '280536']);
+    expect(selection.anchor).toBe('280536');
+  });
+
+  it('selects the ends while the changesets are read, which show the same diff', () => {
+    const selection = spanSelection(undefined, { oldest: 280532, newest: 280536 });
+    expect(keys(selection)).toEqual(['280532', '280536']);
+    expect(selection.anchor).toBe('280536');
+  });
+
+  it('selects one changeset for a span of one', () => {
+    expect(keys(spanSelection(branch, { oldest: 280535, newest: 280535 }))).toEqual(['280535']);
   });
 });
