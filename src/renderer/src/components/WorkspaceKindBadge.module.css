@@ -1,0 +1,40 @@
+/* Overlaps the avatar's bottom-right corner, ringed by its own border so it reads on any row or card behind it. */
+.badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+}
+
+.icon {
+  width: 9px;
+  height: 9px;
+}
+
+/* The lightning reads at this size only filled, as the official clients draw it. */
+.badge[data-kind='dynamic'] .icon {
+  fill: currentColor;
+}
+
+/* Smaller on the switcher's and the sidebar's avatars (`RepositoryAvatar`'s data-size), so it never hides the initial. */
+[data-size='24'] > .badge,
+[data-size='28'] > .badge {
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+}
+
+[data-size='24'] > .badge .icon,
+[data-size='28'] > .badge .icon {
+  width: 8px;
+  height: 8px;
+}
