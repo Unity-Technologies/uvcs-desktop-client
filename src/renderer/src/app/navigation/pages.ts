@@ -38,10 +38,10 @@ export type Page =
   /**
    * `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show.
    * `focusThread`: a comment thread (its first comment's id) to bring into view and mark, in the tab it opens on.
-   * `focusChangeset`: on a branch's review, its changes open changeset by changeset, on that changeset: where a
-   * comment written there is.
-   * `focusChangesets`: on a branch's review, its changes open changeset by changeset with every changeset of the span
-   * selected, as one diff: those new to a reviewer since their review. No link names it: one names the review alone.
+   * `focusChangeset`: on a branch's review, its changes open on that changeset, selected in the list of the branch's
+   * changesets: where a comment written there is.
+   * `focusChangesets`: on a branch's review, its changes open with every changeset of the span selected in that list,
+   * as one diff: those new to a reviewer since their review. No link names it: one names the review alone.
    */
   | {
       kind: 'codeReview';

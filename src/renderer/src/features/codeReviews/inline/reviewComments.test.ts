@@ -27,7 +27,7 @@ describe('threadDiffRequest', () => {
     expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread(), 3)).toEqual({ path: 'src/Player.cs', changesetId: null, seq: 3 });
   });
 
-  it('asks for the changeset a comment was written in, changeset by changeset', () => {
+  it('asks for the changeset a comment was written in', () => {
     expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread({ changesetId: 12 }), 4)).toEqual({ path: 'src/Player.cs', changesetId: 12, seq: 4 });
   });
 

@@ -11,7 +11,7 @@ export function addCommentArgs(reviewId: number, textFile: string, at: CmPlace):
 /**
  * `cm codereview comment add` on a line: named by its revision rather than its path, which a file moved in the review
  * doesn't pin to one revision. `cm` takes only a revision the diff comments on (the newer side's, a deleted file's
- * last one), its line from 1; `--changeset` puts it in that changeset's diff, changeset by changeset.
+ * last one), its line from 1; `--changeset` puts it in that changeset's diff, one of a branch's changesets.
  */
 export function addLineCommentArgs(reviewId: number, comment: NewLineComment, textFile: string, at: CmPlace): string[] {
   return [

@@ -27,7 +27,7 @@ describe('reviewDiffViewOf', () => {
     expect(reviewDiffViewOf({ kind: 'shelve', shelveId: 3 }, { kind: 'shelve', shelveId: 3 })).toEqual(WHOLE);
   });
 
-  // Several changesets selected in "Changeset by changeset" diff as a range: its threads are placed by revision, as
+  // Several changesets selected in a branch diff's list diff as a range: its threads are placed by revision, as
   // the whole branch's are, those on its older revision on the left at their line.
   it("is the whole review for a span of a branch review's changesets", () => {
     expect(reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' })).toEqual(WHOLE);
@@ -105,7 +105,7 @@ describe('threadsOfFile', () => {
     expect(ids(threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 5 }, PLAYER).placed)).toEqual([2]);
   });
 
-  it("shows in the whole review's diff the threads written changeset by changeset too", () => {
+  it("shows in the whole review's diff the threads written in one changeset's diff too", () => {
     const threads = threadsOf([onLine(1, 30, 1), onLine(2, 30, 2, { changesetId: 5 })]);
     expect(ids(threadsOfFile(threads, BRANCH, WHOLE, PLAYER).placed)).toEqual([1, 2]);
   });

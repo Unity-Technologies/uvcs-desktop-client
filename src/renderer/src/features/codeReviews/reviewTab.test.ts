@@ -75,11 +75,11 @@ describe('changesFocusAskedFor', () => {
 });
 
 describe('changesFocusRequest', () => {
-  it('asks the diff for the changeset, changeset by changeset, without a file', () => {
+  it('asks the diff for the changeset, without a file', () => {
     expect(changesFocusRequest({ changesetId: 15 }, 4)).toEqual({ changesetId: 15, seq: 4 });
   });
 
-  it('asks the diff for the span, changeset by changeset', () => {
+  it('asks the diff for the span', () => {
     expect(changesFocusRequest({ changesets: { oldest: 15, newest: 17 } }, 5)).toEqual({ changesets: { oldest: 15, newest: 17 }, seq: 5 });
   });
 });

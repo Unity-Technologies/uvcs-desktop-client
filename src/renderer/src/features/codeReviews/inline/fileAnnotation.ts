@@ -21,7 +21,7 @@ export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRe
 
 /**
  * How many threads a file of the review's diff holds in `view` (`threadsOfFile`), for its row's mark in the list. Read
- * from the threads alone, as the list reads no file: an outdated one written changeset by changeset counts in the whole
+ * from the threads alone, as the list reads no file: an outdated one written in one changeset's diff counts in the whole
  * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
  */
 export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {

@@ -30,7 +30,7 @@ export const LINE_COMMENT_KINDS: readonly LineCommentKind[] = ['changeRequest', 
 /**
  * The comment a line of a review's file takes, or none where `cm` takes none: only the revision the diff comments on
  * (the newer side's, or a deleted file's last one: the side its rows above the code go on, `topSideOf`), so neither the
- * older side of a changed file nor a removed line of a unified diff. Written changeset by changeset, it's that
+ * older side of a changed file nor a removed line of a unified diff. Written in one changeset's diff, it's that
  * changeset's (`--changeset`).
  */
 export function lineCommentAt(view: ReviewDiffView, file: ShownFile, line: ChangedLine): Omit<NewLineComment, 'kind'> | null {

@@ -15,7 +15,7 @@ describe('earlierTagOf', () => {
     expect(earlierTagOf(thread(), true)).toEqual({ label: 'Outdated', tip: 'Written on an earlier version of this file: its line changed since' });
   });
 
-  it('names the changeset a thread was written in, changeset by changeset', () => {
+  it('names the changeset a thread was written in, in its own diff', () => {
     expect(earlierTagOf(thread({ changesetId: 8 }), true).tip).toBe('Written on the file as changeset 8 left it: its line changed since');
   });
 });

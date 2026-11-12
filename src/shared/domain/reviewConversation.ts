@@ -25,7 +25,7 @@ export interface ReviewComment {
   /** The comment it replies to; none for a thread's first comment. */
   parentId?: number;
   anchor: ReviewCommentAnchor;
-  /** The changeset whose diff it was written in, changeset by changeset; none for the whole branch's diff. */
+  /** The changeset whose diff it was written in, one picked in a branch's list; none for the whole branch's diff. */
   changesetId?: number;
   /** The changeset that applied a change request. */
   appliedInChangeset?: number;
@@ -36,7 +36,7 @@ export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'ques
 
 /**
  * Where a new comment on a line goes, and as what: a line (1-based) of the revision the review's diff shows (the newer
- * side's, or a deleted file's last one), and the changeset whose diff it's written in, changeset by changeset.
+ * side's, or a deleted file's last one), and the changeset whose diff it's written in, when one is.
  */
 export interface NewLineComment {
   revisionId: number;
