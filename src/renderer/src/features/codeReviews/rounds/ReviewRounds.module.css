@@ -54,47 +54,81 @@
   transform: rotate(90deg);
 }
 
-/* "Since last review": an accent hairline across the timeline, fading out toward its ends, the words in its middle
-   and the way to the changes as a link beside them. */
+/* "New since your last review": an event on the timeline, as the events' (`.event`) grid lays them out: an accent
+   dot on the rail, then the words, a hairline and the way to the changes at the end. The rail stays as it is: an
+   accent segment from the dot read as a second rail. */
 .since {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
-  margin-block: var(--space-3);
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
   scroll-margin-top: var(--space-5);
 }
 
-.since::before,
-.since::after {
+.sinceDot {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow:
+    0 0 0 4px var(--accent-soft),
+    0 0 0 6px var(--bg-surface);
+}
+
+/* A super quiet heartbeat: a faint ring breathing out of the dot every few seconds. A loop, so it stops on its own
+   under reduced motion (durations alone wouldn't stop it). */
+.sinceDot::before {
   content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  animation: var(--keyframes-heartbeat) 3.2s var(--ease-out) infinite;
 }
 
-.since::after {
-  background: linear-gradient(to left, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+@media (prefers-reduced-motion: reduce) {
+  .sinceDot::before {
+    animation: none;
+    opacity: 0;
+  }
 }
 
-.sinceMiddle {
-  display: inline-flex;
+.sinceLine {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-inline: var(--space-3);
-  color: var(--accent-text);
+  min-width: 0;
   font-size: var(--text-sm);
-  white-space: nowrap;
 }
 
 .sinceLabel {
+  flex: none;
+  color: var(--accent-text);
   font-weight: 600;
 }
 
 .sinceDay {
-  font-weight: 400;
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.sinceRule {
+  flex: 1;
+  min-width: var(--space-4);
+  height: 1px;
+  margin-inline: var(--space-2);
+  background: var(--border-subtle);
 }
 
 /* A link, not a box: a soft tint under the pointer, its arrow nudging on. */
 .seeChanges {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -102,7 +136,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background: none;
-  color: inherit;
+  color: var(--accent-text);
   font: inherit;
   font-weight: 500;
   transition: background var(--duration-fast) var(--ease-out);

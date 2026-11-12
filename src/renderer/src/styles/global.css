@@ -199,6 +199,19 @@ html:has([data-radix-popper-content-wrapper], [role='dialog']) {
   }
 }
 
+/* A ring breathing out of a mark and fading: where something new starts, quietly (the review's "New since" dot). */
+@keyframes heartbeat {
+  from {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  70%,
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-instant: 0ms;
