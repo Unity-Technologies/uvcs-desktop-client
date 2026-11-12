@@ -24,6 +24,7 @@ import { applyDownloads } from './applyDownloads';
 import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
+  downloadChangeLook,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -229,41 +230,52 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
           onKeyDown={onKeyDown}
           autoFocus
         >
-          {rows.map((row, index) => (
-            <div
-              key={row.path}
-              id={rowId(index)}
-              role="treeitem"
-              aria-selected={row.path === selected}
-              aria-expanded={row.expandable ? row.expanded : undefined}
-              aria-checked={row.check}
-              className={styles.row}
-              style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
-              onClick={() => setSelected(row.path)}
-              onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
-            >
-              {row.expandable ? (
-                <button
-                  className={styles.chevron}
-                  data-expanded={row.expanded}
-                  aria-label={row.expanded ? 'Collapse' : 'Expand'}
-                  tabIndex={-1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleExpanded(row.path);
-                  }}
-                >
-                  <ChevronRight size={13} />
-                </button>
-              ) : (
-                <span className={styles.chevronSpace} />
-              )}
-              <Checkbox checked={row.check} focusable={false} ariaLabel={row.name} onChange={() => toggleChecked(row.path)} />
-              <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
-              {row.note === 'loading' && <Spinner size={12} />}
-              {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
-            </div>
-          ))}
+          {rows.map((row, index) => {
+            const look = downloadChangeLook(row.change);
+            return (
+              <div
+                key={row.path}
+                id={rowId(index)}
+                role="treeitem"
+                aria-selected={row.path === selected}
+                aria-expanded={row.expandable ? row.expanded : undefined}
+                aria-checked={row.check}
+                className={styles.row}
+                data-tone={look.tone}
+                style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
+                onClick={() => setSelected(row.path)}
+                onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
+              >
+                {row.expandable ? (
+                  <button
+                    className={styles.chevron}
+                    data-expanded={row.expanded}
+                    aria-label={row.expanded ? 'Collapse' : 'Expand'}
+                    tabIndex={-1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleExpanded(row.path);
+                    }}
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                ) : (
+                  <span className={styles.chevronSpace} />
+                )}
+                <Checkbox
+                  checked={row.check}
+                  focusable={false}
+                  ariaLabel={row.name}
+                  tone={look.tone}
+                  onChange={() => toggleChecked(row.path)}
+                />
+                <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
+                {look.marker && <span className={styles.marker}>{look.marker}</span>}
+                {row.note === 'loading' && <Spinner size={12} />}
+                {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </Dialog>

@@ -65,6 +65,23 @@
   white-space: nowrap;
 }
 
+.row[data-tone='added'] .name,
+.row[data-tone='added'] .marker {
+  color: var(--positive-text);
+}
+
+.row[data-tone='removed'] .name,
+.row[data-tone='removed'] .marker {
+  color: var(--danger-text);
+}
+
+/* A word beside a name Apply downloads or removes, so the change reads without its color too. */
+.marker {
+  flex: none;
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
 .failed {
   overflow: hidden;
   text-overflow: ellipsis;
