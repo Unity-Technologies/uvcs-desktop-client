@@ -34,6 +34,8 @@ import { isWorkspaceRoot } from './workspaceRoot';
 import { listedItems } from './directoryListing';
 import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, unloadedXlinkOf, type XlinkSurroundings } from './xlinkItem';
 import { createXlink, editXlink, loadXlinkFiles } from '../xlinks/xlinkOperations';
+import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
+import { choosesDownloadsFor } from '../partialWorkspace/workspaceDownloads';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
@@ -96,6 +98,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   const unloadedXlink =
     single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
+  const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
+  const choosesDownloads =
+    single && surroundings && choosesDownloadsFor({ ...single, added: isAdded(pendingChanges, single.path) }, surroundings, workspace?.kind, workspace?.selector);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
@@ -110,6 +115,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
+    single && choosesDownloads && menuAction('chooseDownloads', () => openChooseDownloads(workspacePath, single.path)),
     single && views?.changes && menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
     single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
