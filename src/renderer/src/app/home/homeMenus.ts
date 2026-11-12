@@ -11,7 +11,7 @@ import { repositoryLinkTo } from '../links/linkTo';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { exploreRepository } from '../workspace/exploreRepository';
 import type { OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
-import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } from './homeOperations';
+import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace, restoreRepository } from './homeOperations';
 
 /** A workspace's menu wherever it's listed (the home screen, the switcher, the palette); `open` opens it here or in a new window. */
 export function workspaceMenu(workspace: WorkspaceSummary, open: OpenWorkspaceIn): MenuEntry[] {
@@ -45,4 +45,9 @@ export function repositoryMenu(repository: RepositorySummary, createWorkspace: (
     menuAction('serverPermissions', () => openServerPermissions(repository.server)),
     menuAction('delete', () => void deleteRepository(repository), { label: 'Delete repository…' }),
   ]);
+}
+
+/** A deleted repository's menu: restoring it is all it offers until then, besides copying the name it had. */
+export function deletedRepositoryMenu(repository: RepositorySummary): MenuEntry[] {
+  return groupedMenu([menuAction('restore', () => void restoreRepository(repository)), copySubmenu('Repository', { name: repository.name })]);
 }
