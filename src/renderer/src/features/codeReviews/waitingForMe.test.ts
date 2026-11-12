@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { waitingCount, waitingForMe, waitingForMeTip } from './waitingForMe';
+import { waitingBadge, waitingCount, waitingForMe, waitingForMeTip } from './waitingForMe';
 
 describe('whether a review waits for the user', () => {
   it('waits for a reviewer whose own status is Under review, whatever the review as a whole says', () => {
@@ -59,5 +59,15 @@ describe('how many reviews wait for the user', () => {
     ];
     expect(waitingCount(reviews, 'ana')).toBe(2);
     expect(waitingCount(reviews, undefined)).toBe(0);
+  });
+});
+
+describe('waitingBadge', () => {
+  it("counts on the sidebar's Code reviews the reviews read that wait for the user, and shows nothing when none does or none was read", () => {
+    const asked = codeReviewSummary({ id: 1, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Under review' }] });
+    const reviewed = codeReviewSummary({ id: 2, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Reviewed' }] });
+    expect(waitingBadge([asked, reviewed], 'ana')).toEqual({ count: 1 });
+    expect(waitingBadge([reviewed], 'ana')).toBeUndefined();
+    expect(waitingBadge(undefined, 'ana')).toBeUndefined();
   });
 });
