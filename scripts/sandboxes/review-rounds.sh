@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Builds a repository whose code review went back and forth over rounds: the review is asked for, the reviewer asks
 # for rework (a change request and a question), the author fixes it (a changeset applying the request, an answer) and
-# asks again, the reviewer asks for rework once more (two change requests), then, after that status, the author applies
-# one, discards the other with a reply, merges main into the branch, comments and checks in once more. The reviewer is
-# the signed-in user, so the conversation shows their rounds folded, the "Since last review" line after their last
-# status, the check-ins, and Changes the changesets new since then. A second review asks the user for a review, as
-# the Code reviews list marks one waiting for them.
+# asks again, the reviewer asks for rework once more (two change requests and a question), then, after that status,
+# the author applies one, discards the other with a reply, answers the question naming its fix, merges main into the
+# branch, checks in more and comments, and the reviewer leaves one more question open. The reviewer is the signed-in
+# user, so the conversation shows their rounds folded, "New since your last review" after their last status, the
+# check-ins, and Changes the changesets new since then, with the Comments panel toggle counting the open question.
+# A second review asks the user for a review, as the Code reviews list marks one waiting for them.
 # Usage: scripts/sandboxes/review-rounds.sh [repo-name [workspace-folder]]   → repo review-rounds@local, workspace /tmp/uvcs-review-rounds
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -117,6 +118,8 @@ for step in "Tests for the tick cap" "Name the tick limit in the inspector" "Log
   checkin "$(text step "$step")"
 done
 on_review -c="All three done: the tick cap is in, the pool stays (see the reply), and the origin is answered." >/dev/null
+# One question still open, as the Comments panel toggle counts it.
+on_review --path=/Assets/Tests/WaveSpawnerTests.cs --line=1 --type=Question -c="Do these cover a wave smaller than the cap?" >/dev/null
 
 # A second review waiting for the reviewer, as the Code reviews list marks one.
 cm mkbr main/ladder -c="Fix ladder clipping" >/dev/null
