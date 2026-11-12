@@ -1,0 +1,25 @@
+/* A span of changesets above its diff, where one changeset's summary sits (`ChangesetSummary`'s measures). */
+.span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.spanCount {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.span :global(.mono) {
+  font-size: var(--text-xs);
+}
+
+.spanAuthors {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
