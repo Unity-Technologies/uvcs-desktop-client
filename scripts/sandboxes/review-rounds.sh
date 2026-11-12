@@ -32,6 +32,7 @@ text() { printf '%s\n' "$2" > "$TEXTS/$1"; echo "$TEXTS/$1"; }
 # cm detects edits by timestamp, and the rounds are told apart by the second each thing happened.
 w() { sleep 1; mkdir -p "$(dirname "$1")"; printf '%s\n' "$2" > "$1"; }
 checkin() { cm ci --all --private -commentsfile="$1" >/dev/null; }
+changeset() { cm find "changeset where branch = '$1'" "order by changesetid desc" limit 1 --format={changesetid} --nototal; }
 on_review() { sleep 1; cm cr comment add "$REVIEW" --format={guid} "$@"; }
 status() { sleep 1; cm cr review "$REVIEW" "$@" >/dev/null; }
 
@@ -88,15 +89,17 @@ status --rework-required -commentsfile="$(text rework2 'Close, two things left.
 
 And one question on the origin, see the comment on Wave.cs. The rest reads well.')"
 
-# Since the last review: one request applied, the other discarded, the question answered, main merged in, a run of
+# Since the last review: one request applied, the other discarded, the question answered by naming its fix, main merged in, a run of
 # changesets (more than the conversation lists before "N more"), and a comment.
 w Assets/Waves/WaveSpawner.cs "$(spawner '        var count = Math.Min(Math.Min(wave.count, maxAlive), wave.maxPerTick);
         for (var i = 0; i < count; i++) Pool.Take().Spawn(wave.origin);')"
 checkin "$(text tick "Cap a single tick too [apply-change:${TICK:0:8}]")"
 sleep 1
 cm cr comment reply "$POOL" --discard -c="The boss wave reuses it; per wave doubles the GC spikes." >/dev/null
-sleep 1
-cm cr comment reply "$ORIGIN" -c="World space: the spawner places the wave, the wave doesn't move with it." >/dev/null
+# The question answered by naming the changeset that fixes it: the app shows it beside that changeset's diff.
+w Assets/Waves/Wave.cs "public class Wave { public int count; /* In world space: the spawner places the wave. */ public Vector3 origin; }"
+checkin "$(text origin 'Say the wave origin is in world space')"
+cm cr comment reply "$ORIGIN" -c="World space: the spawner places the wave. Written down in cs:$(changeset /main/waves)." >/dev/null
 
 cm switch main >/dev/null
 w README.md "# Waves
