@@ -1,5 +1,5 @@
 import { ArrowDownToLine } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { PartialIncomingChanges } from '@shared/domain/incoming';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { ItemIcon } from '../../components/ItemIcon';
@@ -43,7 +43,7 @@ export function PartialIncomingSession({ workspacePath, incoming, header }: Part
   const [updating, setUpdating] = useState(false);
   const detail = partialSelectionDetail(incoming.items, selectedKey, repository);
   const [unchecked, setUnchecked] = useState<UncheckedItems>(() => new Set());
-  const selection = partialUpdateSelection(incoming.items, unchecked);
+  const selection = useMemo(() => partialUpdateSelection(incoming.items, unchecked), [incoming.items, unchecked]);
   const canUpdate = canUpdateSelection(selection);
 
   const update = async () => {
