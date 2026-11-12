@@ -43,6 +43,10 @@ describe('changesetListRows', () => {
     expect(changesetListRows([], 'nothing')).toEqual([]);
   });
 
+  it('leaves the combined row out when the place shows it apart, above the list (a branch diff)', () => {
+    expect(changesetListRows(oldestFirst(branch), '', { allApart: true }).map(changesetListRowKey)).toEqual(['280530', '280532', '280535', '280536']);
+  });
+
   it('keeps the combined row for a filter of blanks', () => {
     expect(changesetListRows([], '  ').map(changesetListRowKey)).toEqual([ALL_CHANGES_KEY]);
   });

@@ -31,12 +31,13 @@ describe('toggledFold', () => {
 describe('changesetFoldLabel', () => {
   it('names the changesets, and counts them once read', () => {
     expect(changesetFoldLabel(undefined)).toBe('Changesets');
-    expect(changesetFoldLabel(13)).toBe('Changesets · 13');
+    expect(changesetFoldLabel(13)).toBe('13 changesets');
+    expect(changesetFoldLabel(1)).toBe('1 changeset');
   });
 });
 
 describe('changesetFoldLabel, at the limit', () => {
   it('says there are more when the read was cut at its limit', () => {
-    expect(changesetFoldLabel(4, 4)).toBe('Changesets · 4+');
+    expect(changesetFoldLabel(4, 4)).toBe('4+ changesets');
   });
 });
