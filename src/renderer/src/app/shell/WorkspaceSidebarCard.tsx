@@ -21,7 +21,7 @@ export function WorkspaceSidebarCard() {
         aria-label="Switch workspace"
         data-tip={rail ? workspace && workspaceCardTip(workspace) : undefined}
       >
-        <RepositoryAvatar repository={workspace?.repository} label={workspace?.name} size={28} />
+        <RepositoryAvatar repository={workspace?.repository} label={workspace?.name} size={28} workspaceKind={workspace?.kind} />
         <span className={styles.workspaceText}>
           <span className={styles.workspaceNameLine}>
             <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
