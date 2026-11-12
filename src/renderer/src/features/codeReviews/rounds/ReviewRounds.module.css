@@ -54,40 +54,78 @@
   transform: rotate(90deg);
 }
 
-/* "Since last review": a hairline in the accent across the column, the words in its middle. */
+/* "Since last review": an accent hairline across the timeline, fading out toward its ends, and one soft pill in its
+   middle, the way to the changes its other half. */
 .since {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-block: var(--space-2);
-  color: var(--accent-text);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  margin-block: var(--space-3);
   scroll-margin-top: var(--space-5);
-  /* Over the timeline's rail, which breaks at it. */
-  background: var(--bg-surface);
 }
 
 .since::before,
 .since::after {
   content: '';
   flex: 1;
-  border-top: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  height: 1px;
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.since::after {
+  background: linear-gradient(to left, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.sincePill {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-full);
+  /* Opaque, over the timeline's rail. */
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-surface);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.sinceLabel {
+  padding: 3px var(--space-3);
+  font-weight: 600;
+}
+
+.sinceDay {
+  font-weight: 400;
 }
 
 .seeChanges {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px var(--space-3);
   border: none;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   background: none;
   color: inherit;
   font: inherit;
   font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 .seeChanges:hover {
-  color: var(--accent-hover);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.seeChanges:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+
+.seeChangesArrow {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.seeChanges:hover .seeChangesArrow {
+  transform: translateX(2px);
 }
 
 /* Check-ins: under the event's line, one row per changeset, a link to its diff. */

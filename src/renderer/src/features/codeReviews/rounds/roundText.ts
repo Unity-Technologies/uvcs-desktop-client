@@ -20,11 +20,15 @@ export function roundText(round: ReviewRound, user: string | undefined): { name:
   return { name: `Round ${round.number}`, detail: [`${round.status} by ${who}`, ...(settled.length > 0 ? [settled.join(', ')] : [])].join(' · ') };
 }
 
-/** The line before what's new to a reviewer: "Since last review · Nov 9", the day in the reader's time zone. */
-export function sinceText(date: string, { locale, timeZone }: DayFormat = {}): string {
-  const day = new Date(date);
-  if (Number.isNaN(day.getTime())) return 'Since last review';
-  return `Since last review · ${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone }).format(day)}`;
+/**
+ * The line before what's new to a reviewer: "Since last review", and the day of it in the reader's time zone ("Nov 9"),
+ * apart, to read a step quieter; no day when the date can't be read.
+ */
+export function sinceText(date: string, { locale, timeZone }: DayFormat = {}): { label: string; day?: string } {
+  const label = 'Since last review';
+  const at = new Date(date);
+  if (Number.isNaN(at.getTime())) return { label };
+  return { label, day: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone }).format(at) };
 }
 
 /** What a batch of check-ins says after its author's name: "checked in 3 changesets". */
