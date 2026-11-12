@@ -85,8 +85,21 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
   changes, the author, when it was created (the list's order and its period go by it; hidden in a narrower window) and
   the last activity.
-- **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
-  doesn't list but the official client uses.
+- **A review waiting for the user** has a small accent dot before its number (`codeReviewColumns`, which takes the
+  user, `usePlaceUser`, and is built again only when the user changes, so the table keeps its columns while it sorts).
+  It waits (`waitingForMe`) when the user is a reviewer, by name (`sameUser`), whose own status is Under review
+  (tooltip "Waiting for your review"), or wrote it and it's in Rework required with something open,
+  `{unresolvedissues}` above zero (tooltip "Rework: 3 open"). It's decided from the list's own fields: a group the
+  user belongs to isn't told (its members would take a command per row), nor is a reviewer asked again told from one
+  who never looked (both are Under review). No column says why: the tooltip does.
+- **The reviewer menu** (`ChoiceChip`, `REVIEWER_CHOICES`, the store's `reviewer`): **Any reviewer** filters nothing;
+  **I'm a reviewer** keeps the reviews the user is a reviewer of: `where reviewer = 'me'`, which `cm find`'s help
+  doesn't list but the official client uses; **Waiting for me** keeps the rows with the dot. Waiting for me asks the
+  server for the same reviews as Any reviewer (`codeReviewsQuery`: one query key, one `cm find`, shared with the
+  unfiltered list) and keeps its rows locally (`matchesReviewer`): it takes the user's own reviews, which `reviewer =
+  'me'` leaves out, and goes by each reviewer's own status, which the query can't ask for. Clear filters sets it back
+  to Any reviewer; the "I'm a reviewer" chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer
+  (`restoredReviewerFilter`, a `FilterUpgrade`).
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
   status, I'm a reviewer), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
