@@ -32,6 +32,7 @@ import { UpdateCard } from './updates/UpdateCard';
 import { loadUpdateStatus } from './updates/updateStore';
 import { useForgetLeftPlace } from './workspace/leftPlace';
 import { useSession } from './workspace/sessionStore';
+import { useWorkspaceKindsFromMain } from './workspace/workspaceQueries';
 import { useRequestedPlace } from './workspace/useRequestedPlace';
 import { PlaceScreen } from './workspace/PlaceScreen';
 
@@ -60,6 +61,7 @@ function Root() {
   useGravatarSetting();
   useSettingsFromOtherWindows();
   useIssueTrackersFromMain();
+  useWorkspaceKindsFromMain();
   useExternalApps();
   useAppCommands();
   useMenuCommands();

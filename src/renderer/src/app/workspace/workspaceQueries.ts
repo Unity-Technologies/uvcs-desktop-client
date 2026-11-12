@@ -1,8 +1,9 @@
-import { queryOptions, useQueries, useQuery, type QueryClient } from '@tanstack/react-query';
+import { queryOptions, useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import type { WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useSettings } from '../settings/useSettings';
 
@@ -78,8 +79,9 @@ export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
 /**
  * How one workspace holds its files (standard, partial or dynamic), null when `cm` couldn't tell; from a local
  * `cm getworkspacefrompath`. One query per workspace, kept for the session: a kind is set when the workspace is
- * created, so a workspace listed later costs only its own read. A workspace created again in the same folder has
- * another guid, and so another key. An unknown kind is asked again the next time it shows.
+ * created, so a workspace listed later costs only its own read. Choosing what a standard one downloads makes it
+ * partial: main says so (`workspaceKindChanged`) and `forgetWorkspaceKind` reads it again. A workspace created again
+ * in the same folder has another guid, and so another key. An unknown kind is asked again the next time it shows.
  */
 export function workspaceKindQuery({ path, guid }: Pick<WorkspaceSummary, 'path' | 'guid'>) {
   return queryOptions({
@@ -89,6 +91,17 @@ export function workspaceKindQuery({ path, guid }: Pick<WorkspaceSummary, 'path'
     // Kept off screen too: one small answer per listed workspace.
     gcTime: Infinity,
   });
+}
+
+/** Reads again the kind of the workspace in this folder, whatever its guid: main said it changed (`workspaceKindChanged`). */
+export function forgetWorkspaceKind(client: QueryClient, workspacePath: string): Promise<void> {
+  return client.invalidateQueries({ queryKey: queryKeys.workspaceKindsOf(workspacePath) });
+}
+
+/** Keeps the listed workspaces' kinds in step with main: a standard workspace that became partial. */
+export function useWorkspaceKindsFromMain(): void {
+  const client = useQueryClient();
+  useUvcsEvent('workspaceKindChanged', ({ workspacePath }) => void forgetWorkspaceKind(client, workspacePath));
 }
 
 /** The kind of every listed workspace already known, by path (`workspaceKindQuery`); unknown ones are left out. */
