@@ -4,6 +4,7 @@ import type { ItemType } from '@shared/domain/pendingChanges';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { toggled } from './downloadSelection';
 import {
+  downloadChangeLook,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -154,6 +155,17 @@ describe('downloadRows', () => {
       Lib: 'none',
       'readme.md': 'none',
     });
+  });
+});
+
+describe('downloadChangeLook', () => {
+  it('marks what Apply downloads in green and what it removes in red, with a word for each', () => {
+    expect(downloadChangeLook('load')).toEqual({ tone: 'added', marker: 'Download' });
+    expect(downloadChangeLook('unload')).toEqual({ tone: 'removed', marker: 'Remove' });
+  });
+
+  it('leaves what Apply keeps, leaves out or changes in part as it is', () => {
+    for (const change of ['kept', 'none', 'mixed'] as const) expect(downloadChangeLook(change)).toEqual({});
   });
 });
 
