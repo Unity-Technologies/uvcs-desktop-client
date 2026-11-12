@@ -16,7 +16,8 @@ import { DiffPage } from '../diff/DiffPage';
 import { EntryAnnotatorContext } from '../diff/entryAnnotator';
 import { EntryFlagContext } from '../diff/entryFlag';
 import { useReviewThreads } from './conversation/useReviewThreads';
-import { commentsByFile, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
+import { pluralize } from '../../lib/text';
+import { commentsByFile, commentsPanelCounts, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { isLineThread, type LineThread } from './inline/fileThreads';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
@@ -124,6 +125,10 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     [review, threads, user, focus, selectThread, showThreadInConversation, seeInContext],
   );
 
+  // Beside the Comments panel toggle: what's still open, as the panel's Open chip counts it.
+  const open = threads ? commentsPanelCounts(threads, newIds).open : undefined;
+  const openComments = open === undefined ? undefined : { value: open, label: pluralize(open, 'open comment') };
+
   return (
     <ReviewCommentsContext.Provider value={comments}>
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
@@ -140,7 +145,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                     focusChangesets={page.focusChangesets}
                     reviewedUpTo={reviewedUpTo}
                     pageAppliesShelve
-                    detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" icon={<MessagesSquare size={14} />} />}
+                    detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" icon={<MessagesSquare size={14} />} count={openComments} />}
                   />
                 }
                 details={
