@@ -130,6 +130,12 @@ try {
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
     await main.getByText('Game', { exact: true }).waitFor();
     await main.getByText('Levels', { exact: true }).waitFor({ state: 'detached' });
+    // A deleted repository shows only once asked for, tagged, with Restore.
+    await main.getByText('Old', { exact: true }).waitFor({ state: 'detached' });
+    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
+    await main.getByText('Old', { exact: true }).waitFor();
+    await main.getByRole('button', { name: 'Restore' }).waitFor();
+    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
     await sidebar.getByRole('button', { name: /^Home/ }).click();
     await workspaceOnHome.waitFor();
   });
