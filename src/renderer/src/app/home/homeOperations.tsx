@@ -9,6 +9,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { listedRepositories } from '../workspace/workspaceQueries';
+import { repositoryRestore } from './deletedRepositories';
 import { DeleteRepositoryDialog } from './dialogs/DeleteRepositoryDialog';
 import { repositoryRename } from './repositoryRename';
 import { isWorkspaceNameTaken } from './workspaceNaming';
@@ -83,3 +84,33 @@ export async function deleteRepository(repository: RepositorySummary): Promise<v
   if (deleted) toast.success(`Deleted ${repository.name}`);
 }
 
+/**
+ * Restores a deleted repository under the name it had, or, when another repository took that name since, under a new
+ * one the user types (inside the same Unity project).
+ */
+export async function restoreRepository(deleted: RepositorySummary): Promise<void> {
+  const restore = repositoryRestore(
+    deleted,
+    listedRepositories(queryClient, deleted.server).map((listed) => listed.name),
+  );
+  let newName: string | undefined;
+  if (restore.needsNewName) {
+    const typed = await prompt({
+      title: 'Restore repository',
+      description: `Another repository is named ${deleted.name} now. Restore this one under a new name.`,
+      label: 'New name',
+      initialValue: restore.initialName,
+      acceptInitialValue: true,
+      confirmLabel: 'Restore',
+      validate: (name) => (restore.isTaken(name) ? 'There is already a repository with this name.' : undefined),
+    });
+    if (!typed) return;
+    newName = restore.newName(typed);
+  }
+  const restored = await runAndRefresh(
+    "Couldn't restore the repository",
+    () => api.repositories.restore(deleted.spec, newName),
+    queryKeys.repositories(deleted.server),
+  );
+  if (restored) toast.success(`Restored ${newName ?? deleted.name}`);
+}

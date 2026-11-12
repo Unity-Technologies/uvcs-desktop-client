@@ -2,19 +2,19 @@ import type { Changeset } from '@shared/domain/changeset';
 import { pluralizeAtLeast } from '../../lib/text';
 import { authorNames } from './updatedMessage';
 
-/** The heights the section's rows are drawn at: "All incoming changes", and a changeset (comment, then author and date). */
-export const ALL_ROW_HEIGHT = 30;
-export const CHANGESET_ROW_HEIGHT = 49;
+/**
+ * How many rows show before the section scrolls: "All incoming changes" and three changesets. The files below are what
+ * Incoming is for, so they start right under a few changesets and get the rest of the pane.
+ */
+export const INCOMING_ROWS_SHOWN = 4;
 
 /**
- * How many changesets show before the section scrolls: the files below are what Incoming is for, so they start right
- * under a few changesets and get the rest of the pane.
+ * Where "Show 200 more" goes, while older changesets remain to be read: above the oldest changeset shown, as the list
+ * is oldest on top and the next page reads older ones. None once every one is read, or while the filter shows none.
  */
-export const CHANGESETS_SHOWN = 3;
-
-/** The tallest the section's rows get: "All incoming changes" and `shown` changesets; more scroll inside it. */
-export function changesetListMaxHeight(shown = CHANGESETS_SHOWN): number {
-  return ALL_ROW_HEIGHT + shown * CHANGESET_ROW_HEIGHT;
+export function showMoreBeforeKey(shown: readonly Changeset[], more: boolean): string | undefined {
+  const oldest = shown[0];
+  return more && oldest ? String(oldest.id) : undefined;
 }
 
 /**

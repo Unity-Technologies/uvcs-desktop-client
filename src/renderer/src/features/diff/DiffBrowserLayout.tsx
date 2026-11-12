@@ -12,7 +12,7 @@ export interface DiffBrowserSlots {
 }
 
 interface DiffBrowserLayoutProps {
-  /** Above the files, in the same column, its own height dragged apart from theirs: a branch's changesets. */
+  /** Above the files, in the same column, as tall as it draws itself: a branch's changesets. */
   aboveFiles?: ReactNode;
   /** Above the diff, in its column: a changeset's summary where the page's header names its branch. */
   aboveDiff?: ReactNode;
@@ -50,10 +50,14 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable 
         // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.
         stowed={diffExpanded ? 'first' : undefined}
         // A list above the files that comes or goes (a branch read again gains its second changeset) moves the files'
-        // slot, which mounts the browser again: rare enough to keep one plain layout per case.
+        // slot, which mounts the browser again: rare enough to keep one plain layout per case. The list is as tall as
+        // its rows up to its own cap, so the files get the rest.
         first={
           aboveFiles ? (
-            <SplitPane direction="vertical" initialSize={260} minSize={96} maxSize={720} restMinSize={160} first={aboveFiles} second={filesSlot} />
+            <div className={styles.slot}>
+              {aboveFiles}
+              {filesSlot}
+            </div>
           ) : (
             filesSlot
           )

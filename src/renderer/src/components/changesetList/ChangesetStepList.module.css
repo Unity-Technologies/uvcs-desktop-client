@@ -1,8 +1,10 @@
+/* As tall as its toolbar and its rows (`changesetRowsHeight`): what's under it gets the rest. */
 .list {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
   min-height: 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* The files' filter bar's measures (`useChangeFilter`), so the two bars of the column read alike. */
@@ -15,11 +17,14 @@
   padding: 0 var(--space-2);
 }
 
-.newCount {
-  font-variant-numeric: tabular-nums;
+/* The rows scroll inside past `mostRows`. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* One line per changeset, as a commit picker lists them: the comment takes what the age leaves. */
+/* One line per row, as a commit picker lists them: the comment takes what the age leaves. */
 .row {
   display: flex;
   flex: 1;
@@ -30,8 +35,15 @@
 }
 
 /* What the user reviewed reads a step quieter than what's new to them. */
-.row[data-mark='reviewed'] {
+.row[data-quiet] {
   color: var(--text-secondary);
+}
+
+/* In the avatar's 16px, so the words of every row start in one place. */
+.allIcon {
+  flex: none;
+  width: 16px;
+  color: var(--text-tertiary);
 }
 
 .comment {
@@ -40,7 +52,16 @@
   min-width: 0;
 }
 
-.row[data-mark='reviewed'] .comment :global(*) {
+/* "All changes on task": a branch's long name cut at its end, whole in the tooltip. */
+.allLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row[data-quiet] .comment :global(*) {
   color: inherit;
 }
 
@@ -52,18 +73,4 @@
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-/* "Reviewed by you · Nov 9": in the Reviewed status's color (`REVIEW_STATUS_COLORS`), small, between the rows. */
-.reviewed {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--status-added);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }

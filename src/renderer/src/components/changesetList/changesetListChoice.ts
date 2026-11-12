@@ -4,23 +4,24 @@ import { listNames, pluralize } from '../../lib/text';
 import { displayName, sameUser } from '../../lib/userName';
 
 /**
- * What a branch diff's "Changeset by changeset" mode shows beside its list: nothing while the changesets are read,
- * that the branch has none, the diff of one changeset, or that of a span of them, several selected.
+ * What the list's selection shows beside it: every changeset combined (the place's own diff: a branch's, the whole
+ * update), one changeset's diff, that of a span of them (several selected), or nothing yet, while a span asked for
+ * waits for the changesets that tell where it starts.
  */
-export type BranchChangesetPane =
+export type ChangesetListChoice =
+  | { kind: 'all' }
   | { kind: 'reading' }
-  | { kind: 'noChangesets' }
   | { kind: 'changeset'; changesetId: number }
   | { kind: 'span'; target: Extract<DiffTarget, { kind: 'range' }>; changesets: Changeset[] };
 
 /**
- * `changesets`: the branch's, newest first, undefined while read; `selectedIds`: the changesets selected in the list.
- * Until the list selects one (it selects the newest once they're read), the newest shows: the branch has changesets.
- * Several selected show as one diff, from the oldest one's parent to the newest (`cm diff cs:A cs:B`): the span between
- * them, every changeset in it, also those left out of a selection made apart.
+ * `changesets`: the list's, newest first, undefined while read; `selectedIds`: the changesets selected
+ * (`selectedChangesetIds`), none for the combined row. Several selected show as one diff, from the oldest one's parent
+ * to the newest (`cm diff cs:A cs:B`): the span between them, every changeset in it.
  */
-export function branchChangesetPane(changesets: readonly Changeset[] | undefined, selectedIds: readonly number[]): BranchChangesetPane {
-  if (!changesets) return { kind: 'reading' };
+export function changesetListChoice(changesets: readonly Changeset[] | undefined, selectedIds: readonly number[]): ChangesetListChoice {
+  if (selectedIds.length === 0) return { kind: 'all' };
+  if (!changesets) return selectedIds.length === 1 ? { kind: 'changeset', changesetId: selectedIds[0]! } : { kind: 'reading' };
   const selected = new Set(selectedIds);
   const places = changesets.flatMap((changeset, index) => (selected.has(changeset.id) ? [index] : []));
   if (places.length > 1) {
@@ -29,8 +30,10 @@ export function branchChangesetPane(changesets: readonly Changeset[] | undefined
     const oldest = span.at(-1)!;
     return { kind: 'span', target: { kind: 'range', fromSpec: `cs:${oldest.parent}`, toSpec: `cs:${newest.id}` }, changesets: span };
   }
-  const shownId = places.length === 1 ? changesets[places[0]!]!.id : (selectedIds[0] ?? changesets[0]?.id);
-  return shownId === undefined ? { kind: 'noChangesets' } : { kind: 'changeset', changesetId: shownId };
+  if (places.length === 1) return { kind: 'changeset', changesetId: changesets[places[0]!]!.id };
+  // Not in the list (still another branch's while the branch's own are read): one changeset is still shown by its
+  // number; a span can't tell where it starts, so everything combined shows.
+  return selectedIds.length === 1 ? { kind: 'changeset', changesetId: selectedIds[0]! } : { kind: 'all' };
 }
 
 /** A span of changesets in a line, where one changeset's summary sits: "3 changesets · cs:15 to cs:17 · Daniel". */
@@ -40,7 +43,7 @@ export interface ChangesetSpanSummary {
   authors: string;
 }
 
-/** `span`: newest first, as the pane holds it. The authors as they first checked in, each once. */
+/** `span`: newest first, as the choice holds it. The authors as they first checked in, each once. */
 export function changesetSpanSummary(span: readonly Changeset[]): ChangesetSpanSummary {
   const oldestFirst = [...span].reverse();
   const authors: string[] = [];

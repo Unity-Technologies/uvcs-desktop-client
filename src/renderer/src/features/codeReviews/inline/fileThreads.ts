@@ -4,8 +4,9 @@ import type { ReviewCommentAnchor } from '@shared/domain/reviewConversation';
 import type { ReviewThread } from '../conversation/reviewThreads';
 
 /**
- * Which of a review's diffs the Changes tab shows: the whole review's (a branch's "Whole branch", a changeset's, a
- * shelve's) or one changeset of a branch, stepped to in "Changeset by changeset". A comment belongs to the one it was
+ * Which of a review's diffs the Changes tab shows: the whole review's (all a branch's changes, or several of its
+ * changesets as one diff; a changeset's, a shelve's) or one changeset of a branch, picked in the list of its
+ * changesets. A comment belongs to the one it was
  * written in (`ReviewComment.changesetId`), as the official client keeps them.
  */
 export type ReviewDiffView = { kind: 'whole' } | { kind: 'changeset'; changesetId: number };
@@ -67,7 +68,7 @@ export interface FileThreads {
  * - on another revision of the file, an earlier one, to place by where its line went (`placeEarlier`).
  * A changeset's diff shows the threads written in it and those it settled (requests it applied, questions answered in
  * it), so the fix reads beside what asked for it; the whole review's those written in it, and those written
- * changeset by changeset whose revision it shows or whose line it still has, so an open change
+ * in one changeset's diff whose revision it shows or whose line it still has, so an open change
  * request never hides behind the mode it was written in.
  */
 export function threadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): FileThreads {
@@ -125,7 +126,7 @@ export type VersionText = string | null | undefined;
  * is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
  * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
  * before another version arrives would be moved by it. One whose version's read failed is outdated, its line known
- * though not its text, and holds none of the others. A thread written changeset by changeset, in the whole review's
+ * though not its text, and holds none of the others. A thread written in one changeset's diff, in the whole review's
  * diff, shows only where its line is still there: its own place is its changeset's diff.
  */
 export function placeEarlier(

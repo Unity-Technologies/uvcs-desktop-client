@@ -1,29 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchChangesetPane, changesetSpanSummary } from './branchChangesetPane';
+import { changesetListChoice, changesetSpanSummary } from './changesetListChoice';
 
 const changeset = (id: number, owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment: '', owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const newestFirst = [changeset(12), changeset(11), changeset(10)];
 
-describe('branchChangesetPane', () => {
-  it('shows nothing while the changesets are read', () => {
-    expect(branchChangesetPane(undefined, [])).toEqual({ kind: 'reading' });
-  });
-
-  it('says the branch has none when it has none', () => {
-    expect(branchChangesetPane([], [])).toEqual({ kind: 'noChangesets' });
-  });
-
-  it('shows the newest changeset until one is selected, never saying a branch with changesets has none', () => {
-    expect(branchChangesetPane(newestFirst, [])).toEqual({ kind: 'changeset', changesetId: 12 });
+describe('changesetListChoice', () => {
+  it('shows every changeset combined for the combined row, read or not', () => {
+    expect(changesetListChoice(newestFirst, [])).toEqual({ kind: 'all' });
+    expect(changesetListChoice(undefined, [])).toEqual({ kind: 'all' });
   });
 
   it('shows the diff of the changeset selected', () => {
-    expect(branchChangesetPane(newestFirst, [11])).toEqual({ kind: 'changeset', changesetId: 11 });
+    expect(changesetListChoice(newestFirst, [11])).toEqual({ kind: 'changeset', changesetId: 11 });
+  });
+
+  // A review going to a comment opens on its changeset before the branch's changesets are read.
+  it('shows a changeset asked for while the changesets are read', () => {
+    expect(changesetListChoice(undefined, [11])).toEqual({ kind: 'changeset', changesetId: 11 });
+  });
+
+  it('waits for the changesets to tell where a span starts', () => {
+    expect(changesetListChoice(undefined, [10, 12])).toEqual({ kind: 'reading' });
   });
 
   it('shows several changesets selected as one diff, from before the oldest to the newest', () => {
-    expect(branchChangesetPane(newestFirst, [10, 11])).toEqual({
+    expect(changesetListChoice(newestFirst, [10, 11])).toEqual({
       kind: 'span',
       target: { kind: 'range', fromSpec: 'cs:9', toSpec: 'cs:11' },
       changesets: [newestFirst[1], newestFirst[2]],
@@ -32,18 +34,24 @@ describe('branchChangesetPane', () => {
 
   it('shows the whole span of changesets selected apart, whatever order they were picked in', () => {
     const branch = [changeset(15), changeset(14), changeset(13), changeset(12)];
-    expect(branchChangesetPane(branch, [15, 12])).toEqual({ kind: 'span', target: { kind: 'range', fromSpec: 'cs:11', toSpec: 'cs:15' }, changesets: branch });
+    expect(changesetListChoice(branch, [15, 12])).toEqual({ kind: 'span', target: { kind: 'range', fromSpec: 'cs:11', toSpec: 'cs:15' }, changesets: branch });
   });
 
   // The branch's first changeset's parent is where it started, on its parent branch: the span holds what the first did.
   it("diffs from where a span starting at the branch's first changeset started", () => {
     const first: Changeset = { ...changeset(40), parent: 7 };
-    const pane = branchChangesetPane([changeset(41), first], [40, 41]);
-    expect(pane.kind === 'span' && pane.target).toEqual({ kind: 'range', fromSpec: 'cs:7', toSpec: 'cs:41' });
+    const choice = changesetListChoice([changeset(41), first], [40, 41]);
+    expect(choice.kind === 'span' && choice.target).toEqual({ kind: 'range', fromSpec: 'cs:7', toSpec: 'cs:41' });
   });
 
-  it('shows the one changeset left on the branch of a selection the branch no longer holds whole', () => {
-    expect(branchChangesetPane(newestFirst, [99, 11])).toEqual({ kind: 'changeset', changesetId: 11 });
+  it('shows the one changeset left of a selection the list no longer holds whole', () => {
+    expect(changesetListChoice(newestFirst, [99, 11])).toEqual({ kind: 'changeset', changesetId: 11 });
+  });
+
+  // The list still holds another branch's changesets while the branch's own are read (`placeholderData`).
+  it('shows a changeset the list doesn\'t hold by its number, and everything for a span it can\'t place', () => {
+    expect(changesetListChoice(newestFirst, [99])).toEqual({ kind: 'changeset', changesetId: 99 });
+    expect(changesetListChoice(newestFirst, [98, 99])).toEqual({ kind: 'all' });
   });
 });
 

@@ -1,21 +1,21 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Check } from 'lucide-react';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ChangesetSpan, FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { ChangesetStepList } from '../../components/changesetList/ChangesetStepList';
+import { changesetSpanSummary, type ChangesetSpanSummary } from '../../components/changesetList/changesetListChoice';
+import type { ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import type { MenuHost } from '../../components/menuWords';
 import { branchWorkedOn } from '../../components/workingObject';
-import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
-import { hotkey } from '../../lib/shortcutRegistry';
-import { useShortcut } from '../../lib/useShortcut';
+import { branchLabel } from '../../lib/branchLabels';
 import { EmptyState } from '../../ui/EmptyState';
-import { SegmentedControl } from '../../ui/SegmentedControl';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { branchDiffShownFor, branchStartOfChangesets, changesetStep, oldestFirst, shownBranchChangesets, selectedChangesetIds, showsChangesetList, spanSelection, type BranchDiffMode, type ChangesetToShow, type SpanToShow } from './changesetByChangeset';
-import { newChangesetsOf, type ReviewedUpTo } from './branchChangesetRows';
-import { BranchChangesetList } from './BranchChangesetList';
+import { branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
+import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
-import { branchChangesetPane, changesetSpanSummary, type ChangesetSpanSummary } from './branchChangesetPane';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
 import { DiffFrame } from './DiffFrame';
@@ -25,12 +25,12 @@ import styles from './BranchDiff.module.css';
 interface BranchDiffProps {
   branch: string;
   branchHead?: number;
-  /** The file to open on, in the whole branch and in each of its changesets. */
+  /** The file to open on, in all the branch's changes and in each of its changesets. */
   focusPath?: string;
   focusLines?: FocusedLines;
-  /** Opens changeset by changeset, on this changeset (where a review's comment written there is). */
+  /** Opens on this changeset (where a review's comment written there is). */
   focusChangeset?: number;
-  /** Opens changeset by changeset, every changeset of this span selected, as one diff (a review's new changesets). */
+  /** Opens with every changeset of this span selected, as one diff (a review's new changesets). */
   focusChangesets?: ChangesetSpan;
   /** Where the user left off reviewing the branch (a code review's checkpoint): its changesets are marked new or reviewed. */
   reviewedUpTo?: ReviewedUpTo;
@@ -38,81 +38,33 @@ interface BranchDiffProps {
   detailsToggle?: ReactNode;
 }
 
-/** A branch's changes, either all at once or one changeset at a time. */
-export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusChangeset, focusChangesets, reviewedUpTo, detailsToggle }: BranchDiffProps) {
-  const [mode, setMode] = useState<BranchDiffMode>(focusChangeset === undefined && focusChangesets === undefined ? 'wholeBranch' : 'byChangeset');
-  // The changeset asked for, again each time it's asked (`seq`): the user may have stepped elsewhere meanwhile.
-  const [stepTo, setStepTo] = useState<ChangesetToShow | undefined>(focusChangeset === undefined ? undefined : { changesetId: focusChangeset, seq: 0 });
-  const [spanTo, setSpanTo] = useState<SpanToShow | undefined>(focusChangesets === undefined ? undefined : { changesets: focusChangesets, seq: 0 });
-  // The place asks for a mode, with a file or not (a review's comment, in the mode it was written in; a check-in; what's
-  // new since the user's review): switch to it.
-  const focusRequest = useContext(DiffFocusRequestContext);
-  useEffect(() => {
-    const shown = branchDiffShownFor(focusRequest);
-    if (!shown) return;
-    setMode(shown.mode);
-    if (shown.changeset) setStepTo(shown.changeset);
-    if (shown.span) setSpanTo(shown.span);
-  }, [focusRequest?.seq]);
-  const modeToggle = (
-    <>
-      <SegmentedControl<BranchDiffMode>
-        value={mode}
-        onChange={setMode}
-        segments={[
-          { value: 'wholeBranch', label: 'Whole branch' },
-          { value: 'byChangeset', label: 'Changeset by changeset' },
-        ]}
-      />
-      {detailsToggle}
-    </>
-  );
-
-  if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={modeToggle} focusPath={focusPath} focusLines={focusLines} />;
-  return (
-    <ChangesetByChangeset
-      branch={branch}
-      toolbar={modeToggle}
-      focusPath={focusRequest?.path ?? focusPath}
-      focusChangeset={stepTo}
-      focusChangesets={spanTo}
-      reviewedUpTo={reviewedUpTo}
-    />
-  );
-}
-
 /** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
 const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
 
-interface ChangesetByChangesetProps {
-  branch: string;
-  toolbar: ReactNode;
-  focusPath?: string;
-  /** The changeset to show, selected as it opens and each time it's asked for. */
-  focusChangeset?: ChangesetToShow;
-  /** The span to show, its changesets selected as it opens and each time another is asked for. */
-  focusChangesets?: SpanToShow;
-  reviewedUpTo?: ReviewedUpTo;
-}
+/** The changesets shown before the rest scroll inside the list, under "All changes on …". */
+const MOST_ROWS = 6;
 
-function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focusChangesets, reviewedUpTo }: ChangesetByChangesetProps) {
+/**
+ * A branch's changes: all of them (`cm diff br:<branch> --integration`), one changeset's, or several changesets' as
+ * one diff, picked in the list of its changesets above the files (`ChangesetStepList`), which opens on all of them.
+ */
+export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusChangeset, focusChangesets, reviewedUpTo, detailsToggle }: BranchDiffProps) {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filter = useMemo(() => ({ branch }), [branch]);
   const { data: changesets, error } = useChangesets(filter);
-  const [selection, setSelection] = useState<SelectionState>(() => initialSelection(changesets, focusChangeset, focusChangesets));
-  const [query, setQuery] = useState('');
-  const [onlyNew, setOnlyNew] = useState(false);
-  const [revealKey, setRevealKey] = useState<string | null>(null);
-  // Oldest on top, as the branch was built (`oldestFirst`); the read stays newest first for what asks for the newest.
-  const listed = useMemo(() => oldestFirst(changesets ?? []), [changesets]);
-  const shown = useMemo(() => shownBranchChangesets(listed, { query, onlyNew }, reviewedUpTo), [listed, query, onlyNew, reviewedUpTo]);
-  const newCount = useMemo(() => newChangesetsOf(changesets ?? [], reviewedUpTo).length, [changesets, reviewedUpTo]);
-  const selectedId = selection.anchor === null ? null : Number(selection.anchor);
-  // The newest, at the list's bottom: selected first, and brought into view.
-  const newestId = changesets?.[0]?.id;
-  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to. The whole
-  // branch read tells where it starts, for the branch diff up to a changeset.
+  const [focus, setFocus] = useState<ChangesetListFocus>(() => initialBranchDiffFocus(focusChangeset, focusChangesets));
+  // The place asks for changesets, with a file or not (a review's comment, where it was written; a check-in; what's
+  // new since the user's review): select them.
+  const focusRequest = useContext(DiffFocusRequestContext);
+  useEffect(() => {
+    const asked = branchDiffFocusFor(focusRequest);
+    if (asked) setFocus(asked);
+  }, [focusRequest?.seq]);
+  const list = useChangesetStepList({ changesets, focus });
+
+  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset. The whole branch read
+  // tells where it starts, for the branch diff up to a changeset.
   const start = branchStartOfChangesets(branch, changesets);
   const menuContext = {
     place,
@@ -120,99 +72,76 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
     loadedBranch: branchWorkedOn(workspace?.selector),
     branchStartOf: (name: string) => (name === branch ? start : null),
   };
+  const quiet = useCallback((changeset: Changeset) => changesetMark(changeset, reviewedUpTo) === 'reviewed', [reviewedUpTo]);
+  const separator = useMemo(() => reviewedSeparator(list.shown, reviewedUpTo, Date.now()), [list.shown, reviewedUpTo]);
 
-  useEffect(() => {
-    if (selectedId === null && newestId !== undefined) {
-      setSelection(singleSelection(String(newestId)));
-      setRevealKey(String(newestId));
-    }
-  }, [selectedId, newestId]);
-  useEffect(() => {
-    if (focusChangeset === undefined) return;
-    setSelection(singleSelection(String(focusChangeset.changesetId)));
-    setRevealKey(String(focusChangeset.changesetId));
-  }, [focusChangeset?.changesetId, focusChangeset?.seq]);
-  // Every changeset of the span once they're read; its ends until then, which show the same diff.
-  const read = changesets !== undefined;
-  useEffect(() => {
-    if (focusChangesets === undefined) return;
-    setSelection(spanSelection(changesets, focusChangesets.changesets));
-    setRevealKey(String(focusChangesets.changesets.newest));
-  }, [focusChangesets?.seq, read]);
-
-  const stepsTo = (step: 1 | -1): number | null => (changesets ? changesetStep(listed, shown, selectedId, step) : null);
-  const stepTo = (step: 1 | -1): void => {
-    const id = stepsTo(step);
-    if (id === null) return;
-    setSelection(singleSelection(String(id)));
-    setRevealKey(String(id));
-  };
-  // Not from a text field: ⌥⇧↓ ⌥⇧↑ select to the text's ends on macOS (the filters'); the diff's step keys do the same.
-  useShortcut(hotkey('nextChangeset'), () => stepTo(1), true, { whileTyping: false });
-  useShortcut(hotkey('previousChangeset'), () => stepTo(-1), true, { whileTyping: false });
-
-  if (error) return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
-  const pane = branchChangesetPane(changesets, selectedChangesetIds(selection));
-  const changesetList = showsChangesetList(changesets) && (
-    <BranchChangesetList
-      changesets={changesets}
-      shown={shown}
-      query={query}
-      onQueryChange={setQuery}
-      reviewedUpTo={reviewedUpTo}
-      newCount={newCount}
-      onlyNew={onlyNew}
-      onOnlyNewChange={setOnlyNew}
-      selection={selection}
-      onSelectionChange={(next) => {
-        // A changeset picked in the list is already in view; the one stepped to before isn't revealed again.
-        setRevealKey(null);
-        setSelection(next);
-      }}
-      stepsTo={stepsTo}
-      onStep={stepTo}
-      revealKey={revealKey}
-      contextMenu={(rows: Changeset[]) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
+  // Without its changesets, the branch's diff still shows all its changes, or one changeset asked for by its number.
+  if (error && list.choice.kind === 'reading') return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
+  const changesetList = !error && showsChangesetList(changesets) && (
+    <ChangesetStepList
+      list={list}
+      allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
+      quiet={reviewedUpTo && quiet}
+      separator={
+        separator && {
+          beforeKey: separator.beforeKey,
+          content: (
+            <span className={styles.reviewed}>
+              <span className={styles.reviewedBy} data-tip={separator.tip}>
+                <Check size={12} aria-hidden />
+                {separator.label}
+              </span>
+              <button type="button" className={styles.showNew} onClick={() => setFocus({ kind: 'span', span: separator.showNew.span })}>
+                {separator.showNew.label}
+              </button>
+            </span>
+          ),
+        }
+      }
+      mostRows={MOST_ROWS}
+      label="Changesets"
+      contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
     />
   );
 
-  // The changesets stay above the files as each changeset's diff is read (`DiffBrowserLayout`), and the header names
-  // the branch, as in "Whole branch", whatever is read: each changeset's summary, as tall as its comment, goes above
-  // its diff, where its height moves nothing being clicked.
+  // The changesets stay above the files as each diff is read (`DiffBrowserLayout`), and the header names the branch
+  // whatever is read: a changeset's summary, as tall as its comment, goes above its diff, where its height moves
+  // nothing being clicked.
+  const toolbar = detailsToggle;
   const branchDescription = <BranchDescription branch={branch} />;
-  if (pane.kind === 'changeset') {
+  const { choice } = list;
+  if (choice.kind === 'all') {
+    return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={toolbar} focusPath={focusPath} focusLines={focusLines} aboveFiles={changesetList} />;
+  }
+  const changesetFocusPath = focusRequest?.path ?? focusPath;
+  if (choice.kind === 'changeset') {
     return (
       <TargetDiff
-        target={{ kind: 'changeset', changesetId: pane.changesetId }}
+        target={{ kind: 'changeset', changesetId: choice.changesetId }}
         toolbar={toolbar}
-        focusPath={focusPath}
+        focusPath={changesetFocusPath}
         aboveFiles={changesetList}
         pageDescription={branchDescription}
       />
     );
   }
-  if (pane.kind === 'span') {
+  if (choice.kind === 'span') {
     return (
       <TargetDiff
-        target={pane.target}
+        target={choice.target}
         toolbar={toolbar}
-        focusPath={focusPath}
+        focusPath={changesetFocusPath}
         aboveFiles={changesetList}
         pageDescription={branchDescription}
-        description={<ChangesetSpanDescription summary={changesetSpanSummary(pane.changesets)} />}
+        description={<ChangesetSpanDescription summary={changesetSpanSummary(choice.changesets)} />}
       />
     );
   }
   return (
     <DiffFrame description={branchDescription} toolbar={toolbar}>
-      {pane.kind === 'reading' ? <DiffBrowserLayout aboveFiles={changesetList} /> : <EmptyState title="This branch has no changesets" />}
+      <DiffBrowserLayout aboveFiles={changesetList} />
     </DiffFrame>
   );
-}
-
-function initialSelection(changesets: readonly Changeset[] | undefined, focusChangeset: ChangesetToShow | undefined, focusChangesets: SpanToShow | undefined): SelectionState {
-  if (focusChangesets) return spanSelection(changesets, focusChangesets.changesets);
-  return focusChangeset === undefined ? EMPTY_SELECTION : singleSelection(String(focusChangeset.changesetId));
 }
 
 /** Where one changeset's summary sits above its diff: "3 changesets · cs:15 to cs:17 · Daniel". */

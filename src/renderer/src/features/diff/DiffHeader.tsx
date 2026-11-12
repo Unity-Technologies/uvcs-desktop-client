@@ -4,7 +4,7 @@ import styles from './TargetDiff.module.css';
 export interface DiffHeaderProps {
   /** What is compared: a changeset's summary, a branch, a range; nothing while it isn't known yet. */
   description?: ReactNode;
-  /** At the header's end, whatever the body shows: a branch diff's "Whole branch | Changeset by changeset". */
+  /** At the header's end, whatever the body shows: a shelve's actions, a review's Comments panel toggle. */
   toolbar?: ReactNode;
 }
 

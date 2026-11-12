@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { showMoreLanding } from './showMoreLanding';
 
 describe('showMoreLanding', () => {
-  it('lands on the first changeset of the page read, after "All incoming changes" and those shown before', () => {
-    expect(showMoreLanding({ countBefore: 200, count: 400, loading: false, started: true })).toEqual({ kind: 'land', index: 201 });
+  // Read newest first: the page's newest comes right after the 200 read before, above them in the list, oldest on top.
+  it('lands on the newest changeset of the page read, next to those shown before', () => {
+    expect(showMoreLanding({ countBefore: 200, count: 400, loading: false, started: true })).toEqual({ kind: 'land', index: 200 });
   });
 
   it('waits while the page is being read', () => {

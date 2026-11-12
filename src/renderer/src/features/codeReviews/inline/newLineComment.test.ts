@@ -33,7 +33,7 @@ describe('lineCommentAt', () => {
     expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', lineNumber: 0 })).toBeNull();
   });
 
-  it('is written in the changeset shown, changeset by changeset', () => {
+  it("is written in the changeset shown, one of the branch's", () => {
     expect(lineCommentAt(CHANGESET_8, CHANGED, { side: 'additions', lineNumber: 5 })).toEqual({ revisionId: 30, line: 5, changesetId: 8 });
   });
 });

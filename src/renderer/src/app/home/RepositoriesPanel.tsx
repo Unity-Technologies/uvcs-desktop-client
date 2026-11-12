@@ -1,4 +1,4 @@
-import { Database, Plus, RefreshCw, ServerCog } from 'lucide-react';
+import { Database, Plus, RefreshCw, ServerCog, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import type { RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { openServerPermissions } from '../../features/permissions/openPermissions';
@@ -8,10 +8,13 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { ListSkeleton } from '../../ui/Skeleton';
+import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { useProjects, useRepositories } from '../workspace/workspaceQueries';
+import { useDeletedRepositories, useProjects, useRepositories } from '../workspace/workspaceQueries';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
+import { deletedRepositoriesTip, repositoriesShown } from './deletedRepositories';
+import { useDeletedRepositoriesStore } from './deletedRepositoriesStore';
 import { noRepositoriesState, projectChoices, repositoriesInProject, shownProject } from './repositoryProjects';
 import { ProjectFilter } from './ProjectFilter';
 import { useProjectPickStore } from './projectPickStore';
@@ -31,6 +34,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { data: projects = NO_PROJECTS } = useProjects(server);
+  const { data: deleted = NO_REPOSITORIES } = useDeletedRepositories(server);
+  const { shown: withDeleted, setShown: setWithDeleted } = useDeletedRepositoriesStore();
   const shownOne = shownProject(useProjectPickStore((store) => store.picks[server]), projects);
   const project = shownOne?.name ?? null;
   const pickProject = useProjectPickStore((store) => store.pick);
@@ -39,7 +44,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   // Named as in the sidebar: "This computer", an organization's name.
   const place = describeServer(server);
 
-  const shown = useMemo(() => matchingRepositories(repositoriesInProject(repositories ?? [], project), filter), [repositories, project, filter]);
+  const listed = useMemo(() => repositories && repositoriesShown(repositories, deleted, withDeleted), [repositories, deleted, withDeleted]);
+  const shown = useMemo(() => matchingRepositories(repositoriesInProject(listed ?? [], project), filter), [listed, project, filter]);
   const workspaceKinds = useMemo(() => workspaceKindsByPath(workspaceEntries), [workspaceEntries]);
   const rows = repositoryListRows(shown, workspacesByRepository(workspaceEntries), expanded);
   const empty = noRepositoriesState(filter, project);
@@ -53,7 +59,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
         title={place.label}
         subtitle={place.detail}
         count={repositories && shown.length}
-        total={repositories?.length}
+        total={listed?.length}
         actions={
           <>
             <IconButton icon={<ServerCog size={14} />} label="Server permissions…" onClick={() => openServerPermissions(server)} />
@@ -75,6 +81,11 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           }}
         />
         {choices.length > 0 && <ProjectFilter choices={choices} repositoryCount={repositories?.length ?? 0} project={shownOne} onChange={(picked) => pickProject(server, picked)} />}
+        {deleted.length > 0 && (
+          <ToggleChip pressed={withDeleted} onChange={setWithDeleted} icon={<Trash2 size={13} />} data-tip={deletedRepositoriesTip(server)}>
+            Deleted
+          </ToggleChip>
+        )}
       </ViewHeader>
 
       <RepositoryList
@@ -108,6 +119,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
 }
 
 const NO_PROJECTS: UnityProject[] = [];
+const NO_REPOSITORIES: RepositorySummary[] = [];
 
 function toggled(set: ReadonlySet<string>, item: string): Set<string> {
   const next = new Set(set);

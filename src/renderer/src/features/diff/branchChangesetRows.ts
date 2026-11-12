@@ -1,10 +1,10 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { commentLineText } from '../../lib/comments/commentText';
+import type { ChangesetSpan } from '../../app/navigation/pages';
 import { formatDateTime, formatShortDay, type DayFormat } from '../../lib/formatDate';
 import { displayName } from '../../lib/userName';
 
 /**
- * Where the user left off reviewing the branch, as the "Changeset by changeset" list reads it: a code review's
+ * Where the user left off reviewing the branch, as a branch diff's list of changesets reads it: a code review's
  * checkpoint (`ReviewCheckpoint`, features/codeReviews/rounds), when the user gave their status, and the newest
  * changeset on the branch then (none when they gave it before the branch's first changeset).
  */
@@ -24,16 +24,28 @@ export function changesetMark(changeset: Pick<Changeset, 'id'>, reviewedUpTo: Re
   return reviewedUpTo.changesetId === undefined || changeset.id > reviewedUpTo.changesetId ? 'new' : 'reviewed';
 }
 
-/** The changesets new to the user, in the order given; none before they reviewed. What the list's New toggle keeps. */
+/** The changesets new to the user, in the order given; none before they reviewed. */
 export function newChangesetsOf(changesets: readonly Changeset[], reviewedUpTo: ReviewedUpTo | undefined): Changeset[] {
   return changesets.filter((changeset) => changesetMark(changeset, reviewedUpTo) === 'new');
 }
 
-/** The line between the new changesets and the reviewed ones: above which row, its words, and its tooltip. */
+/**
+ * The changesets checked in since the user's review, as one span selected together, one diff: what the review's "See
+ * the changes" opens on (`PageOf<'codeReview'>.focusChangesets`) and the list's "Show the 3 new" selects.
+ * `changesets` in any order. None before a review, while they're read, or when nothing came since.
+ */
+export function newChangesetsSpan(changesets: readonly Changeset[] | undefined, reviewedUpTo: ReviewedUpTo | undefined): ChangesetSpan | undefined {
+  const newIds = newChangesetsOf(changesets ?? [], reviewedUpTo).map((changeset) => changeset.id);
+  return newIds.length > 0 ? { oldest: Math.min(...newIds), newest: Math.max(...newIds) } : undefined;
+}
+
+/** The line between the new changesets and the reviewed ones: above which row, its words, its tooltip and its link. */
 export interface ReviewedSeparator {
   beforeKey: string;
   label: string;
   tip: string;
+  /** "Show the 3 new": the link that selects the new changesets shown together, as one diff. */
+  showNew: { label: string; span: ChangesetSpan };
 }
 
 /**
@@ -46,18 +58,12 @@ export function reviewedSeparator(shown: readonly Changeset[], reviewedUpTo: Rev
   const firstNew = shown.findIndex((changeset) => changesetMark(changeset, reviewedUpTo) === 'new');
   if (firstNew < 1 || changesetMark(shown[firstNew - 1]!, reviewedUpTo) !== 'reviewed') return undefined;
   const first = shown[firstNew]!;
-  return { beforeKey: String(first.id), label: `Reviewed by ${reviewedUpTo.by === undefined ? 'you' : displayName(reviewedUpTo.by)} · ${formatShortDay(reviewedUpTo.date, now, format)}`, tip: formatDateTime(reviewedUpTo.date) };
-}
-
-/** What the New toggle keeps, in its tooltip: since whose last review. */
-export function newToggleTip(reviewedUpTo: Pick<ReviewedUpTo, 'by'>): string {
-  return `Only the changesets new since ${reviewedUpTo.by === undefined ? 'your' : `${displayName(reviewedUpTo.by)}'s`} last review`;
-}
-
-/** A row's tooltip: the comment's first line, then who, when (in full) and which changeset, which the row says shortly. */
-export function changesetRowTip(changeset: Changeset): { text: string; sub: string } {
+  const newCount = newChangesetsOf(shown, reviewedUpTo).length;
+  const span = newChangesetsSpan(shown, reviewedUpTo)!;
   return {
-    text: commentLineText(changeset.comment) || 'No comment',
-    sub: `${displayName(changeset.owner)} · ${formatDateTime(changeset.date)} · cs:${changeset.id}`,
+    beforeKey: String(first.id),
+    label: `Reviewed by ${reviewedUpTo.by === undefined ? 'you' : displayName(reviewedUpTo.by)} · ${formatShortDay(reviewedUpTo.date, now, format)}`,
+    tip: formatDateTime(reviewedUpTo.date),
+    showNew: { label: newCount === 1 ? 'Show the new one' : `Show the ${newCount} new`, span },
   };
 }
