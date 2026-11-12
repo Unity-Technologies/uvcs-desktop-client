@@ -11,6 +11,7 @@ import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
+import { ChipOpenerContext, type ChipOpener } from '../../../components/comments/chipOpener';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
@@ -51,6 +52,11 @@ export interface CommentInContext {
    * opened at one, the dialog steps through those of its part (`contextStepsOf`).
    */
   steps?: readonly StepGroup[];
+  /**
+   * How the page opens a comment's chips (`ChipOpenerContext`): a changeset of the branch in the review's Changes. The
+   * dialog shows outside the page (`openDialog`), so it's handed along and provided again inside.
+   */
+  chipOpener?: ChipOpener | null;
 }
 
 /** As wide as the window allows, up to this: two versions of code side by side, and the changeset's files beside them. */
@@ -79,7 +85,11 @@ function CommentContextDialog(props: DialogProps) {
   useEffect(() => {
     if (!stays) onClose();
   }, [stays, onClose]);
-  return stays ? <ThreadInContext {...props} /> : null;
+  return stays ? (
+    <ChipOpenerContext.Provider value={props.chipOpener ?? null}>
+      <ThreadInContext {...props} />
+    </ChipOpenerContext.Provider>
+  ) : null;
 }
 
 /** The thread as the conversation has it now: a reply, an edit or a discard made here shows at once. */
