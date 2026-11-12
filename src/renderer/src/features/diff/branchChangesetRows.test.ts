@@ -46,12 +46,12 @@ describe('reviewedSeparator', () => {
       beforeKey: '16',
       label: 'Reviewed by you · Nov 15',
       tip: formatDateTime(reviewedUpTo15.date),
-      showNew: { label: 'Show the 2 new', span: { oldest: 16, newest: 17 } },
+      showNew: { label: 'Show the 2 new', short: '2 new', span: { oldest: 16, newest: 17 } },
     });
   });
 
   it('offers the new changesets the filter leaves, a single one in words', () => {
-    expect(reviewedSeparator([changeset(14), changeset(17)], reviewedUpTo15, now, format)?.showNew).toEqual({ label: 'Show the new one', span: { oldest: 17, newest: 17 } });
+    expect(reviewedSeparator([changeset(14), changeset(17)], reviewedUpTo15, now, format)?.showNew).toEqual({ label: 'Show the new one', short: '1 new', span: { oldest: 17, newest: 17 } });
   });
 
   it('goes before the first new one the filter leaves', () => {

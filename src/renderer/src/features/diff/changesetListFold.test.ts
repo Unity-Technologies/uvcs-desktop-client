@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { askedOpen, changesetFoldCount, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
 
 describe('listIsOpen', () => {
   it('is folded unless the user left it open or the page asked for changesets', () => {
@@ -39,5 +39,11 @@ describe('changesetFoldLabel', () => {
 describe('changesetFoldLabel, at the limit', () => {
   it('says there are more when the read was cut at its limit', () => {
     expect(changesetFoldLabel(4, 4)).toBe('4+ changesets');
+  });
+});
+
+describe('changesetFoldCount', () => {
+  it('is the number alone on the row, the words until read', () => {
+    expect([changesetFoldCount(undefined), changesetFoldCount(13), changesetFoldCount(4, 4)]).toEqual(['Changesets', '13', '4+']);
   });
 });
