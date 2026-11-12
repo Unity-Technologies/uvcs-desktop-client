@@ -19,7 +19,10 @@ export interface ThreadHeaderInput {
   earlier?: { label: string; tip: string; opensContext: boolean };
   /** The × that folds it back to its line's marker, while comments are hidden in the code. */
   hides: boolean;
-  /** Whether "Applied" shows how it was applied, in context, rather than opening the changeset. */
+  /**
+   * Whether the card shows a settled request in context (`CommentContextDialog`): "Applied" how it was applied, rather
+   * than opening the changeset, and "Discarded" what it asked against the newest version, beside the reply.
+   */
   seesHowApplied: boolean;
   /** Whether "Answered" can show the reply that answered (the panel's card can't: it goes to the thread). */
   showsAnswer: boolean;
@@ -43,7 +46,8 @@ export interface HeaderLocation {
 }
 
 /** Where the thread stands, as a pill: "Answered" leads to the reply, "Applied" to how it was applied; the rest are words. */
-export type HeaderPill = NonNullable<ThreadBadges['state']> & ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string });
+export type HeaderPill = NonNullable<ThreadBadges['state']> &
+  ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string } | { leadsTo: 'context'; tip: string });
 
 /** What a thread's header shows, in its order; the card maps it to its controls. */
 export interface ThreadHeaderView {
@@ -100,5 +104,6 @@ function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: bool
   if (answer) return { ...badges.state, leadsTo: 'answer', tip: answer.tip };
   if (badges.appliedIn !== undefined && inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
   if (badges.appliedIn !== undefined) return { ...badges.state, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
+  if (thread.state.kind === 'discarded' && seesHowApplied && !inContext) return { ...badges.state, leadsTo: 'context', tip: 'Discarded: see it in context' };
   return { ...badges.state, leadsTo: 'nothing' };
 }

@@ -267,10 +267,12 @@ one read serves both), say what was checked in when (`reviewRounds`).
   conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "2 of 4 in round 1", "1 of 3 since last
   review", "after round 2" for someone with no line of their own, the position alone before any round; arrows before the
   view switch): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came
-  back to check. A step shows the next one's own view of how it was settled, away from the file it was opened from.
-  **Show in Changes**, in its footer, leaves the dialog for the review's Changes, at the thread: a request applied on a
-  branch in the changeset that applied it, whose diff shows it beside the fix (`showInChangesPage`); anything else where
-  it was written.
+  back to check. A step shows the next one's own view of how it was settled, away from the file it was opened from;
+  only the dialog's body changes, never the dialog (opened again, its animation flickered at each step), and the
+  position reads before the two arrows, right-aligned, so stepping never moves an arrow.
+  Its footer leaves the dialog for the review's Changes, at the thread (`showInChangesPage`, `contextFooterAction`):
+  **Open changeset N** for a request applied on a branch, whose diff shows it beside the fix; **Show in Changes** for
+  anything else, where it was written.
 Tried and dropped, so they aren't proposed again: banners under the header saying whose turn it is (they repeated what
 the conversation shows once it opens at its line, and read as stress); a band under the Changes header saying what's
 reviewed; a third mode "Since last review" in Changes (several changesets selected changeset by changeset give the same
@@ -320,9 +322,14 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
   the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
   that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
-  code, the Comments panel, the conversation) opens it on How it was applied; the tag opens it on When commented. No
+  code, the Comments panel, the conversation) opens it on How it was applied, and every **Discarded** pill on Since
+  then, the request against the newest version beside the reply that discarded it (`HeaderPill`'s `context`); the tag
+  opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
-  something else. Its **Open changeset N** opens the changeset itself. When that changeset changed other files too, the
+  something else. Its one button leads to the code (`contextFooterAction`): **Open changeset N**, for a request applied on a branch,
+  opens that changeset in the review's Changes, at the thread, beside the fix; anything else, **Show in Changes**,
+  where it was written. A changeset applying a request on a review of no branch isn't among its changes, and opens on
+  its own page. Two buttons, one to the review's Changes and one to the changeset's own page, read as the same twice. When that changeset changed other files too, the
   dialog lists them all, as a changeset's diff does (`AppliedChangesetFiles`: `DiffBrowser` with its filter, change
   types and tree, the commented file selected first; `appliedFilesOf`, `listsAppliedFiles`), so the reviewer sees what
   else the fix did and which file the comment is on. The commented file's diff is the comment's (an
