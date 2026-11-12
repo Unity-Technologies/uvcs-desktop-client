@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, shownBranchChangesets, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -44,6 +44,26 @@ describe('filterBranchChangesets', () => {
 
   it('shows nothing when nothing matches', () => {
     expect(filterBranchChangesets(branch, 'nothing like this')).toEqual([]);
+  });
+});
+
+describe('shownBranchChangesets', () => {
+  const reviewedUpTo = { date: '2026-10-01T10:00:00Z', changesetId: 280532 };
+
+  it('keeps only the changesets new since the review while New is on', () => {
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, reviewedUpTo))).toEqual([280536, 280535]);
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: false }, reviewedUpTo))).toEqual([280536, 280535, 280532, 280530]);
+  });
+
+  it('filters the new ones by the words typed', () => {
+    expect(ids(shownBranchChangesets(branch, { query: 'marketplace', onlyNew: true }, reviewedUpTo))).toEqual([280535]);
+    expect(ids(shownBranchChangesets(branch, { query: 'crlf', onlyNew: true }, reviewedUpTo))).toEqual([]);
+  });
+
+  // New shows only while there are new changesets: once none is (the user reviewed again), it keeps nothing out.
+  it('shows every changeset when none is new, or before the user reviewed', () => {
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, { date: '2026-10-02T10:00:00Z', changesetId: 280536 }))).toEqual([280536, 280535, 280532, 280530]);
+    expect(ids(shownBranchChangesets(branch, { query: '', onlyNew: true }, undefined))).toEqual([280536, 280535, 280532, 280530]);
   });
 });
 
