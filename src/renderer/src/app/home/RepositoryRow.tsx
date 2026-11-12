@@ -1,7 +1,6 @@
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
-import { DeletedChip } from '../../components/DeletedChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
@@ -12,6 +11,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { exploreRepository } from '../workspace/exploreRepository';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
+import { DeletedChip } from './DeletedChip';
 import { deletedRepositoriesTip } from './deletedRepositories';
 import { deletedRepositoryMenu, repositoryMenu } from './homeMenus';
 import { restoreRepository } from './homeOperations';

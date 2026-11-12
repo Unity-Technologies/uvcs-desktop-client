@@ -1,0 +1,8 @@
+/* A deleted repository: the shape of the other chips, in the color of a deleted item in a change list. */
+.chip {
+  composes: chip from '../../components/WorkspaceChip.module.css';
+  flex: none;
+  background: color-mix(in srgb, var(--status-deleted) 14%, transparent);
+  color: var(--status-deleted);
+  font-weight: var(--weight-medium);
+}
