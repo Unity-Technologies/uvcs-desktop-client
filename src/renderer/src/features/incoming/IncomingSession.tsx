@@ -77,6 +77,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const changesetSteps = useChangesetStepList({
     changesets: changesetList.changesets,
     focus: ALL_INCOMING_FOCUS,
+    // Collapsed, a step would change the files out of sight.
+    stepsEnabled: !changesetsCollapsed,
     onSelect: (picked) => {
       setShowsChangeset(selectedChangesetIds(picked).length === 1);
       setSelection(EMPTY_SELECTION);

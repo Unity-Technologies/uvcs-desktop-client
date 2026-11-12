@@ -16,7 +16,7 @@ import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
-import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { askedOpen, changesetFoldLabel, changesetStepsWork, listIsOpen, toggledFold } from './changesetListFold';
 import { useChangesetListFoldStore } from './changesetListFoldStore';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
@@ -77,7 +77,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     setFocus(askedFocus);
     if (askedOpen(askedFocus)) setAsked(true);
   }, [focusRequest?.seq]);
-  const list = useChangesetStepList({ changesets, focus, allApart: true });
+  const list = useChangesetStepList({ changesets, focus, allApart: true, stepsEnabled: changesetStepsWork(open, changesets) });
 
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset. The whole branch read
   // tells where it starts, for the branch diff up to a changeset.

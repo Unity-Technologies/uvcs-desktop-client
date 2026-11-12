@@ -28,6 +28,8 @@ interface ChangesetStepListOptions {
   onSelect?: (selection: SelectionState) => void;
   /** The place shows the combined row itself, above the list (`changesetListRows`). */
   allApart?: boolean;
+  /** Whether ⌥⇧↓ ⌥⇧↑ step: only while the list shows (`changesetStepsWork`), or a step changes the diff out of sight. */
+  stepsEnabled?: boolean;
 }
 
 /** What `ChangesetStepList` draws and how it's driven. */
@@ -55,7 +57,7 @@ export interface ChangesetStepListState {
  * the place asks for, and again each time it asks), and the steps through it, from the buttons and from anywhere in
  * the view but a text field (⌥⇧↓ ⌥⇧↑, `nextChangeset`, `previousChangeset`: ⌥⇧ selects text to its ends on macOS).
  */
-export function useChangesetStepList({ changesets, focus, onSelect, allApart = false }: ChangesetStepListOptions): ChangesetStepListState {
+export function useChangesetStepList({ changesets, focus, onSelect, allApart = false, stepsEnabled = true }: ChangesetStepListOptions): ChangesetStepListState {
   const [query, setQuery] = useState('');
   const [selection, setSelection] = useState<SelectionState>(() => focusSelection(focus, changesets));
   const [revealKey, setRevealKey] = useState<string | null>(() => focusRevealKey(focus));
@@ -89,8 +91,8 @@ export function useChangesetStepList({ changesets, focus, onSelect, allApart = f
     const id = stepsTo(step);
     if (id !== null) select(singleSelection(String(id)), String(id));
   };
-  useShortcut(hotkey('nextChangeset'), () => stepTo(1), true, { whileTyping: false });
-  useShortcut(hotkey('previousChangeset'), () => stepTo(-1), true, { whileTyping: false });
+  useShortcut(hotkey('nextChangeset'), () => stepTo(1), stepsEnabled, { whileTyping: false });
+  useShortcut(hotkey('previousChangeset'), () => stepTo(-1), stepsEnabled, { whileTyping: false });
 
   const choice = changesetListChoice(changesets, selectedChangesetIds(selection));
   return { changesets, rows, shown, query, setQuery, selection, select, revealKey, stepsTo, stepTo, choice };

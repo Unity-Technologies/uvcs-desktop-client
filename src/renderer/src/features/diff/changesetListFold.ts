@@ -33,3 +33,12 @@ export function toggledFold(fold: ChangesetListFold): { fold: ChangesetListFold;
 export function changesetFoldLabel(open: boolean): string {
   return open ? 'Hide the changesets' : 'Show the changesets';
 }
+
+/**
+ * Whether ⌥⇧↓ ⌥⇧↑ step through the changesets (`useChangesetStepList`'s `stepsEnabled`): only while the list shows
+ * them. Folded, or on a branch of one changeset, which shows no list, a step would change the diff out of sight.
+ */
+export function changesetStepsWork(open: boolean, changesets: readonly { id: number }[] | undefined): boolean {
+  // As `showsChangesetList`, once read: one changeset shows no list.
+  return open && changesets !== undefined && changesets.length > 1;
+}
