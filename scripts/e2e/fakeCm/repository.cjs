@@ -111,7 +111,7 @@ const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is',
 const ATTRIBUTES = [{ id: 61, name: 'status', value: 'In progress', srcobj: 'br:/main/task-001', date: daysAgo(10), ...common }];
 
 /** `cm repository list`. */
-const REPOSITORIES = [{ repid: 1, repname: REPOSITORY, repserver: SERVER, repowner: OWNER }];
+const REPOSITORIES = [{ repid: 1, repname: REPOSITORY, repserver: SERVER, repowner: OWNER, reptype: 'VCS', repguid: '00000000-0000-4000-8000-000000000001' }];
 
 /**
  * The workspace's files: `loaded` is the content of the loaded revision (what `cm cat` answers), `onDisk` what the
