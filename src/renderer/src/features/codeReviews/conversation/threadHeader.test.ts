@@ -124,8 +124,13 @@ describe('threadHeaderOf', () => {
       expect(headerOf(applied, { place: 'code', inContext: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'nothing', tip: 'Applied in changeset 281' });
     });
 
-    it('says a discarded one was discarded, as words', () => {
-      expect(headerOf(discarded).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+    it('leads a discarded one to it in context, where the card can show it, as an applied one does', () => {
+      expect(headerOf(discarded, { seesHowApplied: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'context', tip: 'Discarded: see it in context' });
+    });
+
+    it('says a discarded one was discarded, as words, in context already or where nothing shows it', () => {
+      expect(headerOf(discarded, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+      expect(headerOf(discarded, { seesHowApplied: false }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
     });
 
     it('leads an answered question to its first reply where the card shows replies, and is words in the panel', () => {
