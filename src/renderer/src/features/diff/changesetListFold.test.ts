@@ -34,3 +34,9 @@ describe('changesetFoldLabel', () => {
     expect(changesetFoldLabel(13)).toBe('Changesets · 13');
   });
 });
+
+describe('changesetFoldLabel, at the limit', () => {
+  it('says there are more when the read was cut at its limit', () => {
+    expect(changesetFoldLabel(4, 4)).toBe('Changesets · 4+');
+  });
+});

@@ -1,5 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { Check } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ChangesetSpan, FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -16,6 +16,8 @@ import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
+import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { useChangesetListFoldStore } from './changesetListFoldStore';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
 import { DiffFrame } from './DiffFrame';
@@ -51,15 +53,29 @@ const MOST_ROWS = 6;
 export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusChangeset, focusChangesets, reviewedUpTo, detailsToggle }: BranchDiffProps) {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
-  const filter = useMemo(() => branchChangesetsFilter(branch), [branch]);
-  const { data: changesets, error } = useChangesets(filter);
   const [focus, setFocus] = useState<ChangesetListFocus>(() => initialBranchDiffFocus(focusChangeset, focusChangesets));
+  // Folded, the list is one line and its changesets aren't read (`ChangesetListFold`).
+  const remembered = useChangesetListFoldStore((state) => state.open);
+  const setRemembered = useChangesetListFoldStore((state) => state.setOpen);
+  const [asked, setAsked] = useState(() => askedOpen(focus));
+  const fold = { remembered, asked };
+  const open = listIsOpen(fold);
+  const toggleFold = (): void => {
+    const next = toggledFold(fold);
+    setRemembered(next.fold.remembered);
+    setAsked(next.fold.asked);
+    if (next.showsAll) setFocus({ kind: 'all' });
+  };
+  const filter = useMemo(() => branchChangesetsFilter(branch), [branch]);
+  const { data: changesets, error } = useChangesets(filter, { enabled: open });
   // The place asks for changesets, with a file or not (a review's comment, where it was written; a check-in; what's
   // new since the user's review): select them.
   const focusRequest = useContext(DiffFocusRequestContext);
   useEffect(() => {
-    const asked = branchDiffFocusFor(focusRequest);
-    if (asked) setFocus(asked);
+    const askedFocus = branchDiffFocusFor(focusRequest);
+    if (!askedFocus) return;
+    setFocus(askedFocus);
+    if (askedOpen(askedFocus)) setAsked(true);
   }, [focusRequest?.seq]);
   const list = useChangesetStepList({ changesets, focus });
 
@@ -77,31 +93,44 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
 
   // Without its changesets, the branch's diff still shows all its changes, or one changeset asked for by its number.
   if (error && list.choice.kind === 'reading') return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
+  // "Show the 3 new": on the Reviewed line, and on the folded line too (a review's page has read its changesets).
+  const showNew = separator && (
+    <button
+      type="button"
+      className={styles.showNew}
+      onClick={() => {
+        setFocus({ kind: 'span', span: separator.showNew.span });
+        setAsked(true);
+      }}
+    >
+      {separator.showNew.label}
+    </button>
+  );
   const changesetList = !error && showsChangesetList(changesets) && (
-    <ChangesetStepList
-      list={list}
-      allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
-      quiet={reviewedUpTo && quiet}
-      separator={
-        separator && {
-          beforeKey: separator.beforeKey,
-          content: (
-            <span className={styles.reviewed}>
-              <span className={styles.reviewedBy} data-tip={separator.tip}>
-                <Check size={12} aria-hidden />
-                {separator.label}
+    <ChangesetFold label={changesetFoldLabel(changesets?.length)} open={open} onToggle={toggleFold} folded={showNew}>
+      <ChangesetStepList
+        list={list}
+        allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
+        quiet={reviewedUpTo && quiet}
+        separator={
+          separator && {
+            beforeKey: separator.beforeKey,
+            content: (
+              <span className={styles.reviewed}>
+                <span className={styles.reviewedBy} data-tip={separator.tip}>
+                  <Check size={12} aria-hidden />
+                  {separator.label}
+                </span>
+                {showNew}
               </span>
-              <button type="button" className={styles.showNew} onClick={() => setFocus({ kind: 'span', span: separator.showNew.span })}>
-                {separator.showNew.label}
-              </button>
-            </span>
-          ),
+            ),
+          }
         }
-      }
-      mostRows={MOST_ROWS}
-      label="Changesets"
-      contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
-    />
+        mostRows={MOST_ROWS}
+        label="Changesets"
+        contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
+      />
+    </ChangesetFold>
   );
 
   // The changesets stay above the files as each diff is read (`DiffBrowserLayout`), and the header names the branch
@@ -141,6 +170,26 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     <DiffFrame description={branchDescription} toolbar={toolbar}>
       <DiffBrowserLayout aboveFiles={changesetList} />
     </DiffFrame>
+  );
+}
+
+/**
+ * The changesets above the files, folding to one line ("Changesets · 13 ›") that opens them: who reviews the whole
+ * branch sees that line only, with "Show the 3 new" at its end on a review's page (`folded`). The list mounts only
+ * open, so folded it reads nothing.
+ */
+function ChangesetFold({ label, open, onToggle, folded, children }: { label: string; open: boolean; onToggle: () => void; folded?: ReactNode; children: ReactNode }) {
+  return (
+    <div className={styles.fold} data-open={open || undefined}>
+      <div className={styles.foldBar}>
+        <button type="button" className={styles.foldLine} aria-expanded={open} onClick={onToggle}>
+          <ChevronRight size={14} className={styles.foldChevron} aria-hidden />
+          {label}
+        </button>
+        {!open && folded}
+      </div>
+      {open && children}
+    </div>
   );
 }
 

@@ -49,8 +49,15 @@ clicked at each step.
 
 Why no switch between two modes, the whole branch and its changesets one by one ("Whole branch | Changeset by
 changeset", tried): the branch's own diff is one more row of the list, so stepping into its changesets, and selecting
-several to read as one diff, is there from the start instead of behind a mode few found. It costs one `cm find` more on opening a branch's diff (a review's Changes read it already,
-for its rounds).
+several to read as one diff, is there from the start instead of behind a mode few found.
+
+The list folds to one line above the files, "Changesets · 13 ›" (`ChangesetFold` in `BranchDiff`, `changesetListFold`):
+folded, the page reads as the branch's whole diff did, with no list in the way and no `cm find` (the list mounts only
+open; a review's page has read the changesets for its rounds, so its line counts them and ends with "Show the 3 new").
+It opens when the user opens it, remembered across branches and sessions (`useChangesetListFoldStore`), and when the
+page asks for changesets (what's new since a review, a changeset chip, where a comment was written). Folding it goes
+back to all the changes: a changeset selected out of sight would leave the diff showing what the line doesn't say.
+Always open, tried, put a list and a read in front of everyone reviewing the whole branch.
 
 The list is as tall as its rows up to six (`MOST_ROWS`, `changesetRowsHeight`), the rest scrolling inside it, so the
 files keep their room; it isn't dragged apart from them. Each changeset is one line of 28 px, as a commit picker lists
