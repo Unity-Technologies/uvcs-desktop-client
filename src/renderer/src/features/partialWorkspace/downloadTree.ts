@@ -1,7 +1,7 @@
 import type { RepositoryTreePoint, TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
-import type { CheckState } from '../../ui/Checkbox';
+import type { CheckState, CheckboxTone } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
 import { ancestorsOf } from '../files/fileTreeRows';
@@ -51,6 +51,22 @@ export function downloadChangeOf(check: CheckState, loaded: boolean): DownloadCh
   if (check === 'mixed') return 'mixed';
   if (check) return loaded ? 'kept' : 'load';
   return loaded ? 'unload' : 'none';
+}
+
+/** How a row shows its change: its check's tone, and a word beside its name. */
+export interface DownloadChangeLook {
+  tone?: CheckboxTone;
+  marker?: 'Download' | 'Remove';
+}
+
+/**
+ * Only what Apply downloads or removes stands out, so the user sees at a glance what applying changes; what it keeps,
+ * leaves out or changes in part looks like any checkbox.
+ */
+export function downloadChangeLook(change: DownloadChange): DownloadChangeLook {
+  if (change === 'load') return { tone: 'added', marker: 'Download' };
+  if (change === 'unload') return { tone: 'removed', marker: 'Remove' };
+  return {};
 }
 
 /** A row of the Choose what to download tree. Paths have forward slashes and no leading slash. */
