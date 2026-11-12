@@ -18,3 +18,28 @@ export function chooseDownloadsNote(kind: WorkspaceKind | undefined): string | n
   if (kind !== 'standard') return null;
   return 'Applying makes this a partial workspace: only the folders you pick are downloaded, each file updates on its own, and merging needs the whole branch.';
 }
+
+/** What Files' menu knows of an item when it decides whether to offer choosing what to download on it. */
+export interface DownloadsItem {
+  isPrivate: boolean;
+  /** Added and not checked in yet: the server's tree, which the dialog shows, doesn't hold it. */
+  added: boolean;
+  /** The item's repository, `name@server`, when the listing gives it. */
+  repository?: string;
+}
+
+/**
+ * Whether Files' menu offers Choose what to download on an item: one of the workspace's own repository that the
+ * server's tree holds, in a workspace that may choose (`choosesDownloads`). Not a private or added item, which the
+ * dialog's tree doesn't show, nor one under an xlink: an xlink downloads whole, and its folders aren't chosen.
+ */
+export function choosesDownloadsFor(
+  item: DownloadsItem,
+  where: { underXlink: boolean; workspaceRepository: string | undefined },
+  kind: WorkspaceKind | undefined,
+  selector: WorkspaceSelector | undefined,
+): boolean {
+  if (!choosesDownloads(kind, selector)) return false;
+  if (item.isPrivate || item.added || where.underXlink) return false;
+  return !(where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository);
+}
