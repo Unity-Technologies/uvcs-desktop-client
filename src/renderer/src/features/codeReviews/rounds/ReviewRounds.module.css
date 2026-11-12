@@ -54,8 +54,8 @@
   transform: rotate(90deg);
 }
 
-/* "Since last review": an accent hairline across the timeline, fading out toward its ends, and one soft pill in its
-   middle, the way to the changes its other half. */
+/* "Since last review": an accent hairline across the timeline, fading out toward its ends, the words in its middle
+   and the way to the changes as a link beside them. */
 .since {
   display: flex;
   align-items: center;
@@ -75,21 +75,17 @@
   background: linear-gradient(to left, transparent, color-mix(in srgb, var(--accent) 45%, transparent));
 }
 
-.sincePill {
+.sinceMiddle {
   display: inline-flex;
-  align-items: stretch;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: var(--radius-full);
-  /* Opaque, over the timeline's rail. */
-  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-surface);
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
   color: var(--accent-text);
   font-size: var(--text-sm);
   white-space: nowrap;
 }
 
 .sinceLabel {
-  padding: 3px var(--space-3);
   font-weight: 600;
 }
 
@@ -97,13 +93,14 @@
   font-weight: 400;
 }
 
+/* A link, not a box: a soft tint under the pointer, its arrow nudging on. */
 .seeChanges {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px var(--space-3);
+  padding: 2px 6px;
   border: none;
-  border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -117,7 +114,7 @@
 
 .seeChanges:focus-visible {
   outline: none;
-  box-shadow: var(--focus-ring-inset);
+  box-shadow: var(--focus-ring-visible);
 }
 
 .seeChangesArrow {
