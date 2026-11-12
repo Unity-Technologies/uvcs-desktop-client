@@ -27,7 +27,9 @@ interface FileCommentsInput {
  * Where a file's threads show (`threadsOfFile`, `placeEarlier`): those on a version the diff shows at their line, those
  * on an earlier one at their line now when it's unchanged since, the rest outdated. A thread the diff's changeset
  * settled (`settledIn`) goes first where its line was before the fix, on the older side, as "How it was applied" shows
- * it: the fix changed that line, and the changesets between its version and the fix may have moved it. Until the
+ * it: the fix changed that line, and the changesets between its version and the fix may have moved it. One whose line
+ * those changesets changed too is outdated: taking it to where their change starts was tried, and on a rewritten block
+ * it landed beside unrelated code. Until the
  * versions are read or fail, their threads wait (none shows outdated, or at a line, only to move a moment later); a
  * side that can't be read places none there.
  */
