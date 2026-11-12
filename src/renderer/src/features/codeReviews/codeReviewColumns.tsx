@@ -82,5 +82,5 @@ function WaitingDot({ review, user }: { review: CodeReview; user: string | undef
   const waiting = waitingForMe(review, user);
   if (!waiting) return null;
   const tip = waitingForMeTip(waiting);
-  return <span className={styles.waiting} role="img" aria-label={tip} title={tip} />;
+  return <span className={styles.waiting} role="img" aria-label={tip} data-tip={tip} />;
 }
