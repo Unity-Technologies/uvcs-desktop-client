@@ -29,7 +29,7 @@ describe('reviewDiffViewOf', () => {
 
   // Several changesets selected in "Changeset by changeset" diff as a range: its threads are placed by revision, as
   // the whole branch's are, those on its older revision on the left at their line.
-  it('is the whole review for a span of a branch review's changesets', () => {
+  it("is the whole review for a span of a branch review's changesets", () => {
     expect(reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' })).toEqual(WHOLE);
   });
 
