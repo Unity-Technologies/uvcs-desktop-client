@@ -344,15 +344,17 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* "Applied" and "Answered": the pill is a link as a whole, to how the change request was applied or to the answer. */
+/* A pill that leads somewhere is a link as a whole (how it was settled, the answer): every one hovers alike, a light
+   fill of its own color. */
 button.pill {
   font-family: inherit;
   background: none;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 button.pill:hover {
-  background: color-mix(in srgb, var(--status-added) 10%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .foldedLine {

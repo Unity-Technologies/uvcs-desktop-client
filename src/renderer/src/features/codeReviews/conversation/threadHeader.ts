@@ -104,6 +104,10 @@ function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: bool
   if (answer) return { ...badges.state, leadsTo: 'answer', tip: answer.tip };
   if (badges.appliedIn !== undefined && inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
   if (badges.appliedIn !== undefined) return { ...badges.state, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
-  if (thread.state.kind === 'discarded' && seesHowApplied && !inContext) return { ...badges.state, leadsTo: 'context', tip: 'Discarded: see it in context' };
+  // Every settled pill that leads somewhere else leads to the thread in context: Discarded, and Answered where the card
+  // can't show its answer (the Comments panel's).
+  if ((thread.state.kind === 'discarded' || thread.state.kind === 'answered') && seesHowApplied && !inContext) {
+    return { ...badges.state, leadsTo: 'context', tip: `${badges.state.label}: see it in context` };
+  }
   return { ...badges.state, leadsTo: 'nothing' };
 }

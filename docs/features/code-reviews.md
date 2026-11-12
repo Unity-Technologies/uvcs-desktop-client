@@ -322,8 +322,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
   the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
   that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
-  code, the Comments panel, the conversation) opens it on How it was applied, and every **Discarded** pill on Since
-  then, the request against the newest version beside the reply that discarded it (`HeaderPill`'s `context`); the tag
+  code, the Comments panel, the conversation) opens it on How it was applied, and every **Discarded** pill (and **Answered** in the Comments panel, whose cards show no
+  replies) on Since then, the request against the newest version beside the reply that discarded it (`HeaderPill`'s `context`); the tag
   opens it on When commented. No
   separate "See in context" button: beside the tag and the pill, a third control opening the same dialog read as
   something else. Its one button leads to the code (`contextFooterAction`): **Open changeset N**, for a request applied on a branch,
