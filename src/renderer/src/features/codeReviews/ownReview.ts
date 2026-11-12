@@ -16,3 +16,13 @@ export function ownReviewButton(review: Pick<CodeReviewSummary, 'reviewers'>, us
   if (status) return { label: status, status, joining: false, preselected: status };
   return { label: 'Review', joining: user !== undefined && !isReviewer(review, user), preselected: 'Reviewed' };
 }
+
+/**
+ * What a status covers, said as it's picked: Reviewed and Rework required close the user's round, so what's checked in
+ * later is new to them next time (docs/features/code-reviews.md "Rounds"). Only a branch's review says up to which
+ * changeset (its newest); Under review closes nothing.
+ */
+export function statusCovers(status: CodeReviewStatus, newestChangeset: number | undefined): string | undefined {
+  if (status === 'Under review' || newestChangeset === undefined) return undefined;
+  return `Covers everything up to changeset ${newestChangeset}`;
+}

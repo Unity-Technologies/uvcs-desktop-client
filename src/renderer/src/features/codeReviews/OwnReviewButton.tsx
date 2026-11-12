@@ -9,7 +9,8 @@ import { Button } from '../../ui/Button';
 import { Popover } from '../../ui/Popover';
 import { setOwnReviewStatus } from './codeReviewOperations';
 import { CommentComposer } from './conversation/CommentComposer';
-import { ownReviewButton } from './ownReview';
+import { ownReviewButton, statusCovers } from './ownReview';
+import { useReviewChangesets } from './rounds/useReviewChangesets';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import styles from './CodeReviewPage.module.css';
@@ -47,6 +48,7 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
   const place = usePlace();
   const button = ownReviewButton(review, user);
   const [status, setStatus] = useState<CodeReviewStatus>(button.preselected);
+  const covers = statusCovers(status, useReviewChangesets(review).changesets?.[0]?.id);
 
   return (
     <div className={styles.ownReviewForm}>
@@ -60,7 +62,8 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
           </label>
         ))}
       </fieldset>
-      {button.joining && <p className={styles.joining}>You'll be added as a reviewer.</p>}
+      {button.joining && <p className={styles.formNote}>You'll be added as a reviewer.</p>}
+      {covers && <p className={styles.formNote}>{covers}</p>}
       <CommentComposer
         draftKey={commentDraftKey(placeId(place), 'reviewStatus', review.id)}
         placeholder="Comment (optional)"

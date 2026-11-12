@@ -184,7 +184,8 @@
   padding: 3px 0;
 }
 
-.joining {
+/* A quiet line under the statuses: that picking one adds the user, what the status covers. */
+.formNote {
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
