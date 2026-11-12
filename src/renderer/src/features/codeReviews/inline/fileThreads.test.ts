@@ -26,6 +26,22 @@ describe('reviewDiffViewOf', () => {
     expect(reviewDiffViewOf(CHANGESET_REVIEW, { kind: 'changeset', changesetId: 8 })).toEqual(WHOLE);
     expect(reviewDiffViewOf({ kind: 'shelve', shelveId: 3 }, { kind: 'shelve', shelveId: 3 })).toEqual(WHOLE);
   });
+
+  // Several changesets selected in "Changeset by changeset" diff as a range: its threads are placed by revision, as
+  // the whole branch's are, those on its older revision on the left at their line.
+  it("is the whole review for a span of a branch review's changesets", () => {
+    expect(reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' })).toEqual(WHOLE);
+  });
+
+  it('places the threads a span shows by revision, written in any of its modes', () => {
+    const span = reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' });
+    const threads = threadsOf([onLine(1, 10, 3, { changesetId: 12 }), onLine(2, 30, 8)]);
+    const { placed } = threadsOfFile(threads, BRANCH, span, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([
+      [1, 'deletions', 3],
+      [2, 'additions', 8],
+    ]);
+  });
 });
 
 describe('writtenIn', () => {

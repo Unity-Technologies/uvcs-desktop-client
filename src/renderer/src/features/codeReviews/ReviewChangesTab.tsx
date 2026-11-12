@@ -23,7 +23,7 @@ import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
 import { useReviewCommentsStore } from './inline/reviewCommentsStore';
 import { selectedInPlace } from './inline/threadSelection';
 import { useCommentContext } from './inline/useCommentContext';
-import { changesFocusAskedFor } from './reviewTab';
+import { changesFocusAskedFor, changesFocusRequest, type ChangesFocus } from './reviewTab';
 import { useReviewCheckpoint } from './rounds/useReviewCheckpoint';
 import { COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH, useCommentsPanelStart } from './useCommentsPanelStart';
 import styles from './CodeReviewPage.module.css';
@@ -46,7 +46,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review.id);
-  const { newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
+  const { checkpoint, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
   const [request, setRequest] = useState<DiffFocusRequest | null>(null);
@@ -69,11 +69,11 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const tab = useRef<HTMLDivElement>(null);
   useCommentsPanelStart(threads === undefined ? null : all.length, tab);
 
-  const goToThread = (thread: LineThread): void => {
+  const goToThread = (thread: LineThread, inChangeset?: number): void => {
     seq.current += 1;
     setFocus({ threadId: thread.root.id, seq: seq.current });
     setFolded((current) => unfoldedFor(current, thread));
-    setRequest(threadDiffRequest(review, thread, seq.current));
+    setRequest(threadDiffRequest(review, thread, seq.current, inChangeset));
   };
 
   // The focus as last set, for a pick to compare with outside a state updater, which must stay pure.
@@ -90,20 +90,25 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
 
   const showThreadInConversation = useCallback((threadId: number): void => showInConversation(review.id, threadId), [review.id]);
   const seeInContext = useCommentContext(review);
-  // The page moved to a thread while these changes show already (a comment's file gone to from the conversation): go
-  // to it once the threads are read.
+  // The page moved while these changes show already (a comment's file gone to from the conversation, a check-in, what's
+  // new since the user's review): go to what it asks, a thread once the threads are read.
   const [shownPage, setShownPage] = useState(page);
-  const [asked, setAsked] = useState<number | undefined>(undefined);
+  const [asked, setAsked] = useState<ChangesFocus | undefined>(undefined);
   if (shownPage !== page) {
     setShownPage(page);
-    const threadId = changesFocusAskedFor(shownPage, page);
-    if (threadId !== undefined) setAsked(threadId);
+    const next = changesFocusAskedFor(shownPage, page);
+    if (next !== undefined) setAsked(next);
   }
   useEffect(() => {
-    if (asked === undefined || !threads) return;
-    const thread = threads.find((candidate) => candidate.root.id === asked);
+    if (asked === undefined || (asked.threadId !== undefined && !threads)) return;
     setAsked(undefined);
-    if (thread && isLineThread(thread)) goToThread(thread);
+    const thread = threads?.find((candidate) => candidate.root.id === asked.threadId);
+    if (thread && isLineThread(thread)) {
+      goToThread(thread, asked.changesetId);
+    } else if (asked.changesetId !== undefined || asked.changesets !== undefined) {
+      seq.current += 1;
+      setRequest(changesFocusRequest(asked, seq.current));
+    }
   }, [asked, threads]);
   const fileFlag = useMemo(() => (threads ? reviewFileFlag(threads, review.target) : null), [threads, review.target]);
   const step = (direction: 1 | -1): void => {
@@ -131,6 +136,8 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                   <DiffPage
                     page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }}
                     focusChangeset={page.focusChangeset}
+                    focusChangesets={page.focusChangesets}
+                    reviewedUpTo={checkpoint}
                     pageAppliesShelve
                     detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
                   />
