@@ -1,3 +1,4 @@
+import { MessagesSquare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
@@ -139,7 +140,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
                     focusChangesets={page.focusChangesets}
                     reviewedUpTo={reviewedUpTo}
                     pageAppliesShelve
-                    detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" />}
+                    detailsToggle={<DetailsToggleButton detailsKey={COMMENTS_PANEL_KEY} noun="Comments panel" icon={<MessagesSquare size={14} />} />}
                   />
                 }
                 details={
