@@ -200,7 +200,7 @@ describe('stepGroupsOf', () => {
     // cs:15 at 9:00 applied 7, then 5 was discarded at 11:00.
     expect(stepGroupsOf(blocks)).toEqual([
       { threadIds: [1, 2], scope: 'Round 1' },
-      { threadIds: [7, 5], scope: 'New since last review' },
+      { threadIds: [7, 5], scope: 'New since your last review' },
     ]);
   });
 
@@ -243,7 +243,7 @@ describe('conversationBlocksOf', () => {
     expect(shapeOf(blocks)).toEqual(['round 1 (folded): thread 1, event 2', 'round 2 (folded): checkins 12, event 3, event 5', 'since', 'checkins 15', 'thread 4', 'thread 7']);
   });
 
-  it('lists the changesets of check-ins under the Since last review line, and folds the others to their line', () => {
+  it('lists the changesets of check-ins under the New since your last review line, and folds the others to their line', () => {
     const blocks = conversationBlocksOf({
       conversation: conversation([], [status(2, 'vio', 'Rework required', at(9, 16))]),
       user: 'vio',
