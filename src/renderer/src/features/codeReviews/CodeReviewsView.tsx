@@ -1,4 +1,4 @@
-import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
+import { CircleDot, Inbox, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -30,36 +30,45 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type ReviewerFilter, type StatusFilter } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, matchesReviewer, reviewerChipDot, reviewerChoices, reviewFilterTexts } from './codeReviewFilters';
+import { codeReviewsQuery, matchesReviewers, matchesWaiting, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
+const itself = (name: string): string => name;
 
 export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, reviewer, update } = filters;
+  const { text: search, people, since, status, reviewers, waitingForMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
+  const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewer }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewers: queriedReviewers }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
+  const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
+  const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
   const visible = useMemo(
     () =>
       (reviews ?? []).filter(
-        (review) => matchesPeople(people, me, review.owner) && matchesReviewer(review, reviewer, me) && matchesWordFilter(reviewFilterTexts(review), search),
+        (review) =>
+          matchesPeople(people, me, review.owner) &&
+          matchesReviewers(review, reviewers, me) &&
+          matchesWaiting(review, waitingForMe, me) &&
+          matchesWordFilter(reviewFilterTexts(review), search),
       ),
-    [reviews, people, me, reviewer, search],
+    [reviews, people, me, reviewers, waitingForMe, search],
   );
-  // The reviews read that wait for the user: the reviewer chip's dot and its menu's count say so (`reviewerChipDot`).
+  // The reviews read that wait for the user: Waiting for me counts them.
   const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
   // The same columns while the user stays the same: the table sorts its rows again only when they change.
   const columns = useMemo(() => codeReviewColumns(me), [me]);
@@ -99,13 +108,16 @@ export function CodeReviewsView() {
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
           <>
-            <ChoiceChip<ReviewerFilter>
-              value={reviewer}
-              onChange={(value) => update({ reviewer: value })}
-              icon={<UserCheck size={13} />}
-              neutralValue="anyone"
-              choices={reviewerChoices(waiting)}
-              dot={reviewerChipDot(reviewer, waiting)}
+            <ToggleChip pressed={waitingForMe} icon={<Inbox size={13} />} onChange={(value) => update({ waitingForMe: value })}>
+              {waitingChipLabel(waiting)}
+            </ToggleChip>
+            <PeopleFilter
+              value={reviewers}
+              onChange={(value) => update({ reviewers: value })}
+              people={offeredReviewers}
+              mineTip="Reviews you're asked to review"
+              mine={{ label: "I'm a reviewer", icon: <UserCheck size={13} /> }}
+              pickLabel="Pick reviewers"
             />
             <ChoiceChip<StatusFilter>
               value={status}

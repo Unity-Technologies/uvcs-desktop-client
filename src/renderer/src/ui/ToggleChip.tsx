@@ -25,17 +25,14 @@ interface MenuChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
   /** Highlights the chip when its filter narrows the list (e.g. anything but "Any time"). */
   active?: boolean;
-  /** A small accent dot at its end, these words in its tooltip: something in its menu waits for the user. */
-  dot?: string;
 }
 
 /** A filter that opens a menu of choices, e.g. "Last month ▾". Use it as a dropdown trigger. */
-export const MenuChip = forwardRef<HTMLButtonElement, MenuChipProps>(function MenuChip({ icon, active = false, dot, children, ...rest }, ref) {
+export const MenuChip = forwardRef<HTMLButtonElement, MenuChipProps>(function MenuChip({ icon, active = false, children, ...rest }, ref) {
   return (
-    <button ref={ref} type="button" className={styles.chip} aria-pressed={active} aria-description={dot} data-tip={dot} {...rest}>
+    <button ref={ref} type="button" className={styles.chip} aria-pressed={active} {...rest}>
       {icon}
       {children}
-      {dot && <span className={styles.dot} aria-hidden />}
       <ChevronDown size={12} className={styles.chevron} />
     </button>
   );
