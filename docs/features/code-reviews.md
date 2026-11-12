@@ -255,7 +255,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   newest reviewer left off, naming them: "Reviewed by Miryam Gomez" (`reviewedUpToOf`, `ReviewedUpTo.by`, `newToggleTip`):
   one "Reviewed by you · Nov 9" line with a check, in the Reviewed status's color, between what they
   reviewed and the first one new since, the list oldest on top (`reviewedSeparator`; no row, `DataTable`'s `separator`: the arrows and the selection go past it), what's
-  under it new (`changesetMark`), and the reviewed ones a step quieter; no dot on each new one (docs/features/diff.md). While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
+  under it new (`changesetMark`), and the reviewed ones a step quieter; no dot on each new one (docs/features/diff.md).
+  While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
   only them (`shownBranchChangesets`). Several changesets selected show as one diff (docs/features/diff.md "A branch's
   diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
   (`newChangesetsSpan`, `focusChangesets`). A span is never part of a link: what's new to one reviewer isn't new to
