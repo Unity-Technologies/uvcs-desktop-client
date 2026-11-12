@@ -6,12 +6,12 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, matchesReviewers, matchesWaiting, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
 
-const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false } as const;
+const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
 
 describe('what Code reviews asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
@@ -28,8 +28,13 @@ describe('what Code reviews asks the server for', () => {
     expect(codeReviewsQuery({ ...ASKED, waitingForMe: true }, today).sinceDate).toBeUndefined();
   });
 
+  it("asks for the user's reviews of any date under Opened by me, who else is picked kept as picked", () => {
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, openedByMe: true }, today))).toEqual({ owners: ['me'] });
+    expect(codeReviewsQuery({ ...ASKED, openedByMe: true, people: { mine: false, others: ['zoe'] } }, today).owners).toEqual(['zoe']);
+  });
+
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE, waitingForMe: false }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',
@@ -91,6 +96,25 @@ describe('Waiting for me', () => {
   });
 });
 
+describe('Opened by me', () => {
+  const underReview = codeReviewSummary({ id: 1, owner: 'ana', status: 'Under review' });
+  const inRework = codeReviewSummary({ id: 2, owner: 'ana', status: 'Rework required' });
+  const done = codeReviewSummary({ id: 3, owner: 'ana', status: 'Reviewed' });
+  const zoes = codeReviewSummary({ id: 4, owner: 'zoe', status: 'Under review' });
+  const all = [underReview, inRework, done, zoes];
+
+  it("keeps the user's reviews not reviewed yet, as the official client's Opened by me", () => {
+    expect(all.filter((review) => matchesOpenedByMe(review, true, 'ana')).map((review) => review.id)).toEqual([1, 2]);
+    expect(all.every((review) => matchesOpenedByMe(review, false, 'ana'))).toBe(true);
+    expect(matchesOpenedByMe(underReview, true, undefined)).toBe(false);
+  });
+
+  it('counts them on its chip', () => {
+    expect(openedByMeCount(all, 'ana')).toBe(2);
+    expect([openedChipLabel(0), openedChipLabel(2)]).toEqual(['Opened by me', 'Opened by me · 2']);
+  });
+});
+
 describe('the reviewer filter remembered by an older version', () => {
   it("reads the I'm a reviewer chip as I'm a reviewer among the reviewers", () => {
     expect(restoredReviewersFilter({ reviewerIsMe: true })).toEqual({ reviewers: MINE });
@@ -104,11 +128,11 @@ describe("Code reviews' Clear filters", () => {
     store.getState().update({ text: '', people: EVERYONE, status: 'Reviewed', reviewers: EVERYONE, waitingForMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(true);
 
-    store.getState().update({ people: MINE, reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true });
+    store.getState().update({ people: MINE, reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true, openedByMe: true });
     store.getState().clear();
 
-    const { text, people, status, reviewers, waitingForMe, since } = store.getState();
-    expect({ text, people, status, reviewers, waitingForMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false, since: 'lastYear' });
+    const { text, people, status, reviewers, waitingForMe, openedByMe, since } = store.getState();
+    expect({ text, people, status, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(false);
   });
 });
