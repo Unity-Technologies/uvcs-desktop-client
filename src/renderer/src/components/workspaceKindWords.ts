@@ -28,6 +28,14 @@ export function markedWorkspaceKind(kind: WorkspaceKind | undefined): MarkedWork
   return kind === undefined || kind === 'standard' ? null : kind;
 }
 
+/**
+ * The kind a workspace's row tells, on its avatar and its chip: none for a missing workspace, whose folder is gone and
+ * whose row shows that instead, so its kind as last read isn't claimed for a folder that no longer holds it.
+ */
+export function shownWorkspaceKind(kind: WorkspaceKind | undefined, missing: boolean): WorkspaceKind | undefined {
+  return missing ? undefined : kind;
+}
+
 /** The chip a workspace's row or card shows for its kind, when it marks it (`markedWorkspaceKind`). */
 export function workspaceKindChip(kind: WorkspaceKind | undefined): WorkspaceKindWords | null {
   const marked = markedWorkspaceKind(kind);

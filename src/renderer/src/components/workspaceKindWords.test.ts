@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { markedWorkspaceKind, workspaceCardTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
+import { markedWorkspaceKind, shownWorkspaceKind, workspaceCardTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
 
 describe('markedWorkspaceKind', () => {
   it('marks a partial and a dynamic workspace, never a standard one nor one whose kind is still unread', () => {
     expect(([undefined, 'standard', 'partial', 'dynamic'] as const).map(markedWorkspaceKind)).toEqual([null, null, 'partial', 'dynamic']);
+  });
+});
+
+describe('shownWorkspaceKind', () => {
+  it('tells the kind of a workspace whose folder is there', () => {
+    expect(shownWorkspaceKind('dynamic', false)).toBe('dynamic');
+  });
+
+  it('tells no kind for a missing workspace, whose row says it is missing instead', () => {
+    expect(shownWorkspaceKind('dynamic', true)).toBeUndefined();
   });
 });
 

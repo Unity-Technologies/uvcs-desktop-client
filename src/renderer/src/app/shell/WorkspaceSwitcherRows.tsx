@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { MissingChip } from '../../components/MissingChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
+import { shownWorkspaceKind } from '../../components/workspaceKindWords';
 import { navigationTarget } from '../../lib/listNavigation';
 import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -84,7 +85,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={(event) => onChoose(workspace.path, windowAskedBy(event, { missing }))}
         >
-          <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} workspaceKind={missing ? undefined : entry.kind} className={styles.avatar} />
+          <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} workspaceKind={shownWorkspaceKind(entry.kind, missing)} className={styles.avatar} />
           <span className={styles.text}>
             <span className={styles.name}>
               <Highlight text={workspace.name} />
