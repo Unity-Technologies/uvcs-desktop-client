@@ -21,6 +21,7 @@ import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor } from '
 import { RepositoryFileSearchList } from '../repositoryFiles/RepositoryFileSearchList';
 import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
+import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
   downloadKey,
@@ -174,6 +175,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   return (
     <Dialog
       title="Choose what to download"
+      description={chooseDownloadsNote(info?.kind)}
       width={520}
       onClose={close}
       footer={
