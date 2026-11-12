@@ -68,7 +68,11 @@ loaded, as `cm partial update` would bring them.
   `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
   changes too. An item is added only when it's new (a greater item id than every loaded item, in a later changeset)
   in a folder the workspace loaded whole: a folder that also holds an older item the workspace left out was loaded in
-  part, and an update leaves out what's new in it too. Xlinks and what they hold are left out (`loadedFolders`). A loaded folder the head no longer has fails
+  part, and an update leaves out what's new in it too. Ids and changesets miss an old folder created after the
+  workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder holding a new-looking
+  item (`foldersWithNewItems`) is listed as it was at its loaded changeset (`readItemsWhenLoaded`: `cm ls <folders…>
+  --tree=cs:<N>`, one per changeset, `treeListingArgs`): what it held then existed, so the folder was loaded in part
+  and nothing in it is added. Usually no folder needs it. Xlinks and what they hold are left out (`loadedFolders`). A loaded folder the head no longer has fails
   its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
   moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
   reads as removed.
