@@ -295,11 +295,11 @@ describe('a new workspace for a task', () => {
 
 describe('a partial workspace', () => {
   it('loads and unloads what changed with one cm partial configure of its own process, run in the workspace', async () => {
-    const { service, commands } = workspaces({ 'partial configure': '' });
+    const { service, commands } = workspaces({ 'partial configure': '', ...PARTIAL_WORKSPACE_NAMES });
 
     await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }, { path: 'Docs', load: false }], 'op-1');
 
-    expect(commands).toMatchObject([{ via: 'execute', args: ['partial', 'configure', '+/Assets', '-/Docs', '--silent'], options: { cwd: WORKSPACE } }]);
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([{ via: 'execute', args: ['partial', 'configure', '+/Assets', '-/Docs', '--silent'], options: { cwd: WORKSPACE } }]);
   });
 
   it('keeps its kind: no window is told it changed', async () => {

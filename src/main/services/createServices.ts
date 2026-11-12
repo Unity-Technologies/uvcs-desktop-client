@@ -3,7 +3,7 @@ import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { ProfileList } from '../cm/ProfileList';
 import { homedir } from 'node:os';
 import { app, nativeImage } from 'electron';
-import { sendEventToCaller } from '../ipc/sendEvent';
+import { sendEvent, sendEventToCaller } from '../ipc/sendEvent';
 import { allBundleIds } from '../system/apps/appIdentities';
 import { diskFileSystem } from '../system/apps/appFileSystem';
 import { AppIcons } from '../system/apps/AppIcons';
@@ -88,7 +88,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
-    workspaces: createWorkspacesService(context, switching),
+    workspaces: createWorkspacesService(context, switching, (workspacePath) => sendEvent('workspaceKindChanged', { workspacePath })),
     xlinks: createXlinksService(context, switching),
   };
 }
