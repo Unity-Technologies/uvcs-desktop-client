@@ -133,7 +133,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation and its
   reviewers; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
   lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, and on a branch review's
-  Changes one more for what they show (`cm diff` of the branch, or its changesets changeset by changeset). The review
+  Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
   when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
   with the review's new status and counts, at no `cm` command of its own.
@@ -181,7 +181,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   starts a thread of its own. One on a line shows its file first, the whole path a link to it in the Changes tab, on the
   same page as a tab moves (a place in the review on top replaces it, never stacks a second page of it:
   `movesWithinTop`), opened at the thread, in the mode it was written in (`commentLocationPage`: `focusThread`, and
-  `focusChangeset` for one written changeset by changeset; see "Comments in the code"), then, apart and as text, the
+  `focusChangeset` for one written in a changeset's diff; see "Comments in the code"), then, apart and as text, the
   line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that line,
   which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on every
   card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read, replied
@@ -246,19 +246,19 @@ one read serves both), say what was checked in when (`reviewRounds`).
   ("Daniel checked in 3 changesets"), the words folding the list under them. They start
   listed only under the "Since last review" line, what a reviewer comes back to check; anywhere else folded to that line
   (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
-  without the fill) with its comment's first line, and opens in Changes, changeset by changeset, on it. Past five, the
+  without the fill) with its comment's first line, and opens in Changes on it. Past five, the
   first ones and "N more" (`shownCheckins`). Changesets from before the review are left to Changes: a long branch would
   push the conversation out of sight. The changesets list no merges, so a merge from the parent shows as any changeset
   (telling one would take a `cm find merge` more).
-- **In Changes**, "Changeset by changeset" marks the branch's changesets against where the user left off
+- **In Changes**, the list of the branch's changesets marks them against where the user left off
   (`useReviewCheckpoint`, `BranchDiff`'s `reviewedUpTo`), or, for anyone who gave no status (the author), where the
-  newest reviewer left off, naming them: "Reviewed by Miryam Gomez" (`reviewedUpToOf`, `ReviewedUpTo.by`, `newToggleTip`):
+  newest reviewer left off, naming them: "Reviewed by Miryam Gomez" (`reviewedUpToOf`, `ReviewedUpTo.by`):
   one "Reviewed by you · Nov 9" line with a check, in the Reviewed status's color, between what they
   reviewed and the first one new since, the list oldest on top (`reviewedSeparator`; no row, `DataTable`'s `separator`: the arrows and the selection go past it), what's
   under it new (`changesetMark`), and the reviewed ones a step quieter; no dot on each new one (docs/features/diff.md).
-  While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
-  only them (`shownBranchChangesets`). Several changesets selected show as one diff (docs/features/diff.md "A branch's
-  diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
+  At the line's end, **Show the 3 new** selects the new ones together, one diff (`ReviewedSeparator.showNew`); no New
+  toggle keeps only them, the line says it. Several changesets selected show as one diff (docs/features/diff.md "A
+  branch's diff"); **See the changes**, on the "Since last review" line, opens Changes with the new ones selected together
   (`newChangesetsSpan`, `focusChangesets`). A span is never part of a link: what's new to one reviewer isn't new to
   whoever opens it. A page moved to while Changes shows already (a check-in, Show in Changes, See the changes) reaches
   it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
@@ -275,9 +275,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
   anything else, where it was written.
 Tried and dropped, so they aren't proposed again: banners under the header saying whose turn it is (they repeated what
 the conversation shows once it opens at its line, and read as stress); a band under the Changes header saying what's
-reviewed; a third mode "Since last review" in Changes (several changesets selected changeset by changeset give the same
-diff); a "New" chip in the files' filter bar (it's full); earlier rounds as scopes ("Since round 1": Whole branch covers
-going further back); Applied as a jump to Changes (it loses the reviewer's place; the dialog handles fixes in other
+reviewed; a third mode "Since last review" in Changes (several changesets selected in the list give the same diff); a "New"
+chip in the files' filter bar (it's full); earlier rounds as scopes ("Since round 1": All changes covers going further
+back); Applied as a jump to Changes (it loses the reviewer's place; the dialog handles fixes in other
 files, "marked applied with no file" and reviews of no branch); a column in the list saying why a review waits; and
 a line in the Review popover saying what a status covers ("Covers everything up to changeset 17": it said little,
 and added noise to the popover); rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
@@ -359,10 +359,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   stays as it was: "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment"
   chip to go back, "Since review" off meanwhile), and the state it left was hard to read.
 - **Mode.** A comment belongs to the diff it was written in (`ReviewComment.changesetId`, `writtenIn`): a branch
-  review's "Whole branch" or one changeset of "Changeset by changeset" (`reviewDiffViewOf`). Going to one opens that
-  mode and changeset (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
+  review's whole diff ("All changes on …", or several changesets as one) or one changeset picked in the list
+  (`reviewDiffViewOf`). Going to one selects that (`threadDiffRequest`, `DiffFocusRequest`; from a page, `focusChangeset`). A changeset's diff shows
   the threads written in it and the change requests it applied, on the version they were written on, so the fix reads
-  beside what asked for it (`belongsToChangeset`); the whole branch's also shows those written changeset by changeset that are on a
+  beside what asked for it (`belongsToChangeset`); the whole branch's also shows those written in a changeset's diff that are on a
   revision it shows, or whose line is still there in the newest one (an outdated one is left to its changeset's diff),
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
@@ -474,7 +474,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
   ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
   codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
-  changeset by changeset, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
+  on one changeset picked in the list, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
   thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read
   again holds it (`conversationReadSince`, which waits for a read after the write, `conversationReadAt`, the one the
   write asked for, and reads nothing itself), so the line never shows nothing in between. Cancel or Esc drop it, asking first once words were written
