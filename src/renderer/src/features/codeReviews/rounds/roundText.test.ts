@@ -36,11 +36,11 @@ describe('roundText', () => {
 
 describe('sinceText', () => {
   it('dates the line by the day of the last review, in the reader’s time zone, the day apart to read quieter', () => {
-    expect(sinceText('2026-11-09T23:30:00Z', IN_MADRID)).toEqual({ label: 'Since last review', day: 'Nov 10' });
+    expect(sinceText('2026-11-09T23:30:00Z', IN_MADRID)).toEqual({ label: 'New since last review', day: 'Nov 10' });
   });
 
   it('keeps the words when the date cannot be read', () => {
-    expect(sinceText('not a date', IN_MADRID)).toEqual({ label: 'Since last review' });
+    expect(sinceText('not a date', IN_MADRID)).toEqual({ label: 'New since last review' });
   });
 });
 
