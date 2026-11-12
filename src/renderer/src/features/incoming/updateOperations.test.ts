@@ -137,6 +137,17 @@ describe('updatePartialToIncoming', () => {
     expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '1 item' });
   });
 
+  it('does not count the conflicts it brings, which keep the local version', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs', 'Code/Hull.cs', 'Art/sky.png');
+    const hull = { ...changes.items[1]!, conflict: true };
+
+    expect(await updatePartialToIncoming(ws, changes, { paths: ['Code'], brought: [changes.items[0]!, hull] })).toBe(true);
+
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 1 item from main' }]);
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '1 item' });
+  });
+
   it('names no path when the selection brings every item', async () => {
     fakeApi.answer('workspaces.update', () => undefined);
     const changes = partialIn('Code/Ship.cs');
