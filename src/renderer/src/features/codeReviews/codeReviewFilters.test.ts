@@ -11,7 +11,7 @@ import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsVie
 
 const today = new Date(2026, 8, 25);
 
-const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', reviewers: EVERYONE } as const;
+const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false } as const;
 
 describe('what Code reviews asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
@@ -24,8 +24,12 @@ describe('what Code reviews asks the server for', () => {
     expect(compactFilter(codeReviewsQuery({ ...ASKED, reviewers: { mine: false, others: ['zoe'] } }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
   });
 
+  it('reads every date under Waiting for me: a review waiting for the user for months still waits', () => {
+    expect(codeReviewsQuery({ ...ASKED, waitingForMe: true }, today).sinceDate).toBeUndefined();
+  });
+
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE, waitingForMe: false }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',
