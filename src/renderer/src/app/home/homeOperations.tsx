@@ -84,7 +84,6 @@ export async function deleteRepository(repository: RepositorySummary): Promise<v
   if (deleted) toast.success(`Deleted ${repository.name}`);
 }
 
-
 /**
  * Restores a deleted repository under the name it had, or, when another repository took that name since, under a new
  * one the user types (inside the same Unity project).
@@ -110,7 +109,7 @@ export async function restoreRepository(deleted: RepositorySummary): Promise<voi
   }
   const restored = await runAndRefresh(
     "Couldn't restore the repository",
-    () => api.repositories.restore(deleted, newName),
+    () => api.repositories.restore(deleted.spec, newName),
     queryKeys.repositories(deleted.server),
   );
   if (restored) toast.success(`Restored ${newName ?? deleted.name}`);

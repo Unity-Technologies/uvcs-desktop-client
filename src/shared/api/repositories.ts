@@ -1,4 +1,4 @@
-import type { RepositoryListing, RepositorySummary, ServerProfile } from '../domain/repository';
+import type { RepositoryListing, ServerProfile } from '../domain/repository';
 
 export interface RepositoriesApi {
   /** Servers with a connection profile, plus the local server. */
@@ -10,8 +10,8 @@ export interface RepositoriesApi {
   rename(repositorySpec: string, newName: string): Promise<void>;
   remove(repositorySpec: string): Promise<void>;
   /**
-   * Restores one of the listing's `deletedRepositories`: under the name it had, or `newName` when another repository
-   * took it. Resolves to the restored repository's spec.
+   * Restores one of the listing's `deletedRepositories` by its spec (`<guid>@<server>`): under the name it had, or
+   * `newName` when another repository took it.
    */
-  restore(deleted: RepositorySummary, newName?: string): Promise<string>;
+  restore(deletedSpec: string, newName?: string): Promise<void>;
 }

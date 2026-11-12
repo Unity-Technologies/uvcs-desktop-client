@@ -123,20 +123,20 @@ describe('repositories', () => {
   });
 
   describe('restore', () => {
-    const DELETED = { id: '8', name: 'art', server: 'acme@cloud', owner: 'ana', spec: 'd1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6@acme@cloud', deleted: true } as const;
+    const DELETED = 'd1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6@acme@cloud';
 
     it('restores a deleted repository by its GUID under the name it had, in one quick command', async () => {
       const { service, commands } = repositories({ 'repository undelete': '' });
 
-      expect(await service.restore(DELETED)).toBe('art@acme@cloud');
-      expect(commands).toMatchObject([{ via: 'query', args: ['repository', 'undelete', DELETED.spec] }]);
+      await service.restore(DELETED);
+      expect(commands).toMatchObject([{ via: 'query', args: ['repository', 'undelete', DELETED] }]);
     });
 
     it('restores one under a new name when another repository took its own', async () => {
       const { service, lines } = repositories({ 'repository undelete': '' });
 
-      expect(await service.restore(DELETED, 'art-restored')).toBe('art-restored@acme@cloud');
-      expect(lines()).toEqual([`repository undelete ${DELETED.spec} art-restored`]);
+      await service.restore(DELETED, 'art-restored');
+      expect(lines()).toEqual([`repository undelete ${DELETED} art-restored`]);
     });
 
     it('fails as cm reports it', async () => {
