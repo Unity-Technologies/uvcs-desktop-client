@@ -139,8 +139,9 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   page reads it again on demand, in place. With the review in front, Refresh reads only what the page shows
   (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation and its
   reviewers; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
-  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, and on a branch review's
-  Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
+  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, a fourth on a branch's
+  review for its changesets, which its rounds, its chips and Changes share (`useReviewChangesets`, one `cm find
+  changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
   when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
   with the review's new status and counts, at no `cm` command of its own.
