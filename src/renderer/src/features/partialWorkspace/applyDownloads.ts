@@ -4,7 +4,8 @@ import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
 
 /**
- * Makes a partial workspace download and remove what the user chose, with one `cm partial configure`. It counts as an
+ * Makes a workspace download and remove what the user chose, with one `cm partial configure`; a standard workspace
+ * becomes partial with it. It counts as an
  * update: it changes the files on disk, so it blocks other updates and switches of the workspace while it runs, and
  * refreshes what one refreshes. Resolves to whether it applied.
  */

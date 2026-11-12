@@ -226,7 +226,8 @@ and many people use the same server. Every `cm` command other than local reads (
   How each listed workspace holds its files (standard, partial or dynamic: `WorkspaceKind`) comes from a
   `cm getworkspacefrompath <path> --format={type}…{dynamic}` of each (`workspaces.kinds`, `workspaceKindsReader`,
   `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
-  only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
+  only changes when choosing what a standard workspace downloads makes it partial (main sends
+  `workspaceKindChanged`), so each workspace's is one query kept for the session (`workspaceKindQuery`,
   keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
   none, never as standard, and is asked again the next time it shows. How a partial workspace is created, chosen
   and kept partial: docs/features/partial-workspaces.md.

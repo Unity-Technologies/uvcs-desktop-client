@@ -2,8 +2,8 @@
 
 A partial workspace downloads only the folders and files the user chooses; everything else stays on the server. How
 the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`) is in
-ARCHITECTURE.md. This doc holds how a partial workspace is created, how the user chooses what it downloads, and how it
-stays partial.
+ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one becomes partial, how the user chooses what it
+downloads, and how it stays partial.
 
 ## Creating one
 
@@ -19,8 +19,8 @@ without the user picking them again. Choosing a card sets the kind
 a dynamic workspace has the whole branch. The request carries the kind
 (`CreateWorkspaceRequest.kind`).
 
-The cards don't say the choice can change later: the app doesn't convert a workspace between partial and standard.
-Only which folders a partial workspace holds changes later.
+The choice can change later one way: a standard workspace becomes partial by choosing what it downloads ("Making a
+standard workspace partial"). The app doesn't make a partial workspace standard again.
 
 `workspaces.create` makes the workspace, then runs `cm partial update --silent` in it (`EMPTY_PARTIAL_UPDATE_ARGS`),
 through `execute()` since it changes the workspace's files. An update of no paths downloads nothing but marks the
@@ -36,7 +36,8 @@ updating it.
 
 ## Choosing what to download
 
-**Choose what to download…** opens `ChooseDownloadsDialog`. It's offered on a partial workspace only:
+**Choose what to download…** opens `ChooseDownloadsDialog`. It's offered on a partial workspace, and on a standard
+one on a branch (`choosesDownloads`, "Making a standard workspace partial"):
 
 - the current workspace card's menu (`currentWorkspaceMenu`, the `chooseDownloads` action);
 - the command palette (`useWorkspaceCommands`);
@@ -80,6 +81,21 @@ It runs as an update (`operations.run`, `execute()`): it blocks other updates an
 runs, and refreshes what an update refreshes. Every `cm partial` command is a write of the workspace
 (`changesWorkspace`), so it runs in a `cm shell` of its own that reads it from its input (`processCommand`): a choice of
 thousands of items is still one command, past the command-line limit, rather than several that could stop halfway.
+
+## Making a standard workspace partial
+
+`cm` has no command to convert a workspace: the first `cm partial configure` run in a standard workspace makes it
+partial. So a standard workspace is offered **Choose what to download…** too, but only on a branch
+(`choosesDownloads`): a partial workspace works only on a branch, and a dynamic one downloads files as they're opened.
+The dialog says what applying changes, in the words of the Create workspace dialog's cards (`chooseDownloadsNote`,
+its description): only the folders picked download, each file updates on its own, and merging needs the whole branch.
+Nothing changes until Apply; Cancel leaves the workspace standard. The tree starts with everything checked, since a
+standard workspace holds the whole branch, so the user unchecks what to remove.
+
+The workspace's kind is read once per session (`workspaceKindQuery`), so `configurePartial` tells every window when
+it ran on a standard workspace (`workspaceKindChanged`, also when it failed: `cm` may have converted it before
+failing), and each reads the kind again (`forgetWorkspaceKind`). The current window's workspace info, whose `kind`
+picks the update command, refreshes as after any update (`isAffectedByCheckinOrUpdate`).
 
 ## Staying partial
 
