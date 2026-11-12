@@ -108,8 +108,14 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
   The sidebar counts the same reviews on **Code reviews** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
   view read, by its filters, reading nothing itself: no `cm find` runs for a sidebar, so the count shows once the view
-  was opened. Presets in the sidebar ("Needs my review", "Opened by me", as the official client lists them) were left
-  out: two more rows for what one count and a chip say, and Mine is "opened by me" already.
+  was opened. It counts Waiting for me only, never with Opened by me: it says the user has something to do.
+- **Opened by me** (a `ToggleChip`, the store's `openedByMe`) keeps the user's reviews not reviewed yet (Under review or
+  Rework required), of any date, counting them, "Opened by me · 2" (`matchesOpenedByMe`, `openedByMeCount`,
+  `openedChipLabel`), as the official client's preset of that name does in one click. It asks for the user's reviews
+  (`owners: me`, unless people are picked) and keeps the statuses locally: `cm find review` takes one status. Waiting for
+  me and Opened by me are chips, not presets that set the other filters: each is one condition that combines with the
+  rest. Presets in the sidebar, as the official client lists them, were left out: two more rows for what a count and two
+  chips say.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
   status, I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,

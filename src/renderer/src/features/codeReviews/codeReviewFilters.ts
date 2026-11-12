@@ -15,6 +15,8 @@ interface CodeReviewsQueryFilters {
   reviewers: PeoplePick;
   /** Only those waiting for the user: of any date, as the official client's "Needs my review" reads them. */
   waitingForMe: boolean;
+  /** Only the user's not reviewed yet: of any date, as the official client's "Opened by me" reads them. */
+  openedByMe: boolean;
 }
 
 /**
@@ -23,10 +25,13 @@ interface CodeReviewsQueryFilters {
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
  * me is local too (`matchesWaiting`), over reviews of any date: one left waiting for months is still the user's to do.
+ * Opened by me reads the user's reviews of any date (`owners: me`, unless people are picked, kept as picked) and keeps
+ * those not reviewed yet locally (`matchesOpenedByMe`): the query takes one status, not two.
  */
-export function codeReviewsQuery({ since, people, status, reviewers, waitingForMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
-  const sinceDate = waitingForMe ? undefined : sinceDateFor(since, today);
-  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, sinceDate };
+export function codeReviewsQuery({ since, people, status, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+  const sinceDate = waitingForMe || openedByMe ? undefined : sinceDateFor(since, today);
+  const owners = openedByMe && isEveryone(people) ? ['me'] : pickedOwners(people);
+  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, sinceDate };
 }
 
 /** Whether any reviewer picked is asked on the review (the user under I'm a reviewer, `me`); every review with none picked. */
@@ -38,6 +43,21 @@ export function matchesReviewers(review: Pick<CodeReviewSummary, 'reviewers'>, p
 /** Whether a review read shows under Waiting for me: all of them while it's off; those waiting for the user (`waitingForMe`) while on. */
 export function matchesWaiting(review: Pick<CodeReviewSummary, 'owner' | 'status' | 'reviewers' | 'openIssueCount'>, on: boolean, user: string | undefined): boolean {
   return !on || waitingForMe(review, user) !== undefined;
+}
+
+/** Whether a review read shows under Opened by me: all while it's off; the user's, not reviewed yet, while on. */
+export function matchesOpenedByMe(review: Pick<CodeReviewSummary, 'owner' | 'status'>, on: boolean, user: string | undefined): boolean {
+  return !on || (user !== undefined && sameUser(review.owner, user) && review.status !== 'Reviewed');
+}
+
+/** How many of the reviews read Opened by me keeps. */
+export function openedByMeCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status'>[], user: string | undefined): number {
+  return reviews.filter((review) => matchesOpenedByMe(review, true, user)).length;
+}
+
+/** Opened by me's chip, with how many it keeps: "Opened by me · 2". */
+export function openedChipLabel(opened: number): string {
+  return opened > 0 ? `Opened by me · ${opened}` : 'Opened by me';
 }
 
 /** Waiting for me's chip, with how many reviews read wait for the user: "Waiting for me · 2". */

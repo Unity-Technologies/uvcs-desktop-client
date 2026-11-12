@@ -12,16 +12,18 @@ interface CodeReviewsFilters extends ViewFilters {
   reviewers: PeoplePick;
   /** Only the reviews waiting for the user (`waitingForMe`): their review, or their own review's rework. */
   waitingForMe: boolean;
+  /** Only the user's reviews not reviewed yet (`matchesOpenedByMe`). */
+  openedByMe: boolean;
 }
 
-export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', reviewers: EVERYONE, waitingForMe: false };
+export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false };
 
 /** "I'm a reviewer" was a chip of its own, remembered as `reviewerIsMe`, before the reviewers were picked as people. */
 export const restoredReviewersFilter: FilterUpgrade<CodeReviewsFilters> = (remembered) => (remembered.reviewerIsMe === true ? { reviewers: MINE } : {});
 
 export const useCodeReviewsViewStore = createViewFilters<CodeReviewsFilters>(
   'code-reviews-view',
-  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', reviewers: EVERYONE, waitingForMe: false },
+  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false },
   CLEARED_CODE_REVIEW_FILTERS,
   [],
   restoredReviewersFilter,
