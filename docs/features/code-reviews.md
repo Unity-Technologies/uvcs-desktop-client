@@ -244,7 +244,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
   push the conversation out of sight. The changesets list no merges, so a merge from the parent shows as any changeset
   (telling one would take a `cm find merge` more).
 - **In Changes**, "Changeset by changeset" marks the branch's changesets against where the user left off
-  (`useReviewCheckpoint`, `BranchDiff`'s `reviewedUpTo`): a small accent dot at the start of each one checked in since
+  (`useReviewCheckpoint`, `BranchDiff`'s `reviewedUpTo`), or, for anyone who gave no status (the author), where the
+  newest reviewer left off, naming them: "Reviewed by Miryam Gomez" (`reviewedUpToOf`, `ReviewedUpTo.by`, `newToggleTip`):
+  a small accent dot at the start of each one checked in since
   (`changesetMark`), one "Reviewed by you · Nov 9" line with a check, in the Reviewed status's color, above the first one
   they reviewed (`reviewedSeparator`; no row, `DataTable`'s `separator`: the arrows and the selection go past it), and
   the reviewed ones a step quieter. While any is new, a small **New** toggle beside the list's filter ("New 3") keeps
