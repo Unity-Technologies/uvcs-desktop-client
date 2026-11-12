@@ -3,7 +3,7 @@ import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { change, formatOutput, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { readIncomingChanges } from './incoming';
-import { headListingArgs } from './partialIncoming';
+import { treeListingArgs } from './partialIncoming';
 
 const WORKSPACE = '/work';
 
@@ -11,6 +11,7 @@ const WORKSPACE = '/work';
 // added Hull.cs in Code, and changed Audio, which the workspace left out.
 const LOADED = formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ['22', '23', '-1', 'dir', 'Code', '1', ''], ['27', '15', '-1', 'txt', 'Code\\Engine.cs', '1', ''], ['28', '16', '-1', 'txt', 'Code\\Ship.cs', '1', '']);
 const ROOT_ON_HEAD = [['3', '40', 'dir', '/', '3'], ['20', '42', 'dir', '/Audio', '3'], ['22', '41', 'dir', '/Code', '3']];
+const CODE_WHEN_LOADED = formatOutput(['22', '23', 'dir', '/Code', '1'], ['27', '15', 'txt', '/Code/Engine.cs', '1'], ['28', '16', 'txt', '/Code/Ship.cs', '1']);
 const CODE_ON_HEAD = [['22', '41', 'dir', '/Code', '3'], ['27', '15', 'txt', '/Code/Engine.cs', '1'], ['43', '38', 'txt', '/Code/Hull.cs', '3'], ['28', '34', 'txt', '/Code/Ship.cs', '2']];
 
 const partialWorkspace = (headListing: CmAnswer) =>
@@ -20,6 +21,7 @@ const partialWorkspace = (headListing: CmAnswer) =>
     'ls -R': LOADED,
     'ls /': headListing,
     'ls /Src': headListing,
+    'ls /Code': CODE_WHEN_LOADED,
     'find changeset': formatOutput([3]),
   });
 
@@ -48,9 +50,27 @@ describe('incoming in a partial workspace', () => {
     expect(listings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
       ['ls', '-R'],
       ['ls', '/', '/Code', '--tree=br:/main'],
+      ['ls', '/Code', '--tree=cs:1'],
     ]);
     expect(listings.every((command) => command.readsRecords)).toBe(true);
     expect(commands.some((command) => command.args[0] === 'diff')).toBe(false);
+  });
+
+  it('adds no folder that the loaded root already held, however new it looks, nor anything else in that root', async () => {
+    // Big looks new (a greater item id, a later changeset), but the root as loaded (cs:0) already held it.
+    const rootOnHead = [['3', '40', 'dir', '/', '3'], ['50', '44', 'dir', '/Big', '3'], ['51', '45', 'txt', '/Notes.txt', '3'], ['22', '41', 'dir', '/Code', '3']];
+    const rootWhenLoaded = formatOutput(['3', '5', 'dir', '/', '0'], ['50', '6', 'dir', '/Big', '0'], ['22', '23', 'dir', '/Code', '1']);
+    const answer: CmAnswer = ({ args }) => (args.includes('--tree=cs:0') ? rootWhenLoaded : formatOutput(...rootOnHead, ...CODE_ON_HEAD));
+    const { cm, commands } = partialWorkspace(answer);
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({ items: [item({ kind: 'added', path: 'Code/Hull.cs', headRevisionId: 38 }), item({ kind: 'changed', path: 'Code/Ship.cs', conflict: true, loadedRevisionId: 16, headRevisionId: 34 })] });
+    const loadedListings = commands.filter((command) => command.args.some((arg) => arg.startsWith('--tree=cs:')));
+    expect(loadedListings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
+      ['ls', '/', '--tree=cs:0'],
+      ['ls', '/Code', '--tree=cs:1'],
+    ]);
   });
 
   it('lists the head again without a loaded folder it no longer has, which reads as removed', async () => {
@@ -85,7 +105,7 @@ describe('incoming in a partial workspace', () => {
       ],
     });
     const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args[1] !== '-R');
-    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src']]);
+    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src'], ['/Code']]);
   });
 
   it('rethrows a failure that names no folder', async () => {
@@ -108,7 +128,7 @@ describe('incoming in a partial workspace', () => {
       'ls -R': loaded,
       ls: ({ args }) => {
         const listed = args.filter((arg) => arg.startsWith('/'));
-        const added = listed.includes(lastFolder) ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
+        const added = listed.includes(lastFolder) && args.includes('--tree=br:/main') ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
         return formatOutput(...listed.map(headRowOf), ...added);
       },
       'find changeset': formatOutput([3]),
@@ -117,14 +137,14 @@ describe('incoming in a partial workspace', () => {
     const changes = await readIncomingChanges(cm, WORKSPACE);
 
     expect(changes).toMatchObject({ items: [item({ kind: 'added', path: `${folders[folders.length - 1]}/New.cs`, headRevisionId: 9001 })] });
-    const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args[1] !== '-R');
+    const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args.includes('--tree=br:/main'));
     expect(headListings.length).toBeGreaterThan(1);
     expect(headListings.flatMap((command) => command.args.filter((arg) => arg.startsWith('/'))).sort()).toEqual(['/', ...folders.map((path) => `/${path}`)].sort());
   });
 
   it('splits the folders across listings when they would overflow one command line', () => {
     const folders = Array.from({ length: 2_000 }, (_, index) => `/Assets/Folder number ${index}`);
-    const batches = headListingArgs(folders, '/main');
+    const batches = treeListingArgs(folders, 'br:/main');
     expect(batches.length).toBeGreaterThan(1);
     expect(batches.flatMap((args) => args.filter((arg) => arg.startsWith('/')))).toEqual(folders);
     expect(batches.every((args) => args[0] === 'ls' && args.includes('--tree=br:/main'))).toBe(true);

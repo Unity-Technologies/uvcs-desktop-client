@@ -7,7 +7,7 @@ import type { CmClient } from '../cm/CmClient';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { notInTreePaths } from '../cm/missingItem';
 import { readPendingChanges } from '../workspace/readPendingChanges';
-import { compareWithHead, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import { compareWithHead, foldersWithNewItems, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
 /** What updating the partial workspace on `branch` to its head would change in the folders it loaded. */
 export async function readPartialIncomingItems(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingItem[]> {
@@ -17,7 +17,28 @@ export async function readPartialIncomingItems(cm: CmClient, workspacePath: stri
     readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']),
   ]);
   const head = await readHeadOfFolders(cm, workspacePath, loadedFolders(loaded), branch);
-  return compareWithHead(loaded, head, new Set(changes.map((change) => change.path)));
+  const existedWhenLoaded = await readItemsWhenLoaded(cm, workspacePath, foldersWithNewItems(loaded, head));
+  return compareWithHead(loaded, head, new Set(changes.map((change) => change.path)), existedWhenLoaded);
+}
+
+/**
+ * The ids of the items `folders` held at the changesets the workspace loaded them at: one listing per changeset, and
+ * none when no loaded folder seems to get something new. An item among them existed already, though the workspace
+ * left it out.
+ */
+async function readItemsWhenLoaded(cm: CmClient, workspacePath: string, folders: readonly LoadedTreeItem[]): Promise<Set<number>> {
+  const byChangeset = new Map<number, string[]>();
+  for (const folder of folders) {
+    if (folder.changeset === null) continue;
+    byChangeset.set(folder.changeset, [...(byChangeset.get(folder.changeset) ?? []), serverPath(folder.path)]);
+  }
+  const ids = new Set<number>();
+  for (const [changeset, paths] of byChangeset) {
+    for (const args of treeListingArgs(paths.sort(), `cs:${changeset}`)) {
+      for (const item of await listHead(cm, workspacePath, args)) ids.add(item.itemId);
+    }
+  }
+  return ids;
 }
 
 /**
@@ -48,11 +69,11 @@ export function movedFolderPaths(folders: readonly LoadedTreeItem[], head: reado
 }
 
 /**
- * The `cm ls` commands that list `folders` and their children on the head of `branch`: as few as fit a command line
- * (`fitsCommandLine`), each one listing a batch of folders in order.
+ * The `cm ls` commands that list `folders` and their children in `tree` (`br:/main` its head, `cs:5` a changeset): as
+ * few as fit a command line (`fitsCommandLine`), each one listing a batch of folders in order.
  */
-export function headListingArgs(folders: readonly string[], branch: string): string[][] {
-  const listing = (batch: readonly string[]) => ['ls', ...batch, `--tree=br:${branch}`, HEAD_TREE_FORMAT];
+export function treeListingArgs(folders: readonly string[], tree: string): string[][] {
+  const listing = (batch: readonly string[]) => ['ls', ...batch, `--tree=${tree}`, HEAD_TREE_FORMAT];
   const batches: string[][] = [];
   let batch: string[] = [];
   for (const folder of folders) {
@@ -76,7 +97,7 @@ async function readHeadOfFolders(cm: CmClient, workspacePath: string, folders: r
   const listed = new Set<string>();
   let toList = folders.map((folder) => serverPath(folder.path)).sort();
   while (toList.length > 0) {
-    for (const args of headListingArgs(toList, branch)) head.push(...(await listHead(cm, workspacePath, args)));
+    for (const args of treeListingArgs(toList, `br:${branch}`)) head.push(...(await listHead(cm, workspacePath, args)));
     for (const path of toList) listed.add(path);
     toList = movedFolderPaths(folders, head, listed);
   }
