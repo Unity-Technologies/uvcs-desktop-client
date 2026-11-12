@@ -16,7 +16,7 @@ import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
-import { askedOpen, changesetFoldCount, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
+import { askedOpen, changesetFoldLabel, listIsOpen, toggledFold } from './changesetListFold';
 import { useChangesetListFoldStore } from './changesetListFoldStore';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
@@ -114,7 +114,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
       allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
       selected={list.choice.kind === 'all'}
       onSelectAll={() => setFocus({ kind: 'all' })}
-      count={{ text: changesetFoldCount(changesets?.length), label: changesetFoldLabel(changesets?.length) }}
+      foldLabel={changesetFoldLabel(open)}
       open={open}
       onToggle={toggleFold}
       folded={separator && showNewButton(separator.showNew.short)}
@@ -186,7 +186,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
 
 /**
  * The changesets above the files, under the row that stands for them all, "All changes on task", which folds them
- * (its end, "13 ⌄"): who reviews the whole branch sees that row only, selected, as the old "Whole branch"
+ * (its end, "Changesets ⌄", a word that stays as they're read; how many is the filter's, once open): who reviews the whole branch sees that row only, selected, as the old "Whole branch"
  * said, with "3 new" on a review's page (`folded`). The row stays in its place as the list opens under it,
  * and stands apart from the list (`allApart`), so the filter never hides it. The list mounts only open, so folded it
  * reads nothing.
@@ -195,13 +195,13 @@ function ChangesetFold(props: {
   allChanges: { label: string; tip: string };
   selected: boolean;
   onSelectAll: () => void;
-  count: { text: string; label: string };
+  foldLabel: string;
   open: boolean;
   onToggle: () => void;
   folded?: ReactNode;
   children: ReactNode;
 }) {
-  const { allChanges, selected, onSelectAll, count, open, onToggle, folded, children } = props;
+  const { allChanges, selected, onSelectAll, foldLabel, open, onToggle, folded, children } = props;
   return (
     <div className={styles.fold} data-open={open || undefined}>
       <div className={styles.allRow} data-selected={selected || undefined}>
@@ -210,8 +210,8 @@ function ChangesetFold(props: {
           <span className={styles.allLabel}>{allChanges.label}</span>
         </button>
         {!open && folded}
-        <button type="button" className={styles.foldToggle} aria-expanded={open} aria-label={count.label} data-tip={count.label} onClick={onToggle}>
-          {count.text}
+        <button type="button" className={styles.foldToggle} aria-expanded={open} data-tip={foldLabel} onClick={onToggle}>
+          Changesets
           <ChevronDown size={14} className={styles.foldChevron} aria-hidden />
         </button>
       </div>

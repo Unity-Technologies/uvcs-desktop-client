@@ -52,10 +52,10 @@ changeset", tried): the branch's own diff is one more row of the list, so steppi
 several to read as one diff, is there from the start instead of behind a mode few found.
 
 The list folds under its **All changes on <branch>** row, which stands apart above the list and its filter
-(`ChangesetFold` in `BranchDiff`, `changesetListFold`, the list's `allApart`) and ends in its fold, "13 ⌄"
-(`changesetFoldCount`): folded, the page reads as the branch's whole diff did, that row selected, with no list in
+(`ChangesetFold` in `BranchDiff`, `changesetListFold`, the list's `allApart`) and ends in its fold, "Changesets ⌄"
+(`changesetFoldLabel`; a count there turned into a number as the changesets were read, under the pointer): folded, the page reads as the branch's whole diff did, that row selected, with no list in
 the way and no `cm find` (the list mounts only open; a review's page has read the changesets for its rounds, so its
-row counts them and says "3 new", which selects them). A header line of its own, "Changesets · 13 ›", tried, read as
+row says "3 new", which selects them). A header line of its own, "Changesets · 13 ›", tried, read as
 a section's title, too quiet for what decides what the diff shows.
 It opens when the user opens it, remembered across branches and sessions (`useChangesetListFoldStore`), and when the
 page asks for changesets (what's new since a review, a changeset chip, where a comment was written). Folding it goes
