@@ -257,16 +257,14 @@ one read serves both), say what was checked in when (`reviewRounds`).
   **Show in Changes**, in its footer, leaves the dialog for the review's Changes, at the thread: a request applied on a
   branch in the changeset that applied it, whose diff shows it beside the fix (`showInChangesPage`); anything else where
   it was written.
-- **Your review** says what a status covers as it's picked: "Covers everything up to changeset 17", the branch's newest
-  (`statusCovers`); Under review covers nothing.
-
 Tried and dropped, so they aren't proposed again: banners under the header saying whose turn it is (they repeated what
 the conversation shows once it opens at its line, and read as stress); a band under the Changes header saying what's
 reviewed; a third mode "Since last review" in Changes (several changesets selected changeset by changeset give the same
 diff); a "New" chip in the files' filter bar (it's full); earlier rounds as scopes ("Since round 1": Whole branch covers
 going further back); Applied as a jump to Changes (it loses the reviewer's place; the dialog handles fixes in other
 files, "marked applied with no file" and reviews of no branch); a column in the list saying why a review waits; and
-rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
+a line in the Review popover saying what a status covers ("Covers everything up to changeset 17": it said little,
+and added noise to the popover); rounds as boxes, indented, which broke the timeline into pieces; and rounds as hairlines across it, centered, whose
 ragged ends and broken rail read untidy: a round is one more event on the rail.
 
 ## Comments in the code

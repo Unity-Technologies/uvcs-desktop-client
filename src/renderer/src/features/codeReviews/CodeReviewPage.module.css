@@ -184,9 +184,20 @@
   padding: 3px 0;
 }
 
-/* A quiet line under the statuses: that picking one adds the user, what the status covers. */
+/* A note under the statuses, an info icon leading: picking one adds the user as a reviewer. */
 .formNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
-  color: var(--text-secondary);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
   font-size: var(--text-sm);
+}
+
+.formNote > svg {
+  flex: none;
+  color: var(--accent-text);
 }
