@@ -46,6 +46,10 @@ age in a fixed column ("now", "12m", "3h", "2d", "Oct 14": `formatShortAge`); it
 (`changesetRowTip`: the comment's first line, who, the full date, cs:N). Why not History's two-line `RecordRow`: the
 list sits above the files, and two lines and a big avatar per changeset left room for few. Why no number on the row:
 on every one it said little and took the comment's room; the tooltip has it, and the filter finds it.
+The list is oldest on top (`oldestFirst`), as the branch was built, as a review's conversation reads and as the official
+client lists them; the newest, at its bottom, is selected first and brought into view, and stepping down goes on in
+time. Newest on top, as the app's other changeset lists are, was tried: stepping through a branch then went back in
+time, and the review's marks read upside down against its conversation.
 Its filter matches every word typed in a changeset's number, comment or author's name over the list already read
 (`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. A changeset the
 filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes
@@ -76,8 +80,8 @@ In a code review, a span's comments are placed by revision as the whole branch's
 but one changeset is the whole review's view).
 
 A code review hands the list where the user left off (`reviewedUpTo`, the review's checkpoint): a "Reviewed by you ·
-Nov 9" line above the first reviewed one shown (`reviewedSeparator`), so what's above it is new since
-(`changesetMark`: a number past the changeset reviewed up to), and the reviewed ones a step quieter. No dot on each new
+Nov 9" line between what they reviewed, above, and the first one new since (`reviewedSeparator`), so what's under it is
+new (`changesetMark`: a number past the changeset reviewed up to), and the reviewed ones a step quieter. No dot on each new
 one: it took a column of every row, indenting them all, and stayed lit after the changeset was read (the app keeps
 nothing of what was opened; the line says it once). The line is no
 row: `DataTable`'s `separator`, which the keys and the selection go past (`tableSeparator.ts`). New, beside the filter

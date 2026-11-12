@@ -35,9 +35,17 @@ export function shownBranchChangesets(changesets: readonly Changeset[], { query,
 }
 
 /**
- * The changeset one `step` away from `selectedId` among the `shown` ones (1: the next row down, older; -1: up,
- * newer), or null at either end. `changesets` is the whole branch, newest first: a selected changeset the filter hides
- * keeps its place in it, so the step goes to the nearest shown one on that side.
+ * A branch's changesets as the list shows them: oldest on top, as the branch was built and as the review's
+ * conversation reads (`cm find` reads them newest first). As the official client lists them.
+ */
+export function oldestFirst(changesets: readonly Changeset[]): Changeset[] {
+  return [...changesets].sort((a, b) => a.id - b.id);
+}
+
+/**
+ * The changeset one `step` away from `selectedId` among the `shown` ones (1: the next row down; -1: up), or null at
+ * either end. `changesets` is the whole branch in the list's order (`oldestFirst`: down is newer): a selected changeset
+ * the filter hides keeps its place in it, so the step goes to the nearest shown one on that side.
  */
 export function changesetStep(changesets: readonly Changeset[], shown: readonly Changeset[], selectedId: number | null, step: 1 | -1): number | null {
   if (selectedId === null) return shown[0]?.id ?? null;

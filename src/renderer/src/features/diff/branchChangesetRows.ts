@@ -37,12 +37,15 @@ export interface ReviewedSeparator {
 }
 
 /**
- * "Reviewed by you · Nov 9", above the first reviewed changeset `shown` (newest first): what's below it the user
- * reviewed. None before they reviewed, or when no reviewed changeset shows.
+ * "Reviewed by you · Nov 9", between what the user reviewed and what's new since, in the list `shown` (oldest first,
+ * `oldestFirst`): before the first new changeset, under the reviewed ones. None before they reviewed, or with nothing
+ * on one side of it to tell apart.
  */
 export function reviewedSeparator(shown: readonly Changeset[], reviewedUpTo: ReviewedUpTo | undefined, now: number, format: DayFormat = {}): ReviewedSeparator | undefined {
-  const first = shown.find((changeset) => changesetMark(changeset, reviewedUpTo) === 'reviewed');
-  if (!first || !reviewedUpTo) return undefined;
+  if (!reviewedUpTo) return undefined;
+  const firstNew = shown.findIndex((changeset) => changesetMark(changeset, reviewedUpTo) === 'new');
+  if (firstNew < 1 || changesetMark(shown[firstNew - 1]!, reviewedUpTo) !== 'reviewed') return undefined;
+  const first = shown[firstNew]!;
   return { beforeKey: String(first.id), label: `Reviewed by ${reviewedUpTo.by === undefined ? 'you' : displayName(reviewedUpTo.by)} · ${formatShortDay(reviewedUpTo.date, now, format)}`, tip: formatDateTime(reviewedUpTo.date) };
 }
 

@@ -11,7 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
-import { branchDiffShownFor, branchStartOfChangesets, changesetStep, shownBranchChangesets, selectedChangesetIds, showsChangesetList, spanSelection, type BranchDiffMode, type ChangesetToShow, type SpanToShow } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetStep, oldestFirst, shownBranchChangesets, selectedChangesetIds, showsChangesetList, spanSelection, type BranchDiffMode, type ChangesetToShow, type SpanToShow } from './changesetByChangeset';
 import { newChangesetsOf, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchChangesetList } from './BranchChangesetList';
 import { BranchDescription } from './BranchDescription';
@@ -104,10 +104,13 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
   const [query, setQuery] = useState('');
   const [onlyNew, setOnlyNew] = useState(false);
   const [revealKey, setRevealKey] = useState<string | null>(null);
-  const shown = useMemo(() => shownBranchChangesets(changesets ?? [], { query, onlyNew }, reviewedUpTo), [changesets, query, onlyNew, reviewedUpTo]);
+  // Oldest on top, as the branch was built (`oldestFirst`); the read stays newest first for what asks for the newest.
+  const listed = useMemo(() => oldestFirst(changesets ?? []), [changesets]);
+  const shown = useMemo(() => shownBranchChangesets(listed, { query, onlyNew }, reviewedUpTo), [listed, query, onlyNew, reviewedUpTo]);
   const newCount = useMemo(() => newChangesetsOf(changesets ?? [], reviewedUpTo).length, [changesets, reviewedUpTo]);
   const selectedId = selection.anchor === null ? null : Number(selection.anchor);
-  const firstId = changesets?.[0]?.id;
+  // The newest, at the list's bottom: selected first, and brought into view.
+  const newestId = changesets?.[0]?.id;
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to. The whole
   // branch read tells where it starts, for the branch diff up to a changeset.
   const start = branchStartOfChangesets(branch, changesets);
@@ -119,8 +122,11 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
   };
 
   useEffect(() => {
-    if (selectedId === null && firstId !== undefined) setSelection(singleSelection(String(firstId)));
-  }, [selectedId, firstId]);
+    if (selectedId === null && newestId !== undefined) {
+      setSelection(singleSelection(String(newestId)));
+      setRevealKey(String(newestId));
+    }
+  }, [selectedId, newestId]);
   useEffect(() => {
     if (focusChangeset === undefined) return;
     setSelection(singleSelection(String(focusChangeset.changesetId)));
@@ -134,7 +140,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath, focusChangeset, focu
     setRevealKey(String(focusChangesets.changesets.newest));
   }, [focusChangesets?.seq, read]);
 
-  const stepsTo = (step: 1 | -1): number | null => (changesets ? changesetStep(changesets, shown, selectedId, step) : null);
+  const stepsTo = (step: 1 | -1): number | null => (changesets ? changesetStep(listed, shown, selectedId, step) : null);
   const stepTo = (step: 1 | -1): void => {
     const id = stepsTo(step);
     if (id === null) return;
