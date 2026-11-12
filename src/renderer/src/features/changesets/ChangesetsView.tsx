@@ -102,7 +102,14 @@ export function ChangesetsView() {
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
   const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
-    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap} detailsToggle={<DetailsToggleButton detailsKey="changesets" />} actions={<ViewRefreshButton fetching={isFetching} />}>
+    <ViewHeader
+      title="Changesets"
+      count={cap ? undefined : changesets && visible.length}
+      total={changesets?.length}
+      subtitle={cap}
+      detailsToggle={<DetailsToggleButton detailsKey="changesets" />}
+      actions={<ViewRefreshButton fetching={isFetching} />}
+    >
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
         people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}
