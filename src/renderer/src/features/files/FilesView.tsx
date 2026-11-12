@@ -41,6 +41,7 @@ import { singleSelection } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
+import { choosesDownloads } from '../partialWorkspace/workspaceDownloads';
 import { showsNothingDownloaded } from './nothingDownloaded';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
 import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
@@ -109,6 +110,9 @@ export function FilesView() {
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
           <IconButton icon={<FilePlus size={14} />} label="New file" shortcut={FILE_SHORTCUTS.newFile} onClick={() => createInSelection('file')} />
           <IconButton icon={<FolderPlus size={14} />} label="New folder" shortcut={FILE_SHORTCUTS.newFolder} onClick={() => createInSelection('directory')} />
+          {choosesDownloads(workspace?.kind, workspace?.selector) && (
+            <IconButton icon={<FolderDown size={14} />} label="Choose what to download…" onClick={() => openChooseDownloads(workspacePath)} />
+          )}
           <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
         </>
       }
