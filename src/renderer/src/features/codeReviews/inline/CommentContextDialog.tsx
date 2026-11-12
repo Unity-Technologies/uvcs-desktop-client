@@ -96,7 +96,7 @@ function ThreadInContext(props: DialogProps) {
     setView('since');
     setCommentedSelected(true);
   };
-  const threads = useReviewThreads(review.id, SHOWN_BY_THE_PAGE);
+  const threads = useReviewThreads(review, SHOWN_BY_THE_PAGE);
   const live = liveThreadOf(threads, threadId);
   const appliedIn = live.kind === 'thread' ? settlingChangeset(live.thread) : undefined;
   // The changeset that applied it: the diff "How it was applied" reads anyway (one query), and its files.

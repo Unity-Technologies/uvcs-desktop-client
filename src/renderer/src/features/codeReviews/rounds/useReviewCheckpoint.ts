@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { useReviewConversation } from '../conversation/useReviewConversation';
-import { threadsOf } from '../conversation/reviewThreads';
+import { changesetIdsOf, threadsOf } from '../conversation/reviewThreads';
 import { checkpointOf, conversationBlocksOf, newThreadIds, reviewedUpToOf, stepGroupsOf, type ReviewCheckpoint, type StepGroup } from './reviewRounds';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { useReviewChangesets } from './useReviewChangesets';
@@ -31,7 +31,7 @@ export function useReviewCheckpoint(review: CodeReview): ReviewCheckpointState {
   return useMemo(() => {
     // Placed against changesets still being read, the checkpoint would name none and every changeset would look new.
     const checkpoint = conversation && settled ? checkpointOf(conversation.events, user, changesets) : undefined;
-    const threads = conversation ? threadsOf(conversation.comments) : [];
+    const threads = conversation ? threadsOf(conversation.comments, changesetIdsOf(changesets)) : [];
     const newIds = checkpoint && newThreadIds(threads, checkpoint, user, changesets);
     const stepGroups = conversation && settled ? stepGroupsOf(conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date })) : undefined;
     const reviewedUpTo = conversation && settled ? reviewedUpToOf(conversation.events, user, changesets) : undefined;

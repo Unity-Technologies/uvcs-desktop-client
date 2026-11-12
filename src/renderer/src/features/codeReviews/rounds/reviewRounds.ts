@@ -4,7 +4,7 @@ import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConve
 import { sameUser } from '../../../lib/userName';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { isLineThread } from '../inline/fileThreads';
-import { foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
+import { changesetIdsOf, foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
  * Review rounds: a reviewer's status (Reviewed or Rework required) closes a round. Everything up to it is reviewed for
@@ -180,7 +180,7 @@ export function conversationBlocksOf({ conversation, user, changesets, reviewDat
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
   const placed = placedItems(conversation, checkpoint, changesets, reviewDate);
-  const threads = threadsOf(conversation.comments);
+  const threads = threadsOf(conversation.comments, changesetIdsOf(changesets));
   const blocks: ConversationBlock[] = [];
   let next = 0;
   statuses.forEach((closing, index) => {
@@ -211,7 +211,7 @@ function placedItems(
   changesets: readonly Changeset[] | undefined,
   reviewDate: string,
 ): Placed[] {
-  const placed: Placed[] = timelineOf(conversation).map((item, order) => ({ at: placedAt(item, checkpoint, changesets), order, item }));
+  const placed: Placed[] = timelineOf(conversation, changesetIdsOf(changesets)).map((item, order) => ({ at: placedAt(item, checkpoint, changesets), order, item }));
   const asked = Date.parse(reviewDate);
   const checkedIn = (changesets ?? []).filter((changeset) => Date.parse(changeset.date) > asked);
   // Check-ins come before what's said at the same moment: a fix, then the words about it.

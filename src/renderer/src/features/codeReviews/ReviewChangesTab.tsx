@@ -47,7 +47,7 @@ interface ReviewChangesTabProps {
 export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabProps) {
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
-  const threads = useReviewThreads(review.id);
+  const threads = useReviewThreads(review);
   const { reviewedUpTo, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
