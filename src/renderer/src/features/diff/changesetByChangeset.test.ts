@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, filterBranchChangesets, selectedChangesetIds, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
+import { branchDiffShownFor, branchStartOfChangesets, changesetFilterPlaceholder, changesetStep, oldestFirst, filterBranchChangesets, selectedChangesetIds, shownBranchChangesets, spanSelection, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -186,5 +186,13 @@ describe('selectedChangesetIds', () => {
   it('is the anchor when nothing is selected, and none without one', () => {
     expect(selectedChangesetIds({ selected: new Set(), anchor: '17' })).toEqual([17]);
     expect(selectedChangesetIds({ selected: new Set(), anchor: null })).toEqual([]);
+  });
+});
+
+describe('oldestFirst', () => {
+  it("lists a branch's changesets as it was built, oldest on top, as the conversation reads", () => {
+    const read = [changeset(3), changeset(1), changeset(2)];
+    expect(oldestFirst(read).map((changeset) => changeset.id)).toEqual([1, 2, 3]);
+    expect(read.map((changeset) => changeset.id)).toEqual([3, 1, 2]);
   });
 });

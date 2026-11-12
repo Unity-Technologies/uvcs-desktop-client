@@ -38,30 +38,26 @@ describe('newChangesetsOf', () => {
 });
 
 describe('reviewedSeparator', () => {
-  it('goes above the first reviewed changeset shown, saying when', () => {
-    expect(reviewedSeparator(branch, reviewedUpTo15, now, format)).toEqual({ beforeKey: '15', label: 'Reviewed by you · Nov 15', tip: formatDateTime(reviewedUpTo15.date) });
+  // As the list shows them: oldest first.
+  const listed = [...branch].reverse();
+
+  it('goes between what was reviewed, above, and the first changeset new since, saying when', () => {
+    expect(reviewedSeparator(listed, reviewedUpTo15, now, format)).toEqual({ beforeKey: '16', label: 'Reviewed by you · Nov 15', tip: formatDateTime(reviewedUpTo15.date) });
   });
 
-  it('goes above the first reviewed one the filter leaves', () => {
-    expect(reviewedSeparator([branch[0]!, branch[3]!], reviewedUpTo15, now, format)?.beforeKey).toBe('14');
-  });
-
-  it('goes on top when every changeset shown is reviewed', () => {
-    expect(reviewedSeparator(branch.slice(2), reviewedUpTo15, now, format)?.beforeKey).toBe('15');
+  it('goes before the first new one the filter leaves', () => {
+    expect(reviewedSeparator([changeset(14), changeset(17)], reviewedUpTo15, now, format)?.beforeKey).toBe('17');
   });
 
   it("names the reviewer whose review it is when it isn't the user's own", () => {
-    expect(reviewedSeparator(branch, { ...reviewedUpTo15, by: 'miryam.gomez@unity3d.com' }, now, format)?.label).toBe('Reviewed by Miryam Gomez · Nov 15');
+    expect(reviewedSeparator(listed, { ...reviewedUpTo15, by: 'miryam.gomez@unity3d.com' }, now, format)?.label).toBe('Reviewed by Miryam Gomez · Nov 15');
   });
 
-  it('is none before the user reviewed, or when no reviewed changeset shows', () => {
-    expect(reviewedSeparator(branch, undefined, now, format)).toBeUndefined();
-    expect(reviewedSeparator(branch.slice(0, 2), reviewedUpTo15, now, format)).toBeUndefined();
-    expect(reviewedSeparator(branch, { date: '2026-11-01T10:00:00Z' }, now, format)).toBeUndefined();
-  });
-
-  it('names the year of a review from another year', () => {
-    expect(reviewedSeparator(branch, { date: '2025-11-15T12:00:00Z', changesetId: 15 }, now, format)?.label).toBe('Reviewed by you · Nov 15, 2025');
+  it('is none before the user reviewed, or with nothing on one side of it', () => {
+    expect(reviewedSeparator(listed, undefined, now, format)).toBeUndefined();
+    expect(reviewedSeparator(listed.slice(0, 3), reviewedUpTo15, now, format)).toBeUndefined();
+    expect(reviewedSeparator(listed.slice(3), reviewedUpTo15, now, format)).toBeUndefined();
+    expect(reviewedSeparator(listed, { date: '2026-11-01T10:00:00Z' }, now, format)).toBeUndefined();
   });
 });
 
