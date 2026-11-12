@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import { formatDateTime } from '../../lib/formatDate';
-import { changesetMark, changesetRowTip, newChangesetsOf, reviewedSeparator } from './branchChangesetRows';
+import { changesetMark, changesetRowTip, newChangesetsOf, newToggleTip, reviewedSeparator } from './branchChangesetRows';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: `2026-11-${id}T10:00:00Z`, parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -50,6 +50,10 @@ describe('reviewedSeparator', () => {
     expect(reviewedSeparator(branch.slice(2), reviewedUpTo15, now, format)?.beforeKey).toBe('15');
   });
 
+  it("names the reviewer whose review it is when it isn't the user's own", () => {
+    expect(reviewedSeparator(branch, { ...reviewedUpTo15, by: 'miryam.gomez@unity3d.com' }, now, format)?.label).toBe('Reviewed by Miryam Gomez · Nov 15');
+  });
+
   it('is none before the user reviewed, or when no reviewed changeset shows', () => {
     expect(reviewedSeparator(branch, undefined, now, format)).toBeUndefined();
     expect(reviewedSeparator(branch.slice(0, 2), reviewedUpTo15, now, format)).toBeUndefined();
@@ -71,5 +75,12 @@ describe('changesetRowTip', () => {
 
   it('says there is no comment when there is none', () => {
     expect(changesetRowTip(changeset(17, '  ')).text).toBe('No comment');
+  });
+});
+
+describe('newToggleTip', () => {
+  it('says since whose last review the New toggle keeps changesets', () => {
+    expect(newToggleTip({})).toBe('Only the changesets new since your last review');
+    expect(newToggleTip({ by: 'miryam.gomez@unity3d.com' })).toBe("Only the changesets new since Miryam Gomez's last review");
   });
 });

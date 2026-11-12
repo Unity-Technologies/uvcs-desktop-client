@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, newThreadIds, roundHolding, roundStatusesOf, settledSinceIds, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundHolding, roundStatusesOf, settledSinceIds, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -123,6 +123,26 @@ describe('checkpointOf', () => {
   it("is a reviewer group member's own, as the server notes the status under their name", () => {
     // A member of a group setting a status is added as a user: the event names the user, never the group.
     expect(checkpointOf([status(3, 'borja', 'Reviewed', at(7, 10))], 'borja', [])?.date).toBe(at(7, 10));
+  });
+});
+
+describe('reviewedUpToOf', () => {
+  const branch = changesets([12, at(7, 9)], [14, at(9, 15)], [15, at(10, 9)]);
+
+  it("is the user's own checkpoint once they gave a status", () => {
+    const events = [status(3, 'vio', 'Rework required', at(7, 10)), status(9, 'ana', 'Reviewed', at(9, 16))];
+
+    expect(reviewedUpToOf(events, 'vio', branch)).toEqual({ date: at(7, 10), changesetId: 12 });
+  });
+
+  it("is the newest reviewer's for anyone who gave none, the author too, naming them", () => {
+    const events = [status(3, 'vio', 'Rework required', at(7, 10)), status(9, 'ana', 'Reviewed', at(9, 16))];
+
+    expect(reviewedUpToOf(events, 'dani', branch)).toEqual({ date: at(9, 16), changesetId: 14, by: 'ana' });
+  });
+
+  it('is none before anyone reviewed', () => {
+    expect(reviewedUpToOf([status(1, 'vio', 'Under review', at(7, 10))], 'dani', branch)).toBeUndefined();
   });
 });
 
