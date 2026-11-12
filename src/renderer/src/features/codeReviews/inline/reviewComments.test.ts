@@ -27,13 +27,20 @@ describe('threadDiffRequest', () => {
     expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread(), 3)).toEqual({ path: 'src/Player.cs', changesetId: null, seq: 3 });
   });
 
-  it('asks for the changeset a comment was written in, changeset by changeset', () => {
+  it('asks for the changeset a comment was written in', () => {
     expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread({ changesetId: 12 }), 4)).toEqual({ path: 'src/Player.cs', changesetId: 12, seq: 4 });
+  });
+
+  // "Show in Changes" from How it was applied: a thread written on the whole branch, in the changeset that applied it.
+  it('asks for the changeset the page names over the one the comment was written in', () => {
+    expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread(), 7, 15)).toEqual({ path: 'src/Player.cs', changesetId: 15, seq: 7 });
+    expect(threadDiffRequest(review({ kind: 'branch', branch: '/main/task' }), thread({ changesetId: 12 }), 8, 15)).toEqual({ path: 'src/Player.cs', changesetId: 15, seq: 8 });
   });
 
   it('leaves the mode alone in a review with one: a changeset, a shelve', () => {
     expect(threadDiffRequest(review({ kind: 'changeset', changesetId: 12 }), thread({ changesetId: 12 }), 5)).toEqual({ path: 'src/Player.cs', seq: 5 });
     expect(threadDiffRequest(review({ kind: 'shelve', shelveId: 2 }), thread(), 6)).toEqual({ path: 'src/Player.cs', seq: 6 });
+    expect(threadDiffRequest(review({ kind: 'changeset', changesetId: 12 }), thread(), 6, 12)).toEqual({ path: 'src/Player.cs', seq: 6 });
   });
 });
 

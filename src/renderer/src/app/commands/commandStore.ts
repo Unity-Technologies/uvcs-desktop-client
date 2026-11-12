@@ -27,7 +27,21 @@ export const useCommandStore = create<CommandStore>((set) => ({
 }));
 
 export function allCommands(): Command[] {
-  return [...useCommandStore.getState().commandsByOwner.values()].flat();
+  return registeredCommands(useCommandStore.getState().commandsByOwner);
+}
+
+/**
+ * Every command registered, one per id: a command registered later replaces an earlier one with its id. A page opened
+ * over a view registers after it, so its command wins over the hidden view's, which stays mounted behind it
+ * (Browse repository's "Go to file…" over the workspace's Files).
+ */
+export function registeredCommands(commandsByOwner: ReadonlyMap<string, readonly Command[]>): Command[] {
+  const byId = new Map<string, Command>();
+  for (const command of [...commandsByOwner.values()].flat()) {
+    byId.delete(command.id);
+    byId.set(command.id, command);
+  }
+  return [...byId.values()];
 }
 
 /**

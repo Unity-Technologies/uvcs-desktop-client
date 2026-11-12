@@ -1,0 +1,11 @@
+/* The tree's place in the list pane, a flex column (SplitPane's `.pane`); hidden while the search's results show. */
+.tree {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tree[hidden] {
+  display: none;
+}

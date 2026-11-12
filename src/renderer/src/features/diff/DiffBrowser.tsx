@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
@@ -23,7 +23,7 @@ import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
-import { entryAt, pairedFocus } from './diffFocus';
+import { pairedEntryAt, pairedFocus } from './diffFocus';
 import { DiffFocusRequestContext } from './diffFocusRequest';
 import { pairDiffMetas } from './diffMetaPairs';
 import { diffEntryAnnotation } from './diffEntryHistory';
@@ -31,7 +31,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneDiffs, diffPaneOf } from './diffPane';
 import { useCollapseWithHost } from '../../components/diffExpansionStore';
 import { EntryDiff } from './EntryDiff';
-import { entryFlagChip, EntryFlagContext } from './entryFlag';
+import { entryFlagChip, EntryFlagContext, withMetaMarks } from './entryFlag';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -99,7 +99,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // What a diff compares, by value: a branch diff passes a new target each render.
   const targetKey = JSON.stringify(target);
   const entryFlag = useContext(EntryFlagContext);
-  const flagMarkOf = useMemo(() => entryFlag?.markOf(target), [entryFlag, targetKey]);
+  // An asset's row carries its `.meta`'s mark too: the meta rides on it (`withMetaMarks`).
+  const flagMarkOf = useMemo(() => {
+    const markOf = entryFlag?.markOf(target);
+    return markOf && withMetaMarks(markOf, pairs.metaOf);
+  }, [entryFlag, targetKey, pairs]);
   const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
   const markOf = useMemo(() => {
@@ -137,9 +141,16 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
 
   // The place asks for a file again (a review's Comments panel going to a thread): select it, where the diff has it.
   const focusRequest = useContext(DiffFocusRequestContext);
+  // Once per request, as soon as the files are read: a diff read again leaves the file and its `.meta` toggle as they are.
+  const appliedRequest = useRef<number | null>(null);
   useEffect(() => {
-    const requested = focusRequest && entryAt(entries, focusRequest.path);
-    if (requested) setSelection(singleSelection(diffEntryKey(requested)));
+    if (focusRequest?.path === undefined || appliedRequest.current === focusRequest.seq) return;
+    const requested = pairedEntryAt(pairs, focusRequest.path);
+    if (!requested) return;
+    appliedRequest.current = focusRequest.seq;
+    setSelection(singleSelection(diffEntryKey(requested.entry)));
+    // A `.meta` asked for shows on its asset's row; anything else shows itself, its asset's meta put away.
+    setMetaShownFor(requested.metaShownFor);
   }, [focusRequest?.seq, reading]);
 
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.

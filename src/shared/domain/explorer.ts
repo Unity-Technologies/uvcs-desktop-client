@@ -1,6 +1,12 @@
 import type { ItemType } from './pendingChanges';
 import type { RevisionRef } from './revision';
 
+/**
+ * Which tree of the repository to list: a changeset's, which never changes, or a branch's head, which moves as the
+ * branch gets changesets (a partial workspace on a branch loaded no one changeset to list).
+ */
+export type RepositoryTreePoint = { kind: 'changeset'; changeset: number } | { kind: 'branch'; branch: string };
+
 /** One file or directory as listed by `cm ls`, in the workspace or in a repository tree. */
 export interface TreeItem {
   /** Path relative to the root, with forward slashes and no leading slash, e.g. `src/app.ts`. */

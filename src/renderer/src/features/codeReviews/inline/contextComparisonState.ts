@@ -1,4 +1,4 @@
-import { appliedChangeset, comparisonOf, contextMissingText, entryOfThread, type ContextComparison, type ContextEntry, type ContextView, type OnScreen, type ShownEntry } from './commentContext';
+import { settlingChangeset, comparisonOf, contextMissingText, entryOfThread, type ContextComparison, type ContextEntry, type ContextView, type OnScreen, type ShownEntry } from './commentContext';
 import type { LineThread } from './fileThreads';
 
 /** What a view of "See in context" shows: its comparison, once the diff it needs is read, or why there's none yet. */
@@ -37,7 +37,7 @@ export function contextComparisonState({ thread, view, repository, onScreen, sou
   const entry = entryOf(source, onScreen, read, thread);
   const comparison = comparisonOf(thread, view, repository, entry);
   if (comparison) return { kind: 'comparison', comparison };
-  const appliedIn = appliedChangeset(thread);
+  const appliedIn = settlingChangeset(thread);
   return view === 'since' && appliedIn !== undefined ? { kind: 'notInChangeset', changesetId: appliedIn, text: contextMissingText(thread, view) } : { kind: 'missing', text: contextMissingText(thread, view) };
 }
 

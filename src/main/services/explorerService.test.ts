@@ -67,7 +67,7 @@ describe('browsing the workspace', () => {
     const listed = listing({ wkpath: '/src/a.cs', repspec: 'rep:game@local', hash: contentHashOf(Buffer.from('class A {}\n')), size: 11 });
     const fake = fakeCmClient({ ls: listed });
     const context = serviceContext(fake.cm);
-    await createExplorerService(context).listRepositoryDirectory(workspacePlace(workspace), 12, 'src');
+    await createExplorerService(context).listRepositoryDirectory(workspacePlace(workspace), { kind: 'changeset', changeset: 12 }, 'src');
 
     const read = await createContentService(context).read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
 
@@ -78,7 +78,7 @@ describe('browsing the workspace', () => {
   it("lists a folder of a changeset's tree by its repository path", async () => {
     const { service, lines } = explorer({ ls: listing() });
 
-    await service.listRepositoryDirectory(workspacePlace(WORKSPACE), 12, 'src');
+    await service.listRepositoryDirectory(workspacePlace(WORKSPACE), { kind: 'changeset', changeset: 12 }, 'src');
 
     expect(lines()).toEqual([`ls /src --tree=cs:12 ${TREE_ITEM_FORMAT}`]);
   });
@@ -86,9 +86,20 @@ describe('browsing the workspace', () => {
   it("lists a folder of a changeset's tree of a repository with no workspace, naming it, outside every workspace", async () => {
     const { service, commands } = explorer({ ls: listing() });
 
-    await service.listRepositoryDirectory(repositoryPlace('game@local'), 12, 'src');
+    await service.listRepositoryDirectory(repositoryPlace('game@local'), { kind: 'changeset', changeset: 12 }, 'src');
 
     expect(commands.map(({ args, options }) => [args.slice(0, 3), options])).toEqual([[['ls', '/src', '--tree=cs:12@game@local'], { outsideWorkspaces: true }]]);
+  });
+
+  it("lists a folder of a branch's tree, as its head holds it, in the workspace and in a repository with none", async () => {
+    const inWorkspace = explorer({ ls: listing() });
+    const inRepository = explorer({ ls: listing() });
+
+    await inWorkspace.service.listRepositoryDirectory(workspacePlace(WORKSPACE), { kind: 'branch', branch: '/main/task' }, 'src');
+    await inRepository.service.listRepositoryDirectory(repositoryPlace('game@local'), { kind: 'branch', branch: '/main/task' }, 'src');
+
+    expect(inWorkspace.lines()).toEqual([`ls /src --tree=br:/main/task ${TREE_ITEM_FORMAT}`]);
+    expect(inRepository.commands.map(({ args }) => args[2])).toEqual(['--tree=br:/main/task@game@local']);
   });
 
   it("reads an item's details with one quick cm fileinfo", async () => {

@@ -21,14 +21,15 @@ as on disk while it has changes. A folder shows what it holds and its last chang
 the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
 into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Every folder listing of the
 workspace is one query (`directoryListingQuery`), shared by the tree, Go to file's actions, Paste and the name checks.
-Browse repository shows its tree the same way, every item as its revision (with a filter of its open folders); a
+Browse repository shows its tree the same way, every item as its revision (with a search of its whole tree above it); a
 changeset's tree never changes, so each of its folders is read once (`repositoryListingQuery`, immutable). That tree
 (`RepositoryTree`) is also the Files view of a repository explored without a workspace, at a branch's latest
 changeset (docs/features/explore-repository.md "Files").
 
 ## Finding a file
 
-One way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
+This is a workspace's Files; a repository explored without a workspace, and Browse repository, search the server's
+tree instead (docs/features/explore-repository.md). One way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
 client finds files, and / from the tree: `filesGoToFile`; the header's search button): a fuzzy search (`fuzzyIndex`)
 over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
 revealed in the tree, its folders expanded, and selected with its diff. A reveal (Go to file, the palette's Show in

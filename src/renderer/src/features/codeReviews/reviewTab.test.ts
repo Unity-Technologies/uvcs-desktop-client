@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesFocusAskedFor, conversationFocus, mountedTabs, openingTab, reviewTabShown } from './reviewTab';
+import { changesFocusAskedFor, changesFocusRequest, conversationFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 
 describe('reviewTabShown', () => {
   it('shows the tab the page opens on and hides the other, which keeps its keys off', () => {
@@ -48,7 +48,21 @@ describe('changesFocusAskedFor', () => {
     // The page moves in place now (`movesWithinTop`): the changes, mounted already, went on showing the file they were on.
     const shown = { tab: 'changes', focusPath: 'Assets/Commands.cs' } as const;
     const moved = { tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 51 } as const;
-    expect(changesFocusAskedFor(shown, moved)).toBe(51);
+    expect(changesFocusAskedFor(shown, moved)).toEqual({ threadId: 51 });
+  });
+
+  it("is the changeset a page moved to asks for: a check-in gone to from the conversation", () => {
+    expect(changesFocusAskedFor({ tab: 'conversation' }, { tab: 'changes', focusChangeset: 15 })).toEqual({ changesetId: 15 });
+  });
+
+  it('is the changeset, the file and the thread together: a change request shown where it was applied', () => {
+    const shown = { tab: 'conversation' } as const;
+    const moved = { tab: 'changes', focusChangeset: 15, focusPath: 'Assets/Waves/WaveSpawner.cs', focusThread: 52 } as const;
+    expect(changesFocusAskedFor(shown, moved)).toEqual({ threadId: 52, changesetId: 15 });
+  });
+
+  it("is the span a page moved to asks for: what's new since the user's review", () => {
+    expect(changesFocusAskedFor({ tab: 'conversation' }, { tab: 'changes', focusChangesets: { oldest: 15, newest: 17 } })).toEqual({ changesets: { oldest: 15, newest: 17 } });
   });
 
   it('asks nothing of a page unchanged, of a tab picked, or of a thread gone to in the conversation', () => {
@@ -56,5 +70,27 @@ describe('changesFocusAskedFor', () => {
     expect(changesFocusAskedFor(moved, moved)).toBeUndefined();
     expect(changesFocusAskedFor(moved, { tab: 'changes' })).toBeUndefined();
     expect(changesFocusAskedFor(moved, { tab: 'conversation', focusThread: 51 })).toBeUndefined();
+    expect(changesFocusAskedFor(moved, { tab: 'conversation', focusChangeset: 15 })).toBeUndefined();
+  });
+});
+
+describe('changesFocusRequest', () => {
+  it('asks the diff for the changeset, without a file', () => {
+    expect(changesFocusRequest({ changesetId: 15 }, 4)).toEqual({ changesetId: 15, seq: 4 });
+  });
+
+  it('asks the diff for the span', () => {
+    expect(changesFocusRequest({ changesets: { oldest: 15, newest: 17 } }, 5)).toEqual({ changesets: { oldest: 15, newest: 17 }, seq: 5 });
+  });
+});
+
+describe('pageAfterOpenPick', () => {
+  it('forgets the thread the conversation was opened at, so going to it again reaches the conversation', () => {
+    expect(pageAfterOpenPick({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7 })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: undefined });
+  });
+
+  it('leaves the page as it is when the conversation names no thread', () => {
+    const page = { kind: 'codeReview', reviewId: 41, tab: 'conversation' } as const;
+    expect(pageAfterOpenPick(page)).toBe(page);
   });
 });

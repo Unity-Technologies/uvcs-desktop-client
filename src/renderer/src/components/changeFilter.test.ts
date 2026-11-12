@@ -4,7 +4,7 @@ import { changeFilterPlaceholder, countTones, filtersNothing, matchesChangeFilte
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
     expect(offeredTones(new Set())).toEqual(['changed', 'moved', 'deleted', 'added']);
-    expect(offeredTones(new Set(['muted', 'private', 'permissions']))).toEqual(['changed', 'moved', 'deleted', 'permissions', 'added', 'private', 'muted']);
+    expect(offeredTones(new Set(['muted', 'private', 'permissions']))).toEqual(['changed', 'moved', 'deleted', 'added', 'permissions', 'private', 'muted']);
   });
 });
 

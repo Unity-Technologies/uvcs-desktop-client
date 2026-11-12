@@ -16,7 +16,7 @@ describe('workspaceCreateArgs', () => {
   });
 
   it('creates a dynamic workspace loading /main of the repository, which cm takes from --tree only', () => {
-    expect(workspaceCreateArgs({ name: 'game', path: PATH, repository: 'game@cloud.example:8087', dynamic: true })).toEqual([
+    expect(workspaceCreateArgs({ name: 'game', path: PATH, repository: 'game@cloud.example:8087', kind: 'dynamic' })).toEqual([
       'workspace',
       'create',
       'game',

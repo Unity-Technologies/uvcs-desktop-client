@@ -120,6 +120,17 @@ describe('readChangesetIncomingChanges', () => {
       'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'src/a.txt'), change('CH', 'src/old.txt')),
     });
 
+  it('never makes a conflict of a file changed locally whose permissions alone changed on the branch: it has no content to merge', async () => {
+    const { cm } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: 41 }),
+      'find changeset': changesetsFound('/main', { id: 43, owner: 'ana' }),
+      'diff cs:41 cs:43': diffRecord('C', 'tools/build.sh', { revision: 20, permissions: ['-rw-r--r--', '-rwxr-xr-x'] }),
+      'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'tools/build.sh')),
+    });
+
+    expect((await readChangesetIncomingChanges(cm, '/work')).conflicts).toEqual([]);
+  });
+
   it('reads what came in with one find, one diff from the loaded changeset to the head, and the local changes', async () => {
     const { cm, lines } = branchMovedOn(changesetsFound('/main', { id: 43, owner: 'ana' }, { id: 42, owner: 'bob' }));
 

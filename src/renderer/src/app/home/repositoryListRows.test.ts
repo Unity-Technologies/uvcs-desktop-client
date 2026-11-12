@@ -77,6 +77,17 @@ describe('repositoryListRows', () => {
     ]);
   });
 
+  it('never expands a deleted repository, which has no workspaces until restored', () => {
+    const deletedGame: RepositorySummary = { ...game, spec: 'd1e2f3a4@local', deleted: true };
+    expect(repositoryListRows([deletedGame, game], workspaces, new Set([deletedGame.spec, game.spec])).map(described)).toEqual([
+      'game: 0',
+      'game (open): 2',
+      '  game-wk',
+      '  game-hotfix',
+      '  + game',
+    ]);
+  });
+
   it("looks each repository's workspaces up once, not through every workspace", () => {
     const many = Array.from({ length: 2_000 }, (_, index) => repository(`repo-${index}`));
     const index = workspacesByRepository(many.map((each, at) => ({ workspace: workspace(`wk-${at}`), repository: each.spec })));

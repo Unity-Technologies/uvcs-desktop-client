@@ -130,6 +130,12 @@ try {
     // Inside its project, a repository goes by its own name; the other project's is filtered out.
     await main.getByText('Game', { exact: true }).waitFor();
     await main.getByText('Levels', { exact: true }).waitFor({ state: 'detached' });
+    // A deleted repository shows only once asked for, tagged, with Restore.
+    await main.getByText('Old', { exact: true }).waitFor({ state: 'detached' });
+    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
+    await main.getByText('Old', { exact: true }).waitFor();
+    await main.getByRole('button', { name: 'Restore' }).waitFor();
+    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
     await sidebar.getByRole('button', { name: /^Home/ }).click();
     await workspaceOnHome.waitFor();
   });
@@ -295,10 +301,8 @@ try {
   }
   await step("A repository's file found by name", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Files/ }).click();
-    await main.getByRole('button', { name: 'Go to file' }).click();
-    const dialog = window.getByRole('dialog', { name: 'Go to file' });
-    await dialog.locator('input').fill('player');
-    await dialog.getByText('player.cs', { exact: false }).first().click();
+    await main.getByPlaceholder('Find files and folders by name').fill('player');
+    await main.getByRole('button', { name: /player\.cs/ }).first().click();
     await main.getByRole('row', { name: /player\.cs/ }).first().waitFor();
   });
   await step("A repository's changeset diff, in a new window too", async () => {

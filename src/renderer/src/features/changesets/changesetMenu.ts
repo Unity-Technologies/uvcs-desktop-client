@@ -62,7 +62,7 @@ export function changesetCopyTexts(place: Place, changeset: ChangesetInfo, repos
 
 /**
  * The menu of the selected changesets (one, or two for interval operations), the same wherever changesets show: the
- * Changesets view, a branch diff's "Changeset by changeset", the Branch Explorer, Incoming, the top bar, the palette
+ * Changesets view, a branch diff's list of changesets, the Branch Explorer, Incoming, the top bar, the palette
  * and their details. What needs a workspace (switching, reverting, merging into it) isn't there for a repository
  * explored without one.
  */

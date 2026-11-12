@@ -21,7 +21,7 @@ export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRe
 
 /**
  * How many threads a file of the review's diff holds in `view` (`threadsOfFile`), for its row's mark in the list. Read
- * from the threads alone, as the list reads no file: an outdated one written changeset by changeset counts in the whole
+ * from the threads alone, as the list reads no file: an outdated one written in one changeset's diff counts in the whole
  * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
  */
 export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {
@@ -43,6 +43,24 @@ export function hasComments(comments: Pick<FileComments, 'lines' | 'outdated'> |
 export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lineKey: string | undefined, inCode: boolean): readonly string[] {
   if (inCode || focus.inPlace || lineKey === undefined || opened.includes(lineKey)) return opened;
   return [...opened, lineKey];
+}
+
+/** The lines opened while comments are hidden, in the file they were opened in (`ReviewFileAnnotator` stays as files change). */
+export interface OpenedLines {
+  path: string;
+  keys: readonly string[];
+}
+
+/**
+ * The lines opened while comments are hidden, once a comment written on one of `path` is sent: its line opens, so the
+ * new thread shows where it was written rather than folding into a marker; lines opened in another file aren't this
+ * one's. Unchanged when comments show in the code (read as it's sent: they may have been hidden meanwhile), or the line
+ * is open already.
+ */
+export function openedOnSend(opened: OpenedLines, path: string, lineKey: string, inCode: boolean): OpenedLines {
+  const keys = opened.path === path ? opened.keys : [];
+  if (inCode || keys.includes(lineKey)) return opened;
+  return { path, keys: [...keys, lineKey] };
 }
 
 /** Whether the outdated threads above the code open: when one of them is gone to. */

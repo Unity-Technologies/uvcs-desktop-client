@@ -1,4 +1,6 @@
 import type { RepositorySummary } from '@shared/domain/repository';
+import type { WorkspaceKind } from '@shared/domain/workspace';
+import type { OptionCard } from '../../../ui/OptionCards';
 
 /** What the dialog reads of a repository: its name and spec (a server's listed one, or one explored without a workspace). */
 export type NamedRepository = Pick<RepositorySummary, 'name' | 'spec'>;
@@ -7,6 +9,46 @@ import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repository
 
 /** What "Learn more" next to the dynamic choice opens: Unity's page on dynamic workspaces. */
 export const DYNAMIC_WORKSPACES_URL = 'https://docs.unity.com/en-us/unity-version-control/dynamic-workspaces';
+
+/**
+ * The kind after the user ticks or clears one kind's checkbox: ticking one chooses it (dynamic and partial exclude each
+ * other), clearing the chosen one goes back to standard, and clearing one not chosen changes nothing.
+ */
+export function toggledKind(current: WorkspaceKind, kind: Exclude<WorkspaceKind, 'standard'>, checked: boolean): WorkspaceKind {
+  if (checked) return kind;
+  return current === kind ? 'standard' : current;
+}
+
+/** What the workspace downloads: the whole branch (a standard or dynamic workspace), or only the folders the user picks (partial). */
+export type DownloadChoice = 'branch' | 'folders';
+
+/**
+ * The kind after the user chooses what to download: only some folders makes it partial; the whole branch makes a
+ * partial choice standard and keeps a dynamic one, which downloads the whole branch too.
+ */
+export function kindForDownloads(current: WorkspaceKind, choice: DownloadChoice): WorkspaceKind {
+  if (choice === 'folders') return 'partial';
+  return current === 'partial' ? 'standard' : current;
+}
+
+/**
+ * The "What to download" cards, saying when to choose each: they tell new users what the official client told them by
+ * shipping a separate app for partial workspaces. Each line says only what `cm` holds to: a partial workspace can't
+ * merge (`cm merge` asks to convert it to standard first) and switches only to branches.
+ */
+export function downloadCards(form: Pick<NewWorkspaceForm, 'partialAllowed'>): OptionCard<DownloadChoice>[] {
+  return [
+    { value: 'branch', title: 'The whole branch', description: 'Every file, at one changeset. Switch and merge freely.' },
+    {
+      value: 'folders',
+      title: 'Only the folders I pick',
+      description: form.partialAllowed
+        ? 'Less to download; each file updates on its own. Merging needs the whole branch. Pick the folders next, and change them anytime.'
+        : 'Not for a new repository: it has nothing to pick yet.',
+      disabled: !form.partialAllowed,
+    },
+  ];
+}
 
 /** The repository a new workspace works with, as the dialog's Repository field resolves it. */
 export type WorkspaceRepository =
@@ -36,8 +78,8 @@ export interface NewWorkspaceFormInput {
   root: string | undefined;
   /** This computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`); false until told. */
   dynamicAvailable: boolean;
-  /** The user ticked "Make this workspace dynamic". */
-  dynamicChosen: boolean;
+  /** The kind the user chose with the dialog's download cards and dynamic checkbox. */
+  kindChosen: WorkspaceKind;
   creating: boolean;
 }
 
@@ -60,6 +102,19 @@ export interface NewWorkspaceForm {
   offersDynamic: boolean;
   /** The workspace is created dynamic: chosen, and offered. */
   dynamic: boolean;
+  /** The dynamic checkbox can't be ticked: only the folders picked are downloaded, and a dynamic workspace has the whole branch. */
+  dynamicDisabled: boolean;
+  /**
+   * Whether "Only the folders I pick" can be chosen: not for a repository the dialog creates, which has nothing to pick
+   * from. It can be while no repository is named yet, so the choice reads the same from the start.
+   */
+  partialAllowed: boolean;
+  /** The workspace is created partial, with nothing downloaded until the user chooses: chosen, and allowed. */
+  partial: boolean;
+  /** The download card selected. */
+  downloads: DownloadChoice;
+  /** The kind the workspace is created as: the one chosen if offered, else standard. */
+  kind: WorkspaceKind;
   canCreate: boolean;
 }
 
@@ -69,6 +124,9 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   const workspaceNameTaken = isWorkspaceNameTaken(workspaceName, input.workspaceNames);
   const path = input.chosenPath ?? defaultWorkspacePath(input.root, workspaceName);
   const createsRepository = repository?.kind === 'new' && !repository.created;
+  const partialAllowed = repository?.kind !== 'new';
+  const partial = partialAllowed && input.kindChosen === 'partial';
+  const dynamic = input.dynamicAvailable && input.kindChosen === 'dynamic';
   return {
     repository,
     repositoryList: input.repositoriesFailed ? 'failed' : input.repositories ? 'ready' : 'loading',
@@ -79,7 +137,12 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
     workspaceNameTaken,
     path,
     offersDynamic: input.dynamicAvailable,
-    dynamic: input.dynamicAvailable && input.dynamicChosen,
+    dynamic,
+    dynamicDisabled: partial,
+    partialAllowed,
+    partial,
+    downloads: partial ? 'folders' : 'branch',
+    kind: dynamic ? 'dynamic' : partial ? 'partial' : 'standard',
     canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
   };
 }

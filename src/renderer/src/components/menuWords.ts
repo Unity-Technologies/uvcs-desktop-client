@@ -56,6 +56,7 @@ import {
   Merge,
   MessageSquare,
   MessageSquareCode,
+  MessageSquarePlus,
   MessageSquareText,
   Minus,
   MoveRight,
@@ -148,6 +149,8 @@ export const MENU_WORDS = {
   redoEdit: word('act', Redo2, 'Redo'),
   switch: word('act', ArrowRightLeft),
   taskWorkspace: word('act', FolderGit2, 'Work on this branch in a new workspace…'),
+  // A partial workspace's files on disk, chosen in its tree (`openChooseDownloads`).
+  chooseDownloads: word('act', FolderDown, 'Choose what to download…'),
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),
@@ -205,6 +208,8 @@ export const MENU_WORDS = {
   newWorkspace: word('create', FolderPlus, 'New workspace…'),
   newTaskWorkspace: word('create', FolderGit2, 'New workspace for a task…'),
   newWindow: word('create', AppWindow, 'New window'),
+  // A place's own action on a line of code (`lineMenu`, `DiffAnnotations.lineAction`): a review's "Comment on line 42".
+  lineAction: word('create', MessageSquarePlus),
 
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),

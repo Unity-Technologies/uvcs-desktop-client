@@ -100,6 +100,13 @@ describe('parseWorkspaceStatus', () => {
     });
   });
 
+  it('fails on changeset -1 on a label or a changeset, which loads one changeset', () => {
+    const onLabel = partial.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
+    const onChangeset = partial.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
+    expect(() => parseWorkspaceStatus(onLabel)).toThrow(/cm status/);
+    expect(() => parseWorkspaceStatus(onChangeset)).toThrow(/cm status/);
+  });
+
   it('fails on output without a status, instead of returning an empty branch and changeset -1', () => {
     expect(() => parseWorkspaceStatus('')).toThrow(/cm status/);
     expect(() => parseWorkspaceStatus('<StatusOutput><WkConfigType>Branch</WkConfigType></StatusOutput>')).toThrow(/cm status/);
@@ -112,6 +119,9 @@ describe('loadedChangesetOf', () => {
     expect(loadedChangesetOf(12, { kind: 'label', name: 'v1' })).toBe(12);
     expect(loadedChangesetOf(0, { kind: 'branch', name: '/main' })).toBe(0);
     expect(loadedChangesetOf(-1, { kind: 'shelve', name: '1' })).toBeNull();
+    expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
+    expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
+    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
     expect(loadedChangesetOf(-5, { kind: 'changeset', name: '-5' })).toBeUndefined();
     expect(loadedChangesetOf(Number.NaN, { kind: 'shelve', name: '3' })).toBeUndefined();
   });

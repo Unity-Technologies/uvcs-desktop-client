@@ -2,7 +2,7 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { earlierRevisions, placeEarlier, threadsOfFile, writtenIn, type EarlierThread, type ReviewDiffView, type ShownFile, type ThreadSide, type VersionText } from './fileThreads';
+import { earlierRevisions, placeEarlier, settledIn, threadsOfFile, writtenIn, type EarlierThread, type LineThread, type ReviewDiffView, type ShownFile, type ThreadSide, type VersionText } from './fileThreads';
 import { newerLineFinder } from './newerLine';
 import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } from './threadRows';
 
@@ -25,32 +25,52 @@ interface FileCommentsInput {
 
 /**
  * Where a file's threads show (`threadsOfFile`, `placeEarlier`): those on a version the diff shows at their line, those
- * on an earlier one at their line now when it's unchanged since, the rest outdated. Until the earlier versions are read
- * or fail, their threads wait (none shows outdated, or at a line, only to move a moment later); a newer side that
- * can't be read leaves them all outdated.
+ * on an earlier one at their line now when it's unchanged since, the rest outdated. A thread the diff's changeset
+ * settled (`settledIn`) goes first where its line was before the fix, on the older side, as "How it was applied" shows
+ * it: the fix changed that line, and the changesets between its version and the fix may have moved it. One whose line
+ * those changesets changed too is outdated: taking it to where their change starts was tried, and on a rewritten block
+ * it landed beside unrelated code. Until the
+ * versions are read or fail, their threads wait (none shows outdated, or at a line, only to move a moment later); a
+ * side that can't be read places none there.
  */
 export function fileCommentsOf({ threads, review, view, file, textOf }: FileCommentsInput): FileComments {
   const { placed, earlier } = threadsOfFile(threads, review, view, file);
-  const newer = file.modifiedRevision === -1 ? null : textOf(file.modifiedRevision);
-  const lineIn = typeof newer === 'string' ? newerLineFinder(newer) : null;
+  const newer = sideText(file.modifiedRevision, textOf);
+  const older = earlier.some((entry) => settledIn(entry.thread, view)) ? sideText(file.originalRevision, textOf) : null;
+  const lineInNewer = typeof newer === 'string' ? newerLineFinder(newer) : null;
+  const lineInOlder = typeof older === 'string' ? newerLineFinder(older) : null;
+  const lineOf = (text: string, thread: LineThread): { side: ThreadSide; line: number } | null => {
+    const { line } = thread.root.anchor;
+    const before = settledIn(thread, view) && lineInOlder ? lineInOlder(text, line) : null;
+    if (before !== null) return { side: 'deletions', line: before };
+    const now = lineInNewer ? lineInNewer(text, line) : null;
+    return now === null ? null : { side: 'additions', line: now };
+  };
   const placedEarlier = placeEarlier(
     earlier,
-    (revisionId) => (newer === undefined ? undefined : textOf(revisionId)),
-    (text, line) => (lineIn === null ? null : lineIn(text, line)),
-    (thread) => writtenIn(review, thread).kind === view.kind,
+    (revisionId) => (newer === undefined || older === undefined ? undefined : textOf(revisionId)),
+    lineOf,
+    (thread) => writtenIn(review, thread).kind === view.kind || settledIn(thread, view),
   );
   return { lines: lineThreadsOf([...placed, ...placedEarlier.placed]), outdated: placedEarlier.outdated, reading: placedEarlier.reading };
 }
 
+/** A side's text: none for a side the file isn't on. */
+function sideText(revisionId: number, textOf: (revisionId: number) => VersionText): VersionText {
+  return revisionId === -1 ? null : textOf(revisionId);
+}
+
 /**
- * The versions of a file to read to place its threads (`useFileVersionTexts`): those written on an earlier version, and
- * the newer side's text to find their lines in. None when every thread is on a version the diff shows.
+ * The versions of a file to read to place its threads (`useFileVersionTexts`): those written on an earlier version, the
+ * newer side's text to find their lines in, and the older side's when the diff's changeset settled one of them. None
+ * when every thread is on a version the diff shows.
  */
 export function versionsToRead({ threads, review, view, file }: Omit<FileCommentsInput, 'textOf'>): number[] {
   const { earlier } = threadsOfFile(threads, review, view, file);
   const revisions = earlierRevisions(earlier);
-  if (revisions.length === 0 || file.modifiedRevision === -1 || revisions.includes(file.modifiedRevision)) return revisions;
-  return [...revisions, file.modifiedRevision];
+  if (revisions.length === 0) return revisions;
+  const sides = [file.modifiedRevision, ...(earlier.some((entry) => settledIn(entry.thread, view)) ? [file.originalRevision] : [])];
+  return [...revisions, ...sides.filter((revisionId) => revisionId !== -1 && !revisions.includes(revisionId))];
 }
 
 /** The side a file's rows above its code go on: the one it has, the older for a deleted file. */

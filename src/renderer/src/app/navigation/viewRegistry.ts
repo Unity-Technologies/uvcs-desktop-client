@@ -19,6 +19,7 @@ import { AttributesView } from '../../features/attributes/AttributesView';
 import { BranchExplorerView } from '../../features/branchExplorer/BranchExplorerView';
 import { BranchesView } from '../../features/branches/BranchesView';
 import { ChangesetsView } from '../../features/changesets/ChangesetsView';
+import { useWaitingForMeBadge } from '../../features/codeReviews/useWaitingForMeBadge';
 import { CodeReviewsView } from '../../features/codeReviews/CodeReviewsView';
 import { PlaceFilesView } from '../../features/files/PlaceFilesView';
 import { IncomingChangesView } from '../../features/incoming/IncomingChangesView';
@@ -63,7 +64,7 @@ const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
   { id: 'labels', label: 'Labels', icon: Tag, group: 'History', component: LabelsView },
   { id: 'shelves', label: 'Shelves', icon: Archive, group: 'History', component: ShelvesView },
   { id: 'attributes', label: 'Attributes', icon: Tags, group: 'History', component: AttributesView },
-  { id: 'codeReviews', label: 'Code reviews', icon: MessageSquareCode, group: 'Collaborate', component: CodeReviewsView },
+  { id: 'codeReviews', label: 'Code reviews', icon: MessageSquareCode, group: 'Collaborate', component: CodeReviewsView, useBadge: useWaitingForMeBadge },
   { id: 'locks', label: 'Locks', icon: Lock, group: 'Collaborate', component: LocksView },
   { id: 'sync', label: 'Sync', icon: RefreshCcw, group: 'Collaborate', component: SyncView },
 ];

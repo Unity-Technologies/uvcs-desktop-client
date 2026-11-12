@@ -57,6 +57,12 @@ describe('suggestionQueryAt', () => {
     expect(queryAt('Smile :)‸')).toBeNull();
   });
 
+  it('opens no list on an emoticon, whose Enter would pick an emoji instead of turning it into its own', () => {
+    expect(queryAt('ok :-p‸')).toBeNull();
+    expect(queryAt('ok :-o‸')).toBeNull();
+    expect(queryAt('ok :-1‸')).toEqual({ kind: 'emoji', from: 3, to: 6, text: '-1' });
+  });
+
   it('opens after a bracket or an emphasis mark, never inside a word, a path or an address', () => {
     expect(queryAt('(cs:1‸')).toMatchObject({ kind: 'changeset', text: '1' });
     expect(queryAt('**@a‸')).toMatchObject({ kind: 'person', text: 'a' });

@@ -89,7 +89,7 @@ export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string 
 
 /**
  * The review on its Changes tab at a thread: its file (the diff names files without the leading slash), in the mode it
- * was written in (a branch's diff opens on the changeset of one written changeset by changeset), the diff scrolled to
+ * was written in (a branch's diff opens on the changeset of one written in its diff), the diff scrolled to
  * the thread wherever the file has it: at its line, or above the code when written on an earlier version whose line
  * changed since.
  */

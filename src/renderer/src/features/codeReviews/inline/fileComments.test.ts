@@ -80,6 +80,36 @@ describe('fileCommentsOf', () => {
   });
 });
 
+describe('fileCommentsOf, in the changeset that settled a thread', () => {
+  // Written on revision 20, before other changesets of the branch; changeset 9 changed its line ("c"), on revision 25 still.
+  const BEFORE_FIX = text('new', 'a', 'b', 'c', 'd');
+  const FIX: ShownFile = { path: 'src/Player.cs', originalRevision: 25, modifiedRevision: 30 };
+  const IN_FIX = { kind: 'changeset', changesetId: 9 } as const;
+  const textOf = (revision: number): string | undefined => (revision === 25 ? BEFORE_FIX : TEXTS.get(revision));
+  const answeredInFix = threadsOf([onLine(1, 20, 3, { kind: 'question' }), { ...onLine(2, 20, 3), anchor: { kind: 'review' }, parentId: 1, kind: 'comment', text: 'Fixed in cs:9.' }]);
+
+  it("shows a question answered in it at its line before the fix, on the older side, though written on an earlier version", () => {
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf });
+    expect(comments.lines.map((line) => line.key)).toEqual(['deletions:4']);
+    expect(comments.outdated).toEqual([]);
+  });
+
+  it('waits for the version before the fix', () => {
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: (revision) => (revision === 25 ? undefined : textOf(revision)) });
+    expect([comments.lines, comments.outdated, comments.reading.length]).toEqual([[], [], 1]);
+  });
+
+  it('shows it outdated, not hidden, when its line had changed before the fix too', () => {
+    const changedBefore = (revision: number): string | undefined => (revision === 25 ? text('new', 'a', 'b', 'c changed', 'd') : TEXTS.get(revision));
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: changedBefore });
+    expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([1]);
+  });
+
+  it('reads the version before the fix to place it', () => {
+    expect(versionsToRead({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX })).toEqual([20, 30, 25]);
+  });
+});
+
 describe('annotationRowsOf', () => {
   const [thread] = threadsOf([onLine(1, 30, 2)]);
   const rows = lineThreadsOf([{ thread: thread as never, side: 'additions', line: 2 }]);

@@ -188,9 +188,16 @@ export function shelvesCreated(...shelves: { id: number; repository?: string }[]
   return shelves.map(({ id, repository = 'eco@local' }) => `Created shelve sh:${id}@${repository} (mount:'/')`).join('\n') + '\n';
 }
 
-/** A record of `cm diff … --repositorypaths --format=DIFF_FORMAT`: `status` is A, C, D or M; paths as `cm` prints them. */
-export function diffRecord(status: string, path: string, { oldPath = '', base = -1, revision = 36, type = 'F', repository = 'eco@local' } = {}): string {
-  return formatOutput([status, `"/${path}"`, `"${oldPath && `/${oldPath}`}"`, base, revision, type, `"${repository}"`]);
+/**
+ * A record of `cm diff … --repositorypaths --format=DIFF_FORMAT`: `status` is A, C, D or M; paths as `cm` prints them.
+ * A C without a `base` is a change of the item's permissions alone (`permissions`, before and after).
+ */
+export function diffRecord(
+  status: string,
+  path: string,
+  { oldPath = '', base = -1, revision = 36, type = 'F', repository = 'eco@local', permissions = ['', ''] as readonly [string, string] } = {},
+): string {
+  return formatOutput([status, `"/${path}"`, `"${oldPath && `/${oldPath}`}"`, base, revision, type, `"${repository}"`, `"${permissions[0]}"`, `"${permissions[1]}"`]);
 }
 
 /** `cm merge … --machinereadable --fieldseparator=…` output, as a merge run prints it: one record per line, fields apart by the separator given. */

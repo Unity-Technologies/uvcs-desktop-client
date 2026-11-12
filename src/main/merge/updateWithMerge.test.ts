@@ -65,13 +65,12 @@ function updatingCm(
       }
       return '';
     },
-    'partial update': async () => {
-      for (const name of FILES) await writeFile(file(name), `incoming ${name}
-`);
-      return '';
-    },
     update: async () => {
       if (failUpdate) return cmFails(failUpdate);
+      for (const name of FILES) await writeFile(file(name), `incoming ${name}\n`);
+      return '';
+    },
+    'partial update': async () => {
       for (const name of FILES) await writeFile(file(name), `incoming ${name}\n`);
       return '';
     },

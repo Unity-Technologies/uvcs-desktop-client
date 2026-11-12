@@ -7,6 +7,12 @@ export interface RepositorySummary {
   spec: string;
   /** The Unity project it belongs to, in a Unity organization (`Racing` for `Racing/Game`); none elsewhere. */
   project?: string;
+  /**
+   * Deleted, and still restorable: the server keeps a deleted repository for a while and lists it to its
+   * administrators. Its `name` is the one it had; its `spec` names it by GUID (`<guid>@server`), as
+   * `cm repository undelete` takes it: several deleted repositories may share a name.
+   */
+  deleted?: true;
 }
 
 /** A Unity organization's project: its GUID decides its color in every client (`projectColor`). */
@@ -15,10 +21,14 @@ export interface UnityProject {
   guid: string;
 }
 
-/** What a server holds: its repositories by name, and in a Unity organization its projects by name, empty ones too. */
+/**
+ * What a server holds: its repositories by name, and in a Unity organization its projects by name, empty ones too.
+ * The deleted repositories the server still keeps come apart, by name, so only what asks for them sees them.
+ */
 export interface RepositoryListing {
   repositories: RepositorySummary[];
   projects: UnityProject[];
+  deletedRepositories: RepositorySummary[];
 }
 
 /** A server the client has credentials for, from `cm profile list`. */

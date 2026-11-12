@@ -1,5 +1,5 @@
 import type { Place } from '@shared/domain/place';
-import type { ReviewComment } from '@shared/domain/reviewConversation';
+import type { NewLineComment, ReviewComment } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../../app/refresh/refreshScopes';
@@ -10,6 +10,11 @@ import { confirm } from '../../../ui/dialog/confirm';
 
 export function addReviewComment(place: Place, reviewId: number, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.add(place, reviewId, text), isAffectedByCodeReviews);
+}
+
+/** A change request, a question or a comment on a line of the review's diff. */
+export function addLineComment(place: Place, reviewId: number, comment: NewLineComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnLine(place, reviewId, comment, text), isAffectedByCodeReviews);
 }
 
 export function replyToComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {

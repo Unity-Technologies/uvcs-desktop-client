@@ -41,6 +41,14 @@ describe('countEntriesNeedingMerge', () => {
     expect(countEntriesNeedingMerge(entries, loaded)).toBe(0);
   });
 
+  it('needs none for an item whose permissions alone changed, loaded at its one revision, and a merge at another', () => {
+    const permissionsChange = { before: '-rw-r--r--', after: '-rwxr-xr-x' };
+    const entries = [entry('changed', 'Tools/build.sh', 90, { permissionsChange }), entry('changed', 'Tools/pack.sh', 91, { revisionId: 91, permissionsChange })];
+    const loaded = [folder('Tools'), file('Tools/build.sh', 90), file('Tools/pack.sh', 80)];
+
+    expect(countEntriesNeedingMerge(entries, loaded)).toBe(1);
+  });
+
   it('needs a merge for an item loaded at another revision, checked out, or not loaded at all', () => {
     const entries = [entry('changed', 'Code/Engine.cs', 15), entry('changed', 'Code/Hull.cs', 38), entry('deleted', 'Code/Gone.cs', 3)];
     const loaded = [folder('Code'), file('Code/Engine.cs', 22), file('Code/Hull.cs', -1, true)];

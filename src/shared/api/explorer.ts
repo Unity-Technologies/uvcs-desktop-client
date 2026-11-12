@@ -1,11 +1,11 @@
 import type { Place, RepositoryPlace } from '../domain/place';
-import type { DeletedItemRestore, FoundPath, ItemDetails, RestoreOutcome, ItemMove, RevisionType, TreeItem } from '../domain/explorer';
+import type { DeletedItemRestore, FoundPath, ItemDetails, RestoreOutcome, ItemMove, RepositoryTreePoint, RevisionType, TreeItem } from '../domain/explorer';
 
 export interface ExplorerApi {
   /** Children of a workspace directory (`''` is the root), including private items. */
   listDirectory(workspacePath: string, directory: string): Promise<TreeItem[]>;
-  /** Children of a directory in the repository at a changeset, without a workspace. */
-  listRepositoryDirectory(place: Place, changesetId: number, directory: string): Promise<TreeItem[]>;
+  /** Children of a directory in the repository's tree at a changeset or a branch's head, without a workspace. */
+  listRepositoryDirectory(place: Place, tree: RepositoryTreePoint, directory: string): Promise<TreeItem[]>;
   /**
    * The best matches of `query` among a repository's files and folders at a changeset, explored without a workspace
    * (docs/features/explore-repository.md, "Finding a file"): the first search of a changeset lists its tree from the

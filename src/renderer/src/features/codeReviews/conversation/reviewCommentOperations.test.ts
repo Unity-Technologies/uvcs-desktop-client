@@ -7,6 +7,7 @@ import { workspacePlace } from '@shared/domain/place';
 import { answerConfirms } from '../../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes } from '../../../testing/operationOutcome';
 import {
+  addLineComment,
   addReviewComment,
   deleteReviewComment,
   discardChangeRequest,
@@ -21,11 +22,12 @@ const comment = { guid: 'c1' };
 
 describe('writing on a review', () => {
   it('adds, replies, discards, edits and describes, each with one call', async () => {
-    for (const method of ['reviewComments.add', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.setDescription'] as const) {
+    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.setDescription'] as const) {
       fakeApi.answer(method, () => undefined);
     }
 
     expect(await addReviewComment(inWs, 41, 'Nice')).toBe(true);
+    expect(await addLineComment(inWs, 41, { revisionId: 30, line: 7, kind: 'question' }, 'Why?')).toBe(true);
     expect(await replyToComment(inWs, comment, 'Thanks')).toBe(true);
     expect(await discardChangeRequest(inWs, comment, 'cm calls it target')).toBe(true);
     expect(await editReviewComment(inWs, comment, 'Nicer')).toBe(true);
@@ -33,6 +35,7 @@ describe('writing on a review', () => {
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
       ['reviewComments.add', 41, 'Nice'],
+      ['reviewComments.addOnLine', 41, { revisionId: 30, line: 7, kind: 'question' }, 'Why?'],
       ['reviewComments.reply', 'c1', 'Thanks'],
       ['reviewComments.reply', 'c1', 'cm calls it target', { discard: true }],
       ['reviewComments.edit', 'c1', 'Nicer'],
@@ -41,12 +44,13 @@ describe('writing on a review', () => {
   });
 
   it('reads only the reviews again after each write, their lists and conversations, never the workspace', async () => {
-    for (const method of ['reviewComments.add', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.remove', 'reviewComments.setDescription'] as const) {
+    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.remove', 'reviewComments.setDescription'] as const) {
       fakeApi.answer(method, () => undefined);
     }
     answerConfirms(true);
     const writes = [
       () => addReviewComment(inWs, 41, 'Nice'),
+      () => addLineComment(inWs, 41, { revisionId: 30, line: 7, kind: 'changeRequest' }, 'Rename it'),
       () => replyToComment(inWs, comment, 'Thanks'),
       () => discardChangeRequest(inWs, comment, 'Not needed'),
       () => editReviewComment(inWs, comment, 'Nicer'),

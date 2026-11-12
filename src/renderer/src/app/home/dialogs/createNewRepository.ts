@@ -1,4 +1,4 @@
-import type { WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../queryClient';
@@ -11,7 +11,7 @@ interface NewRepository {
   /** The spec of the repository an earlier try made before its workspace failed: only the workspace is left. */
   created: string | undefined;
   /** The workspace to create with it; none when not asked for. */
-  workspace?: { name: string; path: string; dynamic?: boolean };
+  workspace?: { name: string; path: string; kind?: WorkspaceKind };
 }
 
 /** What a dialog tells the user when creating failed. `createdRepository`: made already, so trying again makes only the workspace. */

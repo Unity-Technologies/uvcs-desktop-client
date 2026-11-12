@@ -7,6 +7,7 @@ import {
   diffWidthBesidePanel,
   commentsPanelStartsHidden,
   commentPosition,
+  commentsFilterChoices,
   commentsPanelCounts,
   commentsByFile,
   commentsOrderTip,
@@ -243,7 +244,7 @@ describe('matchExcerpt', () => {
 
 describe('commentsPanelCounts', () => {
   it('counts the threads on lines, and the open ones; the comments on the whole review are not on the code', () => {
-    expect(commentsPanelCounts(THREADS)).toEqual({ open: 1, all: 4 });
+    expect(commentsPanelCounts(THREADS)).toEqual({ open: 1, new: 0, all: 4 });
   });
 });
 
@@ -256,8 +257,8 @@ describe('initialCommentsFilter', () => {
 
 describe('emptyCommentsText', () => {
   it('tells a review with no comments on its code from one with nothing left to answer', () => {
-    expect(emptyCommentsText('all', { open: 0, all: 0 }).title).toBe('No comments on the code yet');
-    expect(emptyCommentsText('open', { open: 0, all: 3 }).title).toBe('Nothing left to answer');
+    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the code yet');
+    expect(emptyCommentsText('open', { open: 0, new: 0, all: 3 }).title).toBe('Nothing left to answer');
   });
 });
 
@@ -337,5 +338,36 @@ describe('diffWidthBesidePanel', () => {
   it('is what the tab leaves the diff: its width less the files and the panel', () => {
     // A 900 px window leaves the tab about 820: 820 - 340 - 340 = 140, which read as a strip of code.
     expect(diffWidthBesidePanel({ tabWidth: 820, filesWidth: 340, panelWidth: 340 })).toBe(140);
+  });
+});
+
+describe('New', () => {
+  const threads = threadsOf([
+    onLine(1, '/a.cs', 1, { appliedInChangeset: 9 }),
+    onLine(2, '/a.cs', 2),
+    onLine(3, '/b.cs', 1, { kind: 'comment' }),
+    comment(4, { kind: 'general' }),
+  ]);
+  const newIds = new Set([1, 3, 4]);
+
+  it("lists the threads on code new to the user since their last review, and counts them", () => {
+    expect(commentsPanelThreads(threads, 'new', NO_COMMENTS_SEARCH, 'code', newIds).map((thread) => thread.root.id)).toEqual([1, 3]);
+    expect(commentsPanelCounts(threads, newIds)).toEqual({ open: 1, new: 2, all: 3 });
+    expect(threadKindCounts(threads, 'new', newIds)).toEqual({ changeRequest: 1, question: 0, comment: 1 });
+  });
+
+  it('is a choice only for a user back after a review of theirs', () => {
+    expect(commentsFilterChoices(commentsPanelCounts(threads), undefined).map((choice) => choice.label)).toEqual(['Open 1', 'All 3']);
+    expect(commentsFilterChoices(commentsPanelCounts(threads, newIds), newIds).map((choice) => choice.label)).toEqual(['Open 1', 'New 2', 'All 3']);
+  });
+
+  it('opens on New for a reviewer back for another round, and as before otherwise', () => {
+    expect(initialCommentsFilter(threads, newIds)).toBe('new');
+    expect(initialCommentsFilter(threads, new Set())).toBe('open');
+    expect(initialCommentsFilter(threads, undefined)).toBe('open');
+  });
+
+  it('says when nothing is new', () => {
+    expect(emptyCommentsText('new', { open: 0, new: 0, all: 3 }).title).toBe('Nothing new since your last review');
   });
 });

@@ -47,7 +47,8 @@ export function repositoryListRows(
   const rows: RepositoryListRow[] = [];
   for (const repository of repositories) {
     const own = workspaces.get(repository.spec) ?? NO_WORKSPACES;
-    const isExpanded = expanded.has(repository.spec);
+    // A deleted repository has no workspaces to show until it's restored.
+    const isExpanded = !repository.deleted && expanded.has(repository.spec);
     rows.push({ kind: 'repository', repository, workspaces: own, expanded: isExpanded });
     if (!isExpanded) continue;
     for (const workspace of own) rows.push({ kind: 'workspace', repository, workspace });

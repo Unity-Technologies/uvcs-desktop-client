@@ -26,8 +26,9 @@ const WORKSPACE_WRITES = new Set([
 export function changesWorkspace(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;
   if (WORKSPACE_WRITES.has(command)) return true;
-  // A partial workspace's `cm partial update|switch|checkin|…` writes it as the regular command would.
-  if (command === 'partial') return changesWorkspace(args.slice(1));
+  // A partial workspace's `cm partial update|switch|checkin|…` writes it as the regular command would, and
+  // `cm partial configure` downloads or removes what it loads.
+  if (command === 'partial') return args[1] === 'configure' || changesWorkspace(args.slice(1));
   // Without `--merge`, `cm merge` only previews.
   if (command === 'merge') return args.includes('--merge');
   if (command === 'shelveset') return subcommand === 'apply' && !args.includes('--preview');

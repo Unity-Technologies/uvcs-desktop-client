@@ -2,7 +2,7 @@ import type { ReviewCommentsApi } from '@shared/api/reviewComments';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
-import { addCommentArgs, descriptionArgs, editCommentArgs, removeCommentArgs, replyArgs } from '../cm/reviewCommentArgs';
+import { addCommentArgs, addLineCommentArgs, descriptionArgs, editCommentArgs, removeCommentArgs, replyArgs } from '../cm/reviewCommentArgs';
 import { conversationOf, FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
@@ -22,6 +22,11 @@ export function createReviewCommentsService({ cm }: ServiceContext): ReviewComme
     async add(place, reviewId, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(addCommentArgs(reviewId, textFile, at), at.options));
+    },
+
+    async addOnLine(place, reviewId, comment, text) {
+      const at = cmPlace(place);
+      await withTempFile(text, (textFile) => cm.query(addLineCommentArgs(reviewId, comment, textFile, at), at.options));
     },
 
     async reply(place, commentGuid, text, options) {

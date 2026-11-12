@@ -9,8 +9,26 @@ import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
 import { anchorPath, isLineThread, type LineThread } from './fileThreads';
 
-/** What the Comments panel lists: what's still open (change requests to apply, questions to answer), or every thread. */
-export type CommentsFilter = 'open' | 'all';
+/**
+ * What the Comments panel lists: what's still open (change requests to apply, questions to answer), what's new to the
+ * user since their last review (`newThreadIds`: settled since, or with something someone else said since), or every
+ * thread.
+ */
+export type CommentsFilter = 'open' | 'new' | 'all';
+
+/** The threads new to the user since their last review; none before they gave a status that closes a round. */
+export type NewThreads = ReadonlySet<number> | undefined;
+
+function isListedUnder(thread: ReviewThread, filter: CommentsFilter, newIds: NewThreads): boolean {
+  switch (filter) {
+    case 'open':
+      return thread.state.kind === 'open';
+    case 'new':
+      return newIds?.has(thread.root.id) ?? false;
+    case 'all':
+      return true;
+  }
+}
 
 /** A thread's kind, as the panel's kind chips find it. */
 export type ThreadKind = 'changeRequest' | 'question' | 'comment';
@@ -110,8 +128,14 @@ export function commentsOrderTip(order: CommentsOrder): { tip: string; sub: stri
  * The threads on lines of code the panel lists, in the order chosen (`CommentsOrder`); in the same place or at the
  * same moment, as they were started.
  */
-export function commentsPanelThreads(threads: readonly ReviewThread[], filter: CommentsFilter, search: CommentsSearch = NO_COMMENTS_SEARCH, order: CommentsOrder = 'code'): LineThread[] {
-  const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && (filter === 'all' || thread.state.kind === 'open') && matchesCommentsSearch(thread, search));
+export function commentsPanelThreads(
+  threads: readonly ReviewThread[],
+  filter: CommentsFilter,
+  search: CommentsSearch = NO_COMMENTS_SEARCH,
+  order: CommentsOrder = 'code',
+  newIds: NewThreads = undefined,
+): LineThread[] {
+  const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && isListedUnder(thread, filter, newIds) && matchesCommentsSearch(thread, search));
   if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
   const latest = new Map(listed.map((thread) => [thread.root.id, latestActivity(thread)]));
   const direction = order === 'newest' ? -1 : 1;
@@ -157,16 +181,36 @@ export function commentsByFile(listed: readonly LineThread[], order: CommentsOrd
 }
 
 /** How many threads on lines of code each filter lists. */
-export function commentsPanelCounts(threads: readonly ReviewThread[]): Record<CommentsFilter, number> {
+export function commentsPanelCounts(threads: readonly ReviewThread[], newIds: NewThreads = undefined): Record<CommentsFilter, number> {
   const onLines = threads.filter(isLineThread);
-  return { open: onLines.filter((thread) => thread.state.kind === 'open').length, all: onLines.length };
+  return {
+    open: onLines.filter((thread) => thread.state.kind === 'open').length,
+    new: onLines.filter((thread) => isListedUnder(thread, 'new', newIds)).length,
+    all: onLines.length,
+  };
 }
 
-/** How many threads of each kind Open or All lists, for the kind chips. */
-export function threadKindCounts(threads: readonly ReviewThread[], filter: CommentsFilter): Record<ThreadKind, number> {
+/** How many threads of each kind the filter lists, for the kind chips. */
+export function threadKindCounts(threads: readonly ReviewThread[], filter: CommentsFilter, newIds: NewThreads = undefined): Record<ThreadKind, number> {
   const counts: Record<ThreadKind, number> = { changeRequest: 0, question: 0, comment: 0 };
-  for (const thread of commentsPanelThreads(threads, filter)) counts[threadKindOf(thread)] += 1;
+  for (const thread of commentsPanelThreads(threads, filter, NO_COMMENTS_SEARCH, 'code', newIds)) counts[threadKindOf(thread)] += 1;
   return counts;
+}
+
+/** A choice of the panel's filter: its label with how many it lists, and what it lists in its tooltip. */
+export interface CommentsFilterChoice {
+  value: CommentsFilter;
+  label: string;
+  title: string;
+}
+
+/** Open, New and All; New only for a user back after a review of theirs, the only one it means something to. */
+export function commentsFilterChoices(counts: Record<CommentsFilter, number>, newIds: NewThreads): CommentsFilterChoice[] {
+  return [
+    { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
+    ...(newIds ? [{ value: 'new' as const, label: `New ${counts.new}`, title: 'Applied, answered, discarded or said by others since your last review' }] : []),
+    { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
+  ];
 }
 
 /** What a kind chip is called, how many it finds in its tooltip. */
@@ -175,14 +219,20 @@ export function threadKindChipLabel(kind: ThreadKind, count: number): string {
   return `${names[kind]} (${count})`;
 }
 
-/** The panel opens on what's still open, when anything is; else on everything said. */
-export function initialCommentsFilter(threads: readonly ReviewThread[]): CommentsFilter {
-  return commentsPanelCounts(threads).open > 0 ? 'open' : 'all';
+/**
+ * The panel opens on what's new to a reviewer back for another round, when anything is; else on what's still open,
+ * when anything is; else on everything said.
+ */
+export function initialCommentsFilter(threads: readonly ReviewThread[], newIds: NewThreads = undefined): CommentsFilter {
+  const counts = commentsPanelCounts(threads, newIds);
+  if (counts.new > 0) return 'new';
+  return counts.open > 0 ? 'open' : 'all';
 }
 
 /** What the panel says when its filter lists nothing. */
 export function emptyCommentsText(filter: CommentsFilter, counts: Record<CommentsFilter, number>): { title: string; description?: string } {
   if (counts.all === 0) return { title: 'No comments on the code yet' };
+  if (filter === 'new') return { title: 'Nothing new since your last review' };
   return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : { title: 'No comments on the code yet' };
 }
 

@@ -36,13 +36,29 @@
   gap: var(--space-3);
 }
 
+/* One timeline, as a pull request reads: a rail down through the events' icons, behind the cards, which are opaque. */
 .timeline {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  /* Under the middle of an event's icon (`.event`'s padding, then half its 24px). */
+  left: calc(var(--space-4) + 11px);
+  width: 2px;
+  background: var(--border-subtle);
+}
+
+.timeline > li {
+  position: relative;
 }
 
 /* A comment: its avatar beside it, then who, when and its menu, then what it says. */
@@ -328,15 +344,17 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* "Applied" and "Answered": the pill is a link as a whole, to how the change request was applied or to the answer. */
+/* A pill that leads somewhere is a link as a whole (how it was settled, the answer): every one hovers alike, a light
+   fill of its own color. */
 button.pill {
   font-family: inherit;
   background: none;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 button.pill:hover {
-  background: color-mix(in srgb, var(--status-added) 10%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .foldedLine {
@@ -404,17 +422,18 @@ button.pill:hover {
   width: 24px;
   height: 24px;
   border-radius: var(--radius-full);
-  background: var(--bg-active);
+  /* Its tint over the page, opaque: the timeline's rail runs behind it. */
+  background: linear-gradient(var(--bg-active), var(--bg-active)), var(--bg-surface);
   color: var(--text-secondary);
 }
 
 .event[data-icon='Reviewed'] .eventIcon {
-  background: color-mix(in srgb, var(--status-added) 16%, transparent);
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
   color: var(--status-added);
 }
 
 .event[data-icon='Rework required'] .eventIcon {
-  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
   color: var(--status-changed);
 }
 
@@ -433,10 +452,13 @@ button.pill:hover {
   font-size: var(--text-sm);
 }
 
+/* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar
+   beside it read as two). */
 .eventComment {
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
 }
 
 .newComment {
@@ -518,28 +540,75 @@ button.pill:hover {
   white-space: nowrap;
 }
 
+/*
+ * An entry of Open: the thread in the conversation, and at its end, under the pointer or once a key reaches it, the
+ * thread in Changes. The one gone to last keeps a bar on its left, as the Comments panel marks the thread the code shows.
+ */
 .openItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: 3px var(--space-1);
-  border: none;
+  border-left: 2px solid transparent;
   border-radius: var(--radius-sm);
-  background: none;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: left;
 }
 
-.openItem:hover {
+.openItem:hover:not([data-current]) {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.openItem svg {
+.openItem[data-current] {
+  border-left-color: var(--accent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background: var(--bg-selected);
+  color: var(--text-primary);
+}
+
+.openItemPick {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 3px var(--space-1);
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.openItemPick svg {
   flex: none;
   color: var(--status-changed);
+}
+
+.openItemChanges {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.openItem:hover .openItemChanges,
+.openItemChanges:focus-visible {
+  opacity: 1;
+}
+
+.openItemChanges:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .openText {
@@ -566,6 +635,14 @@ button.pill:hover {
 
 .eventRunToggle:hover {
   color: var(--accent-text);
+}
+
+.eventRunToggle > svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.eventRunToggle[aria-expanded='true'] > svg {
+  transform: rotate(90deg);
 }
 
 .foldedLine .author {
@@ -715,10 +792,11 @@ button.earlierTag:hover {
 }
 
 /*
- * In the code, the thread selected (gone to, or picked there: `cardFocusOf`) keeps its ring until another is: among
- * several alike (the outdated ones, stacked above the code), the eye finds it again after the light fades.
+ * The thread selected keeps its ring until another is, so the eye finds it again after the light fades: in the code,
+ * gone to or picked there (`cardFocusOf`), among several alike (the outdated ones, stacked above the code); in the
+ * conversation, gone to from Open or opened at (`threadMarkOf`).
  */
-.thread[data-in-code][data-selected] {
+.thread[data-selected] {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }

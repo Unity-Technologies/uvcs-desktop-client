@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -87,7 +87,7 @@ describe('fileThreadCount', () => {
     { ...onPlayer(5, 30), anchor: { kind: 'review' } },
   ]);
 
-  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written changeset by changeset", () => {
+  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written in one changeset's diff", () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, ENTRY)).toBe(3);
   });
 
@@ -98,5 +98,23 @@ describe('fileThreadCount', () => {
   it('counts none on a file without threads, by its path or the one it moved from', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
+  });
+});
+
+describe('openedOnSend', () => {
+  const inFile = (keys: string[]) => ({ path: 'src/Player.cs', keys });
+
+  it('opens the line a comment was sent on while comments are hidden, after the others', () => {
+    expect(openedOnSend(inFile(['additions:3']), 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:3', 'additions:9']));
+  });
+
+  it("opens it in a file shown after another whose lines were open: those were the other file's", () => {
+    expect(openedOnSend({ path: 'src/Enemy.cs', keys: ['additions:3'] }, 'src/Player.cs', 'additions:9', false)).toEqual(inFile(['additions:9']));
+  });
+
+  it('changes nothing while comments show in the code, or when the line is open already', () => {
+    const opened = inFile(['additions:9']);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:9', false)).toBe(opened);
+    expect(openedOnSend(opened, 'src/Player.cs', 'additions:3', true)).toBe(opened);
   });
 });

@@ -33,6 +33,16 @@
   outline-offset: 2px;
 }
 
+.box[data-tone='added'][data-state='checked'] {
+  background: var(--status-added);
+  border-color: var(--status-added);
+  color: var(--text-inverse);
+}
+
+.box[data-tone='removed'][data-state='unchecked'] {
+  border-color: var(--status-deleted);
+}
+
 .box:disabled {
   opacity: 0.45;
 }

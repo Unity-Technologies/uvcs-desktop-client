@@ -37,9 +37,12 @@ export function canRevertFromDiff(entry: DiffEntry, workspaceRepository: string 
   return isFile && changedContent(entry) && workspaceRepository !== undefined && entry.repository === workspaceRepository;
 }
 
-/** A changed file, or a moved one that changed too: `mergedDiffEntries` keeps the content change's two revisions. */
+/**
+ * A file whose content changed, moved or not: its two revisions differ (`mergedDiffEntries` keeps a moved file's content
+ * change's). A file only moved, or whose permissions alone changed, is one revision on both sides.
+ */
 function changedContent(entry: DiffEntry): boolean {
-  return entry.status === 'changed' || (entry.status === 'moved' && entry.baseRevisionId !== entry.revisionId);
+  return (entry.status === 'changed' || entry.status === 'moved') && entry.baseRevisionId !== entry.revisionId;
 }
 
 /**

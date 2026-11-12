@@ -12,3 +12,5 @@ What lives under `.claude/` is plain Markdown any agent can use:
 - **The reviewer** (`.claude/agents/reviewer.md`): the brief for the clean-context review every branch gets before
   its pull request ("Delivering work: a pull request" in CLAUDE.md). Give it to a fresh agent or session, one that
   didn't write the change, along with the branch and what the change is for.
+- **Explore** (`.claude/agents/Explore.md`): Claude Code's code-search subagent, replacing its built-in one so
+  searches run on a cheaper model. Not a brief to follow: other tools can ignore it.

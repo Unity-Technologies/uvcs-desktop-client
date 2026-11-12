@@ -1,3 +1,4 @@
+import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
 import type { CmPlace } from './cmPlace';
 
 // Every text goes in a file: a comment holds lines, and a `cm shell` line can't carry quotes or line breaks.
@@ -6,6 +7,29 @@ import type { CmPlace } from './cmPlace';
 export function addCommentArgs(reviewId: number, textFile: string, at: CmPlace): string[] {
   return ['codereview', 'comment', 'add', String(reviewId), `-commentsfile=${textFile}`, ...at.repositoryOption];
 }
+
+/**
+ * `cm codereview comment add` on a line: named by its revision rather than its path, which a file moved in the review
+ * doesn't pin to one revision. `cm` takes only a revision the diff comments on (the newer side's, a deleted file's
+ * last one), its line from 1; `--changeset` puts it in that changeset's diff, one of a branch's changesets.
+ */
+export function addLineCommentArgs(reviewId: number, comment: NewLineComment, textFile: string, at: CmPlace): string[] {
+  return [
+    'codereview',
+    'comment',
+    'add',
+    String(reviewId),
+    `-commentsfile=${textFile}`,
+    `--revision=revid:${comment.revisionId}`,
+    `--line=${comment.line}`,
+    `--type=${CM_COMMENT_TYPES[comment.kind]}`,
+    ...(comment.changesetId === undefined ? [] : [`--changeset=cs:${comment.changesetId}`]),
+    ...at.repositoryOption,
+  ];
+}
+
+/** What `cm` calls each kind of comment on a line (`--type`). */
+const CM_COMMENT_TYPES: Record<LineCommentKind, string> = { changeRequest: 'Change', question: 'Question', comment: 'Comment' };
 
 /** `cm codereview comment reply`: the server places the reply where the comment it answers is. */
 export function replyArgs(commentGuid: string, textFile: string, discard: boolean, at: CmPlace): string[] {

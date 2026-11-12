@@ -35,12 +35,14 @@ interface TargetDiffProps {
    * move the lists being stepped through.
    */
   pageDescription?: ReactNode;
+  /** What is compared, in words, where the target's own description wouldn't say it: several changesets of a branch. */
+  description?: ReactNode;
 }
 
-export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles, pageDescription }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles, pageDescription, description: describedAs }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
-  // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
-  const description = <TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />;
+  // Keyed so another changeset (a branch diff's list) folds its own comment afresh (`FoldedComment`).
+  const description = describedAs ?? <TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />;
 
   return (
     <DiffFrame description={pageDescription ?? description} toolbar={toolbar}>

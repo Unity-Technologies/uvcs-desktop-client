@@ -1,5 +1,6 @@
 // What a workspace has loaded in some folders: `cm ls <folders> --format=…`, a read of the workspace's metadata that
-// tells, for each item, the revision it was loaded from and whether it is checked out. A partial workspace reads it
+// tells, for each item, the revision it was loaded from and whether it is checked out. Choosing what a partial
+// workspace downloads reads it to show what is loaded (`WorkspacesApi.loadedIn`), and a partial workspace reads it
 // before taking a shelve back (`shelveAppliesWithoutMerge`).
 
 import { recordFormat, type ReadRecord } from './formatRecords';

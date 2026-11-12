@@ -1,15 +1,10 @@
-import { Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
 import { placeId } from '@shared/domain/place';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
-import { FilterField } from '../../ui/FilterField';
-import { hotkey } from '../../lib/shortcutRegistry';
-import { useShortcut } from '../../lib/useShortcut';
-import { IconButton } from '../../ui/IconButton';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { Stowable } from '../../ui/Stowable';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
@@ -17,10 +12,9 @@ import { useBranch } from '../branches/useBranches';
 import { browseOpening } from '../browseRepository/browseOpening';
 import { RepositoryTree, RepositoryTreeSkeleton } from '../browseRepository/RepositoryTree';
 import { useFilesViewStore, useRevealRequest } from '../files/filesViewStore';
-import { GO_TO_FILE_SHORTCUT } from '../files/useFileCommands';
 import { FilesBranchPicker } from './FilesBranchPicker';
-import { goToRepositoryFile } from './RepositoryGoToFileDialog';
-import { useGoToFileCommand } from './useGoToFileCommand';
+import { RepositoryTreeSearchField, RepositoryTreeSearchResults } from './RepositoryTreeSearch';
+import { useRepositoryTreeSearch } from './useRepositoryTreeSearch';
 import { useRepositoryFilesStore } from './repositoryFilesStore';
 import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './repositoryFilesBody';
 
@@ -39,7 +33,6 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const { choose, forget } = useRepositoryFilesStore.getState();
   const branchRead = useBranch(filesBranchToRead(chosen));
   const body = repositoryFilesBodyOf({ data: branchRead.data, error: branchRead.error }, chosen);
-  const [filter, setFilter] = useState('');
   const diffExpanded = useDiffExpanded();
   const [shownPath, setShownPath] = useState<string | null>(null);
   // A reveal opens the tree anew on its path: the tree reads where it opens only as it mounts.
@@ -58,13 +51,13 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const shown = body.kind === 'tree' ? body.branch : null;
   // One object per branch head: the links' hook keys its own memo by it.
   const linkOrigin = useMemo(() => (shown ? branchFilesOrigin(repository, shown) : undefined), [repository, shown?.name, shown?.headChangeset]);
-  // Finds a file of the branch shown by name (`goToRepositoryFile`), revealed in the tree once picked.
-  const openGoToFile = useCallback(() => {
-    if (!shown) return;
-    void goToRepositoryFile({ place, changesetId: shown.headChangeset, branch: shown.name }).then((path) => path && useFilesViewStore.getState().requestReveal(place, path));
-  }, [place, shown?.headChangeset, shown?.name]);
-  useGoToFileCommand(shown ? openGoToFile : null);
-  useShortcut(hotkey('filesGoToFile'), openGoToFile, shown !== null);
+  // Finds a file or folder anywhere in the branch's latest tree by name, revealed in the tree once picked.
+  const search = useRepositoryTreeSearch({
+    place,
+    changesetId: shown?.headChangeset ?? null,
+    name: shown?.name ?? '',
+    onReveal: (path) => useFilesViewStore.getState().requestReveal(place, path),
+  });
 
   const header = (
     <ViewHeader
@@ -72,14 +65,11 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
       detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}
       subtitle={shown ? filesBranchCaption(shown) : undefined}
       actions={
-        <>
-          <ViewRefreshButton fetching={branchRead.isFetching} />
-          <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} disabled={!shown} onClick={openGoToFile} />
-        </>
+        <ViewRefreshButton fetching={branchRead.isFetching} />
       }
     >
       <FilterBar
-        text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />}
+        text={<RepositoryTreeSearchField search={search} />}
         kinds={<FilesBranchPicker shown={shown?.name ?? null} onPick={(picked) => choose(repository, { name: picked.name, guid: picked.guid })} />}
       />
     </ViewHeader>
@@ -98,11 +88,11 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
           changesetId={body.branch.headChangeset}
           treeId={`${placeId(place)}#branch:${body.branch.guid}`}
           opening={browseOpening({ focusPath: shownPath ?? undefined })}
-          filter={filter}
+          search={search.searching ? <RepositoryTreeSearchResults search={search} /> : undefined}
           detailsKey={DETAILS_KEY}
           onShownItem={setShownPath}
           linkOrigin={linkOrigin}
-          onGoToFile={openGoToFile}
+          onGoToFile={search.focus}
         />
       )}
     </>

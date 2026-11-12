@@ -19,7 +19,10 @@ export interface ThreadHeaderInput {
   earlier?: { label: string; tip: string; opensContext: boolean };
   /** The × that folds it back to its line's marker, while comments are hidden in the code. */
   hides: boolean;
-  /** Whether "Applied" shows how it was applied, in context, rather than opening the changeset. */
+  /**
+   * Whether the card shows a settled request in context (`CommentContextDialog`): "Applied" how it was applied, rather
+   * than opening the changeset, and "Discarded" what it asked against the newest version, beside the reply.
+   */
   seesHowApplied: boolean;
   /** Whether "Answered" can show the reply that answered (the panel's card can't: it goes to the thread). */
   showsAnswer: boolean;
@@ -43,7 +46,8 @@ export interface HeaderLocation {
 }
 
 /** Where the thread stands, as a pill: "Answered" leads to the reply, "Applied" to how it was applied; the rest are words. */
-export type HeaderPill = NonNullable<ThreadBadges['state']> & ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string });
+export type HeaderPill = NonNullable<ThreadBadges['state']> &
+  ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string } | { leadsTo: 'context'; tip: string });
 
 /** What a thread's header shows, in its order; the card maps it to its controls. */
 export interface ThreadHeaderView {
@@ -97,8 +101,19 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
 function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {
   if (!badges.state) return null;
   const answer = showsAnswer ? answerOf(thread) : undefined;
+  // A question answered in a changeset ("Fixed in cs:281301") leads to how, as an applied request does.
+  if (thread.state.kind === 'answered' && thread.state.changesetId !== undefined) {
+    const { changesetId } = thread.state;
+    if (inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Answered in changeset ${changesetId}` };
+    if (seesHowApplied) return { ...badges.state, leadsTo: 'context', tip: `Answered in changeset ${changesetId}: see how it was answered` };
+  }
   if (answer) return { ...badges.state, leadsTo: 'answer', tip: answer.tip };
   if (badges.appliedIn !== undefined && inContext) return { ...badges.state, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
   if (badges.appliedIn !== undefined) return { ...badges.state, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
+  // Every settled pill that leads somewhere else leads to the thread in context: Discarded, and Answered where the card
+  // can't show its answer (the Comments panel's).
+  if ((thread.state.kind === 'discarded' || thread.state.kind === 'answered') && seesHowApplied && !inContext) {
+    return { ...badges.state, leadsTo: 'context', tip: `${badges.state.label}: see it in context` };
+  }
   return { ...badges.state, leadsTo: 'nothing' };
 }

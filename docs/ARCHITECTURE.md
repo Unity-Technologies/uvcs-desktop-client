@@ -33,9 +33,10 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
+| `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
 
 ## How a request flows
 
@@ -227,15 +228,17 @@ and many people use the same server. Every `cm` command other than local reads (
   How each listed workspace holds its files (standard, partial or dynamic: `WorkspaceKind`) comes from a
   `cm getworkspacefrompath <path> --format={type}…{dynamic}` of each (`workspaces.kinds`, `workspaceKindsReader`,
   `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
-  only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
+  only changes when choosing what a standard workspace downloads makes it partial (main sends
+  `workspaceKindChanged`), so each workspace's is one query kept for the session (`workspaceKindQuery`,
   keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
-  none, never as standard, and is asked again the next time it shows.
+  none, never as standard, and is asked again the next time it shows. How a partial workspace is created, chosen
+  and kept partial: docs/features/partial-workspaces.md.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
   A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
-  while the list is stale (`changesetOnScreen`; a branch review's "Changeset by changeset" reads its list, not each
+  while the list is stale (`changesetOnScreen`; a branch diff's list of changesets reads its list, not each
   changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
@@ -537,6 +540,15 @@ by name, and never passes it to `cm`.
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
   app doesn't call: it shows the organization's name as `cm` takes it.
+- **Deleted repositories**: to a server's administrators, `cm repository list` also prints the deleted repositories
+  the server still keeps, each named with `__DELETED__` before its name. They come in that same listing, so showing
+  them costs no command: `repositoryListing.ts` sets them apart (`deletedRepositories`), under the name they had,
+  marked `deleted` and with a spec naming them by GUID, which no two share. The Repositories view lists them only when
+  the user asks (the Deleted toggle, offered only when the server lists some; `useDeletedRepositoriesStore`, kept
+  across sessions), among the live ones by name (`repositoriesShown`), tagged Deleted, with Restore in place of their
+  workspaces. Restore is one `cm repository undelete` by GUID, under the name it had, asking a new one only when a
+  live repository took it (`repositoryRestore`, typed inside its Unity project as Rename does). The toggle's tooltip
+  says Unity Cloud keeps them 7 days (`deletedRepositoriesTip`).
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
@@ -991,8 +1003,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   when nothing is there and when filters hide everything; only what fills it changes.
   - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
     until it is read (`useChangeFilter`'s `reading`, History's text); filters that choose what is read (a time range,
-    people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
-    "Whole branch | Changeset by changeset").
+    people, the kinds an object list asks for) stay live. A control in a pane's header stays with it (`DiffFrame`: a shelve's actions, a
+    review's Comments panel toggle).
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
     (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`; a graph's bands, header cards and
     changesets at the graph's own measurements, `GraphSkeleton`), the details as
@@ -1136,7 +1148,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). A menu names a list key (⌘D, ⌘C, ⇧⌘C) only where its list binds
   it: a list on a page that binds none, its keys reaching the view under the page or the page's own object, passes
-  `MenuHost.listKeysElsewhere` (a branch diff's "Changeset by changeset"). Items that open a dialog
+  `MenuHost.listKeysElsewhere` (a branch diff's list of changesets). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
@@ -1272,7 +1284,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton` (`listViewsRefresh.test.ts`). Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by

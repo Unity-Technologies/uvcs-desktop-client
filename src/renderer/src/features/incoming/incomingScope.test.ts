@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFilesSummary, incomingFileTones, scopeKey } from './incomingScope';
+import { collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFilesSummary, incomingFileTones, incomingScopeOf, scopeDiffToRead, scopeKey } from './incomingScope';
 
 const file = (path: string, extra: Partial<DiffEntry> = {}): DiffEntry => ({ path, status: 'changed', itemType: 'file', ...extra }) as DiffEntry;
+
+const span = { kind: 'range', fromSpec: 'cs:6', toSpec: 'cs:8' } as const;
 
 describe('collidesWithLocal', () => {
   const conflicts = new Set(['src/b.ts']);
@@ -61,15 +63,26 @@ describe('incomingFilesSummary', () => {
 
   it("only counts a changeset's files: they are what it did, not what updating does", () => {
     expect(incomingFilesSummary({ kind: 'changeset', id: 3 }, 5, 1)).toBe('5 changes');
+    expect(incomingFilesSummary({ kind: 'span', target: span }, 5, 1)).toBe('5 changes');
   });
 });
 
 describe('firstIncomingFile', () => {
-  it('opens on the first file changed on both sides, or else on the first file', () => {
-    const files = [file('a.ts'), file('b.ts')];
-    expect(firstIncomingFile(files, (entry) => entry.path === 'b.ts')?.path).toBe('b.ts');
-    expect(firstIncomingFile(files, () => false)?.path).toBe('a.ts');
-    expect(firstIncomingFile([], () => false)).toBeUndefined();
+  const files = [file('a.ts'), file('b.ts')];
+
+  it('opens the whole update on the first file changed on both sides, or else on the first file', () => {
+    expect(firstIncomingFile({ kind: 'all' }, files, (entry) => entry.path === 'b.ts')?.path).toBe('b.ts');
+    expect(firstIncomingFile({ kind: 'all' }, files, () => false)?.path).toBe('a.ts');
+    expect(firstIncomingFile({ kind: 'all' }, [], () => false)).toBeUndefined();
+  });
+
+  // Only the whole update merges: what several changesets did has no conflicts to start from.
+  it('opens several changesets on their first file', () => {
+    expect(firstIncomingFile({ kind: 'span', target: span }, files, (entry) => entry.path === 'b.ts')?.path).toBe('a.ts');
+  });
+
+  it("opens no file for one changeset, whose details show until one is picked", () => {
+    expect(firstIncomingFile({ kind: 'changeset', id: 7 }, files, () => false)).toBeUndefined();
   });
 });
 
@@ -77,9 +90,27 @@ describe('incomingDiffTarget', () => {
   it("reads a file of the whole update from the loaded changeset to the head, and a changeset's from that changeset", () => {
     expect(incomingDiffTarget({ kind: 'all' }, 4, 9)).toEqual({ kind: 'range', fromSpec: 'cs:4', toSpec: 'cs:9' });
     expect(incomingDiffTarget({ kind: 'changeset', id: 7 }, 4, 9)).toEqual({ kind: 'changeset', changesetId: 7 });
+    expect(incomingDiffTarget({ kind: 'span', target: span }, 4, 9)).toEqual(span);
   });
 
   it('keys each scope apart', () => {
     expect(scopeKey({ kind: 'all' })).not.toBe(scopeKey({ kind: 'changeset', id: 7 }));
+    expect(scopeKey({ kind: 'span', target: span })).not.toBe(scopeKey({ kind: 'span', target: { ...span, fromSpec: 'cs:5' } }));
+  });
+});
+
+describe('incomingScopeOf', () => {
+  it('lists the whole update, a changeset, or several changesets as their range', () => {
+    expect(incomingScopeOf({ kind: 'all' })).toEqual({ kind: 'all' });
+    expect(incomingScopeOf({ kind: 'changeset', changesetId: 7 })).toEqual({ kind: 'changeset', id: 7 });
+    expect(incomingScopeOf({ kind: 'span', target: span, changesets: [] })).toEqual({ kind: 'span', target: span });
+  });
+});
+
+describe('scopeDiffToRead', () => {
+  it("reads a changeset's diff, or a span's range, and nothing for the whole update, which comes with the incoming changes", () => {
+    expect(scopeDiffToRead({ kind: 'all' })).toBeNull();
+    expect(scopeDiffToRead({ kind: 'changeset', id: 7 })).toEqual({ kind: 'changeset', changesetId: 7 });
+    expect(scopeDiffToRead({ kind: 'span', target: span })).toEqual(span);
   });
 });

@@ -25,10 +25,24 @@ export interface ReviewComment {
   /** The comment it replies to; none for a thread's first comment. */
   parentId?: number;
   anchor: ReviewCommentAnchor;
-  /** The changeset whose diff it was written in, changeset by changeset; none for the whole branch's diff. */
+  /** The changeset whose diff it was written in, one picked in a branch's list; none for the whole branch's diff. */
   changesetId?: number;
   /** The changeset that applied a change request. */
   appliedInChangeset?: number;
+}
+
+/** The kinds a comment on a line is written as: the reviewer picks one, and it can't change once posted. */
+export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'question' | 'comment'>;
+
+/**
+ * Where a new comment on a line goes, and as what: a line (1-based) of the revision the review's diff shows (the newer
+ * side's, or a deleted file's last one), and the changeset whose diff it's written in, when one is.
+ */
+export interface NewLineComment {
+  revisionId: number;
+  line: number;
+  kind: LineCommentKind;
+  changesetId?: number;
 }
 
 /** What the server notes on its own as a review goes (a status, a rename, the reviewers asked), by whom and when. */
