@@ -108,6 +108,33 @@ describe('partialUpdateSelection', () => {
     const tool = item('changed', 'CodeGen/Tool.cs');
     expect(partialUpdateSelection([ship, tool], uncheckedOf(tool))).toEqual({ paths: ['Code/Ship.cs'], brought: [ship] });
   });
+
+  it('brings everything when an item moves to the top of the workspace', () => {
+    const moved = item('moved', 'Ship.cs', { oldPath: 'Code/Ship.cs' });
+    const sky = item('changed', 'Art/sky.png');
+    expect(partialUpdateSelection([moved, sky], uncheckedOf(sky))).toEqual({ paths: 'all', brought: [moved, sky] });
+  });
+
+  it('updates a moved item whose loaded path is unknown through the folder it moves into', () => {
+    const moved = item('moved', 'Code/New/Ship.cs');
+    const sky = item('changed', 'Art/sky.png');
+    expect(partialUpdateSelection([moved, sky], uncheckedOf(sky))).toEqual({ paths: ['Code/New'], brought: [moved] });
+  });
+
+  it('updates a removed item inside a folder the head moved at the path it has in the workspace', () => {
+    const folder = item('moved', 'Game/Art', { oldPath: 'Art', isDirectory: true });
+    const gone = item('removed', 'Art/old.png');
+    const ship = item('changed', 'Code/Ship.cs');
+    expect(partialUpdateSelection([folder, gone, ship], uncheckedOf(folder, ship))).toEqual({ paths: ['Art/old.png'], brought: [gone] });
+  });
+
+  it('updates an item added in an added folder through the folder the workspace already has', () => {
+    const ai = item('added', 'Code/AI', { isDirectory: true });
+    const brain = item('added', 'Code/AI/Brain.cs');
+    const ship = item('changed', 'Code/Ship.cs');
+    const sky = item('changed', 'Art/sky.png');
+    expect(partialUpdateSelection([ai, brain, ship, sky], uncheckedOf(ai, ship, sky))).toEqual({ paths: ['Code'], brought: [ai, brain, ship] });
+  });
 });
 
 describe('partialUpdateMessage', () => {
@@ -131,6 +158,15 @@ describe('partialUpdateMessage', () => {
     expect(message(items)).toBe('Updating brings 1 item from task. 1 item you changed keeps your version until you check it in, shelve it or undo it.');
     const conflicts = [item('changed', 'Code/Ship.cs', { conflict: true }), item('changed', 'Art/sky.png', { conflict: true })];
     expect(message(conflicts)).toBe('2 items you changed keep your version until you check them in, shelve them or undo them.');
+  });
+
+  it('says an unchecked conflict a folder update brings along keeps the local version', () => {
+    const hull = item('added', 'Code/Hull.cs');
+    const ship = item('changed', 'Code/Ship.cs', { conflict: true });
+    const sky = item('changed', 'Art/sky.png');
+    expect(message([hull, ship, sky], uncheckedOf(ship, sky))).toBe(
+      'Updating brings 1 item from task. 1 item you changed keeps your version until you check it in, shelve it or undo it.',
+    );
   });
 
   it('asks to check items when none is', () => {
