@@ -36,13 +36,29 @@
   gap: var(--space-3);
 }
 
+/* One timeline, as a pull request reads: a rail down through the events' icons, behind the cards, which are opaque. */
 .timeline {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  /* Under the middle of an event's icon (`.event`'s padding, then half its 24px). */
+  left: calc(var(--space-4) + 11px);
+  width: 2px;
+  background: var(--border-subtle);
+}
+
+.timeline > li {
+  position: relative;
 }
 
 /* A comment: its avatar beside it, then who, when and its menu, then what it says. */
@@ -404,17 +420,18 @@ button.pill:hover {
   width: 24px;
   height: 24px;
   border-radius: var(--radius-full);
-  background: var(--bg-active);
+  /* Its tint over the page, opaque: the timeline's rail runs behind it. */
+  background: linear-gradient(var(--bg-active), var(--bg-active)), var(--bg-surface);
   color: var(--text-secondary);
 }
 
 .event[data-icon='Reviewed'] .eventIcon {
-  background: color-mix(in srgb, var(--status-added) 16%, transparent);
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
   color: var(--status-added);
 }
 
 .event[data-icon='Rework required'] .eventIcon {
-  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
   color: var(--status-changed);
 }
 

@@ -20,7 +20,7 @@ import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CheckinsRow } from '../rounds/CheckinsRow';
-import { RoundBlock } from '../rounds/RoundBlock';
+import { RoundMarker } from '../rounds/RoundMarker';
 import { conversationBlocksOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
@@ -98,19 +98,16 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   );
   const renderBlock = (block: ConversationBlock) => {
     switch (block.kind) {
-      case 'round':
-        return (
+      case 'round': {
+        // The marker, then what the round held while unfolded, at the timeline's own indent.
+        const open = roundIsOpen(block.round, toggledRounds, pickedRound);
+        return [
           <li key={`round-${block.round.number}`}>
-            <RoundBlock
-              round={block.round}
-              user={user}
-              open={roundIsOpen(block.round, toggledRounds, pickedRound)}
-              onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))}
-            >
-              <ol className={styles.timeline}>{block.entries.map(renderEntry)}</ol>
-            </RoundBlock>
-          </li>
-        );
+            <RoundMarker round={block.round} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
+          </li>,
+          ...(open ? block.entries.map(renderEntry) : []),
+        ];
+      }
       case 'since':
         return (
           <li key="since">
