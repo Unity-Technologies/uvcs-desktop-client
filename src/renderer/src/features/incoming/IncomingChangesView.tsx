@@ -77,10 +77,11 @@ export function IncomingChangesView() {
   }
 
   if (state.kind === 'upToDate') {
+    const upToDate = <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />;
     return (
       <>
         {header}
-        <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
+        {state.partial ? upToDate : <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={upToDate} />}
       </>
     );
   }

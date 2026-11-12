@@ -80,7 +80,8 @@ loaded, as `cm partial update` would bring them.
   filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
   added; `partialItemTreeGroups`). Each row ends with its letter (`partialItemStatus`, its `partialItemDetail` line as
   the tooltip), and a file selected diffs the loaded revision against the head's (`partialItemDiffEntry`; a folder has
-  none).
+  none). Up to date, it says so alone, with no changesets' heading: the workspace is at no one changeset
+  (`incomingViewState`'s `partial`).
 - **The chip** shows the 'items' state (`incomingChipState`) and its card the first items (`cardItems`,
   `PartialIncomingCard`).
 - **Choosing what to bring**: every item, folder and group has a checkbox, all checked to start (`partialItemChecked`,
