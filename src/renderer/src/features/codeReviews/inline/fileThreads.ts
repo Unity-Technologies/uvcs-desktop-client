@@ -4,8 +4,9 @@ import type { ReviewCommentAnchor } from '@shared/domain/reviewConversation';
 import type { ReviewThread } from '../conversation/reviewThreads';
 
 /**
- * Which of a review's diffs the Changes tab shows: the whole review's (a branch's "Whole branch", a changeset's, a
- * shelve's) or one changeset of a branch, stepped to in "Changeset by changeset". A comment belongs to the one it was
+ * Which of a review's diffs the Changes tab shows: the whole review's (all a branch's changes, or several of its
+ * changesets as one diff; a changeset's, a shelve's) or one changeset of a branch, picked in the list of its
+ * changesets. A comment belongs to the one it was
  * written in (`ReviewComment.changesetId`), as the official client keeps them.
  */
 export type ReviewDiffView = { kind: 'whole' } | { kind: 'changeset'; changesetId: number };
@@ -65,8 +66,9 @@ export interface FileThreads {
  * - on a line of a revision either side shows, at that line: the newer side's, or the older one's (a file the review
  *   deletes is commented on its last revision, which its older side shows);
  * - on another revision of the file, an earlier one, to place by where its line went (`placeEarlier`).
- * A changeset's diff shows the threads written in it; the whole review's those written in it, and those written
- * changeset by changeset whose revision it shows or whose line it still has, so an open change
+ * A changeset's diff shows the threads written in it and those it settled (requests it applied, questions answered in
+ * it), so the fix reads beside what asked for it; the whole review's those written in it, and those written
+ * in one changeset's diff whose revision it shows or whose line it still has, so an open change
  * request never hides behind the mode it was written in.
  */
 export function threadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): FileThreads {
@@ -75,13 +77,27 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
   for (const thread of threads) {
     if (!isLineThread(thread) || !isOfFile(thread.root.anchor, file)) continue;
     const written = writtenIn(review, thread);
-    if (view.kind === 'changeset' && (written.kind !== 'changeset' || written.changesetId !== view.changesetId)) continue;
+    if (view.kind === 'changeset' && !belongsToChangeset(thread, written, view.changesetId)) continue;
     const { revisionId, line } = thread.root.anchor;
     if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', line });
     else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', line });
     else earlier.push({ thread, revisionId });
   }
   return { placed, earlier };
+}
+
+/**
+ * Whether a thread shows in a changeset's diff: written there, or settled by it, a change request it applied or a
+ * question an answer says it fixed ("Fixed in cs:281301").
+ */
+function belongsToChangeset(thread: ReviewThread, written: ReviewDiffView, changesetId: number): boolean {
+  return (written.kind === 'changeset' && written.changesetId === changesetId) || settledIn(thread, { kind: 'changeset', changesetId });
+}
+
+/** Whether `view` is the diff of the changeset that settled the thread: a request it applied, a question answered in it. */
+export function settledIn(thread: ReviewThread, view: ReviewDiffView): boolean {
+  if (view.kind !== 'changeset') return false;
+  return (thread.state.kind === 'applied' || thread.state.kind === 'answered') && thread.state.changesetId === view.changesetId;
 }
 
 export function isLineThread(thread: ReviewThread): thread is LineThread {
@@ -106,17 +122,17 @@ function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
 export type VersionText = string | null | undefined;
 
 /**
- * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on the newer side
- * when it is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
+ * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on a side where it
+ * is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
  * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
  * before another version arrives would be moved by it. One whose version's read failed is outdated, its line known
- * though not its text, and holds none of the others. A thread written changeset by changeset, in the whole review's
+ * though not its text, and holds none of the others. A thread written in one changeset's diff, in the whole review's
  * diff, shows only where its line is still there: its own place is its changeset's diff.
  */
 export function placeEarlier(
   earlier: readonly EarlierThread[],
   textOf: (revisionId: number) => VersionText,
-  lineOf: (earlierText: string, line: number) => number | null,
+  lineOf: (earlierText: string, thread: LineThread) => { side: ThreadSide; line: number } | null,
   showsWhenOutdated: (thread: LineThread) => boolean,
 ): { placed: PlacedThread[]; outdated: EarlierThread[]; reading: EarlierThread[] } {
   const placed: PlacedThread[] = [];
@@ -124,8 +140,8 @@ export function placeEarlier(
   if (earlier.some((entry) => textOf(entry.revisionId) === undefined)) return { placed, outdated, reading: [...earlier] };
   for (const entry of earlier) {
     const text = textOf(entry.revisionId);
-    const line = typeof text === 'string' ? lineOf(text, entry.thread.root.anchor.line) : null;
-    if (line !== null) placed.push({ thread: entry.thread, side: 'additions', line, earlier: entry });
+    const at = typeof text === 'string' ? lineOf(text, entry.thread) : null;
+    if (at !== null) placed.push({ thread: entry.thread, ...at, earlier: entry });
     else if (showsWhenOutdated(entry.thread)) outdated.push(entry);
   }
   return { placed, outdated, reading: [] };

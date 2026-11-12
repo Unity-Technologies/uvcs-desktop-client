@@ -37,3 +37,12 @@ export function focusAs(element: Pick<HTMLElement, 'focus' | 'blur'>, mover: Foc
 export function settleClickFocus(event: { detail: number; currentTarget: HTMLElement }): void {
   if (clickedWith(event.detail) === 'pointer' && document.activeElement === event.currentTarget) focusAs(event.currentTarget, 'pointer');
 }
+
+/**
+ * Whether Chromium rings what a click focuses by itself: a primary click with a modifier held (Shift+click to select a
+ * range, Cmd/Ctrl+click to add a row), whose held key it takes for the keyboard. Such a click focuses its target
+ * itself, ringless (`focusAs`).
+ */
+export function ringsOnClickFocus(click: { button: number; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; altKey: boolean }): boolean {
+  return click.button === 0 && (click.shiftKey || click.ctrlKey || click.metaKey || click.altKey);
+}

@@ -1,4 +1,5 @@
-import type { PageOf, ReviewTab } from '../../app/navigation/pages';
+import type { ChangesetSpan, PageOf, ReviewTab } from '../../app/navigation/pages';
+import type { DiffFocusRequest } from '../diff/diffFocusRequest';
 
 /** The tab a review page opens on: the one it names, else its changes when it names a file, else its conversation. */
 export function openingTab(page: Pick<PageOf<'codeReview'>, 'tab' | 'focusPath'>): ReviewTab {
@@ -32,16 +33,34 @@ export function pageAfterOpenPick(page: PageOf<'codeReview'>): PageOf<'codeRevie
   return conversationFocus(page) === undefined ? page : { ...page, focusThread: undefined };
 }
 
+/** What a review's page asks its changes to go to: a thread, a changeset of its branch, a span of them, or a thread in a changeset. */
+export interface ChangesFocus {
+  threadId?: number;
+  changesetId?: number;
+  changesets?: ChangesetSpan;
+}
+
+type FocusFields = Pick<PageOf<'codeReview'>, 'tab' | 'focusPath' | 'focusThread' | 'focusChangeset' | 'focusChangesets'>;
+
 /**
- * The thread the review's changes go to as its page moves (`movesWithinTop`: a comment's file gone to from the
- * conversation): the changes, mounted already, read their page's thread only as they mount. None for the same page, a
- * tab picked, or a thread the conversation goes to.
+ * What the review's changes go to as its page moves (`movesWithinTop`: a comment's file gone to from the conversation,
+ * a check-in, a change request shown where it was applied, what's new since the user's review): the changes, mounted
+ * already, read their page's focus only as they mount. None for the same page, a tab picked, or a page going to the
+ * conversation.
  */
-export function changesFocusAskedFor(
-  shown: Pick<PageOf<'codeReview'>, 'tab' | 'focusPath' | 'focusThread'>,
-  next: Pick<PageOf<'codeReview'>, 'tab' | 'focusPath' | 'focusThread'>,
-): number | undefined {
-  return next !== shown && openingTab(next) === 'changes' ? next.focusThread : undefined;
+export function changesFocusAskedFor(shown: FocusFields, next: FocusFields): ChangesFocus | undefined {
+  if (next === shown || openingTab(next) !== 'changes') return undefined;
+  const focus: ChangesFocus = {
+    ...(next.focusThread !== undefined && { threadId: next.focusThread }),
+    ...(next.focusChangeset !== undefined && { changesetId: next.focusChangeset }),
+    ...(next.focusChangesets !== undefined && { changesets: next.focusChangesets }),
+  };
+  return Object.keys(focus).length > 0 ? focus : undefined;
+}
+
+/** What the review's diff is asked for to go to a changeset or a span with no thread: that mode, the file left as it is. */
+export function changesFocusRequest({ changesetId, changesets }: Omit<ChangesFocus, 'threadId'>, seq: number): DiffFocusRequest {
+  return { ...(changesetId !== undefined && { changesetId }), ...(changesets && { changesets }), seq };
 }
 
 /**

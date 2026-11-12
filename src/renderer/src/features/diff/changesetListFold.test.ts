@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { askedOpen, changesetFoldLabel, changesetStepsWork, listIsOpen, toggledFold } from './changesetListFold';
+
+describe('listIsOpen', () => {
+  it('is folded unless the user left it open or the page asked for changesets', () => {
+    expect(listIsOpen({ remembered: false, asked: false })).toBe(false);
+    expect(listIsOpen({ remembered: true, asked: false })).toBe(true);
+    expect(listIsOpen({ remembered: false, asked: true })).toBe(true);
+  });
+});
+
+describe('askedOpen', () => {
+  it('opens for a changeset or a span asked for, never for all the changes', () => {
+    expect(askedOpen({ kind: 'all' })).toBe(false);
+    expect(askedOpen({ kind: 'changeset', changesetId: 5 })).toBe(true);
+    expect(askedOpen({ kind: 'span', span: { oldest: 5, newest: 9 } })).toBe(true);
+  });
+});
+
+describe('toggledFold', () => {
+  it('opens and remembers it', () => {
+    expect(toggledFold({ remembered: false, asked: false })).toEqual({ fold: { remembered: true, asked: false }, showsAll: false });
+  });
+
+  it('folds, remembered, and goes back to all the changes: nothing hidden stays selected', () => {
+    expect(toggledFold({ remembered: false, asked: true })).toEqual({ fold: { remembered: false, asked: false }, showsAll: true });
+    expect(toggledFold({ remembered: true, asked: false })).toEqual({ fold: { remembered: false, asked: false }, showsAll: true });
+  });
+});
+
+describe('changesetFoldLabel', () => {
+  it('names what the fold does, whether the changesets are read or not: it never turns into a number as they arrive', () => {
+    expect(changesetFoldLabel(false)).toBe('Show the changesets');
+    expect(changesetFoldLabel(true)).toBe('Hide the changesets');
+  });
+});
+
+describe('changesetStepsWork', () => {
+  const two = [{ id: 2 }, { id: 1 }] as const;
+  it('steps through the changesets only while the list shows them: folded, ⌥⇧↓ would change the diff out of sight', () => {
+    expect(changesetStepsWork(true, two)).toBe(true);
+    expect(changesetStepsWork(false, two)).toBe(false);
+  });
+
+  it("doesn't step on a branch of one changeset, which shows no list, nor while they're read", () => {
+    expect(changesetStepsWork(true, [{ id: 1 }])).toBe(false);
+    expect(changesetStepsWork(true, undefined)).toBe(false);
+  });
+});

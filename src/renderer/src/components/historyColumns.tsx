@@ -20,7 +20,7 @@ export interface HistoryRow {
 /**
  * Columns give way as the list narrows (a small window with the details open), so the comment keeps room to be read
  * and the list never scrolls sideways: the secondary column below 560 px, the author below 700, the avatar below 480
- * and, last, the date below 360. A list beside a diff (a branch's changesets) keeps the avatar at any width, as History
+ * and, last, the date below 360. A list beside a diff (a file's revisions) keeps the avatar at any width, as History
  * does: there it is the only way to tell who made each row.
  */
 const HIDE_SECONDARY_BELOW = 560;

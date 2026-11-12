@@ -122,6 +122,12 @@ describe('contextViewLabels and contextDescription', () => {
     expect(contextDescription(applied, 'since', { fileInChangeset: false })).toBe('Line 12, marked applied in changeset 15');
   });
 
+  it('say how a question was answered by the changeset its answer names', () => {
+    const answered = threadOn(20, { kind: 'question' }, [{ text: 'Fixed in cs:15' }]);
+    expect(contextViewLabels(answered)).toEqual({ commented: 'When commented', since: 'How it was answered' });
+    expect(contextDescription(answered, 'since')).toBe('Line 12 as it was, against changeset 15, which answered it');
+  });
+
   it('say what changed since for anything not applied', () => {
     const discarded = threadOn(20, {}, [{ kind: 'discard' }]);
     expect(contextViewLabels(discarded).since).toBe('Since then');

@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { ContextRequest } from './commentContext';
 import { openCommentContextDialog } from './CommentContextDialog';
 import type { LineThread } from './fileThreads';
-import { showInConversation } from './reviewComments';
+import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
+import { ChipOpenerContext } from '../../../components/comments/chipOpener';
 
 /**
  * Opens a review's threads in context (`openCommentContextDialog`), from wherever they show: the code, the Comments
@@ -15,6 +16,9 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
   const place = usePlace();
   const user = usePlaceUser();
   const repository = usePlaceRepository();
+  const { stepGroups } = useReviewCheckpoint(review);
+  // The dialog shows outside the page (`openDialog`): it takes the page's way of opening chips along.
+  const chipOpener = useContext(ChipOpenerContext);
   return useMemo(() => {
     if (repository === undefined) return undefined;
     return (thread: LineThread, { startsOn, onScreen }: ContextRequest = {}) =>
@@ -26,7 +30,8 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
         repository: onScreen?.entry.repository ?? repository,
         onScreen: onScreen ?? null,
         startsOn,
-        showInConversation: () => showInConversation(review.id, thread.root.id),
+        steps: stepGroups,
+        chipOpener,
       });
-  }, [place, review, user, repository]);
+  }, [place, review, user, repository, stepGroups, chipOpener]);
 }

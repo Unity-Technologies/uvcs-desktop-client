@@ -1,4 +1,5 @@
 import type { ReviewComment, ReviewConversation, ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { findReferences } from '../../../lib/comments/commentReferences';
 import { isShownEvent } from './reviewEventText';
 
 /** An event the timeline shows: one this version reads. */
@@ -8,7 +9,13 @@ export type ShownEvent = ReviewEvent & Exclude<ReviewEventChange, { kind: 'other
  * Where a thread stands, as the server counts it (its open items, `{unresolvedissues}`): a change request is open
  * until a changeset applies it or a reply discards it; a question until anyone replies. Other comments are never open.
  */
-export type ThreadState = { kind: 'none' } | { kind: 'open' } | { kind: 'answered' } | { kind: 'applied'; changesetId: number } | { kind: 'discarded' };
+export type ThreadState =
+  | { kind: 'none' }
+  | { kind: 'open' }
+  /** `changesetId`: the changeset an answer names ("Fixed in cs:281301"), the question's fix, as an applied request's. */
+  | { kind: 'answered'; changesetId?: number }
+  | { kind: 'applied'; changesetId: number }
+  | { kind: 'discarded' };
 
 /** A comment and its replies, oldest first. */
 export interface ReviewThread {
@@ -25,8 +32,14 @@ export type TimelineItem = { kind: 'event'; event: ShownEvent } | { kind: 'threa
  * (other clients answer replies too), oldest first. A reply whose comment is gone (another client deleted it, keeping
  * its replies) starts a thread of its own, so nothing said is lost. What was said in the same second goes in the order it
  * was written (`writtenOrder`): `cm find … order by date` lists it in any order, another on each read.
+ * `branchChangesets`, the review's branch's when known: a question is answered only in one of them (`answeringChangeset`).
  */
-export function threadsOf(unordered: readonly ReviewComment[]): ReviewThread[] {
+/** The ids of a branch's changesets read, for `threadsOf`; none while unknown or for a review of no branch. */
+export function changesetIdsOf(changesets: readonly { id: number }[] | undefined): ReadonlySet<number> | undefined {
+  return changesets && new Set(changesets.map((changeset) => changeset.id));
+}
+
+export function threadsOf(unordered: readonly ReviewComment[], branchChangesets?: ReadonlySet<number>): ReviewThread[] {
   const comments = [...unordered].sort(writtenOrder);
   const byId = new Map(comments.map((comment) => [comment.id, comment]));
   const rootOf = (comment: ReviewComment): ReviewComment => {
@@ -51,8 +64,23 @@ export function threadsOf(unordered: readonly ReviewComment[]): ReviewThread[] {
   }
   return roots.map((root) => {
     const answers = replies.get(root.id) ?? [];
-    return { root, replies: answers, state: threadState(root, answers) };
+    return { root, replies: answers, state: threadState(root, answers, branchChangesets) };
   });
+}
+
+/**
+ * The changeset an answer names, the first in the replies' order: "Fixed in cs:281301". Only one of the review's own
+ * repository (named with no `@repository`), another's isn't in its diffs; and, with the branch's changesets known, one
+ * of them: "Same as we did in cs:120 on main" names no fix of this review.
+ */
+function answeringChangeset(replies: readonly ReviewComment[], branchChangesets: ReadonlySet<number> | undefined): number | undefined {
+  for (const reply of replies) {
+    const named = findReferences(reply.text).find(
+      ({ reference }) => reference.kind === 'changeset' && reference.repository === undefined && (branchChangesets === undefined || branchChangesets.has(reference.id)),
+    );
+    if (named?.reference.kind === 'changeset') return named.reference.id;
+  }
+  return undefined;
 }
 
 /** Whether anyone replied to `comment` itself, in its thread. */
@@ -60,12 +88,16 @@ export function hasReplies(comment: ReviewComment, thread: ReviewThread): boolea
   return thread.replies.some((reply) => reply.parentId === comment.id);
 }
 
-function threadState(root: ReviewComment, replies: readonly ReviewComment[]): ThreadState {
+function threadState(root: ReviewComment, replies: readonly ReviewComment[], branchChangesets: ReadonlySet<number> | undefined): ThreadState {
   if (root.kind === 'changeRequest') {
     if (root.appliedInChangeset !== undefined) return { kind: 'applied', changesetId: root.appliedInChangeset };
     return replies.some((reply) => reply.kind === 'discard') ? { kind: 'discarded' } : { kind: 'open' };
   }
-  if (root.kind === 'question') return replies.length > 0 ? { kind: 'answered' } : { kind: 'open' };
+  if (root.kind === 'question') {
+    if (replies.length === 0) return { kind: 'open' };
+    const changesetId = answeringChangeset(replies, branchChangesets);
+    return changesetId === undefined ? { kind: 'answered' } : { kind: 'answered', changesetId };
+  }
   return { kind: 'none' };
 }
 
@@ -73,10 +105,10 @@ function threadState(root: ReviewComment, replies: readonly ReviewComment[]): Th
  * The events and threads by date, oldest first; at the same moment, in the order the server wrote them. An event this
  * version doesn't read (`isShownEvent`) is left out rather than shown as the server wrote it.
  */
-export function timelineOf(conversation: Pick<ReviewConversation, 'comments' | 'events'>): TimelineItem[] {
+export function timelineOf(conversation: Pick<ReviewConversation, 'comments' | 'events'>, branchChangesets?: ReadonlySet<number>): TimelineItem[] {
   const items: TimelineItem[] = [
     ...conversation.events.filter(isShownEvent).map((event): TimelineItem => ({ kind: 'event', event })),
-    ...threadsOf(conversation.comments).map((thread): TimelineItem => ({ kind: 'thread', thread })),
+    ...threadsOf(conversation.comments, branchChangesets).map((thread): TimelineItem => ({ kind: 'thread', thread })),
   ];
   return items.sort((a, b) => writtenOrder(startOf(a), startOf(b)));
 }

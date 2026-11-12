@@ -9,13 +9,17 @@ its card) is ARCHITECTURE.md "Refresh"; this is the view.
 The left pane is the incoming changesets above the files, as every list of changed files shows them (ARCHITECTURE.md
 "Lists of changed files"). The files are what Incoming is for:
 
-- **The changesets' section** (`IncomingChangesetList`) shows "All incoming changes" and three changesets, then
-  scrolls inside itself (`changesetListMaxHeight`, `CHANGESETS_SHOWN`), so the files always start right below. It
-  closes, and stays closed across sessions (`useIncomingViewStore`); closed, its header sums the changesets up: "3
-  changesets · Ana, Luis" (`changesetsSummary`). Each row is what the list of changesets read (comment, author, date):
-  nothing is asked of `cm` per row, and no row counts its files. It holds the changesets read so far, 200 at a time
-  (`useIncomingChangesetList`): while older ones remain it ends with "Show 200 more" (`IncomingShowMore`) and its
-  counts say "200+" (ARCHITECTURE.md "Server budget").
+- **The changesets' section** (`IncomingChangesetList`) lists them as a branch diff does (`ChangesetStepList`:
+  docs/features/diff.md "A branch's diff" says how its rows, filter, steps, ⌥⇧↓ ⌥⇧↑ and selection work): oldest on
+  top, under "All incoming changes", one line each. It shows that row and three changesets, then scrolls inside itself
+  (`INCOMING_ROWS_SHOWN`), so the files always start right below. It closes, and stays closed across sessions
+  (`useIncomingViewStore`); closed, its header sums the changesets up: "3 changesets · Ana, Luis"
+  (`changesetsSummary`). Each row is what the list of changesets read (comment, author, date): nothing is asked of `cm`
+  per row, and no row counts its files. It holds the changesets read so far, 200 at a time
+  (`useIncomingChangesetList`), the newest first: while older ones remain, "Show 200 more" (`IncomingShowMore`) sits
+  above the oldest shown, where the older ones it reads go (`showMoreBeforeKey`, a `DataTable` separator), and the
+  counts say "200+" (ARCHITECTURE.md "Server budget"). Pressed from the keyboard, the selection lands on the newest of
+  the page read, right above (`showMoreLanding`), so ↑ goes on back in time.
 - **"All incoming changes"**, where Incoming opens, lists the whole update: the diff from the loaded changeset to the
   head that Incoming reads anyway. The files that collide with local changes (changed on both sides, or changed
   locally and deleted or moved on the branch: `collidesWithLocal`) are a group of their own, "Conflicts with your
@@ -29,6 +33,11 @@ The left pane is the incoming changesets above the files, as every list of chang
   for good: the very query its details panel elsewhere reads (`useDiffEntries`, one `cm diff cs:N`), so arrowing
   through changesets reads none of those it passes, and coming back to one reads nothing. ✕ in the files' header goes
   back to all of them.
+- **Several changesets** (Shift or ⌘/Ctrl-click, Shift+↓/↑) list what they did together: their own range diff, from
+  the oldest one's parent to the newest (`IncomingScope` `span`, `incomingScopeOf`; one `cm diff cs:A cs:B`, cached
+  as immutable), "3 changesets · cs:6 to cs:8" over the files (`incomingFilesHeading`), opened on the first file
+  (`firstIncomingFile`). Like a changeset's, those files are what the changesets did, without the conflict groups: only
+  the whole update merges, and its files are the incoming changes' own read, which a range can't stand in for.
 
 A file selected shows its diff: across the whole update, or what its changeset did. A file that conflicts shows the
 conflict panel only in "All incoming changes", where conflicts are resolved: the update merges the whole of it. In a

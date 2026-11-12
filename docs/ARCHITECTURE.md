@@ -33,7 +33,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
@@ -236,7 +236,7 @@ and many people use the same server. Every `cm` command other than local reads (
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
   A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
-  while the list is stale (`changesetOnScreen`; a branch review's "Changeset by changeset" reads its list, not each
+  while the list is stale (`changesetOnScreen`; a branch diff's list of changesets reads its list, not each
   changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
@@ -1001,8 +1001,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   when nothing is there and when filters hide everything; only what fills it changes.
   - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
     until it is read (`useChangeFilter`'s `reading`, History's text); filters that choose what is read (a time range,
-    people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
-    "Whole branch | Changeset by changeset").
+    people, the kinds an object list asks for) stay live. A control in a pane's header stays with it (`DiffFrame`: a shelve's actions, a
+    review's Comments panel toggle).
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
     (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`; a graph's bands, header cards and
     changesets at the graph's own measurements, `GraphSkeleton`), the details as
@@ -1146,7 +1146,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). A menu names a list key (⌘D, ⌘C, ⇧⌘C) only where its list binds
   it: a list on a page that binds none, its keys reaching the view under the page or the page's own object, passes
-  `MenuHost.listKeysElsewhere` (a branch diff's "Changeset by changeset"). Items that open a dialog
+  `MenuHost.listKeysElsewhere` (a branch diff's list of changesets). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its

@@ -26,6 +26,22 @@ describe('reviewDiffViewOf', () => {
     expect(reviewDiffViewOf(CHANGESET_REVIEW, { kind: 'changeset', changesetId: 8 })).toEqual(WHOLE);
     expect(reviewDiffViewOf({ kind: 'shelve', shelveId: 3 }, { kind: 'shelve', shelveId: 3 })).toEqual(WHOLE);
   });
+
+  // Several changesets selected in a branch diff's list diff as a range: its threads are placed by revision, as
+  // the whole branch's are, those on its older revision on the left at their line.
+  it("is the whole review for a span of a branch review's changesets", () => {
+    expect(reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' })).toEqual(WHOLE);
+  });
+
+  it('places the threads a span shows by revision, written in any of its modes', () => {
+    const span = reviewDiffViewOf(BRANCH, { kind: 'range', fromSpec: 'cs:14', toSpec: 'cs:17' });
+    const threads = threadsOf([onLine(1, 10, 3, { changesetId: 12 }), onLine(2, 30, 8)]);
+    const { placed } = threadsOfFile(threads, BRANCH, span, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([
+      [1, 'deletions', 3],
+      [2, 'additions', 8],
+    ]);
+  });
 });
 
 describe('writtenIn', () => {
@@ -46,6 +62,19 @@ describe('threadsOfFile', () => {
     const { placed, earlier } = threadsOfFile(threadsOf([onLine(1, 30, 12)]), BRANCH, WHOLE, PLAYER);
     expect(placed.map(({ side, line }) => [side, line])).toEqual([['additions', 12]]);
     expect(earlier).toEqual([]);
+  });
+
+  it('shows in a changeset\'s diff the change requests it applied, on the version they were written on', () => {
+    // Written on the whole branch at revision 10, applied by changeset 12, whose diff shows 10 on its older side.
+    const threads = threadsOf([onLine(1, 10, 3, { kind: 'changeRequest', appliedInChangeset: 12 }), onLine(2, 10, 4, { kind: 'changeRequest', appliedInChangeset: 13 })]);
+    const { placed } = threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, PLAYER);
+    expect(placed.map(({ thread, side, line }) => [thread.root.id, side, line])).toEqual([[1, 'deletions', 3]]);
+  });
+
+  it("shows in a changeset's diff the questions an answer says it fixed, as the change requests it applied", () => {
+    const threads = threadsOf([onLine(1, 10, 3, { kind: 'question' }), comment(2, { parentId: 1, kind: 'comment', anchor: { kind: 'review' }, text: 'Fixed in cs:12' })]);
+    const { placed } = threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, PLAYER);
+    expect(placed.map(({ thread, side }) => [thread.root.id, side])).toEqual([[1, 'deletions']]);
   });
 
   it('places a thread on the older revision on the older side: a deleted file, or the revision commented on', () => {
@@ -82,7 +111,7 @@ describe('threadsOfFile', () => {
     expect(ids(threadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 5 }, PLAYER).placed)).toEqual([2]);
   });
 
-  it("shows in the whole review's diff the threads written changeset by changeset too", () => {
+  it("shows in the whole review's diff the threads written in one changeset's diff too", () => {
     const threads = threadsOf([onLine(1, 30, 1), onLine(2, 30, 2, { changesetId: 5 })]);
     expect(ids(threadsOfFile(threads, BRANCH, WHOLE, PLAYER).placed)).toEqual([1, 2]);
   });
@@ -93,7 +122,7 @@ describe('placeEarlier', () => {
   const threads = threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1), onLine(4, 20, 9, { changesetId: 5 })]);
   const { earlier } = threadsOfFile(threads, BRANCH, WHOLE, PLAYER);
   // Line 5 of revision 20 is line 7 now; line 9 changed since.
-  const lineOf = (_text: string, line: number): number | null => (line === 5 ? 7 : null);
+  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; line: number } | null => (thread.root.anchor.line === 5 ? { side: 'additions', line: 7 } : null);
   const writtenWhole = (thread: LineThread): boolean => thread.root.changesetId === undefined;
 
   it('places a thread whose line is unchanged since at its line now, saying where it was written', () => {

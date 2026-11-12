@@ -1,0 +1,251 @@
+/* Review rounds in the conversation: a round's line, the "New since your last review" line, and check-ins. Quiet: a round
+   reads as one line of the timeline, never a card. */
+
+/* A round's line, as an event's (`.eventLine`): what the round was, when, and its fold; the whole line folds it. */
+.roundLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+.roundLine:hover {
+  color: var(--text-primary);
+}
+
+.roundLine:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.roundText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roundText b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.roundLine time {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.roundLine[aria-expanded='true'] .chevron,
+.checkinsToggle[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* "New since your last review": an event on the timeline, as the events' (`.event`) grid lays them out: an accent
+   dot on the rail, then the words, a hairline and the way to the changes at the end. The rail stays as it is: an
+   accent segment from the dot read as a second rail. */
+.since {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  scroll-margin-top: var(--space-5);
+}
+
+.sinceDot {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow:
+    0 0 0 4px var(--accent-soft),
+    0 0 0 6px var(--bg-surface);
+}
+
+/* A super quiet heartbeat: a faint ring breathing out of the dot every few seconds. A loop, so it stops on its own
+   under reduced motion (durations alone wouldn't stop it). */
+.sinceDot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  animation: var(--keyframes-heartbeat) 3.2s var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sinceDot::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.sinceLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.sinceLabel {
+  flex: none;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.sinceDay {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.sinceRule {
+  flex: 1;
+  min-width: var(--space-4);
+  height: 1px;
+  margin-inline: var(--space-2);
+  background: var(--border-subtle);
+}
+
+/* A link, not a box: a soft tint under the pointer, its arrow nudging on. */
+.seeChanges {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.seeChanges:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.seeChanges:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.seeChangesArrow {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.seeChanges:hover .seeChangesArrow {
+  transform: translateX(2px);
+}
+
+/* Check-ins: under the event's line, one row per changeset, a link to its diff. */
+.checkins {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Centered, not on a baseline: the number's icon makes its box taller than its text, which lifted it off the line. */
+.checkin {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 2px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: start;
+}
+
+.checkin:hover {
+  background: var(--bg-hover);
+}
+
+.checkin:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+
+/* A changeset as a comment's chip shows one (`ReferenceChip`): its icon and number in the accent, without the fill. */
+.checkinId {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+}
+
+.checkinId > svg {
+  flex: none;
+}
+
+.checkinComment {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.more:hover {
+  color: var(--accent-text);
+}
+
+/* "checked in 3 changesets": the words fold the list under them, as a folded run of reviewer changes opens. */
+.checkinsToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+}
+
+.checkinsToggle:hover {
+  color: var(--text-primary);
+}
+
+.checkinsToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}

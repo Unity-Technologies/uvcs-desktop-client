@@ -6,6 +6,11 @@ import styles from './Dialog.module.css';
 interface DialogProps {
   /** A picture before the title, such as the app's mark (What's New). */
   icon?: ReactNode;
+  /**
+   * A line above the title, at its start: where the dialog is in what it steps through (a pager). There it is seen
+   * first and never moves, whatever width the title and the header's control take.
+   */
+  eyebrow?: ReactNode;
   title: string;
   description?: ReactNode;
   /** A small control at the header's top right, for something the dialog rarely needs changed (where it starts). */
@@ -20,7 +25,7 @@ interface DialogProps {
   marks?: Readonly<Record<`data-${string}`, string>>;
 }
 
-export function Dialog({ icon, title, description, headerAction, width, onClose, onSubmit, footer, children, marks }: DialogProps) {
+export function Dialog({ icon, eyebrow, title, description, headerAction, width, onClose, onSubmit, footer, children, marks }: DialogProps) {
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     onSubmit?.();
@@ -41,6 +46,7 @@ export function Dialog({ icon, title, description, headerAction, width, onClose,
             <div className={styles.header} data-icon={icon ? true : undefined}>
               {icon}
               <div className={styles.heading}>
+                {eyebrow && <div className={styles.eyebrow}>{eyebrow}</div>}
                 <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
                 {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}
               </div>

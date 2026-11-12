@@ -746,7 +746,7 @@ describe("a changeset's menu", () => {
     expect(shortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
   });
 
-  it('names no shortcut where the list keys reach something else, as in a branch diff stepped changeset by changeset', () => {
+  it("names no shortcut where the list keys reach something else, as in a branch diff's list of changesets", () => {
     const menu = changesetMenu({ place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
 
     expect(shortcuts(menu)).toEqual({});

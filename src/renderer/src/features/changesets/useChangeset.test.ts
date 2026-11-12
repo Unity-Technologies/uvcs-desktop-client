@@ -12,7 +12,7 @@ import { changesetOnScreen, changesetQuery } from './useChangeset';
 const PLACE = workspacePlace('/ws');
 const WHERE = { placeRepository: 'game@local' };
 const changeset = (comment: string): Changeset => ({ id: 42, guid: 'g42', branch: '/main/task', comment, owner: 'ana', date: '2026-11-09T10:00:00Z', parent: 41, repository: 'game@local' });
-// A branch's changesets, as "Changeset by changeset" lists them.
+// A branch's changesets, as a branch diff's list reads them.
 const BRANCH_LIST = queryKeys.inPlace(PLACE, 'changesets', { branch: '/main/task' });
 
 let client: QueryClient;

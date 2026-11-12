@@ -87,7 +87,7 @@ describe('fileThreadCount', () => {
     { ...onPlayer(5, 30), anchor: { kind: 'review' } },
   ]);
 
-  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written changeset by changeset", () => {
+  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written in one changeset's diff", () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, ENTRY)).toBe(3);
   });
 

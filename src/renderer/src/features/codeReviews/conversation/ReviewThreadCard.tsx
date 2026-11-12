@@ -291,6 +291,12 @@ function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
         </button>
       );
     }
+    case 'context':
+      return (
+        <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied}>
+          {pill.label}
+        </button>
+      );
     case 'nothing':
       return (
         <span className={styles.pill} data-tone={pill.tone} data-tip={pill.tip}>

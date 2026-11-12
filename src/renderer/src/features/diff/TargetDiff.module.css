@@ -32,10 +32,14 @@
   font-weight: 600;
 }
 
-/* The branch fitted to the row (`PathLabel`) rather than wrapped over several lines. */
+/* The branch fitted to the row (`PathLabel`) rather than wrapped over several lines: one line as tall as the header's
+   buttons, centered on them. The header aligns its ends at the top, for a summary of several lines, which left a
+   one-line title riding high beside a button. */
 .branchTitle {
   display: flex;
+  align-items: center;
   gap: 0.3em;
+  min-height: 28px;
   min-width: 0;
   font-size: var(--text-lg);
   font-weight: 600;

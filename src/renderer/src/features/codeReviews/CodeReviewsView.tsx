@@ -1,4 +1,4 @@
-import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
+import { CircleDot, GitPullRequestArrow, Inbox, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -12,7 +12,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { ChoiceChip } from '../../ui/ChoiceChip';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { CODE_REVIEW_COLUMNS } from './codeReviewColumns';
+import { codeReviewColumns } from './codeReviewColumns';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
@@ -30,32 +30,50 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { ToggleChip } from '../../ui/ToggleChip';
 import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
+import { waitingCount } from './waitingForMe';
+import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
+const itself = (name: string): string => name;
 
 export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, reviewerIsMe, update } = filters;
+  const { text: search, people, since, status, reviewers, waitingForMe, openedByMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
+  const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewerIsMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewers: queriedReviewers, waitingForMe, openedByMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
+  const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
+  const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
   const visible = useMemo(
-    () => (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search)),
-    [reviews, people, me, search],
+    () =>
+      (reviews ?? []).filter(
+        (review) =>
+          matchesPeople(people, me, review.owner) &&
+          matchesReviewers(review, reviewers, me) &&
+          matchesWaiting(review, waitingForMe, me) &&
+          matchesOpenedByMe(review, openedByMe, me) &&
+          matchesWordFilter(reviewFilterTexts(review), search),
+      ),
+    [reviews, people, me, reviewers, waitingForMe, openedByMe, search],
   );
+  // The reviews read that wait for the user: Waiting for me counts them.
+  const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
+  const opened = useMemo(() => openedByMeCount(reviews ?? [], me), [reviews, me]);
+  // The same columns while the user stays the same: the table sorts its rows again only when they change.
+  const columns = useMemo(() => codeReviewColumns(me), [me]);
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
   const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
@@ -92,9 +110,20 @@ export function CodeReviewsView() {
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
           <>
-            <ToggleChip pressed={reviewerIsMe} icon={<UserCheck size={13} />} onChange={(value) => update({ reviewerIsMe: value })}>
-              I'm a reviewer
+            <ToggleChip pressed={waitingForMe} icon={<Inbox size={13} />} onChange={(value) => update({ waitingForMe: value })}>
+              {waitingChipLabel(waiting)}
             </ToggleChip>
+            <ToggleChip pressed={openedByMe} icon={<GitPullRequestArrow size={13} />} onChange={(value) => update({ openedByMe: value })}>
+              {openedChipLabel(opened)}
+            </ToggleChip>
+            <PeopleFilter
+              value={reviewers}
+              onChange={(value) => update({ reviewers: value })}
+              people={offeredReviewers}
+              mineTip="Reviews you're asked to review"
+              mine={{ label: "I'm a reviewer", icon: <UserCheck size={13} /> }}
+              pickLabel="Pick reviewers"
+            />
             <ChoiceChip<StatusFilter>
               value={status}
               onChange={(value) => update({ status: value })}
@@ -132,7 +161,7 @@ export function CodeReviewsView() {
         }
         query={search}
         rows={visible}
-        columns={CODE_REVIEW_COLUMNS}
+        columns={columns}
         rowKey={reviewKey}
         selection={selection}
         onSelectionChange={setSelection}

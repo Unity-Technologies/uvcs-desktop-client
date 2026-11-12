@@ -82,7 +82,7 @@ describe('a comment on a line', () => {
     expect(commentLocationPage(41, { id: 7, anchor: ON_LINE })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs', focusThread: 7 });
   });
 
-  it('opens one written changeset by changeset on that changeset', () => {
+  it("opens one written in a changeset's diff on that changeset", () => {
     expect(commentLocationPage(41, { id: 7, anchor: ON_LINE, changesetId: 2 })).toEqual({
       kind: 'codeReview',
       reviewId: 41,

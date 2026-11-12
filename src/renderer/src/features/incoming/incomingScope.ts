@@ -1,14 +1,28 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { spec } from '@shared/domain/specs';
+import type { ChangesetListChoice } from '../../components/changesetList/changesetListChoice';
 import type { StatusTone } from '../../components/StatusBadge';
 import { formatCount, pluralize } from '../../lib/text';
 import { isStatusGroup, statusGroup, type FileListContent, type GroupedFileListFacts, type StatusGroup } from '../../components/statusGroups';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
 
-/** What Incoming's files show: everything the update brings, or what one incoming changeset changed. */
-export type IncomingScope = { kind: 'all' } | { kind: 'changeset'; id: number };
+/**
+ * What Incoming's files show: everything the update brings, what one incoming changeset changed, or what several did,
+ * as one diff from the oldest one's parent to the newest (`target`).
+ */
+export type IncomingScope = { kind: 'all' } | { kind: 'changeset'; id: number } | { kind: 'span'; target: Extract<DiffTarget, { kind: 'range' }> };
 
-export const ALL_INCOMING: IncomingScope = { kind: 'all' };
+const ALL_INCOMING: IncomingScope = { kind: 'all' };
+
+/**
+ * The scope the changesets' list selects (`changesetListChoice`). Several changesets show their own range diff, not
+ * the update's: what they did, as a changeset's files are, without the conflicts, which only the whole update merges.
+ */
+export function incomingScopeOf(choice: ChangesetListChoice): IncomingScope {
+  if (choice.kind === 'changeset') return { kind: 'changeset', id: choice.changesetId };
+  if (choice.kind === 'span') return { kind: 'span', target: choice.target };
+  return ALL_INCOMING;
+}
 
 /**
  * The groups of the files the update brings, when some of them collide with local changes: an update with conflicts
@@ -39,13 +53,22 @@ export const INCOMING_GROUP_TIPS: Record<IncomingFileGroup, string> = {
 export const INCOMING_TONE_LABELS: Partial<Record<StatusTone, string>> = { conflict: 'Conflicts with your changes' };
 
 export function scopeKey(scope: IncomingScope): string {
-  return scope.kind === 'all' ? 'all' : `changeset:${scope.id}`;
+  if (scope.kind === 'all') return 'all';
+  return scope.kind === 'changeset' ? `changeset:${scope.id}` : `span:${scope.target.fromSpec}:${scope.target.toSpec}`;
 }
 
-/** The diff the scope's files come from, for their menu: the whole update (loaded → head), or the changeset's own. */
-export function incomingDiffTarget(scope: IncomingScope, loadedChangeset: number, headChangeset: number): DiffTarget {
+/**
+ * The diff a scope's files are read from (`useIncomingFiles`): the changeset's own, or the span's range; none for the
+ * whole update, whose files come with the incoming changes.
+ */
+export function scopeDiffToRead(scope: IncomingScope): DiffTarget | null {
   if (scope.kind === 'changeset') return { kind: 'changeset', changesetId: scope.id };
-  return { kind: 'range', fromSpec: spec.changeset(loadedChangeset), toSpec: spec.changeset(headChangeset) };
+  return scope.kind === 'span' ? scope.target : null;
+}
+
+/** The diff the scope's files come from, for their menu: the whole update (loaded → head), or the scope's own. */
+export function incomingDiffTarget(scope: IncomingScope, loadedChangeset: number, headChangeset: number): DiffTarget {
+  return scopeDiffToRead(scope) ?? { kind: 'range', fromSpec: spec.changeset(loadedChangeset), toSpec: spec.changeset(headChangeset) };
 }
 
 /** Where local changes and the update meet: a file changed on both sides, or one changed locally the branch deleted or moved (by its old path). */
@@ -77,17 +100,22 @@ export function incomingFileTones(file: DiffEntry, collides: boolean): readonly 
 
 /**
  * The line under the files' header: what the update does to the workspace, "1 conflict with your changes · 13 to
- * apply", or "14 changes to apply · Your local changes stay as they are"; a changeset's files are what it did, counted.
+ * apply", or "14 changes to apply · Your local changes stay as they are"; a changeset's files (or several's) are what it
+ * did, counted.
  */
 export function incomingFilesSummary(scope: IncomingScope, fileCount: number, conflictCount: number): string {
-  if (scope.kind === 'changeset') return pluralize(fileCount, 'change');
+  if (scope.kind !== 'all') return pluralize(fileCount, 'change');
   const toApply = fileCount - conflictCount;
   if (conflictCount === 0) return `${pluralize(fileCount, 'change')} to apply · Your local changes stay as they are`;
   const conflicts = pluralize(conflictCount, 'conflict with your changes', 'conflicts with your changes');
   return toApply > 0 ? `${conflicts} · ${formatCount(toApply)} to apply` : conflicts;
 }
 
-/** The file Incoming opens on: the first that changed on both sides, or else the first file. */
-export function firstIncomingFile(files: DiffEntry[], collides: (file: DiffEntry) => boolean): DiffEntry | undefined {
-  return files.find(collides) ?? files[0];
+/**
+ * The file a scope opens on: in the whole update the first that changed on both sides, or else the first file; for
+ * several changesets the first; none for one changeset, whose details show until a file is picked.
+ */
+export function firstIncomingFile(scope: IncomingScope, files: DiffEntry[], collides: (file: DiffEntry) => boolean): DiffEntry | undefined {
+  if (scope.kind === 'changeset') return undefined;
+  return scope.kind === 'all' ? (files.find(collides) ?? files[0]) : files[0];
 }

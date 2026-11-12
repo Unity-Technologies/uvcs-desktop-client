@@ -37,7 +37,8 @@ function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
       return object && { object, ...fileIn(page.focusPath, shown) };
     }
     case 'codeReview': {
-      // Its conversation names the review alone; its changes, the file they show too.
+      // Its conversation names the review alone; its changes, the file they show too. Never the changesets they
+      // show (`focusChangeset`, `focusChangesets`): what's new to one reviewer isn't what's new to whoever opens the link.
       const file = openingTab(page) === 'changes' ? fileIn(page.focusPath, shown) : {};
       return { object: { kind: 'codeReview', id: page.reviewId }, ...file };
     }

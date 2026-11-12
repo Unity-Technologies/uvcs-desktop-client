@@ -53,7 +53,7 @@ export function contextEntryOf(review: CodeReviewTarget, thread: LineThread, vie
   // Applied, what the changeset that applied it did to the file; else what it became in the review's newest version:
   // the whole review's diff's, never a changeset's.
   if (view === 'since') {
-    const appliedIn = appliedChangeset(thread);
+    const appliedIn = settlingChangeset(thread);
     return appliedIn !== undefined ? { kind: 'read', target: { kind: 'changeset', changesetId: appliedIn } } : whole();
   }
   const written = writtenIn(review, thread);
@@ -112,12 +112,12 @@ export function appliedComparison(thread: LineThread, applied: ShownEntry | null
  */
 export function comparisonOf(thread: LineThread, view: ContextView, repository: string, entry: ShownEntry | null): ContextComparison | null {
   if (view === 'commented') return entry ? commentedComparison(thread, entry) : null;
-  return appliedChangeset(thread) === undefined ? sinceComparison(thread, repository, entry) : appliedComparison(thread, entry);
+  return settlingChangeset(thread) === undefined ? sinceComparison(thread, repository, entry) : appliedComparison(thread, entry);
 }
 
 /** What a view says when it has nothing to compare (`comparisonOf`). */
 export function contextMissingText(thread: LineThread, view: ContextView): string {
-  const appliedIn = appliedChangeset(thread);
+  const appliedIn = settlingChangeset(thread);
   return view === 'since' && appliedIn !== undefined ? `Changeset ${appliedIn} didn't change this file` : "Couldn't find the diff it was written on";
 }
 
@@ -126,9 +126,10 @@ export function contextTitle(thread: LineThread): string {
   return `${locationText(thread.root.anchor).file}, line ${thread.root.anchor.line}`;
 }
 
-/** What each view is called: the second says how a change request was applied, when it was. */
+/** What each view is called: the second says how a change request was applied, or a question answered, when it was. */
 export function contextViewLabels(thread: LineThread): Record<ContextView, string> {
-  return { commented: 'When commented', since: appliedChangeset(thread) === undefined ? 'Since then' : 'How it was applied' };
+  if (settlingChangeset(thread) === undefined) return { commented: 'When commented', since: 'Since then' };
+  return { commented: 'When commented', since: thread.state.kind === 'answered' ? 'How it was answered' : 'How it was applied' };
 }
 
 /**
@@ -138,14 +139,18 @@ export function contextViewLabels(thread: LineThread): Record<ContextView, strin
 export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true }: { fileInChangeset?: boolean } = {}): string {
   const { line } = thread.root.anchor;
   if (view === 'commented') return `Line ${line} in the diff it was written on`;
-  const appliedIn = appliedChangeset(thread);
+  const appliedIn = settlingChangeset(thread);
   if (appliedIn === undefined) return `Line ${line} as it was, against the newest version`;
+  if (thread.state.kind === 'answered') return `Line ${line} as it was, against changeset ${appliedIn}, which answered it`;
   return fileInChangeset ? `Line ${line} as it was, against changeset ${appliedIn}, which applied it` : `Line ${line}, marked applied in changeset ${appliedIn}`;
 }
 
-/** The changeset that applied a change request; none for any other thread. */
-export function appliedChangeset(thread: Pick<ReviewThread, 'state'>): number | undefined {
-  return thread.state.kind === 'applied' ? thread.state.changesetId : undefined;
+/**
+ * The changeset that settled a thread, which "How it was applied" compares the commented version with: the one that
+ * applied a change request, or the one an answer names ("Fixed in cs:281301"); none for any other thread.
+ */
+export function settlingChangeset(thread: Pick<ReviewThread, 'state'>): number | undefined {
+  return thread.state.kind === 'applied' || thread.state.kind === 'answered' ? thread.state.changesetId : undefined;
 }
 
 /**

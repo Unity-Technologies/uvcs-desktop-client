@@ -124,13 +124,33 @@ describe('threadHeaderOf', () => {
       expect(headerOf(applied, { place: 'code', inContext: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'nothing', tip: 'Applied in changeset 281' });
     });
 
-    it('says a discarded one was discarded, as words', () => {
-      expect(headerOf(discarded).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+    it('leads a discarded one to it in context, where the card can show it, as an applied one does', () => {
+      expect(headerOf(discarded, { seesHowApplied: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'context', tip: 'Discarded: see it in context' });
+    });
+
+    it('says a discarded one was discarded, as words, in context already or where nothing shows it', () => {
+      expect(headerOf(discarded, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+      expect(headerOf(discarded, { seesHowApplied: false }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
     });
 
     it('leads an answered question to its first reply where the card shows replies, and is words in the panel', () => {
       expect(headerOf(answered).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'answer', tip: 'Answered by Bob: see the answer' });
       expect(headerOf(answered, { place: 'panel', showsAnswer: false }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'nothing' });
+    });
+
+    it('leads a question answered in a changeset to how it was answered, where the card can show it', () => {
+      const fixed = threadOf(comment(1, { kind: 'question', anchor: ON_LINE }), reply(2, { text: 'Fixed in cs:281301' }));
+      expect(headerOf(fixed, { seesHowApplied: true }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'context', tip: 'Answered in changeset 281301: see how it was answered' });
+      expect(headerOf(fixed, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'nothing', tip: 'Answered in changeset 281301' });
+    });
+
+    it('leads an answered question in context where the card shows no replies but can show it, as Discarded and Applied do', () => {
+      expect(headerOf(answered, { place: 'panel', showsAnswer: false, seesHowApplied: true }).pill).toEqual({
+        label: 'Answered',
+        tone: 'resolved',
+        leadsTo: 'context',
+        tip: 'Answered: see it in context',
+      });
     });
 
     it('shows none on a plain comment', () => {

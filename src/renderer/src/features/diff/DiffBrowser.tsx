@@ -144,7 +144,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // Once per request, as soon as the files are read: a diff read again leaves the file and its `.meta` toggle as they are.
   const appliedRequest = useRef<number | null>(null);
   useEffect(() => {
-    if (!focusRequest || appliedRequest.current === focusRequest.seq) return;
+    if (focusRequest?.path === undefined || appliedRequest.current === focusRequest.seq) return;
     const requested = pairedEntryAt(pairs, focusRequest.path);
     if (!requested) return;
     appliedRequest.current = focusRequest.seq;
