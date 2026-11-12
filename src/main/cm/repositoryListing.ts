@@ -8,7 +8,9 @@
 // To a server's administrators the list also holds the deleted repositories the server still keeps, which
 // `cm repository undelete` can restore: `cm` prints each under its name with `DELETED_PREFIX` before it
 // (`__DELETED__Racing/Game`). They come apart from the live ones (`deletedRepositories`), under the name they had, and
-// their spec names them by GUID, which `cm repository undelete` takes and, unlike a name, no two share.
+// their spec names them by GUID, which `cm repository undelete` takes and, unlike a name, no two share. One listed with
+// no GUID (a `cm` that doesn't know `{repguid}` prints it empty, as it does any field it doesn't know) is left out:
+// `cm repository undelete` takes no `__DELETED__` name with a server, so nothing could restore it.
 
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { projectOfRepository } from '@shared/domain/organizations';
@@ -42,7 +44,8 @@ export function repositoryListingOf(records: readonly string[][], server: string
   for (const [id = '', listedName = '', repositoryServer = server, owner = '', type = '', guid = ''] of records) {
     const deleted = listedName.startsWith(DELETED_PREFIX);
     const name = deleted ? listedName.slice(DELETED_PREFIX.length) : listedName;
-    const spec = `${deleted && guid ? guid : listedName}@${repositoryServer}`;
+    if (deleted && !guid) continue;
+    const spec = `${deleted ? guid : listedName}@${repositoryServer}`;
     // A deleted project's repositories are listed deleted on their own; the project itself has nothing to show.
     if (withProjects && type === PROJECT_TYPE) {
       if (!deleted) projects.push({ name, guid });
