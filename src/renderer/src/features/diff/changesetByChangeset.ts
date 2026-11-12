@@ -4,6 +4,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { pluralize } from '../../lib/text';
 import { userFilterTexts } from '../../lib/userName';
+import { newChangesetsOf, type ReviewedUpTo } from './branchChangesetRows';
 
 /**
  * The changesets a branch diff's "Changeset by changeset" list shows for its filter: every word in the number, the
@@ -13,6 +14,22 @@ import { userFilterTexts } from '../../lib/userName';
 export function filterBranchChangesets(changesets: readonly Changeset[], query: string): readonly Changeset[] {
   if (!query.trim()) return changesets;
   return changesets.filter((changeset) => matchesWordFilter([String(changeset.id), changeset.comment, ...userFilterTexts(changeset.owner)], query));
+}
+
+/** The list's filters: the words typed, and New (only the changesets new since the user's review). */
+export interface BranchChangesetFilter {
+  query: string;
+  onlyNew: boolean;
+}
+
+/**
+ * The changesets the list shows: with New on, those new since the user's review (`newChangesetsOf`), then those the
+ * words typed match (`filterBranchChangesets`). New shows only while some are new; when none is (before a review, or
+ * after another), it keeps nothing out.
+ */
+export function shownBranchChangesets(changesets: readonly Changeset[], { query, onlyNew }: BranchChangesetFilter, reviewedUpTo: ReviewedUpTo | undefined): readonly Changeset[] {
+  const newOnes = onlyNew ? newChangesetsOf(changesets, reviewedUpTo) : [];
+  return filterBranchChangesets(newOnes.length > 0 ? newOnes : changesets, query);
 }
 
 /**
