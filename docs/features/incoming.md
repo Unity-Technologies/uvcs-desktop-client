@@ -79,12 +79,15 @@ loaded, as `cm partial update` would bring them.
   `partialGroupCheckState`, `withItemsChecked`; the view keeps the unchecked keys, `UncheckedItems`).
   `partialUpdateSelection` turns the checked items into the paths `cm partial update` takes: a changed or removed item
   by its loaded path, a moved one at its loaded path and in the folder it moves into, an added one through its parent
-  folder (the workspace doesn't load it yet), and only the outermost of nested paths. A folder brings everything
-  changed under it, so the update may bring unchecked items too: the selection counts what it brings (`brought`), and
-  names no path (`'all'`) when that is every item, or when an added item sits at the top of the workspace.
+  folder (the workspace doesn't load it yet; a parent the head adds too climbs to the first folder the workspace has,
+  `existingParentOf`), and only the outermost of nested paths. A folder brings everything changed under it, so the
+  update may bring unchecked items too: the selection lists what it brings (`brought`), and names no path (`'all'`)
+  when that is every item, or when an added or moved item lands at the top of the workspace.
 - **Updating** (`updatePartialToIncoming`) runs `cm partial update`, with the selection's paths or none. An item
   changed locally keeps the local version until it is checked in, shelved or undone; the update bar says what updating
   brings, and which unchecked items a folder brings along (`partialUpdateMessage`), offers Update only while some item
-  it brings doesn't conflict, and an update stopped by a conflict leads to Incoming (`explainUpdateConflicts`).
+  it brings doesn't conflict (`canUpdateSelection`), and an update stopped by a conflict leads to Incoming
+  (`explainUpdateConflicts`). The update's count leaves out the conflicts it brings, which keep the local version
+  (`conflictsIn`).
 
 Sandbox: `scripts/sandboxes/partial-operations.sh`.
