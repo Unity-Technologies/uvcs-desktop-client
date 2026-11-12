@@ -1,6 +1,7 @@
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
+import { DeletedChip } from '../../components/DeletedChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
@@ -11,7 +12,9 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { exploreRepository } from '../workspace/exploreRepository';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
-import { repositoryMenu } from './homeMenus';
+import { deletedRepositoriesTip } from './deletedRepositories';
+import { deletedRepositoryMenu, repositoryMenu } from './homeMenus';
+import { restoreRepository } from './homeOperations';
 import { repositoryLabels } from './repositoryProjects';
 import styles from './Home.module.css';
 
@@ -29,7 +32,8 @@ interface RepositoryRowProps {
 }
 
 export function RepositoryRow({ repository, project, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
-  const menu = () => repositoryMenu(repository, onCreateWorkspace);
+  const deleted = repository.deleted ?? false;
+  const menu = () => (deleted ? deletedRepositoryMenu(repository) : repositoryMenu(repository, onCreateWorkspace));
   const onlyWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
   const title = repositoryLabels(repository, project);
   const details = [
@@ -39,10 +43,10 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
 
   return (
     <ActionContextMenu entries={menu}>
-      <div className={styles.row}>
-        <button className={styles.rowMain} onClick={onToggle} aria-expanded={expanded} {...ROVING_ITEM}>
-          <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} />
-          <RepositoryAvatar repository={repository.spec} label={title.name} size={32} />
+      <div className={styles.row} data-deleted={deleted}>
+        <button className={styles.rowMain} onClick={onToggle} aria-expanded={deleted ? undefined : expanded} {...ROVING_ITEM}>
+          <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} data-hidden={deleted} />
+          <RepositoryAvatar repository={repository.spec} label={title.name} size={32} className={styles.rowAvatar} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>
               {/* In a box of its own: the title's gap would open between the pieces a match splits the name into. */}
@@ -60,8 +64,13 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
               {details.join(' · ')}
             </span>
           </span>
+          {deleted && <DeletedChip tip={deletedRepositoriesTip(repository.server)} />}
         </button>
-        {onlyWorkspace ? (
+        {deleted ? (
+          <Button size="small" onClick={() => void restoreRepository(repository)}>
+            Restore
+          </Button>
+        ) : onlyWorkspace ? (
           <Button size="small" onClick={(event) => workspaceOpener(onOpen)(onlyWorkspace.path, windowAskedBy(event))}>
             Open
           </Button>

@@ -37,6 +37,14 @@
   font-weight: var(--weight-medium);
 }
 
+/* A deleted repository: the color of a deleted item in a change list. */
+.deleted {
+  flex: none;
+  background: color-mix(in srgb, var(--status-deleted) 14%, transparent);
+  color: var(--status-deleted);
+  font-weight: var(--weight-medium);
+}
+
 /* Short and telling: it keeps its room while the branch and server chips give way. */
 .kind {
   flex: none;
