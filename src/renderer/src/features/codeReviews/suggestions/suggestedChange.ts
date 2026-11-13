@@ -29,6 +29,9 @@ export function suggestedChangeOf(comment: Pick<ReviewComment, 'kind' | 'anchor'
   return { path: anchorPath(anchor), revisionId: anchor.revisionId, firstLine: anchor.line, lastLine: anchor.line, lines: suggestion.lines };
 }
 
+/** A read something waits on: still being read, failed, or its answer. */
+export type Read<T> = 'reading' | 'failed' | T;
+
 /**
  * The lines a suggestion replaces, as the revision it was written on has them: read (`string[]`), still being read
  * (`'reading'`), or not to be had (`'unknown'`: the read failed, the file is binary, or shorter than the line).
