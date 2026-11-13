@@ -1,6 +1,7 @@
 import { FileDiff } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../../app/navigation/navigationStore';
+import { NotificationsSection } from './NotificationsSection';
 import { ReviewersSection } from './ReviewersSection';
 import type { OpenItem } from './threadPick';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -14,7 +15,10 @@ interface ReviewSideRailProps {
   onPick: (threadId: number) => void;
 }
 
-/** Beside the conversation: who reviews it and the status each gave, and the change requests and questions still open. */
+/**
+ * Beside the conversation: who reviews it and the status each gave, the change requests and questions still open, and
+ * whether the user gets its emails.
+ */
 export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
   return (
     <aside className={styles.rail}>
@@ -36,6 +40,7 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
           ))}
         </ul>
       </section>
+      <NotificationsSection reviewId={review.id} />
     </aside>
   );
 }

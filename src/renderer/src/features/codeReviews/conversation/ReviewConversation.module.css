@@ -515,6 +515,14 @@ button.pill:hover {
   font-size: var(--text-sm);
 }
 
+/* A sentence under a section's title: why the user gets the review's emails. */
+.railNote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 18px;
+}
+
 .reviewers,
 .openItems {
   display: flex;
