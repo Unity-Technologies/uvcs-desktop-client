@@ -3,13 +3,13 @@ import { Fragment } from 'react';
 import { recentCommentPick } from '../../lib/comment';
 import { Tooltip } from '../../ui/Tooltip';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { descriptionFooterButtons } from './descriptionFooterButtons';
+import type { DescriptionFooterButton } from './descriptionFooterButtons';
 import styles from './CheckinPanel.module.css';
 
 interface DescriptionFooterProps {
+  /** What it shows (`descriptionFooterButtons`). */
+  buttons: readonly DescriptionFooterButton[];
   recentComments: readonly string[];
-  /** How many change requests the check-in offers to apply. */
-  changeRequests: number;
   /** A recent comment picked: its parts go in the summary and the description. */
   onRecentComment: (pick: ReturnType<typeof recentCommentPick>) => void;
   /** Where the caret goes once the recent comments' menu closes, after a pick. */
@@ -22,8 +22,7 @@ interface DescriptionFooterProps {
  * The check-in description's footer (`descriptionFooterButtons`): quiet icon buttons at its bottom-left, apart by
  * hairlines; nothing at all when it has none.
  */
-export function DescriptionFooter({ recentComments, changeRequests, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
-  const buttons = descriptionFooterButtons({ recentComments: recentComments.length, changeRequests });
+export function DescriptionFooter({ buttons, recentComments, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
   if (buttons.length === 0) return null;
   return (
     <div className={styles.descriptionFooter} role="toolbar" aria-label="Description">
@@ -37,7 +36,7 @@ export function DescriptionFooter({ recentComments, changeRequests, onRecentComm
             >
               <Tooltip content={button.tip}>
                 <button type="button" className={styles.footerButton} aria-label={button.tip}>
-                  <History size={15} aria-hidden />
+                  <History size={13} aria-hidden />
                 </button>
               </Tooltip>
             </ActionDropdownMenu>
@@ -51,7 +50,7 @@ export function DescriptionFooter({ recentComments, changeRequests, onRecentComm
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={onChangeRequests}
               >
-                <GitPullRequestArrow size={15} aria-hidden />
+                <GitPullRequestArrow size={13} aria-hidden />
                 <span className={styles.footerCount}>{button.count}</span>
               </button>
             </Tooltip>

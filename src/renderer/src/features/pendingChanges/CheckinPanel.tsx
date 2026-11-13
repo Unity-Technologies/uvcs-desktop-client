@@ -16,6 +16,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { DescriptionFooter } from './DescriptionFooter';
+import { descriptionFooterButtons, descriptionHeightWith } from './descriptionFooterButtons';
 import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
 import { changeRequestsBranch, notYetNamed } from '../codeReviews/changeRequests/changeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
@@ -98,6 +99,7 @@ export function CheckinPanel({
   const branchRequests = useBranchChangeRequests(changeRequestsBranch(workingOn, mode), listedCount !== undefined);
   const offered = useMemo(() => notYetNamed(branchRequests.requests, `${summary}\n${description}`), [branchRequests.requests, summary, description]);
   const changeRequests = useMemo(() => ({ ...branchRequests, requests: offered }), [branchRequests, offered]);
+  const footerButtons = descriptionFooterButtons({ recentComments: recentComments.length, changeRequests: offered.length });
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
@@ -163,13 +165,13 @@ export function CheckinPanel({
             className={styles.description}
             label="Description"
             placeholder={DESCRIPTION_PLACEHOLDER}
-            style={{ height: descriptionHeight }}
+            style={{ height: descriptionHeightWith(descriptionHeight, footerButtons) }}
             value={description}
             onChange={(text) => onMessageChange({ description: text })}
             footer={
               <DescriptionFooter
+                buttons={footerButtons}
                 recentComments={recentComments}
-                changeRequests={offered.length}
                 onRecentComment={(pick) => {
                   onMessageChange(pick.parts);
                   caretAfterPick.current = pick.caretIn;

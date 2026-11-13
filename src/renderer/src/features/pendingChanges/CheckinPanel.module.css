@@ -34,21 +34,21 @@
    hairlines, as GitHub Desktop draws its own; the text kept clear of it. */
 .description:has(.descriptionFooter) {
   position: relative;
-  padding-bottom: 28px;
+  padding-bottom: 26px;
 }
 
 .descriptionFooter {
   position: absolute;
-  left: 4px;
+  left: 5px;
   bottom: 3px;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .footerSeparator {
   width: 1px;
-  height: 14px;
+  height: 10px;
   margin: 0 3px;
   background: var(--border-subtle);
 }
@@ -56,16 +56,16 @@
 .footerButton {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 22px;
-  min-width: 22px;
-  padding: 0 4px;
+  gap: 2px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 3px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-tertiary);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 

@@ -10,7 +10,8 @@ description. The description's footer (`DescriptionFooter`, `descriptionFooterBu
 bottom-left, as GitHub Desktop draws its own: small muted icon buttons apart by hairlines, each named by its tooltip.
 **Recent comments**, while there are some, opens the comments checked in lately, a pick filling the summary and the
 description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
-(docs/features/code-reviews.md "Applying change requests"). With neither, there's no footer and the description is
+(docs/features/code-reviews.md "Applying change requests"). While it shows, the description is taller by its row
+(`DESCRIPTION_FOOTER_HEIGHT`), so it takes none of the room to type. With neither, there's no footer and the description is
 as it always was.
 
 ## Changelists and status groups in the list

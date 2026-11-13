@@ -15,3 +15,14 @@ export function descriptionFooterButtons({ recentComments, changeRequests }: { r
       : []),
   ];
 }
+
+/**
+ * How much taller the description is while its footer shows: the footer's row (`.descriptionFooter`, which the
+ * description's bottom padding keeps clear), so it takes none of the room to type.
+ */
+export const DESCRIPTION_FOOTER_HEIGHT = 20;
+
+/** The description's height, the one its resize handle sets, with its footer's row when it shows one. */
+export function descriptionHeightWith(height: number, buttons: readonly DescriptionFooterButton[]): number {
+  return buttons.length > 0 ? height + DESCRIPTION_FOOTER_HEIGHT : height;
+}
