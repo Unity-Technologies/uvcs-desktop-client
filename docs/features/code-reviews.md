@@ -23,7 +23,9 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   they gave already. The button reads their status, or Review when they aren't a reviewer (`ownReviewButton`). The
   popover's draft is whole: the status picked (`useOwnReviewChoiceStore`, `ownReviewChoice`) is kept with the comment
   (`useCommentDraftStore`), under one key per review, as the popover closes (a click elsewhere, to copy something into
-  the comment), and both are cleared once sent; it opens on the status the user gave until they pick another. Only
+  the comment), and both are cleared once sent; it opens on the status the user gave until they pick another. A pick
+  remembers the status it was picked over (`OwnReviewPick`'s `over`): once the user's status changes elsewhere (the
+  menu, another window), the pick is dropped and the popover opens on the status they now have. Only
   reviewers give a status: a user who isn't one yet is added with `cm codereview reviewer add` before their status is
   set, the page's popover saying so, the menu asking first ("You'll be added as one").
   Whether the user is a reviewer goes by name (`isReviewer`, `ownStatus`): a member of a reviewer group isn't known to
