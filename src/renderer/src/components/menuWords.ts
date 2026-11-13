@@ -9,8 +9,10 @@ import {
   ArrowUpDown,
   ArrowUpFromLine,
   Binary,
+  CheckCheck,
   Cherry,
   CircleCheck,
+  CircleDashed,
   CircleDot,
   ClipboardPaste,
   CodeXml,
@@ -184,6 +186,9 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // A review's change request marked by hand (`changeRequestMarkOf`): applied in a changeset picked, or open again.
+  markApplied: word('act', CheckCheck, 'Mark as applied…'),
+  markNotApplied: word('act', CircleDashed, 'Mark as not applied'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),

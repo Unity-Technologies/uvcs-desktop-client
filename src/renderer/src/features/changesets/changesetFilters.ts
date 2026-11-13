@@ -145,8 +145,9 @@ export interface ChangesetChoice {
  * The changesets a changeset picker offers for `search`, leaving out `exclude` (the one being compared): the newest
  * read (`recent`, at most `readLimit` of them; undefined while unread or when the read failed) whose row matches it,
  * and first the one whose number was typed (`1234`, `cs:1234`), so any changeset is reachable without listing them all.
+ * `readLimit` undefined: those read are some of the repository's, not its newest (a branch's), and rule out no number.
  */
-export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number | undefined, search: string): ChangesetChoice[] {
+export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number | undefined, exclude: number | undefined, search: string): ChangesetChoice[] {
   const typed = typedChangesetNumber(search);
   const matching = (recent ?? [])
     .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesWordFilter(changesetRowTexts(changeset), search))
@@ -155,16 +156,26 @@ export function changesetChoices(recent: readonly Changeset[] | undefined, readL
   return [typedChoice(typed, recent, readLimit), ...matching];
 }
 
+/**
+ * What a changeset picker says when it offers nothing: why the read failed, or, as nothing matched, that a number typed
+ * picks one anyway. `listed`: the repository's `newest` (what's missing is older), or `some` of them (a branch's,
+ * which may have none checked in).
+ */
+export function changesetChoicesEmptyText(error: Error | null, listed: 'newest' | 'some'): string {
+  if (error) return `Couldn't read the changesets: ${error.message}. Type a number to pick one.`;
+  return listed === 'newest' ? 'No changesets found. Type a number to pick an older one.' : 'No changesets found. Type a number to pick any other.';
+}
+
 /** What a picker's row shows: the number, the comment's first line, the branch's own name. */
 function changesetRowTexts(changeset: Changeset): string[] {
   return [String(changeset.id), firstLine(changeset.comment), shortBranchName(changeset.branch)];
 }
 
 /** A number typed: its row when read; else whether a changeset can have it, from what the read covered. */
-function typedChoice(id: number, recent: readonly Changeset[] | undefined, readLimit: number): ChangesetChoice {
+function typedChoice(id: number, recent: readonly Changeset[] | undefined, readLimit: number | undefined): ChangesetChoice {
   const read = recent?.find((changeset) => changeset.id === id);
   if (read) return { id, changeset: read };
-  if (!recent || recent.length === 0) return { id };
+  if (!recent || recent.length === 0 || readLimit === undefined) return { id };
   // Older than a read that stopped at its limit. A newer one would be checked in since the read, which is read again
   // as new changesets come (`refreshScopes`: the changeset lists refresh on check-ins, the user's and others').
   const olderThanRead = recent.length >= readLimit && id < Math.min(...recent.map((changeset) => changeset.id));

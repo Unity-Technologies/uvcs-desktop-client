@@ -15,13 +15,13 @@ import { RelativeTime } from '../../../ui/RelativeTime';
 import { CommentComposer } from './CommentComposer';
 import { reviewCommentCopyTexts } from './commentLink';
 import { commentMenu } from './commentMenu';
-import { deleteReviewComment, editReviewComment } from './reviewCommentOperations';
+import { deleteReviewComment, editReviewComment, markChangeRequest } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewCommentViewProps {
-  /** The review it's on, whose link its own extends. */
-  review: Pick<CodeReview, 'id'>;
+  /** The review it's on: its link extends the review's; its change requests are marked applied in its changesets (`changesetsToApplyIn`). */
+  review: Pick<CodeReview, 'id' | 'target'>;
   comment: ReviewComment;
   thread: ReviewThread;
   user: string | undefined;
@@ -54,6 +54,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
     edit: () => setEditing(true),
     remove: () => void deleteReviewComment(place, comment),
     copyTexts: reviewCommentCopyTexts(place, review.id, comment),
+    markChangeRequest: (mark) => void markChangeRequest(place, review, comment, mark),
     ...threadActions,
   });
 
