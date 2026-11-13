@@ -87,14 +87,32 @@ export const ALREADY_APPLIED = 'Your workspace already has this suggestion';
 /**
  * The file holds the suggested lines where the commented ones were, their neighbors as they were: applied to the
  * changes already (Apply to my changes), which would otherwise read as the line having changed. A deletion leaves no
- * line to find, so it reads as changed.
+ * line to find: its neighbors are, together, as the lines' removal left them (`deletionNeighbors`).
  */
 function alreadyApplied(change: SuggestedChange, commentedText: string, text: string): boolean {
-  if (change.lines.length === 0) return false;
   const suggested = withLinesReplaced(commentedText, change.firstLine, change.lastLine, change.lines);
   if (suggested === null) return false;
+  if (change.lines.length === 0) {
+    const neighbors = deletionNeighbors(change.firstLine, lineCountOf(suggested));
+    return neighbors !== null && newerRangeOf(suggested, text, neighbors) !== null;
+  }
   const suggestedLines = { firstLine: change.firstLine, lastLine: change.firstLine + change.lines.length - 1 };
   return newerRangeInContextOf(suggested, text, suggestedLines) !== null;
+}
+
+/**
+ * The lines around the gap a deletion at `firstLine` leaves in a text of `lineCount` lines: the line before it and the
+ * line after it, or the one of them there is at the text's start or end; none when the deletion emptied the text.
+ */
+function deletionNeighbors(firstLine: number, lineCount: number): LineRange | null {
+  const range = { firstLine: Math.max(1, firstLine - 1), lastLine: Math.min(firstLine, lineCount) };
+  return range.lastLine >= range.firstLine ? range : null;
+}
+
+/** A text's lines, as `withLinesReplaced` counts them: one ending in a line end has no line after it. */
+function lineCountOf(text: string): number {
+  const lines = text.split(/\r\n|\n|\r/);
+  return lines.at(-1) === '' ? lines.length - 1 : lines.length;
 }
 
 /** Why a suggestion can't be applied once the lines it was written on changed. */
