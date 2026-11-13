@@ -1,4 +1,3 @@
-import { MoreHorizontal } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useEffect, useRef, useState } from 'react';
@@ -9,14 +8,12 @@ import { Markdown } from '../../../components/Markdown';
 import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
-import { IconButton } from '../../../ui/IconButton';
-import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { CommentComposer } from './CommentComposer';
-import { reviewCommentCopyTexts } from './commentLink';
-import { commentMenu } from './commentMenu';
-import { deleteReviewComment, editReviewComment, markChangeRequest } from './reviewCommentOperations';
+import { CommentMenuButton } from './CommentMenuButton';
+import { editReviewComment } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
+import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewCommentViewProps {
@@ -30,7 +27,7 @@ interface ReviewCommentViewProps {
   /** Whether its author wrote the review: marked Author, as who answers for the changes. */
   byReviewAuthor?: boolean;
   /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
-  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
+  threadActions?: CommentThreadActions;
   /**
    * Gone to, the how-many-th time: lit for a moment, and scrolled to when it `scrolls` (the reply an Answered pill leads
    * to; a reply a link goes to is scrolled to by the conversation, `pickedElementId`).
@@ -50,13 +47,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
     if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [litSeq, scrollsWhenLit]);
   const [editing, setEditing] = useState(false);
-  const menu = commentMenu(comment, thread, user, {
-    edit: () => setEditing(true),
-    remove: () => void deleteReviewComment(place, comment),
-    copyTexts: reviewCommentCopyTexts(place, review.id, comment),
-    markChangeRequest: (mark) => void markChangeRequest(place, review, comment, mark),
-    ...threadActions,
-  });
+  const menu = useCommentMenu({ review, comment, thread, user, edit: () => setEditing(true), threadActions });
 
   return (
     <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit.seq % 2} aria-label={`${displayName(comment.author)}'s comment`}>
@@ -74,11 +65,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
               </span>
             )}
           </span>
-          <span className={styles.commentMenu}>
-            <ActionDropdownMenu entries={menu}>
-              <IconButton size="small" icon={<MoreHorizontal size={14} />} label="Comment actions" />
-            </ActionDropdownMenu>
-          </span>
+          <CommentMenuButton entries={menu} />
         </header>
         {editing ? (
           <CommentComposer
