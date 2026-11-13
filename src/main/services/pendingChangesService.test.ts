@@ -146,7 +146,7 @@ describe('checkin', () => {
 
     const result = await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'Fix [apply-change:deadbeef]', addsPrivate: false }, 'op-1');
 
-    expect(result).toEqual({ kind: 'created', changesetId: 45, branch: '/main/task1', changeRequestsNotApplied: ['deadbeef'] });
+    expect(result).toEqual({ kind: 'created', changesetId: 45, branch: '/main/task1', changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: expect.any(Number) } });
     expect(commands.at(-1)).toMatchObject({ via: 'query', args: ['status', '--header', '--xml'] });
   });
 

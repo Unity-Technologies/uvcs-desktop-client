@@ -78,7 +78,7 @@ export function createPendingChangesService({ cm, operations, revisionCat, heade
     if (!notApplied) throw error;
     const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
     if (loadedChangeset === null || selector.kind !== 'branch') throw error;
-    return { kind: 'created', changesetId: loadedChangeset, branch: selector.name, changeRequestsNotApplied: notApplied };
+    return { kind: 'created', changesetId: loadedChangeset, branch: selector.name, changeRequestsNotApplied: { requests: notApplied, logEntryId: (error as CmError).command.logEntryId } };
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {

@@ -19,6 +19,7 @@ import { checkinRejection, overlappingPaths, type CheckinRejection } from './che
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
 import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -55,7 +56,9 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
       // Checked in, but the change requests the comment names weren't applied: said even when the moment would be quiet.
-      const notApplied = changeRequestsNotAppliedText(done.changeRequestsNotApplied ?? []);
+      // No failure to point at in the status bar: `cm` failed after checking in (`markHandled`).
+      if (done.changeRequestsNotApplied) useCommandLogStore.getState().markHandled(done.changeRequestsNotApplied.logEntryId);
+      const notApplied = changeRequestsNotAppliedText(done.changeRequestsNotApplied?.requests ?? []);
       if (options.quiet && !notApplied) return null;
       return {
         ...(notApplied && { kind: 'info' as const, detail: notApplied }),

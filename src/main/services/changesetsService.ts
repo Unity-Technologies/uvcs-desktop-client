@@ -53,12 +53,12 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
       const at = cmPlace(place);
       try {
         await cm.query(['changeset', 'editcomment', at.spec(`cs:${changesetId}`), comment], at.options);
-        return { changeRequestsNotApplied: [] };
+        return {};
       } catch (error) {
         // Saved, and then `cm` fails naming the change requests no review had pending.
         const notApplied = error instanceof CmError ? changeRequestsNotApplied(error.command.output, comment) : null;
         if (!notApplied) throw error;
-        return { changeRequestsNotApplied: notApplied };
+        return { changeRequestsNotApplied: { requests: notApplied, logEntryId: (error as CmError).command.logEntryId } };
       }
     },
 

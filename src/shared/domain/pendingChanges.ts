@@ -108,9 +108,16 @@ export interface CheckinRequest {
  * recording, it undoes the checkouts whose content is the loaded revision's, so checking in only those releases them.
  */
 /**
- * What a checkin did. `changeRequestsNotApplied`: change requests its comment names (`[apply-change:…]`) that no review
- * had pending: `cm` made the changeset, then applied none of the named requests.
+ * Change requests a comment names (`[apply-change:…]`) that no review had pending: `cm` made the changeset, or saved
+ * the comment, then failed, applying none of the named requests. `logEntryId`: that failure's entry in the command
+ * log, which the window marks handled, as no failure to point at.
  */
-export type CheckinResult = { kind: 'created'; changesetId: number; branch: string; changeRequestsNotApplied?: string[] } | { kind: 'noChanges' };
+export interface ChangeRequestsNotApplied {
+  requests: string[];
+  logEntryId: number;
+}
+
+/** What a checkin did; `changeRequestsNotApplied` when its comment named requests no review had pending. */
+export type CheckinResult = { kind: 'created'; changesetId: number; branch: string; changeRequestsNotApplied?: ChangeRequestsNotApplied } | { kind: 'noChanges' };
 
 export type FilterRuleList = 'ignore' | 'cloaked' | 'hidden';

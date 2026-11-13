@@ -16,6 +16,7 @@ import { pickBranch } from '../branches/BranchPickerDialog';
 import { readStartOutcome, type BranchDiffBase } from './branchDiffUpTo';
 import { pickChangeset } from './ChangesetPickerDialog';
 import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 
 /** The diff of what a changeset changed. */
 export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
@@ -97,7 +98,8 @@ export async function editChangesetComment(place: Place, changeset: Pick<Changes
 export async function saveChangesetComment(place: Place, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
   const saved = await runAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), withChangeRequestsApplied(isAffectedByChangesetComment, comment));
   // Saved, but the change requests the comment names weren't applied: `cm` says so after saving it.
-  const notApplied = saved && changeRequestsNotAppliedText(saved.changeRequestsNotApplied);
+  if (saved?.changeRequestsNotApplied) useCommandLogStore.getState().markHandled(saved.changeRequestsNotApplied.logEntryId);
+  const notApplied = saved && changeRequestsNotAppliedText(saved.changeRequestsNotApplied?.requests ?? []);
   if (notApplied) toast.info('Comment saved', notApplied);
   return saved !== undefined;
 }

@@ -145,11 +145,11 @@ describe('a comment edit naming change requests', () => {
       changeset: cmFails('Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:\n  - deadbeef'),
     });
 
-    expect(await service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:deadbeef]')).toEqual({ changeRequestsNotApplied: ['deadbeef'] });
+    expect(await service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:deadbeef]')).toEqual({ changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: expect.any(Number) } });
   });
 
   it('applies them with nothing to say, and fails as before on any other error', async () => {
-    expect(await changesets({ changeset: '' }).service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:c0d1ce00]')).toEqual({ changeRequestsNotApplied: [] });
+    expect(await changesets({ changeset: '' }).service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:c0d1ce00]')).toEqual({});
     await expect(changesets({ changeset: cmFails('Error: The changeset cs:7 does not exist.') }).service.editComment(IN_WORKSPACE, 7, 'Fix')).rejects.toThrow('does not exist');
   });
 });

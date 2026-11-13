@@ -21,6 +21,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
 import { useSuccessMomentStore } from './successMoment';
@@ -100,7 +101,7 @@ describe('checkinChanges', () => {
   });
 
   it('says it checked in but applied no change request when one the comment names had none pending, quiet or not, and refreshes the reviews', async () => {
-    answerCheckins({ kind: 'created', changesetId: 44, branch: '/main', changeRequestsNotApplied: ['deadbeef'] });
+    answerCheckins({ kind: 'created', changesetId: 44, branch: '/main', changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: 7 } });
     answerSettings();
     const refreshed = watchRefreshes(ws);
 
@@ -110,6 +111,7 @@ describe('checkinChanges', () => {
       { kind: 'info', title: 'Checked in cs:44 on main', detail: 'No change request was applied: deadbeef is applied already, or no review has it open.', action: 'View' },
     ]);
     expect(refreshed()).toContain('codeReviews');
+    expect(useCommandLogStore.getState().handledIds.has(7)).toBe(true);
   });
 
   it('keeps the 15 latest comments, the newest first and each once', async () => {
