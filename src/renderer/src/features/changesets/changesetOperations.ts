@@ -5,7 +5,7 @@ import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { runRead, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
+import { isAffectedByChangesetComment, isAffectedByChangesetMove, withChangeRequestsApplied } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { askForComment } from '../../components/EditCommentDialog';
 import { branchLabel } from '../../lib/branchLabels';
@@ -94,7 +94,7 @@ export async function editChangesetComment(place: Place, changeset: Pick<Changes
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
 export function saveChangesetComment(place: Place, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), isAffectedByChangesetComment);
+  return runVoidAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), withChangeRequestsApplied(isAffectedByChangesetComment, comment));
 }
 
 export async function moveChangesetToBranch(place: Place, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {

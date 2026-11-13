@@ -7,7 +7,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
 import { saveSettings } from '../../app/settings/useSettings';
-import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving, withChangeRequestsApplied } from '../../app/refresh/refreshScopes';
 import { commentLineText } from '../../lib/comments/commentText';
 import { pluralize } from '../../lib/text';
 import { prompt } from '../../ui/dialog/prompt';
@@ -50,7 +50,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     workspacePath,
     run: async (operationId) =>
       expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths, comment, addsPrivate }, operationId), changes),
-    affects: isAffectedByCheckinOrUpdate,
+    affects: withChangeRequestsApplied(isAffectedByCheckinOrUpdate, comment),
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
       if (options.quiet) return null;

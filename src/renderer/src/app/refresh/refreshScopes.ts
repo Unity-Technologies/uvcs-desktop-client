@@ -1,3 +1,4 @@
+import { appliesChangeRequests } from '../../lib/comments/commentReferences';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import type { QueryFilter } from '@shared/domain/query';
@@ -155,6 +156,15 @@ export function isAffectedByLocks(key: QueryKey): boolean {
 
 /** What shows a changeset's comment: the changesets already read too, which only a comment edit changes. */
 const SHOWING_CHANGESET_COMMENTS = ['changesets', 'branchExplorer', 'history', 'annotate', 'workingObjectComment'];
+
+/**
+ * A check-in, or a changeset's comment edited, whose comment applies change requests (`[apply-change:c0d1ce00]`,
+ * `appliesChangeRequests`): `cm` marks them applied, so the code reviews are read again too (their Applied pills,
+ * their open counts, the change requests a check-in can apply). Any other comment: the scope as it is.
+ */
+export function withChangeRequestsApplied(scope: (key: QueryKey) => boolean, comment: string): (key: QueryKey) => boolean {
+  return appliesChangeRequests(comment) ? (key) => scope(key) || isAffectedByCodeReviews(key) : scope;
+}
 
 /** A changeset's comment was edited: only what shows it. */
 export function isAffectedByChangesetComment(key: QueryKey): boolean {

@@ -94,6 +94,14 @@ export function mayHoldReference(text: string): boolean {
 
 const ANY_APPLY_CHANGE = new RegExp(APPLY_CHANGE.source, 'i');
 
+/**
+ * Whether `cm checkin` or `cm changeset editcomment` would apply a change request from this comment: it reads
+ * `[apply-change:…]` anywhere in the text as written, code included (`APPLY_CHANGE`).
+ */
+export function appliesChangeRequests(comment: string): boolean {
+  return ANY_APPLY_CHANGE.test(comment);
+}
+
 const WHOLE_APPLY_CHANGE = new RegExp(`^${APPLY_CHANGE.source}$`, 'i');
 
 /**
