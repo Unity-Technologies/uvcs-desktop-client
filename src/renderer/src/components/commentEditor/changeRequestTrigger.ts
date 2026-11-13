@@ -5,8 +5,7 @@ import { lostFocus } from './typingAt';
 
 /**
  * Whether the field offers the change requests a check-in applies (docs/features/rich-comments.md, "Suggestions"):
- * only a comment `cm` reads them in, a check-in's or a changeset's, where the window knows the branch whose reviews
- * hold them. A compartment of its own, as the branch can change while the field shows.
+ * only a check-in's comment, where the window knows the branch whose reviews hold them (`ChangeRequestsContext`). A compartment of its own, as the branch can change while the field shows.
  */
 export const changeRequestsOffered = Facet.define<boolean, boolean>({ combine: (values) => values.some(Boolean) });
 

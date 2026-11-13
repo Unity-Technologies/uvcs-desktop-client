@@ -34,6 +34,8 @@
    hairlines, as GitHub Desktop draws its own; the text kept clear of it. */
 .description:has(.descriptionFooter) {
   position: relative;
+  /* The footer's row (its 18px buttons 3px off the bottom) and 5px above it: 18px more than its usual 8px (--space-2),
+     which the field's `DESCRIPTION_FOOTER_HEIGHT` (20px) more than covers, so the room to type stays. */
   padding-bottom: 26px;
 }
 

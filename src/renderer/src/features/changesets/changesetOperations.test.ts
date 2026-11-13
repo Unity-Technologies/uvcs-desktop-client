@@ -28,6 +28,7 @@ import { workspacePlace } from '@shared/domain/place';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 import {
   deleteChangeset,
   diffWithAnotherChangeset,
@@ -80,6 +81,7 @@ describe('changeset operations', () => {
 
     expect(await saveChangesetComment(inWs, changeset, 'Fix [apply-change:deadbeef]')).toBe(true);
     expect(shownToasts()).toEqual([{ kind: 'info', title: 'Comment saved', detail: 'No change request was applied: deadbeef is applied already, or no review has it open.' }]);
+    expect(useCommandLogStore.getState().handledIds.has(7)).toBe(true);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {
