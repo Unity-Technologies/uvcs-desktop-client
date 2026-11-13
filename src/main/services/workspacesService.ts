@@ -142,7 +142,7 @@ export function createWorkspacesService(
 
   /**
    * The first `cm partial configure` on a standard workspace makes it partial. A failure may come after it converted
-   * it, so the windows are told its kind changed either way.
+   * it, so the windows are told its kind changed either way, and the kind read before is forgotten.
    */
   function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal }) => {
@@ -155,7 +155,10 @@ export function createWorkspacesService(
       try {
         await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
       } finally {
-        if (converts) tellKindChanged(workspacePath);
+        if (converts) {
+          headers.forget(workspacePath);
+          tellKindChanged(workspacePath);
+        }
       }
     });
   }
