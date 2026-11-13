@@ -9,6 +9,7 @@ import { api } from '../../api/client';
 import { showInBranchExplorer } from '../../features/branchExplorer/branchExplorerStore';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { reviewConversationQuery } from '../../features/codeReviews/conversation/useReviewConversation';
+import { codeReviewQuery } from '../../features/codeReviews/useCodeReviews';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
@@ -145,8 +146,10 @@ async function showHere(place: Place, target: LinkTarget, link: RepositoryLink |
 
 async function readLookup(place: Place, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
   if (lookup.kind === 'reviewConversation') {
-    // The page's own read, kept for it (`reviewConversationQuery`); one that fails leaves the review's page to say why.
-    const conversation = await queryClient.fetchQuery(reviewConversationQuery(place, lookup.reviewId)).catch(() => null);
+    // The page's own reads, kept for it (`codeReviewQuery`, `reviewConversationQuery`). A review that isn't there lists
+    // no comments: its read fails, and the page says so, never also that the comment isn't there.
+    const reads = Promise.all([queryClient.fetchQuery(codeReviewQuery(place, lookup.reviewId)), queryClient.fetchQuery(reviewConversationQuery(place, lookup.reviewId))]);
+    const conversation = await reads.then(([, read]) => read).catch(() => null);
     return { conversation };
   }
   if (lookup.kind === 'label') {
