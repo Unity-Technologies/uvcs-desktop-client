@@ -358,6 +358,16 @@ describe('a standard workspace choosing what to download', () => {
     expect(kindChanges).toEqual([WORKSPACE]);
   });
 
+  it('reads its kind again afterwards, since the one read before is now wrong', async () => {
+    const { service, lines } = workspaces({ 'partial configure': '', ...WORKSPACE_NAMES });
+
+    const kindReads = () => lines().filter((line) => line.startsWith('getworkspacefrompath')).length;
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }], 'op-1');
+    await service.configurePartial(WORKSPACE, [{ path: 'Docs', load: true }], 'op-2');
+
+    expect(kindReads()).toBe(2);
+  });
+
   it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
     // `cm ls <folder>` lists the folder itself first, then the children the workspace has loaded, with the OS's separator.
     const { service, commands } = workspaces({
