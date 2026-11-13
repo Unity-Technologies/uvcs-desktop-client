@@ -64,6 +64,12 @@ describe('suggestionApplyOf', () => {
     expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('30', '45'))) })).toBe('Line 3 changed since the suggestion was written');
   });
 
+  it('says a suggestion of the line as it is changes nothing, wherever the workspace is', () => {
+    const unchanged: SuggestedChange = { ...CHANGE, lines: ['    int Timeout = 30;'] };
+    expect(reasonOf({}, unchanged)).toBe('The suggestion is line 3 as it is');
+    expect(reasonOf({ workspaceBranch: readValue('/main') }, unchanged)).toBe('The suggestion is line 3 as it is');
+  });
+
   it("says so, apart, when the version the suggestion was written on can't be read or isn't text", () => {
     expect(reasonOf({ commentedText: FAILED })).toBe("The code the suggestion was written on can't be read");
     expect(reasonOf({ commentedText: readValue(null) })).toBe("Settings.cs wasn't a text file when the suggestion was written");

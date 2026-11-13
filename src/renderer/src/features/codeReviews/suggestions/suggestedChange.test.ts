@@ -72,6 +72,13 @@ describe('suggestionBody', () => {
     expect(suggestionBody({ ...change, lines: [''] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '\n', rowCount: 2 });
   });
 
+  it('says the suggestion is the lines as they are when it changes nothing, rather than a diff of no change', () => {
+    expect(suggestionBody({ firstLine: 13, lastLine: 13, lines: ['old'] }, readValue(['old']))).toEqual({ kind: 'unchanged', note: 'The suggestion is line 13 as it is' });
+    expect(suggestionBody({ firstLine: 3, lastLine: 4, lines: ['a', 'b'] }, readValue(['a', 'b']))).toEqual({ kind: 'unchanged', note: 'The suggestion is lines 3–4 as they are' });
+    // Indentation counts: a line only reindented is a change.
+    expect(suggestionBody({ firstLine: 3, lastLine: 3, lines: [' old'] }, readValue(['old']))).toMatchObject({ kind: 'diff' });
+  });
+
   it("holds the rows' place while the replaced lines are read, so nothing moves as they arrive", () => {
     expect(suggestionBody(change, READING)).toEqual({ kind: 'reading', rowCount: 3 });
     expect(suggestionBody({ firstLine: 3, lastLine: 5, lines: ['x'] }, READING)).toEqual({ kind: 'reading', rowCount: 4 });
