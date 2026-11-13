@@ -38,8 +38,8 @@ export interface ServerProfile {
   workingMode: string;
 }
 
-/** A protocol a server may be written with (`ssl://host:8088`), which names the same server as `host:8088`. */
-const SERVER_PROTOCOL = /^(?:ssl|udt|tcp):\/\//i;
+/** A protocol a server may be written with (`ssl://host:8088`), which names the same server as `host:8088`; links leave it out. */
+export const SERVER_PROTOCOL = /^(?:ssl|udt|tcp):\/\//i;
 
 /**
  * One form for a server however it's written: by host and port without the protocol (`ssl://host:8088` → `host:8088`),
