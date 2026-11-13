@@ -49,8 +49,8 @@ export interface HeaderLocation {
  * What the thread is and where it stands, as a pill on the band's right, where the eye goes: its kind's icon
  * (`THREAD_KIND_ICONS`, its own tooltip naming the kind) says what it is, so every thread names its kind in one spot,
  * and its words say only where it stands: Open, Applied, Discarded, Answered. A plain comment on a line stands nowhere:
- * its pill says "Comment", in a tone of its own (`comment`) that no state takes. "Answered" leads to the reply,
- * "Applied" to how it was applied; the rest are words.
+ * its pill says "Comment", in a tone of its own (`comment`) that no state takes, the accent.
+ * "Answered" leads to the reply, "Applied" to how it was applied; the rest are words.
  */
 export type HeaderPill = {
   kind: ThreadKindName;

@@ -343,9 +343,12 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* A plain comment on a line: it stands nowhere, so in a color no state takes, the conversation's own. */
+/*
+ * A plain comment on a line: it stands nowhere, so in a color no state takes, the accent, its border as strong as the
+ * states' (60%, as Open's), so it never reads as Discarded's gray.
+ */
 .pill[data-tone='comment'] {
-  border-color: color-mix(in srgb, var(--accent-text) 50%, transparent);
+  border-color: color-mix(in srgb, var(--accent-text) 60%, transparent);
   color: var(--accent-text);
 }
 
