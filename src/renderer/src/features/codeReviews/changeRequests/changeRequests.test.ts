@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewConversation';
 import { codeReviewSummary } from '../../../testing/codeReviewSummary';
-import { changeRequestChip, changeRequestNamed, changeRequestsOf, MAX_REVIEWS_READ_FOR_REQUESTS, openChangeRequests, reviewsToRead } from './changeRequests';
+import { branchChangeRequestsOf, changeRequestChip, changeRequestNamed, changeRequestsBranch, changeRequestsOf, notYetNamed, reviewsToRead, stillOpen } from './changeRequests';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -42,10 +42,10 @@ describe('changeRequestsOf', () => {
 });
 
 describe('reviewsToRead', () => {
-  it('reads only the reviews with something open, the newest first, at most a few', () => {
+  it('reads every review with something open, the newest first', () => {
     const reviews = [5, 9, 7, 8, 6].map((id) => codeReviewSummary({ id, openIssueCount: id === 6 ? 0 : 1 }));
 
-    expect(reviewsToRead(reviews)).toEqual([9, 8, 7].slice(0, MAX_REVIEWS_READ_FOR_REQUESTS));
+    expect(reviewsToRead(reviews)).toEqual([9, 8, 7, 5]);
   });
 
   it('reads none for a branch with no review, or none with anything open', () => {
@@ -54,12 +54,18 @@ describe('reviewsToRead', () => {
   });
 });
 
-describe('openChangeRequests', () => {
-  it("keeps the open ones of every review read, the newest first", () => {
+describe('stillOpen', () => {
+  it('keeps the open ones of every review read, the newest first, those of one second by when they were written', () => {
+    const second = '2026-11-06T10:00:00+01:00';
+    const sameSecond = changeRequestsOf(45, conversationOf(comment(9, { date: second }), comment(8, { date: second })));
+    expect(stillOpen([sameSecond]).map(({ commentId }) => commentId)).toEqual([9, 8]);
+  });
+
+  it("keeps the open ones of every review read, the newest first, across reviews", () => {
     const first = changeRequestsOf(43, conversationOf(comment(1), comment(2, { appliedInChangeset: 7 })));
     const second = changeRequestsOf(44, conversationOf(comment(3), comment(4, { kind: 'discard', parentId: 3 }), comment(5)));
 
-    expect(openChangeRequests([first, second]).map(({ reviewId, commentId }) => [reviewId, commentId])).toEqual([
+    expect(stillOpen([first, second]).map(({ reviewId, commentId }) => [reviewId, commentId])).toEqual([
       [44, 5],
       [43, 1],
     ]);
@@ -110,5 +116,50 @@ describe('changeRequestChip', () => {
       title: 'Change request deadbeef',
       card: { title: 'Change request deadbeef', meta: [] },
     });
+  });
+});
+
+describe('branchChangeRequestsOf', () => {
+  const read = <T>(data: T) => ({ data, isPending: false, isError: false });
+  const reading = { data: undefined, isPending: true, isError: false };
+  const failed = { data: undefined, isPending: false, isError: true };
+  const reviews = read([codeReviewSummary({ id: 43, openIssueCount: 1 }), codeReviewSummary({ id: 44, openIssueCount: 1 })]);
+
+  it("offers every read review's open requests, reading while any is read", () => {
+    expect(branchChangeRequestsOf(reviews, [{ reviewId: 44, ...reading }, { reviewId: 43, ...read(conversationOf(comment(1))) }])).toMatchObject({ reading: true, failed: false, requests: [{ reviewId: 43, commentId: 1 }] });
+  });
+
+  it("keeps the other reviews' requests when one conversation couldn't be read, saying it failed", () => {
+    expect(branchChangeRequestsOf(reviews, [{ reviewId: 44, ...failed }, { reviewId: 43, ...read(conversationOf(comment(1))) }])).toMatchObject({ reading: false, failed: true, requests: [{ commentId: 1 }] });
+  });
+
+  it("is reading while the branch's reviews are, and failed when they couldn't be read", () => {
+    expect(branchChangeRequestsOf(reading, [])).toEqual({ requests: [], reading: true, failed: false });
+    expect(branchChangeRequestsOf(failed, [])).toEqual({ requests: [], reading: false, failed: true });
+  });
+});
+
+describe('changeRequestsBranch', () => {
+  it("offers a check-in on a branch that branch's change requests", () => {
+    expect(changeRequestsBranch({ kind: 'branch', name: '/main/task' }, 'checkin')).toBe('/main/task');
+  });
+
+  it('offers none to a shelve, which applies none, nor to a workspace on a changeset, a label or a shelve', () => {
+    expect(changeRequestsBranch({ kind: 'branch', name: '/main/task' }, 'shelve')).toBeUndefined();
+    expect(changeRequestsBranch({ kind: 'changeset', name: '12' }, 'checkin')).toBeUndefined();
+    expect(changeRequestsBranch(undefined, 'checkin')).toBeUndefined();
+  });
+});
+
+describe('notYetNamed', () => {
+  const requests = changeRequestsOf(43, conversationOf(comment(1), comment(2)));
+
+  it('leaves out the requests the comment already applies, so the count and the list follow it', () => {
+    expect(notYetNamed(requests, 'Shelve first [apply-change:c0d1ce01]').map((request) => request.commentId)).toEqual([2]);
+    expect(notYetNamed(requests, `[apply-change:${comment(2).guid}]`).map((request) => request.commentId)).toEqual([1]);
+  });
+
+  it('gives the same list back when the comment names none', () => {
+    expect(notYetNamed(requests, 'Shelve first')).toBe(requests);
   });
 });
