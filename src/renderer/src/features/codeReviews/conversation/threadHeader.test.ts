@@ -123,23 +123,26 @@ describe('threadHeaderOf', () => {
 
   describe("the first comment's menu", () => {
     it('carries it on a folded card, in the conversation and in the code, where the comment that has it is hidden', () => {
-      expect(headerOf(applied, { foldable: true, folded: true }).commentMenu).toBe(true);
-      expect(headerOf(discarded, { place: 'code', foldable: true, folded: true }).commentMenu).toBe(true);
+      expect(headerOf(applied, { foldable: true, folded: true }).commentMenu).toBe('menu');
+      expect(headerOf(discarded, { place: 'code', foldable: true, folded: true }).commentMenu).toBe('menu');
     });
 
     it('carries it on an open card folded by hand, as on any folded card', () => {
-      expect(headerOf(changeRequest, { foldable: true, folded: true })).toMatchObject({ foldToggle: { expanded: false, label: 'Show the thread' }, commentMenu: true });
+      expect(headerOf(changeRequest, { foldable: true, folded: true })).toMatchObject({ foldToggle: { expanded: false, label: 'Show the thread' }, commentMenu: 'menu' });
     });
 
-    it('leaves it to the comment once the card shows it whole, so there is never a second one', () => {
-      expect(headerOf(applied, { foldable: true }).commentMenu).toBe(false);
-      expect(headerOf(changeRequest).commentMenu).toBe(false);
-      expect(headerOf(answered, { place: 'code', foldable: true }).commentMenu).toBe(false);
+    it('keeps its room on a card shown whole, so the pill stays put as the card folds, the menu left to the comment', () => {
+      expect(headerOf(applied, { foldable: true }).commentMenu).toBe('space');
+      expect(headerOf(answered, { place: 'code', foldable: true }).commentMenu).toBe('space');
+    });
+
+    it('keeps no room on a card that never folds', () => {
+      expect(headerOf(changeRequest).commentMenu).toBeNull();
     });
 
     it("doesn't carry it on the Comments panel's cards, which go to the thread", () => {
-      expect(headerOf(answered, { place: 'panel', folded: true, showsAnswer: false }).commentMenu).toBe(false);
-      expect(headerOf(answered, { place: 'fileGroup', folded: true, showsAnswer: false }).commentMenu).toBe(false);
+      expect(headerOf(answered, { place: 'panel', folded: true, showsAnswer: false }).commentMenu).toBeNull();
+      expect(headerOf(answered, { place: 'fileGroup', folded: true, showsAnswer: false }).commentMenu).toBeNull();
     });
   });
 
