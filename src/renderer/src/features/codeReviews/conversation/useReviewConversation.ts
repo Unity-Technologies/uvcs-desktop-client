@@ -11,11 +11,12 @@ import { usePlace } from '../../../app/workspace/useWorkspace';
  */
 export function useReviewConversation(reviewId: number, reading: ConversationReading = {}) {
   const place = usePlace();
-  return useQuery({
-    queryKey: conversationKey(place, reviewId),
-    queryFn: () => api.reviewComments.conversation(place, reviewId),
-    ...reading,
-  });
+  return useQuery({ ...reviewConversationQuery(place, reviewId), ...reading });
+}
+
+/** The conversation's read, for what reads it before the page shows it (a link to a comment): the page then reads it no more. */
+export function reviewConversationQuery(place: Place, reviewId: number) {
+  return { queryKey: conversationKey(place, reviewId), queryFn: () => api.reviewComments.conversation(place, reviewId) };
 }
 
 /** How a view reads the conversation, when it isn't the page's own way. */

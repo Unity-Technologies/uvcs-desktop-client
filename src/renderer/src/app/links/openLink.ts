@@ -8,6 +8,7 @@ import { parseLink } from '@shared/links/parseLink';
 import { api } from '../../api/client';
 import { showInBranchExplorer } from '../../features/branchExplorer/branchExplorerStore';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
+import { reviewConversationQuery } from '../../features/codeReviews/conversation/useReviewConversation';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
@@ -135,7 +136,7 @@ async function openIn(place: Place, link: RepositoryLink | WorkspaceLink, showOn
 async function showHere(place: Place, target: LinkTarget, link: RepositoryLink | null): Promise<void> {
   const lookup = linkLookup(target);
   const looked = lookup && (await readLookup(place, lookup));
-  if (lookup && !looked) {
+  if (lookup && lookup.kind !== 'reviewConversation' && !looked) {
     const what = lookup.kind === 'label' ? `label ${lookup.name}` : `branch ${lookup.name}`;
     return showLinkFailure({ kind: 'notFound', what, repository: link?.repository ?? 'this repository' });
   }
@@ -143,6 +144,11 @@ async function showHere(place: Place, target: LinkTarget, link: RepositoryLink |
 }
 
 async function readLookup(place: Place, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
+  if (lookup.kind === 'reviewConversation') {
+    // The page's own read, kept for it (`reviewConversationQuery`); one that fails leaves the review's page to say why.
+    const conversation = await queryClient.fetchQuery(reviewConversationQuery(place, lookup.reviewId)).catch(() => null);
+    return { conversation };
+  }
   if (lookup.kind === 'label') {
     const label = await api.labels.get(place, lookup.name);
     return label && { changesetId: label.changeset };
@@ -153,7 +159,11 @@ async function readLookup(place: Place, lookup: NonNullable<ReturnType<typeof li
 
 /** Goes where the link leads in the place; a view the place doesn't show (a repository's Files) opens its first one. */
 function navigate(place: Place, where: LinkNavigation): void {
-  if (where.kind === 'page') return navigation.openPage(where.page);
+  if (where.kind === 'page') {
+    navigation.openPage(where.page);
+    if (where.notice) toast.info(where.notice.title, where.notice.description);
+    return;
+  }
   const { show } = where;
   if (show?.kind === 'branchExplorer') return showInBranchExplorer(show.target);
   if (!showsView(place, where.view)) return navigation.goToView(firstViewOf(place));
