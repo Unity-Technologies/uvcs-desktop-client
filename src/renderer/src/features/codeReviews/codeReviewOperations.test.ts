@@ -7,7 +7,7 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./ReviewersDialog', () => ({ pickReviewers: vi.fn() }));
 
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReviewSummary, ReviewSubscription } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
@@ -15,7 +15,8 @@ import { queryClient } from '../../app/queryClient';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { chooseReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus } from './codeReviewOperations';
+import { chooseReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus, setReviewSubscription } from './codeReviewOperations';
+import { reviewSubscriptionKey } from './useReviewSubscription';
 import { pickReviewers } from './ReviewersDialog';
 
 const user = (name: string): MemberRef => ({ name, kind: 'user' });
@@ -277,5 +278,46 @@ describe('code reviews of a repository explored without a workspace', () => {
 
     expect(fakeApi.argsOf('codeReviews.remove')).toEqual([[repository, [1]]]);
     expect(refreshed()).toEqual(['codeReviews']);
+  });
+});
+
+describe("changing the user's email subscription", () => {
+  const shownAs = (reviewId: number, subscription: ReviewSubscription) => queryClient.setQueryData(reviewSubscriptionKey(inWs, reviewId), subscription);
+  const shown = (reviewId: number) => queryClient.getQueryState<ReviewSubscription>(reviewSubscriptionKey(inWs, reviewId));
+
+  it("unsubscribes, shows it at once and reads that review's subscription again, nothing else", async () => {
+    shownAs(31, { subscribed: true, reason: 'reviewer', emailsEnabled: true });
+    shownAs(32, { subscribed: true, reason: 'owner', emailsEnabled: true });
+    const refreshed = watchRefreshes(ws);
+    fakeApi.answer('codeReviews.unsubscribe', () => undefined);
+
+    await setReviewSubscription(inWs, 31, false);
+
+    expect(fakeApi.argsOf('codeReviews.unsubscribe')).toEqual([[inWs, 31]]);
+    expect(shown(31)).toMatchObject({ data: { subscribed: false, reason: 'unsubscribed', emailsEnabled: true }, isInvalidated: true });
+    expect(shown(32)?.isInvalidated).toBe(false);
+    expect(refreshed()).toEqual([]);
+  });
+
+  it('subscribes, as if by hand until read again', async () => {
+    shownAs(31, { subscribed: false, reason: 'unsubscribed', emailsEnabled: true });
+    fakeApi.answer('codeReviews.subscribe', () => undefined);
+
+    await setReviewSubscription(inWs, 31, true);
+
+    expect(fakeApi.argsOf('codeReviews.subscribe')).toEqual([[inWs, 31]]);
+    expect(shown(31)?.data).toEqual({ subscribed: true, reason: 'manual', emailsEnabled: true });
+  });
+
+  it('tells it failed, and shows the subscription as it was', async () => {
+    shownAs(31, { subscribed: true, reason: 'reviewer', emailsEnabled: true });
+    fakeApi.answer('codeReviews.unsubscribe', () => {
+      throw new Error('Access denied');
+    });
+
+    await setReviewSubscription(inWs, 31, false);
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't unsubscribe you from the review", detail: 'Access denied' }]);
+    expect(shown(31)?.data).toEqual({ subscribed: true, reason: 'reviewer', emailsEnabled: true });
   });
 });

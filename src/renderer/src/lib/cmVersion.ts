@@ -3,7 +3,7 @@ export type CmVersionNumbers = readonly [number, number, number, number];
 
 /**
  * Whether this `cm` (its version as `cm version` prints it) is `first` or later: what offers a command only from the
- * version that has it (`editsBranchComments`). A version it can't read answers no, so a
+ * version that has it (`editsBranchComments`, `readsReviewSubscriptions`). A version it can't read answers no, so a
  * command an older `cm` would take for something else is never sent where it can't be told apart.
  */
 export function isCmVersionAtLeast(cmVersion: string | undefined, first: CmVersionNumbers): boolean {

@@ -1,6 +1,6 @@
 import { serverOfRepository } from '@shared/domain/permissions';
 import type { Place } from '@shared/domain/place';
-import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewStatus, CodeReviewSummary, ReviewSubscription } from '@shared/domain/codeReview';
 import type { MemberRef } from '@shared/domain/member';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
@@ -10,12 +10,14 @@ import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
+import { isAffectedByCodeReviews, isAffectedByReviewSubscription } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
 import { pickReviewers } from './ReviewersDialog';
 import type { ReviewerChanges } from './reviewerPick';
 import { changesOwnStatus, isReviewer } from './reviewers';
+import { subscriptionAfter } from './reviewSubscription';
+import { reviewSubscriptionKey } from './useReviewSubscription';
 
 /** How the user's own status is set: who they are when already known, what they say, whether they agreed to join. */
 export interface OwnStatusOptions {
@@ -102,6 +104,24 @@ export async function removeReviewer(place: Place, review: Pick<CodeReviewSummar
 /** Asks a reviewer, a user or a group, to review it again: their status goes back to "Under review". */
 export async function reRequestReview(place: Place, review: Pick<CodeReviewSummary, 'id'>, reviewer: MemberRef): Promise<void> {
   await runAction(place, "Couldn't ask for a review again", () => api.codeReviews.reRequestReview(place, review.id, [reviewer]), isAffectedByCodeReviews);
+}
+
+/**
+ * Subscribes the user to the review's emails (`subscribes`) or unsubscribes them. Only that review's subscription is
+ * read again (`isAffectedByReviewSubscription`); until it answers, it shows as the server records the change
+ * (`subscriptionAfter`), so the button doesn't flip back for a moment.
+ */
+export async function setReviewSubscription(place: Place, reviewId: number, subscribes: boolean): Promise<void> {
+  await runAction(
+    place,
+    subscribes ? "Couldn't subscribe you to the review" : "Couldn't unsubscribe you from the review",
+    async () => {
+      await (subscribes ? api.codeReviews.subscribe(place, reviewId) : api.codeReviews.unsubscribe(place, reviewId));
+      // Before the refresh `runAction` makes, which marks it to be read again after this.
+      queryClient.setQueryData<ReviewSubscription>(reviewSubscriptionKey(place, reviewId), (shown) => shown && subscriptionAfter(shown, subscribes));
+    },
+    isAffectedByReviewSubscription(reviewId),
+  );
 }
 
 /** Gives the review a new title; resolves to whether it did. */

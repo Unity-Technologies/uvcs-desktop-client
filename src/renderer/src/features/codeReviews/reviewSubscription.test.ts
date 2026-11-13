@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewSubscription, ReviewSubscriptionReason } from '@shared/domain/codeReview';
-import { readsReviewSubscriptions, subscriptionSection } from './reviewSubscription';
+import { readsReviewSubscriptions, subscriptionAfter, subscriptionSection } from './reviewSubscription';
 
 const subscribed = (reason: ReviewSubscriptionReason): ReviewSubscription => ({ subscribed: true, reason, emailsEnabled: true });
 const notSubscribed = (reason: ReviewSubscriptionReason): ReviewSubscription => ({ subscribed: false, reason, emailsEnabled: true });
@@ -59,5 +59,15 @@ describe('subscriptionSection', () => {
 
   it('shows nothing while the subscription is being read, or when it could not be', () => {
     expect(subscriptionSection(undefined)).toBeUndefined();
+  });
+});
+
+describe('subscriptionAfter', () => {
+  it('reads as subscribed by hand once the user subscribes', () => {
+    expect(subscriptionAfter(notSubscribed('unsubscribed'), true)).toEqual({ subscribed: true, reason: 'manual', emailsEnabled: true });
+  });
+
+  it('reads as unsubscribed once the user unsubscribes, whatever subscribed them', () => {
+    expect(subscriptionAfter(subscribed('reviewer'), false)).toEqual({ subscribed: false, reason: 'unsubscribed', emailsEnabled: true });
   });
 });

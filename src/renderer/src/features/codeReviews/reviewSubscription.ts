@@ -54,3 +54,12 @@ export function subscriptionSection(subscription: ReviewSubscription | undefined
     buttonTip: "Get this review's emails",
   };
 }
+
+/**
+ * The subscription once the user subscribed (`subscribes`) or unsubscribed, as the server records it (subscribed by
+ * hand, or unsubscribed): what Notifications shows from when the write succeeds until the read it causes answers, so
+ * the button doesn't go back to what it said for that moment.
+ */
+export function subscriptionAfter(subscription: ReviewSubscription, subscribes: boolean): ReviewSubscription {
+  return { ...subscription, subscribed: subscribes, reason: subscribes ? 'manual' : 'unsubscribed' };
+}
