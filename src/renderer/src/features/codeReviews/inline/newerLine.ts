@@ -26,6 +26,25 @@ export function newerRangeOf(earlier: string, newer: string, range: { firstLine:
   return { firstLine: first, lastLine: first + (range.lastLine - range.firstLine) };
 }
 
+/**
+ * `newerRangeOf` with the block's neighbors: the line before it and the line after it (where the earlier version has
+ * them) must be there unchanged, right before and after it, too. A line diff pairs lines that read alike, and a short
+ * one (a lone `}`, `{`, a blank line, `#endregion`) is alike to many: alone, it can be paired with another such line
+ * once code moved around it. Its neighbors pin it.
+ */
+export function newerRangeInContextOf(earlier: string, newer: string, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
+  const before = range.firstLine > 1 ? 1 : 0;
+  const after = range.lastLine < lineCountOf(earlier) ? 1 : 0;
+  const found = newerRangeOf(earlier, newer, { firstLine: range.firstLine - before, lastLine: range.lastLine + after });
+  return found && { firstLine: found.firstLine + before, lastLine: found.lastLine - after };
+}
+
+/** How many lines a text has, a final line end ending its last line rather than starting another. */
+function lineCountOf(text: string): number {
+  const lines = text.split(/\r\n|\n|\r/);
+  return lines.at(-1) === '' ? lines.length - 1 : lines.length;
+}
+
 /** An earlier version's line diff against the newer one: its hunks, and how many lines the earlier version has. */
 export interface VersionDiff {
   hunks: readonly Pick<Hunk, 'deletionStart' | 'additionStart' | 'hunkContent'>[];
