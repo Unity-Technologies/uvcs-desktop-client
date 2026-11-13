@@ -236,7 +236,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 A comment is linked to by the review's link and its id (`…/code-reviews/311/-/comments/5702`, docs/features/deep-links.md):
 `{id}`, short and the server's own, never its GUID. Its menu's Copy ▸ Link copies it (`reviewCommentCopyTexts`),
 wherever the comment shows: a card in the conversation, a thread in the code, a reply in either. The description has no
-menu and no link of its own: the review's link opens on it, at the top of the conversation.
+menu and no link of its own: it is what the review's link opens on, the conversation's first card.
 
 A link opens the review where the comment is, decided from the conversation as read (`commentLinkPage`), which the link
 reads first and the page then finds read (`reviewConversationQuery`): no command of its own.
@@ -247,7 +247,7 @@ reads first and the page then finds read (`reviewConversationQuery`): no command
 - A comment on the whole review opens the conversation at its thread, centered, unfolded, lit and ringed, as "Show in
   conversation" does. A reply opens it at the reply (`focusReply`, `pickOnFocus`'s `replyId`): the reply brought into
   view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded.
-- The description's id opens the review on its conversation.
+- The description's id opens the review as the review's link does, without saying it's not found.
 - A comment the review no longer has (deleted, or never on it) opens the review on its conversation, and a toast says
   "Comment not found" (`LinkNotice`). A conversation that can't be read leaves the review's page to say why.
 

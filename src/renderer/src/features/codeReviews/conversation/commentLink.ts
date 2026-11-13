@@ -17,8 +17,8 @@ export interface CommentLinkOpening {
  * Where a link to a comment (`…/code-reviews/41/-/comments/7`) opens the review, from its conversation as read
  * (docs/features/code-reviews.md "Links to comments"): a thread on a line in Changes, at the thread, in the mode it was
  * written in, as its file's link in the conversation goes (`commentLocationPage`), a reply there too, its thread shown
- * whole; a thread on the whole review in the conversation, at the thread, at the reply for one; the description on the
- * conversation, at its top. A comment the review no longer has opens the review on its conversation.
+ * whole; a thread on the whole review in the conversation, at the thread, at the reply for one; the description as
+ * the review's own link opens it. A comment the review no longer has opens the review on its conversation.
  */
 export function commentLinkPage(reviewId: number, commentId: number, conversation: ReviewConversation): CommentLinkOpening {
   const review: PageOf<'codeReview'> = { kind: 'codeReview', reviewId };

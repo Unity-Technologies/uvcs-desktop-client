@@ -49,7 +49,7 @@ describe('commentLinkPage', () => {
     expect(commentLinkPage(41, 8, conversation(comment(8, { parentId: 5 })))).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 8 }, found: true });
   });
 
-  it('opens the description on the conversation, at its top', () => {
+  it("opens the review for its description, as the review's own link does", () => {
     expect(commentLinkPage(41, 3, conversation(comment(7)))).toEqual({ page: { kind: 'codeReview', reviewId: 41 }, found: true });
   });
 
