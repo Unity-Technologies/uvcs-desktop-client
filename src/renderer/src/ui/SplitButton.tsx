@@ -29,7 +29,19 @@ interface SplitButtonProps {
 export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, disabled, mainDisabled, tip, tipSub, shortcut }: SplitButtonProps) {
   return (
     <div className={styles.split}>
-      <Button variant={variant} size={size} className={styles.main} icon={icon} loading={loading} disabled={disabled || mainDisabled} data-tip={tip} data-tip-sub={tipSub} data-tip-shortcut={shortcut} onClick={onClick}>
+      {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why it can't be used. */}
+      <Button
+        variant={variant}
+        size={size}
+        className={styles.main}
+        icon={icon}
+        loading={loading}
+        aria-disabled={disabled || mainDisabled || undefined}
+        data-tip={tip}
+        data-tip-sub={tipSub}
+        data-tip-shortcut={shortcut}
+        onClick={() => !(disabled || mainDisabled) && onClick()}
+      >
         {children}
       </Button>
       <ActionDropdownMenu entries={menu}>
