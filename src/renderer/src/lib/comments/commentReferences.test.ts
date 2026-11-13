@@ -118,11 +118,15 @@ describe('findReferences', () => {
 });
 
 describe('a change request to apply, as cm reads it in a check-in comment', () => {
-  it('reads [apply-change:…] by the first eight hex digits of its guid, or the whole guid, in any case, lower-cased', () => {
-    expect(findReferences('Shelve first [apply-change:C0D1CE00] and [apply-change:8123d65a-620d-49ee-bf51-f526741a3341]')).toEqual([
-      { reference: { kind: 'changeRequest', guid: 'c0d1ce00' }, source: '[apply-change:C0D1CE00]', from: 13, to: 36 },
-      { reference: { kind: 'changeRequest', guid: '8123d65a-620d-49ee-bf51-f526741a3341' }, source: '[apply-change:8123d65a-620d-49ee-bf51-f526741a3341]', from: 41, to: 92 },
+  it('reads [apply-change:…] by the first eight hex digits of its guid, lower case, or the whole guid in any case', () => {
+    expect(findReferences('Shelve first [APPLY-CHANGE:c0d1ce00] and [apply-change:8123D65A-620D-49EE-BF51-F526741A3341]')).toEqual([
+      { reference: { kind: 'changeRequest', guid: 'c0d1ce00' }, source: '[APPLY-CHANGE:c0d1ce00]', from: 13, to: 36 },
+      { reference: { kind: 'changeRequest', guid: '8123d65a-620d-49ee-bf51-f526741a3341' }, source: '[apply-change:8123D65A-620D-49EE-BF51-F526741A3341]', from: 41, to: 92 },
     ]);
+  });
+
+  it('reads no short form in capitals: cm matches it as written against the lower-case guid, and applies nothing', () => {
+    expect(referencesIn('[apply-change:C0D1CE00]')).toEqual([]);
   });
 
   it('reads one anywhere, inside a word or a sentence too, as cm does', () => {
