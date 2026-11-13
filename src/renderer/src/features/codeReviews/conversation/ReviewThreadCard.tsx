@@ -70,8 +70,8 @@ type Answering = 'reply' | 'discard' | null;
 type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
 
 /**
- * A comment and its replies as one card. A change request or a question has a header band: its kind's icon, its file
- * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
+ * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
+ * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. A settled one starts folded to that line and
  * its first words (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
@@ -150,8 +150,8 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
 }
 
 /**
- * A thread under its file's name in the Comments panel (`CommentsFileGroup`): its kind's icon leading it, as a list's
- * bullet; who started it, the line it was written on and its replies, then where it stands; its first words under them,
+ * A thread under its file's name in the Comments panel (`CommentsFileGroup`): who started it, the line it was written
+ * on and its replies, then what it is and where it stands, as the conversation's pill; its first words under them,
  * the row's whole width. As a card, anywhere on it goes to the thread, and its words are the way there by keyboard.
  */
 export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerpt }: Omit<ThreadSummaryCardProps, 'reviewId'>) {
@@ -159,7 +159,6 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
   const author = excerpt?.author ?? thread.root.author;
   return (
     <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
-      {header.kindIcon && <ThreadKindIcon root={thread.root} />}
       <span className={styles.rowAbout}>
         <Avatar user={author} size={16} tip={null} />
         <span className={styles.author}>
@@ -228,7 +227,6 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <ChevronRight size={14} aria-hidden />
           </button>
         )}
-        {header.kindIcon && <ThreadKindIcon root={root} />}
         {location && anchor && (location.linked ? (
           <>
             {/* The file, a link to it in Changes, opened at the comment. */}
@@ -245,12 +243,6 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <WrittenLine line={location.line} />
           </span>
         ))}
-        {header.kindLabel && (
-          // Cut short in a narrow card, it says its whole name in its tooltip.
-          <span className={styles.kindLabel} data-tip={header.kindLabel} data-tip-overflow="">
-            {header.kindLabel}
-          </span>
-        )}
         {earlierTag &&
           (earlierTag.opensContext ? (
             <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>
@@ -278,39 +270,53 @@ interface StatePillProps {
 }
 
 /**
- * Where a thread stands, as an outlined pill. "Applied" is one link as a whole, showing how the change
+ * What a thread is and where it stands, as an outlined pill led by its kind's icon (`HeaderPill`). "Applied" is one link as a whole, showing how the change
  * request was applied, in context (`onSeeApplied`), else opening the changeset that applied it: a chip inside the pill
  * would be a frame in a frame. "Answered" is one too, to the reply that answered (`onSeeAnswer`).
  */
 function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
+  const words = <PillWords pill={pill} />;
   switch (pill.leadsTo) {
     case 'answer':
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeAnswer}>
-          {pill.label}
+          {words}
         </button>
       );
     case 'applied': {
       const { changesetId } = pill;
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied ?? (() => openChangesetDiff({ id: changesetId }))}>
-          {pill.label}
+          {words}
         </button>
       );
     }
     case 'context':
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied}>
-          {pill.label}
+          {words}
         </button>
       );
     case 'nothing':
       return (
         <span className={styles.pill} data-tone={pill.tone} data-tip={pill.tip}>
-          {pill.label}
+          {words}
         </span>
       );
   }
+}
+
+/**
+ * The pill's inside: the thread's kind as its icon, whose own tooltip names it (`ThreadKindIcon`) where the pill's says
+ * where it stands, then that state's word ("Comment" for a plain comment, which stands nowhere).
+ */
+function PillWords({ pill }: { pill: HeaderPill }) {
+  return (
+    <>
+      <ThreadKindIcon kind={pill.kind} size={12} />
+      {pill.label}
+    </>
+  );
 }
 
 /** Apart from the file, as text: the line it was written on, which an outdated comment's no longer is. */
