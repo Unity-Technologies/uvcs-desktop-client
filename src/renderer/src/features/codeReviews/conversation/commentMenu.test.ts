@@ -32,4 +32,28 @@ describe('commentMenu', () => {
     expect(ids(commentMenu(thread!.root, thread!, 'bob', inCode))).toEqual(['showInConversation', 'separator', 'copy']);
     expect(ids(commentMenu(thread!.replies[0]!, thread!, 'bob', inCode))).toEqual(['copy', 'separator', 'editComment', 'separator', 'delete']);
   });
+
+  it('marks an open change request applied, and an applied one not applied, first among what it does', () => {
+    const [open, applied] = threadsOf([comment(1, { kind: 'changeRequest' }), comment(2, { kind: 'changeRequest', appliedInChangeset: 4 })]);
+    const marking = { ...noop, markChangeRequest: () => {} };
+
+    expect(ids(commentMenu(open!.root, open!, 'bob', marking))).toEqual(['markApplied', 'separator', 'copy']);
+    expect(ids(commentMenu(applied!.root, applied!, 'bob', marking))).toEqual(['markNotApplied', 'separator', 'copy']);
+  });
+
+  it('runs the mark the entry names', () => {
+    const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
+    const marked: string[] = [];
+    const [entry] = commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: (mark) => marked.push(mark) });
+
+    (entry as { run: () => void }).run();
+
+    expect(marked).toEqual(['applied']);
+  });
+
+  it('offers no mark where nothing can mark it', () => {
+    const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
+
+    expect(ids(commentMenu(open!.root, open!, 'bob', noop))).toEqual(['copy']);
+  });
 });

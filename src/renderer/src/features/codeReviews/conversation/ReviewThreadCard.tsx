@@ -26,7 +26,7 @@ import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewThreadCardProps {
-  review: Pick<CodeReview, 'id' | 'owner'>;
+  review: Pick<CodeReview, 'id' | 'owner' | 'target'>;
   thread: ReviewThread;
   user: string | undefined;
   /** Shown in the code, under its line or above the code: what it says and offers there (`ThreadInCode`). */
@@ -354,7 +354,7 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
 interface WholeThreadProps {
-  review: Pick<CodeReview, 'id' | 'owner'>;
+  review: Pick<CodeReview, 'id' | 'owner' | 'target'>;
   thread: ReviewThread;
   user: string | undefined;
   threadActions?: ThreadActions;

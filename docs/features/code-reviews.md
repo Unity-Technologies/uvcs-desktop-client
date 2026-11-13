@@ -261,6 +261,16 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
   link to copy (Copy ▸ Comment, Link; see "Links to comments").
+- **Marked applied by hand** (`changeRequestMarkOf`, `markChangeRequest`): a change request's menu, in the conversation
+  and in the code, marks an open one **Mark as applied…** and an applied one **Mark as not applied**, for anyone
+  signed in, its author too (anyone may check in its fix). Not a discarded one, nor a reply. `cm` takes a changeset to
+  mark it applied in (`cm codereview comment apply <guid> --changeset=cs:N`), so the changeset picker asks which
+  (`pickChangeset`'s `among`): a branch's review lists its branch's changesets, newest first, the newest ready for
+  Enter (`changesetsToApplyIn`, the read its Changes tab lists them by, so no new command); any other review the
+  repository's newest. Any other changeset of the repository is typed by its number, as `cm` takes any. Mark as not
+  applied runs at once (`cm codereview comment unapply <guid>`), unasked: marking it again is as easy. Each is one
+  quick write (`query()`) refreshing the reviews only (`isAffectedByCodeReviews`), the pill and the open count with
+  them. Both rely on the version reviews need, ungated (see the top of this doc).
 
 ## Links to comments
 
