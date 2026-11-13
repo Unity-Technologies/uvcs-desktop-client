@@ -218,8 +218,9 @@ export const SHORTCUTS = {
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
   paletteEnds: { area: 'Command palette', label: 'First or last result', keys: ['mod+up', 'mod+down', 'ctrl+home', 'ctrl+end'], keysOffMac: ['ctrl+home', 'ctrl+end'] },
-  // Not mod+left/right, which move the caret in the search; Back's mod+[ is the palette's while it's open.
-  paletteScope: { area: 'Command palette', label: 'Previous or next scope', keys: ['mod+[', 'mod+]'] },
+  // A browser's previous and next tab, by arrows any keyboard layout has. Not ⌘ or ⌥ alone (the caret, in the search),
+  // nor ⌃ (macOS switches desktops), nor Ctrl+Alt off Mac (AltGr); Alt+← is Back there, the palette's while it's open.
+  paletteScope: { area: 'Command palette', label: 'Previous or next scope', keys: ['mod+alt+left', 'mod+alt+right'], keysOffMac: ['alt+left', 'alt+right'] },
 
   imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['plus', '='] },
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },
