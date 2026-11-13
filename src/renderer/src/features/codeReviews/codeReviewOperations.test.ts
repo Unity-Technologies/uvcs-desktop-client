@@ -321,3 +321,34 @@ describe("changing the user's email subscription", () => {
     expect(shown(31)?.data).toEqual({ subscribed: true, reason: 'reviewer', emailsEnabled: true });
   });
 });
+
+describe("what a review write reads again of the user's email subscription", () => {
+  // The server subscribes a user added as a reviewer, as giving a status does: it may have unsubscribed them.
+  const subscriptionReadAgainAfter = async (write: () => Promise<unknown>) => {
+    queryClient.setQueryData(reviewSubscriptionKey(inWs, 31), { subscribed: false, reason: 'unsubscribed', emailsEnabled: true });
+    await write();
+    return queryClient.getQueryState(reviewSubscriptionKey(inWs, 31))?.isInvalidated;
+  };
+
+  it('reads it again after reviewers are added or the user gives their status', async () => {
+    workspaceOn('local');
+    fakeApi.answer('accounts.list', () => []);
+    fakeApi.answer('system.currentUser', () => 'ana');
+    fakeApi.answer('codeReviews.addReviewers', () => undefined);
+    fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
+
+    expect(await subscriptionReadAgainAfter(() => changeReviewers(inWs, review('ana'), { add: [group('Developers')], remove: [] }))).toBe(true);
+    expect(await subscriptionReadAgainAfter(() => setOwnReviewStatus(inWs, review('ana'), 'Reviewed'))).toBe(true);
+  });
+
+  it('leaves it after a rename, a reviewer removed or asked again, and reviewers only removed', async () => {
+    fakeApi.answer('codeReviews.rename', () => undefined);
+    fakeApi.answer('codeReviews.removeReviewers', () => undefined);
+    fakeApi.answer('codeReviews.reRequestReview', () => undefined);
+
+    expect(await subscriptionReadAgainAfter(() => renameReview(inWs, 31, 'Jump'))).toBe(false);
+    expect(await subscriptionReadAgainAfter(() => removeReviewer(inWs, review('ana'), user('ana')))).toBe(false);
+    expect(await subscriptionReadAgainAfter(() => reRequestReview(inWs, review('ana'), user('ana')))).toBe(false);
+    expect(await subscriptionReadAgainAfter(() => changeReviewers(inWs, review('ana'), { add: [], remove: [user('ana')] }))).toBe(false);
+  });
+});

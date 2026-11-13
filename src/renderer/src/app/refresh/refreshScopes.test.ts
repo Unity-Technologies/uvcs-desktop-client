@@ -8,6 +8,7 @@ import {
   isAffectedByBranchList,
   isAffectedByChangesetComment,
   isAffectedByChangesetMove,
+  isAffectedByCodeReviews,
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
@@ -15,14 +16,14 @@ import {
   isAffectedByPendingChangeEdit,
   isAffectedByPermissions,
   isAffectedByRecordedMove,
-  isAffectedByReviewSubscription,
-  isAffectedByCodeReviews,
   isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
   isAffectedByShelveComment,
   isAffectedByShelving,
   isAffectedByShelvingAway,
+  isAffectedByTakingPartInReview,
+  isAffectedByReviewSubscription,
   isAffectedByWorkspaceState,
   isShownByCodeReviewPage,
 } from './refreshScopes';
@@ -261,9 +262,17 @@ describe("a review's email subscription", () => {
     expect(subscription(key('codeReviews', 'list', {}))).toBe(false);
   });
 
-  // Taking part (a comment, being added as a reviewer) subscribes the user again.
-  it('is read again by any write on a review', () => {
-    expect(isAffectedByCodeReviews(key('codeReviews', 'subscription', 7))).toBe(true);
+  // Only taking part (a comment, a reply, a reviewer added, the user's own status) can subscribe the user again.
+  it('is read again by a write that makes the user take part, with the rest of the reviews', () => {
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'conversation', 7))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'list', {}))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('branches', {}))).toBe(false);
+  });
+
+  it('is not read again by any other write on a review: a rename, a delete, an edit', () => {
+    expect(isAffectedByCodeReviews(key('codeReviews', 'subscription', 7))).toBe(false);
+    expect(isAffectedByCodeReviews(key('codeReviews', 'conversation', 7))).toBe(true);
   });
 });
 
