@@ -28,13 +28,14 @@ describe('buttons that create something', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('are found whether their icon is missing or only a plus', () => {
+  it('are found whether their icon is missing, only a plus or without one', () => {
     const source = [
       '<Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={() => open()}>\n  New branch\n</Button>',
       '<Button variant="primary" icon={<Plus size={14} />} onClick={() => open()}>\n  New label\n</Button>',
       '<Button onClick={() => open()}>New attribute</Button>',
+      '<Button icon={<MessageSquare size={14} />}>New code review</Button>',
       '<Button icon={<Plus size={14} />}>Add rule</Button>',
     ].join('\n');
-    expect(newButtonsWithoutTheirIcon(source)).toEqual(['New label', 'New attribute']);
+    expect(newButtonsWithoutTheirIcon(source)).toEqual(['New label', 'New attribute', 'New code review']);
   });
 });
