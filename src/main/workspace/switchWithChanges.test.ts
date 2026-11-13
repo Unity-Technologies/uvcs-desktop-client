@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
-import { downloadWholeBranch, switchWithChanges, type SwitchDependencies, type WholeBranchChangesAction } from './switchWithChanges';
+import { downloadWholeBranch, switchWithChanges, type SwitchDependencies } from './switchWithChanges';
 import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 

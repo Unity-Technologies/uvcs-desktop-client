@@ -1,6 +1,6 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceKind } from '@shared/domain/workspace';
-import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
@@ -61,9 +61,6 @@ export async function switchWithChanges(
   const result = await switchFrom(deps, workspacePath, { ...workspace, kind, switchesAs: kind }, snapshot, targetSpec, action, context);
   return { ...result, renamedPrivates: await privatesRenamedBySwitch(deps.cm, workspacePath, snapshot) };
 }
-
-/** What a partial workspace can do with its pending changes as it downloads its whole branch: they stay on it. */
-export type WholeBranchChangesAction = Exclude<SwitchChangesAction, 'leave'>;
 
 /**
  * Makes a partial workspace standard by downloading everything its branch holds. `cm` has no command to convert a

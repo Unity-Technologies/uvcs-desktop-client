@@ -7,6 +7,12 @@ export type PendingChangesAction = 'leave' | 'bring';
  */
 export type SwitchChangesAction = PendingChangesAction | 'discard';
 
+/**
+ * What a partial workspace does with its pending changes as it downloads its whole branch: they stay on that branch,
+ * so they come along or are undone, never left behind on a shelve.
+ */
+export type WholeBranchChangesAction = Exclude<SwitchChangesAction, 'leave'>;
+
 /** The setting: ask every time, or always do the same. */
 export type PendingChangesOnSwitch = 'ask' | PendingChangesAction;
 
