@@ -18,6 +18,8 @@ export interface SuggestionQuery {
   to: number;
   /** What was typed after the trigger, up to the caret. */
   text: string;
+  /** What a pick writes before the reference: a space, where the change requests button opened the list after a word. */
+  prefix?: string;
 }
 
 /**
@@ -105,10 +107,11 @@ export function isDismissed(query: SuggestionQuery, dismissedAt: number | null):
 export function pickSuggestion(state: EditorState, query: SuggestionQuery, insert: string): TransactionSpec {
   const next = state.sliceDoc(query.to, query.to + 1);
   const space = next === '' || !/[\s.,;:!?)\]}'"*_~]/.test(next) ? ' ' : '';
+  const from = query.from + (query.prefix?.length ?? 0);
   return {
-    changes: { from: query.from, to: query.to, insert: insert + space },
-    selection: { anchor: query.from + insert.length + (space || next === ' ' ? 1 : 0) },
-    effects: suggestionPicked.of({ from: query.from, to: query.from + insert.length }),
+    changes: { from: query.from, to: query.to, insert: (query.prefix ?? '') + insert + space },
+    selection: { anchor: from + insert.length + (space || next === ' ' ? 1 : 0) },
+    effects: suggestionPicked.of({ from, to: from + insert.length }),
     scrollIntoView: true,
     userEvent: 'input.complete',
     annotations: ownStep,

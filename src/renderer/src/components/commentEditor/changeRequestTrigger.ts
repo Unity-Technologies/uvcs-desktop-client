@@ -24,40 +24,41 @@ export function withChangeRequestsOffered(offered: boolean): Extension {
  */
 const TYPED_APPLY = /(?<![\p{L}\p{N}/@:.#\\-])\[apply(?:-(?:c(?:h(?:a(?:n(?:g(?:e(?::([^\s\]]*))?)?)?)?)?)?)?)?$/iu;
 
-/** Where the list its button opened starts (`openChangeRequests`), while what's typed after it filters it. */
-const openedAt = StateEffect.define<number>();
+/** Where the list its button opened starts, and what a pick writes before the reference there (a space after a word). */
+interface Opened {
+  at: number;
+  prefix?: string;
+}
+
+const openedAt = StateEffect.define<Opened>();
 
 /**
- * Where the list opened by the change requests button starts, until the caret leaves what's typed after it, the text
- * changes other than by typing there, or the field loses the focus.
+ * The list the change requests button opened (`openChangeRequests`), until the caret leaves what's typed after it, the
+ * text changes other than by typing there, or the field loses the focus. It writes nothing itself: closed with no pick,
+ * the text is as it was.
  */
-export const changeRequestsOpened = StateField.define<number | null>({
+export const changeRequestsOpened = StateField.define<Opened | null>({
   create: () => null,
-  update: (at, transaction) => {
+  update: (opened, transaction) => {
     for (const effect of transaction.effects) if (effect.is(openedAt)) return effect.value;
-    if (at === null) return null;
+    if (opened === null) return null;
     if (lostFocus(transaction)) return null;
     const typing = transaction.isUserEvent('input.type') || transaction.isUserEvent('delete.backward');
     if ((transaction.docChanged || transaction.selection) && !typing) return null;
-    const moved = transaction.changes.mapPos(at, -1);
-    return transaction.state.selection.main.head < moved ? null : moved;
+    const at = transaction.changes.mapPos(opened.at, -1);
+    return transaction.state.selection.main.head < at ? null : { ...opened, at };
   },
 });
 
 /**
- * What the change requests button does: opens their list at the caret, a space before it after a word (a reference
- * glued to a word reads, but badly), so what's typed next filters it and a pick writes the reference there.
+ * What the change requests button does: opens their list at the caret, so what's typed next filters it and a pick
+ * writes the reference there, a space before it after a word (a reference glued to a word reads, but badly).
  */
 export function openChangeRequests(state: EditorState): TransactionSpec {
   const head = state.selection.main.head;
   const before = state.sliceDoc(head - 1, head);
-  const space = before !== '' && !/\s/.test(before) ? ' ' : '';
-  return {
-    changes: { from: head, insert: space },
-    selection: { anchor: head + space.length },
-    effects: openedAt.of(head + space.length),
-    scrollIntoView: true,
-  };
+  const prefix = before !== '' && !/\s/.test(before) ? ' ' : undefined;
+  return { effects: openedAt.of({ at: head, ...(prefix && { prefix }) }), scrollIntoView: true };
 }
 
 /** The change requests' list for the caret, typed (`[apply`) or opened by its button; null where the field offers none. */
@@ -76,10 +77,10 @@ export function changeRequestQueryAt(state: EditorState): SuggestionQuery | null
 
 /** The list its button opened, with what was typed since: none once a space is typed or the caret left the line. */
 export function openedChangeRequestQuery(state: EditorState): SuggestionQuery | null {
-  const at = state.field(changeRequestsOpened, false);
-  if (at === null || at === undefined || !state.facet(changeRequestsOffered)) return null;
+  const opened = state.field(changeRequestsOpened, false);
+  if (!opened || !state.facet(changeRequestsOffered)) return null;
   const head = state.selection.main.head;
-  const text = state.sliceDoc(at, head);
+  const text = state.sliceDoc(opened.at, head);
   if (/\s/.test(text)) return null;
-  return { kind: 'changeRequest', from: at, to: head, text };
+  return { kind: 'changeRequest', from: opened.at, to: head, text, ...(opened.prefix && { prefix: opened.prefix }) };
 }
