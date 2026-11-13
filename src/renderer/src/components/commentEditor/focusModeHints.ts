@@ -17,6 +17,8 @@ const TRIGGER_WORDS: Record<SuggestionKind, string> = {
   person: 'mention',
   emoji: 'emoji',
   issue: 'issue',
+  // Opened by `[apply`, `cm`'s own syntax, or the check-in's button: no trigger of the hints.
+  changeRequest: 'apply',
 };
 
 /**

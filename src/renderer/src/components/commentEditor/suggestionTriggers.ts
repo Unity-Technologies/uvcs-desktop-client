@@ -1,7 +1,10 @@
 import { KIND_PREFIXES, type PrefixedKind } from '../../lib/kindPrefixes';
 
-/** What a suggestion list offers: the objects a comment names, people, emoji and the tracker's issues. */
-export type SuggestionKind = PrefixedKind | 'emoji' | 'issue';
+/**
+ * What a suggestion list offers: the objects a comment names, people, emoji, the tracker's issues, and the change
+ * requests a check-in applies (opened by `[apply`, `cm`'s own syntax, or their button: `changeRequestTrigger`).
+ */
+export type SuggestionKind = PrefixedKind | 'emoji' | 'issue' | 'changeRequest';
 
 /**
  * What opens each suggestion list as it's typed: the prefixes the palette reads too (`KIND_PREFIXES`: the specs'
@@ -20,5 +23,5 @@ export const SUGGESTION_TRIGGERS: Readonly<Record<string, SuggestionKind>> = {
  * the suggestions list this repository's, so it gets no row and searches nothing here. A mention's `@` is an address.
  */
 export function namesAnotherRepository(kind: SuggestionKind, typed: string): boolean {
-  return kind !== 'person' && kind !== 'emoji' && kind !== 'issue' && typed.includes('@');
+  return kind !== 'person' && kind !== 'emoji' && kind !== 'issue' && kind !== 'changeRequest' && typed.includes('@');
 }

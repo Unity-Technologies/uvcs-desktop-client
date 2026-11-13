@@ -1,5 +1,6 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
+import { changeRequestQueryAt, openedChangeRequestQuery } from './changeRequestTrigger';
 import { EMOTICON_EMOJI } from './emoticons';
 import { isInCode } from './formatCommands';
 import { issueReferences } from './issueReferencesFacet';
@@ -49,6 +50,9 @@ const PERSON_NAME = /^[\p{L}\p{N}_.+\\@-]*$/u;
 export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   const main = state.selection.main;
   if (!main.empty || state.selection.ranges.length > 1) return null;
+  // `[apply`, where the field offers change requests to apply: `cm`'s own syntax, apart from the prefixes.
+  const changeRequest = changeRequestQueryAt(state);
+  if (changeRequest) return changeRequest;
   const line = state.doc.lineAt(main.head);
   const match = TYPED.exec(line.text.slice(0, main.head - line.from));
   if (!match) return null;
@@ -68,10 +72,12 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
 
 /**
  * The suggestion list to show: the word at the caret's (`suggestionQueryAt`), only while it is being typed
- * (`typingAt`). A field that opens with its caret after a reference, or a caret moved into one, opens none.
+ * (`typingAt`), or the change requests their button opened (`openedChangeRequestQuery`). A field that opens with its
+ * caret after a reference, or a caret moved into one, opens none.
  */
 export function suggestionsShownAt(state: EditorState): SuggestionQuery | null {
-  return state.field(typingAt, false) === state.selection.main.head ? suggestionQueryAt(state) : null;
+  const typed = state.field(typingAt, false) === state.selection.main.head ? suggestionQueryAt(state) : null;
+  return typed ?? openedChangeRequestQuery(state);
 }
 
 /**

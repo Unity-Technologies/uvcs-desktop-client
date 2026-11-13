@@ -27,7 +27,7 @@ describe('typing [apply', () => {
     expect(queryAt('See [the docs‸')).toBeNull();
     expect(queryAt('[docs](https://acme.com/apply‸')).toBeNull();
     expect(queryAt('word[apply‸')).toBeNull();
-    expect(queryAt('`[apply‸')).toBeNull();
+    expect(queryAt('`[apply‸`')).toBeNull();
     expect(queryAt('[apply-change:c0d1ce00]‸')).toBeNull();
   });
 
