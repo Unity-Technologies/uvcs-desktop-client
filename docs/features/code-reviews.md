@@ -253,9 +253,11 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   tab stop). **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
   cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
   a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill, every one the same
-  shape and border: **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed",
-  **Discarded** neutral gray, and **Comment** in the accent blue (`PillTone`'s `comment`), a color no state takes, so it
-  never reads as Discarded.
+  shape and border, the kind's icon leading its words: **Open** in the color of "Rework required", **Applied** and **Answered**
+  in the color of "Reviewed", **Discarded** neutral gray, and **Comment** a muted violet (`--comment-kind-text`,
+  `--comment-kind-border`; `PillTone`'s `comment`), a color no state takes. Not gray, which read as Discarded; not
+  blue, the app's link color, which read as a link (and as the Comments panel's pressed filter chip); not teal, too
+  close to Applied's green.
 - **A question answered in a changeset**: an answer naming a changeset of the review's repository ("Fixed in
   cs:281301", the first one named in the replies, `answeringChangeset`) answers the question in it, as a changeset
   applies a change request (`ThreadState`'s `answered.changesetId`, `settlingChangeset`): that changeset's diff shows
