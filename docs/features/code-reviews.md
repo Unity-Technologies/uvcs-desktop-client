@@ -389,6 +389,20 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, `keptLayoutAfter`, kept
+  by `useConversationLayout`): where each thread shows and whether each round starts folded are decided once, when
+  who the user is, the conversation and the branch's changesets are read, each from the read the page started on
+  opening, never a cached answer it is about to replace nor the previous review's changesets (`answerIsCurrent`).
+  Afterwards, what the user or a refresh changes (a request marked applied or not, a reply, a discard) updates the
+  card, its round's counts and Open in place: a thread shown never moves (marking it applied would otherwise take it
+  under the "New since your last review" line, and unmarking it back), and a round never folds or unfolds by itself
+  (settling its last open thread would fold it with the card under the pointer). What's new (a comment, an event, a
+  check-in) is placed as on a first read; a round closed meanwhile (the user's own status, or for the author or a
+  bystander anyone's) shows unfolded, since what it holds was on screen. The next time the page opens, it lays the
+  conversation out afresh; so does a page window when it switches tabs or goes to a thread (Show in conversation),
+  as each remounts its page (`pageKey` holds the tab and the thread). "How it was applied", opened from the
+  conversation, steps through the threads where it shows them (`ContextRequest.steps`); opened from Changes, where a
+  fresh read places them (`useReviewCheckpoint`).
 - **What a reviewer said with their status** sits under its event in a soft tint, no bar beside it (the rail is the
   timeline's one vertical line: a bar beside it read as two), folded past four lines with "Show more"
   (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
@@ -415,7 +429,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
   thread was written in.
 - **How it was applied** opened at a settled thread steps through the others settled in the same part of the
-  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "Round 1 · 2 of 4", "New since last
+  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`; from the conversation, as its kept layout
+  shows them: "The layout holds while the page is open"; "Round 1 · 2 of 4", "New since last
   review · 1 of 3", "After round 2" for someone with no line of their own ("After the review" past a review's only
   round, whose own threads show the position alone, as before any round); a pager
   above the title, its arrows first, where it is seen first and never moves): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came

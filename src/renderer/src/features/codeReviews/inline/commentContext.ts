@@ -4,6 +4,7 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
 import { reviewDiffTarget } from '../reviewTarget';
+import type { StepGroup } from '../rounds/reviewRounds';
 import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
 
 /**
@@ -35,6 +36,11 @@ export interface OnScreen {
 export interface ContextRequest {
   startsOn?: ContextView;
   onScreen?: OnScreen;
+  /**
+   * What "How it was applied" steps through, as the view it opens from shows the threads: the conversation's kept
+   * layout (`useConversationLayout`). None steps through them as a fresh read places them (`stepGroupsOf`).
+   */
+  steps?: readonly StepGroup[];
 }
 
 /**
