@@ -48,6 +48,14 @@
   overflow: hidden;
 }
 
+/* A suggestion of the lines as they are: said in a line of quiet text, as there's no change to draw. */
+.note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 /* The rows' place while they're read: Pierre's lines are 20px (`PIERRE_SURFACE_CSS` keeps them so). */
 .placeholder {
   height: calc(var(--rows) * 20px);

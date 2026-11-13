@@ -427,7 +427,7 @@ ranges changes only it.
   in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines
   (`rowUnderPointer`). Its rows run edge to edge, from the header's border to the box's
   and from the change bar on (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar every code view
-  has (`PaneScrollbars`), there only while a line overflows. "Suggested change: delete the line" for an empty fence. The line is read from the revision the
+  has (`PaneScrollbars`), there only while a line overflows. "Suggested change: delete the line" for an empty fence. A suggestion of the lines as they are (Suggest change's prefill sent unedited) says "The suggestion is line 13 as it is" in place of a diff of no rows (`unchangedSuggestionNote`). The line is read from the revision the
   comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so in
   the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it, and
   only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from the
@@ -452,7 +452,8 @@ An open change request's Suggested change has a split button in its header (`Sug
 
 Where it stands (`suggestionApplyOf`, from what the window read: `useSuggestionApply`, worked out again only when what
 it reads changes; the button shows it through `suggestionApplyButtonOf`); no suggestion costs a command: a settled
-request (applied, discarded) has no button. It's disabled, its tooltip saying why, in a window with no workspace; for a
+request (applied, discarded) has no button. It's disabled, its tooltip saying why, for a suggestion of the lines as they are (it changes nothing, wherever the
+workspace is); in a window with no workspace; for a
 shelve's review (on no branch); in a workspace not on the review's branch (a changeset review's: its changeset's, which
 its diff reads, `reviewBranchOf`; `cm wi` tells the workspace's, locally); behind that branch, as the incoming check
 last saw (`behindBranch`, polled anyway); when the version the suggestion was written on can't be read, or isn't text;

@@ -31,6 +31,7 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
         {actions && <span className={styles.actions}>{actions}</span>}
       </figcaption>
       {body.kind === 'reading' && <SuggestionPlaceholder rowCount={body.rowCount} />}
+      {body.kind === 'unchanged' && <p className={styles.note}>{body.note}</p>}
       {body.kind === 'diff' && (
         <Suspense fallback={<SuggestionPlaceholder rowCount={body.rowCount} />}>
           <SuggestionDiff path={change.path} body={body} />

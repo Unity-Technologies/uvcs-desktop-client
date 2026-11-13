@@ -6,7 +6,7 @@ import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
 import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
 import { withLinesReplaced } from './replaceLines';
-import { FAILED, READING, rangeWords, readValue, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
+import { FAILED, READING, rangeWords, readValue, replacedLinesIn, unchangedSuggestionNote, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
  * What the decision to apply a suggestion knows (docs/features/code-reviews.md "Applying a suggestion"), all of it
@@ -45,6 +45,9 @@ export type SuggestionApply =
 /** What a suggestion can do, from what's known (`SuggestionApplyFacts`), the first reason it can't winning. */
 export function suggestionApplyOf(change: SuggestedChange, facts: SuggestionApplyFacts): SuggestionApply {
   if (!facts.open) return { kind: 'none' };
+  // Before the workspace's reasons: no workspace could apply a change of nothing.
+  const unchanged = unchangedSuggestionNote(change, replacedLinesIn(facts.commentedText, change));
+  if (unchanged) return { kind: 'unavailable', reason: unchanged };
   const blocked = branchReason(facts);
   if (blocked) return { kind: 'unavailable', reason: blocked };
   const { workspaceFile, commentedText } = facts;
