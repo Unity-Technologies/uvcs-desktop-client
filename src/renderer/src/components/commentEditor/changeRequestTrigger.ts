@@ -17,11 +17,12 @@ export function withChangeRequestsOffered(offered: boolean): Extension {
 }
 
 /**
- * `[apply`, `cm`'s own syntax (`[apply-change:c0d1ce00]`), in any case, then as much of `-change:` as was typed and
- * what filters the requests: where a reference may start (after a space, a line's start, an opening bracket or an
- * emphasis mark), never inside a word. A Markdown link's `[` alone opens nothing.
+ * `[apply`, `cm`'s own syntax (`[apply-change:c0d1ce00]`), in any case, then as much of `-change:` as was typed, and
+ * only after the whole `-change:` what filters the requests: where a reference may start (after a space, a line's start,
+ * an opening bracket or an emphasis mark), never inside a word, and never a word that only starts like it (`[applying`).
+ * A Markdown link's `[` alone opens nothing.
  */
-const TYPED_APPLY = /(?<![\p{L}\p{N}/@:.#\\-])\[apply(?:-(?:c(?:h(?:a(?:n(?:g(?:e:?)?)?)?)?)?)?)?([^\s\]]*)$/iu;
+const TYPED_APPLY = /(?<![\p{L}\p{N}/@:.#\\-])\[apply(?:-(?:c(?:h(?:a(?:n(?:g(?:e(?::([^\s\]]*))?)?)?)?)?)?)?)?$/iu;
 
 /** Where the list its button opened starts (`openChangeRequests`), while what's typed after it filters it. */
 const openedAt = StateEffect.define<number>();
