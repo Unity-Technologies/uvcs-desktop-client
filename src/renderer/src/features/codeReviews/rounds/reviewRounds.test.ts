@@ -470,6 +470,17 @@ describe('conversationBlocksOf, laid out as first read (`conversationLayoutOf`)'
     expect(shapeOf(blocks)).toEqual(['round 1 (folded): event 2', 'round 2: checkins 15, thread 1, event 6']);
   });
 
+  it('steps "How it was applied" through a request marked applied in the round it stays in', () => {
+    const first = { conversation: conversation([request(1, at(9, 15)), request(3, at(9, 15), { appliedInChangeset: 15 })], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
+    const layout = conversationLayoutOf(first);
+    const marked = { ...first, conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 }), request(3, at(9, 15), { appliedInChangeset: 15 })], [roundClosed]) };
+
+    expect(stepGroupsOf(conversationBlocksOf({ ...marked, layout }))).toEqual([
+      { threadIds: [1], scope: '' },
+      { threadIds: [3], scope: 'New since your last review' },
+    ]);
+  });
+
   it('lays out as a first read does', () => {
     const first = { conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 }), question(3, at(9, 14))], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
 
