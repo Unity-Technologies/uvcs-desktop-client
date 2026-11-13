@@ -252,12 +252,12 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
   tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
   which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
-  apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the band's
-  end, after the pill, under the pointer as on a comment (`threadHeaderOf`'s `commentMenu`, `FirstCommentMenu`): the
-  same entries, wired once (`useCommentMenu`), so "Mark as not applied", Copy, Edit and Delete don't wait for an
-  unfold; Edit unfolds the card at the comment's editor. Shown whole, the menu is the comment's only, never two, and
-  its room on the band stays empty, so the pill doesn't move as the card folds; the Comments panel's cards, which go
-  to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
+  apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the end of
+  the folded line, under the pointer, where the comment shown whole has it (`FirstCommentMenu`): the same entries,
+  wired once (`useCommentMenu`), so "Mark as not applied", Copy, Edit and Delete don't wait for an unfold; Edit
+  unfolds the card at the comment's editor. Not on the band: there, after the pill, it took room the band had to keep
+  empty while the card was whole, which pushed every pill left of the open cards' pills. The Comments panel's cards,
+  which go to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
   Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
   the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill,
   every one the same shape and border, the kind's icon leading its words: **Open** in the color of "Rework required",
