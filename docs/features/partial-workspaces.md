@@ -119,7 +119,9 @@ whole branch first (`PARTIAL_REFUSED` in `switchWithChanges.ts`), so the way bac
 (`downloadWholeBranch` in `main/workspace/switchWithChanges.ts`, `switchesAs: 'standard'`). It runs as the switch with
 pending changes does ("Switching with pending changes", shelves-and-switching.md): the changes are shelved first, as a
 partial workspace shelves them, then brought back, merged as a standard workspace merges, or undone, as the user
-chose (`WholeBranchChangesAction`).
+chose (`WholeBranchChangesAction`). A switch that changes the workspace's kind reads the kind again afterwards, even
+when it failed (`switchWorkspace`, `forgetKind`): a failure that comes after `cm` converted the workspace puts the
+shelved changes back as the standard workspace it now is.
 
 It asks first (`askWholeBranchDownload`, its words in `wholeBranchDownload.ts`): it names the branch and says
 everything on it downloads, with no size estimate, which would cost a server read of the whole tree. With pending
