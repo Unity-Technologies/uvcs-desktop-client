@@ -116,3 +116,32 @@ describe('findReferences', () => {
     expect(sourcesIn('cs:1 and cs:2')).toEqual(['cs:1', 'cs:2']);
   });
 });
+
+describe('a change request to apply, as cm reads it in a check-in comment', () => {
+  it('reads [apply-change:…] by the first eight hex digits of its guid, or the whole guid, in any case, lower-cased', () => {
+    expect(findReferences('Shelve first [apply-change:C0D1CE00] and [apply-change:8123d65a-620d-49ee-bf51-f526741a3341]')).toEqual([
+      { reference: { kind: 'changeRequest', guid: 'c0d1ce00' }, source: '[apply-change:C0D1CE00]', from: 13, to: 36 },
+      { reference: { kind: 'changeRequest', guid: '8123d65a-620d-49ee-bf51-f526741a3341' }, source: '[apply-change:8123d65a-620d-49ee-bf51-f526741a3341]', from: 41, to: 92 },
+    ]);
+  });
+
+  it('reads one anywhere, inside a word or a sentence too, as cm does', () => {
+    expect(referencesIn('fixed[apply-change:c0d1ce00].')).toEqual([{ kind: 'changeRequest', guid: 'c0d1ce00' }]);
+  });
+
+  it('reads none that cm would not: another length, no closing bracket, not hex, a space', () => {
+    expect(referencesIn('[apply-change:c0d1ce0] [apply-change:c0d1ce00 [apply-change:c0d1cexx] [apply-change: c0d1ce00] [apply c0d1ce00]')).toEqual([]);
+  });
+
+  it('may hold one, for the quick test before parsing', () => {
+    expect(mayHoldReference('Done [apply-change:c0d1ce00]')).toBe(true);
+  });
+
+  it('reads the other references around one in order', () => {
+    expect(referencesIn('cs:12 [apply-change:c0d1ce00] @ana')).toEqual([
+      { kind: 'changeset', id: 12 },
+      { kind: 'changeRequest', guid: 'c0d1ce00' },
+      { kind: 'user', name: 'ana' },
+    ]);
+  });
+});
