@@ -95,6 +95,10 @@ describe('linkNavigation', () => {
       });
     });
 
+    it('is never named without its review: parseLink reads a comment only after one', () => {
+      expect(() => linkNavigation({ page: { kind: 'reviewComment', commentId: 7 } }, null)).toThrow();
+    });
+
     it("opens the review alone when its conversation couldn't be read: the review's page says why", () => {
       expect(linkNavigation(target, { conversation: null })).toEqual({ kind: 'page', page: { kind: 'codeReview', reviewId: 41 } });
     });

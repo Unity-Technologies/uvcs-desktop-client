@@ -159,6 +159,7 @@ describe('a repository link', () => {
     const reply = { id: 8, guid: 'g8', author: 'bob', date: '2026-11-06T10:00:01+01:00', text: 'Done', kind: 'comment', parentId: 7, anchor: { kind: 'review' } };
     const root = { id: 7, guid: 'g7', author: 'ana', date: '2026-11-06T10:00:00+01:00', text: 'Why?', kind: 'general', anchor: { kind: 'review' } };
     fakeApi.answer('reviewComments.conversation', async () => ({ comments: [root, reply], events: [] }));
+    fakeApi.answer('codeReviews.get', async (_place: unknown, id: number) => ({ id, title: 'Review' }));
 
     await openLink('uvcs://acme.unity/repos/game/code-reviews/411/-/comments/8');
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'codeReview', reviewId: 411, tab: 'conversation', focusThread: 7, focusReply: 8 }]);
@@ -168,6 +169,20 @@ describe('a repository link', () => {
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'codeReview', reviewId: 411 }]);
     expect(fakeApi.argsOf('reviewComments.conversation')).toEqual([[workspacePlace(GAME), 411]]);
     expect(shownToasts()).toContainEqual({ kind: 'info', title: 'Comment not found', detail: 'Code review 411 has no such comment. It may have been deleted.' });
+  });
+
+  it("opens a review that isn't there alone, its page saying so, never also that the comment isn't", async () => {
+    workspaces({ [GAME]: head('game@acme@unity') }, { current: GAME });
+    // `cm find changereviewcomment` lists nothing for a review that isn't there; reading the review says why.
+    fakeApi.answer('reviewComments.conversation', async () => ({ comments: [], events: [] }));
+    fakeApi.answer('codeReviews.get', async () => {
+      throw new Error('Code review 9999 was not found.');
+    });
+
+    await openLink('uvcs://acme.unity/repos/game/code-reviews/9999/-/comments/8');
+
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'codeReview', reviewId: 9999 }]);
+    expect(shownToasts()).not.toContainEqual(expect.objectContaining({ title: 'Comment not found' }));
   });
 
   it('says why a link it cannot read does not open', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentElementId, openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
+import { cardLightOf, commentElementId, nextAnswerLight, openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
@@ -93,6 +93,48 @@ describe('pickedScrollOf', () => {
 
   it('opens the page with the thread it goes to centered, at once', () => {
     expect(pickedScrollOf(pickOnFocus(undefined, 7)!)).toEqual({ block: 'center', behavior: 'auto' });
+  });
+});
+
+describe('cardLightOf', () => {
+  it('lights the reply a link opens the card at, from its first render, not the card', () => {
+    expect(cardLightOf(1, 9, null)).toEqual({ litComment: { replyId: 9, seq: 1, scrolls: false } });
+  });
+
+  it('lights it again when the page moves to it in place, the conversation scrolling to it', () => {
+    expect(cardLightOf(2, 9, null)).toEqual({ litComment: { replyId: 9, seq: 2, scrolls: false } });
+  });
+
+  it('lights the whole card for a later pick naming no reply', () => {
+    expect(cardLightOf(3, undefined, null)).toEqual({ cardHighlight: 3 });
+    expect(cardLightOf(undefined, undefined, null)).toEqual({});
+  });
+
+  it('lights the answer the Answered pill goes to, scrolling it into view', () => {
+    const answer = nextAnswerLight(cardLightOf(undefined, undefined, null), 12, undefined);
+
+    expect(cardLightOf(undefined, undefined, answer)).toEqual({ litComment: { replyId: 12, seq: 0, scrolls: true } });
+  });
+
+  // As before links to replies: the card's light and the answer's are apart, and a pick doesn't put the answer out.
+  it('keeps the answer lit when the card is gone to again without a reply', () => {
+    const answer = nextAnswerLight({}, 12, undefined);
+
+    expect(cardLightOf(4, undefined, answer)).toEqual({ cardHighlight: 4, litComment: { replyId: 12, seq: 0, scrolls: true } });
+  });
+
+  it('lights whichever came last: the answer pressed after a reply was gone to, a reply gone to after the answer', () => {
+    const atReply = cardLightOf(1, 9, null);
+    const answer = nextAnswerLight(atReply, 12, 1);
+
+    expect(cardLightOf(1, 9, answer)).toEqual({ litComment: { replyId: 12, seq: 2, scrolls: true } });
+    expect(cardLightOf(2, 9, answer)).toEqual({ litComment: { replyId: 9, seq: 2, scrolls: false } });
+  });
+
+  it('lights the same reply again when the pill goes to the one a link lit, its light restarting', () => {
+    const atReply = cardLightOf(1, 12, null);
+
+    expect(nextAnswerLight(atReply, 12, 1).seq % 2).not.toBe(atReply.litComment!.seq % 2);
   });
 });
 
