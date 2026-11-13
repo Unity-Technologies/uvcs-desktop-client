@@ -67,6 +67,7 @@ function ApplyButton({ apply, onCheckIn, onApply }: ApplyButtonProps) {
   return (
     <SplitButton
       size="small"
+      flat
       icon={<GitCommitHorizontal size={14} aria-hidden />}
       loading={busy}
       disabled={view.disabled}

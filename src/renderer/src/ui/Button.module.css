@@ -139,6 +139,14 @@
   background: color-mix(in srgb, var(--danger-hover) 88%, black);
 }
 
+/*
+ * No drop shadow (`flat`): in a tinted band (a suggested change's header), a button's drop shadow weighs its lower edge,
+ * and it read as sitting low. Its focus ring is a box-shadow too (`:focus-visible`, global.css): it stays.
+ */
+.flat:not(:focus-visible) {
+  box-shadow: none;
+}
+
 .iconOnly {
   width: var(--control-height);
   padding: 0;
