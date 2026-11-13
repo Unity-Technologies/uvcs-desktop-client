@@ -47,7 +47,7 @@ export function removeCommentArgs(commentGuid: string, at: CmPlace): string[] {
 
 /**
  * `cm codereview comment apply`: a change request marked applied in a changeset, any of the review's repository. `cm`
- * refuses one applied in another changeset already: it's marked not applied first (`unapplyChangeRequestArgs`).
+ * refuses one applied in another changeset already, so it's offered on an open one only (`changeRequestMarkOf`).
  */
 export function applyChangeRequestArgs(changeRequestGuid: string, changesetId: number, at: CmPlace): string[] {
   return ['codereview', 'comment', 'apply', changeRequestGuid, `--changeset=${at.spec(`cs:${changesetId}`)}`, ...at.repositoryOption];
