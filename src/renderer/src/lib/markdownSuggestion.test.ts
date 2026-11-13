@@ -35,7 +35,8 @@ describe('suggestionBlockIndex', () => {
     ['a list', '- item\n  ```suggestion\n  x\n  ```'],
     ['another fence only', '````\n```suggestion\nx\n```\n````'],
     ['another language', '```ts\nx\n```'],
-  ])('shows none for a fence that is no block of its own: %s', (_name, text) => {
+  ])('reads and shows none for a fence that is no block of its own: %s', (_name, text) => {
     expect(suggestionBlockIndex(parseMarkdown(text, { comment: true }))).toBe(-1);
+    expect(readSuggestion(text)).toBeNull();
   });
 });
