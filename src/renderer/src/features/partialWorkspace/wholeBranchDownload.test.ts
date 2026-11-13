@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
-import { wholeBranchButton, wholeBranchCards, wholeBranchMessage, wholeBranchNotes, wholeBranchQuestion } from './wholeBranchDownload';
+import {
+  canDownloadWholeBranch,
+  wholeBranchButton,
+  wholeBranchCancellable,
+  wholeBranchCards,
+  wholeBranchConfirmation,
+  wholeBranchMessage,
+  wholeBranchNotes,
+  wholeBranchQuestion,
+} from './wholeBranchDownload';
 
 const preflight: SwitchPreflight = {
   sourceName: '/main/t1',
@@ -24,6 +33,38 @@ describe('wholeBranchQuestion', () => {
 
   it('is blocked by an unfinished merge, with nothing chosen', () => {
     expect(wholeBranchQuestion({ ...preflight, inMerge: true })).toEqual({ asksAboutChanges: true, blockedByMerge: true, defaultAction: null });
+  });
+});
+
+describe('canDownloadWholeBranch', () => {
+  it('waits for a choice about the pending changes when it asks for one', () => {
+    expect(canDownloadWholeBranch(wholeBranchQuestion(preflight), null)).toBe(false);
+    expect(canDownloadWholeBranch(wholeBranchQuestion(preflight), 'bring')).toBe(true);
+    expect(canDownloadWholeBranch(wholeBranchQuestion(preflight), 'discard')).toBe(true);
+  });
+
+  it('never goes ahead in an unfinished merge, where nothing can be chosen', () => {
+    expect(canDownloadWholeBranch(wholeBranchQuestion({ ...preflight, inMerge: true }), null)).toBe(false);
+  });
+
+  it('goes ahead at once when there is nothing to ask', () => {
+    expect(canDownloadWholeBranch(wholeBranchQuestion({ ...preflight, pendingCount: 0 }), null)).toBe(true);
+  });
+});
+
+describe('wholeBranchConfirmation', () => {
+  it('carries the choice about the pending changes only when there was one', () => {
+    expect(wholeBranchConfirmation(null)).toEqual({});
+    expect(wholeBranchConfirmation('bring')).toEqual({ pendingChanges: 'bring' });
+    expect(wholeBranchConfirmation('discard')).toEqual({ pendingChanges: 'discard' });
+  });
+});
+
+describe('wholeBranchCancellable', () => {
+  it('can be stopped only while no changes are shelved: stopping halfway would leave them in limbo', () => {
+    expect(wholeBranchCancellable({})).toBe(true);
+    expect(wholeBranchCancellable({ pendingChanges: 'bring' })).toBe(false);
+    expect(wholeBranchCancellable({ pendingChanges: 'discard' })).toBe(false);
   });
 });
 
