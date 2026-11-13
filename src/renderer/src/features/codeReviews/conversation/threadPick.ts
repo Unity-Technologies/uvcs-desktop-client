@@ -50,6 +50,11 @@ export function pickedScrollOf(pick: ThreadPick): ScrollIntoViewOptions {
   return pick.by === 'rail' ? { block: 'nearest', behavior: 'smooth' } : { block: 'center', behavior: 'auto' };
 }
 
+/** The thread's element in the conversation, which going to it scrolls to. */
+export function threadElementId(commentId: number): string {
+  return `review-thread-${commentId}`;
+}
+
 /** An entry of the rail's Open: what the thread says, in a line, and whether it's the current one. */
 export interface OpenItem {
   threadId: number;

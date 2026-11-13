@@ -18,6 +18,7 @@ import { discardChangeRequest, replyToComment } from './reviewCommentOperations'
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
+import { threadElementId } from './threadPick';
 import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -404,9 +405,4 @@ function WholeThread({ review, thread, user, threadActions, lit }: { review: Pic
       </div>
     </>
   );
-}
-
-/** The thread's element, which a link to it scrolls to. */
-export function threadElementId(commentId: number): string {
-  return `review-thread-${commentId}`;
 }

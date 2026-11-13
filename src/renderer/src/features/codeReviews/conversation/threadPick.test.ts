@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { commentElementId, openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
-import { commentElementId, threadElementId } from './ReviewThreadCard';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
