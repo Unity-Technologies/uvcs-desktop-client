@@ -19,7 +19,13 @@ describe('ownReviewButton', () => {
 
 describe('ownReviewChoice', () => {
   it('opens on the status the user picked and left unsent, not the one they gave', () => {
-    expect(ownReviewChoice(ownReviewButton(review, 'ana@acme.com'), 'Reviewed')).toBe('Reviewed');
+    expect(ownReviewChoice(ownReviewButton(review, 'ana@acme.com'), { status: 'Reviewed', over: 'Rework required' })).toBe('Reviewed');
+  });
+
+  it('drops a pick once the status it was picked over changed elsewhere (the menu, another window)', () => {
+    const setElsewhere = { reviewers: [{ name: 'ana@acme.com', status: 'Under review' as const }] };
+
+    expect(ownReviewChoice(ownReviewButton(setElsewhere, 'ana@acme.com'), { status: 'Reviewed', over: 'Rework required' })).toBe('Under review');
   });
 
   it('opens on the preselected status when nothing was picked', () => {
