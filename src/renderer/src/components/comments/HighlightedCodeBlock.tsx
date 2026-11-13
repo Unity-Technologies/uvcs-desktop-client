@@ -27,45 +27,11 @@ interface HighlightedCodeBlockProps {
 }
 
 /**
- * A code block highlighted by the highlighter the diffs share (`getSharedHighlighter`), in the app's theme
- * (`useHighlightedLines`).
+ * A code block highlighted by the highlighter the diffs share (`getSharedHighlighter`), in the app's theme. Each run
+ * ignores its result once a newer run or the unmount took over (StrictMode mounts twice); until the new theme's
+ * colors arrive, the last ones stay.
  */
 export function HighlightedCodeBlock({ text, language, fallback }: HighlightedCodeBlockProps) {
-  const lines = useHighlightedLines(text, language);
-  if (!lines) return fallback;
-  return (
-    <pre data-language={language}>
-      <code>
-        {lines.map((line, index) => (
-          <span key={index}>
-            {index > 0 && '\n'}
-            <HighlightedLine tokens={line} />
-          </span>
-        ))}
-      </code>
-    </pre>
-  );
-}
-
-/** One line's tokens, each in its color. */
-export function HighlightedLine({ tokens }: { tokens: readonly ThemedToken[] }) {
-  return (
-    <>
-      {tokens.map((token, index) => (
-        <span key={index} style={codeTokenStyle(token)}>
-          {token.content}
-        </span>
-      ))}
-    </>
-  );
-}
-
-/**
- * A text's lines highlighted in `language` (as `highlightedLanguage` names it), or null until they are, and for a
- * language the highlighter doesn't know. Each run ignores its result once a newer run or the unmount took over
- * (StrictMode mounts twice); until the new theme's colors arrive, the last ones stay.
- */
-export function useHighlightedLines(text: string, language: string): ThemedToken[][] | null {
   const theme = pierreThemeName(useResolvedTheme());
   const key = `${theme}\n${language}\n${text}`;
   const [shown, setShown] = useState<Shown | null>(() => keptBlock(key, text, language));
@@ -93,7 +59,23 @@ export function useHighlightedLines(text: string, language: string): ThemedToken
     };
   }, [key, text, language, theme]);
 
-  return shown && shown.text === text && shown.language === language ? shown.lines : null;
+  if (!shown || shown.text !== text || shown.language !== language) return fallback;
+  return (
+    <pre data-language={language}>
+      <code>
+        {shown.lines.map((line, index) => (
+          <span key={index}>
+            {index > 0 && '\n'}
+            {line.map((token, tokenIndex) => (
+              <span key={tokenIndex} style={codeTokenStyle(token)}>
+                {token.content}
+              </span>
+            ))}
+          </span>
+        ))}
+      </code>
+    </pre>
+  );
 }
 
 function keptBlock(key: string, text: string, language: string): Shown | null {
