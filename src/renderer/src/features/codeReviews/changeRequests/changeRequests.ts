@@ -1,10 +1,13 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { ReviewConversation } from '@shared/domain/reviewConversation';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { changeRequestsNamedIn } from '@shared/applyChange';
+import type { CheckinMode } from '../../pendingChanges/checkinButton';
 import type { ChipCard } from '../../../components/comments/chipContent';
 import { commentLineText } from '../../../lib/comments/commentText';
 import { shortGuid } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
-import { threadsOf, type ThreadState } from '../conversation/reviewThreads';
+import { threadsOf, writtenOrder, type ThreadState } from '../conversation/reviewThreads';
 
 /** Where a change request stands, as its thread does (`threadsOf`): open until a changeset applies it or a reply discards it. */
 export type ChangeRequestState = Extract<ThreadState, { kind: 'open' | 'applied' | 'discarded' }>;
@@ -55,31 +58,70 @@ export function changeRequestsOf(reviewId: number, conversation: ReviewConversat
 }
 
 /**
- * How many of a branch's reviews have their conversations read for the change requests a check-in can apply: a branch
- * has one review, rarely two; a few more are left to their pages, so a branch reviewed again and again costs a few
- * finds, not one per review.
- */
-export const MAX_REVIEWS_READ_FOR_REQUESTS = 3;
-
-/**
- * The reviews of a branch whose conversations are read for their change requests: only those with something open
- * (`openIssueCount`, the server's count of open requests and questions), the newest first, at most
- * `MAX_REVIEWS_READ_FOR_REQUESTS`. A branch with no review, or none open, reads nothing more.
+ * The reviews of a branch whose conversations are read for their change requests: every one with something open
+ * (`openIssueCount`, the server's count of open requests and questions), the newest first. A branch has one review,
+ * rarely two; one with nothing open, or none at all, reads nothing more.
  */
 export function reviewsToRead(reviews: readonly CodeReviewSummary[]): number[] {
   return reviews
     .filter((review) => review.openIssueCount > 0)
     .map((review) => review.id)
-    .sort((a, b) => b - a)
-    .slice(0, MAX_REVIEWS_READ_FOR_REQUESTS);
+    .sort((a, b) => b - a);
 }
 
-/** The open change requests of the reviews read, the newest first: what a check-in comment can apply. */
-export function openChangeRequests(reviews: readonly (readonly ReviewChangeRequest[])[]): ReviewChangeRequest[] {
+/** The open change requests of the reviews read, the newest first (`writtenOrder`): what a check-in comment can apply. */
+export function stillOpen(reviews: readonly (readonly ReviewChangeRequest[])[]): ReviewChangeRequest[] {
   return reviews
     .flat()
     .filter((request) => request.state.kind === 'open')
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.commentId - a.commentId));
+    .sort((a, b) => writtenOrder({ date: b.date, id: b.commentId }, { date: a.date, id: a.commentId }));
+}
+
+/** A read as TanStack Query gives it. */
+export interface Read<T> {
+  data: T | undefined;
+  isPending: boolean;
+  isError: boolean;
+}
+
+/** A branch's open change requests, and whether some are still being read or couldn't be. */
+export interface BranchChangeRequests {
+  requests: readonly ReviewChangeRequest[];
+  reading: boolean;
+  failed: boolean;
+}
+
+/**
+ * What a check-in offers to apply from its branch's reviews (`useBranchChangeRequests`): the open requests of every
+ * conversation read, as they come, so one review that couldn't be read hides none of the others'; `reading` while the
+ * reviews or any conversation are, `failed` when any couldn't be read.
+ */
+export function branchChangeRequestsOf(reviews: Read<readonly CodeReviewSummary[]>, conversations: readonly (Read<ReviewConversation> & { reviewId: number })[]): BranchChangeRequests {
+  const read = conversations.flatMap((conversation) => (conversation.data ? [changeRequestsOf(conversation.reviewId, conversation.data)] : []));
+  return {
+    requests: stillOpen(read),
+    reading: (reviews.isPending && !reviews.isError) || conversations.some((conversation) => conversation.isPending && !conversation.isError),
+    failed: reviews.isError || conversations.some((conversation) => conversation.isError),
+  };
+}
+
+/**
+ * The branch whose change requests a check-in offers to apply: the workspace's, while it is on a branch and the panel
+ * checks in. A shelve applies none (`cm shelve` never reads them), and a workspace on a changeset, a label or a shelve
+ * checks in to no branch of its own.
+ */
+export function changeRequestsBranch(workingOn: WorkspaceSelector | undefined, mode: CheckinMode): string | undefined {
+  return mode === 'checkin' && workingOn?.kind === 'branch' ? workingOn.name : undefined;
+}
+
+/**
+ * The requests the comment doesn't name yet (`[apply-change:…]`, as `cm` reads it): one already written isn't offered
+ * again, and the button's count follows.
+ */
+export function notYetNamed(requests: readonly ReviewChangeRequest[], comment: string): readonly ReviewChangeRequest[] {
+  const named = changeRequestsNamedIn(comment);
+  if (named.length === 0) return requests;
+  return requests.filter((request) => !named.includes(shortGuid(request.guid)) && !named.includes(request.guid.toLowerCase()));
 }
 
 /** The request a comment names (`[apply-change:c0d1ce00]`, or its whole guid) among those read, as `cm` matches it. */
@@ -108,25 +150,25 @@ export interface ChangeRequestChip {
   opens?: { reviewId: number; threadId: number };
 }
 
-const LEAD = 'Applies';
+const LEAD = 'Applies:';
 
 /**
- * A change request's chip (docs/features/rich-comments.md, "How references show"): "Applies" muted, then its first line,
+ * A change request's chip (docs/features/rich-comments.md, "How references show"): "Applies:" muted, then its first line,
  * and a card saying where it stands, its review, who asked and when. One the window hasn't read (`request` undefined)
- * reads "Applies change request c0d1ce00" and opens nothing: a chip reads nothing of its own.
+ * reads "Applies: change request c0d1ce00" and opens nothing: a chip reads nothing of its own.
  */
 export function changeRequestChip(request: ReviewChangeRequest | undefined, guid: string, ago: (date: string) => string): ChangeRequestChip {
   const number = shortGuid(guid);
   const title = `Change request ${number}`;
   if (!request) {
     const label = `change request ${number}`;
-    return { lead: LEAD, label, name: `${LEAD} ${label}`, title, card: { title, meta: [] } };
+    return { lead: LEAD, label, name: `Applies ${label}`, title, card: { title, meta: [] } };
   }
   const label = commentLineText(request.text) || title;
   return {
     lead: LEAD,
     label,
-    name: `${LEAD} change request: ${label}`,
+    name: `Applies change request: ${label}`,
     title,
     card: { comment: request.text, title, meta: [title, stateText(request.state), `Code review ${request.reviewId}`, displayName(request.author), ago(request.date)] },
     opens: { reviewId: request.reviewId, threadId: request.commentId },

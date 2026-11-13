@@ -92,7 +92,7 @@ describe('changeRequestChip', () => {
     const [request] = changeRequestsOf(43, conversationOf(comment(1, { text: 'Shelve **first**\n\nThe undo fails.' })));
 
     expect(changeRequestChip(request, 'c0d1ce01', ago)).toEqual({
-      lead: 'Applies',
+      lead: 'Applies:',
       label: 'Shelve first',
       name: 'Applies change request: Shelve first',
       title: 'Change request c0d1ce01',
@@ -110,7 +110,7 @@ describe('changeRequestChip', () => {
 
   it('names one the window has not read by its number, opening nothing', () => {
     expect(changeRequestChip(undefined, 'deadbeef', ago)).toEqual({
-      lead: 'Applies',
+      lead: 'Applies:',
       label: 'change request deadbeef',
       name: 'Applies change request deadbeef',
       title: 'Change request deadbeef',

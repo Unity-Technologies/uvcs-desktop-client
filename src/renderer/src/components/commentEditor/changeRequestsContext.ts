@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { BranchChangeRequests } from '../../features/codeReviews/changeRequests/useChangeRequests';
+import type { BranchChangeRequests } from '../../features/codeReviews/changeRequests/changeRequests';
 
 /**
  * The change requests a comment's fields offer to apply (`[apply`, their button): the branch's that the comment's
