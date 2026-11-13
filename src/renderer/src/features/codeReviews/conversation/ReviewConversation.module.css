@@ -349,10 +349,18 @@ button.location:hover .locationFile {
   color: var(--accent-text);
 }
 
-/* The thread's kind, leading the pill in its words' color; its own tooltip names it. */
+/* The thread's kind, leading the pill in its words' color; its own tooltip names it where the words don't. */
 .pill .kindIcon {
   align-self: center;
   color: inherit;
+}
+
+/*
+ * The pill's words give its baseline, so they read on one line with the band's file and "1 reply" (`.headerEnd`):
+ * left to the icon, the first item, the words sat two pixels high.
+ */
+.pillLabel {
+  align-self: baseline;
 }
 
 /* A pill that leads somewhere is a link as a whole (how it was settled, the answer): every one hovers alike, a light

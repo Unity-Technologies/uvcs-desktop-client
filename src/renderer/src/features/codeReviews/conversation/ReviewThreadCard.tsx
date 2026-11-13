@@ -315,7 +315,7 @@ function PillContent({ pill }: { pill: HeaderPill }) {
   return (
     <>
       <ThreadKindIcon kind={pill.kind} size={12} named={pill.kindTip !== null} />
-      {pill.label}
+      <span className={styles.pillLabel}>{pill.label}</span>
     </>
   );
 }
