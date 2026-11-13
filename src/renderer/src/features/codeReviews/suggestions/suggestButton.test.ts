@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { refusalShown, SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome } from './suggestButton';
+import { refusalShown, SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome, withSuggestionInserted } from './suggestButton';
 import { FAILED, READING, readValue } from './suggestedChange';
 
 describe('suggestButtonOf', () => {
@@ -46,5 +46,15 @@ describe('refusalShown', () => {
 describe('suggestLineLabel', () => {
   it('names the line, as "Comment on line 42" does', () => {
     expect(suggestLineLabel({ lineNumber: 42 })).toBe('Suggest change on line 42');
+  });
+});
+
+describe('withSuggestionInserted', () => {
+  it('inserts the suggestion at the caret and makes the comment a change request, whatever it was', () => {
+    expect(withSuggestionInserted('Why not 60?', 11, ['  speed = 60;'])).toEqual({
+      text: 'Why not 60?\n```suggestion\n  speed = 60;\n```',
+      caret: 'Why not 60?\n```suggestion\n  speed = 60;'.length,
+      kind: 'changeRequest',
+    });
   });
 });

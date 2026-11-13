@@ -1,6 +1,5 @@
 import { MessageSquareDiff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { withSuggestionAt } from '../../../lib/reviewSuggestion';
 import { placeId } from '@shared/domain/place';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
@@ -11,7 +10,7 @@ import { Button } from '../../../ui/Button';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
-import { refusalShown, suggestButtonOf, suggestRequestOutcome, type SuggestRefusal } from '../suggestions/suggestButton';
+import { refusalShown, suggestButtonOf, suggestRequestOutcome, withSuggestionInserted, type SuggestRefusal } from '../suggestions/suggestButton';
 import { commentedLines } from '../suggestions/suggestedChange';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { CommentComposer } from '../conversation/CommentComposer';
@@ -47,9 +46,10 @@ interface NewLineCommentCardProps {
  * A comment being written under a line of a review's diff: what it is (a change request, a question or a comment,
  * which can't change once posted), then the rich editor. Suggest change inserts a suggestion of the line at the caret
  * (docs/features/code-reviews.md "Suggested changes"), from the diff's own read of it, making the comment a change
- * request; opened from the code's "Suggest change on line 42" (`suggestRequest`), it's inserted as the line is read. Sent at once, as every comment is, it stays, sending, until the
- * conversation read again holds it (`conversationReadSince`), so the line never shows nothing in between. Cancel or Esc
- * drop it, asking first once words were written. Focused only when opened (`focusRequest`).
+ * request (`withSuggestionInserted`); opened from the code's "Suggest change on line 42" (`suggestRequest`), it's
+ * inserted as the line is read. Sent at once, as every comment is, it stays, sending, until the conversation read again
+ * holds it (`conversationReadSince`), so the line never shows nothing in between. Cancel or Esc drop it, asking first
+ * once words were written. Focused only when opened (`focusRequest`).
  */
 export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const place = usePlace();
@@ -77,9 +77,9 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
   const insertSuggestion = (lines: readonly string[]): void => {
     const at = field.current?.selection()?.head ?? text.length;
-    const inserted = withSuggestionAt(text, at, lines);
+    const inserted = withSuggestionInserted(text, at, lines);
     useCommentDraftStore.getState().keep(draftKey, { summary: '', description: inserted.text });
-    if (kind !== 'changeRequest') setKind(spot.key, 'changeRequest');
+    setKind(spot.key, inserted.kind);
     setCaretAfterInsert(inserted.caret);
   };
   const suggestAtCaret = (): void => {
