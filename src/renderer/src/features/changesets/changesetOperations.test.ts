@@ -56,7 +56,7 @@ beforeEach(() => {
 describe('changeset operations', () => {
   it('saves an edited comment and refreshes only what shows it, the changesets already read too', async () => {
     asked.comment = 'New comment';
-    fakeApi.answer('changesets.editComment', () => undefined);
+    fakeApi.answer('changesets.editComment', () => ({ changeRequestsNotApplied: [] }));
     const refreshed = watchRefreshes(ws);
 
     await editChangesetComment(inWs, changeset);
@@ -71,8 +71,15 @@ describe('changeset operations', () => {
     });
     expect(await saveChangesetComment(inWs, changeset, 'New comment')).toBe(false);
 
-    fakeApi.answer('changesets.editComment', () => undefined);
+    fakeApi.answer('changesets.editComment', () => ({ changeRequestsNotApplied: [] }));
     expect(await saveChangesetComment(inWs, changeset, 'New comment')).toBe(true);
+  });
+
+  it('saves a comment naming a change request no review has pending, saying none was applied', async () => {
+    fakeApi.answer('changesets.editComment', () => ({ changeRequestsNotApplied: ['deadbeef'] }));
+
+    expect(await saveChangesetComment(inWs, changeset, 'Fix [apply-change:deadbeef]')).toBe(true);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Comment saved', detail: 'No change request was applied: deadbeef is applied already, or no review has it open.' }]);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {

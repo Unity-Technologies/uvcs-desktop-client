@@ -116,7 +116,7 @@ export function findReferences(text: string, issues?: IssueReferenceReader): Fou
 /** The change requests to apply among the other references (`applyChangeMatches`), in order; nothing else read inside one. */
 function withChangeRequests(text: string, found: FoundReference[]): FoundReference[] {
   const requests = applyChangeMatches(text).map(
-    (match): FoundReference => ({ reference: { kind: 'changeRequest', guid: match[1]!.toLowerCase() }, source: match[0], from: match.index, to: match.index + match[0].length }),
+    (match): FoundReference => ({ reference: { kind: 'changeRequest', guid: match[1]!.toLowerCase() }, source: match[0], from: match.index!, to: match.index! + match[0].length }),
   );
   if (requests.length === 0) return found;
   const outside = found.filter((other) => !requests.some((request) => other.from < request.to && other.to > request.from));

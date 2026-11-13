@@ -99,6 +99,19 @@ describe('checkinChanges', () => {
     expect(shownToasts()).toEqual([]);
   });
 
+  it('says it checked in but applied no change request when one the comment names had none pending, quiet or not, and refreshes the reviews', async () => {
+    answerCheckins({ ...created(44), changeRequestsNotApplied: ['deadbeef'] });
+    answerSettings();
+    const refreshed = watchRefreshes(ws);
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'Fix [apply-change:deadbeef]', quiet: true })).toBe(true);
+
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Checked in cs:44 on main', detail: 'No change request was applied: deadbeef is applied already, or no review has it open.', action: 'View' },
+    ]);
+    expect(refreshed()).toContain('codeReviews');
+  });
+
   it('keeps the 15 latest comments, the newest first and each once', async () => {
     const older = Array.from({ length: 15 }, (_, index) => `comment ${index}`);
     answerCheckins(created(44));

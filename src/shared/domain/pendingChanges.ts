@@ -107,6 +107,10 @@ export interface CheckinRequest {
  * What `cm checkin` did: the changeset it created, or none (`noChanges`) when nothing was left to record. Before
  * recording, it undoes the checkouts whose content is the loaded revision's, so checking in only those releases them.
  */
-export type CheckinResult = { kind: 'created'; changesetId: number; branch: string } | { kind: 'noChanges' };
+/**
+ * What a checkin did. `changeRequestsNotApplied`: change requests its comment names (`[apply-change:…]`) that no review
+ * had pending: `cm` made the changeset, then applied none of the named requests.
+ */
+export type CheckinResult = { kind: 'created'; changesetId: number; branch: string; changeRequestsNotApplied?: string[] } | { kind: 'noChanges' };
 
 export type FilterRuleList = 'ignore' | 'cloaked' | 'hidden';

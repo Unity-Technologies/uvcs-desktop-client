@@ -18,6 +18,7 @@ import { expectedCheckinResult, releasedCheckoutsNote } from './checkinOutcome';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
+import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -53,8 +54,11 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     affects: withChangeRequestsApplied(isAffectedByCheckinOrUpdate, comment),
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
-      if (options.quiet) return null;
+      // Checked in, but the change requests the comment names weren't applied: said even when the moment would be quiet.
+      const notApplied = changeRequestsNotAppliedText(done.changeRequestsNotApplied ?? []);
+      if (options.quiet && !notApplied) return null;
       return {
+        ...(notApplied && { kind: 'info' as const, detail: notApplied }),
         title: checkedInMessage(done.changesetId, done.branch),
         action: {
           label: 'View',

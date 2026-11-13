@@ -4,7 +4,7 @@ import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
-import { runRead, runVoidAction } from '../../app/operations/runOperation';
+import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove, withChangeRequestsApplied } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { askForComment } from '../../components/EditCommentDialog';
@@ -15,6 +15,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
 import { readStartOutcome, type BranchDiffBase } from './branchDiffUpTo';
 import { pickChangeset } from './ChangesetPickerDialog';
+import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
 
 /** The diff of what a changeset changed. */
 export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
@@ -93,8 +94,12 @@ export async function editChangesetComment(place: Place, changeset: Pick<Changes
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
-export function saveChangesetComment(place: Place, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), withChangeRequestsApplied(isAffectedByChangesetComment, comment));
+export async function saveChangesetComment(place: Place, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
+  const saved = await runAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), withChangeRequestsApplied(isAffectedByChangesetComment, comment));
+  // Saved, but the change requests the comment names weren't applied: `cm` says so after saving it.
+  const notApplied = saved && changeRequestsNotAppliedText(saved.changeRequestsNotApplied);
+  if (notApplied) toast.info('Comment saved', notApplied);
+  return saved !== undefined;
 }
 
 export async function moveChangesetToBranch(place: Place, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {

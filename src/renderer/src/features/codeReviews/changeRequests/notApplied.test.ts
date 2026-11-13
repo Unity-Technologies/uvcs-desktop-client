@@ -8,7 +8,7 @@ describe('changeRequestsNotAppliedText', () => {
 
   it('names several the same way', () => {
     expect(changeRequestsNotAppliedText(['deadbeef', 'cafebabe'])).toBe('No change request was applied: deadbeef and cafebabe are applied already, or no review has them open.');
-    expect(changeRequestsNotAppliedText(['a1', 'b2', 'c3'])).toBe('No change request was applied: a1, b2 and c3 are applied already, or no review has them open.');
+    expect(changeRequestsNotAppliedText(['a1', 'b2', 'c3'])).toBe('No change request was applied: a1, b2 and 1 other are applied already, or no review has them open.');
   });
 
   it('says nothing when every one was applied', () => {
