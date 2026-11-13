@@ -44,8 +44,8 @@ tooltip). Selected, as the page opens unless it's asked for changesets, that row
 `{ kind: 'branch' }`, `cm diff br:<branch> --integration`. One changeset selected shows its own diff; several show as
 one (below). What the selection shows is `changesetListChoice`; `BranchDiff` only renders it. The page's header is one
 line naming what is selected on the branch (`BranchDescription`, `branchDiffHeading`): "All changes on <branch>",
-"Changes in cs:1234 on <branch>", "Changes in cs:15 to cs:17 on <branch>". A header naming the branch only, whatever
-was selected, read as if the files below were still all the branch's. A changeset's summary sits above its diff
+"Changes in cs:1234 on <branch>", "Changes in cs:15 to cs:17 on <branch>". Naming only the branch would read as if the
+files below were all the branch's. A changeset's summary sits above its diff
 (`TargetDiff`'s `pageDescription`), since its height follows its comment, and over the whole page it would move the
 list being clicked at each step; the header's one line keeps its height.
 
