@@ -3,6 +3,16 @@ import { PIERRE_SURFACE_CSS, pierreDiffOptions } from './pierreOptions';
 
 const css = pierreDiffOptions({ theme: 'light', layout: 'split', collapseUnchanged: true, wrapLines: false }).unsafeCSS ?? '';
 
+describe('PIERRE_SURFACE_CSS: how code reads in every diff', () => {
+  it("shows code at 12px, the classic desktop client's size, not Pierre's 13px", () => {
+    expect(PIERRE_SURFACE_CSS).toContain('--diffs-font-size:12px');
+  });
+
+  it("leaves the line height to Pierre: its virtualizer counts on 20px lines", () => {
+    expect(PIERRE_SURFACE_CSS).not.toContain('--diffs-line-height');
+  });
+});
+
 describe('pierreDiffOptions: the row of comments under a changed line', () => {
   it('keeps the surface the app gives every diff', () => {
     expect(css.startsWith(PIERRE_SURFACE_CSS)).toBe(true);
