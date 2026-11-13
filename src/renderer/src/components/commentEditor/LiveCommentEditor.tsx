@@ -3,6 +3,8 @@ import { useIssueReferences } from '../issues/useIssueTrackers';
 import { useIssueReads } from '../issues/useIssueReads';
 import { editorIssueKeys } from './editorIssueKeys';
 import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
+import { changeRequestsOfferedCompartment, openChangeRequests, suggestionListHint, withChangeRequestsOffered } from './changeRequestTrigger';
+import { ChangeRequestsContext } from './changeRequestsContext';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -44,14 +46,17 @@ import styles from './LiveCommentEditor.module.css';
 interface LiveCommentEditorProps extends CommentFieldProps {
   /** The caret in the plain field it replaces, which it takes over (`CommentField`). */
   initialFocus: { current: { at: number } | null };
+  /** The change requests asked for before it loaded (`openChangeRequests`): it opens them as it mounts. */
+  pendingChangeRequests: { current: boolean };
 }
 
 /**
  * The comment editor (docs/features/rich-comments.md, "Writing"): CodeMirror over the comment's own text, drawn as it
  * reads around the caret, with the suggestion list and the selection bar. Its text is the stored comment, in and out.
  */
-export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
-  const host = useRef<HTMLDivElement>(null);
+export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, footer, ref, initialFocus, pendingChangeRequests }: LiveCommentEditorProps) {
+  // Where CodeMirror draws the text: a slot of its own, before the footer, so the keyboard reaches the text first.
+  const slot = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
   const [portals] = useState(() => new WidgetPortals());
@@ -71,8 +76,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   // Built in the effect and destroyed in its cleanup, so StrictMode's second mount gets an editor of its own.
   useEffect(() => {
     const editor = new EditorView({
-      parent: host.current!,
-      root: editorRootOf(host.current!),
+      parent: slot.current!,
+      root: editorRootOf(slot.current!),
       state: EditorState.create({
         doc: value,
         extensions: [
@@ -101,6 +106,12 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
       focusEditor(editor);
     }
+    if (pendingChangeRequests.current) {
+      pendingChangeRequests.current = false;
+      editor.dispatch({ selection: { anchor: editor.state.doc.length } });
+      editor.dispatch(openChangeRequests(editor.state));
+      focusEditor(editor);
+    }
     setView(editor);
     setState(editor.state);
     return () => {
@@ -122,6 +133,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
   useEffect(() => view?.dispatch({ effects: issueReferencesCompartment.reconfigure(withIssueReferences(issues)) }), [view, issues]);
+  const offersChangeRequests = useContext(ChangeRequestsContext) !== null;
+  useEffect(() => view?.dispatch({ effects: changeRequestsOfferedCompartment.reconfigure(withChangeRequestsOffered(offersChangeRequests)) }), [view, offersChangeRequests]);
 
   const handle = useMemo(
     () => ({
@@ -136,8 +149,15 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
         focusEditor(view);
         return true;
       },
+      openChangeRequests: () => {
+        if (!view || disabled) return false;
+        if (!view.hasFocus) view.dispatch({ selection: { anchor: view.state.doc.length } });
+        view.dispatch(openChangeRequests(view.state));
+        focusEditor(view);
+        return true;
+      },
     }),
-    [view],
+    [view, disabled],
   );
   useImperativeHandle(ref, () => handle, [handle]);
   const group = useContext(FocusGroupContext);
@@ -172,7 +192,6 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   return (
     <div
-      ref={host}
       className={classNames(fieldStyles.field, styles.editor, className)}
       style={style}
       data-single-line={singleLine || undefined}
@@ -187,6 +206,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
       {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={fieldFocused(view, state)} />}
+      <div ref={slot} className={styles.slot} />
+      {footer}
       <WidgetPortalsView portals={portals} onDrawn={measure} />
       {suggestions.list}
       {bar.element}
@@ -283,7 +304,7 @@ function useFocusMode(view: EditorView | null, singleLine: boolean, suggesting: 
  */
 function caretAtPress(view: EditorView, event: React.MouseEvent): void {
   const target = event.target as Element;
-  const press = { button: event.button, onText: view.contentDOM.contains(target), inBox: view.dom.parentElement?.contains(target) ?? false, onControl: target.closest('button, [role="toolbar"], a') !== null };
+  const press = { button: event.button, onText: view.contentDOM.contains(target), inBox: (event.currentTarget as Element).contains(target), onControl: target.closest('button, [role="toolbar"], a') !== null };
   if (!pressPlacesCaret(press)) return;
   event.preventDefault();
   focusAt(view, view.posAtCoords({ x: event.clientX, y: event.clientY }, false));
@@ -382,7 +403,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   }, [view, shown, active, listId, activeOption]);
 
   const anchor = shown && view ? boxAt(view, open!.from, open!.from) : null;
-  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} query={open!.text} onPick={pick} onHover={moveTo} /> : null;
+  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} query={open!.text} onPick={pick} onHover={moveTo} hint={suggestionListHint(open)} /> : null;
   return { shown, list };
 }
 

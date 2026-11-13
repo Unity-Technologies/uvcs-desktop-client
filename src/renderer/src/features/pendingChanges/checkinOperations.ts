@@ -6,7 +6,7 @@ import { runAction, runOperation, runRead } from '../../app/operations/runOperat
 import { queryClient } from '../../app/queryClient';
 import { rememberRecentComment } from '../../app/settings/useSettings';
 import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
-import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving, withChangeRequestsApplied } from '../../app/refresh/refreshScopes';
 import { commentLineText } from '../../lib/comments/commentText';
 import { pluralize } from '../../lib/text';
 import { prompt } from '../../ui/dialog/prompt';
@@ -17,6 +17,8 @@ import { expectedCheckinResult, releasedCheckoutsNote } from './checkinOutcome';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
+import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 
 interface CheckinOptions {
   workspacePath: string;
@@ -47,11 +49,16 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     workspacePath,
     run: async (operationId) =>
       expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths, comment, addsPrivate }, operationId), changes),
-    affects: isAffectedByCheckinOrUpdate,
+    affects: withChangeRequestsApplied(isAffectedByCheckinOrUpdate, comment),
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
-      if (options.quiet) return null;
+      // Checked in, but the change requests the comment names weren't applied: said even when the moment would be quiet.
+      // No failure to point at in the status bar: `cm` failed after checking in (`markHandled`).
+      if (done.changeRequestsNotApplied) useCommandLogStore.getState().markHandled(done.changeRequestsNotApplied.logEntryId);
+      const notApplied = changeRequestsNotAppliedText(done.changeRequestsNotApplied?.requests ?? []);
+      if (options.quiet && !notApplied) return null;
       return {
+        ...(notApplied && { kind: 'info' as const, detail: notApplied }),
         title: checkedInMessage(done.changesetId, done.branch),
         action: {
           label: 'View',

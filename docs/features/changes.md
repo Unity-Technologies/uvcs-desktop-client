@@ -3,6 +3,17 @@
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
 List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
 
+## The check-in's comment
+
+Written in the rich comment editor (docs/features/rich-comments.md "Writing"): a summary, holding no button, and a
+description. The description's footer (`DescriptionFooter`, `descriptionFooterButtons`) is a quiet row at its
+bottom-left, as GitHub Desktop draws its own: small muted icon buttons apart by hairlines, each named by its tooltip.
+**Recent comments**, while there are some, opens the repository's comments checked in lately ("Recent comments are per
+repository" below), a pick filling the summary and the description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
+(docs/features/code-reviews.md "Applying change requests"). While it shows, the description is taller by its row
+(`DESCRIPTION_FOOTER_HEIGHT`), so it takes none of the room to type. With neither, there's no footer and the description is
+as it always was.
+
 ## Changelists and status groups in the list
 
 - **Grouping by changelist** is the view menu's "Group by ▸ Changelist" in Changes alone (`usePendingChangesViewStore`'s

@@ -6,7 +6,7 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCH_STARTS, FOUND_CHANGESETS } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
-import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -136,6 +136,21 @@ describe('changesets', () => {
       ['query', ['changeset', 'move', 'cs:7', 'br:/main/task2']],
       ['query', ['changeset', 'delete', 'cs:7']],
     ]);
+  });
+});
+
+describe('a comment edit naming change requests', () => {
+  it('saves the comment and says which named requests no review had pending, as cm fails after saving it', async () => {
+    const { service } = changesets({
+      changeset: cmFails('Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:- deadbeef'),
+    });
+
+    expect(await service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:deadbeef]')).toEqual({ changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: expect.any(Number) } });
+  });
+
+  it('applies them with nothing to say, and fails as before on any other error', async () => {
+    expect(await changesets({ changeset: '' }).service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:c0d1ce00]')).toEqual({});
+    await expect(changesets({ changeset: cmFails('Error: The changeset cs:7 does not exist.') }).service.editComment(IN_WORKSPACE, 7, 'Fix')).rejects.toThrow('does not exist');
   });
 });
 

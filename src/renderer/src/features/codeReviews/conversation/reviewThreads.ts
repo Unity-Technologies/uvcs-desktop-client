@@ -146,7 +146,7 @@ export function foldReviewerChanges(items: readonly TimelineItem[], minimum = FO
 }
 
 /** Oldest first; in the same moment, by number, the server numbering comments as they're written. */
-function writtenOrder(a: Pick<ReviewComment, 'date' | 'id'>, b: Pick<ReviewComment, 'date' | 'id'>): number {
+export function writtenOrder(a: Pick<ReviewComment, 'date' | 'id'>, b: Pick<ReviewComment, 'date' | 'id'>): number {
   return Date.parse(a.date) - Date.parse(b.date) || a.id - b.id;
 }
 

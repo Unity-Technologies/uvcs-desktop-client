@@ -25,6 +25,7 @@ import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { splitRepositorySpec } from '../../lib/servers';
 import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
 import { useSuccessMomentStore } from './successMoment';
@@ -111,6 +112,20 @@ describe('checkinChanges', () => {
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true });
 
     expect(shownToasts()).toEqual([]);
+  });
+
+  it('says it checked in but applied no change request when one the comment names had none pending, quiet or not, and refreshes the reviews', async () => {
+    answerCheckins({ kind: 'created', changesetId: 44, branch: '/main', changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: 7 } });
+    answerSettings();
+    const refreshed = watchRefreshes(ws);
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'Fix [apply-change:deadbeef]', quiet: true })).toBe(true);
+
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Checked in cs:44 on main', detail: 'No change request was applied: deadbeef is applied already, or no review has it open.', action: 'View' },
+    ]);
+    expect(refreshed()).toContain('codeReviews');
+    expect(useCommandLogStore.getState().handledIds.has(7)).toBe(true);
   });
 
   it("remembers the comment for the workspace's repository, offered in its other workspaces and not in other repositories", async () => {
