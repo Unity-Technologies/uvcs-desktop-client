@@ -52,7 +52,16 @@ export interface HeaderLocation {
  * its pill says "Comment", in a tone of its own (`comment`) that no state takes. "Answered" leads to the reply,
  * "Applied" to how it was applied; the rest are words.
  */
-export type HeaderPill = { kind: ThreadKindName; label: string; tone: PillTone } &
+export type HeaderPill = {
+  kind: ThreadKindName;
+  /**
+   * The kind's name, the icon's tooltip and what a screen reader says of it; null where the label names the kind
+   * already ("Comment"), so it isn't said twice: the icon is then only drawn.
+   */
+  kindTip: ThreadKindName | null;
+  label: string;
+  tone: PillTone;
+} &
   ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string } | { leadsTo: 'context'; tip: string });
 
 /** The pill's color: open amber, done green, discarded gray, a plain comment blue, as no state is. */
@@ -101,30 +110,30 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
   return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
-/** What the pill shows: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */
-function pillWords(thread: ReviewThread, badges: ThreadBadges): Pick<HeaderPill, 'kind' | 'label' | 'tone'> | null {
+/** How the pill looks: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */
+function pillLook(thread: ReviewThread, badges: ThreadBadges): Pick<HeaderPill, 'kind' | 'kindTip' | 'label' | 'tone'> | null {
   const kind = threadKindName(thread.root);
-  if (!badges.state) return hasThreadHeader(thread) ? { kind, label: kind, tone: 'comment' } : null;
-  return { kind, ...badges.state };
+  if (!badges.state) return hasThreadHeader(thread) ? { kind, kindTip: null, label: kind, tone: 'comment' } : null;
+  return { kind, kindTip: kind, ...badges.state };
 }
 
 function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {
-  const words = pillWords(thread, badges);
-  if (!words) return null;
+  const look = pillLook(thread, badges);
+  if (!look) return null;
   const answer = showsAnswer ? answerOf(thread) : undefined;
   // A question answered in a changeset ("Fixed in cs:281301") leads to how, as an applied request does.
   if (thread.state.kind === 'answered' && thread.state.changesetId !== undefined) {
     const { changesetId } = thread.state;
-    if (inContext) return { ...words, leadsTo: 'nothing', tip: `Answered in changeset ${changesetId}` };
-    if (seesHowApplied) return { ...words, leadsTo: 'context', tip: `Answered in changeset ${changesetId}: see how it was answered` };
+    if (inContext) return { ...look, leadsTo: 'nothing', tip: `Answered in changeset ${changesetId}` };
+    if (seesHowApplied) return { ...look, leadsTo: 'context', tip: `Answered in changeset ${changesetId}: see how it was answered` };
   }
-  if (answer) return { ...words, leadsTo: 'answer', tip: answer.tip };
-  if (badges.appliedIn !== undefined && inContext) return { ...words, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
-  if (badges.appliedIn !== undefined) return { ...words, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
+  if (answer) return { ...look, leadsTo: 'answer', tip: answer.tip };
+  if (badges.appliedIn !== undefined && inContext) return { ...look, leadsTo: 'nothing', tip: `Applied in changeset ${badges.appliedIn}` };
+  if (badges.appliedIn !== undefined) return { ...look, leadsTo: 'applied', changesetId: badges.appliedIn, tip: appliedPillTip(badges.appliedIn, seesHowApplied) };
   // Every settled pill that leads somewhere else leads to the thread in context: Discarded, and Answered where the card
   // can't show its answer (the Comments panel's).
   if ((thread.state.kind === 'discarded' || thread.state.kind === 'answered') && seesHowApplied && !inContext) {
-    return { ...words, leadsTo: 'context', tip: `${words.label}: see it in context` };
+    return { ...look, leadsTo: 'context', tip: `${look.label}: see it in context` };
   }
-  return { ...words, leadsTo: 'nothing' };
+  return { ...look, leadsTo: 'nothing' };
 }
