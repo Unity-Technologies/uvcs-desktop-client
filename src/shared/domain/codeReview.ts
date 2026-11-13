@@ -57,6 +57,11 @@ export interface CodeReview extends CodeReviewSummary {
 export interface CodeReviewFilter {
   /** Only the review with this number: the palette's lookup of a number typed. */
   id?: number;
+  /**
+   * Only the reviews of this branch (`/main/task`): the reviews whose change requests a check-in on it can apply
+   * (`useBranchChangeRequests`). `cm` fails for a branch that doesn't exist.
+   */
+  targetBranch?: string;
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
   /** Only reviews the user is one of the reviewers of. */

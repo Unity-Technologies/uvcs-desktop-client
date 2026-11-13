@@ -23,6 +23,8 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
+      // A branch's name can't hold a quote, which `cm find` can't read: its spec is matched exactly.
+      ...(filter.targetBranch !== undefined ? [equalsCondition('target', `br:${filter.targetBranch}`)] : []),
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
