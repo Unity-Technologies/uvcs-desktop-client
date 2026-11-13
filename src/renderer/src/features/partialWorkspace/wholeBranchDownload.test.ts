@@ -103,4 +103,8 @@ describe('wholeBranchNotes', () => {
   it('never mentions changes left on the branch: they stay on their shelves, untouched', () => {
     expect(wholeBranchNotes({ ...preflight, leftShelveCount: 2 }, 'bring')).toEqual([]);
   });
+
+  it('says nothing in an unfinished merge: nothing can be chosen, and what blocks it is all that matters', () => {
+    expect(wholeBranchNotes({ ...preflight, inMerge: true, privateCount: 2, lockedPaths: ['a.png'] }, null)).toEqual([]);
+  });
 });
