@@ -6,8 +6,8 @@ import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 /**
  * A button that creates something ("New branch", "New label") shows that thing's icon with a plus (`GitBranchPlus`,
  * `TagPlus`), so it reads at a glance as what it makes; a bare `Plus` says only "add". Where Lucide has no such icon
- * the feature draws one on its grid (`TagsPlus`). Every `<Button>` whose label starts with "New " has an icon,
- * and it isn't the bare `Plus`.
+ * the feature draws one on its grid (`TagsPlus`). Every `<Button>` whose written label starts with "New " has an icon
+ * whose name ends in `Plus`, and isn't the bare `Plus`.
  */
 function newButtonsWithoutTheirIcon(source: string): string[] {
   const offenders: string[] = [];
@@ -15,7 +15,7 @@ function newButtonsWithoutTheirIcon(source: string): string[] {
     const opening = source.lastIndexOf('<Button', label.index);
     if (opening < 0) continue;
     const props = source.slice(opening, label.index);
-    if (!/\bicon=\{</.test(props) || /\bicon=\{<Plus\b/.test(props)) offenders.push(label[1]);
+    if (!/\bicon=\{<\w+Plus\b/.test(props)) offenders.push(label[1]);
   }
   return offenders;
 }
