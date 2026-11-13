@@ -32,14 +32,14 @@ import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
 import { listNarrowingDown } from '../workspace/listNarrowingDown';
 import { measureMoveSimilarities, type FileGlance } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
 export function createPendingChangesService({ cm, operations, revisionCat, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
-  const kindOf = kindFromHeaders(headers);
-  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf };
+  const { kindOf, forgetKind } = kindDependencies(headers);
+  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf, forgetKind };
 
   function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
     return readPendingChanges(cm, workspacePath, pendingChangesStatusOptions(filter), { diskDetails: true });

@@ -109,16 +109,16 @@ async function switchFrom(
   const summary = summarizePending(snapshot.changes);
   switch (switchApproach(summary)) {
     case 'switchAsIs':
-      await runSwitch(cm, workspacePath, targetSpec, workspace.switchesAs, context);
+      await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
       return { kind: 'switched', restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'refuseMerge':
       throw new Error(IN_MERGE);
     case 'undoUnchangedCheckouts':
       await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-      await runSwitch(cm, workspacePath, targetSpec, workspace.switchesAs, context);
+      await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
       return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'shelveChanges':
-      if (action === 'discard') return discardChanges(deps, workspacePath, workspace.switchesAs, summary.pendingCount, targetSpec, context);
+      if (action === 'discard') return discardChanges(deps, workspacePath, workspace, summary.pendingCount, targetSpec, context);
       return shelveChanges(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
   }
 }
@@ -128,7 +128,7 @@ async function switchFrom(
  * private files, as Undo in Changes leaves them (one the target has at the same path is renamed by `cm switch`).
  * With no shelve, a failure can't put anything back: its error says what is already undone instead.
  */
-async function discardChanges(deps: SwitchDependencies, workspacePath: string, kind: WorkspaceKind, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
+async function discardChanges(deps: SwitchDependencies, workspacePath: string, workspace: SwitchingWorkspace, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
   const { cm } = deps;
   if (context.signal.aborted) throw new Error('The switch was cancelled.');
   const committed = withoutStop(context);
@@ -143,7 +143,7 @@ async function discardChanges(deps: SwitchDependencies, workspacePath: string, k
 
   committed.beginStep('Switching', 2, 2);
   try {
-    await runSwitch(cm, workspacePath, targetSpec, kind, committed);
+    await switchWorkspace(deps, workspacePath, workspace, targetSpec, committed);
   } catch (error) {
     throw new Error(`${failureReason(error)}. Your changes were undone, as you chose, but the switch didn't finish.`);
   }
@@ -171,6 +171,19 @@ async function shelveChanges(
     return { kind: 'left', shelveId: record.shelveId, count: record.paths.length, sourceName: record.source.name, restored };
   }
   return bringChanges(deps, workspacePath, record, workspace.switchesAs, committed);
+}
+
+/**
+ * Switches as the workspace switches (`switchesAs`). A switch that changes its kind may have changed it even if it
+ * failed partway, so the kind is read again afterwards (`forgetKind`): a rollback then puts the changes back as the
+ * workspace now is.
+ */
+async function switchWorkspace(deps: SwitchDependencies, workspacePath: string, workspace: SwitchingWorkspace, targetSpec: string, context: OperationContext): Promise<void> {
+  try {
+    await runSwitch(deps.cm, workspacePath, targetSpec, workspace.switchesAs, context);
+  } finally {
+    if (workspace.switchesAs !== workspace.kind) deps.forgetKind(workspacePath);
+  }
 }
 
 /** Once the workspace starts changing (changes shelved, a restore under way), stopping halfway would leave a mess. */
@@ -210,7 +223,7 @@ async function shelveAndSwitch(
     await assertClean(cm, workspacePath);
 
     context.beginStep('Switching', 3, steps);
-    await runSwitch(cm, workspacePath, targetSpec, workspace.switchesAs, context);
+    await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
   } catch (error) {
     throw await rollBackSwitch(deps, workspacePath, record, error, context);
   }

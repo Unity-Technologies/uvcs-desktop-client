@@ -21,6 +21,8 @@ export interface ShelveFlowDependencies {
    * asks for it where it needs it, and a step after a command that rewrote the workspace reads it again, at no server cost.
    */
   kindOf(workspacePath: string): Promise<WorkspaceKind>;
+  /** After a command that may have changed the workspace's kind (a partial one switching as standard): the next `kindOf` reads it again. */
+  forgetKind(workspacePath: string): void;
 }
 
 /**
@@ -30,4 +32,12 @@ export interface ShelveFlowDependencies {
  */
 export function kindFromHeaders(headers: { names(workspacePath: string): Promise<WorkspaceNames> }): ShelveFlowDependencies['kindOf'] {
   return (workspacePath) => headers.names(workspacePath).then((names) => names.kind ?? 'standard');
+}
+
+/** `kindOf` and `forgetKind` from the workspace headers: forgetting drops their cached reads of the workspace (`WorkspaceHeaders.forget`). */
+export function kindDependencies(headers: {
+  names(workspacePath: string): Promise<WorkspaceNames>;
+  forget(workspacePath: string): void;
+}): Pick<ShelveFlowDependencies, 'kindOf' | 'forgetKind'> {
+  return { kindOf: kindFromHeaders(headers), forgetKind: (workspacePath) => headers.forget(workspacePath) };
 }

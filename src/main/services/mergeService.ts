@@ -9,13 +9,13 @@ import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createMergeService({ cm, operations, workspaceCopies, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
   const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
-  const kindOf = kindFromHeaders(headers);
+  const { kindOf, forgetKind } = kindDependencies(headers);
 
   return {
     preview: async (workspacePath, request) => {
@@ -45,7 +45,7 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
       operations.run(operationId, async (context) => updateWithMerge(cm, workspacePath, await kindOf(workspacePath), resolutions, backupsRoot, context)),
     shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) =>
-        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot, kindOf }, workspacePath, resolutions, context),
+        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot, kindOf, forgetKind }, workspacePath, resolutions, context),
       ),
   };
 }

@@ -22,7 +22,7 @@ import { locateInWorkspace } from '../links/locateInWorkspace';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { downloadWholeBranch, switchWithChanges } from '../workspace/switchWithChanges';
@@ -39,8 +39,8 @@ export function createWorkspacesService(
   { switchShelves, leftChanges }: SwitchContext,
   tellKindChanged: (workspacePath: string) => void,
 ): WorkspacesApi {
-  const kindOf = kindFromHeaders(headers);
-  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf };
+  const { kindOf, forgetKind } = kindDependencies(headers);
+  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf, forgetKind };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   // The heads and the kinds of the listed workspaces read one workspace at a time between them, so one pooled shell stays free.
   const listedReadTurns = workspaceReadTurns();
