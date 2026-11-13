@@ -156,6 +156,16 @@ export function changesetChoices(recent: readonly Changeset[] | undefined, readL
   return [typedChoice(typed, recent, readLimit), ...matching];
 }
 
+/**
+ * What a changeset picker says when it offers nothing: why the read failed, or, as nothing matched, that a number typed
+ * picks one anyway. `listed`: the repository's `newest` (what's missing is older), or `some` of them (a branch's,
+ * which may have none checked in).
+ */
+export function changesetChoicesEmptyText(error: Error | null, listed: 'newest' | 'some'): string {
+  if (error) return `Couldn't read the changesets: ${error.message}. Type a number to pick one.`;
+  return listed === 'newest' ? 'No changesets found. Type a number to pick an older one.' : 'No changesets found. Type a number to pick any other.';
+}
+
 /** What a picker's row shows: the number, the comment's first line, the branch's own name. */
 function changesetRowTexts(changeset: Changeset): string[] {
   return [String(changeset.id), firstLine(changeset.comment), shortBranchName(changeset.branch)];

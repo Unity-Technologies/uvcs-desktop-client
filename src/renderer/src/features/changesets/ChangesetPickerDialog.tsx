@@ -11,7 +11,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Highlight } from '../../ui/Highlight';
 import { PickList } from '../../ui/PickList';
-import { changesetChoices, type ChangesetChoice } from './changesetFilters';
+import { changesetChoices, changesetChoicesEmptyText, type ChangesetChoice } from './changesetFilters';
 import { RECENT_CHANGESETS, recentChangesetsQuery } from './recentChangesets';
 import { changesetsQuery } from './useChangesets';
 import styles from './ChangesetPickerDialog.module.css';
@@ -58,7 +58,7 @@ function ChangesetPickerDialog({ title, exclude, place, among, finish }: PickCha
         isDisabled={(choice) => choice.missing === true}
         loading={waiting}
         rowHeight={30}
-        empty={error ? `Couldn't read the changesets: ${error.message}. Type a number to pick one.` : 'No changesets found. Type a number to pick an older one.'}
+        empty={changesetChoicesEmptyText(error, among ? 'some' : 'newest')}
         renderItem={({ id, changeset, missing }) => (
           <>
             <GitCommitVertical size={13} className={styles.icon} />
