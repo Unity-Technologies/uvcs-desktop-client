@@ -4,7 +4,10 @@ import { KIND_PREFIXES, type PrefixedKind } from '../../lib/kindPrefixes';
  * What a suggestion list offers: the objects a comment names, people, emoji, the tracker's issues, and the change
  * requests a check-in applies (opened by `[apply`, `cm`'s own syntax, or their button: `changeRequestTrigger`).
  */
-export type SuggestionKind = PrefixedKind | 'emoji' | 'issue' | 'changeRequest';
+export type SuggestionKind = TriggeredKind | 'changeRequest';
+
+/** What a trigger of `SUGGESTION_TRIGGERS` opens: every kind but the change requests, which `[apply` and their button open. */
+export type TriggeredKind = PrefixedKind | 'emoji' | 'issue';
 
 /**
  * What opens each suggestion list as it's typed: the prefixes the palette reads too (`KIND_PREFIXES`: the specs'
@@ -12,7 +15,7 @@ export type SuggestionKind = PrefixedKind | 'emoji' | 'issue' | 'changeRequest';
  * `suggestionQueryAt`). Apart from the editor, so focus mode's footer (`focusModeHints`), drawn with the check-in,
  * reads them without loading it.
  */
-export const SUGGESTION_TRIGGERS: Readonly<Record<string, SuggestionKind>> = {
+export const SUGGESTION_TRIGGERS: Readonly<Record<string, TriggeredKind>> = {
   ...KIND_PREFIXES,
   ':': 'emoji',
   '#': 'issue',

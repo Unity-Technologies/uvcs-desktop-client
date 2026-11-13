@@ -1,5 +1,5 @@
 import type { KeyHint } from '../../ui/KeyHints';
-import { SUGGESTION_TRIGGERS, type SuggestionKind } from './suggestionTriggers';
+import { SUGGESTION_TRIGGERS, type TriggeredKind } from './suggestionTriggers';
 
 /** A hint of focus mode's footer (`KeyHints`): keys pressed (`typed` false) or text typed as written, and what it does. */
 export interface FocusModeHint extends KeyHint {
@@ -8,7 +8,7 @@ export interface FocusModeHint extends KeyHint {
 }
 
 /** What each suggestion's trigger writes, in the palette's way of naming its prefixes: one short lowercase word. */
-const TRIGGER_WORDS: Record<SuggestionKind, string> = {
+const TRIGGER_WORDS: Record<TriggeredKind, string> = {
   changeset: 'reference',
   branch: 'reference',
   label: 'reference',
@@ -17,8 +17,6 @@ const TRIGGER_WORDS: Record<SuggestionKind, string> = {
   person: 'mention',
   emoji: 'emoji',
   issue: 'issue',
-  // Opened by `[apply`, `cm`'s own syntax, or the check-in's button: no trigger of the hints.
-  changeRequest: 'apply',
 };
 
 /**
