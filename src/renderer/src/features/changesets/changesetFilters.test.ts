@@ -223,6 +223,11 @@ describe('changesetChoices', () => {
     expect(choices('60', recent, 3)).toEqual([{ id: 60, missing: true }]);
   });
 
+  it("offers any number typed by its number alone when those read are some of the repository's, not its newest (a branch's)", () => {
+    expect(changesetChoices(recent, undefined, 50, '45')).toEqual([{ id: 45 }]);
+    expect(changesetChoices(recent, undefined, 50, '42')).toEqual([{ id: 42, changeset: recent[1] }, { id: 41, changeset: recent[2] }]);
+  });
+
   it('offers any number typed while the changesets are unread, or the read failed', () => {
     expect(changesetChoices(undefined, NOT_REACHED, 50, '7')).toEqual([{ id: 7 }]);
     expect(changesetChoices(undefined, NOT_REACHED, 50, '')).toEqual([]);
