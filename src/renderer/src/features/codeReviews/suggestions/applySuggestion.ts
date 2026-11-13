@@ -50,7 +50,9 @@ export async function checkInSuggestion(write: SuggestionWrite, comment: string)
   // Changed since the button showed (an editor saved it): checking it in alone would take those changes too.
   if (await pendingChangeOf(workspacePath, change.path)) return refused(change.path, otherChangesReason(change.path));
   if (!(await writeSuggestion(write))) return false;
-  // The file had no other change, so the one it has now is the suggestion's: no need to read the list again.
+  // The file had no other change, so the one it has now is the suggestion's: no need to read the list again. Named as
+  // changed rather than read back: `cm` may not see a write in the second of the file's last update (it compares
+  // timestamps), and `cm checkin` says so if it doesn't.
   const written: PendingChange = { path: change.path, kinds: ['changed'], itemType: 'file', size: 0, lastModified: '' };
   // Its comment names a change request that's applied once checked in: never one to pick again from the recent ones.
   const checkedIn = await checkinChanges({ workspacePath, changes: [written], paths: [change.path], addsPrivate: false, comment, remembersComment: false });
