@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection } from './pierreDom';
+import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection, rowUnderPointer } from './pierreDom';
 
 describe('pierreDom', () => {
   it('names a changed line by its type in Pierre’s rows', () => {
@@ -195,5 +195,32 @@ describe('editorHasFocusIn', () => {
   it('is nothing else in the diff, nor a diff without focus', () => {
     expect(editorHasFocusIn(focusedIn(new FakeElement('BUTTON')))).toBe(false);
     expect(editorHasFocusIn(focusedIn(null))).toBe(false);
+  });
+});
+
+describe('rowUnderPointer', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', FakeElement));
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** The composed path of an event from `target` up through its ancestors, its shadow root and that root's host. */
+  function pathFrom(target: FakeElement, ...above: FakeElement[]): FakeElement[] {
+    const path: FakeElement[] = [];
+    for (let element: FakeElement | null = target; element; element = element.parentElement) path.push(element);
+    return [...path, ...above];
+  }
+
+  it("is the line of the code's row under the pointer", () => {
+    const line = row(12, 'change-addition', 'speed = 60;');
+    new FakeElement('DIV', { 'data-additions': '' }, [line]);
+    expect(rowUnderPointer(pathFrom(line.children[0] as FakeElement, new FakeElement('diffs-container')))).toEqual({ lineNumber: 12, lineType: 'change-addition', pane: 'additions' });
+  });
+
+  // A suggested change in a thread on the code is a diff of its own, in the code's annotation row: its rows are its
+  // lines, not the code's, so the code's menu, hover and gutter button don't take them for the line under the pointer.
+  it("is none over the rows of a diff shown in a comment on the code, which aren't the code's lines", () => {
+    const suggested = row(1, 'change-deletion', 'speed = 30;');
+    new FakeElement('DIV', {}, [suggested]);
+    const nested = pathFrom(suggested.children[0] as FakeElement, new FakeElement('diffs-container'), new FakeElement('FIGURE'), new FakeElement('SLOT'), new FakeElement('DIV', { 'data-line-annotation': '0,1' }), new FakeElement('diffs-container'));
+    expect(rowUnderPointer(nested)).toBeNull();
   });
 });
