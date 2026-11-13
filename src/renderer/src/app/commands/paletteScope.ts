@@ -70,16 +70,20 @@ export function offeredPrefixes(shown: Place | null): ScopePrefix[] {
  * (`fix br:main`) is text.
  */
 export function parseScope(query: string): { scope: PaletteScope; text: string } {
-  const trimmed = query.trimStart();
-  const found = SCOPE_PREFIXES.find(({ prefix }) => trimmed.startsWith(prefix));
-  return found ? { scope: found.scope, text: trimmed.slice(found.prefix.length).trim() } : { scope: 'all', text: query.trim() };
+  const { found, rest } = splitPrefix(query);
+  return found ? { scope: found.scope, text: rest.trim() } : { scope: 'all', text: query.trim() };
 }
 
 /** The query without its leading prefix, the rest as typed: a space typed last still parts the next word. */
 export function withoutScopePrefix(query: string): string {
+  return splitPrefix(query).rest;
+}
+
+/** The one place a leading prefix is read, so a chip and a typed prefix always agree (`queryInScope`). */
+function splitPrefix(query: string): { found: ScopePrefix | undefined; rest: string } {
   const trimmed = query.trimStart();
   const found = SCOPE_PREFIXES.find(({ prefix }) => trimmed.startsWith(prefix));
-  return found ? trimmed.slice(found.prefix.length).trimStart() : trimmed;
+  return { found, rest: found ? trimmed.slice(found.prefix.length).trimStart() : trimmed };
 }
 
 export function isInScope(section: SectionId, scope: PaletteScope): boolean {
