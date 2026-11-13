@@ -104,6 +104,13 @@ describe('refresh scopes', () => {
     expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed [APPLY-CHANGE:c0d1ce00]')(key('codeReviews', {}))).toBe(true);
   });
 
+  it("refreshes a branch's change requests to apply after any check-in or update: what came in may have applied some", () => {
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'summaries', { targetBranch: '/main/task' }))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'conversation', 43))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'summaries', {}))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', {}))).toBe(false);
+  });
+
   it('leaves the code reviews alone after a comment that applies none', () => {
     expect(withChangeRequestsApplied(isAffectedByCheckinOrUpdate, 'Shelve first, see cr:43 and [apply-change:c0d1ce0]')(key('codeReviews', {}))).toBe(false);
     expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed')).toBe(isAffectedByChangesetComment);
