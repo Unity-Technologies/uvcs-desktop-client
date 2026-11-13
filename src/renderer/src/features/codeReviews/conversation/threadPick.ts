@@ -12,6 +12,8 @@ import { commentLocationPage } from './threadBadges';
 export interface ThreadPick {
   /** The thread's first comment's id. */
   threadId: number;
+  /** A reply in it to go to, the one a link names: lit and brought into view in place of the thread. */
+  replyId?: number;
   /** Which pick this is, counting every one: the card's light restarts when it changes (`ReviewThreadCard.highlight`). */
   seq: number;
   /** In the rail (scrolled to, gliding), or by the page opening at it (shown at once). */
@@ -24,21 +26,30 @@ export function pickThread(previous: ThreadPick | undefined, threadId: number): 
 }
 
 /**
- * The page opened at a thread, or moved to another: that one becomes current. A tab shown as it is (no thread to go to)
- * keeps the one picked.
+ * The page opened at a thread, or moved to another: that one becomes current, at the reply the page names. A tab shown
+ * as it is (no thread to go to) keeps the one picked.
  */
-export function pickOnFocus(previous: ThreadPick | undefined, focusThread: number | undefined): ThreadPick | undefined {
-  return focusThread === undefined ? previous : { threadId: focusThread, seq: nextSeq(previous), by: 'page' };
+export function pickOnFocus(previous: ThreadPick | undefined, focusThread: number | undefined, focusReply?: number): ThreadPick | undefined {
+  if (focusThread === undefined) return previous;
+  return { threadId: focusThread, ...(focusReply !== undefined && { replyId: focusReply }), seq: nextSeq(previous), by: 'page' };
 }
 
 function nextSeq(previous: ThreadPick | undefined): number {
   return (previous?.seq ?? 0) + 1;
 }
 
-/** How a thread's card shows the pick: lit for a moment (`highlight`) and ringed while it's the current one. */
-export function threadMarkOf(threadId: number, pick: ThreadPick | undefined): { highlight: number | undefined; selected: boolean } {
+/**
+ * How a thread's card shows the pick: unfolded and lit for a moment (`highlight`), ringed while it's the current one;
+ * at a reply (`litReply`), the reply lit rather than the whole card.
+ */
+export function threadMarkOf(threadId: number, pick: ThreadPick | undefined): { highlight: number | undefined; selected: boolean; litReply?: number } {
   const picked = pick?.threadId === threadId;
-  return { highlight: picked ? pick.seq : undefined, selected: picked };
+  return { highlight: picked ? pick.seq : undefined, selected: picked, ...(picked && pick.replyId !== undefined && { litReply: pick.replyId }) };
+}
+
+/** The element the conversation brings into view for a pick: the thread's, or the reply's it goes to. */
+export function pickedElementId(pick: ThreadPick): string {
+  return pick.replyId === undefined ? threadElementId(pick.threadId) : commentElementId(pick.replyId);
 }
 
 /**
@@ -53,6 +64,11 @@ export function pickedScrollOf(pick: ThreadPick): ScrollIntoViewOptions {
 /** The thread's element in the conversation, which going to it scrolls to. */
 export function threadElementId(commentId: number): string {
   return `review-thread-${commentId}`;
+}
+
+/** A comment's element in the conversation, which going to it scrolls to (a reply a link names). */
+export function commentElementId(commentId: number): string {
+  return `review-comment-${commentId}`;
 }
 
 /** An entry of the rail's Open: what the thread says, in a line, and whether it's the current one. */
