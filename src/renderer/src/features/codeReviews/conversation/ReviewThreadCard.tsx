@@ -275,45 +275,46 @@ interface StatePillProps {
  * would be a frame in a frame. "Answered" is one too, to the reply that answered (`onSeeAnswer`).
  */
 function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
-  const words = <PillWords pill={pill} />;
+  const content = <PillContent pill={pill} />;
   switch (pill.leadsTo) {
     case 'answer':
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeAnswer}>
-          {words}
+          {content}
         </button>
       );
     case 'applied': {
       const { changesetId } = pill;
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied ?? (() => openChangesetDiff({ id: changesetId }))}>
-          {words}
+          {content}
         </button>
       );
     }
     case 'context':
       return (
         <button type="button" className={styles.pill} data-tone={pill.tone} data-tip={pill.tip} onClick={onSeeApplied}>
-          {words}
+          {content}
         </button>
       );
     case 'nothing':
       return (
         <span className={styles.pill} data-tone={pill.tone} data-tip={pill.tip}>
-          {words}
+          {content}
         </span>
       );
   }
 }
 
 /**
- * The pill's inside: the thread's kind as its icon, whose own tooltip names it (`ThreadKindIcon`) where the pill's says
- * where it stands, then that state's word ("Comment" for a plain comment, which stands nowhere).
+ * The pill's inside: the thread's kind as its icon, then where it stands ("Comment" for a plain comment, which stands
+ * nowhere). The icon's own tooltip names the kind (`kindTip`) where the words don't, over the pill's tip; where they
+ * do, it's only drawn.
  */
-function PillWords({ pill }: { pill: HeaderPill }) {
+function PillContent({ pill }: { pill: HeaderPill }) {
   return (
     <>
-      <ThreadKindIcon kind={pill.kind} size={12} />
+      <ThreadKindIcon kind={pill.kind} size={12} named={pill.kindTip !== null} />
       {pill.label}
     </>
   );
