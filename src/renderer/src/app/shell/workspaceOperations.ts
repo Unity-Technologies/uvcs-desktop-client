@@ -1,5 +1,7 @@
 import type { IncomingChanges } from '@shared/domain/incoming';
+import { selectorSpec } from '@shared/domain/specs';
 import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
@@ -8,12 +10,13 @@ import { incomingCount } from '../../features/incoming/incomingCount';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { incomingChangesKey } from '../../features/incoming/useIncomingChanges';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
+import { askWholeBranchDownload } from '../../features/partialWorkspace/WholeBranchDialog';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
 import { queryClient } from '../queryClient';
 import { isAffectedByCheckinOrUpdate } from '../refresh/refreshScopes';
-import { switchToast } from './switchToast';
+import { switchToast, wholeBranchToast } from './switchToast';
 
 /** Resolves to whether it updated. */
 export async function updateWorkspace(workspacePath: string): Promise<boolean> {
@@ -64,6 +67,26 @@ export async function switchWorkspace(
     // Once changes are shelved, stopping halfway would leave them in limbo.
     cancellable: !action,
     success: (switched) => switchToast(switched, displayName),
+  });
+  return Boolean(result);
+}
+
+/** Makes a partial workspace standard, after asking: it downloads everything its branch holds. Resolves to whether it did. */
+export async function downloadWholeBranch(workspacePath: string, selector: WorkspaceSelector): Promise<boolean> {
+  if (refuseWhileBusy(workspacePath)) return false;
+  const preflight = await runRead("Couldn't download the whole branch", () => api.workspaces.switchPreflight(workspacePath, selectorSpec(selector)));
+  if (!preflight) return false;
+  const confirmation = await askWholeBranchDownload(preflight);
+  if (!confirmation) return false;
+
+  const result = await runOperation({
+    title: 'Downloading the whole branch',
+    workspacePath,
+    kind: 'switch',
+    run: (operationId) => api.workspaces.downloadWholeBranch(workspacePath, operationId, confirmation.pendingChanges),
+    // Once changes are shelved, stopping halfway would leave them in limbo.
+    cancellable: !confirmation.pendingChanges,
+    success: (downloaded) => wholeBranchToast(downloaded, selector.name),
   });
   return Boolean(result);
 }

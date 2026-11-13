@@ -43,3 +43,8 @@ export function choosesDownloadsFor(
   if (item.isPrivate || item.added || where.underXlink) return false;
   return !(where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository);
 }
+
+/** Whether a workspace may download its whole branch, which makes it standard: a partial one, once its branch is known. */
+export function downloadsWholeBranch(kind: WorkspaceKind | undefined, selector: WorkspaceSelector | undefined): boolean {
+  return kind === 'partial' && selector?.kind === 'branch';
+}
