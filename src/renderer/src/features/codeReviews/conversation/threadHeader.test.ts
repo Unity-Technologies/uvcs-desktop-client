@@ -110,6 +110,24 @@ describe('threadHeaderOf', () => {
     });
   });
 
+  describe("the first comment's menu", () => {
+    it('carries it on a folded card, in the conversation and in the code, where the comment that has it is hidden', () => {
+      expect(headerOf(applied, { foldable: true, folded: true }).commentMenu).toBe(true);
+      expect(headerOf(discarded, { place: 'code', foldable: true, folded: true }).commentMenu).toBe(true);
+    });
+
+    it('leaves it to the comment once the card shows it whole, so there is never a second one', () => {
+      expect(headerOf(applied, { foldable: true }).commentMenu).toBe(false);
+      expect(headerOf(changeRequest).commentMenu).toBe(false);
+      expect(headerOf(answered, { place: 'code', foldable: true }).commentMenu).toBe(false);
+    });
+
+    it("doesn't carry it on the Comments panel's cards, which go to the thread", () => {
+      expect(headerOf(answered, { place: 'panel', folded: true, showsAnswer: false }).commentMenu).toBe(false);
+      expect(headerOf(answered, { place: 'fileGroup', folded: true, showsAnswer: false }).commentMenu).toBe(false);
+    });
+  });
+
   describe('the pill', () => {
     it('says an open change request is open, as words', () => {
       expect(headerOf(changeRequest).pill).toEqual({ label: 'Open', tone: 'open', leadsTo: 'nothing' });
