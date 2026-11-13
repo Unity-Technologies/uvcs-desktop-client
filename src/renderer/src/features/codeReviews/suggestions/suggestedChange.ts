@@ -2,17 +2,29 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { suggestionOf } from '@shared/reviewSuggestion';
 import { anchorPath } from '../inline/fileThreads';
 
+/** Lines of a file, 1-based as an editor counts them, both included: one line is `firstLine === lastLine`. */
+export interface LineRange {
+  firstLine: number;
+  lastLine: number;
+}
+
+/**
+ * The lines a comment is on, which its suggestion replaces: the one place a comment's anchor becomes a range. `cm`
+ * names one line today (`{line}`, 1-based). Once comments take ranges (`cm codereview comment add --line=A-B`, stored
+ * as a `lines:A-B` location, 0-based and inclusive), only this reads them; everything after it takes a range.
+ */
+export function commentedLines(anchor: { line: number }): LineRange {
+  return { firstLine: anchor.line, lastLine: anchor.line };
+}
+
 /**
  * What a change request suggests (docs/features/code-reviews.md "Suggested changes"): the lines of a revision of a file
- * it replaces, and the lines it puts there. `cm` names one line today, so `firstLine` and `lastLine` are the same; a
- * comment on a range (a future `--line=A-B`) fills both.
+ * it replaces (`LineRange`, from `commentedLines`), and the lines it puts there.
  */
-export interface SuggestedChange {
+export interface SuggestedChange extends LineRange {
   /** A repository path without its leading slash, as the diff names files (`anchorPath`). */
   path: string;
   revisionId: number;
-  firstLine: number;
-  lastLine: number;
   /** What takes their place: none deletes them. */
   lines: string[];
 }
@@ -26,7 +38,7 @@ export function suggestedChangeOf(comment: Pick<ReviewComment, 'kind' | 'anchor'
   const suggestion = suggestionOf(comment.text);
   if (!suggestion) return null;
   const { anchor } = comment;
-  return { path: anchorPath(anchor), revisionId: anchor.revisionId, firstLine: anchor.line, lastLine: anchor.line, lines: suggestion.lines };
+  return { path: anchorPath(anchor), revisionId: anchor.revisionId, ...commentedLines(anchor), lines: suggestion.lines };
 }
 
 /** A read something waits on: still being read, failed, or its answer. */
@@ -39,10 +51,12 @@ export type Read<T> = 'reading' | 'failed' | T;
 export type ReplacedLines = string[] | 'reading' | 'unknown';
 
 /** The lines `firstLine` to `lastLine` (1-based) of a version's text, its line ends left out; unknown past its end. */
-export function replacedLinesIn(text: string | null | undefined, change: Pick<SuggestedChange, 'firstLine' | 'lastLine'>): ReplacedLines {
+export function replacedLinesIn(text: string | null | undefined, change: LineRange): ReplacedLines {
   if (text === undefined) return 'reading';
   if (text === null) return 'unknown';
   const lines = text.split(/\r\n|\n|\r/);
+  // A text ending in a line end has no line after it (as `withLinesReplaced` counts lines).
+  if (lines.at(-1) === '') lines.pop();
   if (change.firstLine < 1 || change.lastLine > lines.length) return 'unknown';
   return lines.slice(change.firstLine - 1, change.lastLine);
 }
@@ -62,6 +76,12 @@ export function suggestionRows(replaced: ReplacedLines, lines: readonly string[]
 }
 
 /** The block's heading: what it does to the code. */
-export function suggestionTitle(lines: readonly string[]): string {
-  return lines.length === 0 ? 'Suggested change: delete the line' : 'Suggested change';
+export function suggestionTitle(change: LineRange & Pick<SuggestedChange, 'lines'>): string {
+  if (change.lines.length > 0) return 'Suggested change';
+  return change.lastLine > change.firstLine ? 'Suggested change: delete the lines' : 'Suggested change: delete the line';
+}
+
+/** "Line 13", "Lines 13–15": the lines a suggestion replaces, as its reasons name them. */
+export function rangeWords({ firstLine, lastLine }: LineRange): string {
+  return lastLine > firstLine ? `Lines ${firstLine}–${lastLine}` : `Line ${firstLine}`;
 }

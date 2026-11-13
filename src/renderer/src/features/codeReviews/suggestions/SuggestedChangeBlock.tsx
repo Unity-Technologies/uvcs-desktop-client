@@ -25,10 +25,10 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
   const rows = suggestionRows(useReplacedLines(change), change.lines);
   const plain = <SuggestionRows rows={rows} />;
   return (
-    <figure className={styles.block} aria-label={suggestionTitle(change.lines)}>
+    <figure className={styles.block} aria-label={suggestionTitle(change)}>
       <figcaption className={styles.header}>
         <MessageSquareDiff size={14} aria-hidden />
-        <span className={styles.title}>{suggestionTitle(change.lines)}</span>
+        <span className={styles.title}>{suggestionTitle(change)}</span>
         {actions && <span className={styles.actions}>{actions}</span>}
       </figcaption>
       <Suspense fallback={plain}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { replacedLinesIn, suggestedChangeOf, suggestionRows, suggestionTitle } from './suggestedChange';
+import { commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionRows, suggestionTitle } from './suggestedChange';
 
 const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', line: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
@@ -36,6 +36,11 @@ describe('replacedLinesIn', () => {
     expect(replacedLinesIn('a\rb', change)).toEqual(['b']);
   });
 
+  it('takes every line of a range', () => {
+    expect(replacedLinesIn('a\r\nb\r\nc\r\nd', { firstLine: 2, lastLine: 4 })).toEqual(['b', 'c', 'd']);
+    expect(replacedLinesIn('a\nb\n', { firstLine: 2, lastLine: 3 })).toBe('unknown');
+  });
+
   it('tells a version still read from one that failed or is shorter than the line', () => {
     expect(replacedLinesIn(undefined, change)).toBe('reading');
     expect(replacedLinesIn(null, change)).toBe('unknown');
@@ -52,6 +57,14 @@ describe('suggestionRows', () => {
     ]);
   });
 
+  it('shows a range as all its lines removed, then the suggested ones added', () => {
+    expect(suggestionRows(['a', 'b'], ['ab'])).toEqual([
+      { kind: 'removed', text: 'a' },
+      { kind: 'removed', text: 'b' },
+      { kind: 'added', text: 'ab' },
+    ]);
+  });
+
   it('shows a deletion as the line removed alone', () => {
     expect(suggestionRows(['old'], [])).toEqual([{ kind: 'removed', text: 'old' }]);
   });
@@ -64,7 +77,21 @@ describe('suggestionRows', () => {
 
 describe('suggestionTitle', () => {
   it('says when the suggestion deletes the line', () => {
-    expect(suggestionTitle([])).toBe('Suggested change: delete the line');
-    expect(suggestionTitle(['x'])).toBe('Suggested change');
+    expect(suggestionTitle({ firstLine: 3, lastLine: 3, lines: [] })).toBe('Suggested change: delete the line');
+    expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: [] })).toBe('Suggested change: delete the lines');
+    expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: ['x'] })).toBe('Suggested change');
+  });
+});
+
+describe('commentedLines', () => {
+  it("is the one line cm names a comment by, today", () => {
+    expect(commentedLines({ line: 7 })).toEqual({ firstLine: 7, lastLine: 7 });
+  });
+});
+
+describe('rangeWords', () => {
+  it('names one line or a range', () => {
+    expect(rangeWords({ firstLine: 7, lastLine: 7 })).toBe('Line 7');
+    expect(rangeWords({ firstLine: 7, lastLine: 9 })).toBe('Lines 7–9');
   });
 });

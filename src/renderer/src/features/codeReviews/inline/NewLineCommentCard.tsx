@@ -11,6 +11,7 @@ import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
 import { suggestButtonOf } from '../suggestions/suggestButton';
+import { commentedLines } from '../suggestions/suggestedChange';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { CommentComposer } from '../conversation/CommentComposer';
 import { addLineComment } from '../conversation/reviewCommentOperations';
@@ -68,7 +69,8 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
 
   const draftKey = commentDraftKey(placeId(place), 'reviewLineComment', spot.key);
   const text = composerText(useCommentDraftStore((state) => state.drafts[draftKey]), '');
-  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, firstLine: spot.comment.line, lastLine: spot.comment.line });
+  // The lines the comment is on, which Suggest change fills the fence with: one today, a range once comments take them.
+  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, ...commentedLines(spot.comment) });
   const suggest = suggestButtonOf(lineText, text);
   // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
   const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ContentSource } from '@shared/domain/content';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { contentQuery } from '../../diff/viewer/contentQueries';
-import { replacedLinesIn, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
+import { replacedLinesIn, type LineRange, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
 
 const NOTHING: ContentSource = { kind: 'empty' };
 
@@ -13,7 +13,7 @@ const NOTHING: ContentSource = { kind: 'empty' };
  * suggestion shown (`SuggestedChangeBlock`; a settled thread starts folded), never for a comment that holds none, and
  * by a new comment on a line, whose Suggest change fills the fence with it (`NewLineCommentCard`): the diff's read.
  */
-export function useReplacedLines(change: Pick<SuggestedChange, 'path' | 'revisionId' | 'firstLine' | 'lastLine'>): ReplacedLines {
+export function useReplacedLines(change: Pick<SuggestedChange, 'path' | 'revisionId'> & LineRange): ReplacedLines {
   const text = useCommentedText(change);
   return replacedLinesIn(text === 'reading' ? undefined : text === 'failed' ? null : text, change);
 }
