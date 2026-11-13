@@ -1,5 +1,5 @@
 import { GitPullRequestArrow, History } from 'lucide-react';
-import { Fragment } from 'react';
+import { forwardRef, Fragment, type ButtonHTMLAttributes } from 'react';
 import { recentCommentPick } from '../../lib/comment';
 import { Tooltip } from '../../ui/Tooltip';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
@@ -34,29 +34,37 @@ export function DescriptionFooter({ buttons, recentComments, onRecentComment, on
               entries={recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recent.split('\n')[0]!, run: () => onRecentComment(recentCommentPick(recent)) }))}
               onCloseAutoFocus={onRecentMenuClosed}
             >
-              <Tooltip content={button.tip}>
-                <button type="button" className={styles.footerButton} aria-label={button.tip}>
-                  <History size={13} aria-hidden />
-                </button>
-              </Tooltip>
+              <FooterButton tip={button.tip} aria-label={button.tip}>
+                <History size={13} aria-hidden />
+              </FooterButton>
             </ActionDropdownMenu>
           ) : (
-            <Tooltip content={button.tip}>
-              <button
-                type="button"
-                className={styles.footerButton}
-                aria-label={button.label}
-                // A press leaves the caret where it is in the description: the list opens there. The keyboard's Enter opens it at the end.
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={onChangeRequests}
-              >
-                <GitPullRequestArrow size={13} aria-hidden />
-                <span className={styles.footerCount}>{button.count}</span>
-              </button>
-            </Tooltip>
+            <FooterButton
+              tip={button.tip}
+              aria-label={button.label}
+              // A press leaves the caret where it is in the description: the list opens there. The keyboard's Enter opens it at the end.
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onChangeRequests}
+            >
+              <GitPullRequestArrow size={13} aria-hidden />
+              <span className={styles.footerCount}>{button.count}</span>
+            </FooterButton>
           )}
         </Fragment>
       ))}
     </div>
   );
 }
+
+/**
+ * One of the footer's quiet buttons, its tooltip naming it. Like `IconButton`, it takes the props and the ref of a menu
+ * trigger it is the child of (`ActionDropdownMenu`'s `asChild`) onto its button: given to the tooltip, they never
+ * reached it, and Recent comments opened nothing.
+ */
+const FooterButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tip: string }>(function FooterButton({ tip, ...rest }, ref) {
+  return (
+    <Tooltip content={tip}>
+      <button ref={ref} type="button" className={styles.footerButton} {...rest} />
+    </Tooltip>
+  );
+});
