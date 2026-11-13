@@ -33,6 +33,15 @@ export function recentCommentPick(comment: string): { parts: CommentParts; caret
   return { parts, caretIn: parts.description ? 'description' : 'summary' };
 }
 
+/**
+ * How Recent comments names a comment: the first line its pick writes (`recentCommentPick`, the change requests it
+ * applied left out); one that writes nothing, as it was written.
+ */
+export function recentCommentLabel(comment: string): string {
+  const written = withoutApplyChanges(comment).trim();
+  return (written || comment).split(/\r?\n/)[0]!;
+}
+
 /** A comment opening with a list item: the item is no title, though a row shows it as the comment's line. */
 const OPENS_WITH_LIST = /^\s*(?:[-*+]|\d+[.)])\s/;
 

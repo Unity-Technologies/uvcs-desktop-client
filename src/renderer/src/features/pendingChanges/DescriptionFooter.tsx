@@ -1,6 +1,6 @@
 import { GitPullRequestArrow, History } from 'lucide-react';
 import { forwardRef, Fragment, type ButtonHTMLAttributes } from 'react';
-import { recentCommentPick } from '../../lib/comment';
+import { recentCommentLabel, recentCommentPick } from '../../lib/comment';
 import { Tooltip } from '../../ui/Tooltip';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { DescriptionFooterButton } from './descriptionFooterButtons';
@@ -31,7 +31,7 @@ export function DescriptionFooter({ buttons, recentComments, onRecentComment, on
           {index > 0 && <span className={styles.footerSeparator} aria-hidden />}
           {button.kind === 'recentComments' ? (
             <ActionDropdownMenu
-              entries={recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recent.split('\n')[0]!, run: () => onRecentComment(recentCommentPick(recent)) }))}
+              entries={recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recentCommentLabel(recent), run: () => onRecentComment(recentCommentPick(recent)) }))}
               onCloseAutoFocus={onRecentMenuClosed}
             >
               <FooterButton tip={button.tip} aria-label={button.tip}>
