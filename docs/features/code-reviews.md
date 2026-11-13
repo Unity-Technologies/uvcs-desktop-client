@@ -239,7 +239,10 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   (**Answered**: any reply answers it, there's no other way to resolve one). Other comments are never open. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
+  tab stop). Folded, its first comment's menu sits at the band's end, after the pill, under the pointer as on a comment
+  (`threadHeaderOf`'s `commentMenu`, `FirstCommentMenu`): the same entries, wired once (`useCommentMenu`), so "Mark as
+  not applied", Copy, Edit and Delete don't wait for an unfold; Edit unfolds the card at the comment's editor. Shown
+  whole, the menu is the comment's only, never two; the Comments panel's cards, which go to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
   cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
   a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill: **Open** in the color
   of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral.
