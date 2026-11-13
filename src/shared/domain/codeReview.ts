@@ -84,6 +84,26 @@ export interface CodeReviewFilter {
  */
 export const NEWEST_CODE_REVIEWS = 300;
 
+/**
+ * Why the signed-in user gets a review's emails or doesn't, as `cm codereview subscription` names it: they wrote it
+ * (`owner`), review it, commented, were mentioned, or subscribed themselves (`manual`); they unsubscribed; `none`, no
+ * subscription of their own (a reviewer group they belong to may still send them); `other`, a reason `cm` doesn't know.
+ */
+export const REVIEW_SUBSCRIPTION_REASONS = ['owner', 'reviewer', 'commented', 'mentioned', 'manual', 'unsubscribed', 'none', 'other'] as const;
+
+export type ReviewSubscriptionReason = (typeof REVIEW_SUBSCRIPTION_REASONS)[number];
+
+/** Whether the signed-in user gets a review's emails, and why (`CodeReviewsApi.subscription`). */
+export interface ReviewSubscription {
+  subscribed: boolean;
+  reason: ReviewSubscriptionReason;
+  /**
+   * Whether the review's repository sends review emails at all (its "Code Review Email Trigger"); false too when the
+   * user can't see that trigger. While false, being subscribed sends nothing, though it's kept.
+   */
+  emailsEnabled: boolean;
+}
+
 export interface CreateCodeReviewRequest {
   /** `br:/main/task`, `cs:12` or `sh:3`. */
   targetSpec: string;

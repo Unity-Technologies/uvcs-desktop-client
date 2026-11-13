@@ -5,7 +5,9 @@ server, with a destination branch: what this doc says of reviews holds for both.
 
 Reviews need `cm` 11.0.16.10616 or later: the fields `cm find review` reads (`FOUND_REVIEWS`) and the reviewer
 commands are that version's, and with `--format` a field an older `cm` doesn't know fails the whole command, so the
-list, the branch chips and the palette's reviews would read nothing. The app doesn't check the version yet.
+list, the branch chips and the palette's reviews would read nothing. The app relies on that version for every review
+command, but those an older `cm` would misread as another command, creating a review: those are offered only from the
+version that has them (`isCmVersionAtLeast`; the email subscription, see "Email notifications").
 
 ## Reviewers and their status
 
@@ -143,16 +145,45 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 - **Refresh** (the header's button, ⌘R, the menu's; in a page window too): others write on a review while it's open,
   someone waiting for comments (a teammate, an agent) among them, and a focus reads it again only once stale, so the
   page reads it again on demand, in place. With the review in front, Refresh reads only what the page shows
-  (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation and its
-  reviewers; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
-  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, a fourth on a branch's
-  review for its changesets, which its rounds, its chips and Changes share (`useReviewChangesets`, one `cm find
-  changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
+  (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation, its
+  reviewers and the user's email subscription; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
+  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, a fourth for the user's
+  email subscription (from a `cm` that has it), a fifth on a branch's review for its changesets, which its rounds, its
+  chips and Changes share (`useReviewChangesets`, one `cm find changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
   when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
   with the review's new status and counts, at no `cm` command of its own.
   Nothing remounts, so the tab, the file selected, the scroll and the threads unfolded stay; the icon spins while any
   of it is read. Nothing reads it on a timer.
+
+## Email notifications
+
+- The server emails a review's people as it changes, when its repository has the "Code Review Email Trigger". The
+  page's rail ends with **Notifications** (`NotificationsSection`): one sentence of why the user gets the review's
+  emails, and one button, **Unsubscribe** or **Subscribe** (`subscriptionSection`). Why, as `cm` names it
+  (`ReviewSubscription.reason`): "You get emails because you opened this review" (`owner`), "…you're a reviewer",
+  "…you commented", "…you were mentioned", "…you subscribed" (`manual`), and "You get emails about this review" for a
+  reason this version doesn't know. Unsubscribed: "You don't get emails about this review". With no subscription of
+  their own (`none`): "You aren't subscribed to this review", not "no emails", as a reviewer group they belong to may
+  still send them. Unsubscribe's tooltip says the emails stop until they take part again: the server subscribes them
+  again when they comment, someone mentions them, or adds them (or a group they're in) as a reviewer.
+- It reads one `cm codereview subscription <id> --format={subscribed} {reason} {emails}` as the page opens
+  (`CodeReviewsApi.subscription`, `useReviewSubscription`, `query()`; three fixed English words, `parseReviewSubscription`).
+  It hardly changes by itself, so a focus doesn't read it again (`SLOW_CHANGING_QUERY`). Only the writes that make the
+  user take part read it again (`isAffectedByTakingPartInReview`): a comment, on the review or a line, a reply (a
+  discard is one), reviewers added, the user's own status; the server subscribes them again then. A rename, an edit, a
+  delete, a reviewer removed or asked again don't (`isAffectedByCodeReviews` leaves it out). The page's Refresh reads
+  it (`isShownByCodeReviewPage`).
+- Subscribe and Unsubscribe are one quick `cm codereview subscribe <id>` or `unsubscribe <id>` (`setReviewSubscription`),
+  for the signed-in user only; they read again only that review's subscription (`isAffectedByReviewSubscription`), and
+  show the outcome at once, as the server records it (`subscriptionAfter`: subscribed by hand, or unsubscribed), so the
+  button doesn't flip back while that read runs.
+- Nothing shows while it's read, when the read fails (a server without the command: no error, the section is optional,
+  and it isn't asked again while that failure is kept, `asksForSubscription`, so writes and Refresh don't repeat it)
+  or when the repository sends no review emails (`emails` "disabled", also when the user can't see the trigger): a
+  button that changes nothing they'd notice would be noise. Nor from a `cm` older than 11.0.16.10616
+  (`readsReviewSubscriptions`, `isCmVersionAtLeast`), which isn't asked: it takes `cm codereview
+  subscription 6` for a review of `subscription` to create.
 
 ## The conversation
 
@@ -177,8 +208,8 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   a row (asked, asked again, removed) read as one line that lists each under it on a click, and folds them back on
   another (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
-  reviewers (see "Reviewers and their status") and **Open**: the change requests and questions still open
-  (`ReviewSideRail`, `openItemsOf`).
+  reviewers (see "Reviewers and their status"), **Open**: the change requests and questions still open
+  (`ReviewSideRail`, `openItemsOf`), and **Notifications** (see "Email notifications").
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off
@@ -228,7 +259,34 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
-  discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
+  discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
+  link to copy (Copy ▸ Comment, Link; see "Links to comments").
+
+## Links to comments
+
+A comment is linked to by the review's link and its id (`…/code-reviews/311/-/comments/5702`, docs/features/deep-links.md):
+`{id}`, short and the server's own, never its GUID. Its menu's Copy ▸ Link copies it (`reviewCommentCopyTexts`),
+wherever the comment shows: a card in the conversation, a thread in the code, a reply in either. The description has no
+menu and no link of its own: it is what the review's link opens on, the conversation's first card.
+
+A link opens the review where the comment is, decided from the conversation as read (`commentLinkPage`), which the link
+reads first with the review itself, and the page then finds both read (`reviewConversationQuery`, `codeReviewQuery`): no
+command of its own.
+
+- A comment on a line, or a reply in its thread, opens Changes at the thread, in the mode it was written in, as its
+  file's link in the conversation does (`commentLocationPage`): under its line, or among the outdated above the code
+  for one on an earlier version whose line changed. The thread shows whole, its replies with it; the reply isn't lit
+  there, the thread is.
+- A comment on the whole review opens the conversation at its thread, centered, unfolded, lit and ringed, as "Show in
+  conversation" does. A reply opens it at the reply (`focusReply`, `pickOnFocus`'s `replyId`): the reply brought into
+  view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded. The
+  card decides what it lights from its props (`cardLightOf`), so one mounting at the reply, a link opened cold, lights
+  it from its first render; the conversation scrolls to it, the reply itself only for the Answered pill
+  (`CardLight.litComment.scrolls`). Between the pill's answer and a reply gone to, whichever came last is lit, each new light restarting on the same reply too (`commentLightShown`).
+- The description's id opens the review as the review's link does, without saying it's not found.
+- A comment the review no longer has (deleted, or never on it) opens the review on its conversation, and a toast says
+  "Comment not found" (`LinkNotice`). A review that isn't there lists no comments: its read fails, and its page says
+  so alone, as does one whose conversation can't be read.
 
 ## Applying change requests
 
@@ -249,7 +307,7 @@ review of the repository; the app writes the text and runs no command of its own
 - **What it reads** (`useBranchChangeRequests`): one `cm find review "where target = 'br:/main/task'"` (`CodeReviewFilter.targetBranch`;
   `cm` fails for a branch that doesn't exist, which shows no button), then, for each review of it with something open
   (`{unresolvedissues}` above zero, `reviewsToRead`, at most `MAX_REVIEWS_READ_FOR_REQUESTS`, the newest), its
-  conversation, under the very key its page reads it by (`conversationQuery`), so the page and the check-in find each
+  conversation, under the very key its page reads it by (`reviewConversationQuery`), so the page and the check-in find each
   other's read. A branch with no review, or none open, costs the one find. Open is what the conversation says
   (`threadsOf`'s state: not applied, no discarding reply). Read as the Changes view shows the check-in, and again only
   on an event: the branch switched (another key), a write on a review (`isAffectedByCodeReviews`), a check-in that

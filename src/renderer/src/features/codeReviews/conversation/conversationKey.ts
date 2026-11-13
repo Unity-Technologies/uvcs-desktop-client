@@ -9,7 +9,7 @@ export function conversationsKey(place: Place): readonly unknown[] {
   return queryKeys.inPlace(place, 'codeReviews', 'conversation');
 }
 
-/** Where one review's conversation is cached (`useReviewConversation`, `conversationQuery`). */
+/** Where one review's conversation is cached (`useReviewConversation`, `reviewConversationQuery`). */
 export function conversationKey(place: Place, reviewId: number): readonly unknown[] {
   return [...conversationsKey(place), reviewId];
 }

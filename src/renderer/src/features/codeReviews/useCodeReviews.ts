@@ -24,20 +24,27 @@ export function useCodeReviews(filter: CodeReviewFilter, { enabled = true }: { e
 }
 
 export function useCodeReview(reviewId: number) {
-  const place = usePlace();
-  // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
+  return useQuery(codeReviewQuery(usePlace(), reviewId));
+}
+
+/**
+ * The review's read, its page's, and what reads it before the page shows it (a link to a comment), which the page then
+ * finds read. Opened from a list that read it, the page shows at once, as fresh as that list: read again only once
+ * it's stale.
+ */
+export function codeReviewQuery(place: Place, reviewId: number) {
   const listed = () => listedReviewIn(queryClient, place, reviewId);
-  return useQuery({
+  return {
     queryKey: codeReviewKey(place, reviewId),
+    initialData: () => listed()?.review,
+    initialDataUpdatedAt: () => listed()?.readAt,
     queryFn: async () => {
       const review = await api.codeReviews.get(place, reviewId);
       // The lists under the page show the review as it now is too (a Refresh, a focus): going back finds them in step.
       showReviewReadInListsIn(queryClient, place, review);
       return review;
     },
-    initialData: () => listed()?.review,
-    initialDataUpdatedAt: () => listed()?.readAt,
-  });
+  };
 }
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */

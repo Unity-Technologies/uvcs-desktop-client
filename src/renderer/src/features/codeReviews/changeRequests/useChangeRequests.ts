@@ -5,7 +5,7 @@ import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../../app/queryClient';
 import { usePlace } from '../../../app/workspace/useWorkspace';
-import { conversationQuery } from '../conversation/useReviewConversation';
+import { reviewConversationQuery } from '../conversation/useReviewConversation';
 import { changeRequestsOf, openChangeRequests, reviewsToRead, type ReviewChangeRequest } from './changeRequests';
 
 /** The reviews of one branch (`CodeReviewFilter.targetBranch`): under the reviews' area, so every write on a review reads them again. */
@@ -39,7 +39,7 @@ export function useBranchChangeRequests(branch: string | undefined, enabled = tr
   const reviews = useQuery({ ...branchReviewsQuery(place, branch ?? ''), enabled: reads });
   const toRead = reads && reviews.data ? reviewsToRead(reviews.data) : [];
   const conversations = useQueries({
-    queries: toRead.map((reviewId) => ({ ...conversationQuery(place, reviewId), ...SLOW_CHANGING_QUERY })),
+    queries: toRead.map((reviewId) => ({ ...reviewConversationQuery(place, reviewId), ...SLOW_CHANGING_QUERY })),
   });
   const data = conversations.map((conversation) => conversation.data);
   // Built again only as a conversation is read again: the reviews read and when each was.

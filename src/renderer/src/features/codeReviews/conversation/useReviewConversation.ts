@@ -11,17 +11,16 @@ import { conversationKey } from './conversationKey';
  */
 export function useReviewConversation(reviewId: number, reading: ConversationReading = {}) {
   const place = usePlace();
-  return useQuery({ ...conversationQuery(place, reviewId), ...reading });
+  return useQuery({ ...reviewConversationQuery(place, reviewId), ...reading });
 }
 
-/** How a review's conversation is read: one query per review, which its page and the change requests to apply share. */
-export function conversationQuery(place: Place, reviewId: number) {
-  return {
-    queryKey: conversationKey(place, reviewId),
-    queryFn: () => api.reviewComments.conversation(place, reviewId),
-  };
+/**
+ * How a review's conversation is read, one query per review: the page, what reads it before the page shows it (a link
+ * to a comment) and the change requests a check-in can apply (`useBranchChangeRequests`) share each other's read.
+ */
+export function reviewConversationQuery(place: Place, reviewId: number) {
+  return { queryKey: conversationKey(place, reviewId), queryFn: () => api.reviewComments.conversation(place, reviewId) };
 }
-
 
 /** How a view reads the conversation, when it isn't the page's own way. */
 export type ConversationReading = { refetchOnMount?: false };
@@ -31,7 +30,6 @@ export type ConversationReading = { refetchOnMount?: false };
  * fresh by it (a write, a focus once stale), so opening it reads nothing, however long the page has been shown.
  */
 export const SHOWN_BY_THE_PAGE: ConversationReading = { refetchOnMount: false };
-
 
 /**
  * When the conversation was last read (or its read failed), 0 if it never was: taken right after a write, what

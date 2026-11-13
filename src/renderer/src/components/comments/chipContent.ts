@@ -169,6 +169,7 @@ function linkChip(link: RepositoryLink): ChipContent {
   const item = path && path !== '/' ? lastSegment(path) : undefined;
   if (link.object) {
     const { icon, label, title } = linkObjectWords(link.object);
+    if (link.page?.kind === 'reviewComment') return { kind: 'object', icon, label, title: `A comment in ${title.toLowerCase()}`, repository: link.repository, target };
     return { kind: 'object', icon: item ? 'file' : icon, label: item ?? label, title: item ? `${path} in ${title.toLowerCase()}` : title, repository: link.repository, target };
   }
   return { kind: 'object', icon: item ? 'file' : 'link', label: item ?? link.repository, title: path ?? link.repository, repository: link.repository, target };

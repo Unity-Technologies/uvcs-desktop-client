@@ -1,6 +1,6 @@
 import type { MemberRef } from '../domain/member';
 import type { Place } from '../domain/place';
-import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest } from '../domain/codeReview';
+import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, ReviewSubscription } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
   list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
@@ -24,4 +24,16 @@ export interface CodeReviewsApi {
   /** Gives the review a new title; the server notes the rename in its conversation. */
   rename(place: Place, reviewId: number, title: string): Promise<void>;
   remove(place: Place, reviewIds: number[]): Promise<void>;
+  /**
+   * Whether the signed-in user gets the review's emails, why, and whether its repository sends any: one quick
+   * `cm codereview subscription`, for the review shown. Needs a `cm` that has it (`readsReviewSubscriptions`).
+   */
+  subscription(place: Place, reviewId: number): Promise<ReviewSubscription>;
+  /** Subscribes the signed-in user to the review's emails. */
+  subscribe(place: Place, reviewId: number): Promise<void>;
+  /**
+   * Stops the review's emails to the signed-in user, until they comment on it, someone mentions them or adds them (or a
+   * group they're in) as a reviewer: the server subscribes them again then.
+   */
+  unsubscribe(place: Place, reviewId: number): Promise<void>;
 }

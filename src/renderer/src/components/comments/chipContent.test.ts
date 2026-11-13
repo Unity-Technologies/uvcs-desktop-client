@@ -67,6 +67,7 @@ describe('chipContent', () => {
     });
     expect(chipOf('uvcs://acme@unity/repos/game/changesets/12/-/files/src/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/src/a.cs in changeset 12' });
     expect(chipOf('uvcs://acme@unity/repos/game/-/changesets')).toMatchObject({ icon: 'link', label: 'game' });
+    expect(chipOf('uvcs://acme@unity/repos/game/code-reviews/311/-/comments/5702')).toMatchObject({ icon: 'codeReview', label: '311', title: 'A comment in code review 311' });
   });
 
   it('shows people and emoji as themselves', () => {
