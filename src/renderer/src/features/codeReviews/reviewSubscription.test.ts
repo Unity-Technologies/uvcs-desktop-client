@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewSubscription, ReviewSubscriptionReason } from '@shared/domain/codeReview';
-import { readsReviewSubscriptions, subscriptionAfter, subscriptionSection } from './reviewSubscription';
+import { asksForSubscription, readsReviewSubscriptions, subscriptionAfter, subscriptionSection } from './reviewSubscription';
 
 const subscribed = (reason: ReviewSubscriptionReason): ReviewSubscription => ({ subscribed: true, reason, emailsEnabled: true });
 const notSubscribed = (reason: ReviewSubscriptionReason): ReviewSubscription => ({ subscribed: false, reason, emailsEnabled: true });
@@ -14,6 +14,22 @@ describe('readsReviewSubscriptions', () => {
   it('never asks an older cm, which would take the command for a review to create, nor one it cannot read', () => {
     expect(readsReviewSubscriptions('11.0.16.10615')).toBe(false);
     expect(readsReviewSubscriptions(undefined)).toBe(false);
+  });
+});
+
+describe('asksForSubscription', () => {
+  it('asks a cm that has the command, until it answers and every time it is to be read again', () => {
+    expect(asksForSubscription('11.0.16.10616', 'pending')).toBe(true);
+    expect(asksForSubscription('11.0.16.10616', 'success')).toBe(true);
+  });
+
+  // A server without the command fails it every time: a write or a Refresh would ask it again for nothing.
+  it('stops asking once a read failed', () => {
+    expect(asksForSubscription('11.0.16.10616', 'error')).toBe(false);
+  });
+
+  it('never asks a cm without the command', () => {
+    expect(asksForSubscription('11.0.16.10615', 'pending')).toBe(false);
   });
 });
 
