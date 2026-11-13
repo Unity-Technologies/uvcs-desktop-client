@@ -55,10 +55,10 @@ function OwnReviewForm({ ref, review, user, onDone }: { ref: Ref<HTMLDivElement>
   const button = ownReviewButton(review, user);
   // Kept with the comment, under its key, as the popover closes: reopened, it shows the whole draft (`useOwnReviewChoiceStore`).
   const draftKey = commentDraftKey(placeId(place), 'reviewStatus', review.id);
-  const chosen = useOwnReviewChoiceStore((state) => state.choices[draftKey]);
+  const picked = useOwnReviewChoiceStore((state) => state.choices[draftKey]);
   const choose = useOwnReviewChoiceStore((state) => state.choose);
   const forget = useOwnReviewChoiceStore((state) => state.forget);
-  const status = ownReviewChoice(button, chosen);
+  const status = ownReviewChoice(button, picked);
 
   return (
     <div ref={ref} className={styles.ownReviewForm}>
@@ -66,7 +66,7 @@ function OwnReviewForm({ ref, review, user, onDone }: { ref: Ref<HTMLDivElement>
         <legend className={styles.formTitle}>Mark your review as</legend>
         {CODE_REVIEW_STATUSES.map((choice) => (
           <label key={choice} className={styles.statusChoice}>
-            <input type="radio" name="own-review-status" checked={choice === status} onChange={() => choose(draftKey, choice)} />
+            <input type="radio" name="own-review-status" checked={choice === status} onChange={() => choose(draftKey, { status: choice, over: button.preselected })} />
             <ReviewStatusIcon status={choice} size={14} />
             {choice}
           </label>

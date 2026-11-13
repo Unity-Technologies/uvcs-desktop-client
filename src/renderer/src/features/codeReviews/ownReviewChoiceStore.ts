@@ -1,10 +1,20 @@
 import { create } from 'zustand';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 
+/** A status picked in the "Your review" popover and not sent yet, with the one the popover offered when it was picked. */
+export interface OwnReviewPick {
+  status: CodeReviewStatus;
+  /**
+   * The status the popover started on then (`OwnReviewButtonState.preselected`): once the user's status changes
+   * elsewhere (the review's menu, another window), the pick answered something that's gone (`ownReviewChoice`).
+   */
+  over: CodeReviewStatus;
+}
+
 interface OwnReviewChoices {
-  /** The status picked in each review's "Your review" popover and not sent yet, by the key of its comment's draft. */
-  choices: Record<string, CodeReviewStatus>;
-  choose: (key: string, status: CodeReviewStatus) => void;
+  /** Each review's pick, by the key of its comment's draft. */
+  choices: Record<string, OwnReviewPick>;
+  choose: (key: string, pick: OwnReviewPick) => void;
   /** Sent: the popover opens again on the status the user then has. */
   forget: (key: string) => void;
 }
@@ -16,7 +26,7 @@ interface OwnReviewChoices {
  */
 export const useOwnReviewChoiceStore = create<OwnReviewChoices>((set, get) => ({
   choices: {},
-  choose: (key, status) => set((state) => ({ choices: { ...state.choices, [key]: status } })),
+  choose: (key, pick) => set((state) => ({ choices: { ...state.choices, [key]: pick } })),
   forget: (key) => {
     if (get().choices[key]) set((state) => ({ choices: Object.fromEntries(Object.entries(state.choices).filter(([kept]) => kept !== key)) }));
   },

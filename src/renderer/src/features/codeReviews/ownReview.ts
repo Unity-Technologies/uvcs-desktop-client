@@ -1,4 +1,5 @@
 import type { CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { OwnReviewPick } from './ownReviewChoiceStore';
 import { isReviewer, ownStatus } from './reviewers';
 
 /** What the page's "Your review" button reads: the status the user gave, or Review; and whether picking one adds them. */
@@ -17,8 +18,12 @@ export function ownReviewButton(review: Pick<CodeReviewSummary, 'reviewers'>, us
   return { label: 'Review', joining: user !== undefined && !isReviewer(review, user), preselected: 'Reviewed' };
 }
 
-/** The status the popover shows picked: the one the user picked and didn't send yet (`useOwnReviewChoiceStore`), else the preselected one. */
-export function ownReviewChoice(button: OwnReviewButtonState, chosen: CodeReviewStatus | undefined): CodeReviewStatus {
-  return chosen ?? button.preselected;
+/**
+ * The status the popover shows picked: the one the user picked and didn't send yet (`useOwnReviewChoiceStore`), else
+ * the preselected one. A pick made over a status that has since changed elsewhere (the review's menu, another window)
+ * is dropped: the popover shows what they have now.
+ */
+export function ownReviewChoice(button: OwnReviewButtonState, picked: OwnReviewPick | undefined): CodeReviewStatus {
+  return picked && picked.over === button.preselected ? picked.status : button.preselected;
 }
 
