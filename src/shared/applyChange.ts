@@ -28,13 +28,29 @@ export function changeRequestsNamedIn(comment: string): string[] {
 }
 
 /**
- * A comment without the change requests it names to apply, and the space each leaves: what a recent comment brings to
- * a new check-in, as the requests it applied are no longer pending and `cm` would fail it on them. Any case, as `cm`
- * finds them.
+ * A comment without the change requests it names to apply: what a recent comment brings to a new check-in, as the
+ * requests it applied are no longer pending and `cm` would fail it on them. Any case, as `cm` finds them. Words on both
+ * sides of one keep a space between them, none is left at a line's start or end, and a line left empty goes with its
+ * line end, so the paragraph around it stays one. Line ends stay as they were (CRLF too).
  */
 export function withoutApplyChanges(comment: string): string {
-  return comment.replace(new RegExp(`([ \\t]*)${APPLY_CHANGE_SOURCE}([ \\t]?)`, 'gi'), (_match, before: string, _request: string, after: string, offset: number) => {
-    const atLineStart = offset === 0 || comment[offset - 1] === '\n';
-    return atLineStart && before === '' ? '' : after && before === '' ? after : '';
-  });
+  const references = new RegExp(`[ \\t]*(?:${APPLY_CHANGE_SOURCE}[ \\t]*)+`, 'gi');
+  const parts = comment.split(/(\r?\n)/);
+  const kept: string[] = [];
+  for (let index = 0; index < parts.length; index += 2) {
+    const line = parts[index]!;
+    const end = parts[index + 1];
+    const cleaned = line.replace(references, (run: string, ...rest: unknown[]) => {
+      const offset = rest[rest.length - 2] as number;
+      return offset === 0 || offset + run.length === line.length ? '' : ' ';
+    });
+    if (cleaned === '' && line !== '') {
+      // The line goes, and one line end with it: its own, or the one before it on the last line.
+      if (end === undefined && kept.length > 0) kept.pop();
+      continue;
+    }
+    kept.push(cleaned);
+    if (end !== undefined) kept.push(end);
+  }
+  return kept.join('');
 }
