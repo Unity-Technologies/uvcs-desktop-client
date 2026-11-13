@@ -23,22 +23,22 @@ const SECTION_OF_KIND: Record<PrefixedKind, PrefixedSection> = {
   person: 'people',
 };
 
-/** What the footer calls each section a prefix narrows to. */
-const SCOPE_HINTS: Record<PrefixedSection, string> = {
-  commands: 'commands',
-  files: 'files',
-  changesets: 'changesets',
-  branches: 'branches',
-  labels: 'labels',
-  shelves: 'shelves',
-  codeReviews: 'code reviews',
-  people: 'people',
+/** What the scope chips call each section a prefix narrows to (`scopeChipsFor`). */
+const SCOPE_LABELS: Record<PrefixedSection, string> = {
+  commands: 'Commands',
+  files: 'Files',
+  changesets: 'Changesets',
+  branches: 'Branches',
+  labels: 'Labels',
+  shelves: 'Shelves',
+  codeReviews: 'Code reviews',
+  people: 'People',
 };
 
 export interface ScopePrefix {
   prefix: string;
   scope: PrefixedSection;
-  hint: string;
+  label: string;
   /** One of the prefixes the comment editor reads too (`KIND_PREFIXES`), not the palette's own. */
   shared: boolean;
 }
@@ -54,18 +54,16 @@ export const SCOPE_PREFIXES: readonly ScopePrefix[] = [
 ];
 
 function scopePrefix(prefix: string, scope: PrefixedSection, shared: boolean): ScopePrefix {
-  return { prefix, scope, hint: SCOPE_HINTS[scope], shared };
+  return { prefix, scope, label: SCOPE_LABELS[scope], shared };
 }
 
 /**
- * The prefixes the footer offers where the palette is open, the palette's own apart from those it shares with the
- * comment editor: with no place shown (the home screen) only commands are searched; a repository explored without a
- * workspace has no files; a workspace has every section.
+ * The prefixes that work where the palette is open: with no place shown (the home screen) only commands are searched;
+ * a repository explored without a workspace has no files; a workspace has every section.
  */
-export function offeredPrefixes(shown: Place | null): { own: ScopePrefix[]; shared: ScopePrefix[] } {
+export function offeredPrefixes(shown: Place | null): ScopePrefix[] {
   const inWorkspace = shown !== null && workspacePathOf(shown) !== null;
-  const offered = SCOPE_PREFIXES.filter(({ scope }) => (shown === null ? scope === 'commands' : inWorkspace || scope !== 'files'));
-  return { own: offered.filter((prefix) => !prefix.shared), shared: offered.filter((prefix) => prefix.shared) };
+  return SCOPE_PREFIXES.filter(({ scope }) => (shown === null ? scope === 'commands' : inWorkspace || scope !== 'files'));
 }
 
 /**
