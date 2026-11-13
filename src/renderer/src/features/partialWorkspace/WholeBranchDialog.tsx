@@ -10,12 +10,16 @@ import { GoToChangesButton } from '../branches/GoToChangesButton';
 import { PendingChangesNotes } from '../branches/PendingChangesNotes';
 import { pendingChangesPronoun } from '../branches/pendingChangesWords';
 import styles from '../branches/SwitchWithChangesDialog.module.css';
-import { wholeBranchButton, wholeBranchCards, wholeBranchMessage, wholeBranchNotes, wholeBranchQuestion } from './wholeBranchDownload';
-
-/** The user's go-ahead, with what happens to the pending changes when there are some to ask about. */
-export interface WholeBranchConfirmation {
-  pendingChanges?: WholeBranchChangesAction;
-}
+import {
+  canDownloadWholeBranch,
+  wholeBranchButton,
+  wholeBranchCards,
+  wholeBranchConfirmation,
+  wholeBranchMessage,
+  wholeBranchNotes,
+  wholeBranchQuestion,
+  type WholeBranchConfirmation,
+} from './wholeBranchDownload';
 
 /**
  * Confirms downloading a partial workspace's whole branch, asking what happens to its pending changes. Resolves with
@@ -30,9 +34,9 @@ function WholeBranchDialog({ preflight, onFinish }: { preflight: SwitchPreflight
   const [action, setAction] = useState<WholeBranchChangesAction | null>(question.defaultAction);
   const cancel = (): void => onFinish(undefined);
   const submit = wholeBranchButton(action);
-  const ready = !question.asksAboutChanges || action !== null;
+  const ready = canDownloadWholeBranch(question, action);
   const confirm = (): void => {
-    if (ready) onFinish(action ? { pendingChanges: action } : {});
+    if (ready) onFinish(wholeBranchConfirmation(action));
   };
 
   return (

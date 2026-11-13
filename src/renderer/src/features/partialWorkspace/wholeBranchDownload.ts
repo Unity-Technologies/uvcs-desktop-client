@@ -21,6 +21,26 @@ export function wholeBranchQuestion(preflight: SwitchPreflight): WholeBranchQues
   return { asksAboutChanges: true, blockedByMerge: false, defaultAction: 'bring' };
 }
 
+/** The user's go-ahead, with what happens to the pending changes when there are some to ask about. */
+export interface WholeBranchConfirmation {
+  pendingChanges?: WholeBranchChangesAction;
+}
+
+/** Whether the download can start: a question about the changes needs an answer, and a merge in progress allows none. */
+export function canDownloadWholeBranch(question: WholeBranchQuestion, action: WholeBranchChangesAction | null): boolean {
+  return !question.asksAboutChanges || action !== null;
+}
+
+/** The go-ahead for what the user chose, which carries a choice only when there was one to make. */
+export function wholeBranchConfirmation(action: WholeBranchChangesAction | null): WholeBranchConfirmation {
+  return action ? { pendingChanges: action } : {};
+}
+
+/** Whether the download can be stopped: not once the changes are shelved or undone, as stopping halfway would leave them in limbo. */
+export function wholeBranchCancellable(confirmation: WholeBranchConfirmation): boolean {
+  return !confirmation.pendingChanges;
+}
+
 /** What the confirmation says the download does, for the branch's name (`branchLabel`). */
 export function wholeBranchMessage(branchName: string): string {
   return `Every file on ${branchName} downloads, and this becomes a standard workspace: it can switch to changesets, labels and shelves, and merge.`;

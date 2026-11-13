@@ -11,6 +11,7 @@ import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incomi
 import { incomingChangesKey } from '../../features/incoming/useIncomingChanges';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { askWholeBranchDownload } from '../../features/partialWorkspace/WholeBranchDialog';
+import { wholeBranchCancellable } from '../../features/partialWorkspace/wholeBranchDownload';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
@@ -84,8 +85,7 @@ export async function downloadWholeBranch(workspacePath: string, selector: Works
     workspacePath,
     kind: 'switch',
     run: (operationId) => api.workspaces.downloadWholeBranch(workspacePath, operationId, confirmation.pendingChanges),
-    // Once changes are shelved, stopping halfway would leave them in limbo.
-    cancellable: !confirmation.pendingChanges,
+    cancellable: wholeBranchCancellable(confirmation),
     success: (downloaded) => wholeBranchToast(downloaded, selector.name),
   });
   return Boolean(result);
