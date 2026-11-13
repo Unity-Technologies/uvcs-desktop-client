@@ -32,4 +32,31 @@ describe('commentMenu', () => {
     expect(ids(commentMenu(thread!.root, thread!, 'bob', inCode))).toEqual(['showInConversation', 'separator', 'copyText']);
     expect(ids(commentMenu(thread!.replies[0]!, thread!, 'bob', inCode))).toEqual(['copyText', 'separator', 'editComment', 'separator', 'delete']);
   });
+
+  it('marks an open change request applied, and an applied one not applied, first among what it does', () => {
+    const [open, applied] = threadsOf([comment(1, { kind: 'changeRequest' }), comment(2, { kind: 'changeRequest', appliedInChangeset: 4 })]);
+    const marking = { ...noop, markChangeRequest: () => {} };
+
+    expect(ids(commentMenu(open!.root, open!, 'bob', marking, CM))).toEqual(['markApplied', 'separator', 'copyText']);
+    expect(ids(commentMenu(applied!.root, applied!, 'bob', marking, CM))).toEqual(['markNotApplied', 'separator', 'copyText']);
+  });
+
+  it('runs the mark the entry names', () => {
+    const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
+    const marked: string[] = [];
+    const [entry] = commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: (mark) => marked.push(mark) }, CM);
+
+    (entry as { run: () => void }).run();
+
+    expect(marked).toEqual(['applied']);
+  });
+
+  it('offers no mark where nothing can mark it, nor with a cm that has no command for it', () => {
+    const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
+
+    expect(ids(commentMenu(open!.root, open!, 'bob', noop, CM))).toEqual(['copyText']);
+    expect(ids(commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: () => {} }, '11.0.16.10000'))).toEqual(['copyText']);
+  });
 });
+
+const CM = '11.0.16.10616';

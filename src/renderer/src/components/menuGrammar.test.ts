@@ -297,8 +297,14 @@ const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
 };
 /** A review comment's menu (`commentMenu`), its author's: every entry it offers. */
 const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
+/** A change request's, open or applied: marked applied or not applied by hand (`changeRequestMarkOf`). */
+const changeRequest = { ...reviewComment, kind: 'changeRequest' } as const;
+const appliedChangeRequest = { ...changeRequest, appliedInChangeset: 4 } as const;
+const commentActions = { edit: () => {}, remove: () => {}, copyText: () => {}, showInConversation: () => {}, markChangeRequest: () => {} };
 const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
   reviewComment: () => commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyText: () => {} }),
+  openChangeRequest: () => commentMenu(changeRequest, threadsOf([changeRequest])[0]!, 'jane@example.com', commentActions, '11.0.16.10616'),
+  appliedChangeRequest: () => commentMenu(appliedChangeRequest, threadsOf([appliedChangeRequest])[0]!, 'jane@example.com', commentActions, '11.0.16.10616'),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
