@@ -163,6 +163,7 @@ try {
     await main.getByText('Review player movement', { exact: true }).dblclick();
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await main.getByText('Jump only when grounded.').first().waitFor();
+    await main.getByText("You get emails because you're a reviewer.").waitFor();
     await settled();
   });
   await step('Branch Explorer timeline', async () => {

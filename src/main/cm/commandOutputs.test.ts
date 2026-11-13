@@ -30,9 +30,12 @@ describe('cmOutputKind', () => {
     expect(cmOutputKind(['xlink', '--addrules', '/ws/lib', 'br:/main-br:/main/dev'])).toBe('operation');
   });
 
-  it("reads a code review's reviewers as a list, and every other code review command as an operation", () => {
+  it("reads a code review's reviewers as a list, its subscription as an answer, and every other code review command as an operation", () => {
     expect(cmOutputKind(['codereview', 'reviewer', 'list', '6', '--format={user}'])).toBe('list');
     expect(cmOutputKind(['codereview', 'reviewer', 'ls', '6'])).toBe('list');
+    expect(cmOutputKind(['codereview', 'subscription', '6', '--format={subscribed} {reason} {emails}'])).toBe('answer');
+    expect(cmOutputKind(['codereview', 'subscribe', '6'])).toBe('operation');
+    expect(cmOutputKind(['codereview', 'unsubscribe', '6'])).toBe('operation');
     expect(cmOutputKind(['codereview', 'reviewer', 'add', '6', '--groups=staff'])).toBe('operation');
     expect(cmOutputKind(['codereview', 'cs:12', 'Jump', '--format={id}'])).toBe('operation');
   });

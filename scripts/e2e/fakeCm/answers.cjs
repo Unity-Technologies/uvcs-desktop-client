@@ -42,7 +42,8 @@ const ORGANIZATION_REPOSITORIES = [
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
 const COMMANDS = {
-  version: () => '11.0.16.9000\n',
+  // The version code reviews need (docs/features/code-reviews.md): the app asks what it has, as a review's subscription.
+  version: () => '11.0.16.10616\n',
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.
@@ -63,6 +64,7 @@ const COMMANDS = {
   acl: () => 'Command finished successfully\n',
   setowner: () => '',
   'codereview reviewer': reviewerList,
+  'codereview subscription': reviewSubscription,
 };
 
 /** The server's groups, as `cm listusers --onlygroups` lists them. */
@@ -80,6 +82,18 @@ function reviewerList(args) {
     return { user, status: pair.slice(colon + 1), type: GROUPS.includes(user) ? 'group' : 'user' };
   });
   return formatted(args, reviewers);
+}
+
+/**
+ * `cm codereview subscription <id> --format=…`: the user gets a review's emails as one of its reviewers, and the
+ * repository sends them, so the review's page shows Notifications.
+ */
+function reviewSubscription(args) {
+  const [id] = args;
+  const review = repository.REVIEWS.find((each) => String(each.id) === id);
+  if (!review) throw new Error(`The specified code review '${id}' could not be found`);
+  const reviewer = review.reviewers.split(',').some((pair) => pair.startsWith(`${OWNER}:`));
+  return formatted(args, [{ subscribed: reviewer ? 'yes' : 'no', reason: reviewer ? 'reviewer' : 'none', emails: 'enabled' }]);
 }
 
 /**
