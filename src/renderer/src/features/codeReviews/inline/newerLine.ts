@@ -16,33 +16,31 @@ export function newerLineOf(earlier: string, newer: string, line: number): numbe
  * One line is `firstLine === lastLine`, as `newerLineOf`.
  */
 export function newerRangeOf(earlier: string, newer: string, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
-  if (range.lastLine < range.firstLine) return null;
-  const find = newerLineFinder(newer);
-  const first = find(earlier, range.firstLine);
-  if (first === null) return null;
-  for (let line = range.firstLine + 1; line <= range.lastLine; line++) {
-    if (find(earlier, line) !== first + (line - range.firstLine)) return null;
-  }
-  return { firstLine: first, lastLine: first + (range.lastLine - range.firstLine) };
+  return rangeIn(earlier, newerLineFinder(newer), range);
 }
 
 /**
  * `newerRangeOf` with the block's neighbors: the line before it and the line after it (where the earlier version has
  * them) must be there unchanged, right before and after it, too. A line diff pairs lines that read alike, and a short
  * one (a lone `}`, `{`, a blank line, `#endregion`) is alike to many: alone, it can be paired with another such line
- * once code moved around it. Its neighbors pin it.
+ * once code moved around it. Its neighbors pin it. One line diff serves both the lines and how many the earlier has.
  */
 export function newerRangeInContextOf(earlier: string, newer: string, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
+  const diff = versionDiff(earlier, newer);
   const before = range.firstLine > 1 ? 1 : 0;
-  const after = range.lastLine < lineCountOf(earlier) ? 1 : 0;
-  const found = newerRangeOf(earlier, newer, { firstLine: range.firstLine - before, lastLine: range.lastLine + after });
+  const after = range.lastLine < diff.earlierLineCount ? 1 : 0;
+  const found = rangeIn(earlier, newerLineFinder(newer, () => diff), { firstLine: range.firstLine - before, lastLine: range.lastLine + after });
   return found && { firstLine: found.firstLine + before, lastLine: found.lastLine - after };
 }
 
-/** How many lines a text has, a final line end ending its last line rather than starting another. */
-function lineCountOf(text: string): number {
-  const lines = text.split(/\r\n|\n|\r/);
-  return lines.at(-1) === '' ? lines.length - 1 : lines.length;
+function rangeIn(earlier: string, find: (earlier: string, line: number) => number | null, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
+  if (range.lastLine < range.firstLine) return null;
+  const first = find(earlier, range.firstLine);
+  if (first === null) return null;
+  for (let line = range.firstLine + 1; line <= range.lastLine; line++) {
+    if (find(earlier, line) !== first + (line - range.firstLine)) return null;
+  }
+  return { firstLine: first, lastLine: first + (range.lastLine - range.firstLine) };
 }
 
 /** An earlier version's line diff against the newer one: its hunks, and how many lines the earlier version has. */
