@@ -58,8 +58,12 @@ export type ReviewEventChange =
   /** What this version doesn't read yet (a merge request's statuses and destination, a branch hidden): its text. */
   | { kind: 'other'; text: string };
 
-/** The review's description: the text at the top of its conversation, `guid` editing it. */
+/**
+ * The review's description: the text at the top of its conversation, `guid` editing it. `id` is its comment's, which a
+ * link to it names (docs/features/deep-links.md).
+ */
 export interface ReviewDescription {
+  id: number;
   guid: string;
   text: string;
   author: string;

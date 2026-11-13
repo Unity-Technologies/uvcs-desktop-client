@@ -10,9 +10,9 @@ import { CommentComposer } from './CommentComposer';
 import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
-import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
+import { ReviewThreadCard } from './ReviewThreadCard';
 import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
-import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
@@ -37,11 +37,13 @@ interface ReviewConversationTabProps {
   review: CodeReview;
   /** The thread the page was opened at (Show in conversation, from the code): gone to, lit and ringed. */
   focusThread?: number;
+  /** A reply of that thread the page was opened at (a link to it): gone to and lit, its thread ringed. */
+  focusReply?: number;
   /** A thread picked in Open: the page forgets the one it was opened at, so going to it again goes to it. */
   onPickedInOpen: () => void;
 }
 
-export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: ReviewConversationTabProps) {
+export function ReviewConversationTab({ review, focusThread, focusReply, onPickedInOpen }: ReviewConversationTabProps) {
   const place = usePlace();
   const user = usePlaceUser();
   // "Show in conversation" from the dialog moves this page to the thread, in place (`showInConversation`).
@@ -62,11 +64,11 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
   // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
-  const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread));
-  const [pickedFocus, setPickedFocus] = useState(focusThread);
-  if (focusThread !== pickedFocus) {
-    setPickedFocus(focusThread);
-    setPick(pickOnFocus(pick, focusThread));
+  const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread, focusReply));
+  const [pickedFocus, setPickedFocus] = useState({ focusThread, focusReply });
+  if (focusThread !== pickedFocus.focusThread || focusReply !== pickedFocus.focusReply) {
+    setPickedFocus({ focusThread, focusReply });
+    setPick(pickOnFocus(pick, focusThread, focusReply));
   }
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
@@ -76,7 +78,7 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
-    if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView(pickedScrollOf(pick));
+    if (read && pick) document.getElementById(pickedElementId(pick))?.scrollIntoView(pickedScrollOf(pick));
   }, [read, pick]);
 
   // Opened where the reviewer left off, once: their own status set meanwhile moves the line, never the page.

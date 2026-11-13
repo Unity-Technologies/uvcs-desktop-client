@@ -60,6 +60,7 @@ export function conversationOf(records: readonly RawReviewComment[]): ReviewConv
       conversation.comments.push(commentOf(record));
     } else if (record.text.startsWith(DESCRIPTION_PREFIX)) {
       conversation.description = {
+        id: record.id,
         guid: record.guid,
         text: record.text.slice(DESCRIPTION_PREFIX.length),
         author: record.owner,

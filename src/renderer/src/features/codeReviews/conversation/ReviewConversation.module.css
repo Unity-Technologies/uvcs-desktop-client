@@ -515,6 +515,14 @@ button.pill:hover {
   font-size: var(--text-sm);
 }
 
+/* A sentence under a section's title: why the user gets the review's emails. */
+.railNote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 18px;
+}
+
 .reviewers,
 .openItems {
   display: flex;
@@ -699,7 +707,10 @@ button.pill:hover {
   }
 }
 
-/* The reply an Answered pill leads to, lit for a moment as a thread gone to is, alternating so a second click lights it again. */
+/*
+ * The reply an Answered pill leads to, or a link goes to, lit for a moment as a thread gone to is, alternating so each
+ * new one lights it again (`commentLightShown`).
+ */
 .comment[data-highlight] {
   border-radius: var(--radius-md);
 }
