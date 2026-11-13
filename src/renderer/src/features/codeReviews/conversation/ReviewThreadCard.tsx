@@ -18,7 +18,7 @@ import { discardChangeRequest, replyToComment } from './reviewCommentOperations'
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
-import { commentElementId, threadElementId } from './threadPick';
+import { cardLightOf, commentElementId, nextAnswerLight, threadElementId, type AnswerLight, type CardLight } from './threadPick';
 import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -78,11 +78,12 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
-  const [answerShown, setAnswerShown] = useState<{ replyId: number; seq: number } | null>(null);
+  const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
+  const light = cardLightOf(highlight, litReply, answerShown);
   const answer = answerOf(thread);
   const seeAnswer = answer && (() => {
     setFolded(false);
-    setAnswerShown((shown) => ({ replyId: answer.replyId, seq: (shown?.seq ?? -1) + 1 }));
+    setAnswerShown(nextAnswerLight(light, answer.replyId, highlight));
   });
   const foldable = startsFolded(thread);
   const hasHeader = hasThreadHeader(thread);
@@ -90,7 +91,6 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   if (highlight !== shownHighlight) {
     setShownHighlight(highlight);
     if (highlight !== undefined) setFolded(false);
-    setAnswerShown(highlight !== undefined && litReply !== undefined ? { replyId: litReply, seq: highlight } : null);
   }
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
@@ -99,7 +99,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
       className={styles.thread}
       data-folded={folded}
       data-in-code={inCode ? '' : undefined}
-      data-highlight={highlight === undefined || litReply !== undefined ? undefined : highlight % 2}
+      data-highlight={light.cardHighlight === undefined ? undefined : light.cardHighlight % 2}
       data-selected={selected || undefined}
       {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
@@ -112,7 +112,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
           <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
         ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={answerShown ?? undefined} commentIds={!inCode} />
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={light.litComment} commentIds={!inCode} />
         )}
       </div>
     </section>
@@ -355,7 +355,7 @@ interface WholeThreadProps {
   thread: ReviewThread;
   user: string | undefined;
   threadActions?: ThreadActions;
-  lit?: { replyId: number; seq: number };
+  lit?: CardLight['litComment'];
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
 }
@@ -367,17 +367,17 @@ function WholeThread({ review, thread, user, threadActions, lit, commentIds }: W
 
   return (
     <>
-      <ReviewCommentView reviewId={review.id} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
+      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
       {replies.map((reply) => (
         <ReviewCommentView
           key={reply.id}
-          reviewId={review.id}
+          review={review}
           comment={reply}
           thread={thread}
           user={user}
           action={replyAction(reply)}
           byReviewAuthor={isAuthor(review, reply.author)}
-          lit={lit?.replyId === reply.id ? lit.seq : undefined}
+          lit={lit?.replyId === reply.id ? lit : undefined}
           elementId={commentIds ? commentElementId(reply.id) : undefined}
         />
       ))}

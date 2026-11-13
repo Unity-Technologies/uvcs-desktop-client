@@ -47,6 +47,41 @@ export function threadMarkOf(threadId: number, pick: ThreadPick | undefined): { 
   return { highlight: picked ? pick.seq : undefined, selected: picked, ...(picked && pick.replyId !== undefined && { litReply: pick.replyId }) };
 }
 
+/** The answer the Answered pill went to, the how-many-th time, and the card's light (`highlight`) it was pressed under. */
+export interface AnswerLight {
+  replyId: number;
+  seq: number;
+  underHighlight: number | undefined;
+}
+
+/**
+ * What a thread's card lights: the card itself (`cardHighlight`), or one of its comments (`litComment`). `scrolls`
+ * says whether the comment brings itself into view: the answer the Answered pill goes to does; a reply a link goes to
+ * doesn't, the conversation scrolling to it (`pickedElementId`).
+ */
+export interface CardLight {
+  cardHighlight?: number;
+  litComment?: { replyId: number; seq: number; scrolls: boolean };
+}
+
+/**
+ * How a card shows what it was gone to and what was pressed in it: from props, so a card mounting at a reply (a link
+ * opened cold) lights it from its first render. A pick at a reply (`litReply`) lights the reply, not the card. The
+ * answer the pill went to stays lit across later picks with no reply, as it always did; between it and a pick at a
+ * reply, whichever came last: the answer when pressed under the card's current light.
+ */
+export function cardLightOf(highlight: number | undefined, litReply: number | undefined, answer: AnswerLight | null): CardLight {
+  const answerLit = answer && { replyId: answer.replyId, seq: answer.seq, scrolls: true };
+  if (highlight === undefined || litReply === undefined) return { ...(highlight !== undefined && { cardHighlight: highlight }), ...(answerLit && { litComment: answerLit }) };
+  if (answerLit && answer.underHighlight === highlight) return { litComment: answerLit };
+  return { litComment: { replyId: litReply, seq: highlight, scrolls: false } };
+}
+
+/** The Answered pill pressed: its answer lit next, its light restarting even on the reply lit now. */
+export function nextAnswerLight(light: CardLight, replyId: number, highlight: number | undefined): AnswerLight {
+  return { replyId, seq: (light.litComment?.seq ?? -1) + 1, underHighlight: highlight };
+}
+
 /** The element the conversation brings into view for a pick: the thread's, or the reply's it goes to. */
 export function pickedElementId(pick: ThreadPick): string {
   return pick.replyId === undefined ? threadElementId(pick.threadId) : commentElementId(pick.replyId);

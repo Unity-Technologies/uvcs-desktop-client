@@ -2,6 +2,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useEffect, useRef, useState } from 'react';
+import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
@@ -20,7 +21,7 @@ import styles from './ReviewConversation.module.css';
 
 interface ReviewCommentViewProps {
   /** The review it's on, whose link its own extends. */
-  reviewId: number;
+  review: Pick<CodeReview, 'id'>;
   comment: ReviewComment;
   thread: ReviewThread;
   user: string | undefined;
@@ -30,29 +31,34 @@ interface ReviewCommentViewProps {
   byReviewAuthor?: boolean;
   /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
   threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
-  /** Gone to, the how-many-th time (the reply an Answered pill leads to): scrolled to and lit for a moment. */
-  lit?: number;
+  /**
+   * Gone to, the how-many-th time: lit for a moment, and scrolled to when it `scrolls` (the reply an Answered pill leads
+   * to; a reply a link goes to is scrolled to by the conversation, `pickedElementId`).
+   */
+  lit?: { seq: number; scrolls: boolean };
   /** Its element's id, which going to it scrolls to (`commentElementId`): in the conversation only, as ids are unique. */
   elementId?: string;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ reviewId, comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
+export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
+  const litSeq = lit?.seq;
+  const scrollsWhenLit = lit?.scrolls === true;
   useEffect(() => {
-    if (lit !== undefined) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [lit]);
+    if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [litSeq, scrollsWhenLit]);
   const [editing, setEditing] = useState(false);
   const menu = commentMenu(comment, thread, user, {
     edit: () => setEditing(true),
     remove: () => void deleteReviewComment(place, comment),
-    copyTexts: reviewCommentCopyTexts(place, reviewId, comment),
+    copyTexts: reviewCommentCopyTexts(place, review.id, comment),
     ...threadActions,
   });
 
   return (
-    <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>
+    <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit.seq % 2} aria-label={`${displayName(comment.author)}'s comment`}>
       <Avatar user={comment.author} size={24} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>
