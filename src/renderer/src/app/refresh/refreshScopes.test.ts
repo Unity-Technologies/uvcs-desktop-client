@@ -101,7 +101,7 @@ describe('refresh scopes', () => {
     expect(checkin(key('codeReviews', 'conversation', 43))).toBe(true);
     expect(checkin(key('pendingChanges'))).toBe(true);
     expect(checkin(key('labels', {}))).toBe(false);
-    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed [APPLY-CHANGE:C0D1CE00]')(key('codeReviews', {}))).toBe(true);
+    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed [APPLY-CHANGE:c0d1ce00]')(key('codeReviews', {}))).toBe(true);
   });
 
   it('leaves the code reviews alone after a comment that applies none', () => {
