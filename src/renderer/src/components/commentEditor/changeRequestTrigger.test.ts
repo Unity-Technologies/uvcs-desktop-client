@@ -53,17 +53,28 @@ describe('the list opened by its button', () => {
   const typed = (state: EditorState, text: string): EditorState =>
     state.update({ changes: { from: state.selection.main.head, insert: text }, selection: { anchor: state.selection.main.head + text.length }, userEvent: 'input.type' }).state;
 
-  it('opens at the caret, a space before it after a word, with nothing typed yet', () => {
+  it('opens at the caret, writing nothing until a pick, which sets a space before the reference after a word', () => {
     const state = editorState('Shelve first‸', offered);
     const opened = state.update(openChangeRequests(state)).state;
-    expect(written(opened)).toBe('Shelve first ‸');
-    expect(suggestionsShownAt(opened)).toEqual({ kind: 'changeRequest', from: 13, to: 13, text: '' });
+    expect(written(opened)).toBe('Shelve first‸');
+    const query = suggestionsShownAt(opened);
+    expect(query).toEqual({ kind: 'changeRequest', from: 12, to: 12, text: '', prefix: ' ' });
+    expect(written(opened.update(pickSuggestion(opened, query!, '[apply-change:c0d1ce00]')).state)).toBe('Shelve first [apply-change:c0d1ce00] ‸');
+  });
+
+  it('leaves the text as it was when closed with no pick', () => {
+    const state = editorState('Shelve first‸', offered);
+    const closed = state.update(openChangeRequests(state)).state.update({ selection: { anchor: 0 } }).state;
+    expect(written(closed)).toBe('‸Shelve first');
+    expect(suggestionsShownAt(closed)).toBeNull();
   });
 
   it('opens with no space at a line start or after one', () => {
     for (const text of ['‸', 'Done\n‸', 'Done ‸']) {
       const state = editorState(text, offered);
-      expect(written(state.update(openChangeRequests(state)).state)).toBe(text);
+      const opened = state.update(openChangeRequests(state)).state;
+      expect(written(opened)).toBe(text);
+      expect(suggestionsShownAt(opened)?.prefix).toBeUndefined();
     }
   });
 
