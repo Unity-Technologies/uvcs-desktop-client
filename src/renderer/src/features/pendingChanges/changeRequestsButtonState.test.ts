@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewChangeRequest } from '../codeReviews/changeRequests/changeRequests';
-import { changeRequestsButton } from './changeRequestsButton';
+import { changeRequestsButton } from './changeRequestsButtonState';
 
 const request = (commentId: number): ReviewChangeRequest => ({ reviewId: 43, commentId, guid: `g${commentId}`, author: 'ana', date: '', text: 'Fix it', state: { kind: 'open' } });
 

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { CommentField } from '../../components/commentEditor/CommentField';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
+import { ChangeRequestsContext } from '../../components/commentEditor/changeRequestsContext';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { recentCommentPick, withSummaryText } from '../../lib/comment';
@@ -16,6 +17,8 @@ import { ResizeHandle } from '../../ui/ResizeHandle';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
+import { ChangeRequestsButton } from './ChangeRequestsButton';
+import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -91,6 +94,8 @@ export function CheckinPanel({
   // The field a recent comment picked puts the caret in, once its menu closes.
   const caretAfterPick = useRef<'summary' | 'description' | null>(null);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
+  // The change requests a check-in on the workspace's branch can apply, offered in its comment (`[apply`, their button).
+  const changeRequests = useBranchChangeRequests(workingOn?.kind === 'branch' ? workingOn.name : undefined);
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
@@ -134,6 +139,7 @@ export function CheckinPanel({
     <div className={styles.panel}>
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       {/* Focus mode opens the summary and the description together (`focusModeFields('checkin')`). */}
+      <ChangeRequestsContext value={changeRequests}>
       <CommentFocusGroup>
         <div className={styles.summaryField}>
           <CommentField
@@ -148,6 +154,8 @@ export function CheckinPanel({
             onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
             onEnter={() => descriptionRef.current?.focus()}
           />
+          <div className={styles.fieldButtons}>
+          <ChangeRequestsButton changeRequests={changeRequests} className={styles.changeRequests} onOpen={() => descriptionRef.current?.openChangeRequests()} />
           {recentComments.length > 0 && (
             <ActionDropdownMenu
               entries={recentComments.map((recent, index) => ({
@@ -171,6 +179,7 @@ export function CheckinPanel({
               <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
             </ActionDropdownMenu>
           )}
+          </div>
         </div>
         <CommentField
           ref={descriptionRef}
@@ -183,6 +192,7 @@ export function CheckinPanel({
           onChange={(text) => onMessageChange({ description: text })}
         />
       </CommentFocusGroup>
+      </ChangeRequestsContext>
       {shelving && (
         <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
           <Checkbox checked={keepShelved} onChange={setKeepShelved} label="Keep the changes here" />

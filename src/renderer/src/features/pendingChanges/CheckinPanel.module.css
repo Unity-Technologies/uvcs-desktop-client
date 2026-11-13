@@ -30,15 +30,30 @@
   line-height: 18px;
 }
 
-/* Keeps typed text clear of the recent comments button floating at the right edge. */
+/* Keeps typed text clear of the buttons floating at the right edge: Recent comments, the change requests to apply. */
 .summaryField:has(.recent) .summary {
   padding-right: 32px;
 }
 
-.recent {
+.summaryField:has(.changeRequests) .summary {
+  padding-right: 56px;
+}
+
+.summaryField:has(.changeRequests):has(.recent) .summary {
+  padding-right: 84px;
+}
+
+.fieldButtons {
   position: absolute;
   top: 4px;
   right: 4px;
+  display: flex;
+  gap: 2px;
+}
+
+.changeRequests {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .description {
