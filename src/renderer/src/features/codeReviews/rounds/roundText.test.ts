@@ -6,7 +6,7 @@ import type { ReviewRound } from './reviewRounds';
 const IN_MADRID = { locale: 'en-US', timeZone: 'Europe/Madrid' };
 
 function round(fields: Partial<ReviewRound> = {}): ReviewRound {
-  return { number: 1, reviewer: 'vio', status: 'Rework required', date: '2026-11-09T16:40:00+01:00', comment: '', applied: 0, discarded: 0, answered: 0, open: 0, folds: true, ...fields };
+  return { number: 1, eventId: 2, reviewer: 'vio', status: 'Rework required', date: '2026-11-09T16:40:00+01:00', comment: '', applied: 0, discarded: 0, answered: 0, open: 0, folds: true, ...fields };
 }
 
 function changeset(id: number): Changeset {

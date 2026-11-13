@@ -139,6 +139,8 @@ export type ConversationEntry = TimelineEntry | CheckinsEntry;
  */
 export interface ReviewRound {
   number: number;
+  /** The server's note of the status that closed it: what names the round from one read to the next. */
+  eventId: number;
   reviewer: string;
   status: RoundStatus;
   date: string;
@@ -148,7 +150,10 @@ export interface ReviewRound {
   discarded: number;
   answered: number;
   open: number;
-  /** Folded to one line: nothing started in it is still open. */
+  /**
+   * Starts folded to one line: nothing started in it is still open. Laid out as first read (`ConversationLayout`), as it
+   * was then, and unfolded for a round closed since.
+   */
   folds: boolean;
 }
 
@@ -165,6 +170,30 @@ export interface ConversationInput {
   changesets: readonly Changeset[] | undefined;
   /** When the review was asked for: only changesets checked in since show in the timeline. */
   reviewDate: string;
+  /** How the page first laid the conversation out, kept while it's open; none lays it out afresh. */
+  layout?: ConversationLayout;
+}
+
+/**
+ * How the conversation was laid out when the page first read it, kept while the page is open so what the user (or a
+ * refresh) changes updates the cards in place and never moves them: a thread marked applied would otherwise jump under
+ * the "New since your last review" line, and settling a round's last open thread would fold the round under the pointer.
+ */
+export interface ConversationLayout {
+  /** The moment each thread shown was placed at (`placedAt`), by its comment's id. */
+  threadsAt: ReadonlyMap<number, number>;
+  /** Whether each round started folded, by the id of the status that closed it (`ReviewRound.eventId`). */
+  roundsFold: ReadonlyMap<number, boolean>;
+}
+
+/** The layout of a conversation read for the first time, to keep while the page is open (`ConversationInput.layout`). */
+export function conversationLayoutOf(input: ConversationInput): ConversationLayout {
+  const fresh: ConversationInput = { ...input, layout: undefined };
+  const checkpoint = checkpointOf(input.conversation.events, input.user, input.changesets);
+  return {
+    threadsAt: new Map(placedItems(fresh, checkpoint).flatMap(({ at, item }) => (item.kind === 'thread' ? [[item.thread.root.id, at] as const] : []))),
+    roundsFold: new Map(conversationBlocksOf(fresh).flatMap((block) => (block.kind === 'round' ? [[block.round.eventId, block.round.folds] as const] : []))),
+  };
 }
 
 /** A timeline item or a check-in, placed at the moment it shows. */
@@ -174,12 +203,14 @@ type Placed = { at: number; order: number; item: TimelineItem | CheckinsEntry };
  * The conversation in blocks. Each round the user's statuses closed (everyone's, for the author) folds to a line once
  * nothing started in it is open; the latest entries stay as they are. For a reviewer, a "New since your last review" line
  * follows their last status when anything came after it, and a thread from an earlier round settled since (applied,
- * answered, discarded) moves under it, when it settled: that's what they come back to check.
+ * answered, discarded) moves under it, when it settled: that's what they come back to check. Given the page's first
+ * `layout`, the threads it showed stay where they were and its rounds fold as they did; what's new is placed as above.
  */
-export function conversationBlocksOf({ conversation, user, changesets, reviewDate }: ConversationInput): ConversationBlock[] {
+export function conversationBlocksOf(input: ConversationInput): ConversationBlock[] {
+  const { conversation, user, changesets, layout } = input;
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
-  const placed = placedItems(conversation, checkpoint, changesets, reviewDate);
+  const placed = placedItems(input, checkpoint);
   const threads = threadsOf(conversation.comments, changesetIdsOf(changesets));
   const blocks: ConversationBlock[] = [];
   let next = 0;
@@ -190,7 +221,10 @@ export function conversationBlocksOf({ conversation, user, changesets, reviewDat
     const start = index === 0 ? -Infinity : Date.parse(statuses[index - 1]!.date);
     // Every thread started in the round counts, one settled since and shown under the line too: it's what the round asked.
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn), entries: entriesOf(inRound, false) });
+    const round = roundOf(index + 1, closing, startedIn);
+    // A round closed since the page laid the conversation out held what was on screen: it stays unfolded.
+    if (layout) round.folds = layout.roundsFold.get(closing.eventId) ?? false;
+    blocks.push({ kind: 'round', round, entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   const since = whose === 'own' && rest.length > 0;
@@ -205,13 +239,11 @@ function closesAfter(placed: Placed, closing: ClosingStatus): boolean {
   return item.kind === 'event' && item.event.id > closing.eventId;
 }
 
-function placedItems(
-  conversation: Pick<ReviewConversation, 'comments' | 'events'>,
-  checkpoint: ReviewCheckpoint | undefined,
-  changesets: readonly Changeset[] | undefined,
-  reviewDate: string,
-): Placed[] {
-  const placed: Placed[] = timelineOf(conversation, changesetIdsOf(changesets)).map((item, order) => ({ at: placedAt(item, checkpoint, changesets), order, item }));
+function placedItems({ conversation, changesets, reviewDate, layout }: ConversationInput, checkpoint: ReviewCheckpoint | undefined): Placed[] {
+  // A thread the page already showed stays where it was (`ConversationLayout`).
+  const at = (item: TimelineItem): number =>
+    (item.kind === 'thread' ? layout?.threadsAt.get(item.thread.root.id) : undefined) ?? placedAt(item, checkpoint, changesets);
+  const placed: Placed[] = timelineOf(conversation, changesetIdsOf(changesets)).map((item, order) => ({ at: at(item), order, item }));
   const asked = Date.parse(reviewDate);
   const checkedIn = (changesets ?? []).filter((changeset) => Date.parse(changeset.date) > asked);
   // Check-ins come before what's said at the same moment: a fix, then the words about it.
@@ -248,7 +280,7 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
 function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[]): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
-  return { number, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
+  return { number, eventId: closing.eventId, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
 }
 
 /**
