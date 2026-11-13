@@ -322,13 +322,20 @@ button.location:hover .locationFile {
 
 /*
  * A folded card's first comment's menu (`FirstCommentMenu`), after the pill: centered on the band rather than on its
- * baseline, and kept from making it taller than its 36px.
+ * baseline, and kept from making it taller than its 36px. Shown whole, an empty space as wide holds its place, so the
+ * pill doesn't move as the card folds.
  */
-.threadHeader .commentMenu {
+.threadHeader .commentMenu,
+.commentMenuSpace {
   display: inline-flex;
   align-self: center;
   margin-block: -4px;
   margin-left: calc(var(--space-1) - var(--space-3));
+}
+
+.commentMenuSpace {
+  width: 24px;
+  height: 24px;
 }
 
 /* A pill outlined in its words' color: where a thread stands (open amber, done green), who wrote the review. */

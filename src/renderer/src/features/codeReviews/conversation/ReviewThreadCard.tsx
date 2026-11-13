@@ -280,7 +280,8 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
       <span className={styles.headerEnd}>
         {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
         {pill && <StatePill pill={pill} onSeeApplied={onSeeApplied} onSeeAnswer={onSeeAnswer} />}
-        {header.commentMenu && firstCommentMenu && <FirstCommentMenu thread={thread} {...firstCommentMenu} />}
+        {header.commentMenu === 'menu' && firstCommentMenu && <FirstCommentMenu thread={thread} {...firstCommentMenu} />}
+        {header.commentMenu === 'space' && <span className={styles.commentMenuSpace} aria-hidden />}
         {header.hides && inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
