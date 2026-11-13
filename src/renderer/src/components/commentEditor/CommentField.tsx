@@ -87,6 +87,8 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, lab
       input.setSelectionRange(Math.min(within.anchor, within.head), Math.max(within.anchor, within.head), within.head < within.anchor ? 'backward' : 'forward');
       return true;
     },
+    // The list is the editor's: until it loads (at idle after start-up), there is none to open.
+    openChangeRequests: () => false,
   }));
   const remember = (): void => {
     focusRef.current = { at: field.current?.selectionStart ?? value.length };

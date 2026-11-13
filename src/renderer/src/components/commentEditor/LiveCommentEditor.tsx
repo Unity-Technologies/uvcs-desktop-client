@@ -3,6 +3,8 @@ import { useIssueReferences } from '../issues/useIssueTrackers';
 import { useIssueReads } from '../issues/useIssueReads';
 import { editorIssueKeys } from './editorIssueKeys';
 import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
+import { changeRequestsOfferedCompartment, openChangeRequests, withChangeRequestsOffered } from './changeRequestTrigger';
+import { ChangeRequestsContext } from './changeRequestsContext';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -122,6 +124,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
   useEffect(() => view?.dispatch({ effects: issueReferencesCompartment.reconfigure(withIssueReferences(issues)) }), [view, issues]);
+  const offersChangeRequests = useContext(ChangeRequestsContext) !== null;
+  useEffect(() => view?.dispatch({ effects: changeRequestsOfferedCompartment.reconfigure(withChangeRequestsOffered(offersChangeRequests)) }), [view, offersChangeRequests]);
 
   const handle = useMemo(
     () => ({
@@ -133,6 +137,13 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
         if (!view) return false;
         const within = withinText(selection, view.state.doc.length);
         view.dispatch({ selection: within, scrollIntoView: true });
+        focusEditor(view);
+        return true;
+      },
+      openChangeRequests: () => {
+        if (!view) return false;
+        if (!view.hasFocus) view.dispatch({ selection: { anchor: view.state.doc.length } });
+        view.dispatch(openChangeRequests(view.state));
         focusEditor(view);
         return true;
       },
