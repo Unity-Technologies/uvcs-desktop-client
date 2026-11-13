@@ -318,7 +318,7 @@ button.location:hover .locationFile {
   color: var(--text-tertiary);
 }
 
-/* A pill outlined in its words' color: where a thread stands (open amber, done green, a plain comment blue), who wrote the review. */
+/* A pill outlined in its words' color: where a thread stands (open amber, done green, a plain comment violet), who wrote the review. */
 .pill {
   display: inline-flex;
   flex: none;
@@ -344,12 +344,12 @@ button.location:hover .locationFile {
 }
 
 /*
- * A plain comment on a line: it stands nowhere, so in a color no state takes, the accent, its border as strong as the
- * states' (60%, as Open's), so it never reads as Discarded's gray.
+ * A plain comment on a line: it stands nowhere, so in a muted violet no state takes. Not gray, which reads as
+ * Discarded; not blue, the links' color; not teal, too close to Applied's green.
  */
 .pill[data-tone='comment'] {
-  border-color: color-mix(in srgb, var(--accent-text) 60%, transparent);
-  color: var(--accent-text);
+  border-color: var(--comment-kind-border);
+  color: var(--comment-kind-text);
 }
 
 /* The thread's kind, leading the pill in its words' color; its own tooltip names it where the words don't. */

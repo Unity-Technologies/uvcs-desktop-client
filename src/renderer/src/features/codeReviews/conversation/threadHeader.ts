@@ -49,7 +49,7 @@ export interface HeaderLocation {
  * What the thread is and where it stands, as a pill on the band's right, where the eye goes: its kind's icon
  * (`THREAD_KIND_ICONS`, its own tooltip naming the kind) says what it is, so every thread names its kind in one spot,
  * and its words say only where it stands: Open, Applied, Discarded, Answered. A plain comment on a line stands nowhere:
- * its pill says "Comment", in a tone of its own (`comment`) that no state takes, the accent.
+ * its pill says "Comment", in a tone of its own (`comment`) that no state takes, a muted violet.
  * "Answered" leads to the reply, "Applied" to how it was applied; the rest are words.
  */
 export type HeaderPill = {
@@ -64,7 +64,7 @@ export type HeaderPill = {
 } &
   ({ leadsTo: 'nothing'; tip?: string } | { leadsTo: 'answer'; tip: string } | { leadsTo: 'applied'; changesetId: number; tip: string } | { leadsTo: 'context'; tip: string });
 
-/** The pill's color: open amber, done green, discarded gray, a plain comment blue, as no state is. */
+/** The pill's color: open amber, done green, discarded gray, a plain comment violet, as no state is. */
 export type PillTone = NonNullable<ThreadBadges['state']>['tone'] | 'comment';
 
 /** What a thread's header shows, in its order; the card maps it to its controls. */
