@@ -63,4 +63,15 @@ describe('useNewLineCommentsStore', () => {
     store.suggestTaken(request.seq);
     expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
   });
+
+  it('drops the request for a suggestion once its comment is canceled, or opened again from a plain "+"', () => {
+    const store = useNewLineCommentsStore.getState();
+    store.open(at(7), { suggests: true });
+    store.close(at(7).key);
+    expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
+
+    store.open(at(7), { suggests: true });
+    store.open(at(7));
+    expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
+  });
 });
