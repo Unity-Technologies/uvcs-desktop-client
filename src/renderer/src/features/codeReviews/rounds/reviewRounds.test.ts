@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, conversationLayoutOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -410,5 +410,69 @@ describe('conversationBlocksOf', () => {
 
     expect(roundHolding(blocks, 1)).toBe(1);
     expect(roundHolding(blocks, 3)).toBeUndefined();
+  });
+});
+
+describe('conversationBlocksOf, laid out as first read (`conversationLayoutOf`)', () => {
+  const user = 'vio';
+  const reviewDate = at(7, 8);
+  const roundClosed = status(2, 'vio', 'Rework required', at(9, 16));
+
+  it('keeps a request applied since the last review under the line once marked as not applied, its round still folded', () => {
+    const first = { conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
+    const layout = conversationLayoutOf(first);
+
+    const unmarked = conversationBlocksOf({ ...first, conversation: conversation([request(1, at(9, 15))], [roundClosed]), layout });
+
+    expect(shapeOf(unmarked)).toEqual(['round 1 (folded): event 2', 'since', 'checkins 15', 'thread 1']);
+    // Its contents follow what changed: the round counts the request open again.
+    expect(unmarked[0]?.kind === 'round' && unmarked[0].round.open).toBe(1);
+  });
+
+  it("keeps a request in its round once marked as applied, and the round unfolded though nothing in it is open", () => {
+    const first = { conversation: conversation([request(1, at(9, 15))], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
+    const layout = conversationLayoutOf(first);
+
+    const marked = conversationBlocksOf({ ...first, conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [roundClosed]), layout });
+
+    expect(shapeOf(marked)).toEqual(['round 1: thread 1, event 2', 'since', 'checkins 15']);
+    expect(marked[0]?.kind === 'round' && marked[0].round.applied).toBe(1);
+  });
+
+  it('keeps a question in its round once answered or discarded', () => {
+    const first = { conversation: conversation([question(1, at(9, 15)), request(3, at(9, 15))], [roundClosed]), user, changesets: undefined, reviewDate };
+    const layout = conversationLayoutOf(first);
+
+    const settled = conversationBlocksOf({
+      ...first,
+      conversation: conversation([question(1, at(9, 15)), reply(4, 1, at(10, 10)), request(3, at(9, 15)), reply(5, 3, at(10, 11), { kind: 'discard' })], [roundClosed]),
+      layout,
+    });
+
+    expect(shapeOf(settled)).toEqual(['round 1: thread 1, thread 3, event 2']);
+  });
+
+  it('places what was said since as it would be placed on a first read', () => {
+    const first = { conversation: conversation([request(1, at(9, 15))], [roundClosed]), user, changesets: undefined, reviewDate };
+    const layout = conversationLayoutOf(first);
+
+    const blocks = conversationBlocksOf({ ...first, conversation: conversation([request(1, at(9, 15)), comment(3, at(10, 12), { author: 'dani' })], [roundClosed]), layout });
+
+    expect(shapeOf(blocks)).toEqual(['round 1: thread 1, event 2', 'since', 'thread 3']);
+  });
+
+  it('shows unfolded a round closed while the page is open: what it holds was on screen', () => {
+    const first = { conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
+    const layout = conversationLayoutOf(first);
+
+    const blocks = conversationBlocksOf({ ...first, conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 })], [roundClosed, status(6, 'vio', 'Reviewed', at(10, 13))]), layout });
+
+    expect(shapeOf(blocks)).toEqual(['round 1 (folded): event 2', 'round 2: checkins 15, thread 1, event 6']);
+  });
+
+  it('lays out as a first read does', () => {
+    const first = { conversation: conversation([request(1, at(9, 15), { appliedInChangeset: 15 }), question(3, at(9, 14))], [roundClosed]), user, changesets: changesets([15, at(10, 9)]), reviewDate };
+
+    expect(conversationBlocksOf({ ...first, layout: conversationLayoutOf(first) })).toEqual(conversationBlocksOf(first));
   });
 });
