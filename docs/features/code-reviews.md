@@ -232,9 +232,12 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read, replied
   to, folded and selected. Its header is one quiet line: its folder (giving way first in a narrow card), file and line
   (`locationText`), then a pill on the right saying what the thread is and where it stands (`HeaderPill`, `pillOf`).
-  The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), whose own tooltip
-  names the kind (`ThreadKindIcon`; hovering the rest of the pill shows the state's tip), and its words say only where it
-  stands (`threadBadges`), as the server counts open ones:
+  The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), and its words say
+  only where it stands (`threadBadges`), as the server counts open ones. The icon's own tooltip names the kind where the
+  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request" or "Question", even on a pill that is
+  a link, whose tooltip, over the rest of it, says what a click shows. Beside "Comment" the icon is only drawn, with no
+  tooltip and hidden from a screen reader, so the kind isn't said twice. Open and Comment pills have no tooltip of their
+  own. Where it stands:
   a change request is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its
   tooltip naming the changeset: "Applied in changeset 4: see how it was applied", `appliedPillTip`; shown in how it was
   applied itself, it only names the changeset, as opening it would go behind the dialog, whose footer opens it:
