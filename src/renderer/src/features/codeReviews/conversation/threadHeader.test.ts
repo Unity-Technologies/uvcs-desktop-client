@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf, type ReviewThread } from './reviewThreads';
-import { hasThreadHeader, threadHeaderOf, type ThreadHeaderInput } from './threadHeader';
+import { foldsByHand, hasThreadHeader, threadHeaderOf, type ThreadHeaderInput } from './threadHeader';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -29,6 +29,17 @@ describe('hasThreadHeader', () => {
     expect(hasThreadHeader(threadOf(comment(1, { kind: 'changeRequest' })))).toBe(true);
     expect(hasThreadHeader(threadOf(comment(1, { kind: 'question' })))).toBe(true);
     expect(hasThreadHeader(general)).toBe(false);
+  });
+});
+
+describe('foldsByHand', () => {
+  it('folds every card with a header band, open or settled, so they all work the same way', () => {
+    expect([changeRequest, applied, discarded, answered, plainOnLine].map(foldsByHand)).toEqual([true, true, true, true, true]);
+    expect(foldsByHand(threadOf(comment(1, { kind: 'question' })))).toBe(true);
+  });
+
+  it("doesn't fold a comment on the whole review, which has no band to hold the chevron", () => {
+    expect(foldsByHand(general)).toBe(false);
   });
 });
 
@@ -107,6 +118,31 @@ describe('threadHeaderOf', () => {
 
     it('counts no replies on a folded thread with none', () => {
       expect(headerOf(applied, { folded: true }).replies).toBeNull();
+    });
+  });
+
+  describe("the first comment's menu", () => {
+    it('carries it on a folded card, in the conversation and in the code, where the comment that has it is hidden', () => {
+      expect(headerOf(applied, { foldable: true, folded: true }).commentMenu).toBe('menu');
+      expect(headerOf(discarded, { place: 'code', foldable: true, folded: true }).commentMenu).toBe('menu');
+    });
+
+    it('carries it on an open card folded by hand, as on any folded card', () => {
+      expect(headerOf(changeRequest, { foldable: true, folded: true })).toMatchObject({ foldToggle: { expanded: false, label: 'Show the thread' }, commentMenu: 'menu' });
+    });
+
+    it('keeps its room on a card shown whole, so the pill stays put as the card folds, the menu left to the comment', () => {
+      expect(headerOf(applied, { foldable: true }).commentMenu).toBe('space');
+      expect(headerOf(answered, { place: 'code', foldable: true }).commentMenu).toBe('space');
+    });
+
+    it('keeps no room on a card that never folds', () => {
+      expect(headerOf(changeRequest).commentMenu).toBeNull();
+    });
+
+    it("doesn't carry it on the Comments panel's cards, which go to the thread", () => {
+      expect(headerOf(answered, { place: 'panel', folded: true, showsAnswer: false }).commentMenu).toBeNull();
+      expect(headerOf(answered, { place: 'fileGroup', folded: true, showsAnswer: false }).commentMenu).toBeNull();
     });
   });
 

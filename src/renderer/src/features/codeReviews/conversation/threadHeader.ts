@@ -13,7 +13,7 @@ export interface ThreadHeaderInput {
   thread: ReviewThread;
   place: ThreadCardPlace;
   folded: boolean;
-  /** A settled thread folds and unfolds from its header; the panel's cards stay folded. */
+  /** The card folds and unfolds from its header (`foldsByHand`); the panel's cards stay folded. */
   foldable: boolean;
   /** In the code, written on an earlier version (`earlierTagOf`), and whether its tag shows it in context. */
   earlier?: { label: string; tip: string; opensContext: boolean };
@@ -63,11 +63,27 @@ export interface ThreadHeaderView {
   line: string | null;
   pill: HeaderPill | null;
   hides: boolean;
+  /**
+   * The first comment's menu (`useCommentMenu`) at the header's end, after the pill: folded, the comment that has it is
+   * hidden, and what it offers ("Mark as not applied", Copy, Edit, Delete) shouldn't wait for a click that unfolds it.
+   * Only on a card that folds (the conversation's, the code's): the Comments panel's go to the thread. Shown whole, the
+   * comment has it (one menu, not two), and the header keeps its room empty (`space`), so the pill doesn't move as the
+   * card folds.
+   */
+  commentMenu: 'menu' | 'space' | null;
 }
 
 /** Whether a thread's card has a header band: one on a line, a change request, or a question. A plain review comment has none. */
 export function hasThreadHeader(thread: ReviewThread): boolean {
   return thread.root.anchor.kind === 'line' || threadBadges(thread).kind !== undefined;
+}
+
+/**
+ * Whether a card folds by hand, from its header's chevron: every one with a header band, open or settled, so they all
+ * work the same way. How it starts is apart (`startsFolded`): a settled one folded, an open one whole.
+ */
+export function foldsByHand(thread: ReviewThread): boolean {
+  return hasThreadHeader(thread);
 }
 
 export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer, inContext }: ThreadHeaderInput): ThreadHeaderView {
@@ -87,7 +103,14 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     line: underFile && thread.root.anchor.kind === 'line' ? writtenLineText(thread.root.anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
+    commentMenu: commentMenuOf(place, folded, foldable),
   };
+}
+
+function commentMenuOf(place: ThreadCardPlace, folded: boolean, foldable: boolean): ThreadHeaderView['commentMenu'] {
+  if (place !== 'conversation' && place !== 'code') return null;
+  if (folded) return 'menu';
+  return foldable ? 'space' : null;
 }
 
 function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation | null {
