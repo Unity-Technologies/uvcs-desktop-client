@@ -2,7 +2,6 @@ import { Command as Cmdk } from 'cmdk';
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { isRowMenuKey } from '../../lib/rowMenu';
-import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
@@ -16,6 +15,7 @@ import { PaletteRow } from './PaletteRow';
 import { linkGroupIn } from './linkResults';
 import { isPaletteTextKey } from './paletteTextKeys';
 import { parseScope, type SectionId } from './paletteScope';
+import { scopeStepOf } from './paletteScopeKeys';
 import { queryInScope, scopeChipsFor, steppedChip, type ScopeChip } from './scopeChips';
 import { ScopeChipRow } from './ScopeChipRow';
 import { collapseGroups, COLLAPSED_ROWS, moreLabel, shownSections, type SearchGroup, type SearchResult } from './searchResults';
@@ -40,7 +40,7 @@ export function CommandPalette() {
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
  * the best matches come first. A prefix narrows the search to one section (`SCOPE_PREFIXES`), as its chip under the
- * search does by writing it (`scopeChipsFor`, ⌘[ and ⌘] step through them); a pasted link opens it. Enter opens a result (a workspace in a new
+ * search does by writing it (`scopeChipsFor`; ⌥⌘← ⌥⌘→, Alt+← Alt+→ off Mac, step through them); a pasted link opens it. Enter opens a result (a workspace in a new
  * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
@@ -118,7 +118,11 @@ function OpenPalette({ close }: { close: () => void }) {
 
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
-    if (event.target !== inputRef.current) return event.preventDefault();
+    // Stopped too: the window's shortcuts (Back's Alt+←) must not act under the palette.
+    if (event.target !== inputRef.current) {
+      event.stopPropagation();
+      return event.preventDefault();
+    }
     // Taken: the palette closes before the key reaches the window, where Esc would also collapse an expanded diff.
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -127,7 +131,7 @@ function OpenPalette({ close }: { close: () => void }) {
     if (event.key === 'Enter' && ranInNewWindow(selectedResult, event)) return;
     const step = chips && scopeStepOf(event);
     if (step) {
-      // Taken, or Back would also leave the page under the palette.
+      // Taken, or Back (Alt+← off Mac) would also leave the page under the palette.
       event.preventDefault();
       event.stopPropagation();
       return pickScope(steppedChip(chips, typedScope, step));
@@ -215,14 +219,6 @@ function useFocusBackOnClose(): void {
 /** Home and End in the field are the field's (`isPaletteTextKey`), not cmdk's. */
 function keepTextKeys(event: KeyboardEvent<HTMLInputElement>): void {
   if (isPaletteTextKey(event)) event.stopPropagation();
-}
-
-/** ⌘] steps to the next chip, ⌘[ to the one before (`paletteScope`). */
-function scopeStepOf(event: KeyboardEvent): 1 | -1 | null {
-  const [previous, next] = hotkeys('paletteScope');
-  if (next && matchesShortcut(event, next)) return 1;
-  if (previous && matchesShortcut(event, previous)) return -1;
-  return null;
 }
 
 function moreValue(section: SectionId): string {

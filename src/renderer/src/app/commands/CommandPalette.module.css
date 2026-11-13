@@ -55,6 +55,7 @@
 .scopes {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 0 var(--space-4) var(--space-3);
@@ -195,26 +196,4 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   cursor: default;
-}
-
-.footer {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-
-.hint {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-/* The scope's keys sit at the far end of the keys' row. */
-.scopeHint {
-  margin-left: auto;
 }

@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { MenuChip, ToggleChip } from '../../ui/ToggleChip';
 import type { PaletteScope } from './paletteScope';
-import { moreChipLabel, type ScopeChip, type ScopeChips } from './scopeChips';
+import { clickedChip, moreChipLabel, type ScopeChip, type ScopeChips } from './scopeChips';
 import styles from './CommandPalette.module.css';
 
 interface ScopeChipRowProps {
@@ -13,14 +13,17 @@ interface ScopeChipRowProps {
   onMenuClosed: () => void;
 }
 
-/** The sections the palette can narrow to (`scopeChipsFor`), the one searched highlighted; each shows its prefix. */
+/**
+ * The sections the palette can narrow to (`scopeChipsFor`), the one searched highlighted; each shows its prefix. They
+ * are the mouse's way: the keys are the prefixes typed, or ⌥⌘← ⌥⌘→ (`scopeStepOf`), as Tab is the palette's.
+ */
 export function ScopeChipRow({ chips, scope, onPick, onMenuClosed }: ScopeChipRowProps) {
   const more = moreChipLabel(chips.more, scope);
   const moreEntries = chips.more.map((chip) => ({ id: chip.scope, label: chip.label, detail: chip.prefix, checked: chip.scope === scope, run: () => onPick(chip) }));
   return (
-    <div className={styles.scopes} role="toolbar" aria-label="Search in">
+    <div className={styles.scopes} role="group" aria-label="Search in">
       {chips.row.map((chip) => (
-        <ToggleChip key={chip.scope} size="small" pressed={chip.scope === scope} onChange={() => onPick(chip)} onMouseDown={keepFocusInSearch}>
+        <ToggleChip key={chip.scope} size="small" pressed={chip.scope === scope} onChange={() => onPick(clickedChip(chips, chip, scope))} onMouseDown={keepFocusInSearch}>
           {chip.label}
           {chip.prefix && <span className={styles.chipPrefix}>{chip.prefix}</span>}
         </ToggleChip>
@@ -34,7 +37,7 @@ export function ScopeChipRow({ chips, scope, onPick, onMenuClosed }: ScopeChipRo
             onMenuClosed();
           }}
         >
-          <MenuChip active={more.active} data-size="small">
+          <MenuChip active={more.active} size="small">
             {more.label}
           </MenuChip>
         </ActionDropdownMenu>
