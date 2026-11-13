@@ -239,17 +239,23 @@ wherever the comment shows: a card in the conversation, a thread in the code, a 
 menu and no link of its own: it is what the review's link opens on, the conversation's first card.
 
 A link opens the review where the comment is, decided from the conversation as read (`commentLinkPage`), which the link
-reads first and the page then finds read (`reviewConversationQuery`): no command of its own.
+reads first with the review itself, and the page then finds both read (`reviewConversationQuery`, `codeReviewQuery`): no
+command of its own.
 
 - A comment on a line, or a reply in its thread, opens Changes at the thread, in the mode it was written in, as its
   file's link in the conversation does (`commentLocationPage`): under its line, or among the outdated above the code
-  for one on an earlier version whose line changed. The thread shows whole, its replies with it.
+  for one on an earlier version whose line changed. The thread shows whole, its replies with it; the reply isn't lit
+  there, the thread is.
 - A comment on the whole review opens the conversation at its thread, centered, unfolded, lit and ringed, as "Show in
   conversation" does. A reply opens it at the reply (`focusReply`, `pickOnFocus`'s `replyId`): the reply brought into
-  view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded.
+  view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded. The
+  card decides what it lights from its props (`cardLightOf`), so one mounting at the reply, a link opened cold, lights
+  it from its first render; the conversation scrolls to it, the reply itself only for the Answered pill
+  (`CardLight.litComment.scrolls`). Between the pill's answer and a reply gone to, whichever came last is lit.
 - The description's id opens the review as the review's link does, without saying it's not found.
 - A comment the review no longer has (deleted, or never on it) opens the review on its conversation, and a toast says
-  "Comment not found" (`LinkNotice`). A conversation that can't be read leaves the review's page to say why.
+  "Comment not found" (`LinkNotice`). A review that isn't there lists no comments: its read fails, and its page says
+  so alone, as does one whose conversation can't be read.
 
 ## Rounds
 
