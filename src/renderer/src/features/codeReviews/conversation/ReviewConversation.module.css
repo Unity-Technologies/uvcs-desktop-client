@@ -404,6 +404,11 @@ button.pill:hover {
   min-width: 0;
 }
 
+.foldedRow .foldedLine {
+  /* The whole line unfolds the card on a click, up to the menu, as it did on its own. */
+  flex: 1;
+}
+
 .foldedRow .commentMenu {
   display: inline-flex;
   flex: none;
