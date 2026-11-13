@@ -91,6 +91,20 @@ describe('suggestionApplyOf on a range of lines', () => {
 });
 
 describe('suggestionTargetIn', () => {
+  it('refuses a line repeated elsewhere (a lone brace) whose neighbors no longer hold it, rather than writing at the wrong one', () => {
+    const brace: SuggestedChange = { ...CHANGE, firstLine: 3, lastLine: 3, lines: ['} // Run'] };
+    const commented = 'void Run() {\n  step();\n}\n';
+    const moved = 'void Run() {\n}\n  step();\n';
+    expect(suggestionTargetIn(brace, commented, text(moved))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+  });
+
+  it('takes the block where its neighbors still hold it, code added further above', () => {
+    const brace: SuggestedChange = { ...CHANGE, firstLine: 3, lastLine: 3, lines: ['} // Run'] };
+    const commented = 'void Run() {\n  step();\n}\n';
+    const added = 'void Walk() {\n}\n\nvoid Run() {\n  step();\n}\n';
+    expect(suggestionTargetIn(brace, commented, text(added))).toMatchObject({ kind: 'ready', range: { firstLine: 6, lastLine: 6 } });
+  });
+
   it('rechecks a fresh read of the file as the button did', () => {
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED))).toEqual({ kind: 'ready', text: COMMENTED, range: { firstLine: 3, lastLine: 3 } });
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '31')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
