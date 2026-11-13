@@ -100,7 +100,7 @@ describe('checkinChanges', () => {
   });
 
   it('says it checked in but applied no change request when one the comment names had none pending, quiet or not, and refreshes the reviews', async () => {
-    answerCheckins({ ...created(44), changeRequestsNotApplied: ['deadbeef'] });
+    answerCheckins({ kind: 'created', changesetId: 44, branch: '/main', changeRequestsNotApplied: ['deadbeef'] });
     answerSettings();
     const refreshed = watchRefreshes(ws);
 
