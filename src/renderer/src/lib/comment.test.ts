@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentEditorExit, editedComment, editingParts, hasUnsavedEdit, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
+import { commentEditorExit, editedComment, editingParts, hasUnsavedEdit, recentCommentLabel, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -173,6 +173,17 @@ describe('recentCommentPick', () => {
       caretIn: 'description',
     });
     expect(recentCommentPick('[apply-change:c0d1ce00]')).toEqual({ parts: { summary: '', description: '' }, caretIn: 'summary' });
+  });
+});
+
+describe('recentCommentLabel', () => {
+  it('names a recent comment by the first line its pick writes, the change requests it applied left out', () => {
+    expect(recentCommentLabel('Shelve first [apply-change:c0d1ce00]\n\nThe undo fails.')).toBe('Shelve first');
+    expect(recentCommentLabel('[apply-change:c0d1ce00]\n\nThe undo fails.')).toBe('The undo fails.');
+  });
+
+  it('names one that writes nothing as it was written', () => {
+    expect(recentCommentLabel('[apply-change:c0d1ce00]')).toBe('[apply-change:c0d1ce00]');
   });
 });
 
