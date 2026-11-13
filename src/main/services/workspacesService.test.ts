@@ -407,6 +407,14 @@ describe('a partial workspace downloading its whole branch', () => {
     expect(kindChanges).toEqual([WORKSPACE]);
   });
 
+  it('tells its kind may have changed when its kind cannot be read and the switch fails', async () => {
+    const { service, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, getworkspacefrompath: cmFails('The workspace could not be read.') });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow();
+
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
   it('refuses a standard workspace, switching nothing and telling no window', async () => {
     const { service, commands, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, ...WORKSPACE_NAMES });
 
