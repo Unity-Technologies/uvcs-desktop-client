@@ -13,23 +13,32 @@
   padding: var(--space-4) var(--space-5) var(--space-2);
 }
 
+/*
+ * The actions sit at the title's end while the title keeps a readable width beside them; in a narrower window they
+ * wrap to a row of their own under it, rather than squeezing the title to a word per line.
+ */
 .titleRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-4);
+  gap: var(--space-2) var(--space-4);
 }
 
 .titleRow > :first-child {
-  flex: 1;
+  flex: 1 1 280px;
   min-width: 0;
 }
 
-/* The header's actions stay at the title's end, on its first line however long it wraps. */
+/*
+ * On the title's first line however long it wraps. On a row of their own they may narrow: the switch's words give
+ * way first (`.reviewedCode`).
+ */
 .headerActions {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .title {
@@ -58,6 +67,26 @@
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 12px;
+}
+
+/*
+ * What's reviewed, the dot and when wrap as one: a wrapping meta line never leaves the dot alone at a line's end or
+ * start. In a very narrow window the branch gives way, its whole name in its tooltip.
+ */
+.targetAndTime {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+/* A changeset or shelve named in words: cut with an ellipsis rather than pushed past the row, as the branch is. */
+.targetText {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .dot {
