@@ -382,6 +382,70 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 - **Reading it**: anywhere a comment shows, the reference is a chip reading "Applies:" and the request
   (docs/features/rich-comments.md "How references show").
 
+## Suggested changes
+
+A change request can suggest the code itself, as GitHub's suggested changes do: a fence whose language is `suggestion`,
+holding the lines that replace the commented line. It is plain text in the comment (`suggestionOf`,
+`shared/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server
+field is involved. `cm` names one line, so a suggestion replaces exactly that line: an empty fence deletes it, several
+lines replace it. `SuggestedChange` holds `firstLine` and `lastLine` for when a comment can name a range.
+
+- **What counts** (`suggestionOf`, `suggestedChangeOf`): only a change request on a line holds one, as only those are
+  applied (`[apply-change:…]`); a fence in a question or a comment is a code block. Only the comment's first such fence
+  of its own counts, read as CommonMark reads fences (backticks or tildes, closed by one at least as long, the opening's
+  indentation taken off each line, `\r\n` or `\n`, words after `suggestion` allowed); one in a quote, a list or
+  another fence is code. Markdown shows the same block (`suggestionBlockIndex`, `markdownSuggestion.test.ts` keeps the
+  two readers agreeing).
+- **Writing** (see "Writing from the code"): the new line comment's **Suggest change** (`suggestButtonOf`) inserts the
+  fence at the caret, on lines of its own, filled with the line's text as the diff read it (`withSuggestionAt`,
+  `useReplacedLines`: the diff's own read, no command), the caret at the end of the line, and makes the comment a
+  change request. It's offered once per comment, as only the first fence counts. The code's menu has **Suggest change
+  on line 42** after "Comment on line 42" (`LineAction.variant`), opening the comment with the fence in it
+  (`useNewLineCommentsStore`'s `suggestRequest`). A fence a line of code would close takes more backticks
+  (`suggestionFence`). Not in a reply, which has no line of its own and is never a change request, nor in an edit,
+  whose composer is every comment's: the fence can be typed there, as it can anywhere.
+- **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
+  cards in the code, How it was applied), a **Suggested change** box: the commented line removed, the suggested lines
+  added, in the diff's tints, highlighted in the file's language (`syntaxLanguage`, the comments' highlighter,
+  `useHighlightedLines`); "Suggested change: delete the line" for an empty fence. The line is read from the revision
+  the comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so
+  in the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it,
+  and only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from
+  the disk. While it's read a row holds its place; one that can't be read shows the suggested lines alone. One-line
+  previews (the Comments panel, Open, a folded card) show the comment's first words, or the code's first line, as for
+  any code block. Copying keeps the fence as written.
+
+## Applying a suggestion
+
+An open change request's Suggested change has a split button in its header (`SuggestionApplyButton`):
+
+- **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request
+  to apply in its description (`suggestionCheckinComment`; in the summary its chip, reading a line of code, wrapped and
+  moved the buttons from under the pointer), then writes the line and checks in that file alone (`checkInSuggestion`,
+  `checkinChanges`: one `cm checkin` in a process, the reviews refreshed as its comment applies a request,
+  `withChangeRequestsApplied`).
+- **Apply to my changes**, behind the caret, only writes the file (`applySuggestionToChanges`): the change is pending,
+  and Changes offers the request in the next check-in ("Change requests to apply" above). That's the way to take
+  several suggestions in one changeset.
+
+Where it stands (`suggestionApplyOf`, from what the window read: `useSuggestionApply`); no suggestion costs a command:
+a settled request (applied, discarded) has no button. It's disabled, its tooltip saying why, in a window with no
+workspace; for a shelve's review (on no branch); in a workspace not on the review's branch (a changeset review's: its
+changeset's, which its diff reads, `reviewBranchOf`; `cm wi` tells the workspace's, locally); behind that branch, as
+the incoming check last saw (`behindBranch`, polled anyway); and when the file's line no longer holds the text the
+suggestion was written on, the line followed from the commented revision into the file on disk (`newerLineOf`; the
+disk read is free). The file must be UTF-8 text, as the app reads files (`toFileContent`): a replacement character
+means another encoding, which writing back would change. A file with other pending changes takes Apply to my changes
+only: checking it in alone would take those too (`checkIn.reason`).
+
+Writing (`withLinesReplaced`) changes that line only: the others, their line ends (the replaced line's own in a file of
+mixed ones), a last line without one and a byte order mark stay. The file is read again first and nothing is written
+if it changed since (`writeSuggestion`); the text shows at once and the views of the workspace's files are read again,
+as a discard in the diff does (`showFileText`, `refreshFileViews`). As everywhere the app writes a workspace file, it
+doesn't check it out first: `cm` finds the change by its timestamp; a read-only file fails the write and says so. A
+check-in that fails (a lock, the server) leaves the file written, a pending change, and says so: the user asked for the
+change, and putting the old text back could lose an edit made meanwhile.
+
 ## Rounds
 
 A review goes back and forth: the author checks in, a reviewer asks for rework, the author fixes and asks again. A
@@ -662,7 +726,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
   their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" in the gutter of the line under the
   pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
-  the code's menu (on the last of the lines selected: `cm` names one line). No key: a review's diff has no caret, so no
+  the code's menu (on the last of the lines selected: `cm` names one line), "Suggest change on line 42" after it (see
+  "Suggested changes"). No key: a review's diff has no caret, so no
   line is "current". The comment opens under the line (`NewLineCommentCard`), after the line's threads, the line
   outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
   as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change

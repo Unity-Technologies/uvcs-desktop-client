@@ -185,6 +185,10 @@ and no line is tokenized past 1,000 characters. Each block is tokenized once per
 grammar loads, for a language the highlighter doesn't know, and for a block too big, it shows plain in the same box,
 so nothing moves as colors arrive; switching themes keeps the old colors until the new ones are in.
 
+A change request's ```` ```suggestion ```` fence shows as its Suggested change instead, the line it replaces and the
+lines suggested (`Markdown`'s `suggestion`, docs/features/code-reviews.md "Suggested changes"); in any other comment it
+is a code block.
+
 ## Writing
 
 Every comment field writes a comment the same way (`CommentField`, `components/commentEditor/`): the check-in and
