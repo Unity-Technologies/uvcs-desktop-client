@@ -239,15 +239,18 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   (**Answered**: any reply answers it, there's no other way to resolve one). Other comments are never open. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). Every card with a header band folds the same way from its chevron, an open one too, which starts whole
-  (`foldsByHand`: how a card starts and whether it folds are apart). Folded, in the conversation and in the code, its
-  first comment's menu sits at the band's end, after the pill, under the pointer as on a comment
-  (`threadHeaderOf`'s `commentMenu`, `FirstCommentMenu`): the same entries, wired once (`useCommentMenu`), so "Mark as
-  not applied", Copy, Edit and Delete don't wait for an unfold; Edit unfolds the card at the comment's editor. Shown
-  whole, the menu is the comment's only, never two; the Comments panel's cards, which go to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
-  cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
-  a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill: **Open** in the color
-  of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral.
+  tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
+  which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
+  apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the band's
+  end, after the pill, under the pointer as on a comment (`threadHeaderOf`'s `commentMenu`, `FirstCommentMenu`): the
+  same entries, wired once (`useCommentMenu`), so "Mark as not applied", Copy, Edit and Delete don't wait for an
+  unfold; Edit unfolds the card at the comment's editor. Shown whole, the menu is the comment's only, never two, and
+  its room on the band stays empty, so the pill doesn't move as the card folds; the Comments panel's cards, which go
+  to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
+  Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
+  the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill:
+  **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded**
+  neutral.
 - **A question answered in a changeset**: an answer naming a changeset of the review's repository ("Fixed in
   cs:281301", the first one named in the replies, `answeringChangeset`) answers the question in it, as a changeset
   applies a change request (`ThreadState`'s `answered.changesetId`, `settlingChangeset`): that changeset's diff shows
