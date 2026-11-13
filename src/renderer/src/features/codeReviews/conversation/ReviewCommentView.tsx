@@ -30,6 +30,8 @@ interface ReviewCommentViewProps {
   threadActions?: CommentThreadActions;
   /** Opens in its editor: Edit was picked on its folded card's header, which unfolded it. */
   startsEditing?: boolean;
+  /** Its editor opened as `startsEditing` asked, which spends the ask (`threadCardFold`'s `editorOpened`). */
+  onEditorOpened?: () => void;
   /**
    * Gone to, the how-many-th time: lit for a moment, and scrolled to when it `scrolls` (the reply an Answered pill leads
    * to; a reply a link goes to is scrolled to by the conversation, `pickedElementId`).
@@ -40,7 +42,7 @@ interface ReviewCommentViewProps {
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, startsEditing = false, lit, elementId }: ReviewCommentViewProps) {
+export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, startsEditing = false, onEditorOpened, lit, elementId }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
   const litSeq = lit?.seq;
@@ -49,6 +51,9 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
     if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [litSeq, scrollsWhenLit]);
   const [editing, setEditing] = useState(startsEditing);
+  useEffect(() => {
+    if (startsEditing) onEditorOpened?.();
+  }, [startsEditing, onEditorOpened]);
   const menu = useCommentMenu({ review, comment, thread, user, edit: () => setEditing(true), threadActions });
 
   return (

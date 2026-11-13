@@ -3,7 +3,7 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState, type MouseEvent, type ReactNode } from 'react';
+import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
@@ -19,7 +19,8 @@ import { discardChangeRequest, replyToComment } from './reviewCommentOperations'
 import { ReviewCommentView } from './ReviewCommentView';
 import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
+import { answerOf, commentLocationPage, replyAction } from './threadBadges';
+import { initialThreadCardFold, nextThreadCardFold } from './threadCardFold';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
 import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
@@ -76,9 +77,7 @@ type Answering = 'reply' | 'discard' | null;
  * it and its first words from its chevron (`foldsByHand`); a settled one starts folded (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
-  // Edit, picked from the folded header's menu: the thread unfolds with its first comment's editor open.
-  const [editsRoot, setEditsRoot] = useState(false);
+  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight));
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
@@ -88,7 +87,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   if (nextCommentLight !== commentLight) setCommentLight(nextCommentLight);
   const answer = answerOf(thread);
   const seeAnswer = answer && (() => {
-    setFolded(false);
+    foldEvent('unfold');
     setAnswerShown((previous) => nextAnswerLight(previous, answer.replyId, highlight));
   });
   const foldable = foldsByHand(thread);
@@ -96,17 +95,9 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   // Gone to again: shown whole, as what was asked for.
   if (highlight !== shownHighlight) {
     setShownHighlight(highlight);
-    if (highlight !== undefined) setFolded(false);
+    if (highlight !== undefined) foldEvent('unfold');
   }
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
-  const toggleFold = () => {
-    setFolded(!folded);
-    setEditsRoot(false);
-  };
-  const editRoot = () => {
-    setFolded(false);
-    setEditsRoot(true);
-  };
 
   return (
     <section
@@ -126,8 +117,8 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
           inCode={inCode}
           onSeeApplied={onSeeApplied}
           onSeeAnswer={seeAnswer}
-          onToggle={foldable ? toggleFold : undefined}
-          firstCommentMenu={{ review, user, threadActions, onEdit: editRoot }}
+          onToggle={foldable ? () => foldEvent('toggle') : undefined}
+          firstCommentMenu={{ review, user, threadActions, onEdit: () => foldEvent('editRoot') }}
         />
       )}
       {inCode?.snippet}
@@ -135,9 +126,9 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
       <div className={styles.threadBody} data-thread-body="">
         {folded ? (
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
-          <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
+          <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
         ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} lit={nextCommentLight} commentIds={!inCode} />
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
         )}
       </div>
     </section>
@@ -400,19 +391,20 @@ interface WholeThreadProps {
   threadActions?: CommentThreadActions;
   /** Its first comment opens in its editor: Edit was picked on the folded header (`FirstCommentMenu`). */
   editsRoot: boolean;
+  onRootEditorOpened: () => void;
   lit?: ShownCommentLight;
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
 }
 
-function WholeThread({ review, thread, user, threadActions, editsRoot, lit, commentIds }: WholeThreadProps) {
+function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds }: WholeThreadProps) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
 
   return (
     <>
-      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} startsEditing={editsRoot} />
+      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} startsEditing={editsRoot} onEditorOpened={onRootEditorOpened} />
       {replies.map((reply) => (
         <ReviewCommentView
           key={reply.id}
