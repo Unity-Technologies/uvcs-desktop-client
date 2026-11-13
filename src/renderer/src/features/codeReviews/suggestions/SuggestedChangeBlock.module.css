@@ -44,9 +44,15 @@
   white-space: pre;
 }
 
+/* As wide as the longest row, and the box at least: a short row's tint runs on under a long one scrolled sideways. */
+.block .rows code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
 .row {
   display: flex;
-  min-width: max-content;
 }
 
 .row[data-kind='removed'] {
