@@ -230,6 +230,42 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
 
+## Applying change requests
+
+A change request is applied the way `cm` has always applied one: a check-in whose comment names it,
+`[apply-change:c0d1ce00]` (the first eight hex digits of its guid, or the whole guid, in any case). `cm checkin` and
+`cm changeset editcomment` find it in the comment as written and mark the request applied in that changeset, on any
+review of the repository; the app writes the text and runs no command of its own for it, so every client reads it.
+
+- **Writing it** (docs/features/rich-comments.md "Suggestions"): in the check-in's comment, typing `[apply` (`cm`'s own
+  syntax, `changeRequestQueryAt`) opens **Change requests to apply**, the open ones of the reviews of the workspace's
+  branch, the newest first; what's typed after it filters them by their words, file, review, author or number, and a
+  pick writes the whole `[apply-change:c0d1ce00]` (`changeRequestSuggestions`). `cr:` stays a review's spec only: a
+  request isn't a review, and mixing them under one prefix read as one. The discoverable door is a small button beside
+  Recent comments with their count (`ChangeRequestsButton`, `changeRequestsButton` in `changeRequestsButtonState.ts`),
+  shown only while the branch has some open: it opens the same list at the description's caret (at its end if it had
+  no focus, a space before it after a word: `openChangeRequests`). No combo of requests and no banner: the official
+  client's list in the check-in was in the way of every check-in, and most have nothing to apply.
+- **What it reads** (`useBranchChangeRequests`): one `cm find review "where target = 'br:/main/task'"` (`CodeReviewFilter.targetBranch`;
+  `cm` fails for a branch that doesn't exist, which shows no button), then, for each review of it with something open
+  (`{unresolvedissues}` above zero, `reviewsToRead`, at most `MAX_REVIEWS_READ_FOR_REQUESTS`, the newest), its
+  conversation, under the very key its page reads it by (`conversationQuery`), so the page and the check-in find each
+  other's read. A branch with no review, or none open, costs the one find. Open is what the conversation says
+  (`threadsOf`'s state: not applied, no discarding reply). Read as the Changes view shows the check-in, and again only
+  on an event: the branch switched (another key), a write on a review (`isAffectedByCodeReviews`), a check-in that
+  applies one; never on a focus (`SLOW_CHANGING_QUERY`). One find of every open change request of the repository
+  (`type = 'change' and appliedinchangeset = -1`, as `cm checkin` asks) was rejected: it grows with the repository's
+  history, needs a second find for the discarding replies, and shares nothing with the review's page. `cm find
+  changereviewcomment` can't filter by a review's target.
+- **After the check-in** (`withChangeRequestsApplied`): a check-in or a comment edit whose comment holds such a
+  reference (`appliesChangeRequests`) refreshes the code reviews too, so their Applied pills, their Open counts and the
+  button follow. A reference to nothing open never blocks a check-in: `cm` leaves it as text.
+- **Reading it**: anywhere a comment shows, the reference is a chip (docs/features/rich-comments.md "How references
+  show").
+- Only the check-in offers them. A changeset's comment edited in its details panel applies them too (`cm changeset
+  editcomment`), but offering them there would read the branch's reviews for every changeset selected; the reference
+  typed by hand there still applies and shows as its chip.
+
 ## Rounds
 
 A review goes back and forth: the author checks in, a reviewer asks for rework, the author fixes and asks again. A

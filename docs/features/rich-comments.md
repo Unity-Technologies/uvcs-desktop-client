@@ -35,6 +35,7 @@ before.
   | `uvcs://…`, or the official client's `plastic://…` (`isAppLink`) | what the link opens (docs/features/deep-links.md), its text kept as written |
   | `@ana`, `@ACME\tom`, `@ana@acme.com`, `@josé` | a person, as `cm` names owners, in any script |
   | `:tada:` | an emoji, by GitHub's names (`gemoji`) |
+  | `[apply-change:c0d1ce00]` (or the whole guid) | a code review's change request a check-in applies, read as `cm` reads it: in any case, anywhere, even inside a word (`APPLY_CHANGE`) |
   | `VCS-12`, `#12`, `acme/game#12`, an issue's bare address | an issue of the repository's tracker, only where one is connected (docs/features/issue-trackers.md) |
 
   The prefixes are `cm`'s own, read as `cm` reads them: lower case only (`CS:12` isn't one), the body up to the
@@ -64,6 +65,11 @@ before.
   no test reaches the layers). A click opens it as its link would (`openReference` → `openLink`):
   in this window when it shows that repository, else in the one that does; a repository named without its server is
   on the place's (`referenceRepository`). In a row or a title a chip is no tab stop: the row's keys reach its object.
+- A **change request** to apply (`ChangeRequestChip`, `changeRequestChip`) is its icon and its first line, its card
+  saying where it stands (Open, Applied in changeset 7, Discarded), its review, who asked and when; a click opens the
+  review at its thread (`conversationAt`). The editor's Markdown reader takes its brackets for a link's
+  (`isChangeRequestReference` keeps them out of `excludedRanges` and `markLink`); micromark, with no definition for it,
+  doesn't. Until the window read its review's conversation it reads "Change request c0d1ce00" and opens nothing.
 - A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
   the tooltip.
 - Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
@@ -110,6 +116,8 @@ before.
   `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art", no access or out of reach). The chip keeps "1201 art"
   either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
   reminder of what it points at, and the object's own page reads it fresh.
+- **A change request** reads nothing: the chip looks through the review conversations the window read
+  (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read.
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
   too) of another repository aren't read.
 
@@ -361,6 +369,15 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
 - **Stays closed**: on the word Esc closed it on (`dismissedAt`, the word's start, held by the editor: one editor per
   field, made again with each place, so nothing carries over between places or fields), until another word is typed.
   Nothing it depends on is module-level; the lists it reads are the place's queries, keyed by the place.
+
+**Change requests to apply** (docs/features/code-reviews.md "Applying change requests") open in a field that offers
+them (`ChangeRequestsContext`, the check-in's, `changeRequestsOffered`), on `[apply` typed where a reference may start,
+in any case and with as much of `-change:` as was typed (`changeRequestQueryAt`): `cm`'s own syntax, so a Markdown link's
+`[` alone opens nothing, and `cr:` stays the reviews'. Their button opens the list at the caret with nothing typed
+(`openChangeRequests`, `changeRequestsOpened`: until the caret leaves what's typed after it, a space, another edit or
+the focus leaving). What's typed filters them; a pick writes `[apply-change:c0d1ce00]` in place of it, the closing
+bracket of one being edited too. They read nothing of their own: the list is what the check-in read for its button.
+They aren't among focus mode's hints: the button is their door.
 
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, or `#` where the place
 has an issue tracker (docs/features/issue-trackers.md "Suggesting issues"), after a space, a line's start, a bracket

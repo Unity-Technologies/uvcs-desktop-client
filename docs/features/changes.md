@@ -3,6 +3,12 @@
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
 List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
 
+## The check-in's comment
+
+Written in the rich comment editor (docs/features/rich-comments.md "Writing"). Beside Recent comments, a small button
+with a count offers the change requests of the branch's code reviews that the check-in can apply, shown only while some
+are open (docs/features/code-reviews.md "Applying change requests").
+
 ## Changelists and status groups in the list
 
 - **Grouping by changelist** is the view menu's "Group by ▸ Changelist" in Changes alone (`usePendingChangesViewStore`'s
