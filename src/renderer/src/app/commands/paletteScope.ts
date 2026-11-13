@@ -39,8 +39,6 @@ export interface ScopePrefix {
   prefix: string;
   scope: PrefixedSection;
   label: string;
-  /** One of the prefixes the comment editor reads too (`KIND_PREFIXES`), not the palette's own. */
-  shared: boolean;
 }
 
 /**
@@ -48,13 +46,13 @@ export interface ScopePrefix {
  * comment editor reads too (`KIND_PREFIXES`: `cs:`, `br:`, `lb:`, `sh:`, `cr:`, `@`), in their order.
  */
 export const SCOPE_PREFIXES: readonly ScopePrefix[] = [
-  scopePrefix('>', 'commands', false),
-  scopePrefix('/', 'files', false),
-  ...Object.entries(KIND_PREFIXES).map(([prefix, kind]) => scopePrefix(prefix, SECTION_OF_KIND[kind], true)),
+  scopePrefix('>', 'commands'),
+  scopePrefix('/', 'files'),
+  ...Object.entries(KIND_PREFIXES).map(([prefix, kind]) => scopePrefix(prefix, SECTION_OF_KIND[kind])),
 ];
 
-function scopePrefix(prefix: string, scope: PrefixedSection, shared: boolean): ScopePrefix {
-  return { prefix, scope, label: SCOPE_LABELS[scope], shared };
+function scopePrefix(prefix: string, scope: PrefixedSection): ScopePrefix {
+  return { prefix, scope, label: SCOPE_LABELS[scope] };
 }
 
 /**
@@ -75,6 +73,13 @@ export function parseScope(query: string): { scope: PaletteScope; text: string }
   const trimmed = query.trimStart();
   const found = SCOPE_PREFIXES.find(({ prefix }) => trimmed.startsWith(prefix));
   return found ? { scope: found.scope, text: trimmed.slice(found.prefix.length).trim() } : { scope: 'all', text: query.trim() };
+}
+
+/** The query without its leading prefix, the rest as typed: a space typed last still parts the next word. */
+export function withoutScopePrefix(query: string): string {
+  const trimmed = query.trimStart();
+  const found = SCOPE_PREFIXES.find(({ prefix }) => trimmed.startsWith(prefix));
+  return found ? trimmed.slice(found.prefix.length).trimStart() : trimmed;
 }
 
 export function isInScope(section: SectionId, scope: PaletteScope): boolean {

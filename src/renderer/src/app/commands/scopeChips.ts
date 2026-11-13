@@ -1,5 +1,5 @@
 import type { Place } from '@shared/domain/place';
-import { offeredPrefixes, parseScope, type PaletteScope } from './paletteScope';
+import { offeredPrefixes, withoutScopePrefix, type PaletteScope } from './paletteScope';
 
 /** A chip under the palette's search that narrows it to one section, showing the prefix that does the same typed. */
 export interface ScopeChip {
@@ -36,7 +36,7 @@ export function scopeChipsFor(shown: Place | null): ScopeChips | null {
  * the only state, so a chip and a typed prefix can't disagree, and clicking one shows what to type next time.
  */
 export function queryInScope(query: string, chip: ScopeChip): string {
-  return chip.prefix + parseScope(query).text;
+  return chip.prefix + withoutScopePrefix(query);
 }
 
 /** The chip `step` places away from the selected one, through the row then More, going round at either end. */
@@ -44,6 +44,11 @@ export function steppedChip({ row, more }: ScopeChips, scope: PaletteScope, step
   const chips = [...row, ...more];
   const at = Math.max(0, chips.findIndex((chip) => chip.scope === scope));
   return chips[(at + step + chips.length) % chips.length]!;
+}
+
+/** The chip a click on one means: itself, or All when it was the one picked already, as a pressed toggle comes undone. */
+export function clickedChip({ row }: ScopeChips, chip: ScopeChip, scope: PaletteScope): ScopeChip {
+  return chip.scope === scope ? row[0]! : chip;
 }
 
 /** What the More chip says: the section picked under it, so the scope shows, else "More". */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import { moreChipLabel, queryInScope, scopeChipsFor, steppedChip, type ScopeChip, type ScopeChips } from './scopeChips';
+import { clickedChip, moreChipLabel, queryInScope, scopeChipsFor, steppedChip, type ScopeChip, type ScopeChips } from './scopeChips';
 
 const labels = (chips: readonly ScopeChip[]) => chips.map(({ label, prefix }) => `${label} ${prefix}`.trim());
 
@@ -39,6 +39,12 @@ describe('queryInScope', () => {
     expect(queryInScope('  > switch', chip('files'))).toBe('/switch');
   });
 
+  it('keeps the text as typed, a space typed last too, which parts the next word', () => {
+    expect(queryInScope('player ', chip('branches'))).toBe('br:player ');
+    expect(queryInScope('cs:fix ', chip('branches'))).toBe('br:fix ');
+    expect(queryInScope('br: two  words', chip('changesets'))).toBe('cs:two  words');
+  });
+
   it('takes the prefix away for All, keeping the text', () => {
     expect(queryInScope('br:main', chip('all'))).toBe('main');
     expect(queryInScope('br:', chip('all'))).toBe('');
@@ -66,6 +72,20 @@ describe('steppedChip', () => {
   it('starts from All when a typed prefix has no chip here (files, outside a workspace)', () => {
     const chips = scopeChipsFor(repositoryPlace('game@local'))!;
     expect(steppedChip(chips, 'files', 1).scope).toBe('branches');
+  });
+});
+
+describe('clickedChip', () => {
+  const chips = workspaceChips();
+  const branches = chips.row.find((chip) => chip.scope === 'branches')!;
+
+  it('picks the chip clicked', () => {
+    expect(clickedChip(chips, branches, 'all').scope).toBe('branches');
+    expect(clickedChip(chips, branches, 'changesets').scope).toBe('branches');
+  });
+
+  it('goes back to All when the chip clicked is the one picked', () => {
+    expect(clickedChip(chips, branches, 'branches').scope).toBe('all');
   });
 });
 
