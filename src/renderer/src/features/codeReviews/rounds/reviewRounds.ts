@@ -188,11 +188,10 @@ export interface ConversationLayout {
 
 /** The layout of a conversation read for the first time, to keep while the page is open (`ConversationInput.layout`). */
 export function conversationLayoutOf(input: ConversationInput): ConversationLayout {
-  const fresh: ConversationInput = { ...input, layout: undefined };
-  const checkpoint = checkpointOf(input.conversation.events, input.user, input.changesets);
+  const { placed, blocks } = laidOut({ ...input, layout: undefined });
   return {
-    threadsAt: new Map(placedItems(fresh, checkpoint).flatMap(({ at, item }) => (item.kind === 'thread' ? [[item.thread.root.id, at] as const] : []))),
-    roundsFold: new Map(conversationBlocksOf(fresh).flatMap((block) => (block.kind === 'round' ? [[block.round.eventId, block.round.folds] as const] : []))),
+    threadsAt: new Map(placed.flatMap(({ at, item }) => (item.kind === 'thread' ? [[item.thread.root.id, at] as const] : []))),
+    roundsFold: new Map(blocks.flatMap((block) => (block.kind === 'round' ? [[block.round.eventId, block.round.folds] as const] : []))),
   };
 }
 
@@ -207,6 +206,11 @@ type Placed = { at: number; order: number; item: TimelineItem | CheckinsEntry };
  * `layout`, the threads it showed stay where they were and its rounds fold as they did; what's new is placed as above.
  */
 export function conversationBlocksOf(input: ConversationInput): ConversationBlock[] {
+  return laidOut(input).blocks;
+}
+
+/** The conversation's blocks, and where each item was placed in them. */
+function laidOut(input: ConversationInput): { placed: Placed[]; blocks: ConversationBlock[] } {
   const { conversation, user, changesets, layout } = input;
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
@@ -221,16 +225,15 @@ export function conversationBlocksOf(input: ConversationInput): ConversationBloc
     const start = index === 0 ? -Infinity : Date.parse(statuses[index - 1]!.date);
     // Every thread started in the round counts, one settled since and shown under the line too: it's what the round asked.
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
-    const round = roundOf(index + 1, closing, startedIn);
     // A round closed since the page laid the conversation out held what was on screen: it stays unfolded.
-    if (layout) round.folds = layout.roundsFold.get(closing.eventId) ?? false;
-    blocks.push({ kind: 'round', round, entries: entriesOf(inRound, false) });
+    const keptFolds = layout && (layout.roundsFold.get(closing.eventId) ?? false);
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn, keptFolds), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   const since = whose === 'own' && rest.length > 0;
   if (since) blocks.push({ kind: 'since', date: checkpoint!.date });
   blocks.push(...entriesOf(rest, since).map((entry): ConversationBlock => ({ kind: 'entry', entry })));
-  return blocks;
+  return { placed, blocks };
 }
 
 /** Whether an item at the very moment of a status comes after it: anything written after the status's own note. */
@@ -277,10 +280,11 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
   return batched;
 }
 
-function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[]): ReviewRound {
+/** A round's line; `keptFolds`, how it started in the page's first layout, over what it holds now. */
+function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[], keptFolds: boolean | undefined): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
-  return { number, eventId: closing.eventId, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: open === 0 };
+  return { number, eventId: closing.eventId, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: keptFolds ?? open === 0 };
 }
 
 /**
