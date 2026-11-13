@@ -6,8 +6,11 @@
 # diff, an edited comment, and comments on a revision a later changeset replaced (the comments on an older revision): on
 # lines it left alone, which the Changes tab shows at their line in the newest one, and on a line it edited (an open
 # question, the discarded request), outdated; and comments far down a long file (two lines apart, which the diff's
-# scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Two more
-# reviews have no comments: one of a changeset, one of a shelve.
+# scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Change
+# requests suggest changes (a ```suggestion fence, docs/features/code-reviews.md "Suggested changes"): a line replaced,
+# a line deleted, a line replaced by several, one in a file with Windows line ends, and one outdated, its line changed
+# since; a question holds the same fence, which reads as code. Two more reviews have no comments: one of a changeset,
+# one of a shelve. The workspace ends on the review's branch, where its suggestions can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -85,6 +88,9 @@ w Assets/Scripts/Retry.cs "public static class Retry
 }"
 # A long file, for comments gone to far down it and near its end (where the view stops scrolling).
 w Assets/Scripts/Commands.cs "$(echo 'public static class Commands'; echo '{'; for i in $(seq 1 796); do echo "    public static string Command$i => \"command $i\";"; done; echo '}')"
+# A file with Windows line ends, which a suggestion applied keeps.
+sleep 1
+printf 'public static class Settings\r\n{\r\n    public const int Retries = 3;\r\n    public const int TimeoutSeconds = 30;\r\n}\r\n' > Assets/Scripts/Settings.cs
 checkin "$(text retry '`Retry` reads better on several lines')"
 
 REVIEW=$(cm cr br:/main/task-2210 "Switch with changes" --users=me --format={id} \
@@ -117,6 +123,29 @@ on_review --path=/Assets/Scripts/Commands.cs --line=400 --type=Change -c="Name i
 on_review --path=/Assets/Scripts/Commands.cs --line=402 --type=Comment -c="This one reads well." >/dev/null
 on_review --path=/Assets/Scripts/Commands.cs --line=796 --type=Question -c="Is the last command still used?" >/dev/null
 on_review --path=/Assets/Scripts/SwitchFlow.cs --line=12 --changeset="cs:$FIRST" --type=Comment -c="In this changeset alone, the update comes last." >/dev/null
+# Suggested changes. This one's line changes in the check-in below, so it reads outdated.
+suggest() { on_review --path="$1" --line="$2" --type="${4:-Change}" -commentsfile="$(text "suggestion-$2-${4:-Change}" "$3")" >/dev/null; }
+suggest /Assets/Scripts/SwitchFlow.cs 13 'Bring the changes back if the update fails:
+```suggestion
+        workspace.Update(target, onFailure: () => workspace.Apply(shelve));
+```'
+suggest /Assets/Scripts/Retry.cs 5 'Braces, as the rest of the file:
+```suggestion
+        for (var i = 0; i < count; i++)
+        {
+            action();
+        }
+```'
+suggest /Assets/Scripts/Commands.cs 3 'Nothing calls `Command1`:
+```suggestion
+```'
+suggest /Assets/Scripts/Settings.cs 4 '```suggestion
+    public const int TimeoutSeconds = 60;
+```'
+suggest /Assets/Scripts/Retry.cs 3 'Would this read better?
+```suggestion
+    public static void Times(int count, Action action, Action onEach)
+```' Question
 
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
@@ -143,6 +172,11 @@ w Assets/Tests/RetryTests.cs "public class RetryTests
     public void RunsTheActionTheTimesAsked() { }
 }"
 checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
+# On the newest revision: a line replaced by one.
+suggest /Assets/Scripts/SwitchFlow.cs 15 'Say where it switched to:
+```suggestion
+        Log($"Switched to {target.Name}");
+```'
 
 cm switch main >/dev/null
 w README.md "# Code reviews
@@ -155,5 +189,6 @@ cm shelveset create --all -c="Draft README" >/dev/null
 cm undo -r . >/dev/null
 SHELVE=$(cm find shelve --format={shelveid} --nototal | tail -n 1)
 cm cr "sh:$SHELVE" "Draft README" >/dev/null
+cm switch main/task-2210 >/dev/null
 
 echo "Built $REPO in $WK: code review $REVIEW (with comments), a changeset review and a shelve review"
