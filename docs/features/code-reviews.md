@@ -387,8 +387,13 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 A change request can suggest the code itself, as GitHub's suggested changes do: a fence whose language is `suggestion`,
 holding the lines that replace the commented line. It is plain text in the comment (`suggestionOf`,
 `shared/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server
-field is involved. `cm` names one line, so a suggestion replaces exactly that line: an empty fence deletes it, several
-lines replace it. `SuggestedChange` holds `firstLine` and `lastLine` for when a comment can name a range.
+field is involved. A suggestion replaces the lines its comment is on: one line today; a range once comments take ranges
+(`cm codereview comment add --line=A-B`, stored as a `lines:A-B` location, 0-based and inclusive). An empty fence
+deletes them, several lines replace them. Everything after the anchor takes a range (`LineRange`, `{ firstLine,
+lastLine }`, one line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into
+the workspace's file (`newerRangeOf`: the whole block unchanged and together, moved is fine), writing them
+(`withLinesReplaced`) and the reasons ("Lines 13–15 changed…", `rangeWords`). The one place a comment's `{line}`
+becomes a range is `commentedLines`: supporting ranges changes only it.
 
 - **What counts** (`suggestionOf`, `suggestedChangeOf`): only a change request on a line holds one, as only those are
   applied (`[apply-change:…]`); a fence in a question or a comment is a code block. Only the comment's first such fence
@@ -438,10 +443,15 @@ disk read is free). The file must be UTF-8 text, as the app reads files (`toFile
 means another encoding, which writing back would change. A file with other pending changes takes Apply to my changes
 only: checking it in alone would take those too (`checkIn.reason`).
 
-Writing (`withLinesReplaced`) changes that line only: the others, their line ends (the replaced line's own in a file of
-mixed ones), a last line without one and a byte order mark stay. The file is read again first and nothing is written
-if it changed since (`writeSuggestion`); the text shows at once and the views of the workspace's files are read again,
-as a discard in the diff does (`showFileText`, `refreshFileViews`). As everywhere the app writes a workspace file, it
+**Right before writing**, both actions check again (`writeSuggestion`): the user may have edited the file between
+seeing the button and clicking it. The file is read again and its lines followed as the button did
+(`suggestionTargetIn`), and Check in suggestion reads the pending changes afresh (`cm status`, local) first. On a
+mismatch nothing is written, and a toast gives the reason the disabled button would have ("Line 13 changed since the
+suggestion was written", "Settings.cs has other changes…").
+
+Writing (`withLinesReplaced`) changes those lines only: the others, their line ends (the last replaced line's own in a
+file of mixed ones), a last line without one and a byte order mark stay. The text shows at once and the views of the
+workspace's files are read again, as a discard in the diff does (`showFileText`, `refreshFileViews`). As everywhere the app writes a workspace file, it
 doesn't check it out first: `cm` finds the change by its timestamp; a read-only file fails the write and says so. A
 check-in that fails (a lock, the server) leaves the file written, a pending change, and says so: the user asked for the
 change, and putting the old text back could lose an edit made meanwhile.
