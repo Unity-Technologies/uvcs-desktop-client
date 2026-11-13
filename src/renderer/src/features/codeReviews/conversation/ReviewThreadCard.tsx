@@ -351,7 +351,7 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
 interface WholeThreadProps {
-  review: Pick<CodeReview, 'owner'>;
+  review: Pick<CodeReview, 'id' | 'owner'>;
   thread: ReviewThread;
   user: string | undefined;
   threadActions?: ThreadActions;
@@ -367,10 +367,11 @@ function WholeThread({ review, thread, user, threadActions, lit, commentIds }: W
 
   return (
     <>
-      <ReviewCommentView comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
+      <ReviewCommentView reviewId={review.id} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
       {replies.map((reply) => (
         <ReviewCommentView
           key={reply.id}
+          reviewId={review.id}
           comment={reply}
           thread={thread}
           user={user}

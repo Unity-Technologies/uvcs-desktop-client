@@ -8,17 +8,19 @@ import { Markdown } from '../../../components/Markdown';
 import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
-import { copyToClipboard } from '../../../ui/copyToClipboard';
 import { IconButton } from '../../../ui/IconButton';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { CommentComposer } from './CommentComposer';
+import { reviewCommentCopyTexts } from './commentLink';
 import { commentMenu } from './commentMenu';
 import { deleteReviewComment, editReviewComment } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewCommentViewProps {
+  /** The review it's on, whose link its own extends. */
+  reviewId: number;
   comment: ReviewComment;
   thread: ReviewThread;
   user: string | undefined;
@@ -35,7 +37,7 @@ interface ReviewCommentViewProps {
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
+export function ReviewCommentView({ reviewId, comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -45,7 +47,7 @@ export function ReviewCommentView({ comment, thread, user, action, byReviewAutho
   const menu = commentMenu(comment, thread, user, {
     edit: () => setEditing(true),
     remove: () => void deleteReviewComment(place, comment),
-    copyText: () => copyToClipboard(comment.text, 'Comment'),
+    copyTexts: reviewCommentCopyTexts(place, reviewId, comment),
     ...threadActions,
   });
 

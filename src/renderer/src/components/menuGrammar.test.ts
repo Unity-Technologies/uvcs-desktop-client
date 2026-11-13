@@ -609,6 +609,7 @@ describe('Copy', () => {
   });
 
   it("copies a review's comment as its text and its link, which opens the review at it", async () => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
     expect(await copiedBy(COMMENT_MENUS.reviewComment!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
   });
 
