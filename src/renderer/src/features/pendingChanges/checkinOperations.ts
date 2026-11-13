@@ -1,13 +1,10 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { withRecentComment } from '@shared/domain/recentComments';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ApiError, api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
-import { saveSettings } from '../../app/settings/useSettings';
+import { rememberRecentComment } from '../../app/settings/useSettings';
 import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { commentLineText } from '../../lib/comments/commentText';
@@ -144,12 +141,10 @@ export function undoUnchangedCheckouts(workspacePath: string): Promise<void | un
 
 /**
  * Puts the comment first among the recent ones the check-in panel offers in the workspace's repository, once
- * (`withRecentComment`). The repository comes from the workspace's info, which Changes has already read (`cm wi`, a
- * local read); a workspace whose info can't be read remembers nothing. A store that can't save it says so.
+ * (`rememberRecentComment`, which the main process applies). The repository comes from the workspace's info, which
+ * Changes has already read (`cm wi`, a local read); a workspace whose info can't be read remembers nothing.
  */
 async function rememberComment(workspacePath: string, comment: string): Promise<void> {
   const { repository } = await queryClient.ensureQueryData(workspaceInfoQuery(workspacePath)).catch(() => ({ repository: undefined }));
-  if (!repository) return;
-  const settings = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-  return saveSettings(withRecentComment(settings, repository, comment));
+  if (repository) await rememberRecentComment(repository, comment);
 }
