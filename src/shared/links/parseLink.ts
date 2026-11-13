@@ -190,7 +190,7 @@ function readPlacePage(segments: readonly string[], place: 'repository' | 'works
   return unknown(`It names a page "${decodeSegment(word) ?? word}".`);
 }
 
-/** Which pages each object has (docs/features/deep-links.md): a shelve, a range and a review only their diff's files. */
+/** Which pages each object has (docs/features/deep-links.md): a shelve and a range only their diff's files, a review its comments too. */
 const OBJECT_PAGES: Record<LinkObject['kind'], ReadonlySet<string>> = {
   changeset: new Set(['files', 'browse', 'history', 'annotate', 'branch-explorer']),
   branch: new Set(['files', 'browse', 'history', 'annotate', 'branch-explorer']),
@@ -198,19 +198,26 @@ const OBJECT_PAGES: Record<LinkObject['kind'], ReadonlySet<string>> = {
   changesetRange: new Set(['files']),
   labelRange: new Set(['files']),
   shelve: new Set(['files']),
-  codeReview: new Set(['files']),
+  codeReview: new Set(['files', 'comments']),
 };
 
 function readObjectPage(segments: readonly string[], object: LinkObject): PageReading {
   const [word = '', ...rest] = segments;
   if (!word) return malformed('It names no page after "-".');
   if (!OBJECT_PAGES[object.kind].has(word)) return unknown(`It names a page "${decodeSegment(word) ?? word}" of a ${objectNoun(object)}.`);
+  if (word === 'comments') return readReviewComment(rest);
   const path = pathIn(rest);
   if (path === null) return malformed('Its path is not valid.');
   if (word === 'branch-explorer') return rest.length === 0 ? { page: { kind: 'view', view: 'branch-explorer' } } : unknown('It names an item in the Branch Explorer.');
   if (word === 'browse') return { page: { kind: 'browse', path } };
   if (rest.length === 0) return malformed(`Its ${word} page names no file.`);
   return { page: word === 'files' ? { kind: 'diffFile', path } : { kind: word as 'history' | 'annotate', path } };
+}
+
+/** `…/code-reviews/311/-/comments/5702`: one comment of the review, by its id, and nothing after it. */
+function readReviewComment(segments: readonly string[]): PageReading {
+  const commentId = segments.length === 1 ? idIn(segments[0]!) : null;
+  return commentId === null ? malformed('Its comment number is not valid.') : { page: { kind: 'reviewComment', commentId } };
 }
 
 /**

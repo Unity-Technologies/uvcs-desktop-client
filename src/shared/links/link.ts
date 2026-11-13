@@ -76,10 +76,13 @@ export type LinkView = (typeof LINK_VIEWS)[number];
  * - `diffFile`: the object's diff, on that file.
  * - `browse`, `history`, `annotate`: the item as it was at the object (the head of /main for none, the workspace's
  *   own in a workspace link).
+ * - `reviewComment`: a code review's comment, by the id `cm find changereviewcomment` prints for it (`{id}`): the
+ *   review opens on it, where it was written.
  */
 export type LinkPage =
   | { kind: 'view'; view: LinkView; path?: string }
   | { kind: 'diffFile'; path: string }
+  | { kind: 'reviewComment'; commentId: number }
   | { kind: 'browse'; path: string }
   | { kind: 'history'; path: string }
   | { kind: 'annotate'; path: string };
