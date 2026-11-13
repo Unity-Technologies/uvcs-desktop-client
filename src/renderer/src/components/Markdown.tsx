@@ -1,7 +1,7 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
 import { isAppLink } from '@shared/links/parseLink';
-import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
+import { parseMarkdown, suggestionBlockIndex, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
 import { CodeBlock } from './comments/CodeBlock';
 import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
@@ -17,11 +17,16 @@ interface MarkdownProps {
   text: string;
   /** A comment: its references show as chips, its line breaks are kept, and copying gives back what was written. */
   comment?: boolean;
+  /**
+   * What shows in place of the comment's suggestion fence (a change request's Suggested change): its first
+   * ```` ```suggestion ```` block of its own, as `suggestionOf` reads it. Without it, the fence is a code block.
+   */
+  suggestion?: ReactNode;
 }
 
 /** Markdown text (a comment, release notes, an attribute's value) rendered as elements; web links open in the browser. */
-export function Markdown({ text, comment = false }: MarkdownProps) {
-  return comment ? <CommentMarkdown text={text} /> : <TextMarkdown text={text} />;
+export function Markdown({ text, comment = false, suggestion }: MarkdownProps) {
+  return comment ? <CommentMarkdown text={text} suggestion={suggestion} /> : <TextMarkdown text={text} />;
 }
 
 function TextMarkdown({ text }: { text: string }) {
@@ -33,7 +38,7 @@ function TextMarkdown({ text }: { text: string }) {
  * A comment: its references as chips, the place's issues among them (`useIssueReferences`), only in a place's window,
  * as release notes show outside one.
  */
-function CommentMarkdown({ text }: { text: string }) {
+function CommentMarkdown({ text, suggestion }: { text: string; suggestion?: ReactNode }) {
   const issues = useIssueReferences();
   const blocks = useMemo(() => parseMarkdown(text, { comment: true, ...(issues && { issues }) }), [text, issues]);
   return (
@@ -41,7 +46,7 @@ function CommentMarkdown({ text }: { text: string }) {
       {/* A comment shown in full reads its other repositories' objects and its issues; a row's chips wait for their cards. */}
       <ResolvedReferences blocks={blocks} />
       {issues && <ResolvedIssues blocks={blocks} />}
-      <MarkdownBlocks blocks={blocks} source={text} />
+      <MarkdownBlocks blocks={blocks} source={text} suggestion={suggestion} />
     </>
   );
 }
@@ -52,17 +57,19 @@ interface MarkdownBlocksProps {
   source?: string;
   /** How pictures show (`MarkdownImages`): as chips, as comments show them, unless the text's are meant to be seen. */
   images?: MarkdownImages;
+  /** What shows in place of the first suggestion fence of the text's own (`MarkdownProps.suggestion`). */
+  suggestion?: ReactNode;
 }
 
 const ImagesContext = createContext<MarkdownImages>('chip');
 
 /** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesOutline`), rendered as elements. */
-export function MarkdownBlocks({ blocks, source, images = 'chip' }: MarkdownBlocksProps) {
+export function MarkdownBlocks({ blocks, source, images = 'chip', suggestion }: MarkdownBlocksProps) {
   const onCopy = useMemo(() => (source === undefined ? undefined : copyAsSource(source)), [source]);
   return (
     <ImagesContext.Provider value={images}>
       <div className={`${styles.markdown} selectable`} onCopy={onCopy}>
-        {renderBlocks(blocks)}
+        {suggestion === undefined ? renderBlocks(blocks) : withSuggestion(blocks, suggestion)}
       </div>
     </ImagesContext.Provider>
   );
@@ -71,6 +78,15 @@ export function MarkdownBlocks({ blocks, source, images = 'chip' }: MarkdownBloc
 /** One line already read into Markdown's marks (a release note's title), for an element of the caller's own. */
 export function MarkdownInlines({ inlines }: { inlines: readonly MarkdownInline[] }) {
   return <>{renderInlines(inlines)}</>;
+}
+
+/**
+ * The text's blocks, the first suggestion fence of its own shown as `suggestion`: the fence `suggestionOf` reads, as
+ * one in a quote, a list or another fence isn't a block of the text's own here either.
+ */
+function withSuggestion(blocks: readonly MarkdownBlock[], suggestion: ReactNode): ReactNode[] {
+  const at = suggestionBlockIndex(blocks);
+  return blocks.map((block, index) => (index === at ? <Fragment key={index}>{suggestion}</Fragment> : renderBlock(block, index)));
 }
 
 function renderBlocks(blocks: readonly MarkdownBlock[]): ReactNode[] {

@@ -3,6 +3,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
 import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import { SUGGESTION_LANGUAGE } from '@shared/reviewSuggestion';
 import { findReferences, type CommentReference, type FoundReference } from './comments/commentReferences';
 
 /**
@@ -78,6 +79,14 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Ma
  * The inlines of a text's first block, its marks of a heading, a list item or a quote left out: a comment's first
  * line in a list row (inline formatting only) or a title.
  */
+/**
+ * The block a comment's suggestion fence is read into, or -1: its first code block of its own whose language is
+ * `suggestion`, the fence `suggestionOf` reads (one in a quote, a list or another fence is no block of its own).
+ */
+export function suggestionBlockIndex(blocks: readonly MarkdownBlock[]): number {
+  return blocks.findIndex((block) => block.kind === 'code' && block.language === SUGGESTION_LANGUAGE);
+}
+
 export function parseInline(text: string, options: MarkdownOptions = {}): MarkdownInline[] {
   const first = parseMarkdown(text, options)[0];
   return first ? inlinesOfBlock(first) : [];
