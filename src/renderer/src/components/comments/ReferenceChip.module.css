@@ -104,3 +104,18 @@
   font-style: normal;
   line-height: 1;
 }
+
+/* A change request to apply: "Applies" in the summary's muted weight, then the request's first line, which gives way. */
+.lead {
+  flex: none;
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.request {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

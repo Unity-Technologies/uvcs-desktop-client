@@ -1,7 +1,6 @@
 import { useMemo, type MouseEvent } from 'react';
 import { changeRequestChip } from '../../features/codeReviews/changeRequests/changeRequests';
 import { useCachedChangeRequest } from './useCachedChangeRequest';
-import { chipName } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
 import styles from './ReferenceChip.module.css';
@@ -28,14 +27,15 @@ export function ChangeRequestChip({ guid, source, compact, interactive }: Change
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
-      <span className={styles.label}>{chip.label}</span>
+      <span className={styles.lead}>{chip.lead}</span>
+      <span className={styles.request}>{chip.label}</span>
     </>
   );
   const opens = chip.opens;
   if (!interactive || !opens) {
     return (
       <ChipHoverCard card={chip.card}>
-        <span {...shown} aria-label={chipName(chip.title, request ? chip.label : undefined)}>
+        <span {...shown} aria-label={chip.name}>
           {content}
         </span>
       </ChipHoverCard>
@@ -50,7 +50,7 @@ export function ChangeRequestChip({ guid, source, compact, interactive }: Change
   };
   return (
     <ChipHoverCard card={chip.card}>
-      <a href="#" {...shown} aria-label={chipName(chip.title, chip.label)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+      <a href="#" {...shown} aria-label={chip.name} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}
       </a>
     </ChipHoverCard>

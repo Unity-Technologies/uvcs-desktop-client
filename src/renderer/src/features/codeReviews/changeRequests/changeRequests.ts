@@ -93,27 +93,40 @@ export function changeRequestNamed(reviews: readonly (readonly ReviewChangeReque
   return undefined;
 }
 
-/** How a change request named in a comment shows: its chip's text, its card, and the thread a click opens. */
+/** How a change request named in a comment shows: its chip's words, its card, and the thread a click opens. */
 export interface ChangeRequestChip {
+  /** What the chip says it does, muted before the request: the comment applies it. */
+  lead: string;
   /** The request's first line; its number while the window hasn't read it. */
   label: string;
-  /** "Change request c0d1ce00": the tooltip's and a screen reader's name. */
+  /** The chip's name for a screen reader: "Applies change request: Shelve first". */
+  name: string;
+  /** "Change request c0d1ce00": the card's. */
   title: string;
   card: ChipCard;
   /** The review's thread it opens; none for a request the window hasn't read. */
   opens?: { reviewId: number; threadId: number };
 }
 
+const LEAD = 'Applies';
+
 /**
- * A change request's chip (docs/features/rich-comments.md, "How references show"): its first line, and a card saying
- * where it stands, its review, who asked and when. One the window hasn't read (`request` undefined) reads as its
- * number and opens nothing: a chip reads nothing of its own.
+ * A change request's chip (docs/features/rich-comments.md, "How references show"): "Applies" muted, then its first line,
+ * and a card saying where it stands, its review, who asked and when. One the window hasn't read (`request` undefined)
+ * reads "Applies change request c0d1ce00" and opens nothing: a chip reads nothing of its own.
  */
 export function changeRequestChip(request: ReviewChangeRequest | undefined, guid: string, ago: (date: string) => string): ChangeRequestChip {
-  const title = `Change request ${shortGuid(guid)}`;
-  if (!request) return { label: title, title, card: { title, meta: [] } };
+  const number = shortGuid(guid);
+  const title = `Change request ${number}`;
+  if (!request) {
+    const label = `change request ${number}`;
+    return { lead: LEAD, label, name: `${LEAD} ${label}`, title, card: { title, meta: [] } };
+  }
+  const label = commentLineText(request.text) || title;
   return {
-    label: commentLineText(request.text) || title,
+    lead: LEAD,
+    label,
+    name: `${LEAD} change request: ${label}`,
     title,
     card: { comment: request.text, title, meta: [title, stateText(request.state), `Code review ${request.reviewId}`, displayName(request.author), ago(request.date)] },
     opens: { reviewId: request.reviewId, threadId: request.commentId },
