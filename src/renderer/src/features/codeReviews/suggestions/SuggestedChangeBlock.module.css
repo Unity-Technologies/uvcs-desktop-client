@@ -15,7 +15,8 @@
   align-items: center;
   gap: var(--space-1);
   min-height: 28px;
-  padding: var(--space-1) var(--space-2);
+  /* Room enough around the button that its 1px shadow doesn't read as it sitting low. */
+  padding: 6px var(--space-2) 6px var(--space-3);
   border-bottom: 1px solid var(--border-default);
   background: var(--bg-code);
   color: var(--text-secondary);
