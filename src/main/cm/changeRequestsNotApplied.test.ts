@@ -52,5 +52,7 @@ describe('changeRequestsNotApplied', () => {
     expect(changeRequestsNotApplied('Error: The following items are locked:\n  - deadbeef', 'Fix it')).toBeNull();
     expect(changeRequestsNotApplied('Error: A merge is needed from changeset cs:4', 'Fix [apply-change:deadbeef]')).toBeNull();
     expect(changeRequestsNotApplied('Error: …:\n  - deadbeef\n  - /src/a.cs', 'Fix [apply-change:deadbeef]')).toBeNull();
+    // A longer hex word is no request number, though it starts like one.
+    expect(changeRequestsNotApplied('Error: …:\n  - deadbeef0', 'Fix [apply-change:deadbeef]')).toBeNull();
   });
 });
