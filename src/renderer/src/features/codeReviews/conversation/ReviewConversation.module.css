@@ -867,6 +867,11 @@ button.earlierTag:hover {
   overflow: hidden;
 }
 
+/* Alone in the code's band, no path to share a baseline with: centered on the fold toggle, as the pill is. */
+.thread[data-in-code] .headerStart > .writtenLine {
+  align-self: center;
+}
+
 .thread[data-in-code] .earlierTag {
   flex-shrink: 1;
   min-width: 0;

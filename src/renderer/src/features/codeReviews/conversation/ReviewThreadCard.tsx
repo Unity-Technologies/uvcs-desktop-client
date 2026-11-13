@@ -263,6 +263,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <WrittenLine line={location.line} />
           </span>
         ))}
+        {header.line && <WrittenLine line={header.line} />}
         {earlierTag &&
           (earlierTag.opensContext ? (
             <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>

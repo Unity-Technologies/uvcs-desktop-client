@@ -237,7 +237,9 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on every
   card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read, replied
   to, folded and selected. Its header is one quiet line: its folder (giving way first in a narrow card), file and line
-  (`locationText`), then a pill on the right saying what the thread is and where it stands (`HeaderPill`, `pillOf`).
+  (`locationText`), then a pill on the right saying what the thread is and where it stands (`HeaderPill`, `pillOf`). In the code, where the file is the one shown, the
+  header names only the line (`ThreadHeaderView.line`): a thread can sit rows below its line, or away from it once
+  outdated.
   The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), and its words say
   only where it stands (`threadBadges`), as the server counts open ones. The icon's own tooltip names the kind where the
   words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request" or "Question", even on a pill that is
