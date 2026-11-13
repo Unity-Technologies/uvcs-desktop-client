@@ -181,6 +181,33 @@ describe('one code review', () => {
   });
 });
 
+describe("the user's email subscription to a review", () => {
+  it('reads it with one quick cm codereview subscription holding just its three values', async () => {
+    const { service, commands } = codeReviews({ 'codereview subscription': 'yes reviewer enabled\n' });
+
+    expect(await service.subscription(IN_WORKSPACE, 6)).toEqual({ subscribed: true, reason: 'reviewer', emailsEnabled: true });
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'subscription', '6', '--format={subscribed} {reason} {emails}'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('fails on an answer it cannot read, so nothing is shown from a guess', async () => {
+    const { service } = codeReviews({ 'codereview subscription': 'Unknown command\n' });
+
+    await expect(service.subscription(IN_WORKSPACE, 6)).rejects.toThrow('Unexpected answer');
+  });
+
+  it('subscribes and unsubscribes the user with one quick command each', async () => {
+    const { service, commands } = codeReviews({ 'codereview subscribe': '', 'codereview unsubscribe': '' });
+
+    await service.unsubscribe(IN_WORKSPACE, 6);
+    await service.subscribe(IN_WORKSPACE, 6);
+
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['codereview', 'unsubscribe', '6'] },
+      { via: 'query', args: ['codereview', 'subscribe', '6'] },
+    ]);
+  });
+});
+
 describe('code review writes', () => {
   it('creates a review asking its reviewers in the same command, and returns its id', async () => {
     const { service, commands } = codeReviews({ codereview: '42\n' });
@@ -329,5 +356,14 @@ describe('code reviews of a repository explored without a workspace', () => {
       'codereview review 6 --reviewed --repository=game@local',
       'codereview -d 6 7 --repository=game@local',
     ]);
+  });
+
+  it("reads and changes the user's email subscription naming the repository", async () => {
+    const { service, lines } = codeReviews({ 'codereview subscription': 'no none enabled', 'codereview subscribe': '' });
+
+    expect(await service.subscription(ON_REPOSITORY, 6)).toEqual({ subscribed: false, reason: 'none', emailsEnabled: true });
+    await service.subscribe(ON_REPOSITORY, 6);
+
+    expect(lines()).toEqual(['codereview subscription 6 --format={subscribed} {reason} {emails} --repository=game@local', 'codereview subscribe 6 --repository=game@local']);
   });
 });
