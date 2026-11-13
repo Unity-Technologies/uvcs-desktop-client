@@ -3,7 +3,7 @@ import { useIssueReferences } from '../issues/useIssueTrackers';
 import { useIssueReads } from '../issues/useIssueReads';
 import { editorIssueKeys } from './editorIssueKeys';
 import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
-import { changeRequestsOfferedCompartment, openChangeRequests, withChangeRequestsOffered } from './changeRequestTrigger';
+import { changeRequestsOfferedCompartment, openChangeRequests, suggestionListHint, withChangeRequestsOffered } from './changeRequestTrigger';
 import { ChangeRequestsContext } from './changeRequestsContext';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
@@ -402,7 +402,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   }, [view, shown, active, listId, activeOption]);
 
   const anchor = shown && view ? boxAt(view, open!.from, open!.from) : null;
-  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} query={open!.text} onPick={pick} onHover={moveTo} /> : null;
+  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} query={open!.text} onPick={pick} onHover={moveTo} hint={suggestionListHint(open)} /> : null;
   return { shown, list };
 }
 

@@ -82,5 +82,20 @@ export function openedChangeRequestQuery(state: EditorState): SuggestionQuery | 
   const head = state.selection.main.head;
   const text = state.sliceDoc(opened.at, head);
   if (/\s/.test(text)) return null;
-  return { kind: 'changeRequest', from: opened.at, to: head, text, ...(opened.prefix && { prefix: opened.prefix }) };
+  return { kind: 'changeRequest', from: opened.at, to: head, text, ...(opened.prefix && { prefix: opened.prefix }), byButton: true };
+}
+
+/** A line at the suggestion list's foot, its middle in code style. */
+export interface SuggestionListHint {
+  before: string;
+  code: string;
+  after: string;
+}
+
+/**
+ * The change requests' list opened by their button teaches the way to write one by hand, `cm`'s own `[apply`; typed,
+ * the user knows it already, and every other list says nothing.
+ */
+export function suggestionListHint(query: SuggestionQuery | null): SuggestionListHint | null {
+  return query?.kind === 'changeRequest' && query.byButton ? { before: 'Type ', code: '[apply', after: ' in a comment to reference one' } : null;
 }

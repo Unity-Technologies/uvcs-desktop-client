@@ -20,6 +20,8 @@ export interface SuggestionQuery {
   text: string;
   /** What a pick writes before the reference: a space, where the change requests button opened the list after a word. */
   prefix?: string;
+  /** Opened by the change requests button, not typed: the list's foot teaches `[apply` (`suggestionListHint`). */
+  byButton?: true;
 }
 
 /**
