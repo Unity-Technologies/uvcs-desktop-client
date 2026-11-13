@@ -109,6 +109,13 @@ describe('suggestionTargetIn', () => {
     expect(suggestionTargetIn(brace, commented, text(added))).toMatchObject({ kind: 'ready', range: { firstLine: 6, lastLine: 6 } });
   });
 
+  it('says the code around the lines changed when only a neighbor did: changed or removed', () => {
+    const around = 'The code around line 3 changed since the suggestion was written';
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('{\r\n', '{ // open\r\n')))).toEqual({ kind: 'refused', reason: around });
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('}\r\n', '')))).toEqual({ kind: 'refused', reason: around });
+    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{\r\n', '{ // open\r\n'))) })).toBe(around);
+  });
+
   it('rechecks a fresh read of the file as the button did', () => {
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED))).toEqual({ kind: 'ready', text: COMMENTED, range: { firstLine: 3, lastLine: 3 } });
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '31')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });

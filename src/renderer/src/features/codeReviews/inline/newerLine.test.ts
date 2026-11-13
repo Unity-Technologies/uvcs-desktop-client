@@ -110,6 +110,13 @@ describe('newerRangeInContextOf', () => {
     expect(newerRangeInContextOf(lines('a', 'b', '}'), lines('a', '}', 'b'), { firstLine: 3, lastLine: 3 })).toBeNull();
   });
 
+  it('loses a block whose neighbor changed, or was removed', () => {
+    const changed = [...TEN];
+    changed[1] = 'line 2 edited';
+    expect(newerRangeInContextOf(lines(...TEN), lines(...changed), { firstLine: 3, lastLine: 4 })).toBeNull();
+    expect(newerRangeInContextOf(lines(...TEN), lines(...TEN.slice(0, 4), ...TEN.slice(5)), { firstLine: 3, lastLine: 4 })).toBeNull();
+  });
+
   it('loses a block a line was put right next to', () => {
     expect(newerRangeInContextOf(lines(...TEN), lines(...TEN.slice(0, 2), 'new', ...TEN.slice(2)), { firstLine: 3, lastLine: 4 })).toBeNull();
   });
