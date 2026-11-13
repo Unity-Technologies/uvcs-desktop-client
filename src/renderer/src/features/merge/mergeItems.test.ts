@@ -57,6 +57,16 @@ describe('merge items', () => {
     expect(listed).toEqual(['src/ui/widgets/Lap_2.cs', 'old/a.cs', 'assets', 'assets/ship.mat', 'empty']);
   });
 
+  it('keeps a folder added with its Unity meta and the items under it, so the meta rides on the folder', () => {
+    const changes: MergePlan['changes'] = [
+      { kind: 'added', path: '/Assets/Props' },
+      { kind: 'added', path: '/Assets/Props.meta' },
+      { kind: 'added', path: '/Assets/Props/box.prefab' },
+    ];
+    const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
+    expect(listed).toEqual(['Assets/Props', 'Assets/Props.meta', 'Assets/Props/box.prefab']);
+  });
+
   it('names every item by its path without the root, for the tree and the filter', () => {
     expect(buildMergeItems(plan, [], [file]).map((item) => item.path)).toEqual(['twin.txt', 'a.txt', 'new.txt']);
   });

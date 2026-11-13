@@ -20,6 +20,26 @@ describe('listedEntries', () => {
     expect(paths([folder('empty'), folder('lib', 'moved'), file('lib/a.ts', 'changed')])).toEqual(['empty', 'lib', 'lib/a.ts']);
   });
 
+  it('keeps a folder added with its Unity meta and files in it, so the meta rides on the folder', () => {
+    const entries = [folder('Assets/Props'), file('Assets/Props.meta'), file('Assets/Props/box.prefab'), file('Assets/Props/box.prefab.meta')];
+    expect(paths(entries)).toEqual(['Assets/Props', 'Assets/Props.meta', 'Assets/Props/box.prefab', 'Assets/Props/box.prefab.meta']);
+  });
+
+  it('keeps a folder deleted with its Unity meta and files in it', () => {
+    expect(paths([folder('Assets/Old', 'deleted'), file('Assets/Old.meta', 'deleted'), file('Assets/Old/a.png', 'deleted')])).toEqual([
+      'Assets/Old',
+      'Assets/Old.meta',
+      'Assets/Old/a.png',
+    ]);
+  });
+
+  it('leaves out a folder added with files in it when its meta changed otherwise', () => {
+    expect(paths([folder('Assets/Props'), file('Assets/Props.meta', 'changed'), file('Assets/Props/box.prefab')])).toEqual([
+      'Assets/Props.meta',
+      'Assets/Props/box.prefab',
+    ]);
+  });
+
   it('keeps a folder whose name only starts like another path', () => {
     expect(paths([folder('src'), file('src2/a.ts')])).toEqual(['src', 'src2/a.ts']);
   });
