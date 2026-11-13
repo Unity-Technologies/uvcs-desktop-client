@@ -1,9 +1,12 @@
+import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import type { NewLineComment, ReviewComment } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../../app/refresh/refreshScopes';
 import { confirm } from '../../../ui/dialog/confirm';
+import { pickChangeset } from '../../changesets/ChangesetPickerDialog';
+import { changesetsToApplyIn, type ChangeRequestMark } from './changeRequestMarks';
 
 // Every write on a review reads the review again, its lists too: the counts of comments and open ones change with it.
 // Each resolves to whether it was done, so the field that wrote it is cleared or keeps the text to try again.
@@ -24,6 +27,20 @@ export function replyToComment(place: Place, comment: Pick<ReviewComment, 'guid'
 /** Discards a change request with a reply saying why: it's no longer open. */
 export function discardChangeRequest(place: Place, changeRequest: Pick<ReviewComment, 'guid'>, why: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't discard the change request", () => api.reviewComments.reply(place, changeRequest.guid, why, { discard: true }), isAffectedByCodeReviews);
+}
+
+/**
+ * Marks a change request by hand (`changeRequestMarkOf`): applied in the changeset the user picks, among the review's
+ * own where it has them (`changesetsToApplyIn`), the newest first; or not applied, at once, as it's marked again as
+ * easily.
+ */
+export async function markChangeRequest(place: Place, review: Pick<CodeReview, 'target'>, changeRequest: Pick<ReviewComment, 'guid'>, mark: ChangeRequestMark): Promise<boolean> {
+  if (mark === 'notApplied') {
+    return runVoidAction(place, "Couldn't mark the change request as not applied", () => api.reviewComments.markNotApplied(place, changeRequest.guid), isAffectedByCodeReviews);
+  }
+  const changesetId = await pickChangeset({ title: 'Mark as applied in a changeset', among: changesetsToApplyIn(review.target) });
+  if (changesetId === undefined) return false;
+  return runVoidAction(place, "Couldn't mark the change request as applied", () => api.reviewComments.markApplied(place, changeRequest.guid, changesetId), isAffectedByCodeReviews);
 }
 
 export function editReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {

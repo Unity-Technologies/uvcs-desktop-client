@@ -110,7 +110,7 @@ describe('marking a change request by hand', () => {
 
     expect(await markChangeRequest(inWs, branchReview, comment, 'applied')).toBe(true);
 
-    expect(asked.picker).toEqual([{ title: 'Mark as applied in…', among: { branch: '/main/task', limit: expect.any(Number) } }]);
+    expect(asked.picker).toEqual([{ title: 'Mark as applied in a changeset', among: { branch: '/main/task', limit: expect.any(Number) } }]);
     expect(fakeApi.argsOf('reviewComments.markApplied')).toEqual([[inWs, 'c1', 12]]);
     expect(refreshed()).toEqual(['codeReviews']);
   });
@@ -118,7 +118,7 @@ describe('marking a change request by hand', () => {
   it("offers a changeset's or a shelve's review the repository's newest changesets", async () => {
     await markChangeRequest(inWs, { target: { kind: 'shelve', shelveId: 3 } }, comment, 'applied');
 
-    expect(asked.picker).toEqual([{ title: 'Mark as applied in…', among: undefined }]);
+    expect(asked.picker).toEqual([{ title: 'Mark as applied in a changeset', among: undefined }]);
   });
 
   it('marks nothing when no changeset is picked', async () => {
