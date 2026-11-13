@@ -10,6 +10,22 @@ export function newerLineOf(earlier: string, newer: string, line: number): numbe
   return newerLineFinder(newer)(earlier, line);
 }
 
+/**
+ * Where lines `firstLine` to `lastLine` of an earlier version are in a newer one, when the whole block is still there
+ * unchanged and together: moved up or down is fine, a line of it changed, removed, or another put inside it is not.
+ * One line is `firstLine === lastLine`, as `newerLineOf`.
+ */
+export function newerRangeOf(earlier: string, newer: string, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
+  if (range.lastLine < range.firstLine) return null;
+  const find = newerLineFinder(newer);
+  const first = find(earlier, range.firstLine);
+  if (first === null) return null;
+  for (let line = range.firstLine + 1; line <= range.lastLine; line++) {
+    if (find(earlier, line) !== first + (line - range.firstLine)) return null;
+  }
+  return { firstLine: first, lastLine: first + (range.lastLine - range.firstLine) };
+}
+
 /** An earlier version's line diff against the newer one: its hunks, and how many lines the earlier version has. */
 export interface VersionDiff {
   hunks: readonly Pick<Hunk, 'deletionStart' | 'additionStart' | 'hunkContent'>[];
