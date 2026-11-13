@@ -143,8 +143,9 @@ the workspace only gives the page a window and a repository to read.
 6. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
-   isn't there says so. A review's comment first reads the review's conversation, the read its page makes and then
-   finds already read (`reviewConversationQuery`), to know where the comment is (`commentLinkPage`); a comment the
+   isn't there says so. A review's comment first reads the review and its conversation, the reads its page makes and
+   then finds already made (`codeReviewQuery`, `reviewConversationQuery`), to know where the comment is
+   (`commentLinkPage`); a comment the
    review no longer has opens the review and says so in a toast (`LinkNotice`). An object that doesn't exist or can't be
    read says so in the page, as any page does.
 
