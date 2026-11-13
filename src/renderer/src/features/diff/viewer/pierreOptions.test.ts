@@ -58,4 +58,9 @@ describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
     expect(options.unsafeCSS).toContain('--diffs-gap-block:0px');
     expect(pierreDiffOptions({ theme: 'dark', layout: 'unified', collapseUnchanged: false, wrapLines: false }).unsafeCSS).not.toContain('--diffs-gap-block');
   });
+
+  it("runs a row's tint on from its change bar, with no line between the gutter and the code, unlike the code's diff", () => {
+    expect(options.unsafeCSS).toContain('--diffs-gap-style:none');
+    expect(pierreDiffOptions({ theme: 'dark', layout: 'unified', collapseUnchanged: false, wrapLines: false }).unsafeCSS).not.toContain('--diffs-gap-style');
+  });
 });
