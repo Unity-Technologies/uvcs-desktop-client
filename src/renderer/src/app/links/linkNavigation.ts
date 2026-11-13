@@ -105,7 +105,7 @@ function placeNavigation(page: LinkPage | undefined, lines: LinkLines | undefine
   }
   if (page.kind === 'diffFile') return { kind: 'view', view: 'changes', show: { kind: 'change', path: workspaceRelative(page.path) } };
   // Only a review has comments: `parseLink` reads none after a repository or a workspace.
-  if (page.kind === 'reviewComment') return { kind: 'view', view: 'codeReviews' };
+  if (page.kind === 'reviewComment') throw new Error('A link names a comment only after its review.');
   return itemPage(page, lines, page.kind === 'browse' ? lookedChangeset(looked) : null);
 }
 
