@@ -257,8 +257,8 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   wired once (`useCommentMenu`), so "Mark as not applied", Copy, Edit and Delete don't wait for an unfold; Edit
   unfolds the card at the comment's editor. Not on the band: there, after the pill, it took room the band had to keep
   empty while the card was whole, which pushed every pill left of the open cards' pills. The Comments panel's cards,
-  which go to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
-  Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
+  which go to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code
+  (not the Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
   the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill,
   every one the same shape and border, the kind's icon leading its words: **Open** in the color of "Rework required",
   **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral gray, and **Comment** a muted violet
