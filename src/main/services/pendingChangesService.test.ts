@@ -8,7 +8,7 @@ import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { runsLong } from '../cm/longCommands';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
-import { change, formatOutput, pendingStatus, recordsOutput, WORKSPACE_GUID } from '../cm/testing/cmOutput';
+import { change, formatOutput, pendingStatus, recordsOutput, statusHeader, WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
@@ -136,6 +136,18 @@ describe('checkin', () => {
     const { service } = pendingChanges({ ...STANDARD, checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
 
     expect(await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1')).toEqual({ kind: 'noChanges' });
+  });
+
+  it('reads a checkin whose comment names a change request no review has pending as checked in, its changeset from the local status', async () => {
+    const failed = cmFails(
+      ['CI_START', 'STAGE Confirming checkin operation', 'STAGE ', 'Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:- deadbeef'].join('\n'),
+    );
+    const { service, commands } = pendingChanges({ ...STANDARD, checkin: failed, status: statusHeader('/main/task1', { changeset: 45 }) });
+
+    const result = await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'Fix [apply-change:deadbeef]', addsPrivate: false }, 'op-1');
+
+    expect(result).toEqual({ kind: 'created', changesetId: 45, branch: '/main/task1', changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: expect.any(Number) } });
+    expect(commands.at(-1)).toMatchObject({ via: 'query', args: ['status', '--header', '--xml'] });
   });
 
   it('deletes the comment file when the checkin fails', async () => {

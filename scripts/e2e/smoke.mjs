@@ -181,6 +181,13 @@ try {
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
   });
+  await step("The branch's change requests to apply", async () => {
+    // The workspace's branch has a review asking for a change: the description offers it, and picking it writes it.
+    await main.getByRole('button', { name: '1 change request to apply' }).click();
+    await window.getByRole('listbox', { name: 'Suggestions' }).getByRole('option', { name: /Jump only when grounded/ }).click();
+    await main.getByLabel('Applies change request: Jump only when grounded.').waitFor();
+    await main.getByRole('button', { name: '1 change request to apply' }).waitFor({ state: 'detached' });
+  });
   await step('Expanded diff', async () => {
     // The header's button, then the key: the sidebar goes out of sight and the diff stays; Esc gives the window back.
     const sidebar = window.getByRole('navigation');

@@ -1,3 +1,4 @@
+import type { ChangeRequestsNotApplied } from '../domain/pendingChanges';
 import type { BranchStart } from '../domain/branch';
 import type { Changeset } from '../domain/changeset';
 import type { Place } from '../domain/place';
@@ -13,7 +14,11 @@ export interface ChangesetsApi {
   find(place: Place, changesetId: number, read?: OneObjectRead): Promise<Changeset | null>;
   /** Where `branch` starts: one `cm find` of its first changeset. Null for a branch with no changesets. */
   branchStart(place: Place, branch: string): Promise<BranchStart | null>;
-  editComment(place: Place, changesetId: number, comment: string): Promise<void>;
+  /**
+   * Writes the comment. `changeRequestsNotApplied`: change requests it names (`[apply-change:…]`) that no review had
+   * pending, which `cm` says after saving it, applying none of them.
+   */
+  editComment(place: Place, changesetId: number, comment: string): Promise<{ changeRequestsNotApplied?: ChangeRequestsNotApplied }>;
   /** Moves the changeset and its descendants to another branch (full name, e.g. `/main/fix`). */
   moveToBranch(place: Place, changesetId: number, branch: string): Promise<void>;
   remove(place: Place, changesetId: number): Promise<void>;

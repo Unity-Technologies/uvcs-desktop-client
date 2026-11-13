@@ -3,7 +3,7 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useState, type MouseEvent, type ReactNode } from 'react';
+import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
@@ -13,13 +13,16 @@ import { Button } from '../../../ui/Button';
 import { Highlight } from '../../../ui/Highlight';
 import { IconButton } from '../../../ui/IconButton';
 import { CommentComposer } from './CommentComposer';
+import { CommentMenuButton } from './CommentMenuButton';
 import { canDiscard } from './commentPermissions';
 import { discardChangeRequest, replyToComment } from './reviewCommentOperations';
 import { ReviewCommentView } from './ReviewCommentView';
+import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
+import { answerOf, commentLocationPage, replyAction } from './threadBadges';
+import { initialThreadCardFold, nextThreadCardFold } from './threadCardFold';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
-import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
+import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -67,15 +70,15 @@ export interface ThreadInCode {
 }
 
 type Answering = 'reply' | 'discard' | null;
-type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
 
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
- * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. A settled one starts folded to that line and
- * its first words (`startsFolded`); a click shows it whole.
+ * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
+ * that band folds to it and its first words from its chevron (`foldsByHand`); a settled one starts folded
+ * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
+  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight));
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
@@ -85,15 +88,15 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   if (nextCommentLight !== commentLight) setCommentLight(nextCommentLight);
   const answer = answerOf(thread);
   const seeAnswer = answer && (() => {
-    setFolded(false);
+    foldEvent('unfold');
     setAnswerShown((previous) => nextAnswerLight(previous, answer.replyId, highlight));
   });
-  const foldable = startsFolded(thread);
+  const foldable = foldsByHand(thread);
   const hasHeader = hasThreadHeader(thread);
   // Gone to again: shown whole, as what was asked for.
   if (highlight !== shownHighlight) {
     setShownHighlight(highlight);
-    if (highlight !== undefined) setFolded(false);
+    if (highlight !== undefined) foldEvent('unfold');
   }
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
@@ -107,15 +110,26 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
       {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
     >
-      {hasHeader && <ThreadHeader reviewId={review.id} thread={thread} folded={folded} inCode={inCode} onSeeApplied={onSeeApplied} onSeeAnswer={seeAnswer} onToggle={foldable ? () => setFolded(!folded) : undefined} />}
+      {hasHeader && (
+        <ThreadHeader
+          reviewId={review.id}
+          thread={thread}
+          folded={folded}
+          inCode={inCode}
+          onSeeApplied={onSeeApplied}
+          onSeeAnswer={seeAnswer}
+          onToggle={foldable ? () => foldEvent('toggle') : undefined}
+          firstCommentMenu={{ review, user, threadActions, onEdit: () => foldEvent('editRoot') }}
+        />
+      )}
       {inCode?.snippet}
       {/* Named for a place that bounds the card's height and scrolls its body (See in context's thread above the files). */}
       <div className={styles.threadBody} data-thread-body="">
         {folded ? (
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
-          <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
+          <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
         ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={nextCommentLight} commentIds={!inCode} />
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
         )}
       </div>
     </section>
@@ -196,14 +210,16 @@ interface ThreadHeaderProps {
   inCode?: ThreadInCode;
   /** The card around it goes to the thread (the Comments panel's): its file only names where, not a link of its own. */
   cardOpens?: boolean;
-  /** Folds or unfolds a settled thread; none for one that stays whole. */
+  /** Folds or unfolds the thread (`foldsByHand`); none for one that stays whole. */
   onToggle?: () => void;
   onSeeApplied?: () => void;
   /** What "Answered" does: shows the thread whole at the reply that answered it (`answerOf`). */
   onSeeAnswer?: () => void;
+  /** What the first comment's menu needs, shown on the header while the card is folded (`ThreadHeaderView.commentMenu`). */
+  firstCommentMenu?: Omit<FirstCommentMenuProps, 'thread'>;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer, firstCommentMenu }: ThreadHeaderProps) {
   const { root } = thread;
   const header = threadHeaderOf({
     thread,
@@ -257,10 +273,27 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
       <span className={styles.headerEnd}>
         {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
         {pill && <StatePill pill={pill} onSeeApplied={onSeeApplied} onSeeAnswer={onSeeAnswer} />}
+        {header.commentMenu === 'menu' && firstCommentMenu && <FirstCommentMenu thread={thread} {...firstCommentMenu} />}
+        {header.commentMenu === 'space' && <span className={styles.commentMenuSpace} aria-hidden />}
         {header.hides && inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
   );
+}
+
+interface FirstCommentMenuProps {
+  review: Pick<CodeReview, 'id' | 'target'>;
+  thread: ReviewThread;
+  user: string | undefined;
+  threadActions?: CommentThreadActions;
+  /** Edit unfolds the card, its first comment in its editor. */
+  onEdit: () => void;
+}
+
+/** The first comment's menu, on the header of a folded card: the same entries as on the comment (`useCommentMenu`). */
+function FirstCommentMenu({ review, thread, user, threadActions, onEdit }: FirstCommentMenuProps) {
+  const entries = useCommentMenu({ review, comment: thread.root, thread, user, edit: onEdit, threadActions });
+  return <CommentMenuButton entries={entries} />;
 }
 
 interface StatePillProps {
@@ -364,20 +397,23 @@ interface WholeThreadProps {
   review: Pick<CodeReview, 'id' | 'owner' | 'target'>;
   thread: ReviewThread;
   user: string | undefined;
-  threadActions?: ThreadActions;
+  threadActions?: CommentThreadActions;
+  /** Its first comment opens in its editor: Edit was picked on the folded header (`FirstCommentMenu`). */
+  editsRoot: boolean;
+  onRootEditorOpened: () => void;
   lit?: ShownCommentLight;
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
 }
 
-function WholeThread({ review, thread, user, threadActions, lit, commentIds }: WholeThreadProps) {
+function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds }: WholeThreadProps) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
 
   return (
     <>
-      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
+      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} startsEditing={editsRoot} onEditorOpened={onRootEditorOpened} />
       {replies.map((reply) => (
         <ReviewCommentView
           key={reply.id}

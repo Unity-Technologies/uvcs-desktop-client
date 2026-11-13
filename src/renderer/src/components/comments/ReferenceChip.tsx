@@ -6,6 +6,7 @@ import { Avatar } from '../../ui/Avatar';
 import { IssueChip } from '../issues/IssueChip';
 import { usePlaceTracker } from '../issues/useIssueTrackers';
 import { cachedRecordOf, summaryOf } from './cachedSummary';
+import { ChangeRequestChip } from './ChangeRequestChip';
 import { ChipOpenerContext } from './chipOpener';
 import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
@@ -49,6 +50,8 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
       );
     case 'issue':
       return <PlaceIssueChip reference={chip} source={source} compact={compact} interactive={interactive} />;
+    case 'changeRequest':
+      return <ChangeRequestChip guid={chip.guid} source={source} compact={compact} interactive={interactive} />;
     case 'object':
       return (
         <ObjectChip

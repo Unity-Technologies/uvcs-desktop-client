@@ -168,6 +168,14 @@ describe('parseMarkdown of a comment', () => {
     ]);
   });
 
+  it("reads cm's [apply-change:…] as a change request, never as a link's brackets", () => {
+    expect(parseInline('Shelve first [apply-change:c0d1ce00].', comment)).toEqual([
+      { kind: 'text', text: 'Shelve first ' },
+      { kind: 'reference', reference: { kind: 'changeRequest', guid: 'c0d1ce00' }, source: '[apply-change:c0d1ce00]' },
+      { kind: 'text', text: '.' },
+    ]);
+  });
+
   it('reads a person named by an email address as the person, not a mail link', () => {
     expect(parseInline('Thanks @ana@acme.com!', comment)).toEqual([
       { kind: 'text', text: 'Thanks ' },

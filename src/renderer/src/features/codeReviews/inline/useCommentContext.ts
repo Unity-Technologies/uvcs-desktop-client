@@ -21,7 +21,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
   const chipOpener = useContext(ChipOpenerContext);
   return useMemo(() => {
     if (repository === undefined) return undefined;
-    return (thread: LineThread, { startsOn, onScreen }: ContextRequest = {}) =>
+    return (thread: LineThread, { startsOn, onScreen, steps }: ContextRequest = {}) =>
       openCommentContextDialog({
         place,
         review,
@@ -30,7 +30,7 @@ export function useCommentContext(review: CodeReview): ((thread: LineThread, req
         repository: onScreen?.entry.repository ?? repository,
         onScreen: onScreen ?? null,
         startsOn,
-        steps: stepGroups,
+        steps: steps ?? stepGroups,
         chipOpener,
       });
   }, [place, review, user, repository, stepGroups, chipOpener]);

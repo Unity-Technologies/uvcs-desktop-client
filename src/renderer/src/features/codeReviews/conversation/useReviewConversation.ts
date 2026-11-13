@@ -1,9 +1,9 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
 import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../../app/queryClient';
 import { usePlace } from '../../../app/workspace/useWorkspace';
+import { conversationKey } from './conversationKey';
 
 /**
  * Everything said on a review, read with one `cm find`. Under the reviews' area, so whatever changes a review reads it
@@ -14,7 +14,10 @@ export function useReviewConversation(reviewId: number, reading: ConversationRea
   return useQuery({ ...reviewConversationQuery(place, reviewId), ...reading });
 }
 
-/** The conversation's read, for what reads it before the page shows it (a link to a comment): the page then reads it no more. */
+/**
+ * How a review's conversation is read, one query per review: the page, what reads it before the page shows it (a link
+ * to a comment) and the change requests a check-in can apply (`useBranchChangeRequests`) share each other's read.
+ */
 export function reviewConversationQuery(place: Place, reviewId: number) {
   return { queryKey: conversationKey(place, reviewId), queryFn: () => api.reviewComments.conversation(place, reviewId) };
 }
@@ -27,10 +30,6 @@ export type ConversationReading = { refetchOnMount?: false };
  * fresh by it (a write, a focus once stale), so opening it reads nothing, however long the page has been shown.
  */
 export const SHOWN_BY_THE_PAGE: ConversationReading = { refetchOnMount: false };
-
-function conversationKey(place: Place, reviewId: number) {
-  return queryKeys.inPlace(place, 'codeReviews', 'conversation', reviewId);
-}
 
 /**
  * When the conversation was last read (or its read failed), 0 if it never was: taken right after a write, what

@@ -250,14 +250,21 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   settled pills' do. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). **Answered** is a link as **Applied** is, in the conversation and in the code (not the Comments panel's
-  cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it, the first, lit for
-  a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill, every one the same
-  shape and border, the kind's icon leading its words: **Open** in the color of "Rework required", **Applied** and **Answered**
-  in the color of "Reviewed", **Discarded** neutral gray, and **Comment** a muted violet (`--comment-kind-text`,
-  `--comment-kind-border`; `PillTone`'s `comment`), a color no state takes. Not gray, which read as Discarded; not
-  blue, the app's link color, which read as a link (and as the Comments panel's pressed filter chip); not teal, too
-  close to Applied's green.
+  tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
+  which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
+  apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the band's
+  end, after the pill, under the pointer as on a comment (`threadHeaderOf`'s `commentMenu`, `FirstCommentMenu`): the
+  same entries, wired once (`useCommentMenu`), so "Mark as not applied", Copy, Edit and Delete don't wait for an
+  unfold; Edit unfolds the card at the comment's editor. Shown whole, the menu is the comment's only, never two, and
+  its room on the band stays empty, so the pill doesn't move as the card folds; the Comments panel's cards, which go
+  to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
+  Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
+  the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill,
+  every one the same shape and border, the kind's icon leading its words: **Open** in the color of "Rework required",
+  **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral gray, and **Comment** a muted violet
+  (`--comment-kind-text`, `--comment-kind-border`; `PillTone`'s `comment`), a color no state takes. Not gray, which
+  read as Discarded; not blue, the app's link color, which read as a link (and as the Comments panel's pressed filter
+  chip); not teal, too close to Applied's green.
 - **A question answered in a changeset**: an answer naming a changeset of the review's repository ("Fixed in
   cs:281301", the first one named in the replies, `answeringChangeset`) answers the question in it, as a changeset
   applies a change request (`ThreadState`'s `answered.changesetId`, `settlingChangeset`): that changeset's diff shows
@@ -313,6 +320,62 @@ command of its own.
   "Comment not found" (`LinkNotice`). A review that isn't there lists no comments: its read fails, and its page says
   so alone, as does one whose conversation can't be read.
 
+## Applying change requests
+
+A change request is applied the way `cm` has always applied one: a check-in whose comment names it,
+`[apply-change:c0d1ce00]`. `cm checkin` and `cm changeset editcomment` find it anywhere in the comment as written (its
+words in any case), match it against the change requests pending on any review of the repository, and mark it applied
+in that changeset. The short form, the guid's first eight hex digits, matches only in lower case, as the guid's digits
+are written; the whole guid matches in any case (`applyChangeMatches`, `shared/applyChange.ts`). The app writes the
+text and runs no command of its own for it, so every client reads it. A shelve applies none. Marking one applied by
+hand ("Marked applied by hand" above) is for a request a check-in didn't name.
+
+- **Writing it** (docs/features/rich-comments.md "Suggestions"): in the check-in's comment, typing `[apply` (`cm`'s own
+  syntax, `changeRequestQueryAt`) opens **Change requests to apply**: the open ones of the reviews of the workspace's
+  branch that the comment doesn't name yet (`notYetNamed`), the newest first; what's typed after `[apply-change:`
+  filters them by their words, file, review, author or number, and a pick writes the whole `[apply-change:c0d1ce00]`
+  (`changeRequestSuggestions`). `cr:` stays a review's spec only: a request isn't a review, and mixing them under one
+  prefix read as one. The discoverable door is the description's footer (docs/features/changes.md "The check-in's
+  comment"): a quiet button with their count, there only while some are offered, which opens the same list at the
+  description's caret, or at its end, and teaches `[apply` at the list's foot (`suggestionListHint`). It always opens:
+  asked before the editor loaded, the list opens as it does. No combo of requests and no banner: the official
+  client's list in the check-in was in the way of every check-in, and most have nothing to apply.
+- **Where** (`changeRequestsBranch`): a check-in on a branch, never a shelve or a workspace on a changeset, a label or a
+  shelve. A changeset's comment edited in its details panel applies them too (`cm changeset editcomment`), but offering
+  them there would read the branch's reviews for every changeset selected; one typed by hand there still applies and
+  shows as its chip.
+- **What it reads** (`useBranchChangeRequests`, `branchChangeRequestsOf`): once the pending changes are read, so it
+  never holds up the list, one `cm find review "where target = 'br:/main/task'"` (`CodeReviewFilter.targetBranch`,
+  `branchReviewsKey`; `cm` fails for a branch that doesn't exist, which offers nothing), then the conversation of each
+  of its reviews with something open (`{unresolvedissues}` above zero, `reviewsToRead`; a branch has one, rarely two),
+  under the very key its page reads it by (`reviewConversationQuery`), so the page and the check-in find each other's
+  read. A review that couldn't be read hides none of the others' requests. A branch with no review, or none open,
+  costs the one find. Open is what the conversation says (`threadsOf`'s state: not applied, no discarding reply). Read
+  again only on an event: the branch switched (another key), a write on a review (`isAffectedByCodeReviews`), a
+  check-in, an update or a switch (`isAffectedByCheckinOrUpdate`: what came in may have applied some); never on a
+  focus (`SLOW_CHANGING_QUERY`). It isn't checked again right before a check-in: that would add a find to every
+  check-in, and `cm` checks the requests itself (below). One find of every open change request of the repository
+  (`type = 'change' and appliedinchangeset = -1`, as `cm checkin` asks) was rejected: it grows with the repository's
+  history, needs a second find for the discarding replies, and shares nothing with the review's page. `cm find
+  changereviewcomment` can't filter by a review's target.
+- **A request no review has pending** (applied already, discarded, no request by that number): `cm` makes the
+  changeset, or saves the comment, then fails listing those requests, and applies none of the requests the comment
+  names. The app reads that failure as done (`changeRequestsNotApplied`, by structure: a list, after a colon or a
+  full-width one, of only requests the comment names, wherever the message puts it, as English, Japanese, Korean and
+  Chinese do; a `cm shell` joins each item's line to the one before, `…changeset:- deadbeef`), takes the new changeset
+  from the workspace's status (a local read), and says "No change request was applied: … is applied already, or no
+  review has it open" (`changeRequestsNotAppliedText`), never "Check in failed", and marks `cm`'s failure handled, so
+  the status bar shows none.
+- **A recent comment picked** (`recentCommentPick`) leaves out the requests it applied (`withoutApplyChanges`): no
+  longer pending, they would make `cm` apply none in the new check-in. The words around one keep a space between them,
+  and a line left empty goes, so its paragraph stays one; a comment whose title was only a reference opens with its
+  description as the title. Recent comments names each comment by what its pick writes (`recentCommentLabel`).
+- **After the check-in** (`withChangeRequestsApplied`): a check-in or a comment edit whose comment holds such a
+  reference (`appliesChangeRequests`) refreshes the code reviews too, so their Applied pills, their Open counts and the
+  footer's count follow.
+- **Reading it**: anywhere a comment shows, the reference is a chip reading "Applies:" and the request
+  (docs/features/rich-comments.md "How references show").
+
 ## Rounds
 
 A review goes back and forth: the author checks in, a reviewer asks for rework, the author fixes and asks again. A
@@ -348,6 +411,20 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, `keptLayoutAfter`, kept
+  by `useConversationLayout`): where each thread shows and whether each round starts folded are decided once, when
+  who the user is, the conversation and the branch's changesets are read, each from the read the page started on
+  opening, never a cached answer it is about to replace nor the previous review's changesets (`answerIsCurrent`).
+  Afterwards, what the user or a refresh changes (a request marked applied or not, a reply, a discard) updates the
+  card, its round's counts and Open in place: a thread shown never moves (marking it applied would otherwise take it
+  under the "New since your last review" line, and unmarking it back), and a round never folds or unfolds by itself
+  (settling its last open thread would fold it with the card under the pointer). What's new (a comment, an event, a
+  check-in) is placed as on a first read; a round closed meanwhile (the user's own status, or for the author or a
+  bystander anyone's) shows unfolded, since what it holds was on screen. The next time the page opens, it lays the
+  conversation out afresh; so does a page window when it switches tabs or goes to a thread (Show in conversation),
+  as each remounts its page (`pageKey` holds the tab and the thread). "How it was applied", opened from the
+  conversation, steps through the threads where it shows them (`ContextRequest.steps`); opened from Changes, where a
+  fresh read places them (`useReviewCheckpoint`).
 - **What a reviewer said with their status** sits under its event in a soft tint, no bar beside it (the rail is the
   timeline's one vertical line: a bar beside it read as two), folded past four lines with "Show more"
   (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
@@ -374,7 +451,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   it as a request (`changesFocusAskedFor`, `changesFocusRequest`): a changeset the page names wins over the one a
   thread was written in.
 - **How it was applied** opened at a settled thread steps through the others settled in the same part of the
-  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`: "Round 1 · 2 of 4", "New since last
+  conversation, in the order it shows them (`stepGroupsOf`, `contextStepsOf`; from the conversation, as its kept layout
+  shows them: "The layout holds while the page is open"; "Round 1 · 2 of 4", "New since last
   review · 1 of 3", "After round 2" for someone with no line of their own ("After the review" past a review's only
   round, whose own threads show the position alone, as before any round); a pager
   above the title, its arrows first, where it is seen first and never moves): stepping stays in the part being read, so a round closed long ago doesn't mix with what a reviewer came

@@ -2,7 +2,7 @@
 // value (`changesetid > 5`, `branch = '/main'`, `date >= '2026-07-01'`, `owner = 'me'`), joined by `and`. Any other
 // condition (`like`, `or`, a field the objects lack) keeps every object: the smoke test checks that views show, not
 // exactly which objects they show.
-const { OWNER } = require('./repository.cjs');
+const { BRANCHES, OWNER } = require('./repository.cjs');
 
 const COMPARISON = /^(\w+)\s*(>=|<=|=|>|<)\s*(?:'([^']*)'|(-?\d+))$/i;
 
@@ -29,10 +29,18 @@ function valueOf(text) {
   return text === 'me' ? OWNER : text;
 }
 
-/** A branch's `name` in a query may be its last segment (`task-001` for `/main/task-001`). */
+/**
+ * A branch's `name` in a query may be its last segment (`task-001` for `/main/task-001`). A review's `target` is a
+ * branch's id as `cm` prints it (`id:20`), and a query names the branch by its spec (`target = 'br:/main/task-001'`).
+ */
 function fieldValues(record, field) {
   const value = record[field];
-  return field === 'name' && typeof value === 'string' ? [value, value.split('/').pop()] : [value];
+  if (field === 'name' && typeof value === 'string') return [value, value.split('/').pop()];
+  if (field === 'target' && typeof value === 'string' && value.startsWith('id:')) {
+    const branch = BRANCHES.find((each) => `id:${each.id}` === value);
+    return branch ? [value, `br:${branch.name}`] : [value];
+  }
+  return [value];
 }
 
 /** The records a `cm find` query finds. */
