@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EditorState } from '@codemirror/state';
 import { editorState, written } from './commentEditorTesting';
-import { changeRequestsOpened, openChangeRequests, withChangeRequestsOffered } from './changeRequestTrigger';
+import { changeRequestsOpened, openChangeRequests, suggestionListHint, withChangeRequestsOffered } from './changeRequestTrigger';
 import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
 import { typingAt } from './typingAt';
 
@@ -58,7 +58,7 @@ describe('the list opened by its button', () => {
     const opened = state.update(openChangeRequests(state)).state;
     expect(written(opened)).toBe('Shelve first‸');
     const query = suggestionsShownAt(opened);
-    expect(query).toEqual({ kind: 'changeRequest', from: 12, to: 12, text: '', prefix: ' ' });
+    expect(query).toEqual({ kind: 'changeRequest', from: 12, to: 12, text: '', prefix: ' ', byButton: true });
     expect(written(opened.update(pickSuggestion(opened, query!, '[apply-change:c0d1ce00]')).state)).toBe('Shelve first [apply-change:c0d1ce00] ‸');
   });
 
@@ -82,7 +82,7 @@ describe('the list opened by its button', () => {
     const state = editorState('Done ‸', offered);
     const filtering = typed(state.update(openChangeRequests(state)).state, 'shel');
     const query = suggestionsShownAt(filtering);
-    expect(query).toEqual({ kind: 'changeRequest', from: 5, to: 9, text: 'shel' });
+    expect(query).toEqual({ kind: 'changeRequest', from: 5, to: 9, text: 'shel', byButton: true });
     expect(written(filtering.update(pickSuggestion(filtering, query!, '[apply-change:c0d1ce00]')).state)).toBe('Done [apply-change:c0d1ce00] ‸');
   });
 
@@ -92,5 +92,16 @@ describe('the list opened by its button', () => {
     expect(suggestionsShownAt(opened.update({ selection: { anchor: 0 } }).state)).toBeNull();
     expect(suggestionsShownAt(typed(opened, 'a b'))).toBeNull();
     expect(suggestionsShownAt(opened.update({ changes: { from: 0, insert: 'x' } }).state)).toBeNull();
+  });
+});
+
+describe('suggestionListHint', () => {
+  it("teaches cm's syntax at the list's foot when its button opened it, not when [apply was typed", () => {
+    const state = editorState('Done ‸', offered);
+    const opened = state.update(openChangeRequests(state)).state;
+    expect(suggestionListHint(suggestionsShownAt(opened))).toEqual({ before: 'Type ', code: '[apply', after: ' in a comment to reference one' });
+    expect(suggestionListHint(queryAt('Done [apply‸'))).toBeNull();
+    expect(suggestionListHint(queryAt('cs:‸'))).toBeNull();
+    expect(suggestionListHint(null)).toBeNull();
   });
 });
