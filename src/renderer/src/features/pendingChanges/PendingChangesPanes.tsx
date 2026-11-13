@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { workspacePlace } from '@shared/domain/place';
 import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { recentCommentsFor } from '@shared/domain/recentComments';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -331,7 +332,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindDescription={behind && behindDescription(behind)}
               preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
-              recentComments={settings.recentComments}
+              recentComments={recentCommentsFor(settings, workspace?.repository)}
               mode={checkinMode}
               onModeChange={setCheckinMode}
               busy={submit.busy}
