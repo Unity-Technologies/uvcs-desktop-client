@@ -56,6 +56,8 @@ interface LiveCommentEditorProps extends CommentFieldProps {
  */
 export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, footer, ref, initialFocus, pendingChangeRequests }: LiveCommentEditorProps) {
   const host = useRef<HTMLDivElement>(null);
+  // Where CodeMirror draws the text: a slot of its own, before the footer, so the keyboard reaches the text first.
+  const slot = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
   const [portals] = useState(() => new WidgetPortals());
@@ -75,8 +77,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   // Built in the effect and destroyed in its cleanup, so StrictMode's second mount gets an editor of its own.
   useEffect(() => {
     const editor = new EditorView({
-      parent: host.current!,
-      root: editorRootOf(host.current!),
+      parent: slot.current!,
+      root: editorRootOf(slot.current!),
       state: EditorState.create({
         doc: value,
         extensions: [
@@ -206,6 +208,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
       {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={fieldFocused(view, state)} />}
+      <div ref={slot} className={styles.slot} />
       {footer}
       <WidgetPortalsView portals={portals} onDrawn={measure} />
       {suggestions.list}
@@ -303,7 +306,7 @@ function useFocusMode(view: EditorView | null, singleLine: boolean, suggesting: 
  */
 function caretAtPress(view: EditorView, event: React.MouseEvent): void {
   const target = event.target as Element;
-  const press = { button: event.button, onText: view.contentDOM.contains(target), inBox: view.dom.parentElement?.contains(target) ?? false, onControl: target.closest('button, [role="toolbar"], a') !== null };
+  const press = { button: event.button, onText: view.contentDOM.contains(target), inBox: (event.currentTarget as Element).contains(target), onControl: target.closest('button, [role="toolbar"], a') !== null };
   if (!pressPlacesCaret(press)) return;
   event.preventDefault();
   focusAt(view, view.posAtCoords({ x: event.clientX, y: event.clientY }, false));
