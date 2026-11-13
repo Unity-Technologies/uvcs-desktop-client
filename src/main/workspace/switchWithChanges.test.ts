@@ -177,6 +177,16 @@ describe('downloading the whole branch into a partial workspace', () => {
     await expect(downloadWhole(deps)).rejects.toThrow('This workspace already has the whole branch.');
     expect(changes(lines())).toEqual([]);
   });
+
+  it('refuses to leave the changes on a shelve, touching nothing: they stay on this branch, so they come along or are undone', async () => {
+    const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
+    const before = { ...pending() };
+    const leave = 'leave' as WholeBranchChangesAction; // what an untrusted renderer could still send
+
+    await expect(downloadWhole(deps, leave)).rejects.toThrow("Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.");
+    expect(changes(lines())).toEqual([]);
+    expect(pending()).toEqual(before);
+  });
 });
 
 describe('switching with changes refuses, touching nothing,', () => {
