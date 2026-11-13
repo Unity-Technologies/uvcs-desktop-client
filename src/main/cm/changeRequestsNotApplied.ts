@@ -1,7 +1,7 @@
 import { changeRequestsNamedIn } from '@shared/applyChange';
 
-/** A change request as `cm` lists it: the first eight hex digits of its guid, or the whole guid. */
-const REQUEST = '[0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?';
+/** A change request as `cm` lists it: the first eight hex digits of its guid, or the whole guid, and no more hex after. */
+const REQUEST = '[0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?(?![0-9a-f])';
 
 /**
  * `cm`'s list after its message's colon (or a full-width one), `- deadbeef` an item. Nothing is required after an item:
