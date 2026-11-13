@@ -18,7 +18,7 @@ import { discardChangeRequest, replyToComment } from './reviewCommentOperations'
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
-import { cardLightOf, commentElementId, nextAnswerLight, threadElementId, type AnswerLight, type CardLight } from './threadPick';
+import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
 import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -80,10 +80,13 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
   const light = cardLightOf(highlight, litReply, answerShown);
+  const [commentLight, setCommentLight] = useState(() => commentLightShown(undefined, light));
+  const nextCommentLight = commentLightShown(commentLight, light);
+  if (nextCommentLight !== commentLight) setCommentLight(nextCommentLight);
   const answer = answerOf(thread);
   const seeAnswer = answer && (() => {
     setFolded(false);
-    setAnswerShown(nextAnswerLight(light, answer.replyId, highlight));
+    setAnswerShown((previous) => nextAnswerLight(previous, answer.replyId, highlight));
   });
   const foldable = startsFolded(thread);
   const hasHeader = hasThreadHeader(thread);
@@ -112,7 +115,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
           <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
         ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={light.litComment} commentIds={!inCode} />
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={nextCommentLight} commentIds={!inCode} />
         )}
       </div>
     </section>
@@ -355,7 +358,7 @@ interface WholeThreadProps {
   thread: ReviewThread;
   user: string | undefined;
   threadActions?: ThreadActions;
-  lit?: CardLight['litComment'];
+  lit?: ShownCommentLight;
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
 }

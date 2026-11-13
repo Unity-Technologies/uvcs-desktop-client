@@ -55,13 +55,22 @@ export interface AnswerLight {
 }
 
 /**
- * What a thread's card lights: the card itself (`cardHighlight`), or one of its comments (`litComment`). `scrolls`
- * says whether the comment brings itself into view: the answer the Answered pill goes to does; a reply a link goes to
- * doesn't, the conversation scrolling to it (`pickedElementId`).
+ * What a thread's card lights: the card itself (`cardHighlight`), or one of its comments (`litComment`). `event`
+ * names what lit the comment (a pick, a press of the pill), so a new one lights it again (`commentLightShown`).
+ * `scrolls` says whether the comment brings itself into view: the answer the Answered pill goes to does; a reply a
+ * link goes to doesn't, the conversation scrolling to it (`pickedElementId`).
  */
 export interface CardLight {
   cardHighlight?: number;
-  litComment?: { replyId: number; seq: number; scrolls: boolean };
+  litComment?: { replyId: number; event: string; scrolls: boolean };
+}
+
+/** A comment's light as the card shows it: `seq` counts the lights the card showed, so each new one changes parity. */
+export interface ShownCommentLight {
+  replyId: number;
+  event: string;
+  scrolls: boolean;
+  seq: number;
 }
 
 /**
@@ -71,15 +80,27 @@ export interface CardLight {
  * reply, whichever came last: the answer when pressed under the card's current light.
  */
 export function cardLightOf(highlight: number | undefined, litReply: number | undefined, answer: AnswerLight | null): CardLight {
-  const answerLit = answer && { replyId: answer.replyId, seq: answer.seq, scrolls: true };
+  const answerLit = answer && { replyId: answer.replyId, event: `answer ${answer.seq}`, scrolls: true };
   if (highlight === undefined || litReply === undefined) return { ...(highlight !== undefined && { cardHighlight: highlight }), ...(answerLit && { litComment: answerLit }) };
   if (answerLit && answer.underHighlight === highlight) return { litComment: answerLit };
-  return { litComment: { replyId: litReply, seq: highlight, scrolls: false } };
+  return { litComment: { replyId: litReply, event: `pick ${highlight}`, scrolls: false } };
 }
 
-/** The Answered pill pressed: its answer lit next, its light restarting even on the reply lit now. */
-export function nextAnswerLight(light: CardLight, replyId: number, highlight: number | undefined): AnswerLight {
-  return { replyId, seq: (light.litComment?.seq ?? -1) + 1, underHighlight: highlight };
+/** The Answered pill pressed: its answer lit next, under the card's light now (`highlight`). */
+export function nextAnswerLight(previous: AnswerLight | null, replyId: number, highlight: number | undefined): AnswerLight {
+  return { replyId, seq: (previous?.seq ?? -1) + 1, underHighlight: highlight };
+}
+
+/**
+ * The comment light a card shows next, from the one it shows: the same while nothing new lit a comment; one counted
+ * past it for a new pick or press, so its parity (`data-highlight`) changes and the light restarts, on the same reply
+ * too. Picks and presses count apart, so their own numbers can't say it.
+ */
+export function commentLightShown(shown: ShownCommentLight | undefined, light: CardLight): ShownCommentLight | undefined {
+  const lit = light.litComment;
+  if (!lit) return shown;
+  if (shown?.event === lit.event && shown.replyId === lit.replyId) return shown;
+  return { ...lit, seq: (shown?.seq ?? 0) + 1 };
 }
 
 /** The element the conversation brings into view for a pick: the thread's, or the reply's it goes to. */
