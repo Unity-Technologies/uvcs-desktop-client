@@ -21,6 +21,7 @@ describe('changeRequestsNotApplied', () => {
   it('reads the first one on the error line itself, as the window gets the output with that line end dropped', () => {
     const output = 'STAGE \nError: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:- 9cc0d065';
     expect(changeRequestsNotApplied(output, 'Again [apply-change:9cc0d065]')).toEqual(['9cc0d065']);
+    expect(changeRequestsNotApplied('Error: …changeset:- deadbeef- cafebabe', '[apply-change:deadbeef] [apply-change:cafebabe]')).toEqual(['deadbeef', 'cafebabe']);
   });
 
   it('reads them in any language, by the requests the comment names, listed after the error', () => {
