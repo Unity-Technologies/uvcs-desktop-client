@@ -82,7 +82,7 @@ describe('conversationOf', () => {
       printed({ id: 60, guid: 'd2', type: 'timeline', comment: '[description]Switching **never loses**\n\nchanges.', modifieddate: LATER }),
     );
 
-    expect(conversation.description).toEqual({ guid: 'd2', text: 'Switching **never loses**\n\nchanges.', author: ANA, date: AT, editedDate: LATER });
+    expect(conversation.description).toEqual({ id: 60, guid: 'd2', text: 'Switching **never loses**\n\nchanges.', author: ANA, date: AT, editedDate: LATER });
     expect(conversation.events).toEqual([]);
   });
 

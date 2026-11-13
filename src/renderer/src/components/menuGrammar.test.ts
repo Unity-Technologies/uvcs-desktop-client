@@ -1,5 +1,6 @@
 import { fakeApi } from '../testing/fakeWindow';
 import { commentMenu } from '../features/codeReviews/conversation/commentMenu';
+import { reviewCommentCopyTexts } from '../features/codeReviews/conversation/commentLink';
 import { threadsOf } from '../features/codeReviews/conversation/reviewThreads';
 import { codeReviewSummary } from '../testing/codeReviewSummary';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -295,10 +296,11 @@ const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
   committedDiffText: () =>
     codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
 };
-/** A review comment's menu (`commentMenu`), its author's: every entry it offers. */
+/** A review comment's menu (`commentMenu`), its author's: every entry it offers, its Copy submenu as every object's. */
 const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
 const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
-  reviewComment: () => commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyText: () => {} }),
+  reviewComment: () =>
+    commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyTexts: reviewCommentCopyTexts(workspacePlace(ws), 41, reviewComment) }),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
@@ -357,7 +359,7 @@ describe('the menu grammar', () => {
     });
   });
 
-  it.each(Object.entries(MENUS))('%s: at most one "Copy" submenu, its entries in the order of every other', (_name, build) => {
+  it.each(Object.entries({ ...MENUS, ...COMMENT_MENUS }))('%s: at most one "Copy" submenu, its entries in the order of every other', (_name, build) => {
     const copies = topEntries(build()).filter((entry) => isSubmenu(entry) && entry.id === 'copy') as Submenu[];
     expect(copies.length).toBeLessThanOrEqual(1);
     expect(topEntries(build()).filter((entry) => !isSubmenu(entry) && entry.label.startsWith('Copy'))).toEqual([]);
@@ -604,6 +606,11 @@ describe('Copy', () => {
 
   it('copies a label as its name, spec, full spec and comment', async () => {
     expect(await copiedBy(labelMenu(workspacePlace(ws), [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+  });
+
+  it("copies a review's comment as its text and its link, which opens the review at it", async () => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
+    expect(await copiedBy(COMMENT_MENUS.reviewComment!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
   });
 
   it('copies a deleted repository as its name alone: its spec names it by an id no link opens', async () => {

@@ -38,6 +38,7 @@ export type Page =
   /**
    * `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show.
    * `focusThread`: a comment thread (its first comment's id) to bring into view and mark, in the tab it opens on.
+   * `focusReply`: a reply of that thread to go to in the conversation, the one a link names.
    * `focusChangeset`: on a branch's review, its changes open on that changeset, selected in the list of the branch's
    * changesets: where a comment written there is.
    * `focusChangesets`: on a branch's review, its changes open with every changeset of the span selected in that list,
@@ -50,6 +51,7 @@ export type Page =
       focusPath?: string;
       focusLines?: FocusedLines;
       focusThread?: number;
+      focusReply?: number;
       focusChangeset?: number;
       focusChangesets?: ChangesetSpan;
     }

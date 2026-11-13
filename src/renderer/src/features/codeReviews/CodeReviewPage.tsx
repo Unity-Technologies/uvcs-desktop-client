@@ -29,7 +29,7 @@ import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
 import { ViewShownContext } from '../../lib/viewShown';
-import { conversationFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
+import { conversationFocus, conversationReplyFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import { ChipOpenerContext, type ChipOpener } from '../../components/comments/chipOpener';
 import { reviewChipPage } from './reviewChipPage';
@@ -74,7 +74,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
               idPrefix={TABS_ID}
               value={tab}
               // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
-              onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusChangeset: undefined, focusChangesets: undefined })}
+              onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusReply: undefined, focusChangeset: undefined, focusChangesets: undefined })}
               tabs={[
                 { value: 'conversation', label: 'Conversation', icon: <MessageSquare size={14} />, count: review.commentCount },
                 { value: 'changes', label: 'Changes', icon: <FileDiff size={14} /> },
@@ -86,7 +86,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
         {mounted.includes('conversation') && (
           <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
             <ViewShownContext.Provider value={reviewTabShown(page, 'conversation')}>
-              <ReviewConversationTab review={review} focusThread={conversationFocus(page)} onPickedInOpen={() => forgetFocus(page)} />
+              <ReviewConversationTab review={review} focusThread={conversationFocus(page)} focusReply={conversationReplyFocus(page)} onPickedInOpen={() => forgetFocus(page)} />
             </ViewShownContext.Provider>
           </div>
         )}

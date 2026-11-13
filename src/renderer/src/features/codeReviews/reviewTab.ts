@@ -24,13 +24,18 @@ export function conversationFocus(page: Pick<PageOf<'codeReview'>, 'tab' | 'focu
   return openingTab(page) === 'conversation' ? page.focusThread : undefined;
 }
 
+/** The reply the conversation goes to in the thread it scrolls to (`conversationFocus`): the one a link names. */
+export function conversationReplyFocus(page: Pick<PageOf<'codeReview'>, 'tab' | 'focusPath' | 'focusThread' | 'focusReply'>): number | undefined {
+  return conversationFocus(page) === undefined ? undefined : page.focusReply;
+}
+
 /**
- * The page once a thread is picked in the conversation's Open: it no longer names the thread it was opened at
- * (`conversationFocus`), so Show in conversation at that thread again changes the page and goes to it (`pickOnFocus`).
- * Replaced in place, never stacked. The same page when it names none.
+ * The page once a thread is picked in the conversation's Open: it no longer names the thread (nor the reply) it was
+ * opened at (`conversationFocus`), so Show in conversation at that thread again changes the page and goes to it
+ * (`pickOnFocus`). Replaced in place, never stacked. The same page when it names none.
  */
 export function pageAfterOpenPick(page: PageOf<'codeReview'>): PageOf<'codeReview'> {
-  return conversationFocus(page) === undefined ? page : { ...page, focusThread: undefined };
+  return conversationFocus(page) === undefined ? page : { ...page, focusThread: undefined, focusReply: undefined };
 }
 
 /** What a review's page asks its changes to go to: a thread, a changeset of its branch, a span of them, or a thread in a changeset. */

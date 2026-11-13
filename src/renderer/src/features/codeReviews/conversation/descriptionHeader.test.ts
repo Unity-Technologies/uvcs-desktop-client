@@ -5,7 +5,7 @@ const review = { owner: 'ana', date: '2026-11-06T10:00:00+01:00' };
 
 describe('descriptionHeader', () => {
   it('reads who wrote the description and when, and what it says', () => {
-    expect(descriptionHeader(review, { guid: 'd', text: 'Why', author: 'bob', date: '2026-11-06T11:00:00+01:00', editedDate: '2026-11-06T12:00:00+01:00' })).toEqual({
+    expect(descriptionHeader(review, { id: 9, guid: 'd', text: 'Why', author: 'bob', date: '2026-11-06T11:00:00+01:00', editedDate: '2026-11-06T12:00:00+01:00' })).toEqual({
       author: 'bob',
       action: 'wrote the description',
       date: '2026-11-06T11:00:00+01:00',
@@ -20,6 +20,6 @@ describe('descriptionHeader', () => {
   });
 
   it('says nothing for a description emptied, still offering to edit it', () => {
-    expect(descriptionHeader(review, { guid: 'd', text: '  \n', author: 'bob', date: review.date })).toEqual({ author: 'bob', action: 'opened the review', date: review.date, editLabel: 'Edit description' });
+    expect(descriptionHeader(review, { id: 9, guid: 'd', text: '  \n', author: 'bob', date: review.date })).toEqual({ author: 'bob', action: 'opened the review', date: review.date, editLabel: 'Edit description' });
   });
 });
