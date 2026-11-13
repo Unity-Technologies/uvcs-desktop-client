@@ -4,7 +4,7 @@ interface EndedLine {
   end: string;
 }
 
-const BOM = '﻿';
+const BOM = '\uFEFF';
 
 /**
  * A file's text with lines `firstLine` to `lastLine` (1-based) replaced by `lines`, everything else as it was: the other

@@ -32,8 +32,8 @@ describe('withLinesReplaced', () => {
   });
 
   it('keeps the byte order mark when the first line changes', () => {
-    expect(withLinesReplaced('﻿using System;\r\nclass A {}\r\n', 1, 1, ['using System.IO;'])).toBe('﻿using System.IO;\r\nclass A {}\r\n');
-    expect(withLinesReplaced('﻿a\nb\n', 1, 1, [])).toBe('﻿b\n');
+    expect(withLinesReplaced('\uFEFFusing System;\r\nclass A {}\r\n', 1, 1, ['using System.IO;'])).toBe('\uFEFFusing System.IO;\r\nclass A {}\r\n');
+    expect(withLinesReplaced('\uFEFFa\nb\n', 1, 1, [])).toBe('\uFEFFb\n');
   });
 
   it('replaces a range of lines, for a comment on several', () => {
