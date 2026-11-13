@@ -10,7 +10,7 @@ import { Button } from '../../../ui/Button';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
-import { suggestButtonOf, suggestRequestOutcome } from '../suggestions/suggestButton';
+import { refusalShown, suggestButtonOf, suggestRequestOutcome, type SuggestRefusal } from '../suggestions/suggestButton';
 import { commentedLines } from '../suggestions/suggestedChange';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { CommentComposer } from '../conversation/CommentComposer';
@@ -94,7 +94,8 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   // Kept apart from the store's request, which a second mount (StrictMode) still sees in its first render's values.
   const suggestedFor = useRef<number | null>(null);
   // Why the menu's request couldn't be met, said in the card rather than leaving it without a suggestion silently.
-  const [refusedSuggestion, setRefusedSuggestion] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<SuggestRefusal | null>(null);
+  const refusedSuggestion = refusalShown(refusal, text);
   useEffect(() => {
     if (suggestSeq === null || suggestedFor.current === suggestSeq) return;
     const outcome = suggestRequestOutcome(lineText, text);
@@ -102,7 +103,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
     suggestedFor.current = suggestSeq;
     suggestTaken(suggestSeq);
     if (outcome.kind === 'insert') insertSuggestion(outcome.lines);
-    else setRefusedSuggestion(outcome.reason);
+    else setRefusal({ reason: outcome.reason, text });
   }, [suggestSeq, lineText]);
 
   return (

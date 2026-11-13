@@ -34,6 +34,20 @@ export function suggestRequestOutcome(lines: ReplacedLines, text: string): Sugge
   return button.enabled && lines.kind === 'read' ? { kind: 'insert', lines: lines.value } : { kind: 'refused', reason: button.tip };
 }
 
+/** Why "Suggest change on line 42" added no suggestion, and the comment's text then. */
+export interface SuggestRefusal {
+  reason: string;
+  text: string;
+}
+
+/**
+ * The refusal the card shows: only while the comment is as it was when it was refused. Typing in it, or a suggestion
+ * inserted, changes it, and the note goes.
+ */
+export function refusalShown(refusal: SuggestRefusal | null, text: string): string | null {
+  return refusal && refusal.text === text ? refusal.reason : null;
+}
+
 /** The code menu's entry beside "Comment on line 42": the comment opened with the line's suggestion in it. */
 export function suggestLineLabel(line: { lineNumber: number }): string {
   return `Suggest change on line ${line.lineNumber}`;
