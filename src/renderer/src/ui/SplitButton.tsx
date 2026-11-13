@@ -16,6 +16,8 @@ interface SplitButtonProps {
   icon?: ReactNode;
   loading?: boolean;
   disabled?: boolean;
+  /** Only the button's own action can't run now (its `tip` says why); the choices behind the caret still can. */
+  mainDisabled?: boolean;
   tip?: string;
   /** A dimmed second line under the tip. */
   tipSub?: string;
@@ -24,10 +26,10 @@ interface SplitButtonProps {
 }
 
 /** A button doing the usual thing, with the alternatives behind a caret joined to it. */
-export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, disabled, tip, tipSub, shortcut }: SplitButtonProps) {
+export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, disabled, mainDisabled, tip, tipSub, shortcut }: SplitButtonProps) {
   return (
     <div className={styles.split}>
-      <Button variant={variant} size={size} className={styles.main} icon={icon} loading={loading} disabled={disabled} data-tip={tip} data-tip-sub={tipSub} data-tip-shortcut={shortcut} onClick={onClick}>
+      <Button variant={variant} size={size} className={styles.main} icon={icon} loading={loading} disabled={disabled || mainDisabled} data-tip={tip} data-tip-sub={tipSub} data-tip-shortcut={shortcut} onClick={onClick}>
         {children}
       </Button>
       <ActionDropdownMenu entries={menu}>
