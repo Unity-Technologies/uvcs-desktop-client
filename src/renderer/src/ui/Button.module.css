@@ -9,6 +9,12 @@
   border-radius: var(--radius-md);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+  /*
+   * Its own, in whole pixels, never its surroundings' (a comment's 1.55 gave 18.6px): the label then sits a whole number
+   * of pixels inside the border (5, 3 and 8 at each height), so the two round together wherever the button lands. A
+   * fractional gap rounded the text a pixel up or down from one page to another, the button itself the same.
+   */
+  line-height: 16px;
   max-width: 100%;
   white-space: nowrap;
   cursor: default;
