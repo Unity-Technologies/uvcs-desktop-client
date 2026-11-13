@@ -57,7 +57,6 @@ import {
   LockOpen,
   Merge,
   MessageSquare,
-  MessageSquareCode,
   MessageSquarePlus,
   MessageSquareText,
   Minus,
@@ -78,7 +77,7 @@ import {
   SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
-  Tag,
+  TagPlus,
   Telescope,
   Text,
   TextSelect,
@@ -204,8 +203,8 @@ export const MENU_WORDS = {
 
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
-  newLabel: word('create', Tag, 'New label…'),
-  newCodeReview: word('create', MessageSquareCode, 'New code review…'),
+  newLabel: word('create', TagPlus, 'New label…'),
+  newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),
   // A folder showing another repository (docs/features/xlinks.md).

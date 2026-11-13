@@ -83,7 +83,7 @@ export function CodeReviewsView() {
     [place, currentBranch, selectWhenShown],
   );
   useCommands(
-    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
+    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquarePlus, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
