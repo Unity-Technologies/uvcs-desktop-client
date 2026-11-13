@@ -251,7 +251,7 @@ command of its own.
   view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded. The
   card decides what it lights from its props (`cardLightOf`), so one mounting at the reply, a link opened cold, lights
   it from its first render; the conversation scrolls to it, the reply itself only for the Answered pill
-  (`CardLight.litComment.scrolls`). Between the pill's answer and a reply gone to, whichever came last is lit.
+  (`CardLight.litComment.scrolls`). Between the pill's answer and a reply gone to, whichever came last is lit, each new light restarting on the same reply too (`commentLightShown`).
 - The description's id opens the review as the review's link does, without saying it's not found.
 - A comment the review no longer has (deleted, or never on it) opens the review on its conversation, and a toast says
   "Comment not found" (`LinkNotice`). A review that isn't there lists no comments: its read fails, and its page says
