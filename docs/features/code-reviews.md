@@ -340,11 +340,14 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
   changeset, or saves the comment, then fails listing those requests, and applies none of the requests the comment
   names. The app reads that failure as done (`changeRequestsNotApplied`, by structure: a list, after a colon or a
   full-width one, of only requests the comment names, wherever the message puts it, as English, Japanese, Korean and
-  Chinese do; a `cm shell` joins each item's line to the one before, `…changeset:- deadbeef`), takes the new changeset from the workspace's status (a local read), and says
-  "No change request was applied: … is applied already, or no review has it open"
-  (`changeRequestsNotAppliedText`), never "Check in failed", and marks `cm`'s failure handled, so the status bar shows none.
-- **A recent comment picked** (`recentCommentPick`) leaves out the requests it applied, and the space each leaves
-  (`withoutApplyChanges`): no longer pending, they would make `cm` apply none in the new check-in.
+  Chinese do; a `cm shell` joins each item's line to the one before, `…changeset:- deadbeef`), takes the new changeset
+  from the workspace's status (a local read), and says "No change request was applied: … is applied already, or no
+  review has it open" (`changeRequestsNotAppliedText`), never "Check in failed", and marks `cm`'s failure handled, so
+  the status bar shows none.
+- **A recent comment picked** (`recentCommentPick`) leaves out the requests it applied (`withoutApplyChanges`): no
+  longer pending, they would make `cm` apply none in the new check-in. The words around one keep a space between them,
+  and a line left empty goes, so its paragraph stays one; a comment whose title was only a reference opens with its
+  description as the title. Recent comments names each comment by what its pick writes (`recentCommentLabel`).
 - **After the check-in** (`withChangeRequestsApplied`): a check-in or a comment edit whose comment holds such a
   reference (`appliesChangeRequests`) refreshes the code reviews too, so their Applied pills, their Open counts and the
   footer's count follow.
