@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { recentCommentsFor, withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { SettingsStore } from './SettingsStore';
 
@@ -78,6 +79,26 @@ describe('SettingsStore reading its file', () => {
 
     expect(new SettingsStore(join(folder, 'settings.json')).get()).toEqual(DEFAULT_SETTINGS);
     expect(readdirSync(folder)).toEqual([]);
+  });
+
+  it('reads a file from before recent comments were per repository, keeping its comments for the repositories without their own', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, JSON.stringify({ theme: 'dark', recentComments: ['Older comment'] }));
+
+    const settings = new SettingsStore(filePath).get();
+
+    expect(settings).toMatchObject({ recentComments: ['Older comment'], recentCommentsByRepository: {} });
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Older comment']);
+  });
+
+  it('keeps the repositories checked in to last first across a restart, so the one left longest is forgotten first', () => {
+    const { settings, filePath } = store();
+    settings.update(withRecentComment(settings.get(), 'game@local', 'In game'));
+    settings.update(withRecentComment(settings.get(), 'art@local', 'In art'));
+    settings.update(withRecentComment(settings.get(), 'game@local', 'Again in game'));
+
+    expect(Object.keys(new SettingsStore(filePath).get().recentCommentsByRepository)).toEqual(['game@local', 'art@local']);
   });
 
   it('turns off Gravatar pictures saved on only by the old default, until the user chooses', () => {
