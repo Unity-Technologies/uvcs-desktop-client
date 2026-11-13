@@ -13,6 +13,7 @@ import {
   type BranchScope,
   CHANGESET_SESSION_FILTERS,
   changesetChoices,
+  changesetChoicesEmptyText,
   changesetsCap,
   CLEARED_CHANGESET_FILTERS,
   CURRENT_BRANCH,
@@ -184,6 +185,20 @@ describe('changesetsCap', () => {
     expect(changesetsCap(2000, 2000, 'anyTime')).toBe('The newest 2,000');
     expect(changesetsCap(12, 40, 'anyTime')).toBeUndefined();
     expect(changesetsCap(2000, 2000, 'lastMonth')).toBeUndefined();
+  });
+});
+
+describe('changesetChoicesEmptyText', () => {
+  it('points to older changesets when the newest were listed', () => {
+    expect(changesetChoicesEmptyText(null, 'newest')).toBe('No changesets found. Type a number to pick an older one.');
+  });
+
+  it("points to any other when a branch's were listed, which may have none", () => {
+    expect(changesetChoicesEmptyText(null, 'some')).toBe('No changesets found. Type a number to pick any other.');
+  });
+
+  it('says why the read failed, and how to pick one anyway', () => {
+    expect(changesetChoicesEmptyText(new Error('Server down'), 'some')).toBe("Couldn't read the changesets: Server down. Type a number to pick one.");
   });
 });
 
