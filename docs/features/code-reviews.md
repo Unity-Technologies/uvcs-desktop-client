@@ -230,13 +230,24 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   line it was written on ("line 1962", `writtenLineText`). Not "file:line" as the link: it read as going to that line,
   which an outdated comment's no longer is, and only the name looked clickable. Not a "Show in code" button: on every
   card, even shown only under the pointer, it was noise. Not the whole card: in the conversation a card is read, replied
-  to, folded and selected. Its header is one quiet line: its kind's icon, its folder (giving way first in a narrow
-  card), file and line (`locationText`), and where it stands in words (`threadBadges`), as the server counts open ones:
+  to, folded and selected. Its header is one quiet line: its folder (giving way first in a narrow card), file and line
+  (`locationText`), then a pill on the right saying what the thread is and where it stands (`HeaderPill`, `pillOf`).
+  The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), and its words say
+  only where it stands (`threadBadges`), as the server counts open ones. The icon's own tooltip names the kind where the
+  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request" or "Question", even on a pill that is
+  a link, whose tooltip, over the rest of it, says what a click shows. Beside "Comment" the icon is only drawn, with no
+  tooltip and hidden from a screen reader, so the kind isn't said twice. Open and Comment pills have no tooltip of their
+  own. Where it stands:
   a change request is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its
   tooltip naming the changeset: "Applied in changeset 4: see how it was applied", `appliedPillTip`; shown in how it was
   applied itself, it only names the changeset, as opening it would go behind the dialog, whose footer opens it:
   `threadHeaderOf`'s `inContext`) or a reply discards it (**Discarded**); a question is **Open** until anyone replies
-  (**Answered**: any reply answers it, there's no other way to resolve one). Other comments are never open. A settled
+  (**Answered**: any reply answers it, there's no other way to resolve one). Other comments are never open: a plain
+  comment on a line has the same pill, its icon and **Comment**, so every band names its kind in one spot (and has a
+  pill, which the band's padding centers its text around). Its kind sat first as a small icon at the left, beside the
+  file: the eye goes to the pill, so an open change request and an open question looked alike, and a plain comment had
+  no icon at all. Not "Open request" and "Open question": the icon says the kind, the words only the state, as the
+  settled pills' do. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
   tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
@@ -248,9 +259,12 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   its room on the band stays empty, so the pill doesn't move as the card folds; the Comments panel's cards, which go
   to the thread, have none. **Answered** is a link as **Applied** is, in the conversation and in the code (not the
   Comments panel's cards, which go to the thread): it shows the thread whole, scrolled to the reply that answered it,
-  the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill:
-  **Open** in the color of "Rework required", **Applied** and **Answered** in the color of "Reviewed", **Discarded**
-  neutral.
+  the first, lit for a moment ("Answered by Borja: see the answer", `answerOf`). Where it stands is an outlined pill,
+  every one the same shape and border, the kind's icon leading its words: **Open** in the color of "Rework required",
+  **Applied** and **Answered** in the color of "Reviewed", **Discarded** neutral gray, and **Comment** a muted violet
+  (`--comment-kind-text`, `--comment-kind-border`; `PillTone`'s `comment`), a color no state takes. Not gray, which
+  read as Discarded; not blue, the app's link color, which read as a link (and as the Comments panel's pressed filter
+  chip); not teal, too close to Applied's green.
 - **A question answered in a changeset**: an answer naming a changeset of the review's repository ("Fixed in
   cs:281301", the first one named in the replies, `answeringChangeset`) answers the question in it, as a changeset
   applies a change request (`ThreadState`'s `answered.changesetId`, `settlingChangeset`): that changeset's diff shows
@@ -585,9 +599,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
     hides now). While searching, every file shows unfolded, so a match says why it's listed (`shownFolds`). Going to a
     comment (a click, the arrows, N) unfolds its file (`unfoldedFor`), so the one gone to never hides; the folds are
     kept by the Changes tab, as the filter is. The name doesn't also show the file: two targets in one band read worse,
-    and a row goes there. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): its kind's icon leading,
-    as a bullet; who started it, "line N" and its replies, then its state; its first words under them, as wide as the
-    row. A line number in a column of its own read as an id, and the icon beside the words took their room. In a narrow
+    and a row goes there. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): who started it, "line N"
+    and its replies, then the conversation's pill (its kind's icon and its state, **Comment** for a plain one); its
+    first words under them, as wide as the row. A line number in a column of its own read as an id, and the icon beside the words took their room. In a narrow
     panel, who started it is cut first, then the replies, the line last. The one gone to has the accent bar on its left.
   - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old
     thread up; one list, as the conversation sums up a settled thread (`ThreadSummaryCard`; its file and line only name
@@ -662,7 +676,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   deleted since, on its last revision: `newLineCommentsIn`). The code at that line may have changed meanwhile: the
   reviewer sees it before sending, and following the line through the change would need the versions read for every
   comment being written. A file moved since, or now shorter than the line, shows it no more; its text stays kept.
-- In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): its kind instead of its file,
+- In the code, a thread is the conversation's card (`ReviewThreadCard` with `inCode`): no file (it's at its line),
+  its kind in its pill as everywhere (no kind's name beside it as well, which said it twice),
   replies, edits, deletes and discards as in the conversation, and its first comment's menu leads to **Show in
   conversation** (the Conversation tab scrolled to it and lit, `showInConversation`: the page moves to it in place,
   as its tabs do; never stacked, both tabs staying mounted as they were left, so Back leaves the review).

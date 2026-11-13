@@ -176,6 +176,10 @@
   --danger-text: #cf222e;
   --danger-soft: rgba(207, 34, 46, 0.07);
   --danger-border: rgba(207, 34, 46, 0.28);
+  /* A plain comment on a line, as a review thread's kind (its pill): a muted violet no thread state takes, nor a
+     link's blue. */
+  --comment-kind-text: #5e4f8a;
+  --comment-kind-border: #b9b0d4;
 
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
@@ -321,6 +325,8 @@
   --danger-text: #ff7b72;
   --danger-soft: rgba(248, 81, 73, 0.1);
   --danger-border: rgba(248, 81, 73, 0.32);
+  --comment-kind-text: #a59cc8;
+  --comment-kind-border: #474162;
 
   --change-added: #3fb950;
   --change-changed: #58a6ff;

@@ -5,6 +5,7 @@ import { NotificationsSection } from './NotificationsSection';
 import { ReviewersSection } from './ReviewersSection';
 import type { OpenItem } from './threadPick';
 import { ThreadKindIcon } from './ThreadKindIcon';
+import { threadKindName } from './threadBadges';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewSideRailProps {
@@ -32,7 +33,7 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
           {open.map((item) => (
             <li key={item.threadId} className={styles.openItem} data-current={item.current || undefined}>
               <button type="button" className={styles.openItemPick} aria-current={item.current || undefined} onClick={() => onPick(item.threadId)}>
-                <ThreadKindIcon root={item.thread.root} />
+                <ThreadKindIcon kind={threadKindName(item.thread.root)} />
                 <span className={styles.openText}>{item.text}</span>
               </button>
               {item.inChanges && <ShowInChangesButton inChanges={item.inChanges} />}
