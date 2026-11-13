@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
+import { commentElementId, threadElementId } from './ReviewThreadCard';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -35,6 +36,11 @@ describe('pickOnFocus', () => {
     const picked = pickThread(undefined, 7);
 
     expect(pickOnFocus(picked, 7)).toEqual({ threadId: 7, seq: 2, by: 'page' });
+  });
+
+  it('goes to the reply a link names, in its thread', () => {
+    expect(pickOnFocus(undefined, 7, 9)).toEqual({ threadId: 7, replyId: 9, seq: 1, by: 'page' });
+    expect(pickOnFocus(pickOnFocus(undefined, 7, 9), 7)).toEqual({ threadId: 7, seq: 2, by: 'page' });
   });
 
   it('keeps what was picked when a tab is shown as it is, with no thread to go to', () => {
@@ -71,6 +77,11 @@ describe('threadMarkOf', () => {
     expect(threadMarkOf(3, picked)).toEqual({ highlight: undefined, selected: false });
   });
 
+  it('lights the reply a link names rather than its thread, which it rings', () => {
+    expect(threadMarkOf(7, pickOnFocus(undefined, 7, 9))).toEqual({ highlight: 1, selected: true, litReply: 9 });
+    expect(threadMarkOf(3, pickOnFocus(undefined, 7, 9))).toEqual({ highlight: undefined, selected: false });
+  });
+
   it('marks nothing before a thread is picked', () => {
     expect(threadMarkOf(7, undefined)).toEqual({ highlight: undefined, selected: false });
   });
@@ -83,6 +94,13 @@ describe('pickedScrollOf', () => {
 
   it('opens the page with the thread it goes to centered, at once', () => {
     expect(pickedScrollOf(pickOnFocus(undefined, 7)!)).toEqual({ block: 'center', behavior: 'auto' });
+  });
+});
+
+describe('pickedElementId', () => {
+  it('brings the picked thread into view, or the reply a link names in it', () => {
+    expect(pickedElementId(pickThread(undefined, 7))).toBe(threadElementId(7));
+    expect(pickedElementId(pickOnFocus(undefined, 7, 9)!)).toBe(commentElementId(9));
   });
 });
 

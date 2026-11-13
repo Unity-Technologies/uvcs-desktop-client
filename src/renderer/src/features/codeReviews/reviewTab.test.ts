@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesFocusAskedFor, changesFocusRequest, conversationFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
+import { changesFocusAskedFor, changesFocusRequest, conversationFocus, conversationReplyFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 
 describe('reviewTabShown', () => {
   it('shows the tab the page opens on and hides the other, which keeps its keys off', () => {
@@ -40,6 +40,14 @@ describe('conversationFocus', () => {
     expect(conversationFocus({ tab: 'conversation', focusThread: 47 })).toBe(47);
     expect(conversationFocus({ tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
     expect(conversationFocus({ focusPath: 'Assets/Retry.cs', focusThread: 47 })).toBeUndefined();
+  });
+});
+
+describe('conversationReplyFocus', () => {
+  it("is the reply the page goes to in the conversation's thread, a link's", () => {
+    expect(conversationReplyFocus({ tab: 'conversation', focusThread: 47, focusReply: 49 })).toBe(49);
+    expect(conversationReplyFocus({ tab: 'conversation', focusThread: 47 })).toBeUndefined();
+    expect(conversationReplyFocus({ tab: 'changes', focusPath: 'Assets/Retry.cs', focusThread: 47, focusReply: 49 })).toBeUndefined();
   });
 });
 
@@ -87,6 +95,16 @@ describe('changesFocusRequest', () => {
 describe('pageAfterOpenPick', () => {
   it('forgets the thread the conversation was opened at, so going to it again reaches the conversation', () => {
     expect(pageAfterOpenPick({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7 })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: undefined });
+  });
+
+  it('forgets the reply it was opened at too', () => {
+    expect(pageAfterOpenPick({ kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7, focusReply: 9 })).toStrictEqual({
+      kind: 'codeReview',
+      reviewId: 41,
+      tab: 'conversation',
+      focusThread: undefined,
+      focusReply: undefined,
+    });
   });
 
   it('leaves the page as it is when the conversation names no thread', () => {
