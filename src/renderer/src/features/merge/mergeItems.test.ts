@@ -67,6 +67,19 @@ describe('merge items', () => {
     expect(listed).toEqual(['Assets/Props', 'Assets/Props.meta', 'Assets/Props/box.prefab']);
   });
 
+  it('keeps a folder deleted with its Unity meta, and leaves out one whose meta changed otherwise', () => {
+    const changes: MergePlan['changes'] = [
+      { kind: 'deleted', path: '/Assets/Old' },
+      { kind: 'deleted', path: '/Assets/Old.meta' },
+      { kind: 'deleted', path: '/Assets/Old/a.png' },
+      { kind: 'added', path: '/Assets/New' },
+      { kind: 'changed', path: '/Assets/New.meta' },
+      { kind: 'added', path: '/Assets/New/b.png' },
+    ];
+    const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
+    expect(listed).toEqual(['Assets/Old', 'Assets/Old.meta', 'Assets/Old/a.png', 'Assets/New.meta', 'Assets/New/b.png']);
+  });
+
   it('names every item by its path without the root, for the tree and the filter', () => {
     expect(buildMergeItems(plan, [], [file]).map((item) => item.path)).toEqual(['twin.txt', 'a.txt', 'new.txt']);
   });

@@ -69,6 +69,19 @@ describe('pairedFocus', () => {
     expect(pairedFocus(pairs, 'missing.ts')).toEqual({ entry: asset, metaShownFor: null });
     expect(pairedFocus(pairs)).toEqual({ entry: asset, metaShownFor: null });
   });
+
+  it('opens on the first file rather than a folder listed before it, a Unity folder added with its meta', () => {
+    const folder: DiffEntry = { ...entry('Assets/Props', 'added'), itemType: 'directory' };
+    const prefab = entry('Assets/Props/box.prefab', 'added');
+    const added = pairDiffMetas([folder, entry('Assets/Props.meta', 'added'), prefab]);
+    expect(pairedFocus(added)).toEqual({ entry: prefab, metaShownFor: null });
+    expect(pairedFocus(added, 'Assets/Props.meta')).toEqual({ entry: folder, metaShownFor: 'Assets/Props' });
+  });
+
+  it('opens on a folder when the diff lists nothing else', () => {
+    const folder: DiffEntry = { ...entry('empty', 'added'), itemType: 'directory' };
+    expect(pairedFocus(pairDiffMetas([folder]))).toEqual({ entry: folder, metaShownFor: null });
+  });
 });
 
 describe('pairedEntryAt', () => {
