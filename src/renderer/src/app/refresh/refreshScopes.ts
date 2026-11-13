@@ -78,10 +78,22 @@ function isIncomingChangesetPage(key: QueryKey): boolean {
 const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeValues', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
 
 /**
+ * What the check-in's change requests to apply are read from (`useBranchChangeRequests`): the branch's reviews and the
+ * conversations read. A check-in, an update or a switch may bring changesets that applied some (someone else's check-in
+ * among them), so they're read again then; the other lists of reviews aren't. Only the shown ones are read again.
+ */
+function isBranchChangeRequests(key: QueryKey): boolean {
+  if (area(key) !== 'codeReviews') return false;
+  const filter = key[4];
+  return detail(key) === 'conversation' || (detail(key) === 'summaries' && typeof filter === 'object' && filter !== null && 'targetBranch' in filter);
+}
+
+/**
  * This workspace checked in, updated, or merged from a branch or changeset: everything but the objects those leave
  * alone, and changesets already read (only editing a comment changes one).
  */
 export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
+  if (isBranchChangeRequests(key)) return true;
   if (area(key) === 'changesets' && detail(key) === 'byId') return false;
   if (isIncomingChangesetPage(key)) return false;
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
