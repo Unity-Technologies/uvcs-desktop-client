@@ -51,6 +51,11 @@ describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
   });
 
   it('draws on the surface every diff does', () => {
-    expect(options.unsafeCSS).toBe(PIERRE_SURFACE_CSS);
+    expect(options.unsafeCSS?.startsWith(PIERRE_SURFACE_CSS)).toBe(true);
+  });
+
+  it("runs its rows edge to edge, with no gap above the first or under the last, unlike the code's diff", () => {
+    expect(options.unsafeCSS).toContain('--diffs-gap-block:0px');
+    expect(pierreDiffOptions({ theme: 'dark', layout: 'unified', collapseUnchanged: false, wrapLines: false }).unsafeCSS).not.toContain('--diffs-gap-block');
   });
 });
