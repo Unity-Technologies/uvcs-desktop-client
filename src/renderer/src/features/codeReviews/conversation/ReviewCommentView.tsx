@@ -1,8 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
 import { MoreHorizontal } from 'lucide-react';
+import type { CodeReview } from '@shared/domain/codeReview';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { cmVersionQuery } from '../../../app/startup/useCmAvailability';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
 import { formatDateTime } from '../../../lib/formatDate';
@@ -14,11 +17,13 @@ import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { CommentComposer } from './CommentComposer';
 import { commentMenu } from './commentMenu';
-import { deleteReviewComment, editReviewComment } from './reviewCommentOperations';
+import { deleteReviewComment, editReviewComment, markChangeRequest } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewCommentViewProps {
+  /** What a change request is marked applied in: its changesets, a branch's review's (`changesetsToApplyIn`). */
+  review: Pick<CodeReview, 'target'>;
   comment: ReviewComment;
   thread: ReviewThread;
   user: string | undefined;
@@ -33,19 +38,27 @@ interface ReviewCommentViewProps {
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit }: ReviewCommentViewProps) {
+export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, lit }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
   useEffect(() => {
     if (lit !== undefined) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [lit]);
   const [editing, setEditing] = useState(false);
-  const menu = commentMenu(comment, thread, user, {
-    edit: () => setEditing(true),
-    remove: () => void deleteReviewComment(place, comment),
-    copyText: () => copyToClipboard(comment.text, 'Comment'),
-    ...threadActions,
-  });
+  const { data: cmVersion } = useQuery(cmVersionQuery);
+  const menu = commentMenu(
+    comment,
+    thread,
+    user,
+    {
+      edit: () => setEditing(true),
+      remove: () => void deleteReviewComment(place, comment),
+      copyText: () => copyToClipboard(comment.text, 'Comment'),
+      markChangeRequest: (mark) => void markChangeRequest(place, review, comment, mark),
+      ...threadActions,
+    },
+    cmVersion,
+  );
 
   return (
     <article ref={element} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>

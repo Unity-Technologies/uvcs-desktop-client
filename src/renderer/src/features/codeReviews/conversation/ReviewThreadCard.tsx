@@ -25,7 +25,7 @@ import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewThreadCardProps {
-  review: Pick<CodeReview, 'id' | 'owner'>;
+  review: Pick<CodeReview, 'id' | 'owner' | 'target'>;
   thread: ReviewThread;
   user: string | undefined;
   /** Shown in the code, under its line or above the code: what it says and offers there (`ThreadInCode`). */
@@ -346,16 +346,16 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
 }
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
-function WholeThread({ review, thread, user, threadActions, lit }: { review: Pick<CodeReview, 'owner'>; thread: ReviewThread; user: string | undefined; threadActions?: ThreadActions; lit?: { replyId: number; seq: number } }) {
+function WholeThread({ review, thread, user, threadActions, lit }: { review: Pick<CodeReview, 'owner' | 'target'>; thread: ReviewThread; user: string | undefined; threadActions?: ThreadActions; lit?: { replyId: number; seq: number } }) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
 
   return (
     <>
-      <ReviewCommentView comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
+      <ReviewCommentView review={review} comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
       {replies.map((reply) => (
-        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} lit={lit?.replyId === reply.id ? lit.seq : undefined} />
+        <ReviewCommentView key={reply.id} review={review} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} lit={lit?.replyId === reply.id ? lit.seq : undefined} />
       ))}
       <div className={styles.answer}>
         {answering === 'reply' && (
