@@ -54,7 +54,7 @@ export function subscriptionSection(subscription: ReviewSubscription | undefined
       text: WHY_SUBSCRIBED[subscription.reason] ?? 'You get emails about this review.',
       subscribes: false,
       buttonLabel: 'Unsubscribe',
-      buttonTip: "Stop this review's emails until you take part in it again",
+      buttonTip: "Stop this review's emails until you comment, are mentioned or are added as a reviewer",
     };
   }
   return {

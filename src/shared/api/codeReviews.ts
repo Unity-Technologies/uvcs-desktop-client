@@ -31,6 +31,9 @@ export interface CodeReviewsApi {
   subscription(place: Place, reviewId: number): Promise<ReviewSubscription>;
   /** Subscribes the signed-in user to the review's emails. */
   subscribe(place: Place, reviewId: number): Promise<void>;
-  /** Stops the review's emails to the signed-in user, until they take part in it again (the server subscribes them). */
+  /**
+   * Stops the review's emails to the signed-in user, until they comment on it, someone mentions them or adds them (or a
+   * group they're in) as a reviewer: the server subscribes them again then.
+   */
   unsubscribe(place: Place, reviewId: number): Promise<void>;
 }
