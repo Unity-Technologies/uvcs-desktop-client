@@ -274,6 +274,14 @@ try {
     await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
     await palette.getByRole('combobox').fill('');
   });
+  await step('A scope chip in the palette', async () => {
+    // A chip writes its prefix before the text typed, as typing it would.
+    const palette = window.getByRole('dialog');
+    await window.keyboard.type('player');
+    await palette.getByRole('group', { name: 'Search in' }).getByRole('button', { name: /^Branches/ }).click();
+    await window.waitForFunction(() => document.querySelector('[cmdk-input]')?.value === 'br:player');
+    await palette.getByRole('combobox').fill('');
+  });
   await step("A code review's number in the palette", async () => {
     // A number alone names a review too, first when it's past every changeset (the fake's reach changeset 7).
     const palette = window.getByRole('dialog');
