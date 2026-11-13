@@ -6,6 +6,7 @@ import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
 import type { GroupedFileListFacts } from '../../components/statusGroups';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
+import { hasMetaAlike } from '../../lib/unityMetaPairs';
 import type { GroupedTreeRow, TreeGroup } from '../../lib/groupedPathTree';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
@@ -69,7 +70,7 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
 
 /**
  * Conflicts first (directory ones, then files), then everything that merges cleanly, but a folder added or deleted
- * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays. The
+ * with what it holds: its items say it already, as in a diff (`changesListed`); a moved one stays. The
  * directory conflicts decided are no longer in the plan, `cm` dropping each it applies (`DirectoryDecisions` fails a
  * decision it still lists), and stay listed from the decisions.
  */
@@ -84,12 +85,15 @@ export function buildMergeItems(plan: MergePlan, decisions: readonly DirectoryDe
       }),
     ),
     ...conflictedFiles.map((file): MergeItem => ({ kind: 'fileConflict', key: `file:${file.key}`, path: withoutRoot(file.path), file })),
-    ...withoutRepeatedFolders(
-      plan.changes.map((change, index): MergeItem & { kind: 'change' } => ({ kind: 'change', key: `change:${index}`, path: withoutRoot(change.path), change })),
-      (item) => item.change.path,
-      (item) => item.change.kind === 'moved',
-    ),
+    ...changesListed(plan.changes),
   ];
+}
+
+/** The merge's changes as items, but a folder added or deleted with what it holds; a moved one, or one whose Unity `.meta` changed alike and rides on its row (`hasMetaAlike`), stays. */
+function changesListed(changes: readonly MergeChange[]): MergeItem[] {
+  const items = changes.map((change, index): MergeItem & { kind: 'change' } => ({ kind: 'change', key: `change:${index}`, path: withoutRoot(change.path), change }));
+  const keepsMeta = hasMetaAlike(items, (item) => item.change.path, (item) => item.change.kind);
+  return withoutRepeatedFolders(items, (item) => item.change.path, (item) => item.change.kind === 'moved' || keepsMeta(item));
 }
 
 export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {

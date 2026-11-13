@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetOfMeta, diffedItem, pairUnityMetas, shownRowsOf, withMetas } from './unityMetaPairs';
+import { assetOfMeta, diffedItem, hasMetaAlike, pairUnityMetas, shownRowsOf, withMetas } from './unityMetaPairs';
 
 interface Item {
   path: string;
@@ -150,5 +150,27 @@ describe('diffedItem', () => {
 
   it('shows the asset when it has no meta listed', () => {
     expect(diffedItem(asset, undefined, 'Assets/Player.png')).toBe(asset);
+  });
+});
+
+describe('hasMetaAlike', () => {
+  type Item = { path: string; kind: string };
+  const of = (items: Item[]) => hasMetaAlike(items, (item) => item.path, (item) => item.kind);
+
+  it('says which items have their meta listed, changed the same way', () => {
+    const folder = { path: 'Assets/Props', kind: 'added' };
+    const file = { path: 'Assets/Props/box.prefab', kind: 'added' };
+    const has = of([folder, { path: 'Assets/Props.meta', kind: 'added' }, file]);
+    expect([has(folder), has(file)]).toEqual([true, false]);
+  });
+
+  it('says no when the meta changed otherwise', () => {
+    const folder = { path: 'Assets/Props', kind: 'added' };
+    expect(of([folder, { path: 'Assets/Props.meta', kind: 'changed' }])(folder)).toBe(false);
+  });
+
+  it('says no for a meta, whose own meta would chain', () => {
+    const meta = { path: 'a.png.meta', kind: 'added' };
+    expect(of([meta, { path: 'a.png.meta.meta', kind: 'added' }])(meta)).toBe(false);
   });
 });
