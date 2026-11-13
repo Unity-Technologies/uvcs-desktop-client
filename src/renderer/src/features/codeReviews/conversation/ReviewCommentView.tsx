@@ -11,6 +11,7 @@ import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { SuggestedChangeBlock } from '../suggestions/SuggestedChangeBlock';
 import { suggestedChangeOf } from '../suggestions/suggestedChange';
+import { SuggestionApplyButton } from '../suggestions/SuggestionApplyButton';
 import { CommentComposer } from './CommentComposer';
 import { CommentMenuButton } from './CommentMenuButton';
 import { editReviewComment } from './reviewCommentOperations';
@@ -94,7 +95,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
           />
         ) : (
           <div className={`${styles.markdown} selectable`}>
-            <Markdown text={comment.text} comment suggestion={suggestion && <SuggestedChangeBlock change={suggestion} />} />
+            <Markdown text={comment.text} comment suggestion={suggestion ? <SuggestedChangeBlock change={suggestion} actions={<SuggestionApplyButton review={review} comment={comment} change={suggestion} open={thread.state.kind === 'open'} />} /> : undefined} />
           </div>
         )}
       </div>
