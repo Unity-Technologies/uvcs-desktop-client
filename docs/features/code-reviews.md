@@ -5,9 +5,9 @@ server, with a destination branch: what this doc says of reviews holds for both.
 
 Reviews need `cm` 11.0.16.10616 or later: the fields `cm find review` reads (`FOUND_REVIEWS`) and the reviewer
 commands are that version's, and with `--format` a field an older `cm` doesn't know fails the whole command, so the
-list, the branch chips and the palette's reviews would read nothing. The app doesn't check the version for those yet;
-it does for the email subscription (see "Email notifications"), whose commands an older `cm` would take for a review to
-create.
+list, the branch chips and the palette's reviews would read nothing. The app relies on that version for every review
+command, but those an older `cm` would misread as another command, creating a review: those are offered only from the
+version that has them (`isCmVersionAtLeast`; the email subscription, see "Email notifications").
 
 ## Reviewers and their status
 
@@ -147,9 +147,9 @@ create.
   page reads it again on demand, in place. With the review in front, Refresh reads only what the page shows
   (`pageRefreshScope`, `isShownByCodeReviewPage`): the review (status, title, description), its conversation, its
   reviewers and the user's email subscription; for a branch's review also the branch's files and changesets, where a change request gets applied. Not the
-  lists of reviews, the view under the page, the top bar or the sidebar: four `cm` reads, a fifth on a branch's
-  review for its changesets, which its rounds, its chips and Changes share (`useReviewChangesets`, one `cm find
-  changeset`), one for the user's email subscription (see "Email notifications"), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
+  lists of reviews, the view under the page, the top bar or the sidebar: three `cm` reads, a fourth for the user's
+  email subscription (from a `cm` that has it), a fifth on a branch's review for its changesets, which its rounds, its
+  chips and Changes share (`useReviewChangesets`, one `cm find changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
   when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
   with the review's new status and counts, at no `cm` command of its own.
@@ -166,17 +166,20 @@ create.
   reason this version doesn't know. Unsubscribed: "You don't get emails about this review". With no subscription of
   their own (`none`): "You aren't subscribed to this review", not "no emails", as a reviewer group they belong to may
   still send them. Unsubscribe's tooltip says the emails stop until they take part again: the server subscribes them
-  again when they comment, are mentioned or are added as a reviewer.
+  again when they comment, someone mentions them, or adds them (or a group they're in) as a reviewer.
 - It reads one `cm codereview subscription <id> --format={subscribed} {reason} {emails}` as the page opens
   (`CodeReviewsApi.subscription`, `useReviewSubscription`, `query()`; three fixed English words, `parseReviewSubscription`).
-  It hardly changes by itself, so a focus doesn't read it again (`SLOW_CHANGING_QUERY`); under the reviews' area, every
-  write on a review reads it again (`isAffectedByCodeReviews`: taking part subscribes the user again), and so does the
-  page's Refresh (`isShownByCodeReviewPage`).
+  It hardly changes by itself, so a focus doesn't read it again (`SLOW_CHANGING_QUERY`). Only the writes that make the
+  user take part read it again (`isAffectedByTakingPartInReview`): a comment, on the review or a line, a reply (a
+  discard is one), reviewers added, the user's own status; the server subscribes them again then. A rename, an edit, a
+  delete, a reviewer removed or asked again don't (`isAffectedByCodeReviews` leaves it out). The page's Refresh reads
+  it (`isShownByCodeReviewPage`).
 - Subscribe and Unsubscribe are one quick `cm codereview subscribe <id>` or `unsubscribe <id>` (`setReviewSubscription`),
   for the signed-in user only; they read again only that review's subscription (`isAffectedByReviewSubscription`), and
   show the outcome at once, as the server records it (`subscriptionAfter`: subscribed by hand, or unsubscribed), so the
   button doesn't flip back while that read runs.
-- Nothing shows while it's read, when the read fails (a server without the command: no error, the section is optional)
+- Nothing shows while it's read, when the read fails (a server without the command: no error, the section is optional,
+  and it isn't asked again while that failure is kept, `asksForSubscription`, so writes and Refresh don't repeat it)
   or when the repository sends no review emails (`emails` "disabled", also when the user can't see the trigger): a
   button that changes nothing they'd notice would be noise. Nor from a `cm` older than 11.0.16.10616
   (`readsReviewSubscriptions`, `isCmVersionAtLeast`), which isn't asked: it takes `cm codereview
