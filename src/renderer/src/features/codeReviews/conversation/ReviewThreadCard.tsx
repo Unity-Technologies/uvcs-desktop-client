@@ -119,7 +119,6 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
           onSeeApplied={onSeeApplied}
           onSeeAnswer={seeAnswer}
           onToggle={foldable ? () => foldEvent('toggle') : undefined}
-          firstCommentMenu={{ review, user, threadActions, onEdit: () => foldEvent('editRoot') }}
         />
       )}
       {inCode?.snippet}
@@ -127,7 +126,11 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
       <div className={styles.threadBody} data-thread-body="">
         {folded ? (
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
-          <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
+          // Its first comment's menu stays on its line, where the comment shown whole has it.
+          <div className={styles.foldedRow}>
+            <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
+            <FirstCommentMenu review={review} thread={thread} user={user} threadActions={threadActions} onEdit={() => foldEvent('editRoot')} />
+          </div>
         ) : (
           <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
         )}
@@ -215,11 +218,9 @@ interface ThreadHeaderProps {
   onSeeApplied?: () => void;
   /** What "Answered" does: shows the thread whole at the reply that answered it (`answerOf`). */
   onSeeAnswer?: () => void;
-  /** What the first comment's menu needs, shown on the header while the card is folded (`ThreadHeaderView.commentMenu`). */
-  firstCommentMenu?: Omit<FirstCommentMenuProps, 'thread'>;
 }
 
-function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer, firstCommentMenu }: ThreadHeaderProps) {
+function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer }: ThreadHeaderProps) {
   const { root } = thread;
   const header = threadHeaderOf({
     thread,
@@ -273,8 +274,6 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
       <span className={styles.headerEnd}>
         {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
         {pill && <StatePill pill={pill} onSeeApplied={onSeeApplied} onSeeAnswer={onSeeAnswer} />}
-        {header.commentMenu === 'menu' && firstCommentMenu && <FirstCommentMenu thread={thread} {...firstCommentMenu} />}
-        {header.commentMenu === 'space' && <span className={styles.commentMenuSpace} aria-hidden />}
         {header.hides && inCode?.hide && <IconButton size="small" icon={<X size={14} />} label={inCode.hide.label} onClick={inCode.hide.onHide} />}
       </span>
     </div>
@@ -290,7 +289,10 @@ interface FirstCommentMenuProps {
   onEdit: () => void;
 }
 
-/** The first comment's menu, on the header of a folded card: the same entries as on the comment (`useCommentMenu`). */
+/**
+ * The first comment's menu, on a folded card's line, at its end as on the comment shown whole: the same entries
+ * (`useCommentMenu`), so they don't wait for an unfold. Not on the band, where it would push the pill aside.
+ */
 function FirstCommentMenu({ review, thread, user, threadActions, onEdit }: FirstCommentMenuProps) {
   const entries = useCommentMenu({ review, comment: thread.root, thread, user, edit: onEdit, threadActions });
   return <CommentMenuButton entries={entries} />;

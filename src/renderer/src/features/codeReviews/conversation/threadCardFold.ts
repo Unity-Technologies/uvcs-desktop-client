@@ -4,13 +4,13 @@ import { startsFolded } from './threadBadges';
 /** Whether a thread's card is folded, and whether its first comment opens in its editor when it shows whole. */
 export interface ThreadCardFold {
   folded: boolean;
-  /** Edit was picked on the folded header (`FirstCommentMenu`): spent once the editor opens (`editorOpened`). */
+  /** Edit was picked on the folded line's menu (`FirstCommentMenu`): spent once the editor opens (`editorOpened`). */
   editsRoot: boolean;
 }
 
 /**
  * What changes it: its chevron (`toggle`); anything else that shows it whole (`unfold`: its folded line, going to it,
- * its Answered pill); Edit on the folded header (`editRoot`); the first comment's editor, opened (`editorOpened`).
+ * its Answered pill); Edit on the folded line's menu (`editRoot`); the first comment's editor, opened (`editorOpened`).
  */
 export type ThreadCardFoldEvent = 'toggle' | 'unfold' | 'editRoot' | 'editorOpened';
 
