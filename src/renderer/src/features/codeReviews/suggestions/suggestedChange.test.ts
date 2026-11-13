@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { FAILED, READING, readValue, commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionRows, suggestionTitle } from './suggestedChange';
+import { FAILED, READING, readValue, commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
 
 const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', line: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
@@ -53,30 +53,33 @@ describe('replacedLinesIn', () => {
   });
 });
 
-describe('suggestionRows', () => {
-  it('shows the line removed, then the suggested lines added', () => {
-    expect(suggestionRows(readValue(['old']), ['new 1', 'new 2'])).toEqual([
-      { kind: 'removed', text: 'old' },
-      { kind: 'added', text: 'new 1' },
-      { kind: 'added', text: 'new 2' },
-    ]);
+describe('suggestionBody', () => {
+  const change = { firstLine: 3, lastLine: 3, lines: ['new 1', 'new 2'] };
+
+  it('is the diff of the lines replaced to those suggested, each ending in a line end, as a file holding them', () => {
+    expect(suggestionBody(change, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: 'new 1\nnew 2\n', rowCount: 3 });
   });
 
-  it('shows a range as all its lines removed, then the suggested ones added', () => {
-    expect(suggestionRows(readValue(['a', 'b']), ['ab'])).toEqual([
-      { kind: 'removed', text: 'a' },
-      { kind: 'removed', text: 'b' },
-      { kind: 'added', text: 'ab' },
-    ]);
+  it('diffs a range as all its lines replaced', () => {
+    expect(suggestionBody({ firstLine: 3, lastLine: 4, lines: ['ab'] }, readValue(['a', 'b']))).toEqual({ kind: 'diff', replacedText: 'a\nb\n', suggestedText: 'ab\n', rowCount: 3 });
   });
 
-  it('shows a deletion as the line removed alone', () => {
-    expect(suggestionRows(readValue(['old']), [])).toEqual([{ kind: 'removed', text: 'old' }]);
+  it('diffs a deletion as the line removed alone', () => {
+    expect(suggestionBody({ ...change, lines: [] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '', rowCount: 1 });
   });
 
-  it("holds the removed line's place while it's read, and shows the suggested lines alone when it can't be", () => {
-    expect(suggestionRows(READING, ['new'])).toEqual([{ kind: 'reading' }, { kind: 'added', text: 'new' }]);
-    expect(suggestionRows(FAILED, ['new'])).toEqual([{ kind: 'added', text: 'new' }]);
+  it('keeps an empty line as a line', () => {
+    expect(suggestionBody({ ...change, lines: [''] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '\n', rowCount: 2 });
+  });
+
+  it("holds the rows' place while the replaced lines are read, so nothing moves as they arrive", () => {
+    expect(suggestionBody(change, READING)).toEqual({ kind: 'reading', rowCount: 3 });
+    expect(suggestionBody({ firstLine: 3, lastLine: 5, lines: ['x'] }, READING)).toEqual({ kind: 'reading', rowCount: 4 });
+  });
+
+  it("shows the suggested lines alone when the replaced ones can't be read, and nothing for a deletion then", () => {
+    expect(suggestionBody(change, FAILED)).toEqual({ kind: 'diff', replacedText: '', suggestedText: 'new 1\nnew 2\n', rowCount: 2 });
+    expect(suggestionBody({ ...change, lines: [] }, FAILED)).toEqual({ kind: 'empty' });
   });
 });
 
