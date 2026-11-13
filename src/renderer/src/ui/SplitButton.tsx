@@ -15,7 +15,11 @@ interface SplitButtonProps {
   size?: ButtonSize;
   icon?: ReactNode;
   loading?: boolean;
+  /** Both halves without their drop shadow (`Button`'s `flat`). */
+  flat?: boolean;
   disabled?: boolean;
+  /** Only the button's own action can't run now (its `tip` says why); the choices behind the caret still can. */
+  mainDisabled?: boolean;
   tip?: string;
   /** A dimmed second line under the tip. */
   tipSub?: string;
@@ -24,14 +28,27 @@ interface SplitButtonProps {
 }
 
 /** A button doing the usual thing, with the alternatives behind a caret joined to it. */
-export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, disabled, tip, tipSub, shortcut }: SplitButtonProps) {
+export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, flat, disabled, mainDisabled, tip, tipSub, shortcut }: SplitButtonProps) {
   return (
     <div className={styles.split}>
-      <Button variant={variant} size={size} className={styles.main} icon={icon} loading={loading} disabled={disabled} data-tip={tip} data-tip-sub={tipSub} data-tip-shortcut={shortcut} onClick={onClick}>
+      {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why it can't be used. */}
+      <Button
+        variant={variant}
+        size={size}
+        className={styles.main}
+        flat={flat}
+        icon={icon}
+        loading={loading}
+        aria-disabled={disabled || mainDisabled || undefined}
+        data-tip={tip}
+        data-tip-sub={tipSub}
+        data-tip-shortcut={disabled || mainDisabled ? undefined : shortcut}
+        onClick={() => !(disabled || mainDisabled) && onClick()}
+      >
         {children}
       </Button>
       <ActionDropdownMenu entries={menu}>
-        <Button variant={variant} size={size} className={styles.caret} icon={<ChevronDown size={14} />} disabled={loading || disabled} aria-label={menuLabel} data-tip={menuLabel} />
+        <Button variant={variant} size={size} flat={flat} className={styles.caret} icon={<ChevronDown size={14} />} disabled={loading || disabled} aria-label={menuLabel} data-tip={menuLabel} />
       </ActionDropdownMenu>
     </div>
   );

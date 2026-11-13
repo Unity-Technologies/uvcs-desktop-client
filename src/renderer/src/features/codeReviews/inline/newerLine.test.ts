@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newerLineFinder, newerLineOf, type VersionDiff } from './newerLine';
+import { newerLineFinder, newerLineOf, newerRangeInContextOf, newerRangeOf, type VersionDiff } from './newerLine';
 
 const lines = (...texts: string[]): string => texts.map((text) => `${text}\n`).join('');
 const TEN = Array.from({ length: 10 }, (_, index) => `line ${index + 1}`);
@@ -71,5 +71,53 @@ describe('newerLineFinder', () => {
     const find = newerLineFinder(lines(...TEN), counted);
     expect([find(lines(...TEN), 1), find(lines(...TEN), 4), find(lines(...TEN.slice(1)), 2)]).toEqual([1, 4, 2]);
     expect(diffs).toBe(2);
+  });
+});
+
+describe('newerRangeOf', () => {
+  it('follows a block of lines moved down whole', () => {
+    expect(newerRangeOf(lines(...TEN), lines('new', ...TEN), { firstLine: 3, lastLine: 5 })).toEqual({ firstLine: 4, lastLine: 6 });
+  });
+
+  it('follows one line as newerLineOf does', () => {
+    expect(newerRangeOf(lines(...TEN), lines(...TEN.slice(2)), { firstLine: 7, lastLine: 7 })).toEqual({ firstLine: 5, lastLine: 5 });
+  });
+
+  it('loses a block one of whose lines changed, or that a line now splits', () => {
+    const changed = [...TEN];
+    changed[3] = 'line 4 edited';
+    expect(newerRangeOf(lines(...TEN), lines(...changed), { firstLine: 3, lastLine: 5 })).toBeNull();
+    expect(newerRangeOf(lines(...TEN), lines(...TEN.slice(0, 3), 'inserted', ...TEN.slice(3)), { firstLine: 3, lastLine: 5 })).toBeNull();
+  });
+
+  it('loses a block past the end of the earlier version', () => {
+    expect(newerRangeOf(lines(...TEN), lines(...TEN), { firstLine: 9, lastLine: 11 })).toBeNull();
+  });
+});
+
+describe('newerRangeInContextOf', () => {
+  it('follows a block whose neighbors moved with it', () => {
+    expect(newerRangeInContextOf(lines(...TEN), lines('new', ...TEN), { firstLine: 3, lastLine: 5 })).toEqual({ firstLine: 4, lastLine: 6 });
+  });
+
+  it('takes the first and last lines, which have a neighbor on one side only', () => {
+    expect(newerRangeInContextOf(lines(...TEN), lines(...TEN), { firstLine: 1, lastLine: 1 })).toEqual({ firstLine: 1, lastLine: 1 });
+    expect(newerRangeInContextOf(lines(...TEN), lines('new', ...TEN), { firstLine: 10, lastLine: 10 })).toEqual({ firstLine: 11, lastLine: 11 });
+  });
+
+  it('loses a lone brace paired with another once code moved around it', () => {
+    expect(newerRangeOf(lines('a', 'b', '}'), lines('a', '}', 'b'), { firstLine: 3, lastLine: 3 })).toEqual({ firstLine: 2, lastLine: 2 });
+    expect(newerRangeInContextOf(lines('a', 'b', '}'), lines('a', '}', 'b'), { firstLine: 3, lastLine: 3 })).toBeNull();
+  });
+
+  it('loses a block whose neighbor changed, or was removed', () => {
+    const changed = [...TEN];
+    changed[1] = 'line 2 edited';
+    expect(newerRangeInContextOf(lines(...TEN), lines(...changed), { firstLine: 3, lastLine: 4 })).toBeNull();
+    expect(newerRangeInContextOf(lines(...TEN), lines(...TEN.slice(0, 4), ...TEN.slice(5)), { firstLine: 3, lastLine: 4 })).toBeNull();
+  });
+
+  it('loses a block a line was put right next to', () => {
+    expect(newerRangeInContextOf(lines(...TEN), lines(...TEN.slice(0, 2), 'new', ...TEN.slice(2)), { firstLine: 3, lastLine: 4 })).toBeNull();
   });
 });

@@ -7,6 +7,7 @@ import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
+import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
@@ -101,41 +102,43 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
   return (
-    <section
-      className={styles.thread}
-      data-folded={folded}
-      data-in-code={inCode ? '' : undefined}
-      data-highlight={light.cardHighlight === undefined ? undefined : light.cardHighlight % 2}
-      data-selected={selected || undefined}
-      {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
-      id={inCode ? undefined : threadElementId(thread.root.id)}
-    >
-      {hasHeader && (
-        <ThreadHeader
-          reviewId={review.id}
-          thread={thread}
-          folded={folded}
-          inCode={inCode}
-          onSeeApplied={onSeeApplied}
-          onSeeAnswer={seeAnswer}
-          onToggle={foldable ? () => foldEvent('toggle') : undefined}
-        />
-      )}
-      {inCode?.snippet}
-      {/* Named for a place that bounds the card's height and scrolls its body (See in context's thread above the files). */}
-      <div className={styles.threadBody} data-thread-body="">
-        {folded ? (
-          // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
-          // Its first comment's menu stays on its line, where the comment shown whole has it.
-          <div className={styles.foldedRow}>
-            <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
-            <FirstCommentMenu review={review} thread={thread} user={user} threadActions={threadActions} onEdit={() => foldEvent('editRoot')} />
-          </div>
-        ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
+    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'line' ? thread.root.anchor.path : null}>
+      <section
+        className={styles.thread}
+        data-folded={folded}
+        data-in-code={inCode ? '' : undefined}
+        data-highlight={light.cardHighlight === undefined ? undefined : light.cardHighlight % 2}
+        data-selected={selected || undefined}
+        {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
+        id={inCode ? undefined : threadElementId(thread.root.id)}
+      >
+        {hasHeader && (
+          <ThreadHeader
+            reviewId={review.id}
+            thread={thread}
+            folded={folded}
+            inCode={inCode}
+            onSeeApplied={onSeeApplied}
+            onSeeAnswer={seeAnswer}
+            onToggle={foldable ? () => foldEvent('toggle') : undefined}
+          />
         )}
-      </div>
-    </section>
+        {inCode?.snippet}
+        {/* Named for a place that bounds the card's height and scrolls its body (See in context's thread above the files). */}
+        <div className={styles.threadBody} data-thread-body="">
+          {folded ? (
+            // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
+            // Its first comment's menu stays on its line, where the comment shown whole has it.
+            <div className={styles.foldedRow}>
+              <FoldedThread thread={thread} onOpen={() => foldEvent('unfold')} pointerOnly={foldable} />
+              <FirstCommentMenu review={review} thread={thread} user={user} threadActions={threadActions} onEdit={() => foldEvent('editRoot')} />
+            </div>
+          ) : (
+            <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
+          )}
+        </div>
+      </section>
+    </CommentedFileContext.Provider>
   );
 }
 
@@ -260,6 +263,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <WrittenLine line={location.line} />
           </span>
         ))}
+        {header.line && <WrittenLine line={header.line} />}
         {earlierTag &&
           (earlierTag.opensContext ? (
             <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>

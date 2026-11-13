@@ -864,7 +864,18 @@ button.earlierTag:hover {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  /*
+   * Its clip reaches 4px past it on every side, given back by the margin: the fold toggle's own -4px (lining its
+   * chevron up with the text under it) and its focus ring were cut off.
+   */
+  margin: -4px;
+  padding: 4px;
   overflow: hidden;
+}
+
+/* Alone in the code's band, no path to share a baseline with: centered on the fold toggle, as the pill is. */
+.thread[data-in-code] .headerStart > .writtenLine {
+  align-self: center;
 }
 
 .thread[data-in-code] .earlierTag {

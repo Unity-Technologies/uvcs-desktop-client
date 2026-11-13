@@ -74,7 +74,10 @@ export interface ThreadHeaderView {
   earlierTag: { label: string; tip: string; opensContext: boolean } | null;
   /** How many replies a folded thread has. */
   replies: string | null;
-  /** Under its file's name, where its file isn't named: the line it was written on, "line 42". */
+  /**
+   * Where the file is named already (under its name, in its code): the line it was written on, "line 42". In the code
+   * a thread can sit rows below its line, or away from it once outdated.
+   */
   line: string | null;
   pill: HeaderPill | null;
   hides: boolean;
@@ -104,7 +107,7 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    line: underFile && thread.root.anchor.kind === 'line' ? writtenLineText(thread.root.anchor) : null,
+    line: (underFile || inCode) && thread.root.anchor.kind === 'line' ? writtenLineText(thread.root.anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };

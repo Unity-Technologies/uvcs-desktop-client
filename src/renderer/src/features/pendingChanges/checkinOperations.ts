@@ -32,6 +32,11 @@ interface CheckinOptions {
   updateFirst?: boolean;
   /** Every pending change goes in: the success moment in the empty Changes tells it, so no toast does. */
   quiet?: boolean;
+  /**
+   * The comment goes in the recent comments (true unless said): not one the app wrote for a single use, such as a
+   * review suggestion's "Apply suggestion from …", which names a change request no longer pending once applied.
+   */
+  remembersComment?: boolean;
 }
 
 /**
@@ -77,7 +82,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
   useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: commentLineText(comment) || undefined });
-  if (comment.trim()) await rememberComment(workspacePath, comment.trim());
+  if (comment.trim() && options.remembersComment !== false) await rememberComment(workspacePath, comment.trim());
   return true;
 }
 

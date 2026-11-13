@@ -5,7 +5,7 @@ import { useNewLineCommentsStore } from './newLineCommentsStore';
 const at = (line: number): NewLineCommentSpot => newLineCommentSpot(41, 'src/Player.cs', 'additions', { revisionId: 30, line });
 
 describe('useNewLineCommentsStore', () => {
-  beforeEach(() => useNewLineCommentsStore.setState({ spots: [], focusRequest: null, focusSeq: 0 }));
+  beforeEach(() => useNewLineCommentsStore.setState({ spots: [], focusRequest: null, focusSeq: 0, suggestRequest: null }));
 
   it('starts one comment per line: a second "+" on it keeps the one being written, and its kind', () => {
     const store = useNewLineCommentsStore.getState();
@@ -50,5 +50,28 @@ describe('useNewLineCommentsStore', () => {
     store.focusTaken(older);
 
     expect(useNewLineCommentsStore.getState().focusRequest?.key).toBe(at(9).key);
+  });
+
+  it('asks for a suggestion in a comment opened from "Suggest change on line N", until it inserts it', () => {
+    const store = useNewLineCommentsStore.getState();
+    store.open(at(7), { suggests: true });
+    const request = useNewLineCommentsStore.getState().suggestRequest!;
+    expect(request.key).toBe(at(7).key);
+
+    store.open(at(9));
+    expect(useNewLineCommentsStore.getState().suggestRequest).toEqual(request);
+    store.suggestTaken(request.seq);
+    expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
+  });
+
+  it('drops the request for a suggestion once its comment is canceled, or opened again from a plain "+"', () => {
+    const store = useNewLineCommentsStore.getState();
+    store.open(at(7), { suggests: true });
+    store.close(at(7).key);
+    expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
+
+    store.open(at(7), { suggests: true });
+    store.open(at(7));
+    expect(useNewLineCommentsStore.getState().suggestRequest).toBeNull();
   });
 });

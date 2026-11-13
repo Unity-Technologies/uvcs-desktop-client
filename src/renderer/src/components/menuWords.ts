@@ -57,6 +57,7 @@ import {
   LockOpen,
   Merge,
   MessageSquare,
+  MessageSquareDiff,
   MessageSquarePlus,
   MessageSquareText,
   Minus,
@@ -214,6 +215,8 @@ export const MENU_WORDS = {
   newWindow: word('create', AppWindow, 'New window'),
   // A place's own action on a line of code (`lineMenu`, `DiffAnnotations.lineAction`): a review's "Comment on line 42".
   lineAction: word('create', MessageSquarePlus),
+  // Its other way (`LineAction.variant`): a review's "Suggest change on line 42".
+  lineActionVariant: word('create', MessageSquareDiff),
 
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),

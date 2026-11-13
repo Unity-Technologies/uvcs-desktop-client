@@ -57,10 +57,12 @@ describe('threadHeaderOf', () => {
       expect(headerOf(plainOnLine, { place: 'fileGroup' }).location).toBeNull();
     });
 
-    it('says the line apart under the file\'s name, where the file names no line, and nowhere else', () => {
+    it('says the line apart where the file is named already, under its name or in its code, and nowhere else', () => {
       expect(headerOf(changeRequest, { place: 'fileGroup' }).line).toBe('line 11');
+      // In the code, a thread can sit rows below its line, or away from it once outdated: the line says which.
+      expect(headerOf(changeRequest, { place: 'code' }).line).toBe('line 11');
       expect(headerOf(changeRequest, { place: 'panel' }).line).toBeNull();
-      expect(headerOf(changeRequest, { place: 'code' }).line).toBeNull();
+      expect(headerOf(changeRequest).line).toBeNull();
     });
 
     it('names no file in the code, where the thread is at its line', () => {

@@ -11,8 +11,8 @@ before.
 - **Markdown**: CommonMark with GitHub's extensions (tables, task lists, strikethrough, bare links, footnotes), read
   by micromark (`parseMarkdown` in `lib/markdown.ts`, the one Markdown reader the app has: release notes and attribute
   values use it too). Raw HTML reads as the text it is, but for `<kbd>`, which shows a key as a keycap, as on GitHub
-  (`<kbd>Ctrl</kbd>+<kbd>F</kbd>`); links open only to `http(s):` (in the browser) and `uvcs:`
-  (in the app), anything else shows its text, a bare email address too (`openExternal` opens web pages only); images
+  (`<kbd>Ctrl</kbd>+<kbd>F</kbd>`); links open only to `http(s):` (in the browser) and `uvcs:` or
+  the official client's `plastic:` (in the app, `OPENED_SCHEMES`, `isAppLink`), anything else shows its text, a bare email address too (`openExternal` opens web pages only); images
   only from `http(s):`.
 - **Line breaks are kept** in a comment (`parseMarkdown(…, { comment: true })`), as GitHub shows comments: plain
   multi-line comments, the most common kind, read as they were written. Release notes and attribute values join a
@@ -184,6 +184,10 @@ thread, so a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` (20,000 characters, the 
 and no line is tokenized past 1,000 characters. Each block is tokenized once per theme (the last 50 kept). Until its
 grammar loads, for a language the highlighter doesn't know, and for a block too big, it shows plain in the same box,
 so nothing moves as colors arrive; switching themes keeps the old colors until the new ones are in.
+
+A change request's ```` ```suggestion ```` fence shows as its Suggested change instead, the line it replaces and the
+lines suggested (`Markdown`'s `suggestion`, docs/features/code-reviews.md "Suggested changes"); in any other comment it
+is a code block.
 
 ## Writing
 

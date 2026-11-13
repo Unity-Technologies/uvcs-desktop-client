@@ -1,0 +1,57 @@
+/*
+ * A change request's suggestion (`SuggestedChangeBlock`): a small diff in a box, drawn by Pierre as the code's diff is,
+ * on the surface the diff viewer draws on, edge to edge; only the header is tinted, as a code block's.
+ */
+.block {
+  margin: var(--space-2) 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 6px var(--space-2) 6px var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-code);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* As tall as its rows: a few lines, never scrolled down, sideways only by their pane (`PaneScrollbars`). */
+.diff {
+  overflow: hidden;
+}
+
+/* A suggestion of the lines as they are: said in a line of quiet text, as there's no change to draw. */
+.note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* The rows' place while they're read: Pierre's lines are 20px (`PIERRE_SURFACE_CSS` keeps them so). */
+.placeholder {
+  height: calc(var(--rows) * 20px);
+  background: var(--bg-subtle);
+}

@@ -47,6 +47,7 @@ describe('code shown with Pierre', () => {
         'features/merge/resolve/ConflictHunks.tsx',
         'features/merge/resolve/HandEditor.tsx',
         'features/merge/resolve/ReadOnlyText.tsx',
+        'features/codeReviews/suggestions/SuggestionDiff.tsx',
       ]),
     );
   });

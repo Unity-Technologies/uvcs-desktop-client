@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ChangeSet } from '@codemirror/state';
 import type { FencedCode, TokenMark } from './codeHighlight';
-import { codeColorsAfter, mapMarks, type Colored } from './codeColorDrawing';
+import { codeColorsAfter, colorsRedrawn, mapMarks, type Colored } from './codeColorDrawing';
 
 const keyword = 'color: blue';
 const number = 'color: green';
@@ -69,5 +69,29 @@ describe('codeColorsAfter', () => {
 
   it('shows plain a block in a language the highlighter doesn’t know', () => {
     expect(codeColorsAfter([edited], () => 'none', kept)).toEqual({ marks: [], uncolored: [] });
+  });
+});
+
+describe('colorsRedrawn', () => {
+  const still = { docChanged: false, viewportChanged: false, colorsArrived: false, themeChanged: false, commentedFileChanged: false };
+
+  it('draws the colors anew, plain until the new ones arrive, in another theme', () => {
+    expect(colorsRedrawn({ ...still, themeChanged: true, docChanged: true })).toBe('anew');
+  });
+
+  // Suggest change opens the comment with the fence in it, and the editor learns the file it's on just after: its code
+  // is colored once it does, not only once something is typed.
+  it("draws them anew once the editor learns the file the comment is on, a suggestion's language", () => {
+    expect(colorsRedrawn({ ...still, commentedFileChanged: true })).toBe('anew');
+  });
+
+  it('draws them again, keeping those drawn, as the text, the view or the colors read change', () => {
+    expect(colorsRedrawn({ ...still, docChanged: true })).toBe('kept');
+    expect(colorsRedrawn({ ...still, viewportChanged: true })).toBe('kept');
+    expect(colorsRedrawn({ ...still, colorsArrived: true })).toBe('kept');
+  });
+
+  it('leaves them as they are otherwise (a caret moved)', () => {
+    expect(colorsRedrawn(still)).toBeNull();
   });
 });

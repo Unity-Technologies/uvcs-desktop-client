@@ -288,7 +288,7 @@ edit look the same: the editor is on as soon as the diff has its colors, so noth
 starts. Each pane of code
 scrolls sideways on its own and its bar would sit at the end of the file, shown only while hovered, so `PaneScrollbars`
 keeps one per pane at the bottom of the view, wherever Pierre shows code (diffs, the whole-file editor, merge
-resolution, moved code, Annotate; `codeScrollsSideways.test.ts`). The view itself never scrolls sideways
+resolution, moved code, Annotate, a suggested change; `codeScrollsSideways.test.ts`). The view itself never scrolls sideways
 (`PaneScrollbars.module.css`): only its panes do, so a resize, which takes a few frames to measure the bars again,
 never shows a second bar under them. The panes' own bars are hidden through Pierre's
 `--diffs-scrollbar-gutter-override` (`paneScrollbarsCss`), so the code ends with the gap it starts with (8 px), and

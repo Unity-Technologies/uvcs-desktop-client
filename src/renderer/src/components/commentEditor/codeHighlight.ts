@@ -1,6 +1,8 @@
 import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { highlightedLanguage } from '../comments/codeBlockLanguage';
+import { fenceLanguage, highlightedLanguage } from '../comments/codeBlockLanguage';
+import { SUGGESTION_LANGUAGE } from '../../lib/markdown';
+import { commentedFileLanguage } from './commentedFileLanguage';
 import { codeTokenStyle, type ColoredToken } from '../comments/codeTokenStyle';
 
 /** A code block's code and the language its fence names, which the comments' highlighter colors. */
@@ -11,7 +13,10 @@ export interface FencedCode {
   language: string;
 }
 
-/** The code blocks with a language in `[from, to]` small enough to highlight, as the shown comment does (`CodeBlock`). */
+/**
+ * The code blocks with a language in `[from, to]` small enough to highlight, as the shown comment does (`CodeBlock`);
+ * a ```suggestion fence's in the language of the file the comment is on (`commentedFileLanguage`).
+ */
 export function fencedCodeIn(state: EditorState, from = 0, to = state.doc.length): FencedCode[] {
   const blocks: FencedCode[] = [];
   syntaxTree(state).iterate({
@@ -24,12 +29,18 @@ export function fencedCodeIn(state: EditorState, from = 0, to = state.doc.length
       if (!code) return false;
       // A block past the comments' limit (a pasted log) stays plain, as the shown comment leaves it (`highlightedLanguage`).
       const text = state.sliceDoc(code.from, code.to);
-      const language = highlightedLanguage(text, info ? state.sliceDoc(info.from, info.to) : undefined);
+      const language = highlightedLanguage(text, codeLanguageOf(state, info ? state.sliceDoc(info.from, info.to) : undefined));
       if (language) blocks.push({ from: code.from, text, language });
       return false;
     },
   });
   return blocks;
+}
+
+/** A fence's language: the one it names, or for a suggestion the commented file's. */
+function codeLanguageOf(state: EditorState, info: string | undefined): string | undefined {
+  if (fenceLanguage(info) !== SUGGESTION_LANGUAGE) return info;
+  return state.facet(commentedFileLanguage) ?? undefined;
 }
 
 /** A colored run of a code block, as a style to draw it with. */

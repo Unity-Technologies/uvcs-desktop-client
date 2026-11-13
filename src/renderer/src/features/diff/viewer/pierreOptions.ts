@@ -65,6 +65,27 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
   };
 }
 
+/**
+ * A snippet's rows run edge to edge in their box, from the border above them to the one below: Pierre leaves a gap
+ * (`--diffs-gap-block`, 8px) above the first row and under the last, which reads as the box's own padding. With no
+ * line numbers its gutter is the change bar alone, and Pierre's line between gutter and code (`--diffs-gap-style`, 2px
+ * of the surface) would split the bar from the row's tint: none, so the tint runs on from the bar.
+ */
+const SNIPPET_ROWS_EDGE_TO_EDGE_CSS = ':host{--diffs-gap-block:0px;--diffs-gap-style:none}';
+
+/**
+ * A few lines' diff shown whole inside a comment (a change request's Suggested change): the code's diff as the viewer
+ * shows it (its colors, bars and word marks), one column, with no line numbers (the comment names its lines, and they'd
+ * number the snippet from 1, not the file), every line shown and no tints for comment rows, as it holds none.
+ */
+export function pierreSnippetDiffOptions(theme: ResolvedTheme): FileDiffOptions<undefined, undefined> {
+  return {
+    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: false, wrapLines: false }),
+    disableLineNumbers: true,
+    unsafeCSS: PIERRE_SURFACE_CSS + SNIPPET_ROWS_EDGE_TO_EDGE_CSS,
+  };
+}
+
 /** The same look for one file on its own, e.g. edited while its diff has no lines to show. */
 export function pierreFileOptions({ theme, wrapLines }: Pick<DiffAppearance, 'theme' | 'wrapLines'>): FileOptions<undefined, undefined> {
   return {

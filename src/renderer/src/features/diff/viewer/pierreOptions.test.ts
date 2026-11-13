@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PIERRE_SURFACE_CSS, pierreDiffOptions } from './pierreOptions';
+import { PIERRE_SURFACE_CSS, pierreDiffOptions, pierreSnippetDiffOptions, WORD_MARKS } from './pierreOptions';
 
 const css = pierreDiffOptions({ theme: 'light', layout: 'split', collapseUnchanged: true, wrapLines: false }).unsafeCSS ?? '';
 
@@ -36,5 +36,31 @@ describe('pierreDiffOptions: the row of comments under a changed line', () => {
     expect(css).toContain('+ [data-gutter-buffer=annotation]{');
     expect(css).toContain('background-size:4px 100%');
     expect(css).not.toContain('[data-gutter-buffer=annotation]::before');
+  });
+});
+
+describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
+  const options = pierreSnippetDiffOptions('dark');
+
+  it("reads as the code's diff: its theme, bars and word marks, in one column", () => {
+    expect(options).toMatchObject({ theme: 'pierre-dark', themeType: 'dark', diffStyle: 'unified', diffIndicators: 'bars', ...WORD_MARKS });
+  });
+
+  it('shows every line, unnumbered, with no header, scrolling long lines sideways', () => {
+    expect(options).toMatchObject({ expandUnchanged: true, disableLineNumbers: true, disableFileHeader: true, overflow: 'scroll' });
+  });
+
+  it('draws on the surface every diff does', () => {
+    expect(options.unsafeCSS?.startsWith(PIERRE_SURFACE_CSS)).toBe(true);
+  });
+
+  it("runs its rows edge to edge, with no gap above the first or under the last, unlike the code's diff", () => {
+    expect(options.unsafeCSS).toContain('--diffs-gap-block:0px');
+    expect(pierreDiffOptions({ theme: 'dark', layout: 'unified', collapseUnchanged: false, wrapLines: false }).unsafeCSS).not.toContain('--diffs-gap-block');
+  });
+
+  it("runs a row's tint on from its change bar, with no line between the gutter and the code, unlike the code's diff", () => {
+    expect(options.unsafeCSS).toContain('--diffs-gap-style:none');
+    expect(pierreDiffOptions({ theme: 'dark', layout: 'unified', collapseUnchanged: false, wrapLines: false }).unsafeCSS).not.toContain('--diffs-gap-style');
   });
 });

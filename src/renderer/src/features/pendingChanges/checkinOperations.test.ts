@@ -175,6 +175,14 @@ describe('checkinChanges', () => {
     expect(settings.recentCommentsByRepository).toEqual({});
   });
 
+  it("leaves out of the recent comments one the app wrote for a single use", async () => {
+    answerCheckins(created(44));
+    answerSettings();
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'Apply suggestion from Ana', remembersComment: false })).toBe(true);
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin']);
+  });
+
   it('refreshes what a checkin changes, not the objects checkins leave alone', async () => {
     answerCheckins(created(44));
     answerSettings();

@@ -3,6 +3,8 @@ import { useIssueReferences } from '../issues/useIssueTrackers';
 import { useIssueReads } from '../issues/useIssueReads';
 import { editorIssueKeys } from './editorIssueKeys';
 import { issueReferences, issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
+import { commentedFileCompartment, withCommentedFile } from './commentedFileLanguage';
+import { CommentedFileContext } from './commentedFileContext';
 import { changeRequestsOfferedCompartment, openChangeRequests, suggestionListHint, withChangeRequestsOffered } from './changeRequestTrigger';
 import { ChangeRequestsContext } from './changeRequestsContext';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
@@ -135,6 +137,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useEffect(() => view?.dispatch({ effects: issueReferencesCompartment.reconfigure(withIssueReferences(issues)) }), [view, issues]);
   const offersChangeRequests = useContext(ChangeRequestsContext) !== null;
   useEffect(() => view?.dispatch({ effects: changeRequestsOfferedCompartment.reconfigure(withChangeRequestsOffered(offersChangeRequests)) }), [view, offersChangeRequests]);
+  const commentedFile = useContext(CommentedFileContext);
+  useEffect(() => view?.dispatch({ effects: commentedFileCompartment.reconfigure(withCommentedFile(commentedFile)) }), [view, commentedFile]);
 
   const handle = useMemo(
     () => ({

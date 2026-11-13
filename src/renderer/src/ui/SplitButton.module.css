@@ -13,12 +13,14 @@
 
 .caret {
   flex: none;
-  margin-left: 1px;
+  /* The halves share one border, as a single control: the caret's sits over the button's right one. */
+  margin-left: -1px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
 
-/* The focused half's ring shows over the other half. */
+/* The hovered half's border, and the focused half's ring, show over the other half. */
+.split > :hover,
 .split > :focus-visible {
   position: relative;
   z-index: 1;

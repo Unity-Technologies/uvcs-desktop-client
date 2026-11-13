@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { editorState } from './commentEditorTesting';
 import { fencedCodeIn, tokenMarks } from './codeHighlight';
+import { withCommentedFile } from './commentedFileLanguage';
 
 describe('fencedCodeIn', () => {
   it('finds each code block with a language, and its code', () => {
@@ -9,6 +10,19 @@ describe('fencedCodeIn', () => {
       { from: 12, text: 'let a = 1;\nlet b;', language: 'ts' },
       { from: 54, text: 'var c;', language: 'c#' },
     ]);
+  });
+});
+
+describe('fencedCodeIn, for a suggestion', () => {
+  const suggestion = 'Say it:\n```suggestion\nLog($"Switched to {target}");\n```';
+
+  it("colors a suggestion's code in the language of the file the comment is on", () => {
+    expect(fencedCodeIn(editorState(suggestion, withCommentedFile('Assets/Scripts/SwitchFlow.cs')))).toEqual([{ from: 22, text: 'Log($"Switched to {target}");', language: 'csharp' }]);
+  });
+
+  it('leaves it plain on no file, or one whose language is not known', () => {
+    expect(fencedCodeIn(editorState(suggestion))).toEqual([]);
+    expect(fencedCodeIn(editorState(suggestion, withCommentedFile('notes.unknownext')))).toEqual([]);
   });
 });
 
