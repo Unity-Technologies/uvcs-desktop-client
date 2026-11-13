@@ -1,7 +1,14 @@
 import { fakeApi } from '../../../testing/fakeWindow';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const asked = vi.hoisted(() => ({ picked: undefined as number | undefined, picker: [] as unknown[] }));
 vi.mock('../../../ui/dialog/confirm', () => import('../../../testing/fakeDialogs'));
+vi.mock('../../changesets/ChangesetPickerDialog', () => ({
+  pickChangeset: async (options: unknown) => {
+    asked.picker.push(options);
+    return asked.picked;
+  },
+}));
 
 import { workspacePlace } from '@shared/domain/place';
 import { answerConfirms } from '../../../testing/fakeDialogs';
@@ -12,6 +19,7 @@ import {
   deleteReviewComment,
   discardChangeRequest,
   editReviewComment,
+  markChangeRequest,
   replyToComment,
   saveReviewDescription,
 } from './reviewCommentOperations';
@@ -19,6 +27,11 @@ import {
 const ws = '/ws';
 const inWs = workspacePlace(ws);
 const comment = { guid: 'c1' };
+
+beforeEach(() => {
+  asked.picked = undefined;
+  asked.picker.length = 0;
+});
 
 describe('writing on a review', () => {
   it('adds, replies, discards, edits and describes, each with one call', async () => {
@@ -84,5 +97,55 @@ describe('writing on a review', () => {
     expect(await deleteReviewComment(inWs, comment)).toBe(true);
 
     expect(fakeApi.argsOf('reviewComments.remove')).toEqual([[inWs, 'c1']]);
+  });
+});
+
+describe('marking a change request by hand', () => {
+  const branchReview = { target: { kind: 'branch', branch: '/main/task' } } as const;
+
+  it("marks it applied in the changeset picked among the branch's, the newest ready for Enter", async () => {
+    fakeApi.answer('reviewComments.markApplied', () => undefined);
+    asked.picked = 12;
+    const refreshed = watchRefreshes(ws);
+
+    expect(await markChangeRequest(inWs, branchReview, comment, 'applied')).toBe(true);
+
+    expect(asked.picker).toEqual([{ title: 'Mark as applied in…', among: { branch: '/main/task', limit: expect.any(Number) } }]);
+    expect(fakeApi.argsOf('reviewComments.markApplied')).toEqual([[inWs, 'c1', 12]]);
+    expect(refreshed()).toEqual(['codeReviews']);
+  });
+
+  it("offers a changeset's or a shelve's review the repository's newest changesets", async () => {
+    await markChangeRequest(inWs, { target: { kind: 'shelve', shelveId: 3 } }, comment, 'applied');
+
+    expect(asked.picker).toEqual([{ title: 'Mark as applied in…', among: undefined }]);
+  });
+
+  it('marks nothing when no changeset is picked', async () => {
+    expect(await markChangeRequest(inWs, branchReview, comment, 'applied')).toBe(false);
+
+    expect(fakeApi.calls()).toEqual([]);
+  });
+
+  it('marks it not applied at once, refreshing the reviews only', async () => {
+    fakeApi.answer('reviewComments.markNotApplied', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    expect(await markChangeRequest(inWs, branchReview, comment, 'notApplied')).toBe(true);
+
+    expect(asked.picker).toEqual([]);
+    expect(fakeApi.argsOf('reviewComments.markNotApplied')).toEqual([[inWs, 'c1']]);
+    expect(refreshed()).toEqual(['codeReviews']);
+  });
+
+  it("says why cm refused it", async () => {
+    fakeApi.answer('reviewComments.markApplied', () => {
+      throw new Error('The change request is already applied in changeset 9.');
+    });
+    asked.picked = 12;
+
+    expect(await markChangeRequest(inWs, branchReview, comment, 'applied')).toBe(false);
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't mark the change request as applied", detail: 'The change request is already applied in changeset 9.' }]);
   });
 });
