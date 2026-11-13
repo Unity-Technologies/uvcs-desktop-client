@@ -15,6 +15,9 @@ import { PaletteRow } from './PaletteRow';
 import { linkGroupIn } from './linkResults';
 import { isPaletteTextKey } from './paletteTextKeys';
 import { parseScope, type SectionId } from './paletteScope';
+import { scopeStepOf } from './paletteScopeKeys';
+import { queryInScope, scopeChipsFor, steppedChip, type ScopeChip } from './scopeChips';
+import { ScopeChipRow } from './ScopeChipRow';
 import { collapseGroups, COLLAPSED_ROWS, moreLabel, shownSections, type SearchGroup, type SearchResult } from './searchResults';
 import { usePaletteSearch } from './usePaletteSearch';
 import { useWorkspaceResults } from './useWorkspaceResults';
@@ -36,7 +39,8 @@ export function CommandPalette() {
 /**
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
- * the best matches come first. A prefix narrows the search to one section (`SCOPE_PREFIXES`); a pasted link opens it. Enter opens a result (a workspace in a new
+ * the best matches come first. A prefix narrows the search to one section (`SCOPE_PREFIXES`), as its chip under the
+ * search does by writing it (`scopeChipsFor`; ⌥⌘← ⌥⌘→, Alt+← Alt+→ off Mac, step through them); a pasted link opens it. Enter opens a result (a workspace in a new
  * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
@@ -54,6 +58,9 @@ function OpenPalette({ close }: { close: () => void }) {
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
   const place = useSession((state) => state.place);
   const workspacePath = useSession((state) => state.workspacePath);
+  const chips = useMemo(() => scopeChipsFor(place), [place]);
+  // The chips follow what is typed now, not the deferred search behind it.
+  const typedScope = parseScope(query).scope;
   useFocusBackOnClose();
 
   const commands = useMemo(() => paletteCommands(commandsByOwner), [commandsByOwner]);
@@ -92,6 +99,17 @@ function OpenPalette({ close }: { close: () => void }) {
     return true;
   };
 
+  const search = (value: string): void => {
+    setQuery(value);
+    setSelected('');
+    setExpanded(new Set());
+  };
+
+  const pickScope = (chip: ScopeChip): void => {
+    search(queryInScope(query, chip));
+    inputRef.current?.focus();
+  };
+
   const expand = (section: SectionId): void => {
     setExpanded((sections) => new Set(sections).add(section));
     // The first row that was held back takes the place of "N more".
@@ -100,13 +118,24 @@ function OpenPalette({ close }: { close: () => void }) {
 
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
-    if (event.target !== inputRef.current) return event.preventDefault();
+    // Stopped too: the window's shortcuts (Back's Alt+←) must not act under the palette.
+    if (event.target !== inputRef.current) {
+      event.stopPropagation();
+      return event.preventDefault();
+    }
     // Taken: the palette closes before the key reaches the window, where Esc would also collapse an expanded diff.
     if (event.key === 'Escape') {
       event.preventDefault();
       close();
     }
     if (event.key === 'Enter' && ranInNewWindow(selectedResult, event)) return;
+    const step = chips && scopeStepOf(event);
+    if (step) {
+      // Taken, or Back (Alt+← off Mac) would also leave the page under the palette.
+      event.preventDefault();
+      event.stopPropagation();
+      return pickScope(steppedChip(chips, typedScope, step));
+    }
     // Tab never leaves the palette: it opens the selected result's actions, when it has some.
     if (event.key === 'Tab' || isRowMenuKey(event)) {
       event.preventDefault();
@@ -132,17 +161,14 @@ function OpenPalette({ close }: { close: () => void }) {
             className={styles.input}
             placeholder="Search everything"
             value={query}
-            onValueChange={(value) => {
-              setQuery(value);
-              setSelected('');
-              setExpanded(new Set());
-            }}
+            onValueChange={search}
             spellCheck={false}
             onKeyDown={keepTextKeys}
             autoFocus
           />
           {isLoading && text && <Spinner size={14} />}
         </div>
+        {chips && <ScopeChipRow chips={chips} scope={typedScope} onPick={pickScope} onMenuClosed={() => inputRef.current?.focus()} />}
         <HighlightQuery query={text}>
           <Cmdk.List className={styles.list}>
             <Cmdk.Empty className={styles.empty}>{isLoading ? 'Searching…' : 'Nothing matches.'}</Cmdk.Empty>
@@ -170,7 +196,7 @@ function OpenPalette({ close }: { close: () => void }) {
             ))}
           </Cmdk.List>
         </HighlightQuery>
-        <PaletteFooter place={place} />
+        <PaletteFooter changesScope={chips !== null} />
       </Cmdk>
     </div>
   );

@@ -1123,8 +1123,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   changesets').
   The changeset comes first, unless the number is past the newest changeset read
   (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
-  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
-  its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. Under the search, a chip per prefix that works where
+  the palette is open (`offeredPrefixes`, `scopeChipsFor`), each showing its prefix: All and the sections searched most
+  in a row, the rest under More, which takes the name of the one picked. A chip writes its prefix in place of the one
+  typed, the rest as typed (`queryInScope`), so the text stays the only state and a chip teaches what to type;
+  clicking the chip picked goes back to All (`clickedChip`). ⌥⌘← ⌥⌘→ step through them, Alt+← Alt+→ off Mac
+  (`scopeStepOf`, `steppedChip`): arrows any keyboard layout has, as a browser's tabs, never ⌘ or ⌥ alone, which move
+  the caret. The home screen, which searches only commands, has none. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
   suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time

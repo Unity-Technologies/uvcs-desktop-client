@@ -23,24 +23,22 @@ const SECTION_OF_KIND: Record<PrefixedKind, PrefixedSection> = {
   person: 'people',
 };
 
-/** What the footer calls each section a prefix narrows to. */
-const SCOPE_HINTS: Record<PrefixedSection, string> = {
-  commands: 'commands',
-  files: 'files',
-  changesets: 'changesets',
-  branches: 'branches',
-  labels: 'labels',
-  shelves: 'shelves',
-  codeReviews: 'code reviews',
-  people: 'people',
+/** What the scope chips call each section a prefix narrows to (`scopeChipsFor`). */
+const SCOPE_LABELS: Record<PrefixedSection, string> = {
+  commands: 'Commands',
+  files: 'Files',
+  changesets: 'Changesets',
+  branches: 'Branches',
+  labels: 'Labels',
+  shelves: 'Shelves',
+  codeReviews: 'Code reviews',
+  people: 'People',
 };
 
 export interface ScopePrefix {
   prefix: string;
   scope: PrefixedSection;
-  hint: string;
-  /** One of the prefixes the comment editor reads too (`KIND_PREFIXES`), not the palette's own. */
-  shared: boolean;
+  label: string;
 }
 
 /**
@@ -48,24 +46,22 @@ export interface ScopePrefix {
  * comment editor reads too (`KIND_PREFIXES`: `cs:`, `br:`, `lb:`, `sh:`, `cr:`, `@`), in their order.
  */
 export const SCOPE_PREFIXES: readonly ScopePrefix[] = [
-  scopePrefix('>', 'commands', false),
-  scopePrefix('/', 'files', false),
-  ...Object.entries(KIND_PREFIXES).map(([prefix, kind]) => scopePrefix(prefix, SECTION_OF_KIND[kind], true)),
+  scopePrefix('>', 'commands'),
+  scopePrefix('/', 'files'),
+  ...Object.entries(KIND_PREFIXES).map(([prefix, kind]) => scopePrefix(prefix, SECTION_OF_KIND[kind])),
 ];
 
-function scopePrefix(prefix: string, scope: PrefixedSection, shared: boolean): ScopePrefix {
-  return { prefix, scope, hint: SCOPE_HINTS[scope], shared };
+function scopePrefix(prefix: string, scope: PrefixedSection): ScopePrefix {
+  return { prefix, scope, label: SCOPE_LABELS[scope] };
 }
 
 /**
- * The prefixes the footer offers where the palette is open, the palette's own apart from those it shares with the
- * comment editor: with no place shown (the home screen) only commands are searched; a repository explored without a
- * workspace has no files; a workspace has every section.
+ * The prefixes that work where the palette is open: with no place shown (the home screen) only commands are searched;
+ * a repository explored without a workspace has no files; a workspace has every section.
  */
-export function offeredPrefixes(shown: Place | null): { own: ScopePrefix[]; shared: ScopePrefix[] } {
+export function offeredPrefixes(shown: Place | null): ScopePrefix[] {
   const inWorkspace = shown !== null && workspacePathOf(shown) !== null;
-  const offered = SCOPE_PREFIXES.filter(({ scope }) => (shown === null ? scope === 'commands' : inWorkspace || scope !== 'files'));
-  return { own: offered.filter((prefix) => !prefix.shared), shared: offered.filter((prefix) => prefix.shared) };
+  return SCOPE_PREFIXES.filter(({ scope }) => (shown === null ? scope === 'commands' : inWorkspace || scope !== 'files'));
 }
 
 /**
@@ -74,9 +70,20 @@ export function offeredPrefixes(shown: Place | null): { own: ScopePrefix[]; shar
  * (`fix br:main`) is text.
  */
 export function parseScope(query: string): { scope: PaletteScope; text: string } {
+  const { found, rest } = splitPrefix(query);
+  return found ? { scope: found.scope, text: rest.trim() } : { scope: 'all', text: query.trim() };
+}
+
+/** The query without its leading prefix, the rest as typed: a space typed last still parts the next word. */
+export function withoutScopePrefix(query: string): string {
+  return splitPrefix(query).rest;
+}
+
+/** The one place a leading prefix is read, so a chip and a typed prefix always agree (`queryInScope`). */
+function splitPrefix(query: string): { found: ScopePrefix | undefined; rest: string } {
   const trimmed = query.trimStart();
   const found = SCOPE_PREFIXES.find(({ prefix }) => trimmed.startsWith(prefix));
-  return found ? { scope: found.scope, text: trimmed.slice(found.prefix.length).trim() } : { scope: 'all', text: query.trim() };
+  return { found, rest: found ? trimmed.slice(found.prefix.length).trimStart() : trimmed };
 }
 
 export function isInScope(section: SectionId, scope: PaletteScope): boolean {
