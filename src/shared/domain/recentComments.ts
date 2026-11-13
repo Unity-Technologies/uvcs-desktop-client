@@ -25,7 +25,9 @@ export function recentCommentsFor(settings: RecentCommentSettings, repository: s
 /**
  * The settings change that puts `comment` first among `repository`'s recent comments, once. Its first check-in starts
  * its own list. The repository goes first, and only the `MAX_RECENT_COMMENT_REPOSITORIES` checked in to last are kept
- * (an object keeps its string keys in the order they were added, through JSON too).
+ * (an object keeps its keys in the order they were added, through JSON too, except integer-like ones, which go first:
+ * a key always holds the `@` before its server, so none is integer-like and none reorders). The settings store applies
+ * it (`SettingsStore.rememberRecentComment`), so windows checking in to other repositories meanwhile keep theirs.
  */
 export function withRecentComment(settings: RecentCommentSettings, repository: string, comment: string): Pick<AppSettings, 'recentCommentsByRepository'> {
   const key = repositoryKey(repository);

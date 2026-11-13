@@ -132,8 +132,10 @@ workspaces, never another repository's: a comment often names what only makes se
 `br:/main/task`, a change request applied). They're kept in the settings by repository
 (`recentCommentsByRepository`, keyed by `repositoryKey`: the name and the server in any case, the server without its
 protocol, so two workspaces of one repository share them), the newest first, `MAX_RECENT_COMMENTS` each; a check-in
-puts its comment first (`withRecentComment`, from `rememberComment` in `checkinOperations`, the repository read from
-the workspace's info Changes already has). Only the `MAX_RECENT_COMMENT_REPOSITORIES` repositories checked in to last
+puts its comment first (`rememberComment` in `checkinOperations`, the repository read from the workspace's info
+Changes already has). The main process applies it to what it holds (`settings.rememberRecentComment`,
+`SettingsStore.rememberRecentComment`, `withRecentComment`), as it does the recent workspaces and branches: a window
+replacing the whole list from its own copy would drop what another window just checked in. Only the `MAX_RECENT_COMMENT_REPOSITORIES` repositories checked in to last
 keep theirs, so the settings don't grow with every repository ever used.
 
 The comments kept before they were per repository (`recentComments`) can't be told apart by repository: they're offered
