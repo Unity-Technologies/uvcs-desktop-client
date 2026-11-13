@@ -122,10 +122,19 @@ export function isAffectedByPermissions(kind: string, ownerChanged: boolean): (k
 
 /**
  * A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list.
- * And the user's email subscription to a review shown: taking part (a comment, being added as a reviewer) subscribes
- * them again, so it is read again with the rest.
+ * Not the user's email subscription to a review, which only taking part in it changes (`isAffectedByTakingPartInReview`).
  */
 export function isAffectedByCodeReviews(key: QueryKey): boolean {
+  return area(key) === 'codeReviews' && detail(key) !== 'subscription';
+}
+
+/**
+ * A write that makes the user take part in a review: a comment or a reply from them (a discard is one), reviewers added
+ * (them, or a group they're in), their own status (which makes them a reviewer). What any review write reads, and the
+ * user's email subscription too, as the server subscribes them again then. Of any review, not only the one written on:
+ * a reply names its comment, not its review, and only the subscription on screen is read now.
+ */
+export function isAffectedByTakingPartInReview(key: QueryKey): boolean {
   return area(key) === 'codeReviews';
 }
 

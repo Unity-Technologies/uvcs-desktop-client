@@ -10,7 +10,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByCodeReviews, isAffectedByReviewSubscription } from '../../app/refresh/refreshScopes';
+import { isAffectedByCodeReviews, isAffectedByReviewSubscription, isAffectedByTakingPartInReview } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { reviewSubscriptionKey } from './codeReviewKey';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
@@ -57,7 +57,7 @@ export async function setOwnReviewStatus(place: Place, review: CodeReviewSummary
       if (joining) await api.codeReviews.addReviewers(place, review.id, [{ name: joining, kind: 'user' }]);
       await api.codeReviews.setOwnStatus(place, review.id, status, ...(comment ? [comment] : []));
     },
-    isAffectedByCodeReviews,
+    isAffectedByTakingPartInReview,
   );
 }
 
@@ -93,7 +93,8 @@ export async function changeReviewers(place: Place, review: Pick<CodeReviewSumma
       if (add.length > 0) await api.codeReviews.addReviewers(place, review.id, add);
       if (remove.length > 0) await api.codeReviews.removeReviewers(place, review.id, remove);
     },
-    isAffectedByCodeReviews,
+    // Someone added may be the user, or a group they're in: the server subscribes them.
+    add.length > 0 ? isAffectedByTakingPartInReview : isAffectedByCodeReviews,
   );
 }
 
