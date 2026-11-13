@@ -1,6 +1,6 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceKind } from '@shared/domain/workspace';
-import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
@@ -26,9 +26,12 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
+const ALREADY_WHOLE = 'This workspace already has the whole branch.';
+const CANT_LEAVE_ON_WHOLE_BRANCH = "Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.";
+/** Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard. */
 const PARTIAL_REFUSED = {
-  notBranch: 'A partial workspace can only switch to a branch.',
-  otherRepository: 'A partial workspace can only switch to a branch of its own repository.',
+  notBranch: 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.',
+  otherRepository: 'A partial workspace can only switch to a branch of its own repository. To switch to another repository, download the whole branch first, from the workspace’s menu.',
 } as const;
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
@@ -57,12 +60,38 @@ export async function switchWithChanges(
   const kind = await deps.kindOf(workspacePath);
   assertPartialCanSwitch(kind, targetSpec, workspace);
   const snapshot = await readPendingSnapshot(deps.cm, workspacePath);
-  const result = await switchFrom(deps, workspacePath, { ...workspace, kind }, snapshot, targetSpec, action, context);
+  const result = await switchFrom(deps, workspacePath, { ...workspace, kind, switchesAs: kind }, snapshot, targetSpec, action, context);
   return { ...result, renamedPrivates: await privatesRenamedBySwitch(deps.cm, workspacePath, snapshot) };
 }
 
-/** What the switch knows of the workspace: where it is, and how it holds its files (which `cm` switches it). */
-type SwitchingWorkspace = WorkspaceIdentity & { kind: WorkspaceKind };
+/**
+ * Makes a partial workspace standard by downloading everything its branch holds. `cm` has no command to convert a
+ * workspace back: a standard `cm switch` to the branch it's on does it, where `cm update` refuses a partial workspace
+ * with checkouts. So this is a switch to the workspace's own selector, with its pending changes shelved as a partial
+ * workspace shelves them (`cm partial shelveset`) and brought back as a standard one merges them.
+ */
+export async function downloadWholeBranch(
+  deps: SwitchDependencies,
+  workspacePath: string,
+  action: WholeBranchChangesAction | undefined,
+  context: OperationContext,
+): Promise<SwitchResult> {
+  // The type keeps 'leave' out, but the action comes from the renderer, which isn't trusted.
+  if ((action as SwitchChangesAction | undefined) === 'leave') throw new Error(CANT_LEAVE_ON_WHOLE_BRANCH);
+  const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
+  if ((await deps.kindOf(workspacePath)) !== 'partial') throw new Error(ALREADY_WHOLE);
+  const snapshot = await readPendingSnapshot(deps.cm, workspacePath);
+  const ownBranch = selectorPlace(workspace.selector).spec;
+  const result = await switchFrom(deps, workspacePath, { ...workspace, kind: 'partial', switchesAs: 'standard' }, snapshot, ownBranch, action, context);
+  return { ...result, renamedPrivates: await privatesRenamedBySwitch(deps.cm, workspacePath, snapshot) };
+}
+
+/**
+ * What the switch knows of the workspace: where it is, how it holds its files (`kind`, which `cm` shelves its changes)
+ * and how it switches (`switchesAs`, which `cm` switches it and merges its changes back). They differ only as a partial
+ * workspace downloads its whole branch (`downloadWholeBranch`).
+ */
+type SwitchingWorkspace = WorkspaceIdentity & { kind: WorkspaceKind; switchesAs: WorkspaceKind };
 
 function assertPartialCanSwitch(kind: WorkspaceKind, targetSpec: string, workspace: WorkspaceIdentity): void {
   if (kind !== 'partial') return;
@@ -83,16 +112,16 @@ async function switchFrom(
   const summary = summarizePending(snapshot.changes);
   switch (switchApproach(summary)) {
     case 'switchAsIs':
-      await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
+      await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
       return { kind: 'switched', restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'refuseMerge':
       throw new Error(IN_MERGE);
     case 'undoUnchangedCheckouts':
       await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-      await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
+      await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
       return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'shelveChanges':
-      if (action === 'discard') return discardChanges(deps, workspacePath, workspace.kind, summary.pendingCount, targetSpec, context);
+      if (action === 'discard') return discardChanges(deps, workspacePath, workspace, summary.pendingCount, targetSpec, context);
       return shelveChanges(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
   }
 }
@@ -102,7 +131,7 @@ async function switchFrom(
  * private files, as Undo in Changes leaves them (one the target has at the same path is renamed by `cm switch`).
  * With no shelve, a failure can't put anything back: its error says what is already undone instead.
  */
-async function discardChanges(deps: SwitchDependencies, workspacePath: string, kind: WorkspaceKind, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
+async function discardChanges(deps: SwitchDependencies, workspacePath: string, workspace: SwitchingWorkspace, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
   const { cm } = deps;
   if (context.signal.aborted) throw new Error('The switch was cancelled.');
   const committed = withoutStop(context);
@@ -117,7 +146,7 @@ async function discardChanges(deps: SwitchDependencies, workspacePath: string, k
 
   committed.beginStep('Switching', 2, 2);
   try {
-    await runSwitch(cm, workspacePath, targetSpec, kind, committed);
+    await switchWorkspace(deps, workspacePath, workspace, targetSpec, committed);
   } catch (error) {
     throw new Error(`${failureReason(error)}. Your changes were undone, as you chose, but the switch didn't finish.`);
   }
@@ -144,7 +173,20 @@ async function shelveChanges(
     const restored = await restoreOnArrival(deps, workspacePath, committed);
     return { kind: 'left', shelveId: record.shelveId, count: record.paths.length, sourceName: record.source.name, restored };
   }
-  return bringChanges(deps, workspacePath, record, committed);
+  return bringChanges(deps, workspacePath, record, workspace.switchesAs, committed);
+}
+
+/**
+ * Switches as the workspace switches (`switchesAs`). A switch that changes its kind may have changed it even if it
+ * failed partway, so the kind is read again afterwards (`forgetKind`): a rollback then puts the changes back as the
+ * workspace now is.
+ */
+async function switchWorkspace(deps: SwitchDependencies, workspacePath: string, workspace: SwitchingWorkspace, targetSpec: string, context: OperationContext): Promise<void> {
+  try {
+    await runSwitch(deps.cm, workspacePath, targetSpec, workspace.switchesAs, context);
+  } finally {
+    if (workspace.switchesAs !== workspace.kind) deps.forgetKind(workspacePath);
+  }
 }
 
 /** Once the workspace starts changing (changes shelved, a restore under way), stopping halfway would leave a mess. */
@@ -184,7 +226,7 @@ async function shelveAndSwitch(
     await assertClean(cm, workspacePath);
 
     context.beginStep('Switching', 3, steps);
-    await runSwitch(cm, workspacePath, targetSpec, workspace.kind, context);
+    await switchWorkspace(deps, workspacePath, workspace, targetSpec, context);
   } catch (error) {
     throw await rollBackSwitch(deps, workspacePath, record, error, context);
   }
@@ -208,9 +250,9 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
   if (await hasPendingChanges(cm, workspacePath)) throw new Error('Some changes are still pending after undoing them.');
 }
 
-async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {
+/** `kind` is the workspace's once switched: a partial workspace can't merge, so it applies the shelve as `cm partial` does. */
+async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, kind: WorkspaceKind, context: OperationContext): Promise<SwitchResult> {
   context.beginStep('Bringing your changes', 4, 4);
-  const kind = await deps.kindOf(workspacePath);
   const mergesHere = kind !== 'partial';
   try {
     const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, kind, context);

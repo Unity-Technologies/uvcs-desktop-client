@@ -49,6 +49,7 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  HardDriveDownload,
   Hash,
   History,
   Layers,
@@ -152,6 +153,7 @@ export const MENU_WORDS = {
   taskWorkspace: word('act', FolderGit2, 'Work on this branch in a new workspace…'),
   // A partial workspace's files on disk, chosen in its tree (`openChooseDownloads`).
   chooseDownloads: word('act', FolderDown, 'Choose what to download…'),
+  downloadWholeBranch: word('act', HardDriveDownload, 'Download the whole branch…'),
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),

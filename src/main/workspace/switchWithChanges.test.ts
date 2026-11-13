@@ -3,10 +3,11 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
-import { switchWithChanges, type SwitchDependencies } from './switchWithChanges';
+import { downloadWholeBranch, switchWithChanges, type SwitchDependencies } from './switchWithChanges';
 import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
@@ -63,12 +64,13 @@ describe('switching a workspace without changes', () => {
   });
 });
 
-describe('switching a partial workspace', () => {
-  function partialWorkspace(scenario: WorkspaceScenario = {}) {
-    const workspace = workspaceWith(scenario);
-    return { ...workspace, deps: { ...workspace.deps, kindOf: async () => 'partial' as const } };
-  }
+/** A workspace whose kind reads partial, so `cm partial` switches and shelves it. */
+function partialWorkspace(scenario: WorkspaceScenario = {}) {
+  const workspace = workspaceWith(scenario);
+  return { ...workspace, deps: { ...workspace.deps, kindOf: async () => 'partial' as const } };
+}
 
+describe('switching a partial workspace', () => {
   it('switches to a branch with cm partial switch, which keeps the files it was configured to load', async () => {
     const { deps, commands, branch } = partialWorkspace();
 
@@ -102,9 +104,89 @@ describe('switching a partial workspace', () => {
     expect(pending()).toEqual(before);
   };
 
-  it.each(['cs:12', 'lb:v1', 'sh:4'])('refuses %s, touching nothing: cm partial switch takes only a branch', (target) => refuses(target, 'A partial workspace can only switch to a branch.'));
+  it.each(['cs:12', 'lb:v1', 'sh:4'])('refuses %s, touching nothing, and says the way out: cm partial switch takes only a branch', (target) => refuses(target, 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.'));
 
-  it('refuses a branch of another repository, touching nothing', () => refuses('br:/main@other@local', 'A partial workspace can only switch to a branch of its own repository.'));
+  it('refuses a branch of another repository, touching nothing, and says the way out', () => refuses('br:/main@other@local', 'A partial workspace can only switch to a branch of its own repository. To switch to another repository, download the whole branch first, from the workspace’s menu.'));
+});
+
+describe('downloading the whole branch into a partial workspace', () => {
+  function downloadWhole(deps: SwitchDependencies, action?: WholeBranchChangesAction) {
+    return downloadWholeBranch(deps, workspacePath, action, recordingContext().context);
+  }
+
+  /** The commands that change the workspace, in order, `cm partial`'s with their first word. */
+  const changes = (lines: string[]): string[] =>
+    lines
+      .filter((line) => /^(partial )?(shelveset|undo|switch|merge sh:\d+ --merge)/.test(line))
+      .map((line) => line.split(' ').slice(0, line.startsWith('partial ') ? 3 : 2).join(' '));
+
+  it('switches to its own branch with a standard cm switch, which downloads everything and makes it standard', async () => {
+    const { deps, commands, branch } = partialWorkspace();
+
+    expect(await downloadWhole(deps)).toEqual({ kind: 'switched' });
+    expect(branch()).toBe('/main/task1');
+    expect(commands.some((command) => command.args[0] === 'partial')).toBe(false);
+    expect(commands.find((command) => command.args[0] === 'switch')).toMatchObject({ via: 'execute', args: ['switch', 'br:/main/task1', '--forcedetailedprogress', '--noinput'] });
+  });
+
+  it('shelves the changes as a partial workspace does, then brings them back as a standard one merges', async () => {
+    const { deps, lines, pending, branch } = partialWorkspace({ pending: EDITED_AND_ADDED });
+
+    expect(await downloadWhole(deps, 'bring')).toEqual({ kind: 'brought' });
+    expect(changes(lines())).toEqual(['partial shelveset create', 'undo -r', 'switch br:/main/task1', 'merge sh:7', 'shelveset delete']);
+    expect(branch()).toBe('/main/task1');
+    expect(pending()).toEqual(EDITED_AND_ADDED);
+  });
+
+  it('leaves changes that need a merge for the merge view, which the now standard workspace can take', async () => {
+    const { deps, shelves } = partialWorkspace({ pending: EDITED_AND_ADDED, fail: { shelveConflicts: 1 } });
+
+    expect(await downloadWhole(deps, 'bring')).toEqual({ kind: 'bringPending', shelveId: 7, conflictCount: 1, mergesHere: true });
+    expect(shelves()).toEqual([7]);
+  });
+
+  it('undoes the changes first when the user chose to lose them', async () => {
+    const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
+
+    expect(await downloadWhole(deps, 'discard')).toMatchObject({ kind: 'discarded', count: 2 });
+    expect(changes(lines())).toEqual(['undo -r', 'switch br:/main/task1']);
+    expect(pending()).toEqual({});
+  });
+
+  it('asks what to do with pending changes, touching nothing', async () => {
+    const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
+
+    await expect(downloadWhole(deps)).rejects.toThrow('The workspace has pending changes.');
+    expect(changes(lines())).toEqual([]);
+    expect(pending()).toEqual(EDITED_AND_ADDED);
+  });
+
+  it('puts the changes back as the workspace now is after the switch that makes it standard fails: cm may have converted it', async () => {
+    const workspace = partialWorkspace({ pending: EDITED_AND_ADDED, fail: { switchBack: true } });
+    let kind: WorkspaceKind = 'partial';
+    const deps = { ...workspace.deps, kindOf: async () => kind, forgetKind: () => (kind = 'standard') };
+
+    await expect(downloadWhole(deps, 'bring')).rejects.toThrow('Your changes were put back.');
+    expect(changes(workspace.lines())).toEqual(['partial shelveset create', 'undo -r', 'switch br:/main/task1', 'merge sh:7', 'shelveset delete']);
+    expect(workspace.pending()).toEqual(EDITED_AND_ADDED);
+  });
+
+  it('refuses a standard workspace, touching nothing: it has the whole branch already', async () => {
+    const { deps, lines } = workspaceWith({});
+
+    await expect(downloadWhole(deps)).rejects.toThrow('This workspace already has the whole branch.');
+    expect(changes(lines())).toEqual([]);
+  });
+
+  it('refuses to leave the changes on a shelve, touching nothing: they stay on this branch, so they come along or are undone', async () => {
+    const { deps, lines, pending } = partialWorkspace({ pending: EDITED_AND_ADDED });
+    const before = { ...pending() };
+    const leave = 'leave' as WholeBranchChangesAction; // what an untrusted renderer could still send
+
+    await expect(downloadWhole(deps, leave)).rejects.toThrow("Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.");
+    expect(changes(lines())).toEqual([]);
+    expect(pending()).toEqual(before);
+  });
 });
 
 describe('switching with changes refuses, touching nothing,', () => {

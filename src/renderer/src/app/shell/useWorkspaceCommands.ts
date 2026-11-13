@@ -1,9 +1,9 @@
-import { ArrowDownToLine, CodeXml, Copy, FolderDown, FolderGit2, FolderSearch, Pause, Play, SquareTerminal } from 'lucide-react';
+import { ArrowDownToLine, CodeXml, Copy, FolderDown, FolderGit2, FolderSearch, HardDriveDownload, Pause, Play, SquareTerminal } from 'lucide-react';
 import { useMemo } from 'react';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openChooseDownloads } from '../../features/partialWorkspace/ChooseDownloadsDialog';
-import { choosesDownloads } from '../../features/partialWorkspace/workspaceDownloads';
+import { choosesDownloads, downloadsWholeBranch } from '../../features/partialWorkspace/workspaceDownloads';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -11,13 +11,15 @@ import { useCommands, type Command } from '../commands/commandStore';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
-import { updateUnlessUpToDate } from './workspaceOperations';
+import { downloadWholeBranch, updateUnlessUpToDate } from './workspaceOperations';
 
-/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them and choosing which it downloads (`choosesDownloads`). */
+/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them, choosing which it downloads (`choosesDownloads`) and downloading the whole branch (`downloadsWholeBranch`). */
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
   const workspace = useWorkspaceInfo().data;
-  const offersDownloads = choosesDownloads(workspace?.kind, workspace?.selector);
+  const selector = workspace?.selector;
+  const offersDownloads = choosesDownloads(workspace?.kind, selector);
+  const offersWholeBranch = downloadsWholeBranch(workspace?.kind, selector);
   const { autoRefresh } = useSettings();
   const updateSettings = useUpdateSettings();
   const apps = useExternalApps();
@@ -52,6 +54,19 @@ export function useWorkspaceCommands(): void {
               icon: FolderDown,
               keywords: ['partial', 'convert', 'download', 'load', 'unload'],
               run: () => openChooseDownloads(workspacePath),
+            },
+          ]
+        : []),
+      // A partial workspace becomes standard again.
+      ...(offersWholeBranch && selector
+        ? [
+            {
+              id: 'workspace.downloadWholeBranch',
+              group: 'Workspace',
+              label: 'Download the whole branch…',
+              icon: HardDriveDownload,
+              keywords: ['standard', 'full', 'convert', 'partial', 'download', 'everything'],
+              run: () => void downloadWholeBranch(workspacePath, selector),
             },
           ]
         : []),
@@ -100,7 +115,7 @@ export function useWorkspaceCommands(): void {
         run: () => copyWorkspacePath(workspacePath),
       },
     ],
-    [workspacePath, offersDownloads, autoRefresh, updateSettings, editor, terminal],
+    [workspacePath, offersDownloads, offersWholeBranch, selector, autoRefresh, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

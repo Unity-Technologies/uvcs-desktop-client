@@ -24,7 +24,7 @@ import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { failureReason } from '../workspace/putShelvedChangesBack';
 import { loadXlink, type XlinkLoad } from '../workspace/loadXlink';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const filesOf = (load: XlinkLoad): LoadedXlinkFiles => (load.kind === 'changesWaiting' ? { changesWaitIn: load.shelveId } : {});
@@ -35,8 +35,8 @@ const filesOf = (load: XlinkLoad): LoadedXlinkFiles => (load.kind === 'changesWa
  */
 export function createXlinksService({ cm, operations, headers }: Pick<ServiceContext, 'cm' | 'operations' | 'headers'>, { switchShelves, leftChanges }: SwitchContext): XlinksApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
-  const kindOf = kindFromHeaders(headers);
-  const shelveFlow = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf };
+  const { kindOf, forgetKind } = kindDependencies(headers);
+  const shelveFlow = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups'), kindOf, forgetKind };
 
   async function rules(workspacePath: string, path: string) {
     const output = await cm.query(showXlinkArgs(toAbsolutePath(workspacePath, path)), inWorkspace(workspacePath));

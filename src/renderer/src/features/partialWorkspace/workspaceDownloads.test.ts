@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
-import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote } from './workspaceDownloads';
+import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote, downloadsWholeBranch } from './workspaceDownloads';
 
 const onBranch: WorkspaceSelector = { kind: 'branch', name: '/main' };
 
@@ -23,6 +23,22 @@ describe('choosesDownloads', () => {
     expect(choosesDownloads('dynamic', onBranch)).toBe(false);
     expect(choosesDownloads(undefined, onBranch)).toBe(false);
     expect(choosesDownloads('standard', undefined)).toBe(false);
+  });
+});
+
+describe('downloadsWholeBranch', () => {
+  it('lets a partial workspace download its whole branch, which makes it standard', () => {
+    expect(downloadsWholeBranch('partial', onBranch)).toBe(true);
+  });
+
+  it('never offers it to a standard or dynamic workspace, which already download everything, or an unknown one', () => {
+    expect(downloadsWholeBranch('standard', onBranch)).toBe(false);
+    expect(downloadsWholeBranch('dynamic', onBranch)).toBe(false);
+    expect(downloadsWholeBranch(undefined, onBranch)).toBe(false);
+  });
+
+  it('waits for the branch it downloads to be known', () => {
+    expect(downloadsWholeBranch('partial', undefined)).toBe(false);
   });
 });
 
