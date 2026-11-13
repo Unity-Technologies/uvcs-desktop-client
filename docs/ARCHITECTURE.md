@@ -1485,7 +1485,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
-    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
+    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge). A
+    folder whose Unity `.meta` changed alike stays too, for the meta to ride on its row rather than show alone
+    (`hasMetaAlike`).
   - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
     together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
     Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
