@@ -16,7 +16,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
-import { recentCommentsFor } from '@shared/domain/recentComments';
+import { recentCommentsFor, withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
@@ -65,12 +65,12 @@ function answerCheckins(...answers: (CheckinResult | 'rejected')[]): void {
   });
 }
 
-/** The settings the window shows, and a store that saves every change to them. */
+/** The settings the window shows, and the main process's store, which remembers each comment in what it holds. */
 let settings: AppSettings;
 function answerSettings(overrides: Partial<AppSettings> = {}): void {
   settings = { ...DEFAULT_SETTINGS, ...overrides };
   queryClient.setQueryData(queryKeys.settings, settings);
-  fakeApi.answer('settings.update', (update: Partial<AppSettings>) => (settings = { ...settings, ...update }));
+  fakeApi.answer('settings.rememberRecentComment', (repository: string, comment: string) => (settings = { ...settings, ...withRecentComment(settings, repository, comment) }));
 }
 
 /** The repository each workspace works on, as Changes has already read it in the workspace's info (`cm wi`). */
@@ -129,7 +129,7 @@ describe('checkinChanges', () => {
   it('still reports the changeset when the store cannot remember the comment, and says so', async () => {
     answerCheckins(created(44));
     answerSettings();
-    fakeApi.answer('settings.update', () => {
+    fakeApi.answer('settings.rememberRecentComment', () => {
       throw new Error('The settings file is read-only');
     });
 
@@ -212,7 +212,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'Mine' })).toBe(true);
 
     expect(dialogs.asked).toEqual([{ incoming: incoming(), overlapping: [], needsReview: false, rejected: true }]);
-    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.update']);
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.rememberRecentComment']);
     const [first, second] = fakeApi.argsOf('pendingChanges.checkin');
     expect(second![1]).toEqual(first![1]);
     expect(shownToasts().some((toast) => toast.kind === 'error')).toBe(false);

@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { recentCommentsFor, withRecentComment } from '@shared/domain/recentComments';
+import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { SettingsStore } from './SettingsStore';
 
@@ -61,6 +61,22 @@ describe('SettingsStore recent branches', () => {
   });
 });
 
+describe('SettingsStore recent comments', () => {
+  it("keeps both repositories' comments when two windows check in to them one right after the other", () => {
+    const { settings, filePath } = store();
+    const changed: string[][] = [];
+    settings.onChanged((_settings, changes) => changed.push(Object.keys(changes)));
+
+    settings.rememberRecentComment('game@local', 'Fix cs:4207');
+    settings.rememberRecentComment('art@local', 'New textures');
+
+    const stored = new SettingsStore(filePath).get();
+    expect(recentCommentsFor(stored, 'game@local')).toEqual(['Fix cs:4207']);
+    expect(recentCommentsFor(stored, 'art@local')).toEqual(['New textures']);
+    expect(changed).toEqual([['recentCommentsByRepository'], ['recentCommentsByRepository']]);
+  });
+});
+
 describe('SettingsStore reading its file', () => {
   it("keeps a file it can't read as settings aside, named for when, and starts from the defaults", () => {
     const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
@@ -94,9 +110,9 @@ describe('SettingsStore reading its file', () => {
 
   it('keeps the repositories checked in to last first across a restart, so the one left longest is forgotten first', () => {
     const { settings, filePath } = store();
-    settings.update(withRecentComment(settings.get(), 'game@local', 'In game'));
-    settings.update(withRecentComment(settings.get(), 'art@local', 'In art'));
-    settings.update(withRecentComment(settings.get(), 'game@local', 'Again in game'));
+    settings.rememberRecentComment('game@local', 'In game');
+    settings.rememberRecentComment('art@local', 'In art');
+    settings.rememberRecentComment('game@local', 'Again in game');
 
     expect(Object.keys(new SettingsStore(filePath).get().recentCommentsByRepository)).toEqual(['game@local', 'art@local']);
   });
