@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome } from './suggestButton';
+import { refusalShown, SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome } from './suggestButton';
 import { FAILED, READING, readValue } from './suggestedChange';
 
 describe('suggestButtonOf', () => {
@@ -26,6 +26,20 @@ describe('suggestRequestOutcome', () => {
   it("says why it added none, rather than nothing: the line can't be read, or a suggestion is there already", () => {
     expect(suggestRequestOutcome(FAILED, '')).toEqual({ kind: 'refused', reason: "The line's text can't be read" });
     expect(suggestRequestOutcome(readValue(['x']), '```suggestion\ny\n```')).toEqual({ kind: 'refused', reason: 'This comment already suggests a change' });
+  });
+});
+
+describe('refusalShown', () => {
+  const refusal = { reason: "The line's text can't be read", text: 'Use the constant' };
+
+  it('says why no suggestion was added while the comment is as it was then', () => {
+    expect(refusalShown(refusal, 'Use the constant')).toBe("The line's text can't be read");
+  });
+
+  it('stops once the comment changes: typed in, or a suggestion inserted', () => {
+    expect(refusalShown(refusal, 'Use the constant.')).toBeNull();
+    expect(refusalShown(refusal, 'Use the constant\n```suggestion\nx\n```')).toBeNull();
+    expect(refusalShown(null, 'Use the constant')).toBeNull();
   });
 });
 
