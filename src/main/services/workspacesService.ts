@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
+import type { SwitchResult, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
 import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
 import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
@@ -24,7 +25,7 @@ import { callerId } from '../ipc/caller';
 import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
 import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
-import { switchWithChanges } from '../workspace/switchWithChanges';
+import { downloadWholeBranch, switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
@@ -159,6 +160,28 @@ export function createWorkspacesService(
     });
   }
 
+  /**
+   * A standard switch to its own branch makes a partial workspace standard. A failure may come after it converted it, so
+   * the windows are told its kind changed either way, and the kind read before is forgotten.
+   */
+  function downloadWholeBranchOf(workspacePath: string, operationId: string, pendingChanges?: WholeBranchChangesAction): Promise<SwitchResult> {
+    return operations.run(operationId, async (context) => {
+      // As `configurePartial`'s: a kind that can't be read may still be partial.
+      const converts = await kindOf(workspacePath).then(
+        (kind) => kind === 'partial',
+        () => true,
+      );
+      try {
+        return await downloadWholeBranch(switchDependencies, workspacePath, pendingChanges, context);
+      } finally {
+        if (converts) {
+          headers.forget(workspacePath);
+          tellKindChanged(workspacePath);
+        }
+      }
+    });
+  }
+
   async function loadedIn(workspacePath: string, folder: string): Promise<string[]> {
     const items = await cm.queryRecords(loadedItemsArgs([join(workspacePath, folder)]), readLoadedItem, { cwd: workspacePath });
     // `cm ls` lists the folder itself first.
@@ -205,5 +228,6 @@ export function createWorkspacesService(
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
       operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),
+    downloadWholeBranch: downloadWholeBranchOf,
   };
 }
