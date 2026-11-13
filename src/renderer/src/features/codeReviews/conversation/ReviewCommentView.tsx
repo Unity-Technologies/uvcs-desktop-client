@@ -1,23 +1,27 @@
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
+import { lazyComponent } from '../../../lib/lazyComponent';
 import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { SuggestedChangeBlock } from '../suggestions/SuggestedChangeBlock';
-import { suggestedChangeOf } from '../suggestions/suggestedChange';
-import { SuggestionApplyButton } from '../suggestions/SuggestionApplyButton';
+import { suggestedChangeOf, type SuggestedChange } from '../suggestions/suggestedChange';
 import { CommentComposer } from './CommentComposer';
 import { CommentMenuButton } from './CommentMenuButton';
 import { editReviewComment } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
 import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import styles from './ReviewConversation.module.css';
+
+// Applying a suggestion follows its line into the workspace's file with the diffs' line diff (Pierre's): loaded with the
+// first suggestion shown, never at start-up. Its header keeps its height while it loads.
+const SuggestionApplyButton = lazyComponent(() => import('../suggestions/SuggestionApplyButton').then((module) => module.SuggestionApplyButton));
 
 interface ReviewCommentViewProps {
   /** The review it's on: its link extends the review's; its change requests are marked applied in its changesets (`changesetsToApplyIn`). */
@@ -95,10 +99,20 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
           />
         ) : (
           <div className={`${styles.markdown} selectable`}>
-            <Markdown text={comment.text} comment suggestion={suggestion ? <SuggestedChangeBlock change={suggestion} actions={<SuggestionApplyButton review={review} comment={comment} change={suggestion} open={thread.state.kind === 'open'} />} /> : undefined} />
+            <Markdown text={comment.text} comment suggestion={suggestion ? <CommentSuggestion review={review} comment={comment} thread={thread} change={suggestion} /> : undefined} />
           </div>
         )}
       </div>
     </article>
   );
+}
+
+/** A change request's suggestion, in place of its fence: what it changes, and applying it while the request is open. */
+function CommentSuggestion({ review, comment, thread, change }: { review: Pick<CodeReview, 'target'>; comment: ReviewComment; thread: ReviewThread; change: SuggestedChange }) {
+  const actions = (
+    <Suspense fallback={null}>
+      <SuggestionApplyButton review={review} comment={comment} change={change} open={thread.state.kind === 'open'} />
+    </Suspense>
+  );
+  return <SuggestedChangeBlock change={change} actions={actions} />;
 }
