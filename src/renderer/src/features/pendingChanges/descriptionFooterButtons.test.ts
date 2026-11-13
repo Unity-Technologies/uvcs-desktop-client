@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descriptionFooterButtons } from './descriptionFooter';
+import { descriptionFooterButtons } from './descriptionFooterButtons';
 
 describe('descriptionFooterButtons', () => {
   it('shows Recent comments while there are some, then the change requests to apply with their count', () => {
