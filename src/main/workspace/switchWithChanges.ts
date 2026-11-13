@@ -27,9 +27,10 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 const ALREADY_WHOLE = 'This workspace already has the whole branch.';
+/** Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard. */
 const PARTIAL_REFUSED = {
-  notBranch: 'A partial workspace can only switch to a branch.',
-  otherRepository: 'A partial workspace can only switch to a branch of its own repository.',
+  notBranch: 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.',
+  otherRepository: 'A partial workspace can only switch to a branch of its own repository. To switch to another repository, download the whole branch first, from the workspace’s menu.',
 } as const;
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
