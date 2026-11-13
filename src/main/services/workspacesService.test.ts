@@ -375,6 +375,45 @@ describe('a standard workspace choosing what to download', () => {
   });
 });
 
+describe('a partial workspace downloading its whole branch', () => {
+  const PARTIAL_ON_TASK1 = { 'status --header --xml': STATUS_HEADER, status: pendingStatus(WORKSPACE), ...PARTIAL_WORKSPACE_NAMES };
+
+  it('switches to its own branch with a standard cm switch of its own process, then every window is told its kind changed', async () => {
+    const { service, commands, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, switch: '' });
+
+    expect(await service.downloadWholeBranch(WORKSPACE, 'op-1')).toMatchObject({ kind: 'switched' });
+
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([{ args: ['switch', 'br:/main/task1', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } }]);
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('reads its kind again afterwards, since the one read before is now wrong', async () => {
+    const { service, lines } = workspaces({ ...PARTIAL_ON_TASK1, switch: '' });
+
+    await service.downloadWholeBranch(WORKSPACE, 'op-1');
+    await service.info(WORKSPACE);
+
+    expect(lines().filter((line) => line.startsWith('getworkspacefrompath'))).toHaveLength(2);
+  });
+
+  it('tells its kind may have changed when the switch fails, since cm may have converted it before failing', async () => {
+    const { service, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, switch: cmFails('The server is not reachable.') });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow('The server is not reachable.');
+
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('refuses a standard workspace, switching nothing and telling no window', async () => {
+    const { service, commands, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, ...WORKSPACE_NAMES });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow('This workspace already has the whole branch.');
+
+    expect(commands.some((command) => command.via === 'execute')).toBe(false);
+    expect(kindChanges).toEqual([]);
+  });
+});
+
 describe('watching a workspace', () => {
   it("shows the workspace's cm sessions and watches it for the calling window", async () => {
     const watch = vi.fn(() => ({ complete: true }) as never);
