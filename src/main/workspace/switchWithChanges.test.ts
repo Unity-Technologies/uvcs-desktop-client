@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SwitchChangesAction, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { downloadWholeBranch, switchWithChanges, type SwitchDependencies } from './switchWithChanges';
@@ -158,6 +159,16 @@ describe('downloading the whole branch into a partial workspace', () => {
     await expect(downloadWhole(deps)).rejects.toThrow('The workspace has pending changes.');
     expect(changes(lines())).toEqual([]);
     expect(pending()).toEqual(EDITED_AND_ADDED);
+  });
+
+  it('puts the changes back as the workspace now is after the switch that makes it standard fails: cm may have converted it', async () => {
+    const workspace = partialWorkspace({ pending: EDITED_AND_ADDED, fail: { switchBack: true } });
+    let kind: WorkspaceKind = 'partial';
+    const deps = { ...workspace.deps, kindOf: async () => kind, forgetKind: () => (kind = 'standard') };
+
+    await expect(downloadWhole(deps, 'bring')).rejects.toThrow('Your changes were put back.');
+    expect(changes(workspace.lines())).toEqual(['partial shelveset create', 'undo -r', 'switch br:/main/task1', 'merge sh:7', 'shelveset delete']);
+    expect(workspace.pending()).toEqual(EDITED_AND_ADDED);
   });
 
   it('refuses a standard workspace, touching nothing: it has the whole branch already', async () => {
