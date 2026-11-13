@@ -131,6 +131,22 @@ describe('suggestionTargetIn', () => {
     expect(suggestionTargetIn(block, COMMENTED, text('class Settings\r\n{\r\n    int Timeout = 60;\r\n    int Retries = 3;\r\n}\r\n'))).toEqual({ kind: 'refused', reason: already });
   });
 
+  it('says the workspace already has a deletion once the lines are gone and their neighbors meet, moved or not', () => {
+    const already = 'Your workspace already has this suggestion';
+    const deletion: SuggestedChange = { ...CHANGE, lines: [] };
+    expect(suggestionTargetIn(deletion, COMMENTED, text('class Settings\r\n{\r\n}\r\n'))).toEqual({ kind: 'refused', reason: already });
+    expect(suggestionTargetIn(deletion, COMMENTED, text('// Settings\r\nclass Settings\r\n{\r\n}\r\n'))).toEqual({ kind: 'refused', reason: already });
+    // At the file's start or end, the one neighbor there is.
+    expect(suggestionTargetIn({ ...deletion, firstLine: 4, lastLine: 4 }, COMMENTED, text('class Settings\r\n{\r\n    int Timeout = 30;\r\n'))).toEqual({ kind: 'refused', reason: already });
+    expect(suggestionTargetIn({ ...deletion, firstLine: 1, lastLine: 2 }, COMMENTED, text('    int Timeout = 30;\r\n}\r\n'))).toEqual({ kind: 'refused', reason: already });
+  });
+
+  it("says the line changed when a deletion's line is gone but its neighbors no longer meet as they were", () => {
+    const deletion: SuggestedChange = { ...CHANGE, lines: [] };
+    expect(suggestionTargetIn(deletion, COMMENTED, text('class Settings\r\n{ // open\r\n}\r\n'))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+    expect(suggestionTargetIn(deletion, COMMENTED, text(COMMENTED.replace('30', '45')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+  });
+
   it('says the line changed when it reads as suggested but its neighbors no longer hold it', () => {
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '60').replace('{\r\n', '{ // open\r\n')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
   });
