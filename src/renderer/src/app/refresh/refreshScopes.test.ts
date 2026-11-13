@@ -15,6 +15,8 @@ import {
   isAffectedByPendingChangeEdit,
   isAffectedByPermissions,
   isAffectedByRecordedMove,
+  isAffectedByReviewSubscription,
+  isAffectedByCodeReviews,
   isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
@@ -250,13 +252,30 @@ describe('incoming changeset pages', () => {
   });
 });
 
+describe("a review's email subscription", () => {
+  it('subscribing or unsubscribing reads that review\'s subscription again, nothing else', () => {
+    const subscription = isAffectedByReviewSubscription(7);
+    expect(subscription(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(subscription(key('codeReviews', 'subscription', 8))).toBe(false);
+    expect(subscription(key('codeReviews', 'review', 7))).toBe(false);
+    expect(subscription(key('codeReviews', 'list', {}))).toBe(false);
+  });
+
+  // Taking part (a comment, being added as a reviewer) subscribes the user again.
+  it('is read again by any write on a review', () => {
+    expect(isAffectedByCodeReviews(key('codeReviews', 'subscription', 7))).toBe(true);
+  });
+});
+
 describe("a code review's page", () => {
   const branchReview = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' });
 
-  it('reads again the review, what was said on it and its reviewers, of that review only', () => {
+  it("reads again the review, what was said on it, its reviewers and the user's subscription, of that review only", () => {
     expect(branchReview(key('codeReviews', 'review', 7))).toBe(true);
     expect(branchReview(key('codeReviews', 'conversation', 7))).toBe(true);
     expect(branchReview(key('codeReviews', 'reviewers', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'subscription', 8))).toBe(false);
     expect(branchReview(key('codeReviews', 'conversation', 8))).toBe(false);
     expect(branchReview(key('codeReviews', 'review', 70))).toBe(false);
   });

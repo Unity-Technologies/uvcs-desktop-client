@@ -120,17 +120,30 @@ export function isAffectedByPermissions(kind: string, ownerChanged: boolean): (k
   return (key) => areas.includes(area(key) as string);
 }
 
-/** A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list. */
+/**
+ * A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list.
+ * And the user's email subscription to a review shown: taking part (a comment, being added as a reviewer) subscribes
+ * them again, so it is read again with the rest.
+ */
 export function isAffectedByCodeReviews(key: QueryKey): boolean {
   return area(key) === 'codeReviews';
 }
 
-/** What a code review's page reads about the review itself, by its number: the review, what was said on it, its reviewers. */
-const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers'];
+/** The user subscribed to a review's emails or unsubscribed: whether they get that review's emails, and nothing else. */
+export function isAffectedByReviewSubscription(reviewId: number): (key: QueryKey) => boolean {
+  return (key) => area(key) === 'codeReviews' && detail(key) === 'subscription' && key[4] === reviewId;
+}
+
+/**
+ * What a code review's page reads about the review itself, by its number: the review, what was said on it, its
+ * reviewers, and whether the user gets its emails.
+ */
+const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers', 'subscription'];
 
 /**
  * What a code review's page shows that others can change while it's open (a comment written, a status set, a changeset
- * checked in on its branch): the review, what was said on it and its reviewers, and, for a branch's review, the
+ * checked in on its branch): the review, what was said on it, its reviewers and the user's email subscription (someone
+ * adding them as a reviewer or mentioning them subscribes them), and, for a branch's review, the
  * branch's files and changesets its Changes tab reads. Not the lists of reviews, nor anything else of the window. A
  * changeset's or shelve's changes never change, and refreshes skip them anyway (`isRefreshable`).
  */
