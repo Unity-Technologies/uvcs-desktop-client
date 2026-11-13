@@ -142,11 +142,15 @@ export function rowTextRange(row: Element, start: number, end: number): Range | 
 
 /**
  * The row a pointer event is on, as Pierre marks it (`lineUnderPointer` reads it): the line number of its number cell
- * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row.
+ * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row, and over
+ * a row of a diff shown in a comment on the code (a suggested change in a thread): its rows come first in the event's
+ * path, inside a `diffs-container` of its own, but they're its lines, not the code's.
  */
 export function rowUnderPointer(path: readonly EventTarget[]): RowUnderPointer | null {
-  const row = path.find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
-  return row ? rowOf(row) : null;
+  const index = path.findIndex((target) => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
+  if (index === -1) return null;
+  const diffsAround = path.slice(index).filter((target) => target instanceof HTMLElement && target.tagName.toLowerCase() === 'diffs-container').length;
+  return diffsAround > 1 ? null : rowOf(path[index] as HTMLElement);
 }
 
 /** Text selected in the page, in a diff or a file Pierre renders (not typed into: the editor has its own selections). */
