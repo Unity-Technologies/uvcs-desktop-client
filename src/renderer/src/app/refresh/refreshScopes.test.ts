@@ -7,6 +7,7 @@ import {
   isAffectedByAttributes,
   isAffectedByBranchList,
   isAffectedByChangesetComment,
+  withChangeRequestsApplied,
   isAffectedByChangesetMove,
   isAffectedByLabels,
   isAffectedByNewChangesets,
@@ -89,6 +90,20 @@ describe('refresh scopes', () => {
     expect(isAffectedByCheckinOrUpdate(key('labels', {}))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('changesets', 'byId', 4))).toBe(false);
+  });
+
+  it('refreshes the code reviews too after a check-in or a comment edit whose comment applies a change request', () => {
+    const checkin = withChangeRequestsApplied(isAffectedByCheckinOrUpdate, 'Shelve first [apply-change:c0d1ce00]');
+    expect(checkin(key('codeReviews', 'summaries', { targetBranch: '/main/task' }))).toBe(true);
+    expect(checkin(key('codeReviews', 'conversation', 43))).toBe(true);
+    expect(checkin(key('pendingChanges'))).toBe(true);
+    expect(checkin(key('labels', {}))).toBe(false);
+    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed [APPLY-CHANGE:C0D1CE00]')(key('codeReviews', {}))).toBe(true);
+  });
+
+  it('leaves the code reviews alone after a comment that applies none', () => {
+    expect(withChangeRequestsApplied(isAffectedByCheckinOrUpdate, 'Shelve first, see cr:43 and [apply-change:c0d1ce0]')(key('codeReviews', {}))).toBe(false);
+    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed')).toBe(isAffectedByChangesetComment);
   });
 
   it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {
