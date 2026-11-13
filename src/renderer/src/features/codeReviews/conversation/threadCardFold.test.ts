@@ -16,7 +16,7 @@ describe('initialThreadCardFold', () => {
 });
 
 describe('nextThreadCardFold', () => {
-  it("unfolds the card at its first comment's editor when Edit is picked on the folded header", () => {
+  it("unfolds the card at its first comment's editor when Edit is picked on the folded line's menu", () => {
     expect(nextThreadCardFold(folded, 'editRoot')).toEqual({ folded: false, editsRoot: true });
   });
 
