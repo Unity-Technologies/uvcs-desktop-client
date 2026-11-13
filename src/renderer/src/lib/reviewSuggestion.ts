@@ -14,12 +14,12 @@ export interface Suggestion {
   lines: string[];
 }
 
-/** The suggestion a comment's text holds, or none. Line ends are `\n` or `\r\n`, as the text was written. */
+/** The suggestion a comment's text holds, or none. Line ends are `\n`, `\r\n` or `\r`, as Markdown reads them. */
 export function suggestionOf(text: string): Suggestion | null {
   const fence = suggestionFenceIn(text);
   if (!fence) return null;
   // An empty fence and one holding an empty line both read as an empty text: the count of lines tells them apart.
-  return { lines: fence.lineCount === 0 ? [] : fence.text.split(/\r?\n/) };
+  return { lines: fence.lineCount === 0 ? [] : fence.text.split(/\r\n|\n|\r/) };
 }
 
 /** Whether a text suggests a change: what a new comment's Suggest change offers once (`suggestButtonOf`). */

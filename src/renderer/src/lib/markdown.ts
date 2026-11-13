@@ -93,11 +93,14 @@ export function suggestionBlockIndex(blocks: readonly MarkdownBlock[]): number {
 export function suggestionFenceIn(source: string): { text: string; lineCount: number } | null {
   const node = readTree(source).children.find((child) => child.type === 'code' && child.lang === SUGGESTION_LANGUAGE);
   if (!node || node.type !== 'code' || !node.position) return null;
-  const written = source.slice(node.position.start.offset, node.position.end.offset).split(/\r?\n/);
+  // Every line end Markdown reads, a lone carriage return too.
+  const written = source.slice(node.position.start.offset, node.position.end.offset).split(/\r\n|\n|\r/);
   const fence = /^ {0,3}(`{3,}|~{3,})/.exec(written[0]!)?.[1] ?? '```';
   const closing = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}[ \\t]*$`);
   const closed = written.length > 1 && closing.test(written.at(-1)!);
-  return { text: node.value, lineCount: written.length - 1 - (closed ? 1 : 0) };
+  // An unclosed fence runs to the text's end, but not onto the empty "line" after a final line end.
+  const trailing = !closed && written.length > 1 && written.at(-1) === '' ? 1 : 0;
+  return { text: node.value, lineCount: written.length - 1 - (closed ? 1 : 0) - trailing };
 }
 
 /**
