@@ -17,3 +17,8 @@ export function ownReviewButton(review: Pick<CodeReviewSummary, 'reviewers'>, us
   return { label: 'Review', joining: user !== undefined && !isReviewer(review, user), preselected: 'Reviewed' };
 }
 
+/** The status the popover shows picked: the one the user picked and didn't send yet (`useOwnReviewChoiceStore`), else the preselected one. */
+export function ownReviewChoice(button: OwnReviewButtonState, chosen: CodeReviewStatus | undefined): CodeReviewStatus {
+  return chosen ?? button.preselected;
+}
+
