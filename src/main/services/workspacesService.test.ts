@@ -10,6 +10,7 @@ import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statu
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { updateCommand } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
+import { memorySettings } from '../settings/testing/memorySettings';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -26,7 +27,7 @@ const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: '
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>) {
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
+  const context = serviceContext(fake.cm, { headers, settings: memorySettings(), watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
   /** The workspaces the service said changed kind (`tellKindChanged`). */
   const kindChanges: string[] = [];
   const service = createWorkspacesService(context, {} as SwitchContext, (workspacePath) => kindChanges.push(workspacePath));
@@ -390,10 +391,12 @@ describe('a partial workspace downloading its whole branch', () => {
   it('reads its kind again afterwards, since the one read before is now wrong', async () => {
     const { service, lines } = workspaces({ ...PARTIAL_ON_TASK1, switch: '' });
 
+    const kindReads = () => lines().filter((line) => line.startsWith('getworkspacefrompath')).length;
     await service.downloadWholeBranch(WORKSPACE, 'op-1');
+    const readsBefore = kindReads();
     await service.info(WORKSPACE);
 
-    expect(lines().filter((line) => line.startsWith('getworkspacefrompath'))).toHaveLength(2);
+    expect(kindReads()).toBe(readsBefore + 1);
   });
 
   it('tells its kind may have changed when the switch fails, since cm may have converted it before failing', async () => {
