@@ -44,6 +44,11 @@ export interface LineAction {
   /** What it does to a line, as its button's tooltip and its menu entry say it ("Comment on line 42"). */
   label: (line: ChangedLine) => string;
   run: (line: ChangedLine) => void;
+  /**
+   * Another way to do it, after it in the code's menu only, the gutter's button staying the one: a review's "Suggest
+   * change on line 42", the comment opened with the line's suggestion in it.
+   */
+  variant?: { label: (line: ChangedLine) => string; run: (line: ChangedLine) => void };
 }
 
 /** A line a row or a marker is about. */

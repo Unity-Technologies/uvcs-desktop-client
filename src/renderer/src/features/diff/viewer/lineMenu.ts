@@ -28,6 +28,7 @@ export function lineMenuEntries({ lines, copyLink, copyLines, annotate, lineActi
   const target = lineActionTarget(lines);
   return [
     lineAction?.offers(target) && menuAction('lineAction', () => lineAction.run(target), { label: lineAction.label(target) }),
+    lineAction?.variant && lineAction.offers(target) && menuAction('lineActionVariant', () => lineAction.variant!.run(target), { label: lineAction.variant.label(target) }),
     annotate && lines.side === 'new' && menuAction('annotateLine', annotate, { label: one ? 'Annotate at this line' : 'Annotate at these lines' }),
     copyLink && menuAction('copyLineLink', copyLink, { label: `Copy link to ${linesWords(lines)}`, shortcut: hotkey('copyLink') }),
     menuAction('copyLines', copyLines, { label: one ? 'Copy line' : 'Copy lines' }),

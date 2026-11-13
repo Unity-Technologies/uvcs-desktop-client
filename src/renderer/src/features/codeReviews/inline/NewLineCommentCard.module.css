@@ -11,7 +11,14 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-2);
+}
+
+/* At the header's end, apart from the kind it sets. */
+.suggest {
+  margin-left: auto;
 }
 
 /* Room for a few lines: a comment on code often says what and why. Beats the composer's own `.field` (one class). */
