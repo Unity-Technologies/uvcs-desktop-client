@@ -4,7 +4,7 @@ import { fileNameOf } from '../../../lib/text';
 import { applyChangeText } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
-import { newerRangeInContextOf } from '../inline/newerLine';
+import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
 import { FAILED, READING, rangeWords, readValue, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
@@ -72,12 +72,19 @@ export function suggestionTargetIn(change: SuggestedChange, commentedText: strin
   const text = editableText(file);
   if (text === null) return { kind: 'refused', reason: `${name} isn't a text file this can change` };
   const range = newerRangeInContextOf(commentedText, text, change);
-  return range ? { kind: 'ready', text, range } : { kind: 'refused', reason: codeChangedReason(change) };
+  if (range) return { kind: 'ready', text, range };
+  // The lines are there, but not their neighbors: say so, as the lines themselves read as written.
+  return { kind: 'refused', reason: newerRangeOf(commentedText, text, change) ? codeAroundChangedReason(change) : codeChangedReason(change) };
 }
 
 /** Why a suggestion can't be applied once the lines it was written on changed. */
 export function codeChangedReason(change: LineRange): string {
   return `${rangeWords(change)} changed since the suggestion was written`;
+}
+
+/** Why a suggestion can't be applied once the lines around it changed, its own being as they were. */
+export function codeAroundChangedReason(change: LineRange): string {
+  return `The code around ${rangeWords(change).toLowerCase()} changed since the suggestion was written`;
 }
 
 /** Why a suggestion can't be checked in alone: a check-in of its file would take the file's other changes too. */

@@ -99,7 +99,8 @@ describe('suggestionTargetIn', () => {
     const brace: SuggestedChange = { ...CHANGE, firstLine: 3, lastLine: 3, lines: ['} // Run'] };
     const commented = 'void Run() {\n  step();\n}\n';
     const moved = 'void Run() {\n}\n  step();\n';
-    expect(suggestionTargetIn(brace, commented, text(moved))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+    // A brace like it is still there, alone: the code around it changed.
+    expect(suggestionTargetIn(brace, commented, text(moved))).toEqual({ kind: 'refused', reason: 'The code around line 3 changed since the suggestion was written' });
   });
 
   it('takes the block where its neighbors still hold it, code added further above', () => {
