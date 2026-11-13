@@ -25,6 +25,7 @@ describe('suggestionBlockIndex', () => {
     ['indented fence', '  ```suggestion\n    deeper\n  ```'],
     ['several lines', '```suggestion\n  a\n\tb\n```'],
     ['an unclosed fence', '```suggestion\nx\n'],
+    ['references before the fence and in its info string', 'As cs:12 did, @ana:\n```suggestion cs:12 @ana\nx = br:/main;\n```'],
   ])('shows the block suggestionOf reads: %s', (_name, text) => {
     expect(shownSuggestion(text)).toBe(readSuggestion(text));
     expect(shownSuggestion(text)).not.toBeNull();
