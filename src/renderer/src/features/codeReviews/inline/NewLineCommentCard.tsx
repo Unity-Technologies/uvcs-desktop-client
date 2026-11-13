@@ -6,6 +6,7 @@ import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
+import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { Button } from '../../../ui/Button';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
@@ -107,41 +108,43 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   }, [suggestSeq, lineText]);
 
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
-        <Tooltip content={suggest.tip}>
-          <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
-            Suggest change
-          </Button>
-        </Tooltip>
+    <CommentedFileContext.Provider value={spot.path}>
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
+          <Tooltip content={suggest.tip}>
+            <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
+              Suggest change
+            </Button>
+          </Tooltip>
+        </div>
+        {refusedSuggestion && (
+          <p className={styles.notice} role="status">
+            No suggestion added: {refusedSuggestion}
+          </p>
+        )}
+        <div>
+          <CommentComposer
+            fieldRef={field}
+            fieldClassName={styles.field}
+            draftKey={draftKey}
+            placeholder={words.placeholder}
+            label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.line })}
+            submitLabel={words.submit}
+            autoFocus={mountedFor.current !== null}
+            asksBeforeDiscarding
+            onSubmit={async (text) => {
+              const sent = await addLineComment(place, spot.reviewId, spot.comment, text);
+              if (!sent) return false;
+              await conversationReadSince(place, spot.reviewId, conversationReadAt(place, spot.reviewId));
+              close(spot.key);
+              onSent();
+              return true;
+            }}
+            onCancel={() => close(spot.key)}
+          />
+        </div>
       </div>
-      {refusedSuggestion && (
-        <p className={styles.notice} role="status">
-          No suggestion added: {refusedSuggestion}
-        </p>
-      )}
-      <div>
-        <CommentComposer
-          fieldRef={field}
-          fieldClassName={styles.field}
-          draftKey={draftKey}
-          placeholder={words.placeholder}
-          label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.line })}
-          submitLabel={words.submit}
-          autoFocus={mountedFor.current !== null}
-          asksBeforeDiscarding
-          onSubmit={async (text) => {
-            const sent = await addLineComment(place, spot.reviewId, spot.comment, text);
-            if (!sent) return false;
-            await conversationReadSince(place, spot.reviewId, conversationReadAt(place, spot.reviewId));
-            close(spot.key);
-            onSent();
-            return true;
-          }}
-          onCancel={() => close(spot.key)}
-        />
-      </div>
-    </div>
+    </CommentedFileContext.Provider>
   );
 }
