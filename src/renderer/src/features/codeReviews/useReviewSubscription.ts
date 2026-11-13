@@ -1,16 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace } from '../../app/workspace/useWorkspace';
+import { reviewSubscriptionKey } from './codeReviewKey';
 import { readsReviewSubscriptions, subscriptionSection, type SubscriptionSection } from './reviewSubscription';
-
-/** Where a review's email subscription is kept: under the reviews' area, so every write on a review reads it again. */
-export function reviewSubscriptionKey(place: Place, reviewId: number) {
-  return queryKeys.inPlace(place, 'codeReviews', 'subscription', reviewId);
-}
 
 /**
  * What the review page's Notifications shows (`subscriptionSection`), or nothing. One `cm codereview subscription` as

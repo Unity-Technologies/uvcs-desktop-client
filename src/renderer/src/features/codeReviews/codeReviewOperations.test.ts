@@ -16,7 +16,7 @@ import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { chooseReviewers, changeReviewers, deleteReviews, removeReviewer, renameReview, reRequestReview, setOwnReviewStatus, setReviewSubscription } from './codeReviewOperations';
-import { reviewSubscriptionKey } from './useReviewSubscription';
+import { reviewSubscriptionKey } from './codeReviewKey';
 import { pickReviewers } from './ReviewersDialog';
 
 const user = (name: string): MemberRef => ({ name, kind: 'user' });

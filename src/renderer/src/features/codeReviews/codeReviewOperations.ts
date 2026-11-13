@@ -12,12 +12,12 @@ import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByCodeReviews, isAffectedByReviewSubscription } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
+import { reviewSubscriptionKey } from './codeReviewKey';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
 import { pickReviewers } from './ReviewersDialog';
 import type { ReviewerChanges } from './reviewerPick';
 import { changesOwnStatus, isReviewer } from './reviewers';
 import { subscriptionAfter } from './reviewSubscription';
-import { reviewSubscriptionKey } from './useReviewSubscription';
 
 /** How the user's own status is set: who they are when already known, what they say, whether they agreed to join. */
 export interface OwnStatusOptions {
