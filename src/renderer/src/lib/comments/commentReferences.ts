@@ -94,6 +94,16 @@ export function mayHoldReference(text: string): boolean {
 
 const ANY_APPLY_CHANGE = new RegExp(APPLY_CHANGE.source, 'i');
 
+const WHOLE_APPLY_CHANGE = new RegExp(`^${APPLY_CHANGE.source}$`, 'i');
+
+/**
+ * Whether a text is a change request to apply and nothing else (`[apply-change:c0d1ce00]`): the editor's Markdown
+ * reader takes its brackets for a link's (a shortcut reference, `[text]`), which would hold the reference out.
+ */
+export function isChangeRequestReference(text: string): boolean {
+  return WHOLE_APPLY_CHANGE.test(text);
+}
+
 /**
  * Every reference in a text, in order. Code and links are the caller's to leave out (`parseMarkdown`). With the
  * place's tracker (`issues`), its issue keys too, where no other reference already reads the text (`br:/main/VCS-12`).

@@ -2,7 +2,7 @@ import type { EditorState } from '@codemirror/state';
 import { issueReferences } from './issueReferencesFacet';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
-import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
+import { findReferences, isChangeRequestReference, type CommentReference } from '../../lib/comments/commentReferences';
 import { justPicked } from './justPicked';
 
 /**
@@ -121,7 +121,8 @@ function markNode(state: EditorState, node: SyntaxNodeRef, reveals: (from: numbe
       if (parent && !reveals(parent.from, parent.to)) marks.push({ kind: 'hidden', from: node.from, to: node.to });
       return;
     case 'Link':
-      markLink(node.node, reveals, marks);
+      // A change request to apply is its chip, not a link (`excludedRanges`).
+      if (!isChangeRequestReference(state.sliceDoc(node.from, node.to))) markLink(node.node, reveals, marks);
       return;
     case 'HTMLTag':
       markKey(state, node.node, reveals, marks);
@@ -256,6 +257,8 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
       if (!NO_REFERENCES.has(node.name) && !drawnTable) return;
       // A bare email address isn't one: a mention or a spec may hold what reads as one (`@ana@acme.com`).
       if (node.name === 'URL' && !WEB_ADDRESS.test(state.sliceDoc(node.from, node.to))) return;
+      // `[apply-change:c0d1ce00]` reads as a link with no address here; micromark, with no definition for it, doesn't.
+      if (node.name === 'Link' && isChangeRequestReference(state.sliceDoc(node.from, node.to))) return;
       excluded.push([node.from, node.to]);
       return false;
     },
