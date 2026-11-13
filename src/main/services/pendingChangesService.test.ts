@@ -140,7 +140,7 @@ describe('checkin', () => {
 
   it('reads a checkin whose comment names a change request no review has pending as checked in, its changeset from the local status', async () => {
     const failed = cmFails(
-      ['CI_START', 'STAGE Confirming checkin operation', 'STAGE ', 'Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:', '  - deadbeef'].join('\n'),
+      ['CI_START', 'STAGE Confirming checkin operation', 'STAGE ', 'Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:- deadbeef'].join('\n'),
     );
     const { service, commands } = pendingChanges({ ...STANDARD, checkin: failed, status: statusHeader('/main/task1', { changeset: 45 }) });
 

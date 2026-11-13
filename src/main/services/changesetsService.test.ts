@@ -142,7 +142,7 @@ describe('changesets', () => {
 describe('a comment edit naming change requests', () => {
   it('saves the comment and says which named requests no review had pending, as cm fails after saving it', async () => {
     const { service } = changesets({
-      changeset: cmFails('Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:\n  - deadbeef'),
+      changeset: cmFails('Error: The following review change requests (specified in the checkin comment) cannot be found or are already applied in a previous changeset:- deadbeef'),
     });
 
     expect(await service.editComment(IN_WORKSPACE, 7, 'Fix [apply-change:deadbeef]')).toEqual({ changeRequestsNotApplied: { requests: ['deadbeef'], logEntryId: expect.any(Number) } });

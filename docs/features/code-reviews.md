@@ -327,8 +327,9 @@ text and runs no command of its own for it, so every client reads it. A shelve a
   changereviewcomment` can't filter by a review's target.
 - **A request no review has pending** (applied already, discarded, no request by that number): `cm` makes the
   changeset, or saves the comment, then fails listing those requests, and applies none of the requests the comment
-  names. The app reads that failure as done (`changeRequestsNotApplied`, by structure: an error listing only requests
-  the comment names, in any language), takes the new changeset from the workspace's status (a local read), and says
+  names. The app reads that failure as done (`changeRequestsNotApplied`, by structure: a list, after a colon or a
+  full-width one, of only requests the comment names, wherever the message puts it, as English, Japanese, Korean and
+  Chinese do; a `cm shell` joins each item's line to the one before, `…changeset:- deadbeef`), takes the new changeset from the workspace's status (a local read), and says
   "No change request was applied: … is applied already, or no review has it open"
   (`changeRequestsNotAppliedText`), never "Check in failed", and marks `cm`'s failure handled, so the status bar shows none.
 - **After the check-in** (`withChangeRequestsApplied`): a check-in or a comment edit whose comment holds such a
