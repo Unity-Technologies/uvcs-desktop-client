@@ -39,7 +39,7 @@ export function SplitButton({ children, onClick, menu, menuLabel, variant = 'sec
         aria-disabled={disabled || mainDisabled || undefined}
         data-tip={tip}
         data-tip-sub={tipSub}
-        data-tip-shortcut={shortcut}
+        data-tip-shortcut={disabled || mainDisabled ? undefined : shortcut}
         onClick={() => !(disabled || mainDisabled) && onClick()}
       >
         {children}
