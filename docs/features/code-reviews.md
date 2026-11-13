@@ -421,8 +421,9 @@ ranges changes only it.
   drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
   otherwise join. Inside a thread in the code, the box is a diff in the code's annotation row: its pointer events stay
   in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines
-  (`rowUnderPointer`). Its lines scroll sideways in the box, with Pierre's own bar at its bottom
-  (`codeScrollsSideways.test.ts`' `SHOWN_WHOLE`). "Suggested change: delete the line" for an empty fence. The line is read from the revision the
+  (`rowUnderPointer`). Its rows run edge to edge, from the header's border to the box's
+  and from the change bar on (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar every code view
+  has (`PaneScrollbars`), there only while a line overflows. "Suggested change: delete the line" for an empty fence. The line is read from the revision the
   comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so in
   the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it, and
   only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from the

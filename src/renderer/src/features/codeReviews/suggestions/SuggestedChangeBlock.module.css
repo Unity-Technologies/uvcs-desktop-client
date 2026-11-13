@@ -42,7 +42,7 @@
   box-shadow: none;
 }
 
-/* As Pierre's rows end: a few lines needn't scroll, so its own bar, shown while hovered, is at the box's bottom. */
+/* As tall as its rows: a few lines, never scrolled down, sideways only by their pane (`PaneScrollbars`). */
 .diff {
   overflow: hidden;
 }
