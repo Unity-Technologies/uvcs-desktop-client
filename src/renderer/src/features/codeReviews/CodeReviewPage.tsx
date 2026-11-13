@@ -183,10 +183,12 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         <CodeReviewStatusBadge status={review.status} />
         <UserLabel user={review.owner} />
         <span>wants a review of</span>
-        {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
-        <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : describeTarget(review.target)}</span>
-        <span className={styles.dot}>·</span>
-        <RelativeTime date={review.date} />
+        <span className={styles.targetAndTime}>
+          {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
+          <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : describeTarget(review.target)}</span>
+          <span className={styles.dot}>·</span>
+          <RelativeTime date={review.date} />
+        </span>
       </div>
     </header>
   );
