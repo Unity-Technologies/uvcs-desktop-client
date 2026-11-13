@@ -305,7 +305,8 @@ A change request is applied the way `cm` has always applied one: a check-in whos
 words in any case), match it against the change requests pending on any review of the repository, and mark it applied
 in that changeset. The short form, the guid's first eight hex digits, matches only in lower case, as the guid's digits
 are written; the whole guid matches in any case (`applyChangeMatches`, `shared/applyChange.ts`). The app writes the
-text and runs no command of its own for it, so every client reads it. A shelve applies none.
+text and runs no command of its own for it, so every client reads it. A shelve applies none. Marking one applied by
+hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 
 - **Writing it** (docs/features/rich-comments.md "Suggestions"): in the check-in's comment, typing `[apply` (`cm`'s own
   syntax, `changeRequestQueryAt`) opens **Change requests to apply**: the open ones of the reviews of the workspace's
