@@ -21,7 +21,7 @@ import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
-import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
+import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
 import { ROW_FOCUS_ATTRIBUTE } from '../../diff/viewer/diffAnnotations';
@@ -72,8 +72,8 @@ type Answering = 'reply' | 'discard' | null;
 
 /**
  * A comment and its replies as one card. A change request or a question has a header band: its kind's icon, its file
- * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
- * its first words (`startsFolded`); a click shows it whole.
+ * and line on a line (a click opens them in Changes), and where it stands as a pill. Any card with that band folds to
+ * it and its first words from its chevron (`foldsByHand`); a settled one starts folded (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
@@ -91,7 +91,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
     setFolded(false);
     setAnswerShown((previous) => nextAnswerLight(previous, answer.replyId, highlight));
   });
-  const foldable = startsFolded(thread);
+  const foldable = foldsByHand(thread);
   const hasHeader = hasThreadHeader(thread);
   // Gone to again: shown whole, as what was asked for.
   if (highlight !== shownHighlight) {
@@ -219,7 +219,7 @@ interface ThreadHeaderProps {
   inCode?: ThreadInCode;
   /** The card around it goes to the thread (the Comments panel's): its file only names where, not a link of its own. */
   cardOpens?: boolean;
-  /** Folds or unfolds a settled thread; none for one that stays whole. */
+  /** Folds or unfolds the thread (`foldsByHand`); none for one that stays whole. */
   onToggle?: () => void;
   onSeeApplied?: () => void;
   /** What "Answered" does: shows the thread whole at the reply that answered it (`answerOf`). */
