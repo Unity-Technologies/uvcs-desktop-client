@@ -1,4 +1,4 @@
-import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
+import { ArrowDownToLine, GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { CommentField } from '../../components/commentEditor/CommentField';
@@ -6,18 +6,16 @@ import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGr
 import { ChangeRequestsContext } from '../../components/commentEditor/changeRequestsContext';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
-import { recentCommentPick, withSummaryText } from '../../lib/comment';
+import { withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { IconButton } from '../../ui/IconButton';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { ResizeHandle } from '../../ui/ResizeHandle';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
-import { ChangeRequestsFooter } from './ChangeRequestsFooter';
+import { DescriptionFooter } from './DescriptionFooter';
 import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
 import { changeRequestsBranch, notYetNamed } from '../codeReviews/changeRequests/changeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
@@ -158,29 +156,6 @@ export function CheckinPanel({
               onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
               onEnter={() => descriptionRef.current?.focus()}
             />
-            {recentComments.length > 0 && (
-              <ActionDropdownMenu
-                entries={recentComments.map((recent, index) => ({
-                  id: `recent.${index}`,
-                  label: recent.split('\n')[0]!,
-                  run: () => {
-                    const pick = recentCommentPick(recent);
-                    onMessageChange(pick.parts);
-                    caretAfterPick.current = pick.caretIn;
-                  },
-                }))}
-                // The caret goes to the text picked, not back to the button.
-                onCloseAutoFocus={(event) => {
-                  const field = caretAfterPick.current;
-                  caretAfterPick.current = null;
-                  if (!field) return;
-                  event.preventDefault();
-                  (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
-                }}
-              >
-                <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
-              </ActionDropdownMenu>
-            )}
           </div>
           <CommentField
             ref={descriptionRef}
@@ -191,7 +166,25 @@ export function CheckinPanel({
             style={{ height: descriptionHeight }}
             value={description}
             onChange={(text) => onMessageChange({ description: text })}
-            footer={<ChangeRequestsFooter offered={offered} onOpen={() => descriptionRef.current?.openChangeRequests()} />}
+            footer={
+              <DescriptionFooter
+                recentComments={recentComments}
+                changeRequests={offered.length}
+                onRecentComment={(pick) => {
+                  onMessageChange(pick.parts);
+                  caretAfterPick.current = pick.caretIn;
+                }}
+                // The caret goes to the text picked, not back to the button.
+                onRecentMenuClosed={(event) => {
+                  const field = caretAfterPick.current;
+                  caretAfterPick.current = null;
+                  if (!field) return;
+                  event.preventDefault();
+                  (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
+                }}
+                onChangeRequests={() => descriptionRef.current?.openChangeRequests()}
+              />
+            }
           />
         </CommentFocusGroup>
       </ChangeRequestsContext>

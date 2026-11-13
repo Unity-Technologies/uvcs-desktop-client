@@ -30,34 +30,57 @@
   line-height: 18px;
 }
 
-/* Keeps typed text clear of the recent comments button floating at the right edge. */
-.summaryField:has(.recent) .summary {
-  padding-right: 32px;
-}
-
-.recent {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-}
-
-/* The description's footer, while the check-in has change requests to offer: a quiet row at its bottom-left, its text
-   kept clear of it. */
+/* The description's footer (`DescriptionFooter`), while it has a button: quiet icons at its bottom-left, apart by
+   hairlines, as GitHub Desktop draws its own; the text kept clear of it. */
 .description:has(.descriptionFooter) {
   position: relative;
-  padding-bottom: 30px;
+  padding-bottom: 28px;
 }
 
 .descriptionFooter {
   position: absolute;
   left: 4px;
-  bottom: 4px;
+  bottom: 3px;
   display: flex;
+  align-items: center;
   gap: 2px;
 }
 
-.changeRequests {
+.footerSeparator {
+  width: 1px;
+  height: 14px;
+  margin: 0 3px;
+  background: var(--border-subtle);
+}
+
+.footerButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.footerButton:hover,
+.footerButton[data-state='open'] {
+  background: var(--bg-hover);
   color: var(--text-secondary);
+}
+
+.footerButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.footerCount {
   font-variant-numeric: tabular-nums;
 }
 
