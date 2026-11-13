@@ -21,7 +21,7 @@ import { useReviewConversation } from './useReviewConversation';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CheckinsRow } from '../rounds/CheckinsRow';
 import { RoundMarker } from '../rounds/RoundMarker';
-import { conversationBlocksOf, roundCountOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { conversationBlocksOf, conversationLayoutOf, roundCountOf, roundHolding, type ConversationBlock, type ConversationEntry, type ConversationLayout } from '../rounds/reviewRounds';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
 import { newChangesetsSpan } from '../../diff/branchChangesetRows';
@@ -56,9 +56,16 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const { changesets, checkpoint, settled: changesetsSettled } = useReviewCheckpoint(review);
   // "See the changes": what was checked in since the user's last review, selected together in Changes as one diff.
   const newSpan = newChangesetsSpan(changesets, checkpoint);
+  // Laid out once, when first read with who the user is and where they left off: while the page is open, what they (or
+  // a refresh) change updates the cards in place, never moves a thread or folds a round (`ConversationLayout`).
+  const [firstLayout, setFirstLayout] = useState<{ reviewId: number; layout: ConversationLayout }>();
+  const layout = firstLayout?.reviewId === review.id ? firstLayout.layout : undefined;
+  if (!layout && conversation && changesetsSettled && user !== undefined) {
+    setFirstLayout({ reviewId: review.id, layout: conversationLayoutOf({ conversation, user, changesets, reviewDate: review.date }) });
+  }
   const blocks = useMemo(
-    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date }) : []),
-    [conversation, user, changesets, review.date],
+    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date, layout }) : []),
+    [conversation, user, changesets, review.date, layout],
   );
   const [toggledRounds, setToggledRounds] = useState<ReadonlySet<number>>(() => new Set());
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
