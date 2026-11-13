@@ -1,6 +1,6 @@
 /*
- * A change request's suggestion (`SuggestedChangeBlock`): a small diff in a box, its rows in the diff's tints over the
- * surface the diff viewer draws on, so they read as the same colors; only the header is tinted, as a code block's.
+ * A change request's suggestion (`SuggestedChangeBlock`): a small diff in a box, drawn by Pierre as the code's diff is,
+ * on the surface the diff viewer draws on, edge to edge; only the header is tinted, as a code block's.
  */
 .block {
   margin: var(--space-2) 0;
@@ -42,57 +42,13 @@
   box-shadow: none;
 }
 
-/* Beats `.markdown pre`'s padding and background: the rows draw their own, edge to edge as the diff's. */
-.block .rows {
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  font-family: var(--font-mono);
-  overflow-x: auto;
-  white-space: pre;
+/* As Pierre's rows end: a few lines needn't scroll, so its own bar, shown while hovered, is at the box's bottom. */
+.diff {
+  overflow: hidden;
 }
 
-/* As wide as the longest row, and the box at least: a short row's tint runs on under a long one scrolled sideways. */
-.block .rows code {
-  display: block;
-  width: max-content;
-  min-width: 100%;
-}
-
-.row {
-  display: flex;
-}
-
-.row[data-kind='removed'] {
-  background: var(--diff-removed-bg);
-}
-
-.row[data-kind='added'] {
-  background: var(--diff-added-bg);
-}
-
-.row[data-kind='reading'] {
+/* The rows' place while they're read: Pierre's lines are 20px (`PIERRE_SURFACE_CSS` keeps them so). */
+.placeholder {
+  height: calc(var(--rows) * 20px);
   background: var(--bg-subtle);
-}
-
-.sign {
-  flex: none;
-  width: 2ch;
-  padding-left: var(--space-2);
-  box-sizing: content-box;
-  color: var(--text-secondary);
-  user-select: none;
-}
-
-.row[data-kind='removed'] .sign {
-  color: var(--change-deleted);
-}
-
-.row[data-kind='added'] .sign {
-  color: var(--change-added);
-}
-
-.code {
-  padding-right: var(--space-3);
 }

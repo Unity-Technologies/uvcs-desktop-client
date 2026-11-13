@@ -203,10 +203,10 @@ describe('rowUnderPointer', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   /** The composed path of an event from `target` up through its ancestors, its shadow root and that root's host. */
-  function pathFrom(target: FakeElement, ...above: FakeElement[]): FakeElement[] {
+  function pathFrom(target: FakeElement, ...above: FakeElement[]): EventTarget[] {
     const path: FakeElement[] = [];
     for (let element: FakeElement | null = target; element; element = element.parentElement) path.push(element);
-    return [...path, ...above];
+    return [...path, ...above] as unknown as EventTarget[];
   }
 
   it("is the line of the code's row under the pointer", () => {

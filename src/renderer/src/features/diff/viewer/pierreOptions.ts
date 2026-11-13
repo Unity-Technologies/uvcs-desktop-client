@@ -65,6 +65,19 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
   };
 }
 
+/**
+ * A few lines' diff shown whole inside a comment (a change request's Suggested change): the code's diff as the viewer
+ * shows it (its colors, bars and word marks), one column, with no line numbers (the comment names its lines, and they'd
+ * number the snippet from 1, not the file), every line shown and no tints for comment rows, as it holds none.
+ */
+export function pierreSnippetDiffOptions(theme: ResolvedTheme): FileDiffOptions<undefined, undefined> {
+  return {
+    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: false, wrapLines: false }),
+    disableLineNumbers: true,
+    unsafeCSS: PIERRE_SURFACE_CSS,
+  };
+}
+
 /** The same look for one file on its own, e.g. edited while its diff has no lines to show. */
 export function pierreFileOptions({ theme, wrapLines }: Pick<DiffAppearance, 'theme' | 'wrapLines'>): FileOptions<undefined, undefined> {
   return {

@@ -259,7 +259,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
-| `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
+| `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`, but a few lines shown whole (`SHOWN_WHOLE`) |
 | `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
 | `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
 | `renderer/src/listViewsRefresh.test.ts`                   | every list view (`ObjectListView`) has the Refresh button in its header (`ViewRefreshButton`) |

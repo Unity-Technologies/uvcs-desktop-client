@@ -14,6 +14,14 @@ const BARS_HELD_BY: Record<string, string> = {
   'features/annotate/HighlightedCode.tsx': 'features/annotate/AnnotatedCode.tsx',
 };
 
+/**
+ * Where code is shown whole, a few lines never scrolled down, so the pane's own bar is already at the bottom of the
+ * view: no `PaneScrollbars` needed. Each says why.
+ */
+const SHOWN_WHOLE: Record<string, string> = {
+  'features/codeReviews/suggestions/SuggestionDiff.tsx': "a change request's suggested lines, in a box as tall as they are",
+};
+
 const source = (file: string): string => readFileSync(join(__dirname, ...file.split('/')), 'utf8');
 
 /** Whether `file` imports, as a value (to render it, not `import type`), one of Pierre's code components, aliased or not. */
@@ -47,12 +55,13 @@ describe('code shown with Pierre', () => {
         'features/merge/resolve/ConflictHunks.tsx',
         'features/merge/resolve/HandEditor.tsx',
         'features/merge/resolve/ReadOnlyText.tsx',
+        ...Object.keys(SHOWN_WHOLE),
       ]),
     );
   });
 
   it('has a horizontal scrollbar at the bottom of the view wherever it is shown', () => {
-    const withoutBars = SURFACES.filter((file) => !source(BARS_HELD_BY[file] ?? file).includes('<PaneScrollbars '));
+    const withoutBars = SURFACES.filter((file) => !(file in SHOWN_WHOLE) && !source(BARS_HELD_BY[file] ?? file).includes('<PaneScrollbars '));
     expect(withoutBars).toEqual([]);
   });
 

@@ -413,13 +413,20 @@ ranges changes only it.
   has no line of its own and is never a change request, nor in an edit, whose composer is every comment's: the fence can
   be typed there, as it can anywhere.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
-  cards in the code, How it was applied), a **Suggested change** box: the commented line removed, the suggested lines
-  added, in the diff's tints, highlighted in the file's language (`syntaxLanguage`, the comments' highlighter,
-  `useHighlightedLines`); "Suggested change: delete the line" for an empty fence. The line is read from the revision the
+  cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
+  ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
+  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`): one column, highlighted in
+  the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it: `useSyntaxHighlighter`), every line
+  shown, no line numbers (the comment names its lines, and Pierre would number the snippet from 1). A few lines, so
+  drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
+  otherwise join. Inside a thread in the code, the box is a diff in the code's annotation row: its pointer events stay
+  in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines
+  (`rowUnderPointer`). Its lines scroll sideways in the box, with Pierre's own bar at its bottom
+  (`codeScrollsSideways.test.ts`' `SHOWN_WHOLE`). "Suggested change: delete the line" for an empty fence. The line is read from the revision the
   comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so in
   the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it, and
   only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from the
-  disk. While it's read a row holds its place; one that can't be read shows the suggested lines alone. One-line previews
+  disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it; lines that can't be read leave the suggested lines alone, added. One-line previews
   (the Comments panel, Open, a folded card) show the comment's first words, or the code's first line, as for any code
   block. Copying keeps the fence as written.
 

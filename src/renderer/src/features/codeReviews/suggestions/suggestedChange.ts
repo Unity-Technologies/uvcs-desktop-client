@@ -74,18 +74,27 @@ export function replacedLinesIn(text: Read<string | null>, change: LineRange): R
   return readValue(lines.slice(change.firstLine - 1, change.lastLine));
 }
 
-/** A row of the Suggested change block: a line it removes or adds, or the removed line's place while it's read. */
-export type SuggestionRow = { kind: 'removed' | 'added'; text: string } | { kind: 'reading' };
-
 /**
- * The rows the Suggested change block shows: the lines replaced, removed, then those suggested, added, as a diff shows
- * them. While the replaced line is read, one row holds its place, so nothing moves as it arrives; when it can't be
- * read, the suggested lines show alone.
+ * What the Suggested change box shows under its header: the diff of the lines replaced to those suggested, each text
+ * as a file holding the lines (each ending in a line end, so no side reads as missing its last one), which Pierre lays
+ * out as the code's diff (`suggestionFileDiff`). While the replaced lines are read, a place as tall as their rows, so nothing
+ * moves as they arrive; when they can't be read, the suggested lines alone, added, and for a deletion nothing.
+ * `rowCount` is the rows the diff takes at most (a line kept shows once), for the place it holds while Pierre loads.
  */
-export function suggestionRows(replaced: ReplacedLines, lines: readonly string[]): SuggestionRow[] {
-  const removed: SuggestionRow[] =
-    replaced.kind === 'reading' ? [{ kind: 'reading' }] : replaced.kind === 'failed' ? [] : replaced.value.map((text) => ({ kind: 'removed', text }));
-  return [...removed, ...lines.map((text): SuggestionRow => ({ kind: 'added', text }))];
+export type SuggestionBody =
+  | { kind: 'reading'; rowCount: number }
+  | { kind: 'diff'; replacedText: string; suggestedText: string; rowCount: number }
+  | { kind: 'empty' };
+
+export function suggestionBody(change: LineRange & Pick<SuggestedChange, 'lines'>, replaced: ReplacedLines): SuggestionBody {
+  if (replaced.kind === 'reading') return { kind: 'reading', rowCount: change.lastLine - change.firstLine + 1 + change.lines.length };
+  const replacedLines = replaced.kind === 'read' ? replaced.value : [];
+  if (replacedLines.length === 0 && change.lines.length === 0) return { kind: 'empty' };
+  return { kind: 'diff', replacedText: asFile(replacedLines), suggestedText: asFile(change.lines), rowCount: replacedLines.length + change.lines.length };
+}
+
+function asFile(lines: readonly string[]): string {
+  return lines.map((line) => `${line}\n`).join('');
 }
 
 /** The block's heading: what it does to the code. */

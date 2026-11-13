@@ -1,13 +1,13 @@
 import { MessageSquareDiff } from 'lucide-react';
 import { Suspense, type ReactNode } from 'react';
 import { lazyComponent } from '../../../lib/lazyComponent';
-import { suggestionRows, suggestionTitle, type SuggestedChange } from './suggestedChange';
-import { SuggestionRows } from './SuggestionRows';
+import { suggestionBody, suggestionTitle, type SuggestedChange } from './suggestedChange';
+import { SuggestionPlaceholder } from './SuggestionPlaceholder';
 import { useReplacedLines } from './useReplacedLines';
 import styles from './SuggestedChangeBlock.module.css';
 
-// The highlighter (Pierre's Shiki) and the file's language load with the first suggestion shown, never at start-up.
-const HighlightedSuggestionRows = lazyComponent(() => import('./HighlightedSuggestionRows').then((module) => module.HighlightedSuggestionRows));
+// Pierre, its highlighter and the file's language load with the first suggestion shown, never at start-up.
+const SuggestionDiff = lazyComponent(() => import('./SuggestionDiff').then((module) => module.SuggestionDiff));
 
 interface SuggestedChangeBlockProps {
   change: SuggestedChange;
@@ -17,13 +17,12 @@ interface SuggestedChangeBlockProps {
 
 /**
  * A change request's suggestion, in place of its fence (docs/features/code-reviews.md "Suggested changes"): the
- * commented line removed and the suggested lines added, in the diff's colors, highlighted in the file's language. It
- * mounts only with its comment shown whole (a settled thread starts folded to its first words), which is when the line
- * it replaces is read.
+ * commented lines removed and the suggested lines added, as the code's diff shows them (`suggestionBody`). It mounts
+ * only with its comment shown whole (a settled thread starts folded to its first words), which is when the lines it
+ * replaces are read.
  */
 export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockProps) {
-  const rows = suggestionRows(useReplacedLines(change), change.lines);
-  const plain = <SuggestionRows rows={rows} />;
+  const body = suggestionBody(change, useReplacedLines(change));
   return (
     <figure className={styles.block} aria-label={suggestionTitle(change)}>
       <figcaption className={styles.header}>
@@ -31,9 +30,12 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
         <span className={styles.title}>{suggestionTitle(change)}</span>
         {actions && <span className={styles.actions}>{actions}</span>}
       </figcaption>
-      <Suspense fallback={plain}>
-        <HighlightedSuggestionRows rows={rows} path={change.path} fallback={plain} />
-      </Suspense>
+      {body.kind === 'reading' && <SuggestionPlaceholder rowCount={body.rowCount} />}
+      {body.kind === 'diff' && (
+        <Suspense fallback={<SuggestionPlaceholder rowCount={body.rowCount} />}>
+          <SuggestionDiff path={change.path} body={body} />
+        </Suspense>
+      )}
     </figure>
   );
 }

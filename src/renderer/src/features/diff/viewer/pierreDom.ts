@@ -77,6 +77,24 @@ export function keepPointerDownToItself(button: HTMLButtonElement | null): (() =
   return () => button.removeEventListener('pointerdown', stop);
 }
 
+/** The pointer events Pierre's diff listens to on its code (`pre`): hovering a row, picking lines, clicking one. */
+const CODE_POINTER_EVENTS = ['pointerdown', 'pointermove', 'click'] as const;
+
+/**
+ * For a diff shown inside a comment on another diff's code (a suggested change in a thread in the code): the events on
+ * its rows would reach the code around it, whose Pierre reads the first row in their path as the line under the
+ * pointer (to hover it, put its gutter button there, pick it), and that row is the comment's diff's own. They stay in
+ * the comment's diff, which handles them first, in its shadow root. Native, as Pierre listens before React sees them.
+ */
+export function keepCodePointerToItself(element: HTMLElement | null): (() => void) | undefined {
+  if (!element) return undefined;
+  const stop = (event: Event): void => event.stopPropagation();
+  for (const type of CODE_POINTER_EVENTS) element.addEventListener(type, stop);
+  return () => {
+    for (const type of CODE_POINTER_EVENTS) element.removeEventListener(type, stop);
+  };
+}
+
 /**
  * Hovers what is under a still pointer anew, as if it had moved: Pierre only follows the pointer, so lines sliding
  * under it (after a discard) would stay unhovered. It's told the pointer left first, as the line it knew may be gone
