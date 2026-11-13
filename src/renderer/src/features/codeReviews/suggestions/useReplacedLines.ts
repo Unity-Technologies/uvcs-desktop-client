@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { contentQuery } from '../../diff/viewer/contentQueries';
@@ -26,7 +27,6 @@ export function useCommentedText(change: Pick<SuggestedChange, 'path' | 'revisio
   const repository = usePlaceRepository();
   const source: ContentSource = repository ? { kind: 'revision', revision: { revisionId: change.revisionId, repository }, fileName: change.path } : NOTHING;
   const read = useQuery({ ...contentQuery(place, source), enabled: repository !== undefined });
-  if (read.isError) return FAILED;
-  if (!read.data) return READING;
-  return readValue(read.data.text ?? null);
+  // The same `Read` while the answer is: what's worked out from it is kept by its reference (`useSuggestionApply`).
+  return useMemo(() => (read.isError ? FAILED : read.data ? readValue(read.data.text ?? null) : READING), [read.isError, read.data]);
 }

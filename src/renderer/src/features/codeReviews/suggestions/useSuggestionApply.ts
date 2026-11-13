@@ -35,7 +35,7 @@ export function useSuggestionApply(workspacePath: string, target: CodeReviewTarg
   // Following the lines into the file is a line diff of the whole file: once per change of what it reads, not per render.
   return useMemo(
     () => suggestionApplyOf(change, { open, workspacePath, workspaceBranch, reviewBranch: reviewBranchOf(target, changesetBranch), behind, commentedText, workspaceFile, pending }),
-    [change, open, workspacePath, readKey(workspaceBranch), target, readKey(changesetBranch), behind?.count, readKey(commentedText), file.data, file.isError, pending],
+    [change, open, workspacePath, readKey(workspaceBranch), target, readKey(changesetBranch), behind?.count, commentedText, file.data, file.isError, pending],
   );
 }
 
@@ -45,7 +45,7 @@ function readOf<Data, T>(query: { isError: boolean; data: Data | undefined }, va
   return query.data === undefined ? READING : readValue(value(query.data));
 }
 
-/** What a `Read` of a small value is, for a memo's keys: its kind, and its value. */
+/** What a `Read` of a branch's name is, for a memo's keys: its kind, and its name. Never a file's text. */
 function readKey(read: Read<string | null>): string {
   return read.kind === 'read' ? `read:${read.value}` : read.kind;
 }
