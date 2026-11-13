@@ -1126,8 +1126,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. Under the search, a chip per prefix that works where
   the palette is open (`offeredPrefixes`, `scopeChipsFor`), each showing its prefix: All and the sections searched most
   in a row, the rest under More, which takes the name of the one picked. A chip writes its prefix in place of the one
-  typed (`queryInScope`), so the text stays the only state and a chip teaches what to type; ⌘[ and ⌘] step through
-  them (`steppedChip`; not ⌘← ⌘→, which move the caret). The home screen, which searches only commands, has none. Labels, code reviews and people are
+  typed, the rest as typed (`queryInScope`), so the text stays the only state and a chip teaches what to type;
+  clicking the chip picked goes back to All (`clickedChip`). ⌥⌘← ⌥⌘→ step through them, Alt+← Alt+→ off Mac
+  (`scopeStepOf`, `steppedChip`): arrows any keyboard layout has, as a browser's tabs, never ⌘ or ⌥ alone, which move
+  the caret. The home screen, which searches only commands, has none. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
   suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time
