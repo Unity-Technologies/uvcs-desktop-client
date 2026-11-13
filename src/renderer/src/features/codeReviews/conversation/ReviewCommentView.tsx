@@ -1,6 +1,6 @@
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
@@ -9,6 +9,8 @@ import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
+import { SuggestedChangeBlock } from '../suggestions/SuggestedChangeBlock';
+import { suggestedChangeOf } from '../suggestions/suggestedChange';
 import { CommentComposer } from './CommentComposer';
 import { CommentMenuButton } from './CommentMenuButton';
 import { editReviewComment } from './reviewCommentOperations';
@@ -54,6 +56,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
   useEffect(() => {
     if (startsEditing) onEditorOpened?.();
   }, [startsEditing, onEditorOpened]);
+  const suggestion = useMemo(() => suggestedChangeOf(comment), [comment]);
   const menu = useCommentMenu({ review, comment, thread, user, edit: () => setEditing(true), threadActions });
 
   return (
@@ -91,7 +94,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
           />
         ) : (
           <div className={`${styles.markdown} selectable`}>
-            <Markdown text={comment.text} comment />
+            <Markdown text={comment.text} comment suggestion={suggestion && <SuggestedChangeBlock change={suggestion} />} />
           </div>
         )}
       </div>

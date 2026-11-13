@@ -1,0 +1,27 @@
+import type { ReactNode } from 'react';
+import { useHighlightedLines } from '../../../components/comments/HighlightedCodeBlock';
+import { MAX_HIGHLIGHTED_COMMENT_CHARS } from '../../../components/comments/codeBlockLanguage';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
+import type { SuggestionRow } from './suggestedChange';
+import { SuggestionRows } from './SuggestionRows';
+
+interface HighlightedSuggestionRowsProps {
+  rows: readonly SuggestionRow[];
+  /** The file's: its language highlights the rows (`syntaxLanguage`). */
+  path: string;
+  fallback: ReactNode;
+}
+
+/**
+ * The rows highlighted in the file's language, the removed and added lines as one text, so a line reads as it does in
+ * the diff; plain until the grammar loads, for a language the highlighter doesn't know and past the size a comment's
+ * code is highlighted to.
+ */
+export function HighlightedSuggestionRows({ rows, path, fallback }: HighlightedSuggestionRowsProps) {
+  const text = rows.flatMap((row) => (row.kind === 'reading' ? [] : [row.text])).join('\n');
+  const language = syntaxLanguage(path);
+  const highlights = language !== 'text' && text.length <= MAX_HIGHLIGHTED_COMMENT_CHARS;
+  const tokens = useHighlightedLines(text, highlights ? language : 'text');
+  if (!highlights || !tokens) return <>{fallback}</>;
+  return <SuggestionRows rows={rows} tokens={tokens} />;
+}

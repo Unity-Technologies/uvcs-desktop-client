@@ -1,0 +1,83 @@
+/* A change request's suggestion (`SuggestedChangeBlock`): a small diff in a box, its rows in the diff's tints. */
+.block {
+  margin: var(--space-2) 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-code);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Beats `.markdown pre`'s padding and background: the rows draw their own. */
+.block .rows {
+  margin: 0;
+  padding: var(--space-1) 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-mono);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.row {
+  display: flex;
+  min-width: max-content;
+}
+
+.row[data-kind='removed'] {
+  background: var(--diff-removed-bg);
+}
+
+.row[data-kind='added'] {
+  background: var(--diff-added-bg);
+}
+
+.row[data-kind='reading'] {
+  background: var(--bg-subtle);
+}
+
+.sign {
+  flex: none;
+  width: 2ch;
+  padding-left: var(--space-2);
+  box-sizing: content-box;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.row[data-kind='removed'] .sign {
+  color: var(--change-deleted);
+}
+
+.row[data-kind='added'] .sign {
+  color: var(--change-added);
+}
+
+.code {
+  padding-right: var(--space-3);
+}
