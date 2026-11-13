@@ -50,6 +50,14 @@ describe('suggestionOf', () => {
 
   it('runs an unclosed fence to the end of the text, not onto its last line end', () => {
     expect(suggestionOf('```suggestion\nx\n')).toEqual({ lines: ['x'] });
+    expect(suggestionOf('```suggestion\n')).toEqual({ lines: [] });
+    expect(suggestionOf('```suggestion\r\n')).toEqual({ lines: [] });
+  });
+
+  it('reads lone carriage returns as line ends, as Markdown does', () => {
+    expect(suggestionOf('```suggestion\rx\r```')).toEqual({ lines: ['x'] });
+    expect(suggestionOf('```suggestion\ra\rb\r```')).toEqual({ lines: ['a', 'b'] });
+    expect(suggestionOf('```suggestion\r```')).toEqual({ lines: [] });
   });
 
   it("doesn't take inline code for a fence", () => {
