@@ -44,6 +44,7 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 | `…/labels/v1.2`, `…/labels/v1.1..v1.2` | the label's diff, or between two labels |
 | `…/shelves/12` | the shelve's diff |
 | `…/code-reviews/311`, `…/merge-requests/311` | the code review, on its conversation |
+| `…/code-reviews/311/-/comments/5702` | the code review at that comment (code-reviews.md "Links to comments") |
 
 A workspace link takes the same views and pages but `browse` (`uvcs:///wk/game/-/history/a.cs`); its item is the
 workspace's own.
@@ -57,6 +58,7 @@ Pages inside an object (`…/<object>/-/<page>`):
 | `history/<path>` | the item's history, from there | changesets, branches, labels |
 | `annotate/<path>` | the item annotated as it was there | changesets, branches, labels |
 | `branch-explorer` | the Branch Explorer, on the object | changesets, branches, labels |
+| `comments/<id>` | the review at one of its comments, by the id `cm find changereviewcomment` prints (`{id}`) | code reviews |
 
 `…/changesets/4207/-/files/Player.cs` is the change to `Player.cs` in 4207; `…/changesets/4207/-/browse/Player.cs` is
 `Player.cs` as it was at 4207.
@@ -141,7 +143,10 @@ the workspace only gives the page a window and a repository to read.
 6. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
-   isn't there says so. An object that doesn't exist or can't be read says so in the page, as any page does.
+   isn't there says so. A review's comment first reads the review's conversation, the read its page makes and then
+   finds already read (`reviewConversationQuery`), to know where the comment is (`commentLinkPage`); a comment the
+   review no longer has opens the review and says so in a toast (`LinkNotice`). An object that doesn't exist or can't be
+   read says so in the page, as any page does.
 
 Opening a link runs no `cm` command of its own beyond those reads: the page reads what it always reads.
 
@@ -153,7 +158,8 @@ badges.
 - **Copy ▸ Link** in every object's menu (`copySubmenu`'s `link`), so every place the menu shows has it (the view, the
   details' More actions, the Branch Explorer, the branch pill, the palette): changesets, branches, labels, shelves,
   code reviews, and a repository on the home screen. A file's menu in a diff, a review, a history or Browse
-  repository has it too: the change to that file there, or the file as it was.
+  repository has it too: the change to that file there, or the file as it was. So does a review's comment, in the
+  conversation and in the code (`reviewCommentCopyTexts`).
 - **Copy link** in every page's header (`CopyLinkButton`: a diff, a review, a history, Browse repository; a page
   window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
   diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed

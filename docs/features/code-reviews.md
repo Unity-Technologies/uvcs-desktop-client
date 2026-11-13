@@ -228,7 +228,28 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
-  discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text to copy.
+  discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
+  link to copy (Copy ▸ Comment, Link; see "Links to comments").
+
+## Links to comments
+
+A comment is linked to by the review's link and its id (`…/code-reviews/311/-/comments/5702`, docs/features/deep-links.md):
+`{id}`, short and the server's own, never its GUID. Its menu's Copy ▸ Link copies it (`reviewCommentCopyTexts`),
+wherever the comment shows: a card in the conversation, a thread in the code, a reply in either. The description has no
+menu and no link of its own: the review's link opens on it, at the top of the conversation.
+
+A link opens the review where the comment is, decided from the conversation as read (`commentLinkPage`), which the link
+reads first and the page then finds read (`reviewConversationQuery`): no command of its own.
+
+- A comment on a line, or a reply in its thread, opens Changes at the thread, in the mode it was written in, as its
+  file's link in the conversation does (`commentLocationPage`): under its line, or among the outdated above the code
+  for one on an earlier version whose line changed. The thread shows whole, its replies with it.
+- A comment on the whole review opens the conversation at its thread, centered, unfolded, lit and ringed, as "Show in
+  conversation" does. A reply opens it at the reply (`focusReply`, `pickOnFocus`'s `replyId`): the reply brought into
+  view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded.
+- The description's id opens the review on its conversation.
+- A comment the review no longer has (deleted, or never on it) opens the review on its conversation, and a toast says
+  "Comment not found" (`LinkNotice`). A conversation that can't be read leaves the review's page to say why.
 
 ## Rounds
 
