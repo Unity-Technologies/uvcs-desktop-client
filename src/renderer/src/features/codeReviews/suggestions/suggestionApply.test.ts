@@ -145,6 +145,11 @@ describe('suggestionTargetIn', () => {
     const deletion: SuggestedChange = { ...CHANGE, lines: [] };
     expect(suggestionTargetIn(deletion, COMMENTED, text('class Settings\r\n{ // open\r\n}\r\n'))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
     expect(suggestionTargetIn(deletion, COMMENTED, text(COMMENTED.replace('30', '45')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+    // At the file's start or end, the one neighbor there is must be at the file's edge too: the line beyond it changed.
+    const first = { ...deletion, firstLine: 1, lastLine: 1 };
+    expect(suggestionTargetIn(first, COMMENTED, text(COMMENTED.replace('class Settings', 'static class Settings')))).toEqual({ kind: 'refused', reason: 'Line 1 changed since the suggestion was written' });
+    const last = { ...deletion, firstLine: 4, lastLine: 4 };
+    expect(suggestionTargetIn(last, COMMENTED, text(COMMENTED.replace(/\}\r\n$/, '} // Settings\r\n')))).toEqual({ kind: 'refused', reason: 'Line 4 changed since the suggestion was written' });
   });
 
   it('says the line changed when it reads as suggested but its neighbors no longer hold it', () => {

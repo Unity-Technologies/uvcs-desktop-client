@@ -50,7 +50,7 @@ describe('suggestLineLabel', () => {
 });
 
 describe('withSuggestionInserted', () => {
-  it('inserts the suggestion at the caret and makes the comment a change request, whatever it was', () => {
+  it('inserts the suggestion at the caret and makes the comment a change request', () => {
     expect(withSuggestionInserted('Why not 60?', 11, ['  speed = 60;'])).toEqual({
       text: 'Why not 60?\n```suggestion\n  speed = 60;\n```',
       caret: 'Why not 60?\n```suggestion\n  speed = 60;'.length,
