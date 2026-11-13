@@ -1,5 +1,5 @@
 import { CommentLine } from '../../components/comments/CommentLine';
-import { Plus, Tag } from 'lucide-react';
+import { Tag, TagPlus } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
@@ -83,7 +83,7 @@ export function LabelsView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => void newLabel(place)}>
+            <Button variant="primary" icon={<TagPlus size={14} />} onClick={() => void newLabel(place)}>
               New label
             </Button>
           </>

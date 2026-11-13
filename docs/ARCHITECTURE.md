@@ -1284,6 +1284,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+- **Buttons that create something** ("New branch", "New label", "New workspace") show what they create with a plus:
+  Lucide's `GitBranchPlus`, `TagPlus`, `MessageSquarePlus`, `DatabasePlus`, `FolderPlus`, never the bare `Plus`, which
+  only says "add". Where Lucide has no such icon the feature draws one on its grid (`TagsPlus`, `Tags` with a
+  plus). An empty state's "New …" button shows it too, and the menu entry and palette command that make the same
+  thing show the same icon (`newLabel`, `newCodeReview` in `menuWords`). The test reads each `<Button>` with a
+  written "New …" label and wants an icon whose name ends in `Plus` (`newButtonsShowTheirObject.test.ts`).
 - **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton` (`listViewsRefresh.test.ts`). Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
