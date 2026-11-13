@@ -82,11 +82,13 @@ describe('changeRequestNamed', () => {
 describe('changeRequestChip', () => {
   const ago = (date: string): string => `ago ${date.slice(11, 16)}`;
 
-  it("reads as the request's first line, its card saying where it stands, its review, who asked and when", () => {
+  it("reads as applying the request, by its first line, its card saying where it stands, its review, who asked and when", () => {
     const [request] = changeRequestsOf(43, conversationOf(comment(1, { text: 'Shelve **first**\n\nThe undo fails.' })));
 
     expect(changeRequestChip(request, 'c0d1ce01', ago)).toEqual({
+      lead: 'Applies',
       label: 'Shelve first',
+      name: 'Applies change request: Shelve first',
       title: 'Change request c0d1ce01',
       card: { comment: 'Shelve **first**\n\nThe undo fails.', title: 'Change request c0d1ce01', meta: ['Change request c0d1ce01', 'Open', 'Code review 43', 'Ana', 'ago 10:01'] },
       opens: { reviewId: 43, threadId: 1 },
@@ -101,6 +103,12 @@ describe('changeRequestChip', () => {
   });
 
   it('names one the window has not read by its number, opening nothing', () => {
-    expect(changeRequestChip(undefined, 'deadbeef', ago)).toEqual({ label: 'Change request deadbeef', title: 'Change request deadbeef', card: { title: 'Change request deadbeef', meta: [] } });
+    expect(changeRequestChip(undefined, 'deadbeef', ago)).toEqual({
+      lead: 'Applies',
+      label: 'change request deadbeef',
+      name: 'Applies change request deadbeef',
+      title: 'Change request deadbeef',
+      card: { title: 'Change request deadbeef', meta: [] },
+    });
   });
 });
