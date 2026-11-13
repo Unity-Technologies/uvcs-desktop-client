@@ -55,7 +55,6 @@ interface LiveCommentEditorProps extends CommentFieldProps {
  * reads around the caret, with the suggestion list and the selection bar. Its text is the stored comment, in and out.
  */
 export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, footer, ref, initialFocus, pendingChangeRequests }: LiveCommentEditorProps) {
-  const host = useRef<HTMLDivElement>(null);
   // Where CodeMirror draws the text: a slot of its own, before the footer, so the keyboard reaches the text first.
   const slot = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
@@ -193,7 +192,6 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   return (
     <div
-      ref={host}
       className={classNames(fieldStyles.field, styles.editor, className)}
       style={style}
       data-single-line={singleLine || undefined}
