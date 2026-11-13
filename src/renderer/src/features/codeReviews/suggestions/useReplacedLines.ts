@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ContentSource } from '@shared/domain/content';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { contentQuery } from '../../diff/viewer/contentQueries';
-import { replacedLinesIn, type LineRange, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
+import { FAILED, READING, readValue, replacedLinesIn, type LineRange, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
 
 const NOTHING: ContentSource = { kind: 'empty' };
 
@@ -14,8 +14,7 @@ const NOTHING: ContentSource = { kind: 'empty' };
  * by a new comment on a line, whose Suggest change fills the fence with it (`NewLineCommentCard`): the diff's read.
  */
 export function useReplacedLines(change: Pick<SuggestedChange, 'path' | 'revisionId'> & LineRange): ReplacedLines {
-  const text = useCommentedText(change);
-  return replacedLinesIn(text === 'reading' ? undefined : text === 'failed' ? null : text, change);
+  return replacedLinesIn(useCommentedText(change), change);
 }
 
 /**
@@ -27,7 +26,7 @@ export function useCommentedText(change: Pick<SuggestedChange, 'path' | 'revisio
   const repository = usePlaceRepository();
   const source: ContentSource = repository ? { kind: 'revision', revision: { revisionId: change.revisionId, repository }, fileName: change.path } : NOTHING;
   const read = useQuery({ ...contentQuery(place, source), enabled: repository !== undefined });
-  if (read.isError) return 'failed';
-  if (!read.data) return 'reading';
-  return read.data.text ?? null;
+  if (read.isError) return FAILED;
+  if (!read.data) return READING;
+  return readValue(read.data.text ?? null);
 }

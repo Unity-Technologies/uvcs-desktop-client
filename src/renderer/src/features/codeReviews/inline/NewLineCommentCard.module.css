@@ -25,3 +25,10 @@
 .card .field {
   min-height: calc(5 * 1.55em + 12px);
 }
+
+/* Why "Suggest change on line 42" added no suggestion: quiet, under the kind. */
+.notice {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionRows, suggestionTitle } from './suggestedChange';
+import { FAILED, READING, readValue, commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionRows, suggestionTitle } from './suggestedChange';
 
 const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', line: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
@@ -31,26 +31,31 @@ describe('replacedLinesIn', () => {
   const change = { firstLine: 2, lastLine: 2 };
 
   it('takes the line from the version, whatever its line ends', () => {
-    expect(replacedLinesIn('a\r\nb\r\nc', change)).toEqual(['b']);
-    expect(replacedLinesIn('a\nb\n', change)).toEqual(['b']);
-    expect(replacedLinesIn('a\rb', change)).toEqual(['b']);
+    expect(replacedLinesIn(readValue('a\r\nb\r\nc'), change)).toEqual(readValue(['b']));
+    expect(replacedLinesIn(readValue('a\nb\n'), change)).toEqual(readValue(['b']));
+    expect(replacedLinesIn(readValue('a\rb'), change)).toEqual(readValue(['b']));
   });
 
   it('takes every line of a range', () => {
-    expect(replacedLinesIn('a\r\nb\r\nc\r\nd', { firstLine: 2, lastLine: 4 })).toEqual(['b', 'c', 'd']);
-    expect(replacedLinesIn('a\nb\n', { firstLine: 2, lastLine: 3 })).toBe('unknown');
+    expect(replacedLinesIn(readValue('a\r\nb\r\nc\r\nd'), { firstLine: 2, lastLine: 4 })).toEqual(readValue(['b', 'c', 'd']));
+    expect(replacedLinesIn(readValue('a\nb\n'), { firstLine: 2, lastLine: 3 })).toEqual(FAILED);
   });
 
-  it('tells a version still read from one that failed or is shorter than the line', () => {
-    expect(replacedLinesIn(undefined, change)).toBe('reading');
-    expect(replacedLinesIn(null, change)).toBe('unknown');
-    expect(replacedLinesIn('only one', change)).toBe('unknown');
+  it('tells a version still read from one that failed, has no text, or is shorter than the line', () => {
+    expect(replacedLinesIn(READING, change)).toEqual(READING);
+    expect(replacedLinesIn(FAILED, change)).toEqual(FAILED);
+    expect(replacedLinesIn(readValue(null), change)).toEqual(FAILED);
+    expect(replacedLinesIn(readValue('only one'), change)).toEqual(FAILED);
+  });
+
+  it("reads a version whose text is the word 'failed' as text", () => {
+    expect(replacedLinesIn(readValue('failed\nreading\n'), change)).toEqual(readValue(['reading']));
   });
 });
 
 describe('suggestionRows', () => {
   it('shows the line removed, then the suggested lines added', () => {
-    expect(suggestionRows(['old'], ['new 1', 'new 2'])).toEqual([
+    expect(suggestionRows(readValue(['old']), ['new 1', 'new 2'])).toEqual([
       { kind: 'removed', text: 'old' },
       { kind: 'added', text: 'new 1' },
       { kind: 'added', text: 'new 2' },
@@ -58,7 +63,7 @@ describe('suggestionRows', () => {
   });
 
   it('shows a range as all its lines removed, then the suggested ones added', () => {
-    expect(suggestionRows(['a', 'b'], ['ab'])).toEqual([
+    expect(suggestionRows(readValue(['a', 'b']), ['ab'])).toEqual([
       { kind: 'removed', text: 'a' },
       { kind: 'removed', text: 'b' },
       { kind: 'added', text: 'ab' },
@@ -66,12 +71,12 @@ describe('suggestionRows', () => {
   });
 
   it('shows a deletion as the line removed alone', () => {
-    expect(suggestionRows(['old'], [])).toEqual([{ kind: 'removed', text: 'old' }]);
+    expect(suggestionRows(readValue(['old']), [])).toEqual([{ kind: 'removed', text: 'old' }]);
   });
 
   it("holds the removed line's place while it's read, and shows the suggested lines alone when it can't be", () => {
-    expect(suggestionRows('reading', ['new'])).toEqual([{ kind: 'reading' }, { kind: 'added', text: 'new' }]);
-    expect(suggestionRows('unknown', ['new'])).toEqual([{ kind: 'added', text: 'new' }]);
+    expect(suggestionRows(READING, ['new'])).toEqual([{ kind: 'reading' }, { kind: 'added', text: 'new' }]);
+    expect(suggestionRows(FAILED, ['new'])).toEqual([{ kind: 'added', text: 'new' }]);
   });
 });
 

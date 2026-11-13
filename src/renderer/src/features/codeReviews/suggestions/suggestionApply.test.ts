@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { factsWithoutWorkspace, reviewBranchOf, suggestionApplyOf, suggestionCheckinComment, suggestionTargetIn, type SuggestionApplyFacts } from './suggestionApply';
-import type { SuggestedChange } from './suggestedChange';
+import { CHECK_IN_TIP, factsWithoutWorkspace, reviewBranchOf, suggestionApplyButtonOf, suggestionApplyOf, suggestionCheckinComment, suggestionTargetIn, type SuggestionApplyFacts } from './suggestionApply';
+import { FAILED, READING, readValue, type SuggestedChange } from './suggestedChange';
 
 const CHANGE: SuggestedChange = { path: 'Assets/Scripts/Settings.cs', revisionId: 37, firstLine: 3, lastLine: 3, lines: ['    int Timeout = 60;'] };
 const COMMENTED = 'class Settings\r\n{\r\n    int Timeout = 30;\r\n}\r\n';
@@ -10,21 +10,16 @@ const text = (value: string): FileContent => ({ text: value, isBinary: false, si
 const READY: SuggestionApplyFacts = {
   open: true,
   workspacePath: '/work/game',
-  workspaceBranch: '/main/task',
-  reviewBranch: '/main/task',
+  workspaceBranch: readValue('/main/task'),
+  reviewBranch: readValue('/main/task'),
   behind: null,
-  commentedText: COMMENTED,
-  workspaceFile: text(COMMENTED),
+  commentedText: readValue(COMMENTED),
+  workspaceFile: readValue(text(COMMENTED)),
   pending: false,
 };
 
-const reasonOf2 = (change: SuggestedChange, facts: Partial<SuggestionApplyFacts>): string | undefined => {
+const reasonOf = (facts: Partial<SuggestionApplyFacts>, change: SuggestedChange = CHANGE): string | undefined => {
   const apply = suggestionApplyOf(change, { ...READY, ...facts });
-  return apply.kind === 'unavailable' ? apply.reason : undefined;
-};
-
-const reasonOf = (facts: Partial<SuggestionApplyFacts>): string | undefined => {
-  const apply = suggestionApplyOf(CHANGE, { ...READY, ...facts });
   return apply.kind === 'unavailable' ? apply.reason : undefined;
 };
 
@@ -35,7 +30,7 @@ describe('suggestionApplyOf', () => {
 
   it('follows the line to where it is in the workspace now', () => {
     const moved = `// header\r\n${COMMENTED}`;
-    expect(suggestionApplyOf(CHANGE, { ...READY, workspaceFile: text(moved) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 4 } });
+    expect(suggestionApplyOf(CHANGE, { ...READY, workspaceFile: readValue(text(moved)) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 4 } });
   });
 
   it('offers nothing for a request applied or discarded', () => {
@@ -44,29 +39,38 @@ describe('suggestionApplyOf', () => {
 
   it('says why it can\'t be applied away from the review branch', () => {
     expect(reasonOf({ workspacePath: null })).toBe("Open a workspace on the review's branch to apply it");
-    expect(reasonOf({ reviewBranch: null })).toBe("A shelve's review: its changes are on no branch to apply them to");
-    expect(reasonOf({ workspaceBranch: '/main' })).toBe("Your workspace isn't on /main/task: switch to it to apply this");
-    expect(reasonOf({ workspaceBranch: null })).toBe("Your workspace isn't on /main/task: switch to it to apply this");
+    expect(reasonOf({ reviewBranch: readValue(null) })).toBe("A shelve's review: its changes are on no branch to apply them to");
+    expect(reasonOf({ workspaceBranch: readValue('/main') })).toBe("Your workspace isn't on /main/task: switch to it to apply this");
+    expect(reasonOf({ workspaceBranch: readValue(null) })).toBe("Your workspace isn't on /main/task: switch to it to apply this");
     expect(reasonOf({ behind: { count: 2, countCapped: false, authors: ['ana'] } })).toBe('Your workspace is behind /main/task: update it first');
   });
 
   it('waits for what it reads, and says when the branch can\'t be told', () => {
-    expect(reasonOf({ reviewBranch: 'reading' })).toBe('Checking your workspace…');
-    expect(reasonOf({ workspaceFile: 'reading' })).toBe('Checking your workspace…');
-    expect(reasonOf({ commentedText: 'reading' })).toBe('Checking your workspace…');
-    expect(reasonOf({ reviewBranch: 'failed' })).toBe("Couldn't tell which branch the review is on");
+    expect(reasonOf({ reviewBranch: READING })).toBe('Checking your workspace…');
+    expect(reasonOf({ workspaceFile: READING })).toBe('Checking your workspace…');
+    expect(reasonOf({ commentedText: READING })).toBe('Checking your workspace…');
+    expect(reasonOf({ reviewBranch: FAILED })).toBe("Couldn't tell which branch the review is on");
+    expect(reasonOf({ workspaceBranch: FAILED })).toBe("Couldn't tell which branch your workspace is on");
   });
 
   it("says when the file isn't there, or isn't UTF-8 text it can write back as it was", () => {
-    expect(reasonOf({ workspaceFile: 'failed' })).toBe("Settings.cs isn't in your workspace");
-    expect(reasonOf({ workspaceFile: { isBinary: true, size: 3 } })).toBe("Settings.cs isn't a text file this can change");
-    expect(reasonOf({ workspaceFile: { isBinary: false, tooLarge: 'text', size: 9e6 } })).toBe("Settings.cs isn't a text file this can change");
-    expect(reasonOf({ workspaceFile: text('caf�') })).toBe("Settings.cs isn't a text file this can change");
+    expect(reasonOf({ workspaceFile: FAILED })).toBe("Settings.cs isn't in your workspace");
+    expect(reasonOf({ workspaceFile: readValue({ isBinary: true, size: 3 }) })).toBe("Settings.cs isn't a text file this can change");
+    expect(reasonOf({ workspaceFile: readValue({ isBinary: false, tooLarge: 'text', size: 9e6 }) })).toBe("Settings.cs isn't a text file this can change");
+    expect(reasonOf({ workspaceFile: readValue(text('caf\uFFFD')) })).toBe("Settings.cs isn't a text file this can change");
   });
 
   it('says when the line no longer holds the text the suggestion was written on', () => {
-    expect(reasonOf({ workspaceFile: text(COMMENTED.replace('30', '45')) })).toBe('Line 3 changed since the suggestion was written');
-    expect(reasonOf({ commentedText: 'failed' })).toBe('Line 3 changed since the suggestion was written');
+    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('30', '45'))) })).toBe('Line 3 changed since the suggestion was written');
+  });
+
+  it("says so, apart, when the version the suggestion was written on can't be read or isn't text", () => {
+    expect(reasonOf({ commentedText: FAILED })).toBe("The code the suggestion was written on can't be read");
+    expect(reasonOf({ commentedText: readValue(null) })).toBe("Settings.cs wasn't a text file when the suggestion was written");
+  });
+
+  it("reads a file whose text is the word 'failed' as text", () => {
+    expect(reasonOf({ commentedText: readValue('failed\n'), workspaceFile: readValue(text('failed\n')) }, { ...CHANGE, firstLine: 1, lastLine: 1 })).toBeUndefined();
   });
 
   it('applies to the changes, but checks in nothing, when the file has other changes a check-in would take', () => {
@@ -81,12 +85,12 @@ describe('suggestionApplyOf on a range of lines', () => {
   const BLOCK: SuggestedChange = { ...CHANGE, firstLine: 2, lastLine: 4, lines: ['{ int Timeout = 60; }'] };
 
   it('is ready where the whole block is, moved or not', () => {
-    expect(suggestionApplyOf(BLOCK, { ...READY, workspaceFile: text(`// a\r\n// b\r\n${COMMENTED}`) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 6 } });
+    expect(suggestionApplyOf(BLOCK, { ...READY, workspaceFile: readValue(text(`// a\r\n// b\r\n${COMMENTED}`)) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 6 } });
   });
 
   it('says the lines changed when any line of the block did, or a line went in between', () => {
-    expect(reasonOf2(BLOCK, { workspaceFile: text(COMMENTED.replace('{', '{ // open')) })).toBe('Lines 2–4 changed since the suggestion was written');
-    expect(reasonOf2(BLOCK, { workspaceFile: text(COMMENTED.replace('{\r\n', '{\r\n    // new\r\n')) })).toBe('Lines 2–4 changed since the suggestion was written');
+    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{', '{ // open'))) }, BLOCK)).toBe('Lines 2–4 changed since the suggestion was written');
+    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{\r\n', '{\r\n    // new\r\n'))) }, BLOCK)).toBe('Lines 2–4 changed since the suggestion was written');
   });
 });
 
@@ -120,11 +124,37 @@ describe('suggestionCheckinComment', () => {
 
 describe('reviewBranchOf', () => {
   it("is a branch review's branch, a changeset review's changeset's, and none for a shelve", () => {
-    expect(reviewBranchOf({ kind: 'branch', branch: '/main/task' }, 'reading')).toBe('/main/task');
-    expect(reviewBranchOf({ kind: 'changeset', changesetId: 12 }, '/main')).toBe('/main');
-    expect(reviewBranchOf({ kind: 'changeset', changesetId: 12 }, 'reading')).toBe('reading');
-    expect(reviewBranchOf({ kind: 'shelve', shelveId: 3 }, '/main')).toBeNull();
-    expect(reviewBranchOf({ kind: 'unknown', description: '?' }, '/main')).toBe('failed');
+    expect(reviewBranchOf({ kind: 'branch', branch: '/main/task' }, READING)).toEqual(readValue('/main/task'));
+    expect(reviewBranchOf({ kind: 'changeset', changesetId: 12 }, readValue('/main'))).toEqual(readValue('/main'));
+    expect(reviewBranchOf({ kind: 'changeset', changesetId: 12 }, READING)).toEqual(READING);
+    expect(reviewBranchOf({ kind: 'shelve', shelveId: 3 }, readValue('/main'))).toEqual(readValue(null));
+    expect(reviewBranchOf({ kind: 'unknown', description: '?' }, readValue('/main'))).toEqual(FAILED);
+  });
+});
+
+describe('suggestionApplyButtonOf', () => {
+  it('shows nothing for a settled request', () => {
+    expect(suggestionApplyButtonOf({ kind: 'none' }).shown).toBe(false);
+  });
+
+  it('is off whole, saying why, when it can\'t be applied', () => {
+    expect(suggestionApplyButtonOf({ kind: 'unavailable', reason: 'Your workspace is behind /main/task: update it first' })).toEqual({
+      shown: true,
+      disabled: true,
+      mainDisabled: true,
+      tip: 'Your workspace is behind /main/task: update it first',
+    });
+  });
+
+  it('checks in, or only applies to the changes when the file has others', () => {
+    const ready = suggestionApplyOf(CHANGE, READY);
+    expect(suggestionApplyButtonOf(ready)).toEqual({ shown: true, disabled: false, mainDisabled: false, tip: CHECK_IN_TIP });
+    expect(suggestionApplyButtonOf(suggestionApplyOf(CHANGE, { ...READY, pending: true }))).toEqual({
+      shown: true,
+      disabled: false,
+      mainDisabled: true,
+      tip: 'Settings.cs has other changes, which a check-in of it would take too: apply it to your changes',
+    });
   });
 });
 

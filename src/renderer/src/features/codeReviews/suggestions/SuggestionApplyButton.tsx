@@ -9,7 +9,7 @@ import { askDialog } from '../../../ui/dialog/dialogStore';
 import { SplitButton } from '../../../ui/SplitButton';
 import { applySuggestionToChanges, checkInSuggestion, type SuggestionWrite } from './applySuggestion';
 import type { SuggestedChange } from './suggestedChange';
-import { factsWithoutWorkspace, suggestionApplyOf, suggestionCheckinComment, type SuggestionApply } from './suggestionApply';
+import { factsWithoutWorkspace, suggestionApplyButtonOf, suggestionApplyOf, suggestionCheckinComment, type SuggestionApply } from './suggestionApply';
 import { useSuggestionApply } from './useSuggestionApply';
 
 interface SuggestionApplyButtonProps {
@@ -57,21 +57,21 @@ interface ApplyButtonProps {
 
 function ApplyButton({ apply, onCheckIn, onApply }: ApplyButtonProps) {
   const [busy, setBusy] = useState(false);
-  if (apply.kind === 'none') return null;
-  const ready = apply.kind === 'ready' ? apply : null;
+  const view = suggestionApplyButtonOf(apply);
+  if (!view.shown) return null;
   const run = (action: ((ready: Extract<SuggestionApply, { kind: 'ready' }>) => Promise<unknown>) | undefined): void => {
-    if (!ready || !action || busy) return;
+    if (apply.kind !== 'ready' || !action || busy) return;
     setBusy(true);
-    void action(ready).finally(() => setBusy(false));
+    void action(apply).finally(() => setBusy(false));
   };
   return (
     <SplitButton
       size="small"
       icon={<GitCommitHorizontal size={14} aria-hidden />}
       loading={busy}
-      disabled={!ready}
-      mainDisabled={ready?.checkIn.reason !== undefined}
-      tip={apply.kind === 'unavailable' ? apply.reason : (ready?.checkIn.reason ?? 'Check in this file with the suggestion, applying the change request')}
+      disabled={view.disabled}
+      mainDisabled={view.mainDisabled}
+      tip={view.tip}
       menuLabel="More ways to apply it"
       menu={[{ id: 'applyToChanges', label: 'Apply to my changes', run: () => run(onApply) }]}
       onClick={() => run(onCheckIn)}

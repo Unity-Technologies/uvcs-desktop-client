@@ -50,8 +50,10 @@ export async function checkInSuggestion(write: SuggestionWrite, comment: string)
   // Changed since the button showed (an editor saved it): checking it in alone would take those changes too.
   if (await pendingChangeOf(workspacePath, change.path)) return refused(change.path, otherChangesReason(change.path));
   if (!(await writeSuggestion(write))) return false;
-  const pending = (await pendingChangeOf(workspacePath, change.path)) ?? { path: change.path, kinds: ['changed'], itemType: 'file', size: 0, lastModified: '' };
-  const checkedIn = await checkinChanges({ workspacePath, changes: [pending], paths: [change.path], addsPrivate: false, comment });
+  // The file had no other change, so the one it has now is the suggestion's: no need to read the list again.
+  const written: PendingChange = { path: change.path, kinds: ['changed'], itemType: 'file', size: 0, lastModified: '' };
+  // Its comment names a change request that's applied once checked in: never one to pick again from the recent ones.
+  const checkedIn = await checkinChanges({ workspacePath, changes: [written], paths: [change.path], addsPrivate: false, comment, remembersComment: false });
   if (!checkedIn) toast.info(`The suggestion stays in your changes`, `${fileNameOf(change.path)} has it: check it in from Changes.`);
   return checkedIn;
 }
@@ -92,11 +94,7 @@ async function readWorkspaceFile(workspacePath: string, path: string): Promise<F
   }
 }
 
-/**
- * The file's pending change, if any, from a fresh read of the list Changes shows (`cm status`, a local read): asked
- * right before a check-in and right after the write. `cm` may not see a write in the second of the file's last update
- * (it compares timestamps): the check-in then names the file as changed, and `cm checkin` tells.
- */
+/** The file's pending change, if any, from a fresh read of the list Changes shows (`cm status`, a local read). */
 async function pendingChangeOf(workspacePath: string, path: string): Promise<PendingChange | undefined> {
   const { pendingChanges: filter } = await queryClient.fetchQuery(settingsQuery);
   const { changes } = await queryClient.fetchQuery({ ...pendingChangesQuery(workspacePath, filter), staleTime: 0 });

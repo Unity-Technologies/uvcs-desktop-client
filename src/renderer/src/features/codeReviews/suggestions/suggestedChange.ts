@@ -41,24 +41,37 @@ export function suggestedChangeOf(comment: Pick<ReviewComment, 'kind' | 'anchor'
   return { path: anchorPath(anchor), revisionId: anchor.revisionId, ...commentedLines(anchor), lines: suggestion.lines };
 }
 
-/** A read something waits on: still being read, failed, or its answer. */
-export type Read<T> = 'reading' | 'failed' | T;
+/**
+ * Something the window reads, as what waits on it sees it: still being read, failed, or read (`value`). Tagged, so a
+ * value never reads as one of the others (a file whose text is "failed").
+ */
+export type Read<T> = { kind: 'reading' } | { kind: 'failed' } | { kind: 'read'; value: T };
+
+export const READING: Read<never> = { kind: 'reading' };
+export const FAILED: Read<never> = { kind: 'failed' };
+
+export function readValue<T>(value: T): Read<T> {
+  return { kind: 'read', value };
+}
 
 /**
- * The lines a suggestion replaces, as the revision it was written on has them: read (`string[]`), still being read
- * (`'reading'`), or not to be had (`'unknown'`: the read failed, the file is binary, or shorter than the line).
+ * The lines a suggestion replaces, as the revision it was written on has them; failed when they're not to be had (the
+ * read failed, the version has no text, or is shorter than the lines).
  */
-export type ReplacedLines = string[] | 'reading' | 'unknown';
+export type ReplacedLines = Read<string[]>;
 
-/** The lines `firstLine` to `lastLine` (1-based) of a version's text, its line ends left out; unknown past its end. */
-export function replacedLinesIn(text: string | null | undefined, change: LineRange): ReplacedLines {
-  if (text === undefined) return 'reading';
-  if (text === null) return 'unknown';
-  const lines = text.split(/\r\n|\n|\r/);
+/**
+ * The lines `firstLine` to `lastLine` (1-based) of a version's text (`null`: a version with no text, binary or too
+ * large), their line ends left out.
+ */
+export function replacedLinesIn(text: Read<string | null>, change: LineRange): ReplacedLines {
+  if (text.kind !== 'read') return text;
+  if (text.value === null) return FAILED;
+  const lines = text.value.split(/\r\n|\n|\r/);
   // A text ending in a line end has no line after it (as `withLinesReplaced` counts lines).
   if (lines.at(-1) === '') lines.pop();
-  if (change.firstLine < 1 || change.lastLine > lines.length) return 'unknown';
-  return lines.slice(change.firstLine - 1, change.lastLine);
+  if (change.firstLine < 1 || change.lastLine > lines.length) return FAILED;
+  return readValue(lines.slice(change.firstLine - 1, change.lastLine));
 }
 
 /** A row of the Suggested change block: a line it removes or adds, or the removed line's place while it's read. */
@@ -71,7 +84,7 @@ export type SuggestionRow = { kind: 'removed' | 'added'; text: string } | { kind
  */
 export function suggestionRows(replaced: ReplacedLines, lines: readonly string[]): SuggestionRow[] {
   const removed: SuggestionRow[] =
-    replaced === 'reading' ? [{ kind: 'reading' }] : replaced === 'unknown' ? [] : replaced.map((text) => ({ kind: 'removed', text }));
+    replaced.kind === 'reading' ? [{ kind: 'reading' }] : replaced.kind === 'failed' ? [] : replaced.value.map((text) => ({ kind: 'removed', text }));
   return [...removed, ...lines.map((text): SuggestionRow => ({ kind: 'added', text }))];
 }
 

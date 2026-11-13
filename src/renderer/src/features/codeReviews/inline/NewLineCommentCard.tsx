@@ -10,7 +10,7 @@ import { Button } from '../../../ui/Button';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
-import { suggestButtonOf } from '../suggestions/suggestButton';
+import { suggestButtonOf, suggestRequestOutcome } from '../suggestions/suggestButton';
 import { commentedLines } from '../suggestions/suggestedChange';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { CommentComposer } from '../conversation/CommentComposer';
@@ -74,13 +74,16 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const suggest = suggestButtonOf(lineText, text);
   // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
   const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
-  const insertSuggestion = (): void => {
-    if (!suggest.enabled || !Array.isArray(lineText)) return;
+  const insertSuggestion = (lines: readonly string[]): void => {
     const at = field.current?.selection()?.head ?? text.length;
-    const inserted = withSuggestionAt(text, at, lineText);
+    const inserted = withSuggestionAt(text, at, lines);
     useCommentDraftStore.getState().keep(draftKey, { summary: '', description: inserted.text });
     if (kind !== 'changeRequest') setKind(spot.key, 'changeRequest');
     setCaretAfterInsert(inserted.caret);
+  };
+  const suggestAtCaret = (): void => {
+    const outcome = suggestRequestOutcome(lineText, text);
+    if (outcome.kind === 'insert') insertSuggestion(outcome.lines);
   };
   useEffect(() => {
     if (caretAfterInsert === null) return;
@@ -90,11 +93,16 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const suggestTaken = useNewLineCommentsStore((state) => state.suggestTaken);
   // Kept apart from the store's request, which a second mount (StrictMode) still sees in its first render's values.
   const suggestedFor = useRef<number | null>(null);
+  // Why the menu's request couldn't be met, said in the card rather than leaving it without a suggestion silently.
+  const [refusedSuggestion, setRefusedSuggestion] = useState<string | null>(null);
   useEffect(() => {
-    if (suggestSeq === null || lineText === 'reading' || suggestedFor.current === suggestSeq) return;
+    if (suggestSeq === null || suggestedFor.current === suggestSeq) return;
+    const outcome = suggestRequestOutcome(lineText, text);
+    if (outcome.kind === 'wait') return;
     suggestedFor.current = suggestSeq;
     suggestTaken(suggestSeq);
-    insertSuggestion();
+    if (outcome.kind === 'insert') insertSuggestion(outcome.lines);
+    else setRefusedSuggestion(outcome.reason);
   }, [suggestSeq, lineText]);
 
   return (
@@ -102,11 +110,16 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
       <div className={styles.header}>
         <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
         <Tooltip content={suggest.tip}>
-          <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={insertSuggestion}>
+          <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
             Suggest change
           </Button>
         </Tooltip>
       </div>
+      {refusedSuggestion && (
+        <p className={styles.notice} role="status">
+          No suggestion added: {refusedSuggestion}
+        </p>
+      )}
       <div>
         <CommentComposer
           fieldRef={field}

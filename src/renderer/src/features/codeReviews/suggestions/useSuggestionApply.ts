@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import { workspacePlace } from '@shared/domain/place';
 import { useWorkspaceInfoOf } from '../../../app/workspace/useWorkspace';
@@ -8,7 +9,7 @@ import { contentQuery } from '../../diff/viewer/contentQueries';
 import { useIncomingSummary } from '../../incoming/useIncomingSummary';
 import { behindBranch } from '../../pendingChanges/checkinBehind';
 import { usePendingChanges } from '../../pendingChanges/usePendingChanges';
-import type { Read, SuggestedChange } from './suggestedChange';
+import { FAILED, READING, readValue, type Read, type SuggestedChange } from './suggestedChange';
 import { reviewBranchOf, suggestionApplyOf, type SuggestionApply } from './suggestionApply';
 import { useCommentedText } from './useReplacedLines';
 
@@ -20,18 +21,31 @@ import { useCommentedText } from './useReplacedLines';
  */
 export function useSuggestionApply(workspacePath: string, target: CodeReviewTarget, change: SuggestedChange, open: boolean): SuggestionApply {
   const info = useWorkspaceInfoOf(workspacePath);
-  const workspaceBranch: Read<string | null> = info.isError ? 'failed' : info.data ? (branchWorkedOn(info.data.selector) ?? null) : 'reading';
+  const workspaceBranch = readOf(info, (data) => branchWorkedOn(data.selector) ?? null);
   const changeset = useChangeset(target.kind === 'changeset' ? target.changesetId : null);
-  const changesetBranch: Read<string> = changeset.isError ? 'failed' : (changeset.data?.branch ?? 'reading');
-  const reviewBranch = reviewBranchOf(target, changesetBranch);
+  const changesetBranch: Read<string> = changeset.isError ? FAILED : changeset.data ? readValue(changeset.data.branch) : READING;
   const { data: summary } = useIncomingSummary();
-  const branch = typeof workspaceBranch === 'string' && workspaceBranch !== 'reading' && workspaceBranch !== 'failed' ? workspaceBranch : undefined;
-  const behind = behindBranch(summary, branch, false);
+  const behind = behindBranch(summary, workspaceBranch.kind === 'read' ? (workspaceBranch.value ?? undefined) : undefined, false);
   const { data: pendingChanges } = usePendingChanges();
   const pending = pendingChanges?.changes.some((pendingChange) => pendingChange.path === change.path) ?? false;
   const commentedText = useCommentedText(change);
   // The file on disk: a free read, again whenever asked (`contentCaching`), and refreshed with the workspace's files.
   const file = useQuery({ ...contentQuery(workspacePlace(workspacePath), { kind: 'workspaceFile', path: change.path }), enabled: open, retry: false });
-  const workspaceFile = file.isError ? 'failed' : (file.data ?? 'reading');
-  return suggestionApplyOf(change, { open, workspacePath, workspaceBranch, reviewBranch, behind, commentedText, workspaceFile, pending });
+  const workspaceFile = readOf(file, (data) => data);
+  // Following the lines into the file is a line diff of the whole file: once per change of what it reads, not per render.
+  return useMemo(
+    () => suggestionApplyOf(change, { open, workspacePath, workspaceBranch, reviewBranch: reviewBranchOf(target, changesetBranch), behind, commentedText, workspaceFile, pending }),
+    [change, open, workspacePath, readKey(workspaceBranch), target, readKey(changesetBranch), behind?.count, readKey(commentedText), file.data, file.isError, pending],
+  );
+}
+
+/** A query's answer as a `Read`, through `value`. */
+function readOf<Data, T>(query: { isError: boolean; data: Data | undefined }, value: (data: Data) => T): Read<T> {
+  if (query.isError) return FAILED;
+  return query.data === undefined ? READING : readValue(value(query.data));
+}
+
+/** What a `Read` of a small value is, for a memo's keys: its kind, and its value. */
+function readKey(read: Read<string | null>): string {
+  return read.kind === 'read' ? `read:${read.value}` : read.kind;
 }

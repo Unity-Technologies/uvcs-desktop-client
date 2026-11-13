@@ -103,6 +103,8 @@ describe('checkInSuggestion', () => {
 
     expect(disk).toBe(AFTER);
     expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: [PATH], comment: COMMENT, addsPrivate: false }]);
+    // One fresh read of the pending changes before writing; the comment isn't kept among the recent ones.
+    expect(fakeApi.methods()).toEqual(['pendingChanges.list', 'content.read', 'content.writeWorkspaceFile', 'pendingChanges.checkin']);
   });
 
   it('refreshes the reviews too, as the check-in applies the change request', async () => {
