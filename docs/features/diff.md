@@ -42,10 +42,12 @@ branch as long as /main never reads whole; Incoming lists its changesets with th
 first row that stands for all of them: **All changes on <branch>** (the branch's name, `branchLabel`, whole in the
 tooltip). Selected, as the page opens unless it's asked for changesets, that row shows the diff above:
 `{ kind: 'branch' }`, `cm diff br:<branch> --integration`. One changeset selected shows its own diff; several show as
-one (below). What the selection shows is `changesetListChoice`; `BranchDiff` only renders it. The page's header names
-the branch whatever is selected (`BranchDescription`); a changeset's summary sits above its diff (`TargetDiff`'s
-`pageDescription`), since its height follows its comment, and over the whole page it would move the list being
-clicked at each step.
+one (below). What the selection shows is `changesetListChoice`; `BranchDiff` only renders it. The page's header is one
+line naming what is selected on the branch (`BranchDescription`, `branchDiffHeading`): "All changes on <branch>",
+"Changes in cs:1234 on <branch>", "Changes in cs:15 to cs:17 on <branch>". Naming only the branch would read as if the
+files below were all the branch's. A changeset's summary sits above its diff
+(`TargetDiff`'s `pageDescription`), since its height follows its comment, and over the whole page it would move the
+list being clicked at each step; the header's one line keeps its height.
 
 Why no switch between two modes, the whole branch and its changesets one by one ("Whole branch | Changeset by
 changeset", tried): the branch's own diff is one more row of the list, so stepping into its changesets, and selecting
