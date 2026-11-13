@@ -6,6 +6,7 @@ import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
+import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
@@ -107,6 +108,21 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     async remove(place, reviewIds) {
       const at = cmPlace(place);
       await cm.query(deleteReviewsArgs(reviewIds, at), at.options);
+    },
+
+    async subscription(place, reviewId) {
+      const at = cmPlace(place);
+      return parseReviewSubscription(await cm.query(reviewSubscriptionArgs(reviewId, at), at.options));
+    },
+
+    async subscribe(place, reviewId) {
+      const at = cmPlace(place);
+      await cm.query(setSubscriptionArgs(reviewId, true, at), at.options);
+    },
+
+    async unsubscribe(place, reviewId) {
+      const at = cmPlace(place);
+      await cm.query(setSubscriptionArgs(reviewId, false, at), at.options);
     },
   };
 }
