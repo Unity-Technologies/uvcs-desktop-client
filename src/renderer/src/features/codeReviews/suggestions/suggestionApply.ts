@@ -4,8 +4,8 @@ import { fileNameOf } from '../../../lib/text';
 import { applyChangeText } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
-import { newerLineOf } from '../inline/newerLine';
-import type { Read, SuggestedChange } from './suggestedChange';
+import { newerRangeOf } from '../inline/newerLine';
+import { rangeWords, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
  * What the decision to apply a suggestion knows (docs/features/code-reviews.md "Applying a suggestion"), all of it
@@ -32,13 +32,14 @@ export interface SuggestionApplyFacts {
 
 /**
  * Whether a suggestion can be applied, and where: none for a request no longer open (no button at all); unavailable,
- * with why, for the tooltip of a disabled button; or ready, at the workspace file's line that holds the text it was
- * written on, with whether it can be checked in alone (`checkIn.reason`: why not).
+ * with why, for the tooltip of a disabled button; or ready, at the lines of the workspace's file that hold the text it
+ * was written on, with whether it can be checked in alone (`checkIn.reason`: why not). `commentedText` is what both
+ * actions check the file against again right before writing (`suggestionTargetIn`).
  */
 export type SuggestionApply =
   | { kind: 'none' }
   | { kind: 'unavailable'; reason: string }
-  | { kind: 'ready'; text: string; firstLine: number; lastLine: number; checkIn: { reason?: string } };
+  | { kind: 'ready'; range: LineRange; commentedText: string; checkIn: { reason?: string } };
 
 /** What a suggestion can do, from what's known (`SuggestionApplyFacts`), the first reason it can't winning. */
 export function suggestionApplyOf(change: SuggestedChange, facts: SuggestionApplyFacts): SuggestionApply {
@@ -46,16 +47,40 @@ export function suggestionApplyOf(change: SuggestedChange, facts: SuggestionAppl
   const blocked = branchReason(facts);
   if (blocked) return { kind: 'unavailable', reason: blocked };
   const { workspaceFile, commentedText } = facts;
-  const name = fileNameOf(change.path);
   if (workspaceFile === 'reading' || commentedText === 'reading') return { kind: 'unavailable', reason: 'Checking your workspace…' };
-  if (workspaceFile === 'failed') return { kind: 'unavailable', reason: `${name} isn't in your workspace` };
-  const text = editableText(workspaceFile);
-  if (text === null) return { kind: 'unavailable', reason: `${name} isn't a text file this can change` };
-  const line = commentedText === 'failed' || commentedText === null ? null : newerLineOf(commentedText, text, change.firstLine);
-  if (line === null) return { kind: 'unavailable', reason: `Line ${change.firstLine} changed since the suggestion was written` };
-  const lastLine = line + (change.lastLine - change.firstLine);
-  const checkIn = facts.pending ? { reason: `${name} has other changes, which a check-in of it would take too: apply it to your changes` } : {};
-  return { kind: 'ready', text, firstLine: line, lastLine, checkIn };
+  if (commentedText === 'failed' || commentedText === null) return { kind: 'unavailable', reason: codeChangedReason(change) };
+  const target = suggestionTargetIn(change, commentedText, workspaceFile);
+  if (target.kind === 'refused') return { kind: 'unavailable', reason: target.reason };
+  const checkIn = facts.pending ? { reason: otherChangesReason(change.path) } : {};
+  return { kind: 'ready', range: target.range, commentedText, checkIn };
+}
+
+/** Where a suggestion goes in a workspace file's text, or why it can't go there. */
+export type SuggestionTarget = { kind: 'ready'; text: string; range: LineRange } | { kind: 'refused'; reason: string };
+
+/**
+ * Where the suggestion's lines are in the workspace's file (`file`, or 'failed' when it couldn't be read): the block
+ * of lines it was written on (`commentedText`, the revision's), followed into the file whole (`newerRangeOf`: moved is
+ * fine, any of its lines changed is not). Decided as the button shows, and again from a fresh read right before the
+ * file is written, as the user may have edited it in between (`writeSuggestion`).
+ */
+export function suggestionTargetIn(change: SuggestedChange, commentedText: string, file: FileContent | 'failed'): SuggestionTarget {
+  const name = fileNameOf(change.path);
+  if (file === 'failed') return { kind: 'refused', reason: `${name} isn't in your workspace` };
+  const text = editableText(file);
+  if (text === null) return { kind: 'refused', reason: `${name} isn't a text file this can change` };
+  const range = newerRangeOf(commentedText, text, change);
+  return range ? { kind: 'ready', text, range } : { kind: 'refused', reason: codeChangedReason(change) };
+}
+
+/** Why a suggestion can't be applied once the lines it was written on changed. */
+export function codeChangedReason(change: LineRange): string {
+  return `${rangeWords(change)} changed since the suggestion was written`;
+}
+
+/** Why a suggestion can't be checked in alone: a check-in of its file would take the file's other changes too. */
+export function otherChangesReason(path: string): string {
+  return `${fileNameOf(path)} has other changes, which a check-in of it would take too: apply it to your changes`;
 }
 
 function branchReason({ workspacePath, workspaceBranch, reviewBranch, behind }: SuggestionApplyFacts): string | null {
@@ -96,7 +121,7 @@ export function factsWithoutWorkspace(open: boolean): SuggestionApplyFacts {
  */
 function editableText(content: FileContent): string | null {
   if (content.isBinary || content.tooLarge || content.text === undefined) return null;
-  return content.text.includes('�') ? null : content.text;
+  return content.text.includes('\uFFFD') ? null : content.text;
 }
 
 /**

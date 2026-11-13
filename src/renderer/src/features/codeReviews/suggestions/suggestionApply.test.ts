@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { factsWithoutWorkspace, reviewBranchOf, suggestionApplyOf, suggestionCheckinComment, type SuggestionApplyFacts } from './suggestionApply';
+import { factsWithoutWorkspace, reviewBranchOf, suggestionApplyOf, suggestionCheckinComment, suggestionTargetIn, type SuggestionApplyFacts } from './suggestionApply';
 import type { SuggestedChange } from './suggestedChange';
 
 const CHANGE: SuggestedChange = { path: 'Assets/Scripts/Settings.cs', revisionId: 37, firstLine: 3, lastLine: 3, lines: ['    int Timeout = 60;'] };
@@ -18,6 +18,11 @@ const READY: SuggestionApplyFacts = {
   pending: false,
 };
 
+const reasonOf2 = (change: SuggestedChange, facts: Partial<SuggestionApplyFacts>): string | undefined => {
+  const apply = suggestionApplyOf(change, { ...READY, ...facts });
+  return apply.kind === 'unavailable' ? apply.reason : undefined;
+};
+
 const reasonOf = (facts: Partial<SuggestionApplyFacts>): string | undefined => {
   const apply = suggestionApplyOf(CHANGE, { ...READY, ...facts });
   return apply.kind === 'unavailable' ? apply.reason : undefined;
@@ -25,12 +30,12 @@ const reasonOf = (facts: Partial<SuggestionApplyFacts>): string | undefined => {
 
 describe('suggestionApplyOf', () => {
   it('is ready at the line on the review branch, to check in alone', () => {
-    expect(suggestionApplyOf(CHANGE, READY)).toEqual({ kind: 'ready', text: COMMENTED, firstLine: 3, lastLine: 3, checkIn: {} });
+    expect(suggestionApplyOf(CHANGE, READY)).toEqual({ kind: 'ready', range: { firstLine: 3, lastLine: 3 }, commentedText: COMMENTED, checkIn: {} });
   });
 
   it('follows the line to where it is in the workspace now', () => {
     const moved = `// header\r\n${COMMENTED}`;
-    expect(suggestionApplyOf(CHANGE, { ...READY, workspaceFile: text(moved) })).toMatchObject({ kind: 'ready', firstLine: 4, lastLine: 4 });
+    expect(suggestionApplyOf(CHANGE, { ...READY, workspaceFile: text(moved) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 4 } });
   });
 
   it('offers nothing for a request applied or discarded', () => {
@@ -69,6 +74,27 @@ describe('suggestionApplyOf', () => {
       kind: 'ready',
       checkIn: { reason: 'Settings.cs has other changes, which a check-in of it would take too: apply it to your changes' },
     });
+  });
+});
+
+describe('suggestionApplyOf on a range of lines', () => {
+  const BLOCK: SuggestedChange = { ...CHANGE, firstLine: 2, lastLine: 4, lines: ['{ int Timeout = 60; }'] };
+
+  it('is ready where the whole block is, moved or not', () => {
+    expect(suggestionApplyOf(BLOCK, { ...READY, workspaceFile: text(`// a\r\n// b\r\n${COMMENTED}`) })).toMatchObject({ kind: 'ready', range: { firstLine: 4, lastLine: 6 } });
+  });
+
+  it('says the lines changed when any line of the block did, or a line went in between', () => {
+    expect(reasonOf2(BLOCK, { workspaceFile: text(COMMENTED.replace('{', '{ // open')) })).toBe('Lines 2–4 changed since the suggestion was written');
+    expect(reasonOf2(BLOCK, { workspaceFile: text(COMMENTED.replace('{\r\n', '{\r\n    // new\r\n')) })).toBe('Lines 2–4 changed since the suggestion was written');
+  });
+});
+
+describe('suggestionTargetIn', () => {
+  it('rechecks a fresh read of the file as the button did', () => {
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED))).toEqual({ kind: 'ready', text: COMMENTED, range: { firstLine: 3, lastLine: 3 } });
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '31')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+    expect(suggestionTargetIn(CHANGE, COMMENTED, 'failed')).toEqual({ kind: 'refused', reason: "Settings.cs isn't in your workspace" });
   });
 });
 

@@ -9,12 +9,14 @@ import { queryClient } from '../../../app/queryClient';
 import { workspaceInfoQuery } from '../../../app/workspace/useWorkspace';
 import { shownToasts, watchRefreshes } from '../../../testing/operationOutcome';
 import { applySuggestionToChanges, checkInSuggestion, type SuggestionWrite } from './applySuggestion';
+import type { SuggestedChange } from './suggestedChange';
 
 const ws = '/ws';
 const PATH = 'Assets/Scripts/Settings.cs';
 const BEFORE = 'class Settings\r\n{\r\n    int Timeout = 30;\r\n}\r\n';
 const AFTER = 'class Settings\r\n{\r\n    int Timeout = 60;\r\n}\r\n';
-const WRITE: SuggestionWrite = { workspacePath: ws, path: PATH, text: BEFORE, firstLine: 3, lastLine: 3, lines: ['    int Timeout = 60;'] };
+const CHANGE: SuggestedChange = { path: PATH, revisionId: 37, firstLine: 3, lastLine: 3, lines: ['    int Timeout = 60;'] };
+const WRITE: SuggestionWrite = { workspacePath: ws, change: CHANGE, commentedText: BEFORE };
 const COMMENT = 'Apply suggestion from Ana [apply-change:c0d1ce00]';
 const CHANGED: PendingChange = { path: PATH, kinds: ['changed'], itemType: 'file', size: 50, lastModified: '' };
 
@@ -42,13 +44,39 @@ describe('applySuggestionToChanges', () => {
     expect(shownToasts()).toMatchObject([{ kind: 'success', title: 'Suggestion applied to Settings.cs', detail: 'Check it in from Changes, which offers its change request to apply.' }]);
   });
 
-  it('writes nothing when the file changed since it was read', async () => {
-    disk = BEFORE.replace('Settings', 'Options');
+  it('writes nothing when the line was edited after the button showed, saying why as the button would', async () => {
+    disk = BEFORE.replace('30', '45');
 
     expect(await applySuggestionToChanges(WRITE)).toBe(false);
 
     expect(fakeApi.methods()).not.toContain('content.writeWorkspaceFile');
-    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Settings.cs changed since', detail: 'Nothing was written: look at the suggestion again.' }]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Nothing was written to Settings.cs', detail: 'Line 3 changed since the suggestion was written' }]);
+  });
+
+  it('writes at the line where it is now, when lines were added above it since', async () => {
+    disk = `// Settings\r\n${BEFORE}`;
+
+    expect(await applySuggestionToChanges(WRITE)).toBe(true);
+    expect(disk).toBe(`// Settings\r\n${AFTER}`);
+  });
+
+  it('replaces a range of lines, checked whole', async () => {
+    const block: SuggestedChange = { ...CHANGE, firstLine: 2, lastLine: 4, lines: ['{ int Timeout = 60; }'] };
+    expect(await applySuggestionToChanges({ ...WRITE, change: block })).toBe(true);
+    expect(disk).toBe('class Settings\r\n{ int Timeout = 60; }\r\n');
+
+    disk = BEFORE.replace('}', '} // end');
+    expect(await applySuggestionToChanges({ ...WRITE, change: block })).toBe(false);
+    expect(shownToasts().at(-1)).toEqual({ kind: 'info', title: 'Nothing was written to Settings.cs', detail: 'Lines 2–4 changed since the suggestion was written' });
+  });
+
+  it("writes nothing when the file isn't there any more", async () => {
+    fakeApi.answer('content.read', () => {
+      throw new Error('ENOENT');
+    });
+
+    expect(await applySuggestionToChanges(WRITE)).toBe(false);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Nothing was written to Settings.cs', detail: "Settings.cs isn't in your workspace" }]);
   });
 
   it('says so when the file can\'t be written (read-only, locked by another app)', async () => {
@@ -97,10 +125,22 @@ describe('checkInSuggestion', () => {
     expect(shownToasts()).toContainEqual({ kind: 'info', title: 'The suggestion stays in your changes', detail: 'Settings.cs has it: check it in from Changes.' });
   });
 
-  it('checks nothing in when the file changed since it was read', async () => {
-    disk = 'other';
+  it('writes and checks in nothing when the file got other changes after the button showed', async () => {
+    disk = `${BEFORE}// more\r\n`;
 
     expect(await checkInSuggestion(WRITE, COMMENT)).toBe(false);
-    expect(fakeApi.methods()).toEqual(['content.read']);
+
+    expect(fakeApi.methods()).toEqual(['pendingChanges.list']);
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Nothing was written to Settings.cs', detail: 'Settings.cs has other changes, which a check-in of it would take too: apply it to your changes' },
+    ]);
+  });
+
+  it('reads the pending changes afresh, not as the window last saw them', async () => {
+    queryClient.setQueryData([...queryKeys.inWorkspace(ws, 'pendingChanges'), DEFAULT_SETTINGS.pendingChanges], { changes: [] });
+    disk = `${BEFORE}// more\r\n`;
+
+    expect(await checkInSuggestion(WRITE, COMMENT)).toBe(false);
+    expect(fakeApi.methods()).not.toContain('content.writeWorkspaceFile');
   });
 });

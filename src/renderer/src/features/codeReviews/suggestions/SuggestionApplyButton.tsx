@@ -34,7 +34,7 @@ export function SuggestionApplyButton({ review, comment, change, open }: Suggest
 
 function WorkspaceApplyButton({ workspacePath, review, comment, change, open }: SuggestionApplyButtonProps & { workspacePath: string }) {
   const apply = useSuggestionApply(workspacePath, review.target, change, open);
-  const write = (ready: Extract<SuggestionApply, { kind: 'ready' }>): SuggestionWrite => ({ workspacePath, path: change.path, text: ready.text, firstLine: ready.firstLine, lastLine: ready.lastLine, lines: change.lines });
+  const write = (ready: Extract<SuggestionApply, { kind: 'ready' }>): SuggestionWrite => ({ workspacePath, change, commentedText: ready.commentedText });
   return (
     <ApplyButton
       apply={apply}
