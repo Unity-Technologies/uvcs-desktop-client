@@ -1,5 +1,6 @@
 import { CommentLine } from '../../components/comments/CommentLine';
-import { Plus, Tags } from 'lucide-react';
+import { Tags } from 'lucide-react';
+import { NewAttributeIcon } from './NewAttributeIcon';
 import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
@@ -71,7 +72,7 @@ export function AttributesView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(place)}>
+            <Button variant="primary" icon={<NewAttributeIcon size={14} />} onClick={() => openCreateAttributeDialog(place)}>
               New attribute
             </Button>
           </>
@@ -94,7 +95,11 @@ export function AttributesView() {
             icon={<Tags size={22} />}
             title="No attributes"
             description="Create an attribute, then set its value from the details of any branch, changeset or label."
-            action={<Button onClick={() => openCreateAttributeDialog(place)}>New attribute</Button>}
+            action={
+              <Button icon={<NewAttributeIcon size={14} />} onClick={() => openCreateAttributeDialog(place)}>
+                New attribute
+              </Button>
+            }
           />
         }
         query={search.trim()}

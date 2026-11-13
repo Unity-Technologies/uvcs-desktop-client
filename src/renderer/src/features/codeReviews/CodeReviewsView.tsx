@@ -1,4 +1,4 @@
-import { CircleDot, GitPullRequestArrow, Inbox, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
+import { CircleDot, GitPullRequestArrow, Inbox, MessageSquareCode, MessageSquarePlus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -98,7 +98,7 @@ export function CodeReviewsView() {
       actions={
         <>
           <ViewRefreshButton fetching={isFetching} />
-          <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+          <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
             New review
           </Button>
         </>
@@ -153,7 +153,7 @@ export function CodeReviewsView() {
             title="No code reviews"
             description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
             action={
-              <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+              <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
                 New review
               </Button>
             }
