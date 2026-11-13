@@ -400,7 +400,7 @@ interface WholeThreadProps {
   thread: ReviewThread;
   user: string | undefined;
   threadActions?: CommentThreadActions;
-  /** Its first comment opens in its editor: Edit was picked on the folded header (`FirstCommentMenu`). */
+  /** Its first comment opens in its editor: Edit was picked on the folded line's menu (`FirstCommentMenu`). */
   editsRoot: boolean;
   onRootEditorOpened: () => void;
   lit?: ShownCommentLight;
