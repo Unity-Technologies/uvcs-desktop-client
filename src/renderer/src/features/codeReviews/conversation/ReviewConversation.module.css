@@ -134,6 +134,7 @@
 
 .comment:hover .commentMenu,
 .description:hover .commentMenu,
+.thread[data-folded='true']:hover .threadHeader .commentMenu,
 .commentMenu:focus-within,
 .commentMenu:has([aria-expanded='true']) {
   opacity: 1;
@@ -317,6 +318,17 @@ button.location:hover .locationFile {
 
 .replyCount {
   color: var(--text-tertiary);
+}
+
+/*
+ * A folded card's first comment's menu (`FirstCommentMenu`), after the pill: centered on the band rather than on its
+ * baseline, and kept from making it taller than its 36px.
+ */
+.threadHeader .commentMenu {
+  display: inline-flex;
+  align-self: center;
+  margin-block: -4px;
+  margin-left: calc(var(--space-1) - var(--space-3));
 }
 
 /* A pill outlined in its words' color: where a thread stands (open amber, done green), who wrote the review. */
