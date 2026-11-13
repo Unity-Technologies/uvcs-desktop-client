@@ -409,13 +409,13 @@ ranges changes only it.
   `useReplacedLines`: the diff's own read, no command), the caret at the end of the line, and makes the comment a change
   request. While it's written, the fence's code is colored in the commented file's language, as the box shows it once
   sent (`commentedFileLanguage`, given by `CommentedFileContext` in a line comment, its replies and edits), from the
-  moment the editor learns the file, not only once the code is typed into (`colorsRedrawn`). It's offered once per comment, as only the first fence counts. The code's menu has **Suggest change on line
-  42** after "Comment on line 42" (`LineAction.variant`), opening the comment with the fence in it
-  (`useNewLineCommentsStore`'s `suggestRequest`); when it can't fill one (the line can't be read, a suggestion is there
-  already), the card says why rather than opening without one (`suggestRequestOutcome`), until the comment changes
-  (`refusalShown`). A fence a line of code would close takes more backticks (`suggestionFence`). Not in a reply, which
-  has no line of its own and is never a change request, nor in an edit, whose composer is every comment's: the fence can
-  be typed there, as it can anywhere.
+  moment the editor learns the file, not only once the code is typed into (`colorsRedrawn`). It's offered once per
+  comment, as only the first fence counts. The code's menu has **Suggest change on line 42** after "Comment on line 42"
+  (`LineAction.variant`), opening the comment with the fence in it (`useNewLineCommentsStore`'s `suggestRequest`); when
+  it can't fill one (the line can't be read, a suggestion is there already), the card says why rather than opening
+  without one (`suggestRequestOutcome`), until the comment changes (`refusalShown`). A fence a line of code would close
+  takes more backticks (`suggestionFence`). Not in a reply, which has no line of its own and is never a change request,
+  nor in an edit, whose composer is every comment's: the fence can be typed there, as it can anywhere.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
@@ -424,16 +424,18 @@ ranges changes only it.
   shown, no line numbers (the comment names its lines, and Pierre would number the snippet from 1). A few lines, so
   drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
   otherwise join. Inside a thread in the code, the box is a diff in the code's annotation row: its pointer events stay
-  in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines
-  (`rowUnderPointer`). Its rows run edge to edge, from the header's border to the box's
-  and from the change bar on (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar every code view
-  has (`PaneScrollbars`), there only while a line overflows. "Suggested change: delete the line" for an empty fence. A suggestion of the lines as they are (Suggest change's prefill sent unedited) says "The suggestion is line 13 as it is" in place of a diff of no rows (`unchangedSuggestionNote`). The line is read from the revision the
-  comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so in
-  the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it, and
-  only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from the
-  disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it; lines that can't be read leave the suggested lines alone, added. One-line previews
-  (the Comments panel, Open, a folded card) show the comment's first words, or the code's first line, as for any code
-  block. Copying keeps the fence as written.
+  in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines (`rowUnderPointer`).
+  Its rows run edge to edge, from the header's border to the box's and from the change bar on
+  (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar every code view has (`PaneScrollbars`), there
+  only while a line overflows. "Suggested change: delete the line" for an empty fence. A suggestion of the lines as they
+  are (Suggest change's prefill sent unedited) says "The suggestion is line 13 as it is" in place of a diff of no rows
+  (`unchangedSuggestionNote`). The line is read from the revision the comment is on (`useCommentedText`): one immutable
+  `contentQuery` under the key the review's diff reads it by, so in the code it's the diff's read, and in the
+  conversation one read per revision, shared by every suggestion on it, and only by a comment shown whole (a settled
+  thread starts folded); a revision the workspace has loaded is read from the disk. While it's read, and while Pierre
+  loads with the first box shown, a place as tall as its rows holds it; lines that can't be read leave the suggested
+  lines alone, added. One-line previews (the Comments panel, Open, a folded card) show the comment's first words, or the
+  code's first line, as for any code block. Copying keeps the fence as written.
 
 ## Applying a suggestion
 
@@ -452,22 +454,23 @@ An open change request's Suggested change has a split button in its header (`Sug
 
 Where it stands (`suggestionApplyOf`, from what the window read: `useSuggestionApply`, worked out again only when what
 it reads changes; the button shows it through `suggestionApplyButtonOf`); no suggestion costs a command: a settled
-request (applied, discarded) has no button. It's disabled, its tooltip saying why, for a suggestion of the lines as they are (it changes nothing, wherever the
-workspace is); in a window with no workspace; for a
-shelve's review (on no branch); in a workspace not on the review's branch (a changeset review's: its changeset's, which
-its diff reads, `reviewBranchOf`; `cm wi` tells the workspace's, locally); behind that branch, as the incoming check
-last saw (`behindBranch`, polled anyway); when the version the suggestion was written on can't be read, or isn't text;
-and when the file's lines no longer hold the text the suggestion was written on (`suggestionTargetIn`): the block of
-lines is followed from the commented revision into the file on disk (the disk read is free) whole and with its neighbors
+request (applied, discarded) has no button. It's disabled, its tooltip saying why, for a suggestion of the lines as they
+are (it changes nothing, wherever the workspace is); in a window with no workspace; for a shelve's review (on no
+branch); in a workspace not on the review's branch (a changeset review's: its changeset's, which its diff reads,
+`reviewBranchOf`; `cm wi` tells the workspace's, locally); behind that branch, as the incoming check last saw
+(`behindBranch`, polled anyway); when the version the suggestion was written on can't be read, or isn't text; and when
+the file's lines no longer hold the text the suggestion was written on (`suggestionTargetIn`): the block of lines is
+followed from the commented revision into the file on disk (the disk read is free) whole and with its neighbors
 (`newerRangeInContextOf`): moved is fine, but any of its lines changed, or the line just before or after it (where the
 revision has one), is not. A line diff pairs lines that read alike, and a short one (a lone `}`, a blank line,
 `#endregion`) reads like many: alone it could be paired with another such line once code moved around it, and the
 suggestion would be written there. When the lines are there but a neighbor changed, the reason says so ("The code around
 line 3 changed…", `codeAroundChangedReason`); when they already read as suggested, in the same place (after Apply to my
-changes), it says the workspace already has the suggestion (`ALREADY_APPLIED`): for a deletion, when its lines are
-gone and the lines before and after them meet as the removal left them (`deletionNeighbors`). The file must be UTF-8 text, as the app reads files (`toFileContent`): a
-replacement character means another encoding, which writing back would change. A file with other pending changes takes
-Apply to my changes only: checking it in alone would take those too (`checkIn.reason`).
+changes), it says the workspace already has the suggestion (`ALREADY_APPLIED`): for a deletion, when its lines are gone
+and the lines before and after them meet as the removal left them (`deletionNeighbors`). The file must be UTF-8 text, as
+the app reads files (`toFileContent`): a replacement character means another encoding, which writing back would change.
+A file with other pending changes takes Apply to my changes only: checking it in alone would take those too
+(`checkIn.reason`).
 
 **Right before writing**, both actions check again (`writeSuggestion`): the user may have edited the file between seeing
 the button and clicking it. The file is read again and its lines followed as the button did (`suggestionTargetIn`), and
