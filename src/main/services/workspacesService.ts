@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { SwitchResult, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
-import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
+import type { PartialRule, WorkspaceInfo, WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
 import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
 import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
@@ -141,48 +141,40 @@ export function createWorkspacesService(
   }
 
   /**
-   * The first `cm partial configure` on a standard workspace makes it partial. A failure may come after it converted
-   * it, so the windows are told its kind changed either way, and the kind read before is forgotten.
+   * Runs a step that turns a workspace of kind `from` into another kind. A failure may come after it converted it, so
+   * the kind read before is forgotten and the windows are told it changed either way.
    */
-  function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal }) => {
-      // The kind only decides whether to tell the window it may change (a local, cached read): a read that fails must
-      // not stop the user's choice, and telling once too often only makes the window read the kind again.
-      const converts = await kindOf(workspacePath).then(
-        (kind) => kind === 'standard',
-        () => true,
-      );
-      try {
-        await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
-      } finally {
-        if (converts) {
-          headers.forget(workspacePath);
-          tellKindChanged(workspacePath);
-        }
+  async function changingKind<T>(workspacePath: string, from: WorkspaceKind, step: () => Promise<T>): Promise<T> {
+    // The kind only decides whether to tell the windows (a local, cached read): a read that fails must not stop the
+    // user's choice, and telling once too often only makes a window read the kind again.
+    const converts = await kindOf(workspacePath).then(
+      (kind) => kind === from,
+      () => true,
+    );
+    try {
+      return await step();
+    } finally {
+      if (converts) {
+        headers.forget(workspacePath);
+        tellKindChanged(workspacePath);
       }
-    });
+    }
   }
 
-  /**
-   * A standard switch to its own branch makes a partial workspace standard. A failure may come after it converted it, so
-   * the windows are told its kind changed either way, and the kind read before is forgotten.
-   */
+  /** The first `cm partial configure` on a standard workspace makes it partial. */
+  function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
+    return operations.run(operationId, ({ signal }) =>
+      changingKind(workspacePath, 'standard', async () => {
+        await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
+      }),
+    );
+  }
+
+  /** A standard switch to its own branch makes a partial workspace standard. */
   function downloadWholeBranchOf(workspacePath: string, operationId: string, pendingChanges?: WholeBranchChangesAction): Promise<SwitchResult> {
-    return operations.run(operationId, async (context) => {
-      // As `configurePartial`'s: a kind that can't be read may still be partial.
-      const converts = await kindOf(workspacePath).then(
-        (kind) => kind === 'partial',
-        () => true,
-      );
-      try {
-        return await downloadWholeBranch(switchDependencies, workspacePath, pendingChanges, context);
-      } finally {
-        if (converts) {
-          headers.forget(workspacePath);
-          tellKindChanged(workspacePath);
-        }
-      }
-    });
+    return operations.run(operationId, (context) =>
+      changingKind(workspacePath, 'partial', () => downloadWholeBranch(switchDependencies, workspacePath, pendingChanges, context)),
+    );
   }
 
   async function loadedIn(workspacePath: string, folder: string): Promise<string[]> {
