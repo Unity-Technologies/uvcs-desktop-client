@@ -2,6 +2,7 @@ import { nameToEmoji } from 'gemoji';
 import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 import type { RepositoryLink } from '@shared/links/link';
 import { isAppLink, parseLink } from '@shared/links/parseLink';
+import { applyChangeMatches, appliesChangeRequests, isApplyChange } from '@shared/applyChange';
 
 /**
  * Where a file reference points: the changeset, branch, label or shelve after `#` in `serverpath:/a.cs#cs:12`.
@@ -67,13 +68,6 @@ const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"*_~]+$/;
 /** A person as `cm` names them, in any script: a name, `DOMAIN\name`, or an email address (Unity Cloud). */
 const MENTION = /^@([\p{L}\p{N}_\\][\p{L}\p{N}_.+\\-]*(?:@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)?)/u;
 
-/**
- * A change request a changeset applies, as `cm checkin` and `cm changeset editcomment` find it in the comment: the first
- * eight hex digits of its guid, or the whole guid, between `[apply-change:` and `]`, in any case and anywhere, even
- * inside a word, as `cm` reads it. The case-insensitive flag is the global expression's own (no modifier needed).
- */
-const APPLY_CHANGE = /\[apply-change:([0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?)\]/gi;
-
 /** The text a check-in comment holds to apply a change request (`[apply-change:c0d1ce00]`), by its guid's first eight digits. */
 export function applyChangeText(guid: string): string {
   return `[apply-change:${shortGuid(guid)}]`;
@@ -89,27 +83,15 @@ const ANY_CANDIDATE = new RegExp(CANDIDATE.source, 'u');
 
 /** Whether a text may hold a reference, without reading any: a quick test before parsing. */
 export function mayHoldReference(text: string): boolean {
-  return ANY_CANDIDATE.test(text) || ANY_APPLY_CHANGE.test(text);
+  return ANY_CANDIDATE.test(text) || appliesChangeRequests(text);
 }
-
-const ANY_APPLY_CHANGE = new RegExp(APPLY_CHANGE.source, 'i');
-
-/**
- * Whether `cm checkin` or `cm changeset editcomment` would apply a change request from this comment: it reads
- * `[apply-change:…]` anywhere in the text as written, code included (`APPLY_CHANGE`).
- */
-export function appliesChangeRequests(comment: string): boolean {
-  return ANY_APPLY_CHANGE.test(comment);
-}
-
-const WHOLE_APPLY_CHANGE = new RegExp(`^${APPLY_CHANGE.source}$`, 'i');
 
 /**
  * Whether a text is a change request to apply and nothing else (`[apply-change:c0d1ce00]`): the editor's Markdown
  * reader takes its brackets for a link's (a shortcut reference, `[text]`), which would hold the reference out.
  */
 export function isChangeRequestReference(text: string): boolean {
-  return WHOLE_APPLY_CHANGE.test(text);
+  return isApplyChange(text);
 }
 
 /**
@@ -131,9 +113,9 @@ export function findReferences(text: string, issues?: IssueReferenceReader): Fou
   return keys.length === 0 ? withRequests : [...withRequests, ...keys].sort((a, b) => a.from - b.from);
 }
 
-/** The change requests to apply among the other references (`APPLY_CHANGE`), in order; nothing else read inside one. */
+/** The change requests to apply among the other references (`applyChangeMatches`), in order; nothing else read inside one. */
 function withChangeRequests(text: string, found: FoundReference[]): FoundReference[] {
-  const requests = [...text.matchAll(APPLY_CHANGE)].map(
+  const requests = applyChangeMatches(text).map(
     (match): FoundReference => ({ reference: { kind: 'changeRequest', guid: match[1]!.toLowerCase() }, source: match[0], from: match.index, to: match.index + match[0].length }),
   );
   if (requests.length === 0) return found;

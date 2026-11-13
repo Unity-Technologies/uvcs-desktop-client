@@ -1,4 +1,4 @@
-import { appliesChangeRequests } from '../../lib/comments/commentReferences';
+import { appliesChangeRequests } from '@shared/applyChange';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import type { QueryFilter } from '@shared/domain/query';
