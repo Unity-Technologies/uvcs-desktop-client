@@ -450,7 +450,8 @@ lines is followed from the commented revision into the file on disk (the disk re
 revision has one), is not. A line diff pairs lines that read alike, and a short one (a lone `}`, a blank line,
 `#endregion`) reads like many: alone it could be paired with another such line once code moved around it, and the
 suggestion would be written there. When the lines are there but a neighbor changed, the reason says so ("The code around
-line 3 changed…", `codeAroundChangedReason`). The file must be UTF-8 text, as the app reads files (`toFileContent`): a
+line 3 changed…", `codeAroundChangedReason`); when they already read as suggested, in the same place (after Apply to my
+changes), it says the workspace already has the suggestion (`ALREADY_APPLIED`). The file must be UTF-8 text, as the app reads files (`toFileContent`): a
 replacement character means another encoding, which writing back would change. A file with other pending changes takes
 Apply to my changes only: checking it in alone would take those too (`checkIn.reason`).
 

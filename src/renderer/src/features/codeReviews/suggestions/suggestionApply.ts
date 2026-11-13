@@ -5,6 +5,7 @@ import { applyChangeText } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
 import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
+import { withLinesReplaced } from './replaceLines';
 import { FAILED, READING, rangeWords, readValue, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
@@ -73,8 +74,24 @@ export function suggestionTargetIn(change: SuggestedChange, commentedText: strin
   if (text === null) return { kind: 'refused', reason: `${name} isn't a text file this can change` };
   const range = newerRangeInContextOf(commentedText, text, change);
   if (range) return { kind: 'ready', text, range };
+  if (alreadyApplied(change, commentedText, text)) return { kind: 'refused', reason: ALREADY_APPLIED };
   // The lines are there, but not their neighbors: say so, as the lines themselves read as written.
   return { kind: 'refused', reason: newerRangeOf(commentedText, text, change) ? codeAroundChangedReason(change) : codeChangedReason(change) };
+}
+
+export const ALREADY_APPLIED = 'Your workspace already has this suggestion';
+
+/**
+ * The file holds the suggested lines where the commented ones were, their neighbors as they were: applied to the
+ * changes already (Apply to my changes), which would otherwise read as the line having changed. A deletion leaves no
+ * line to find, so it reads as changed.
+ */
+function alreadyApplied(change: SuggestedChange, commentedText: string, text: string): boolean {
+  if (change.lines.length === 0) return false;
+  const suggested = withLinesReplaced(commentedText, change.firstLine, change.lastLine, change.lines);
+  if (suggested === null) return false;
+  const suggestedLines = { firstLine: change.firstLine, lastLine: change.firstLine + change.lines.length - 1 };
+  return newerRangeInContextOf(suggested, text, suggestedLines) !== null;
 }
 
 /** Why a suggestion can't be applied once the lines it was written on changed. */
