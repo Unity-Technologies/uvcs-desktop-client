@@ -16,9 +16,13 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
+import { recentCommentsFor, withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
+import { splitRepositorySpec } from '../../lib/servers';
 import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useCommandLogStore } from '../../app/shell/commandLogStore';
@@ -62,12 +66,21 @@ function answerCheckins(...answers: (CheckinResult | 'rejected')[]): void {
   });
 }
 
-/** The settings the window shows, and a store that saves every change to them. */
+/** The settings the window shows, and the main process's store, which remembers each comment in what it holds. */
 let settings: AppSettings;
-function answerSettings(recentComments: string[] = []): void {
-  settings = { ...DEFAULT_SETTINGS, recentComments };
+function answerSettings(overrides: Partial<AppSettings> = {}): void {
+  settings = { ...DEFAULT_SETTINGS, ...overrides };
   queryClient.setQueryData(queryKeys.settings, settings);
-  fakeApi.answer('settings.update', (update: Partial<AppSettings>) => (settings = { ...settings, ...update }));
+  fakeApi.answer('settings.rememberRecentComment', (repository: string, comment: string) => (settings = { ...settings, ...withRecentComment(settings, repository, comment) }));
+}
+
+/** The repository each workspace works on, as Changes has already read it in the workspace's info (`cm wi`). */
+function knowRepositories(repositories: Record<string, string>): void {
+  for (const [path, repository] of Object.entries(repositories)) {
+    const { name: repositoryName, server } = splitRepositorySpec(repository);
+    const info: WorkspaceInfo = { name: 'ws', path, repository, repositoryName, server, selector: { kind: 'branch', name: '/main' }, loadedChangeset: 41 };
+    queryClient.setQueryData(workspaceInfoQuery(path).queryKey, info);
+  }
 }
 
 beforeEach(() => {
@@ -76,6 +89,7 @@ beforeEach(() => {
   useCheckinAfterUpdateStore.setState({ rejected: {} });
   useSuccessMomentStore.setState({ moments: {} });
   queryClient.clear();
+  knowRepositories({ [ws]: 'game@local' });
 });
 
 describe('checkinChanges', () => {
@@ -88,7 +102,7 @@ describe('checkinChanges', () => {
     expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails', addsPrivate: false }]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on main', action: 'View' }]);
     expect(useSuccessMomentStore.getState().moments[ws]).toMatchObject({ verb: 'Checked in', changesetId: 44, detail: 'Add login' });
-    expect(settings.recentComments).toEqual(['Add login\n\nDetails']);
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Add login\n\nDetails']);
   });
 
   it('shows no toast when told to be quiet: the empty Changes tells it', async () => {
@@ -114,24 +128,23 @@ describe('checkinChanges', () => {
     expect(useCommandLogStore.getState().handledIds.has(7)).toBe(true);
   });
 
-  it('keeps the 15 latest comments, the newest first and each once', async () => {
-    const older = Array.from({ length: 15 }, (_, index) => `comment ${index}`);
-    answerCheckins(created(44));
-    answerSettings(older);
+  it("remembers the comment for the workspace's repository, offered in its other workspaces and not in other repositories", async () => {
+    answerCheckins(created(44), created(45));
+    answerSettings({ recentComments: ['Older comment'] });
+    knowRepositories({ [ws]: 'game@local', '/game-2': 'Game@local' });
 
-    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  comment 3 ' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  Fix cs:4207 ' });
+    await checkinChanges({ workspacePath: '/game-2', ...sending([change('a.ts')]), comment: 'Merge br:/main/task' });
 
-    expect(settings.recentComments).toEqual(['comment 3', ...older.filter((comment) => comment !== 'comment 3')]);
-    answerCheckins(created(45));
-    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'new' });
-    expect(settings.recentComments).toHaveLength(15);
-    expect(settings.recentComments[0]).toBe('new');
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Merge br:/main/task', 'Fix cs:4207']);
+    expect(recentCommentsFor(settings, 'art@local')).toEqual(['Older comment']);
+    expect(settings.recentComments).toEqual(['Older comment']);
   });
 
   it('still reports the changeset when the store cannot remember the comment, and says so', async () => {
     answerCheckins(created(44));
     answerSettings();
-    fakeApi.answer('settings.update', () => {
+    fakeApi.answer('settings.rememberRecentComment', () => {
       throw new Error('The settings file is read-only');
     });
 
@@ -146,6 +159,20 @@ describe('checkinChanges', () => {
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  ' });
 
     expect(fakeApi.methods()).toEqual(['pendingChanges.checkin']);
+  });
+
+  it("remembers nothing, and still reports the changeset, when the workspace's repository can't be read", async () => {
+    answerCheckins(created(44));
+    answerSettings();
+    queryClient.removeQueries({ queryKey: workspaceInfoQuery(ws).queryKey });
+    fakeApi.answer('workspaces.info', () => {
+      throw new Error('Not on workspace');
+    });
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
+
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'workspaces.info']);
+    expect(settings.recentCommentsByRepository).toEqual({});
   });
 
   it('refreshes what a checkin changes, not the objects checkins leave alone', async () => {
@@ -200,7 +227,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'Mine' })).toBe(true);
 
     expect(dialogs.asked).toEqual([{ incoming: incoming(), overlapping: [], needsReview: false, rejected: true }]);
-    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.update']);
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.rememberRecentComment']);
     const [first, second] = fakeApi.argsOf('pendingChanges.checkin');
     expect(second![1]).toEqual(first![1]);
     expect(shownToasts().some((toast) => toast.kind === 'error')).toBe(false);

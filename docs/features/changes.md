@@ -8,8 +8,8 @@ List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item
 Written in the rich comment editor (docs/features/rich-comments.md "Writing"): a summary, holding no button, and a
 description. The description's footer (`DescriptionFooter`, `descriptionFooterButtons`) is a quiet row at its
 bottom-left, as GitHub Desktop draws its own: small muted icon buttons apart by hairlines, each named by its tooltip.
-**Recent comments**, while there are some, opens the comments checked in lately, a pick filling the summary and the
-description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
+**Recent comments**, while there are some, opens the repository's comments checked in lately ("Recent comments are per
+repository" below), a pick filling the summary and the description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
 (docs/features/code-reviews.md "Applying change requests"). While it shows, the description is taller by its row
 (`DESCRIPTION_FOOTER_HEIGHT`), so it takes none of the room to type. With neither, there's no footer and the description is
 as it always was.
@@ -135,3 +135,20 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
   `.psd` that isn't pairable, and a pairing the detection gets wrong (`src/Legacy/Arsenal/Weapon.cs` paired with
   `Gun.cs` at 40% where it became `Rifle.cs` at 30%). With "Detect moved and renamed files" on, most of its deleted
   files are paired, and offered so; turn it off to see each on its own.
+
+## Recent comments are per repository
+
+The check-in's Recent comments menu offers the comments checked in to the workspace's repository, from any of its
+workspaces, never another repository's: a comment often names what only makes sense where it was written (`cs:4207`,
+`br:/main/task`, a change request applied). They're kept in the settings by repository
+(`recentCommentsByRepository`, keyed by `repositoryKey`: the name and the server in any case, the server without its
+protocol, so two workspaces of one repository share them), the newest first, `MAX_RECENT_COMMENTS` each; a check-in
+puts its comment first (`rememberComment` in `checkinOperations`, the repository read from the workspace's info
+Changes already has). The main process applies it to what it holds (`settings.rememberRecentComment`,
+`SettingsStore.rememberRecentComment`, `withRecentComment`), as it does the recent workspaces and branches: a window
+replacing the whole list from its own copy would drop what another window just checked in. Only the `MAX_RECENT_COMMENT_REPOSITORIES` repositories checked in to last
+keep theirs, so the settings don't grow with every repository ever used.
+
+The comments kept before they were per repository (`recentComments`) can't be told apart by repository: they're offered
+to every repository with no list of its own yet, until its first check-in starts one (`recentCommentsFor`), and are
+never written again.

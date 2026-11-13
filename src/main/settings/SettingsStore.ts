@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { storedGravatarChoice } from '@shared/domain/gravatarChoice';
+import { withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { replaceFileSync } from '../files/replaceFileSync';
 import { withRecentBranch } from './recentBranches';
@@ -10,10 +11,10 @@ type ChangeListener = (settings: AppSettings, changes: Partial<AppSettings>) => 
 
 /**
  * App preferences persisted as JSON in the user data folder. Every window writes through this one store, one
- * change at a time; changes that depend on the stored value (the recent workspaces and branches) are computed here,
- * not by a window from a copy that another window may have changed meanwhile. The file is replaced whole or not at
- * all (`replaceFileSync`); one that can't be read as settings is kept aside (`settings.json.<when>.bak`) and the app
- * starts from the defaults.
+ * change at a time; changes that depend on the stored value (the recent workspaces, branches and comments) are
+ * computed here, not by a window from a copy that another window may have changed meanwhile. The file is replaced
+ * whole or not at all (`replaceFileSync`); one that can't be read as settings is kept aside
+ * (`settings.json.<when>.bak`) and the app starts from the defaults.
  */
 export class SettingsStore {
   private settings: AppSettings;
@@ -53,6 +54,11 @@ export class SettingsStore {
   rememberRecentBranch(workspaceGuid: string, branchGuid: string): AppSettings {
     const recent = this.settings.recentBranchesByWorkspace;
     return this.update({ recentBranchesByWorkspace: { ...recent, [workspaceGuid]: withRecentBranch(recent[workspaceGuid] ?? [], branchGuid) } });
+  }
+
+  /** Puts a check-in's comment first among its repository's recent comments. */
+  rememberRecentComment(repository: string, comment: string): AppSettings {
+    return this.update(withRecentComment(this.settings, repository, comment));
   }
 
   onChanged(listener: ChangeListener): void {
