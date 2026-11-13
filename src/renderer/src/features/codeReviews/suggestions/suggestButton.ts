@@ -1,4 +1,4 @@
-import { holdsSuggestion } from '@shared/reviewSuggestion';
+import { holdsSuggestion } from '../../../lib/reviewSuggestion';
 import type { ReplacedLines } from './suggestedChange';
 
 /** What a new line comment's Suggest change offers: whether it can insert the fence now, and its tooltip saying so. */

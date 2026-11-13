@@ -1,5 +1,5 @@
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { suggestionOf } from '@shared/reviewSuggestion';
+import { suggestionOf } from '../../../lib/reviewSuggestion';
 import { anchorPath } from '../inline/fileThreads';
 
 /** Lines of a file, 1-based as an editor counts them, both included: one line is `firstLine === lastLine`. */

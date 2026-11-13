@@ -3,7 +3,6 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
 import type { IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
-import { SUGGESTION_LANGUAGE } from '@shared/reviewSuggestion';
 import { findReferences, type CommentReference, type FoundReference } from './comments/commentReferences';
 
 /**
@@ -75,18 +74,36 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Ma
   return new MarkdownReader(source, options).blocks();
 }
 
-/**
- * The inlines of a text's first block, its marks of a heading, a list item or a quote left out: a comment's first
- * line in a list row (inline formatting only) or a title.
- */
+/** The language a fence names to suggest a change (docs/features/code-reviews.md "Suggested changes"). */
+export const SUGGESTION_LANGUAGE = 'suggestion';
+
 /**
  * The block a comment's suggestion fence is read into, or -1: its first code block of its own whose language is
- * `suggestion`, the fence `suggestionOf` reads (one in a quote, a list or another fence is no block of its own).
+ * `suggestion` (one in a quote, a list or another fence is no block of its own). `suggestionFenceIn` reads the same.
  */
 export function suggestionBlockIndex(blocks: readonly MarkdownBlock[]): number {
   return blocks.findIndex((block) => block.kind === 'code' && block.language === SUGGESTION_LANGUAGE);
 }
 
+/**
+ * A comment's suggestion fence as Markdown reads it, the block `suggestionBlockIndex` finds: its text, the fence's
+ * indentation taken off, and how many lines it holds, which tells an empty fence (none) from one holding an empty line
+ * (one), whose texts are both empty. None when the text has no such block of its own.
+ */
+export function suggestionFenceIn(source: string): { text: string; lineCount: number } | null {
+  const node = readTree(source).children.find((child) => child.type === 'code' && child.lang === SUGGESTION_LANGUAGE);
+  if (!node || node.type !== 'code' || !node.position) return null;
+  const written = source.slice(node.position.start.offset, node.position.end.offset).split(/\r?\n/);
+  const fence = /^ {0,3}(`{3,}|~{3,})/.exec(written[0]!)?.[1] ?? '```';
+  const closing = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}[ \\t]*$`);
+  const closed = written.length > 1 && closing.test(written.at(-1)!);
+  return { text: node.value, lineCount: written.length - 1 - (closed ? 1 : 0) };
+}
+
+/**
+ * The inlines of a text's first block, its marks of a heading, a list item or a quote left out: a comment's first
+ * line in a list row (inline formatting only) or a title.
+ */
 export function parseInline(text: string, options: MarkdownOptions = {}): MarkdownInline[] {
   const first = parseMarkdown(text, options)[0];
   return first ? inlinesOfBlock(first) : [];

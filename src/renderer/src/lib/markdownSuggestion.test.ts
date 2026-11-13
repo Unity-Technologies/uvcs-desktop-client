@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { suggestionOf } from '@shared/reviewSuggestion';
+import { suggestionOf } from './reviewSuggestion';
 import { parseMarkdown, suggestionBlockIndex } from './markdown';
 
 /** The block shown as the suggestion, and its text as Markdown reads it: what `suggestionOf` must agree with. */

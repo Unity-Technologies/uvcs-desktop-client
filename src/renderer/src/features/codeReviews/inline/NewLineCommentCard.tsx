@@ -1,6 +1,6 @@
 import { MessageSquareDiff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { withSuggestionAt } from '@shared/reviewSuggestion';
+import { withSuggestionAt } from '../../../lib/reviewSuggestion';
 import { placeId } from '@shared/domain/place';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
