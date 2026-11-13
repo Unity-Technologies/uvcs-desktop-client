@@ -45,6 +45,19 @@ export function removeCommentArgs(commentGuid: string, at: CmPlace): string[] {
   return ['codereview', 'comment', 'delete', commentGuid, ...at.repositoryOption];
 }
 
+/**
+ * `cm codereview comment apply`: a change request marked applied in a changeset, any of the review's repository. `cm`
+ * refuses one applied in another changeset already: it's marked not applied first (`unapplyChangeRequestArgs`).
+ */
+export function applyChangeRequestArgs(changeRequestGuid: string, changesetId: number, at: CmPlace): string[] {
+  return ['codereview', 'comment', 'apply', changeRequestGuid, `--changeset=${at.spec(`cs:${changesetId}`)}`, ...at.repositoryOption];
+}
+
+/** `cm codereview comment unapply`: the change request is open again, applied in no changeset. */
+export function unapplyChangeRequestArgs(changeRequestGuid: string, at: CmPlace): string[] {
+  return ['codereview', 'comment', 'unapply', changeRequestGuid, ...at.repositoryOption];
+}
+
 /** `cm codereview -e --descriptionfile`: writes the description, adds it to a review with none, an empty one clears it. */
 export function descriptionArgs(reviewId: number, textFile: string, at: CmPlace): string[] {
   return ['codereview', '-e', String(reviewId), `--descriptionfile=${textFile}`, ...at.repositoryOption];
