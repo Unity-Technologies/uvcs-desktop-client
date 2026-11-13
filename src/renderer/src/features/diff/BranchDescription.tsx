@@ -11,7 +11,7 @@ import styles from './TargetDiff.module.css';
 export function BranchDescription({ branch, choice = { kind: 'all' } }: { branch: string; choice?: ChangesetListChoice }) {
   return (
     <div className={styles.branchTitle}>
-      <span>{branchDiffHeading(choice)}</span>
+      <span className={styles.branchLead}>{branchDiffHeading(choice)}</span>
       <PathLabel path={branch} fitContent />
     </div>
   );
