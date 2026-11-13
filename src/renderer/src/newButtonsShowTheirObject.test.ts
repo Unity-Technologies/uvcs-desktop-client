@@ -6,7 +6,7 @@ import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 /**
  * A button that creates something ("New branch", "New label") shows that thing's icon with a plus (`GitBranchPlus`,
  * `TagPlus`), so it reads at a glance as what it makes; a bare `Plus` says only "add". Where Lucide has no such icon
- * the feature draws one on its grid (`NewAttributeIcon`). Every `<Button>` whose label starts with "New " has an icon,
+ * the feature draws one on its grid (`TagsPlus`). Every `<Button>` whose label starts with "New " has an icon,
  * and it isn't the bare `Plus`.
  */
 function newButtonsWithoutTheirIcon(source: string): string[] {
