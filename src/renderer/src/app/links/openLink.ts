@@ -147,7 +147,9 @@ async function showHere(place: Place, target: LinkTarget, link: RepositoryLink |
 async function readLookup(place: Place, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
   if (lookup.kind === 'reviewConversation') {
     // The page's own reads, kept for it (`codeReviewQuery`, `reviewConversationQuery`). A review that isn't there lists
-    // no comments: its read fails, and the page says so, never also that the comment isn't there.
+    // no comments: its read fails, and the page says so, never also that the comment isn't there. The page reads it once
+    // more as it mounts (a failed read is retried then, as a page opened after a lost connection needs): a second read
+    // only for a link to a review that isn't there.
     const reads = Promise.all([queryClient.fetchQuery(codeReviewQuery(place, lookup.reviewId)), queryClient.fetchQuery(reviewConversationQuery(place, lookup.reviewId))]);
     const conversation = await reads.then(([, read]) => read).catch(() => null);
     return { conversation };
