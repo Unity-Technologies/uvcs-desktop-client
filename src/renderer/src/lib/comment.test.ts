@@ -166,6 +166,14 @@ describe('recentCommentPick', () => {
   it('keeps a comment that opens with a list whole in the description, its first item no title', () => {
     expect(recentCommentPick('- one\n- two')).toEqual({ parts: { summary: '', description: '- one\n- two' }, caretIn: 'description' });
   });
+
+  it('leaves out the change requests it applied, and the space they leave: cm would fail the new check-in on them', () => {
+    expect(recentCommentPick('Shelve first [apply-change:c0d1ce00]\n\nThe undo fails. [apply-change:deadbeef]\n[APPLY-CHANGE:cafebabe] Logged')).toEqual({
+      parts: { summary: 'Shelve first', description: 'The undo fails.\nLogged' },
+      caretIn: 'description',
+    });
+    expect(recentCommentPick('[apply-change:c0d1ce00]')).toEqual({ parts: { summary: '', description: '' }, caretIn: 'summary' });
+  });
 });
 
 describe('commentEditorExit', () => {
