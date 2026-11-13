@@ -1,9 +1,9 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
 import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../../app/queryClient';
 import { usePlace } from '../../../app/workspace/useWorkspace';
+import { conversationKey } from './conversationKey';
 
 /**
  * Everything said on a review, read with one `cm find`. Under the reviews' area, so whatever changes a review reads it
@@ -11,12 +11,17 @@ import { usePlace } from '../../../app/workspace/useWorkspace';
  */
 export function useReviewConversation(reviewId: number, reading: ConversationReading = {}) {
   const place = usePlace();
-  return useQuery({
+  return useQuery({ ...conversationQuery(place, reviewId), ...reading });
+}
+
+/** How a review's conversation is read: one query per review, which its page and the change requests to apply share. */
+export function conversationQuery(place: Place, reviewId: number) {
+  return {
     queryKey: conversationKey(place, reviewId),
     queryFn: () => api.reviewComments.conversation(place, reviewId),
-    ...reading,
-  });
+  };
 }
+
 
 /** How a view reads the conversation, when it isn't the page's own way. */
 export type ConversationReading = { refetchOnMount?: false };
@@ -27,9 +32,6 @@ export type ConversationReading = { refetchOnMount?: false };
  */
 export const SHOWN_BY_THE_PAGE: ConversationReading = { refetchOnMount: false };
 
-function conversationKey(place: Place, reviewId: number) {
-  return queryKeys.inPlace(place, 'codeReviews', 'conversation', reviewId);
-}
 
 /**
  * When the conversation was last read (or its read failed), 0 if it never was: taken right after a write, what
