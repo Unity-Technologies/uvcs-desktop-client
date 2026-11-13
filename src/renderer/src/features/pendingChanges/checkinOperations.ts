@@ -1,12 +1,11 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ApiError, api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
-import { saveSettings } from '../../app/settings/useSettings';
+import { rememberRecentComment } from '../../app/settings/useSettings';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { commentLineText } from '../../lib/comments/commentText';
 import { pluralize } from '../../lib/text';
@@ -18,8 +17,6 @@ import { expectedCheckinResult, releasedCheckoutsNote } from './checkinOutcome';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
-
-const MAX_RECENT_COMMENTS = 15;
 
 interface CheckinOptions {
   workspacePath: string;
@@ -73,7 +70,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
   useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: commentLineText(comment) || undefined });
-  if (comment.trim()) await rememberComment(comment.trim());
+  if (comment.trim()) await rememberComment(workspacePath, comment.trim());
   return true;
 }
 
@@ -142,8 +139,12 @@ export function undoUnchangedCheckouts(workspacePath: string): Promise<void | un
   return runAction(workspacePlace(workspacePath), "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath), isAffectedByPendingChangeEdit);
 }
 
-/** Puts the comment first among the recent ones the check-in panel offers, once. A store that can't save it says so. */
-function rememberComment(comment: string): Promise<void> {
-  const { recentComments } = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-  return saveSettings({ recentComments: [comment, ...recentComments.filter((recent) => recent !== comment)].slice(0, MAX_RECENT_COMMENTS) });
+/**
+ * Puts the comment first among the recent ones the check-in panel offers in the workspace's repository, once
+ * (`rememberRecentComment`, which the main process applies). The repository comes from the workspace's info, which
+ * Changes has already read (`cm wi`, a local read); a workspace whose info can't be read remembers nothing.
+ */
+async function rememberComment(workspacePath: string, comment: string): Promise<void> {
+  const { repository } = await queryClient.ensureQueryData(workspaceInfoQuery(workspacePath)).catch(() => ({ repository: undefined }));
+  if (repository) await rememberRecentComment(repository, comment);
 }
