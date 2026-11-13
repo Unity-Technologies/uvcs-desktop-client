@@ -135,8 +135,8 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays out
   of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation, not in
   the header. In a narrow window the title keeps a readable width (280 px) and the actions wrap to a row of their own
-  under it, the switch's words cut first; what's reviewed, the dot and when wrap together (`CodeReviewPage.module.css`). Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed
-  diff. The page names the tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a
+  under it, the switch's words cut first; what's reviewed, the dot and when wrap together (`CodeReviewPage.module.css`).
+  Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a
   file (`focusPath`, a link's `/-/files/<path>`), which the changes show. Picking a tab shows the page with it in place
   (`navigation.replacePage`), so Back leaves the review, and the page's link follows it: the review alone on its
   conversation, the review and its file on its changes (`pageLinkTarget`). Each tab shown so far stays mounted, the
