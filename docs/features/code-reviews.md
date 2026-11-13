@@ -385,28 +385,30 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 ## Suggested changes
 
 A change request can suggest the code itself, as GitHub's suggested changes do: a fence whose language is `suggestion`,
-holding the lines that replace the commented line. It is plain text in the comment (`suggestionOf`,
-`shared/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server
+holding the lines that replace the commented ones. It is plain text in the comment (`suggestionOf`,
+`lib/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server
 field is involved. A suggestion replaces the lines its comment is on: one line today; a range once comments take ranges
 (`cm codereview comment add --line=A-B`, stored as a `lines:A-B` location, 0-based and inclusive). An empty fence
 deletes them, several lines replace them. Everything after the anchor takes a range (`LineRange`, `{ firstLine,
 lastLine }`, one line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into
-the workspace's file (`newerRangeOf`: the whole block unchanged and together, moved is fine), writing them
+the workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing them
 (`withLinesReplaced`) and the reasons ("Lines 13–15 changed…", `rangeWords`). The one place a comment's `{line}`
 becomes a range is `commentedLines`: supporting ranges changes only it.
 
 - **What counts** (`suggestionOf`, `suggestedChangeOf`): only a change request on a line holds one, as only those are
   applied (`[apply-change:…]`); a fence in a question or a comment is a code block. Only the comment's first such fence
-  of its own counts, read as CommonMark reads fences (backticks or tildes, closed by one at least as long, the opening's
-  indentation taken off each line, `\r\n` or `\n`, words after `suggestion` allowed); one in a quote, a list or
-  another fence is code. Markdown shows the same block (`suggestionBlockIndex`, `markdownSuggestion.test.ts` keeps the
-  two readers agreeing).
+  of its own counts (backticks or tildes, words after `suggestion` allowed, the fence's indentation taken off each
+  line); one in a quote, a list or another fence is code. It's read by the comments' own Markdown reader
+  (`suggestionFenceIn`, micromark), as the comment shows it (`suggestionBlockIndex`), so a fence is a suggestion exactly
+  where the comment shows its box (`markdownSuggestion.test.ts`). A hand-written fence reader was dropped: it read a
+  fence inside a list item, which Markdown shows as the item's code, so the comment had a suggestion with no box.
 - **Writing** (see "Writing from the code"): the new line comment's **Suggest change** (`suggestButtonOf`) inserts the
   fence at the caret, on lines of its own, filled with the line's text as the diff read it (`withSuggestionAt`,
   `useReplacedLines`: the diff's own read, no command), the caret at the end of the line, and makes the comment a
   change request. It's offered once per comment, as only the first fence counts. The code's menu has **Suggest change
   on line 42** after "Comment on line 42" (`LineAction.variant`), opening the comment with the fence in it
-  (`useNewLineCommentsStore`'s `suggestRequest`). A fence a line of code would close takes more backticks
+  (`useNewLineCommentsStore`'s `suggestRequest`); when it can't fill one (the line can't be read, a suggestion is there
+  already), the card says why rather than opening without one (`suggestRequestOutcome`). A fence a line of code would close takes more backticks
   (`suggestionFence`). Not in a reply, which has no line of its own and is never a change request, nor in an edit,
   whose composer is every comment's: the fence can be typed there, as it can anywhere.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
@@ -426,33 +428,41 @@ An open change request's Suggested change has a split button in its header (`Sug
 
 - **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request
   to apply in its description (`suggestionCheckinComment`; in the summary its chip, reading a line of code, wrapped and
-  moved the buttons from under the pointer), then writes the line and checks in that file alone (`checkInSuggestion`,
-  `checkinChanges`: one `cm checkin` in a process, the reviews refreshed as its comment applies a request,
-  `withChangeRequestsApplied`).
+  moved the buttons from under the pointer), then writes the lines and checks in that file alone (`checkInSuggestion`,
+  `checkinChanges`). Its commands: one `cm status` (local) right before, then one `cm checkin` in a process; the views
+  of the workspace's files and the reviews are read again as after any check-in naming a request
+  (`withChangeRequestsApplied`). The comment isn't kept among the recent comments (`remembersComment: false`): it names
+  a request that's applied once checked in.
 - **Apply to my changes**, behind the caret, only writes the file (`applySuggestionToChanges`): the change is pending,
   and Changes offers the request in the next check-in ("Change requests to apply" above). That's the way to take
   several suggestions in one changeset.
 
-Where it stands (`suggestionApplyOf`, from what the window read: `useSuggestionApply`); no suggestion costs a command:
+Where it stands (`suggestionApplyOf`, from what the window read: `useSuggestionApply`, worked out again only when
+what it reads changes; the button shows it through `suggestionApplyButtonOf`); no suggestion costs a command:
 a settled request (applied, discarded) has no button. It's disabled, its tooltip saying why, in a window with no
 workspace; for a shelve's review (on no branch); in a workspace not on the review's branch (a changeset review's: its
 changeset's, which its diff reads, `reviewBranchOf`; `cm wi` tells the workspace's, locally); behind that branch, as
-the incoming check last saw (`behindBranch`, polled anyway); and when the file's line no longer holds the text the
-suggestion was written on, the line followed from the commented revision into the file on disk (`newerLineOf`; the
-disk read is free). The file must be UTF-8 text, as the app reads files (`toFileContent`): a replacement character
+the incoming check last saw (`behindBranch`, polled anyway); when the version the suggestion was written on can't be
+read, or isn't text; and when the file's lines no longer hold the text the suggestion was written on
+(`suggestionTargetIn`): the block of lines is followed from the commented revision into the file on disk (the disk
+read is free) whole and with its neighbors (`newerRangeInContextOf`): moved is fine, but any of its lines changed, or
+the line just before or after it (where the revision has one), is not. A line diff pairs lines that read alike, and a
+short one (a lone `}`, a blank line, `#endregion`) reads like many: alone it could be paired with another such line
+once code moved around it, and the suggestion would be written there. The file must be UTF-8 text, as the app reads files (`toFileContent`): a replacement character
 means another encoding, which writing back would change. A file with other pending changes takes Apply to my changes
 only: checking it in alone would take those too (`checkIn.reason`).
 
 **Right before writing**, both actions check again (`writeSuggestion`): the user may have edited the file between
 seeing the button and clicking it. The file is read again and its lines followed as the button did
-(`suggestionTargetIn`), and Check in suggestion reads the pending changes afresh (`cm status`, local) first. On a
+(`suggestionTargetIn`), and Check in suggestion first reads the pending changes afresh (`cm status`, local), not as the
+window last saw them. On a
 mismatch nothing is written, and a toast gives the reason the disabled button would have ("Line 13 changed since the
 suggestion was written", "Settings.cs has other changes…").
 
 Writing (`withLinesReplaced`) changes those lines only: the others, their line ends (the last replaced line's own in a
 file of mixed ones), a last line without one and a byte order mark stay. The text shows at once and the views of the
-workspace's files are read again, as a discard in the diff does (`showFileText`, `refreshFileViews`). As everywhere the app writes a workspace file, it
-doesn't check it out first: `cm` finds the change by its timestamp; a read-only file fails the write and says so. A
+workspace's files are read again, as a discard in the diff does (`showFileText`, `refreshFileViews`). As everywhere
+the app writes a workspace file, it doesn't check it out first: `cm` finds the change by its timestamp; a read-only file fails the write and says so. A
 check-in that fails (a lock, the server) leaves the file written, a pending change, and says so: the user asked for the
 change, and putting the old text back could lose an edit made meanwhile.
 
