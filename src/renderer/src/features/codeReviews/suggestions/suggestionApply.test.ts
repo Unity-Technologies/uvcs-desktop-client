@@ -117,6 +117,18 @@ describe('suggestionTargetIn', () => {
     expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{\r\n', '{ // open\r\n'))) })).toBe(around);
   });
 
+  it('says the workspace already has it once its lines read as suggested: applied to the changes, or moved since', () => {
+    const already = 'Your workspace already has this suggestion';
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '60')))).toEqual({ kind: 'refused', reason: already });
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text('// Settings\r\n' + COMMENTED.replace('30', '60')))).toEqual({ kind: 'refused', reason: already });
+    const block: SuggestedChange = { ...CHANGE, firstLine: 2, lastLine: 4, lines: ['{', '    int Timeout = 60;', '    int Retries = 3;', '}'] };
+    expect(suggestionTargetIn(block, COMMENTED, text('class Settings\r\n{\r\n    int Timeout = 60;\r\n    int Retries = 3;\r\n}\r\n'))).toEqual({ kind: 'refused', reason: already });
+  });
+
+  it('says the line changed when it reads as suggested but its neighbors no longer hold it', () => {
+    expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '60').replace('{\r\n', '{ // open\r\n')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
+  });
+
   it('rechecks a fresh read of the file as the button did', () => {
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED))).toEqual({ kind: 'ready', text: COMMENTED, range: { firstLine: 3, lastLine: 3 } });
     expect(suggestionTargetIn(CHANGE, COMMENTED, text(COMMENTED.replace('30', '31')))).toEqual({ kind: 'refused', reason: 'Line 3 changed since the suggestion was written' });
