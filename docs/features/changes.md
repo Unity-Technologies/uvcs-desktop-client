@@ -5,9 +5,13 @@ List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item
 
 ## The check-in's comment
 
-Written in the rich comment editor (docs/features/rich-comments.md "Writing"). Beside Recent comments, a small button
-with a count offers the change requests of the branch's code reviews that the check-in can apply, shown only while some
-are open (docs/features/code-reviews.md "Applying change requests").
+Written in the rich comment editor (docs/features/rich-comments.md "Writing"): a summary, holding no button, and a
+description. The description's footer (`DescriptionFooter`, `descriptionFooterButtons`) is a quiet row at its
+bottom-left, as GitHub Desktop draws its own: small muted icon buttons apart by hairlines, each named by its tooltip.
+**Recent comments**, while there are some, opens the comments checked in lately, a pick filling the summary and the
+description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
+(docs/features/code-reviews.md "Applying change requests"). With neither, there's no footer and the description is
+as it always was.
 
 ## Changelists and status groups in the list
 
