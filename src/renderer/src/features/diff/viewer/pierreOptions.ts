@@ -7,9 +7,12 @@ import { pierreTint } from './pierreTint';
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
  * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
- * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu).
+ * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu), at
+ * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
+ * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
  */
-export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono)}';
+export const PIERRE_SURFACE_CSS =
+  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}';
 
 /**
  * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own

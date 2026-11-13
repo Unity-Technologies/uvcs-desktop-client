@@ -13,6 +13,11 @@ A side of any diff that the workspace holds unchanged (the side before of the ne
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
 "Revisions on disk".
 
+Code shows in the app's code font (`--font-mono`) at 12px, the size the classic desktop client uses, rather than
+Pierre's 13px, wherever Pierre shows it: diffs, merge resolution and Annotate all take `PIERRE_SURFACE_CSS`
+(`--diffs-font-size`). Lines stay Pierre's 20px tall, because Pierre's virtualizer (`metrics.lineHeight`) and Annotate's
+`ANNOTATION_LINE_HEIGHT` both count on that height. A change to the line height changes all three together.
+
 ## The diff's header
 
 Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer; a changeset picked in a
