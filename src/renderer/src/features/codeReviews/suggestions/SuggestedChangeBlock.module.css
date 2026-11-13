@@ -38,7 +38,8 @@
 }
 
 /* Flat in the header's band: a button's drop shadow weighs its lower edge, and it read as sitting low. */
-.actions button {
+/* Its focus ring is a box-shadow too (`:focus-visible`, global.css): it stays. */
+.actions button:not(:focus-visible) {
   box-shadow: none;
 }
 
