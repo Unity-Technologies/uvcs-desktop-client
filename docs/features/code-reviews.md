@@ -405,7 +405,9 @@ ranges changes only it.
 - **Writing** (see "Writing from the code"): the new line comment's **Suggest change** (`suggestButtonOf`) inserts the
   fence at the caret, on lines of its own, filled with the line's text as the diff read it (`withSuggestionAt`,
   `useReplacedLines`: the diff's own read, no command), the caret at the end of the line, and makes the comment a change
-  request. It's offered once per comment, as only the first fence counts. The code's menu has **Suggest change on line
+  request. While it's written, the fence's code is colored in the commented file's language, as the box shows it once
+  sent (`commentedFileLanguage`, given by `CommentedFileContext` in a line comment, its replies and edits), from the
+  moment the editor learns the file, not only once the code is typed into (`colorsRedrawn`). It's offered once per comment, as only the first fence counts. The code's menu has **Suggest change on line
   42** after "Comment on line 42" (`LineAction.variant`), opening the comment with the fence in it
   (`useNewLineCommentsStore`'s `suggestRequest`); when it can't fill one (the line can't be read, a suggestion is there
   already), the card says why rather than opening without one (`suggestRequestOutcome`), until the comment changes
