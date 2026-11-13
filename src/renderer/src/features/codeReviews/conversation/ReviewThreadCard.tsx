@@ -18,7 +18,7 @@ import { discardChangeRequest, replyToComment } from './reviewCommentOperations'
 import { ReviewCommentView } from './ReviewCommentView';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction, startsFolded } from './threadBadges';
-import { threadElementId } from './threadPick';
+import { commentElementId, threadElementId } from './threadPick';
 import { hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { ThreadKindIcon } from './ThreadKindIcon';
@@ -35,6 +35,8 @@ interface ReviewThreadCardProps {
   highlight?: number;
   /** The thread selected in the code, gone to or picked there (`cardFocusOf`): ringed in the accent, as its line is. */
   selected?: boolean;
+  /** The reply gone to with the thread (`threadMarkOf`, a link's): lit in place of the whole card. */
+  litReply?: number;
   /** What "Applied" opens: how the change request was applied, in context; else the changeset that applied it. */
   onSeeApplied?: () => void;
 }
@@ -72,7 +74,7 @@ type ThreadActions = Pick<ThreadInCode, 'showInConversation'>;
  * and line on a line (a click opens them in Changes), and where it stands as a pill. A settled one starts folded to that line and
  * its first words (`startsFolded`); a click shows it whole.
  */
-export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, onSeeApplied }: ReviewThreadCardProps) {
+export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
   const [folded, setFolded] = useState(() => startsFolded(thread) && highlight === undefined);
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
@@ -88,6 +90,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   if (highlight !== shownHighlight) {
     setShownHighlight(highlight);
     if (highlight !== undefined) setFolded(false);
+    setAnswerShown(highlight !== undefined && litReply !== undefined ? { replyId: litReply, seq: highlight } : null);
   }
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
@@ -96,7 +99,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
       className={styles.thread}
       data-folded={folded}
       data-in-code={inCode ? '' : undefined}
-      data-highlight={highlight === undefined ? undefined : highlight % 2}
+      data-highlight={highlight === undefined || litReply !== undefined ? undefined : highlight % 2}
       data-selected={selected || undefined}
       {...(inCode && highlight !== undefined && { [ROW_FOCUS_ATTRIBUTE]: '' })}
       id={inCode ? undefined : threadElementId(thread.root.id)}
@@ -109,7 +112,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
           // The header's fold toggle is the keyboard's way to unfold it: the line is a second way for the pointer only.
           <FoldedThread thread={thread} onOpen={() => setFolded(false)} pointerOnly={foldable} />
         ) : (
-          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={answerShown ?? undefined} />
+          <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} lit={answerShown ?? undefined} commentIds={!inCode} />
         )}
       </div>
     </section>
@@ -347,7 +350,17 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
 }
 
 /** Every comment of the thread, then a reply box, and Discard for a change request someone else asked for. */
-function WholeThread({ review, thread, user, threadActions, lit }: { review: Pick<CodeReview, 'owner'>; thread: ReviewThread; user: string | undefined; threadActions?: ThreadActions; lit?: { replyId: number; seq: number } }) {
+interface WholeThreadProps {
+  review: Pick<CodeReview, 'owner'>;
+  thread: ReviewThread;
+  user: string | undefined;
+  threadActions?: ThreadActions;
+  lit?: { replyId: number; seq: number };
+  /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
+  commentIds: boolean;
+}
+
+function WholeThread({ review, thread, user, threadActions, lit, commentIds }: WholeThreadProps) {
   const place = usePlace();
   const [answering, setAnswering] = useState<Answering>(null);
   const { root, replies } = thread;
@@ -356,7 +369,16 @@ function WholeThread({ review, thread, user, threadActions, lit }: { review: Pic
     <>
       <ReviewCommentView comment={root} thread={thread} user={user} byReviewAuthor={isAuthor(review, root.author)} threadActions={threadActions} />
       {replies.map((reply) => (
-        <ReviewCommentView key={reply.id} comment={reply} thread={thread} user={user} action={replyAction(reply)} byReviewAuthor={isAuthor(review, reply.author)} lit={lit?.replyId === reply.id ? lit.seq : undefined} />
+        <ReviewCommentView
+          key={reply.id}
+          comment={reply}
+          thread={thread}
+          user={user}
+          action={replyAction(reply)}
+          byReviewAuthor={isAuthor(review, reply.author)}
+          lit={lit?.replyId === reply.id ? lit.seq : undefined}
+          elementId={commentIds ? commentElementId(reply.id) : undefined}
+        />
       ))}
       <div className={styles.answer}>
         {answering === 'reply' && (

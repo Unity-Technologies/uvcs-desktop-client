@@ -30,10 +30,12 @@ interface ReviewCommentViewProps {
   threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
   /** Gone to, the how-many-th time (the reply an Answered pill leads to): scrolled to and lit for a moment. */
   lit?: number;
+  /** Its element's id, which going to it scrolls to (`commentElementId`): in the conversation only, as ids are unique. */
+  elementId?: string;
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit }: ReviewCommentViewProps) {
+export function ReviewCommentView({ comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -48,7 +50,7 @@ export function ReviewCommentView({ comment, thread, user, action, byReviewAutho
   });
 
   return (
-    <article ref={element} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>
+    <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit % 2} aria-label={`${displayName(comment.author)}'s comment`}>
       <Avatar user={comment.author} size={24} />
       <div className={styles.commentBody}>
         <header className={styles.commentHeader}>
