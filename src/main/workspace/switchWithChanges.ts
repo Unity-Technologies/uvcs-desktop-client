@@ -27,6 +27,7 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 const ALREADY_WHOLE = 'This workspace already has the whole branch.';
+const CANT_LEAVE_ON_WHOLE_BRANCH = "Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.";
 /** Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard. */
 const PARTIAL_REFUSED = {
   notBranch: 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.',
@@ -75,6 +76,8 @@ export async function downloadWholeBranch(
   action: WholeBranchChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
+  // The type keeps 'leave' out, but the action comes from the renderer, which isn't trusted.
+  if ((action as SwitchChangesAction | undefined) === 'leave') throw new Error(CANT_LEAVE_ON_WHOLE_BRANCH);
   const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
   if ((await deps.kindOf(workspacePath)) !== 'partial') throw new Error(ALREADY_WHOLE);
   const snapshot = await readPendingSnapshot(deps.cm, workspacePath);
