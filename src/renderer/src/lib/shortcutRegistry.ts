@@ -218,6 +218,8 @@ export const SHORTCUTS = {
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
   paletteEnds: { area: 'Command palette', label: 'First or last result', keys: ['mod+up', 'mod+down', 'ctrl+home', 'ctrl+end'], keysOffMac: ['ctrl+home', 'ctrl+end'] },
+  // Not mod+left/right, which move the caret in the search; Back's mod+[ is the palette's while it's open.
+  paletteScope: { area: 'Command palette', label: 'Previous or next scope', keys: ['mod+[', 'mod+]'] },
 
   imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['plus', '='] },
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },
