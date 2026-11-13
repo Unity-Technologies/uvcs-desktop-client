@@ -333,6 +333,15 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, kept by
+  `ReviewConversationTab`): where each thread shows and whether each round starts folded are decided once, when the
+  conversation is first read with who the user is and the branch's changesets. Afterwards, what the user or a refresh
+  changes (a request marked applied or not, a reply, a discard) updates the card, its round's counts and Open in
+  place: a thread shown never moves (marking it applied would otherwise take it under the "New since your last review"
+  line, and unmarking it back), and a round never folds or unfolds by itself (settling its last open thread would fold
+  it with the card under the pointer). What's new (a comment, an event, a check-in) is placed as on a first read; a
+  round closed meanwhile (the user's own status) shows unfolded, since what it holds was on screen. The next time the
+  page opens, it lays the conversation out afresh. Changes reads the rounds afresh on every read (`stepGroupsOf`).
 - **What a reviewer said with their status** sits under its event in a soft tint, no bar beside it (the rail is the
   timeline's one vertical line: a bar beside it read as two), folded past four lines with "Show more"
   (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
