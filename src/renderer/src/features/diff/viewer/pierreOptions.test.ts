@@ -8,7 +8,7 @@ describe('PIERRE_SURFACE_CSS: how code reads in every diff', () => {
     expect(PIERRE_SURFACE_CSS).toContain('--diffs-font-size:12px');
   });
 
-  it("leaves the line height to Pierre: its virtualizer counts on 20px lines", () => {
+  it('leaves the line height to Pierre: its virtualizer counts on 20px lines', () => {
     expect(PIERRE_SURFACE_CSS).not.toContain('--diffs-line-height');
   });
 });
