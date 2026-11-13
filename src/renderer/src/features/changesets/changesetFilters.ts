@@ -145,8 +145,9 @@ export interface ChangesetChoice {
  * The changesets a changeset picker offers for `search`, leaving out `exclude` (the one being compared): the newest
  * read (`recent`, at most `readLimit` of them; undefined while unread or when the read failed) whose row matches it,
  * and first the one whose number was typed (`1234`, `cs:1234`), so any changeset is reachable without listing them all.
+ * `readLimit` undefined: those read are some of the repository's, not its newest (a branch's), and rule out no number.
  */
-export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number | undefined, search: string): ChangesetChoice[] {
+export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number | undefined, exclude: number | undefined, search: string): ChangesetChoice[] {
   const typed = typedChangesetNumber(search);
   const matching = (recent ?? [])
     .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesWordFilter(changesetRowTexts(changeset), search))
@@ -161,10 +162,10 @@ function changesetRowTexts(changeset: Changeset): string[] {
 }
 
 /** A number typed: its row when read; else whether a changeset can have it, from what the read covered. */
-function typedChoice(id: number, recent: readonly Changeset[] | undefined, readLimit: number): ChangesetChoice {
+function typedChoice(id: number, recent: readonly Changeset[] | undefined, readLimit: number | undefined): ChangesetChoice {
   const read = recent?.find((changeset) => changeset.id === id);
   if (read) return { id, changeset: read };
-  if (!recent || recent.length === 0) return { id };
+  if (!recent || recent.length === 0 || readLimit === undefined) return { id };
   // Older than a read that stopped at its limit. A newer one would be checked in since the read, which is read again
   // as new changesets come (`refreshScopes`: the changeset lists refresh on check-ins, the user's and others').
   const olderThanRead = recent.length >= readLimit && id < Math.min(...recent.map((changeset) => changeset.id));
