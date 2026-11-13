@@ -46,13 +46,15 @@ import styles from './LiveCommentEditor.module.css';
 interface LiveCommentEditorProps extends CommentFieldProps {
   /** The caret in the plain field it replaces, which it takes over (`CommentField`). */
   initialFocus: { current: { at: number } | null };
+  /** The change requests asked for before it loaded (`openChangeRequests`): it opens them as it mounts. */
+  pendingChangeRequests: { current: boolean };
 }
 
 /**
  * The comment editor (docs/features/rich-comments.md, "Writing"): CodeMirror over the comment's own text, drawn as it
  * reads around the caret, with the suggestion list and the selection bar. Its text is the stored comment, in and out.
  */
-export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
+export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, footer, ref, initialFocus, pendingChangeRequests }: LiveCommentEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
@@ -103,6 +105,12 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
       focusEditor(editor);
     }
+    if (pendingChangeRequests.current) {
+      pendingChangeRequests.current = false;
+      editor.dispatch({ selection: { anchor: editor.state.doc.length } });
+      editor.dispatch(openChangeRequests(editor.state));
+      focusEditor(editor);
+    }
     setView(editor);
     setState(editor.state);
     return () => {
@@ -141,14 +149,14 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
         return true;
       },
       openChangeRequests: () => {
-        if (!view) return false;
+        if (!view || disabled) return false;
         if (!view.hasFocus) view.dispatch({ selection: { anchor: view.state.doc.length } });
         view.dispatch(openChangeRequests(view.state));
         focusEditor(view);
         return true;
       },
     }),
-    [view],
+    [view, disabled],
   );
   useImperativeHandle(ref, () => handle, [handle]);
   const group = useContext(FocusGroupContext);
@@ -198,6 +206,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
       {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={fieldFocused(view, state)} />}
+      {footer}
       <WidgetPortalsView portals={portals} onDrawn={measure} />
       {suggestions.list}
       {bar.element}

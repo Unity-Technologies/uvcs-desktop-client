@@ -48,19 +48,21 @@ export function CommentField(props: CommentFieldProps) {
 
 function EditorField(props: CommentFieldProps) {
   const fallbackFocus = useRef<{ at: number } | null>(null);
+  // The change requests asked for before the editor loaded: it opens them as it mounts.
+  const pendingChangeRequests = useRef(false);
   // Chosen once per field: a field that showed the lazy one keeps it, never mounting its editor again as the code lands.
   const [LiveCommentEditor] = useState(() => loadedEditor);
   useEffect(preloadCommentEditor, []);
-  if (LiveCommentEditor) return <LiveCommentEditor {...props} initialFocus={fallbackFocus} />;
+  if (LiveCommentEditor) return <LiveCommentEditor {...props} initialFocus={fallbackFocus} pendingChangeRequests={pendingChangeRequests} />;
   return (
-    <Suspense fallback={<PlainCommentField {...props} focusRef={fallbackFocus} />}>
-      <LazyCommentEditor {...props} initialFocus={fallbackFocus} />
+    <Suspense fallback={<PlainCommentField {...props} focusRef={fallbackFocus} pendingChangeRequests={pendingChangeRequests} />}>
+      <LazyCommentEditor {...props} initialFocus={fallbackFocus} pendingChangeRequests={pendingChangeRequests} />
     </Suspense>
   );
 }
 
 /** The field before the editor loads: the same box and text, a plain input or textarea. */
-function PlainCommentField({ value, onChange, singleLine = false, label, id, labelledBy, groupField: _groupField, placeholder, autoFocus, disabled, onEnter, onSubmit, className, style, ref, focusRef }: CommentFieldProps & { focusRef: { current: { at: number } | null } }) {
+function PlainCommentField({ value, onChange, singleLine = false, label, id, labelledBy, groupField: _groupField, placeholder, autoFocus, disabled, onEnter, onSubmit, className, style, footer, ref, focusRef, pendingChangeRequests }: CommentFieldProps & { focusRef: { current: { at: number } | null }; pendingChangeRequests: { current: boolean } }) {
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => ({
     focus: () => field.current?.focus(),
@@ -87,8 +89,13 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, lab
       input.setSelectionRange(Math.min(within.anchor, within.head), Math.max(within.anchor, within.head), within.head < within.anchor ? 'backward' : 'forward');
       return true;
     },
-    // The list is the editor's: until it loads (at idle after start-up), there is none to open.
-    openChangeRequests: () => false,
+    // The list is the editor's: asked for before it loads, it opens there as it mounts, the caret at the text's end.
+    openChangeRequests: () => {
+      if (disabled) return false;
+      pendingChangeRequests.current = true;
+      preloadCommentEditor();
+      return true;
+    },
   }));
   const remember = (): void => {
     focusRef.current = { at: field.current?.selectionStart ?? value.length };
@@ -122,6 +129,7 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, lab
   return (
     <div className={classNames(styles.field, className)} style={style} {...{ [COMMENT_FIELD_ATTRIBUTE]: true }}>
       {singleLine ? <input {...shared} onChange={(event) => onChange(event.target.value)} /> : <textarea {...shared} onChange={(event) => onChange(event.target.value)} />}
+      {footer}
     </div>
   );
 }
