@@ -467,8 +467,11 @@ revision has one), is not. A line diff pairs lines that read alike, and a short 
 suggestion would be written there. When the lines are there but a neighbor changed, the reason says so ("The code around
 line 3 changed…", `codeAroundChangedReason`); when they already read as suggested, in the same place (after Apply to my
 changes), it says the workspace already has the suggestion (`ALREADY_APPLIED`): for a deletion, when its lines are gone
-and the lines before and after them meet as the removal left them (`deletionNeighbors`). The file must be UTF-8 text, as
-the app reads files (`toFileContent`): a replacement character means another encoding, which writing back would change.
+and the lines before and after them meet as the removal left them (`deletionNeighbors`, `deletionApplied`); at the
+file's start or end, the one neighbor there is sits at the file's edge too, or the line beyond it is the deleted one,
+changed. A deleted line moved elsewhere reads as applied: it's gone from where the suggestion pointed. The file must be
+UTF-8 text, as the app reads files (`toFileContent`): a replacement character means another encoding, which writing back
+would change.
 A file with other pending changes takes Apply to my changes only: checking it in alone would take those too
 (`checkIn.reason`).
 

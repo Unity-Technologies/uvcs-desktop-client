@@ -92,12 +92,23 @@ export const ALREADY_APPLIED = 'Your workspace already has this suggestion';
 function alreadyApplied(change: SuggestedChange, commentedText: string, text: string): boolean {
   const suggested = withLinesReplaced(commentedText, change.firstLine, change.lastLine, change.lines);
   if (suggested === null) return false;
-  if (change.lines.length === 0) {
-    const neighbors = deletionNeighbors(change.firstLine, lineCountOf(suggested));
-    return neighbors !== null && newerRangeOf(suggested, text, neighbors) !== null;
-  }
+  if (change.lines.length === 0) return deletionApplied(change, suggested, text);
   const suggestedLines = { firstLine: change.firstLine, lastLine: change.firstLine + change.lines.length - 1 };
   return newerRangeInContextOf(suggested, text, suggestedLines) !== null;
+}
+
+/**
+ * A deletion is in the file when its neighbors meet there as its removal left them (`suggested`). At the file's start
+ * or end there is one neighbor, which must sit at the file's edge too: a line beyond it is the deleted one, changed.
+ * A deleted line moved elsewhere reads as applied: it's gone from where the suggestion pointed.
+ */
+function deletionApplied(change: LineRange, suggested: string, text: string): boolean {
+  const suggestedCount = lineCountOf(suggested);
+  const neighbors = deletionNeighbors(change.firstLine, suggestedCount);
+  const found = neighbors && newerRangeOf(suggested, text, neighbors);
+  if (!neighbors || !found) return false;
+  if (change.firstLine === 1 && found.firstLine !== 1) return false;
+  return change.firstLine <= suggestedCount || found.lastLine === lineCountOf(text);
 }
 
 /**
