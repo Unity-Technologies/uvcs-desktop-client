@@ -16,6 +16,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
+import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
@@ -63,10 +64,15 @@ function answerCheckins(...answers: (CheckinResult | 'rejected')[]): void {
 
 /** The settings the window shows, and a store that saves every change to them. */
 let settings: AppSettings;
-function answerSettings(recentComments: string[] = []): void {
-  settings = { ...DEFAULT_SETTINGS, recentComments };
+function answerSettings(overrides: Partial<AppSettings> = {}): void {
+  settings = { ...DEFAULT_SETTINGS, ...overrides };
   queryClient.setQueryData(queryKeys.settings, settings);
   fakeApi.answer('settings.update', (update: Partial<AppSettings>) => (settings = { ...settings, ...update }));
+}
+
+/** The repository each workspace works on, as `cm wi` tells it. */
+function answerRepositories(repositories: Record<string, string>): void {
+  fakeApi.answer('workspaces.info', (path: string) => ({ path, repository: repositories[path] }));
 }
 
 beforeEach(() => {
@@ -75,6 +81,7 @@ beforeEach(() => {
   useCheckinAfterUpdateStore.setState({ rejected: {} });
   useSuccessMomentStore.setState({ moments: {} });
   queryClient.clear();
+  answerRepositories({ [ws]: 'game@local' });
 });
 
 describe('checkinChanges', () => {
@@ -87,7 +94,7 @@ describe('checkinChanges', () => {
     expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails', addsPrivate: false }]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on main', action: 'View' }]);
     expect(useSuccessMomentStore.getState().moments[ws]).toMatchObject({ verb: 'Checked in', changesetId: 44, detail: 'Add login' });
-    expect(settings.recentComments).toEqual(['Add login\n\nDetails']);
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Add login\n\nDetails']);
   });
 
   it('shows no toast when told to be quiet: the empty Changes tells it', async () => {
@@ -99,18 +106,17 @@ describe('checkinChanges', () => {
     expect(shownToasts()).toEqual([]);
   });
 
-  it('keeps the 15 latest comments, the newest first and each once', async () => {
-    const older = Array.from({ length: 15 }, (_, index) => `comment ${index}`);
-    answerCheckins(created(44));
-    answerSettings(older);
+  it("remembers the comment for the workspace's repository, offered in its other workspaces and not in other repositories", async () => {
+    answerCheckins(created(44), created(45));
+    answerSettings({ recentComments: ['Older comment'] });
+    answerRepositories({ [ws]: 'game@local', '/game-2': 'Game@local' });
 
-    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  comment 3 ' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  Fix cs:4207 ' });
+    await checkinChanges({ workspacePath: '/game-2', ...sending([change('a.ts')]), comment: 'Merge br:/main/task' });
 
-    expect(settings.recentComments).toEqual(['comment 3', ...older.filter((comment) => comment !== 'comment 3')]);
-    answerCheckins(created(45));
-    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'new' });
-    expect(settings.recentComments).toHaveLength(15);
-    expect(settings.recentComments[0]).toBe('new');
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Merge br:/main/task', 'Fix cs:4207']);
+    expect(recentCommentsFor(settings, 'art@local')).toEqual(['Older comment']);
+    expect(settings.recentComments).toEqual(['Older comment']);
   });
 
   it('still reports the changeset when the store cannot remember the comment, and says so', async () => {
