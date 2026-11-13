@@ -18,8 +18,11 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
 import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
+import { splitRepositorySpec } from '../../lib/servers';
 import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
@@ -70,9 +73,13 @@ function answerSettings(overrides: Partial<AppSettings> = {}): void {
   fakeApi.answer('settings.update', (update: Partial<AppSettings>) => (settings = { ...settings, ...update }));
 }
 
-/** The repository each workspace works on, as `cm wi` tells it. */
-function answerRepositories(repositories: Record<string, string>): void {
-  fakeApi.answer('workspaces.info', (path: string) => ({ path, repository: repositories[path] }));
+/** The repository each workspace works on, as Changes has already read it in the workspace's info (`cm wi`). */
+function knowRepositories(repositories: Record<string, string>): void {
+  for (const [path, repository] of Object.entries(repositories)) {
+    const { name: repositoryName, server } = splitRepositorySpec(repository);
+    const info: WorkspaceInfo = { name: 'ws', path, repository, repositoryName, server, selector: { kind: 'branch', name: '/main' }, loadedChangeset: 41 };
+    queryClient.setQueryData(workspaceInfoQuery(path).queryKey, info);
+  }
 }
 
 beforeEach(() => {
@@ -81,7 +88,7 @@ beforeEach(() => {
   useCheckinAfterUpdateStore.setState({ rejected: {} });
   useSuccessMomentStore.setState({ moments: {} });
   queryClient.clear();
-  answerRepositories({ [ws]: 'game@local' });
+  knowRepositories({ [ws]: 'game@local' });
 });
 
 describe('checkinChanges', () => {
@@ -109,7 +116,7 @@ describe('checkinChanges', () => {
   it("remembers the comment for the workspace's repository, offered in its other workspaces and not in other repositories", async () => {
     answerCheckins(created(44), created(45));
     answerSettings({ recentComments: ['Older comment'] });
-    answerRepositories({ [ws]: 'game@local', '/game-2': 'Game@local' });
+    knowRepositories({ [ws]: 'game@local', '/game-2': 'Game@local' });
 
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  Fix cs:4207 ' });
     await checkinChanges({ workspacePath: '/game-2', ...sending([change('a.ts')]), comment: 'Merge br:/main/task' });
@@ -137,6 +144,20 @@ describe('checkinChanges', () => {
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  ' });
 
     expect(fakeApi.methods()).toEqual(['pendingChanges.checkin']);
+  });
+
+  it("remembers nothing, and still reports the changeset, when the workspace's repository can't be read", async () => {
+    answerCheckins(created(44));
+    answerSettings();
+    queryClient.removeQueries({ queryKey: workspaceInfoQuery(ws).queryKey });
+    fakeApi.answer('workspaces.info', () => {
+      throw new Error('Not on workspace');
+    });
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
+
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'workspaces.info']);
+    expect(settings.recentCommentsByRepository).toEqual({});
   });
 
   it('refreshes what a checkin changes, not the objects checkins leave alone', async () => {
