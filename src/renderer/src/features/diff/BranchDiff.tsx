@@ -144,12 +144,12 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     </ChangesetFold>
   );
 
-  // The changesets stay above the files as each diff is read (`DiffBrowserLayout`), and the header names the branch
-  // whatever is read: a changeset's summary, as tall as its comment, goes above its diff, where its height moves
-  // nothing being clicked.
+  // The changesets stay above the files as each diff is read (`DiffBrowserLayout`), and the header's one line names
+  // what is read on the branch ("Changes in cs:1234 on task"): a changeset's summary, as tall as its comment, goes
+  // above its diff, where its height moves nothing being clicked.
   const toolbar = detailsToggle;
-  const branchDescription = <BranchDescription branch={branch} />;
   const { choice } = list;
+  const branchDescription = <BranchDescription branch={branch} choice={choice} />;
   if (choice.kind === 'all') {
     return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={toolbar} focusPath={focusPath} focusLines={focusLines} aboveFiles={changesetList} />;
   }
