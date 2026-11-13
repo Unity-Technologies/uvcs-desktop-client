@@ -37,26 +37,23 @@ describe('commentMenu', () => {
     const [open, applied] = threadsOf([comment(1, { kind: 'changeRequest' }), comment(2, { kind: 'changeRequest', appliedInChangeset: 4 })]);
     const marking = { ...noop, markChangeRequest: () => {} };
 
-    expect(ids(commentMenu(open!.root, open!, 'bob', marking, CM))).toEqual(['markApplied', 'separator', 'copyText']);
-    expect(ids(commentMenu(applied!.root, applied!, 'bob', marking, CM))).toEqual(['markNotApplied', 'separator', 'copyText']);
+    expect(ids(commentMenu(open!.root, open!, 'bob', marking))).toEqual(['markApplied', 'separator', 'copyText']);
+    expect(ids(commentMenu(applied!.root, applied!, 'bob', marking))).toEqual(['markNotApplied', 'separator', 'copyText']);
   });
 
   it('runs the mark the entry names', () => {
     const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
     const marked: string[] = [];
-    const [entry] = commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: (mark) => marked.push(mark) }, CM);
+    const [entry] = commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: (mark) => marked.push(mark) });
 
     (entry as { run: () => void }).run();
 
     expect(marked).toEqual(['applied']);
   });
 
-  it('offers no mark where nothing can mark it, nor with a cm that has no command for it', () => {
+  it('offers no mark where nothing can mark it', () => {
     const [open] = threadsOf([comment(1, { kind: 'changeRequest' })]);
 
-    expect(ids(commentMenu(open!.root, open!, 'bob', noop, CM))).toEqual(['copyText']);
-    expect(ids(commentMenu(open!.root, open!, 'bob', { ...noop, markChangeRequest: () => {} }, '11.0.16.10000'))).toEqual(['copyText']);
+    expect(ids(commentMenu(open!.root, open!, 'bob', noop))).toEqual(['copyText']);
   });
 });
-
-const CM = '11.0.16.10616';

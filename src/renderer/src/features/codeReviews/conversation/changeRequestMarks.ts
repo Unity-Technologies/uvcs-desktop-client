@@ -1,12 +1,8 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { cmVersionAtLeast } from '../../../lib/cmVersion';
 import { branchChangesetsFilter } from '../../diff/branchDiffChangesets';
 import type { ReviewThread } from './reviewThreads';
-
-/** The first `cm` with `cm codereview comment apply` and `unapply`, the commands that mark a change request by hand. */
-const FIRST_CM_MARKING_CHANGE_REQUESTS = [11, 0, 16, 10616];
 
 /**
  * What a change request can be marked by hand: applied in a changeset the user picks (`cm codereview comment apply`),
@@ -19,9 +15,8 @@ export type ChangeRequestMark = 'applied' | 'notApplied';
  * in, as anyone may check in the change that applies it, its author too; an open one marked applied, an applied one
  * not applied. A discarded one is settled, as the official client has it; replying reopens nothing either.
  */
-export function changeRequestMarkOf(comment: ReviewComment, thread: ReviewThread, user: string | undefined, cmVersion: string | undefined): ChangeRequestMark | undefined {
+export function changeRequestMarkOf(comment: ReviewComment, thread: ReviewThread, user: string | undefined): ChangeRequestMark | undefined {
   if (comment.id !== thread.root.id || thread.root.kind !== 'changeRequest' || user === undefined) return undefined;
-  if (!cmVersionAtLeast(cmVersion, FIRST_CM_MARKING_CHANGE_REQUESTS)) return undefined;
   if (thread.state.kind === 'open') return 'applied';
   return thread.state.kind === 'applied' ? 'notApplied' : undefined;
 }

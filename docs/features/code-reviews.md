@@ -238,8 +238,7 @@ list, the branch chips and the palette's reviews would read nothing. The app doe
   repository's newest. Any other changeset of the repository is typed by its number, as `cm` takes any. Mark as not
   applied runs at once (`cm codereview comment unapply <guid>`), unasked: marking it again is as easy. Each is one
   quick write (`query()`) refreshing the reviews only (`isAffectedByCodeReviews`), the pill and the open count with
-  them. Both need `cm` 11.0.16.10616 or later (`FIRST_CM_MARKING_CHANGE_REQUESTS`, `cmVersionAtLeast`): with an older
-  one, or one whose version can't be read, the menu doesn't offer them.
+  them. Both are commands of the `cm` reviews need (see the top of this doc).
 
 ## Rounds
 

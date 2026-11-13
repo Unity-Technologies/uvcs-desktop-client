@@ -303,8 +303,8 @@ const appliedChangeRequest = { ...changeRequest, appliedInChangeset: 4 } as cons
 const commentActions = { edit: () => {}, remove: () => {}, copyText: () => {}, showInConversation: () => {}, markChangeRequest: () => {} };
 const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
   reviewComment: () => commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyText: () => {} }),
-  openChangeRequest: () => commentMenu(changeRequest, threadsOf([changeRequest])[0]!, 'jane@example.com', commentActions, '11.0.16.10616'),
-  appliedChangeRequest: () => commentMenu(appliedChangeRequest, threadsOf([appliedChangeRequest])[0]!, 'jane@example.com', commentActions, '11.0.16.10616'),
+  openChangeRequest: () => commentMenu(changeRequest, threadsOf([changeRequest])[0]!, 'jane@example.com', commentActions),
+  appliedChangeRequest: () => commentMenu(appliedChangeRequest, threadsOf([appliedChangeRequest])[0]!, 'jane@example.com', commentActions),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
