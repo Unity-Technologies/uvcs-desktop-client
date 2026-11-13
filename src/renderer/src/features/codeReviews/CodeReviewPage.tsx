@@ -185,7 +185,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         <span>wants a review of</span>
         <span className={styles.targetAndTime}>
           {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
-          <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : describeTarget(review.target)}</span>
+          <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : <span className={styles.targetText}>{describeTarget(review.target)}</span>}</span>
           <span className={styles.dot}>·</span>
           <RelativeTime date={review.date} />
         </span>

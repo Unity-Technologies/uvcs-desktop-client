@@ -82,6 +82,13 @@
   white-space: nowrap;
 }
 
+/* A changeset or shelve named in words: cut with an ellipsis rather than pushed past the row, as the branch is. */
+.targetText {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
 .dot {
   color: var(--text-tertiary);
 }
