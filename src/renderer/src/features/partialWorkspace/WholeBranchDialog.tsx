@@ -74,7 +74,7 @@ function WholeBranchDialog({ preflight, onFinish }: { preflight: SwitchPreflight
         </>
       )}
       {question.blockedByMerge && <p className={styles.blocker}>You’re in the middle of a merge. Check it in or undo it before downloading the whole branch.</p>}
-      {!question.blockedByMerge && <PendingChangesNotes notes={wholeBranchNotes(preflight, action)} />}
+      <PendingChangesNotes notes={wholeBranchNotes(preflight, action)} />
     </Dialog>
   );
 }

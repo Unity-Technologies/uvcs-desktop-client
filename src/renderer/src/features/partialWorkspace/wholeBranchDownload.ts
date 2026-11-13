@@ -68,8 +68,9 @@ export function wholeBranchButton(action: WholeBranchChangesAction | null): { la
 
 /**
  * The switch's notes on private files and locks. Changes left on the branch before aren't mentioned: they stay on
- * their shelves, and nothing new is left beside them.
+ * their shelves, and nothing new is left beside them. An unfinished merge shows none: only what blocks it matters.
  */
 export function wholeBranchNotes(preflight: SwitchPreflight, action: WholeBranchChangesAction | null): string[] {
+  if (wholeBranchQuestion(preflight).blockedByMerge) return [];
   return switchNotes({ ...preflight, leftShelveCount: 0 }, action);
 }
