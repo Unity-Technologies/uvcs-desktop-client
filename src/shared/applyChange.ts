@@ -26,3 +26,15 @@ export function isApplyChange(text: string): boolean {
 export function changeRequestsNamedIn(comment: string): string[] {
   return applyChangeMatches(comment).map((match) => match[1]!.toLowerCase());
 }
+
+/**
+ * A comment without the change requests it names to apply, and the space each leaves: what a recent comment brings to
+ * a new check-in, as the requests it applied are no longer pending and `cm` would fail it on them. Any case, as `cm`
+ * finds them.
+ */
+export function withoutApplyChanges(comment: string): string {
+  return comment.replace(new RegExp(`([ \\t]*)${APPLY_CHANGE_SOURCE}([ \\t]?)`, 'gi'), (_match, before: string, _request: string, after: string, offset: number) => {
+    const atLineStart = offset === 0 || comment[offset - 1] === '\n';
+    return atLineStart && before === '' ? '' : after && before === '' ? after : '';
+  });
+}

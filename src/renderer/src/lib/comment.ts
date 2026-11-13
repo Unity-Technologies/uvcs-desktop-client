@@ -1,3 +1,4 @@
+import { withoutApplyChanges } from '@shared/applyChange';
 import { commentHeading } from './comments/commentHeading';
 
 /** A comment read as a title (its first line) and a description (the rest), like a commit message. */
@@ -24,10 +25,11 @@ export function editingParts(comment: string): CommentParts {
 
 /**
  * A recent comment picked in the check-in: its parts as Edit comment opens a comment (`editingParts`), and the field
- * the caret goes to, where its text ends: the description when it has one, else the summary.
+ * the caret goes to, where its text ends: the description when it has one, else the summary. The change requests it
+ * applied are left out (`withoutApplyChanges`): no longer pending, `cm` would fail the new check-in on them.
  */
 export function recentCommentPick(comment: string): { parts: CommentParts; caretIn: 'summary' | 'description' } {
-  const parts = editingParts(comment);
+  const parts = editingParts(withoutApplyChanges(comment).trim());
   return { parts, caretIn: parts.description ? 'description' : 'summary' };
 }
 
