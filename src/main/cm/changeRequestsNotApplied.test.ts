@@ -28,6 +28,10 @@ describe('changeRequestsNotApplied', () => {
     expect(changeRequestsNotApplied(`Error: …:\n  - ${guid}`, `Fix [apply-change:${guid.toUpperCase()}]`)).toEqual([guid]);
   });
 
+  it('reads a short number written in capitals, which cm finds in the comment but never matches', () => {
+    expect(changeRequestsNotApplied('Error: …:\n  - DEADBEEF', 'Fix [apply-change:DEADBEEF]')).toEqual(['deadbeef']);
+  });
+
   it("reads none from any other failure: a list that isn't of the comment's requests, or no list", () => {
     expect(changeRequestsNotApplied('Error: The following items are locked:\n  - deadbeef', 'Fix it')).toBeNull();
     expect(changeRequestsNotApplied('Error: A merge is needed from changeset cs:4', 'Fix [apply-change:deadbeef]')).toBeNull();
