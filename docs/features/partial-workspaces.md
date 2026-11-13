@@ -2,8 +2,8 @@
 
 A partial workspace downloads only the folders and files the user chooses; everything else stays on the server. How
 the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`) is in
-ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one becomes partial, how the user
-chooses what it downloads, and how it stays partial.
+ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one becomes partial and a partial
+one standard again, how the user chooses what it downloads, and how it stays partial.
 
 ## Creating one
 
@@ -11,7 +11,7 @@ The Create workspace dialog asks "What to download": **The whole branch** (stand
 I pick** (partial). Each card says when to choose it (`downloadCards` in `newWorkspaceForm.ts`), since the app has one
 window for both kinds where the official client had a separate app for partial workspaces: the whole branch switches
 and merges freely; picked folders download less and update file by file, but `cm` refuses to merge into a partial
-workspace and switches it only to branches. The cards show from the start, before a repository is named; picking
+workspace and switches it only to branches of its repository. The cards show from the start, before a repository is named; picking
 folders is greyed for a new repository, which holds nothing to pick (`partialAllowed`). The kind chosen stays partial
 meanwhile (`kindChosen`): the dialog shows the whole branch, and naming an existing repository brings the folders back
 without the user picking them again. Choosing a card sets the kind
@@ -19,8 +19,9 @@ without the user picking them again. Choosing a card sets the kind
 a dynamic workspace has the whole branch. The request carries the kind
 (`CreateWorkspaceRequest.kind`).
 
-The choice can change later one way: a standard workspace becomes partial by choosing what it downloads ("Making a
-standard workspace partial"). The app doesn't make a partial workspace standard again.
+The choice can change later both ways: a standard workspace becomes partial by choosing what it downloads ("Making a
+standard workspace partial"), and a partial one standard again by downloading the whole branch ("Making a partial
+workspace standard").
 
 `workspaces.create` makes the workspace, then runs `cm partial update --silent` in it (`EMPTY_PARTIAL_UPDATE_ARGS`),
 through `execute()` since it changes the workspace's files. An update of no paths downloads nothing but marks the
@@ -104,6 +105,28 @@ The workspace's kind is read once per session (`workspaceKindQuery`), so `config
 it ran on a standard workspace (`workspaceKindChanged`, also when it failed: `cm` may have converted it before
 failing), and each reads the kind again (`forgetWorkspaceKind`). The current window's workspace info, whose `kind`
 picks the update command, refreshes as after any update (`isAffectedByCheckinOrUpdate`).
+
+## Making a partial workspace standard
+
+**Download the whole branch…** makes a partial workspace standard, so it can switch to a changeset, label, shelve or
+another repository, and merge. It's offered on a partial workspace on a branch (`downloadsWholeBranch`): the current
+workspace card's menu (`currentWorkspaceMenu`, the `downloadWholeBranch` action) and the command palette
+(`useWorkspaceCommands`, `workspace.downloadWholeBranch`). A switch the partial workspace refuses says to download the
+whole branch first (`PARTIAL_REFUSED` in `switchWithChanges.ts`), so the way back is named where it's needed.
+
+`cm` has no command to convert a workspace back, and `cm update` refuses a partial workspace with checkouts: a standard
+`cm switch` to the branch the workspace is on downloads everything it holds and makes it standard
+(`downloadWholeBranch` in `main/workspace/switchWithChanges.ts`, `switchesAs: 'standard'`). It runs as the switch with
+pending changes does ("Switching with pending changes", shelves-and-switching.md): the changes are shelved first, as a
+partial workspace shelves them, then brought back, merged as a standard workspace merges, or undone, as the user
+chose (`WholeBranchChangesAction`).
+
+It asks first (`askWholeBranchDownload`, its words in `wholeBranchDownload.ts`): it names the branch and says
+everything on it downloads, with no size estimate, which would cost a server read of the whole tree. With pending
+changes it asks what happens to them (`wholeBranchCards`: bring them along, or undo them, `UNDO_CHANGES_DESCRIPTION`).
+The toast says the whole branch is on disk and what happened to the changes (`wholeBranchToast`). The service forgets
+the kind it read and tells every window the kind changed (`downloadWholeBranchOf`, `workspaceKindChanged`), also when
+the switch failed: `cm` may have converted the workspace before failing.
 
 ## Staying partial
 

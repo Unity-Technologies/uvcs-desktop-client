@@ -51,8 +51,9 @@ the update that shelves blocking changes, Changes, merges). Standard and dynamic
 `cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
 rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
 `switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`): a changeset,
-label or shelve ("A partial workspace can only switch to a branch."), or a branch of another repository ("… of its own
-repository.").
+label or shelve, or a branch of another repository, and the refusal says to download the whole branch first
+(`PARTIAL_REFUSED`), which makes the workspace standard (partial-workspaces.md, "Making a partial workspace
+standard").
 
 A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
 (Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`
