@@ -95,7 +95,7 @@ describe('suggestionApplyOf on a range of lines', () => {
   });
 
   it('says the lines changed when any line of the block did, or a line went in between', () => {
-    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{', '{ // open'))) }, BLOCK)).toBe('Lines 2–4 changed since the suggestion was written');
+    expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replaceAll('{', '{ // open'))) }, BLOCK)).toBe('Lines 2–4 changed since the suggestion was written');
     expect(reasonOf({ workspaceFile: readValue(text(COMMENTED.replace('{\r\n', '{\r\n    // new\r\n'))) }, BLOCK)).toBe('Lines 2–4 changed since the suggestion was written');
   });
 });

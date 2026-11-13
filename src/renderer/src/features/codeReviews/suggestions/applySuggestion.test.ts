@@ -65,7 +65,7 @@ describe('applySuggestionToChanges', () => {
     expect(await applySuggestionToChanges({ ...WRITE, change: block })).toBe(true);
     expect(disk).toBe('class Settings\r\n{ int Timeout = 60; }\r\n');
 
-    disk = BEFORE.replace('}', '} // end');
+    disk = BEFORE.replaceAll('}', '} // end');
     expect(await applySuggestionToChanges({ ...WRITE, change: block })).toBe(false);
     expect(shownToasts().at(-1)).toEqual({ kind: 'info', title: 'Nothing was written to Settings.cs', detail: 'Lines 2–4 changed since the suggestion was written' });
   });
