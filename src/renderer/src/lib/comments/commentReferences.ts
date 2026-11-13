@@ -26,6 +26,11 @@ export type CommentReference =
   | { kind: 'file'; path: string; at: ReferencePoint; repository?: string }
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; name: string; glyph: string }
+  /**
+   * A change request of a code review a check-in applies, as `cm` reads it in a changeset's comment
+   * (`[apply-change:c0d1ce00]`): its guid's first eight hex digits, or the whole guid, lower case.
+   */
+  | { kind: 'changeRequest'; guid: string }
   /** A `uvcs://` link (or the official client's `plastic://` one) to a repository's object or page (docs/features/deep-links.md). */
   | { kind: 'link'; link: RepositoryLink }
   /**
@@ -62,13 +67,32 @@ const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"*_~]+$/;
 /** A person as `cm` names them, in any script: a name, `DOMAIN\name`, or an email address (Unity Cloud). */
 const MENTION = /^@([\p{L}\p{N}_\\][\p{L}\p{N}_.+\\-]*(?:@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)?)/u;
 
+/**
+ * A change request a changeset applies, as `cm checkin` and `cm changeset editcomment` find it in the comment: the first
+ * eight hex digits of its guid, or the whole guid, between `[apply-change:` and `]`, in any case and anywhere, even
+ * inside a word, as `cm` reads it. The case-insensitive flag is the global expression's own (no modifier needed).
+ */
+const APPLY_CHANGE = /\[apply-change:([0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?)\]/gi;
+
+/** The text a check-in comment holds to apply a change request (`[apply-change:c0d1ce00]`), by its guid's first eight digits. */
+export function applyChangeText(guid: string): string {
+  return `[apply-change:${shortGuid(guid)}]`;
+}
+
+/** A guid's first eight hex digits, lower case: how a comment names a change request (`applyChangeText`). */
+export function shortGuid(guid: string): string {
+  return guid.slice(0, 8).toLowerCase();
+}
+
 // Its own expression: `test` on the global one would leave a `lastIndex` that `matchAll` in `findReferences` copies.
 const ANY_CANDIDATE = new RegExp(CANDIDATE.source, 'u');
 
 /** Whether a text may hold a reference, without reading any: a quick test before parsing. */
 export function mayHoldReference(text: string): boolean {
-  return ANY_CANDIDATE.test(text);
+  return ANY_CANDIDATE.test(text) || ANY_APPLY_CHANGE.test(text);
 }
+
+const ANY_APPLY_CHANGE = new RegExp(APPLY_CHANGE.source, 'i');
 
 /**
  * Every reference in a text, in order. Code and links are the caller's to leave out (`parseMarkdown`). With the
@@ -80,12 +104,23 @@ export function findReferences(text: string, issues?: IssueReferenceReader): Fou
     const read = readCandidate(match[0]);
     if (read) found.push({ reference: read.reference, source: read.source, from: match.index, to: match.index + read.source.length });
   }
-  if (!issues) return found;
+  const withRequests = withChangeRequests(text, found);
+  if (!issues) return withRequests;
   const keys = issues
     .referencesIn(text)
-    .filter((issue) => !found.some((other) => issue.from < other.to && issue.to > other.from))
+    .filter((issue) => !withRequests.some((other) => issue.from < other.to && issue.to > other.from))
     .map(({ key, bare, source, from, to }): FoundReference => ({ reference: { kind: 'issue', key, bare }, source, from, to }));
-  return keys.length === 0 ? found : [...found, ...keys].sort((a, b) => a.from - b.from);
+  return keys.length === 0 ? withRequests : [...withRequests, ...keys].sort((a, b) => a.from - b.from);
+}
+
+/** The change requests to apply among the other references (`APPLY_CHANGE`), in order; nothing else read inside one. */
+function withChangeRequests(text: string, found: FoundReference[]): FoundReference[] {
+  const requests = [...text.matchAll(APPLY_CHANGE)].map(
+    (match): FoundReference => ({ reference: { kind: 'changeRequest', guid: match[1]!.toLowerCase() }, source: match[0], from: match.index, to: match.index + match[0].length }),
+  );
+  if (requests.length === 0) return found;
+  const outside = found.filter((other) => !requests.some((request) => other.from < request.to && other.to > request.from));
+  return [...outside, ...requests].sort((a, b) => a.from - b.from);
 }
 
 function readCandidate(candidate: string): { reference: CommentReference; source: string } | null {
