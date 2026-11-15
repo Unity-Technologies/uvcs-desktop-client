@@ -50,9 +50,12 @@ command by kind, everywhere the app updates, switches or checks in (Incoming, th
 the update that shelves blocking changes, Changes, merges). Standard and dynamic workspaces keep `cm update`,
 `cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
 rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
-`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`): a changeset,
-label or shelve ("A partial workspace can only switch to a branch."), or a branch of another repository ("… of its own
-repository.").
+`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`, one reason per
+kind of target, each with its message in `PARTIAL_REFUSED`): a changeset ("A partial workspace can't switch to a
+changeset yet."), a label, a shelve, or a branch of another repository. A changeset is "yet": the Gluon client keeps a
+partial workspace on a changeset by setting its selector and updating only what it loads, which no `cm` command does
+so far. `cm switch` and `cm setselector` to a changeset download everything and make the workspace standard, and
+`cm partial update --changeset` moves the files but leaves the workspace on its branch, so the next update undoes it.
 
 A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
 (Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`
