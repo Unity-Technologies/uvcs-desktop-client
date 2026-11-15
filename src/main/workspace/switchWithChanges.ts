@@ -27,7 +27,7 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 // A changeset is "yet": the official Gluon client keeps a partial workspace on one, which `cm partial switch` can't do
-// so far. A label, a shelve and another repository's branch aren't open to a partial workspace in any client.
+// so far (docs/features/shelves-and-switching.md). It takes neither a label, a shelve nor another repository's branch.
 const PARTIAL_REFUSED: Record<PartialSwitchDisabledReason, string> = {
   changeset: "A partial workspace can't switch to a changeset yet.",
   label: "A partial workspace can't switch to a label.",

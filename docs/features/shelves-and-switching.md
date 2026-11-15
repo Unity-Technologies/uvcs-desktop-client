@@ -66,12 +66,20 @@ are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwis
 and a switch's toast says to merge it in a standard workspace instead of offering the merge page (`mergesHere` on
 `bringPending`), which refuses a partial workspace (`conflictRepositories`).
 
-A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
-update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
-(`loadedChangesetOf`: -1 only on a branch, any other number below zero stays unexpected output), as on a shelve, and
-tells the two apart by the selector's kind, never by `loadedChangeset`. So Incoming lists the items the branch head
-changes rather than changesets (docs/features/incoming.md "A partial workspace"), no branch is made from the
-workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
+`cm status` reports changeset -1 for a partial workspace, whatever it's on (`WorkspaceStatus.partial`), and the
+app reads what it has loaded from the selector (`loadedChangesetOf`; any other number below zero stays unexpected
+output):
+
+- **On a branch**, it has no one changeset: each folder may be at another changeset of the branch (`cm partial
+  update` of one path). Incoming lists the items the branch head changes rather than changesets
+  (docs/features/incoming.md "A partial workspace"), and no branch is made from the workspace's changeset.
+- **On a changeset**, as the official Gluon client leaves one, everything it loads is at that changeset, which the
+  app shows and works from as a standard workspace's.
+- **On a label**, the label's changeset holds it, but `cm` doesn't print it: no changeset, as on a branch, and
+  Choose what to download isn't offered (`choosesDownloads`), its tree having no point to show.
+
+Off a branch nothing comes in. Whatever it's on, a merge into a partial workspace is refused (`loadedTree`,
+`noLoadedTreeMessage`).
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
