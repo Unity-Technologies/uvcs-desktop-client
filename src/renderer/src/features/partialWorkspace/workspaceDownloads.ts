@@ -1,14 +1,14 @@
 import type { WorkspaceKind, WorkspaceSelector } from '@shared/domain/workspace';
 
 /**
- * Whether a workspace may choose what it downloads: a partial one on a branch or a changeset, whose tree the dialog
- * shows (`downloadTreePoint`), but not on a label, whose changeset `cm` doesn't print; a standard one on a branch too,
- * since the first choice applied (`cm partial configure`) makes it partial. A dynamic workspace downloads files as
- * they're opened, and an unknown kind or selector may be either.
+ * Whether a workspace may choose what it downloads: one on a branch, partial or standard (the first choice applied,
+ * `cm partial configure`, makes a standard one partial). Off a branch it isn't offered: on a label the dialog's tree
+ * has no changeset to show (`downloadTreePoint`), and what `cm partial configure` does to a workspace on a changeset
+ * hasn't been checked. A dynamic workspace downloads files as they're opened, and an unknown kind or selector may be
+ * either.
  */
 export function choosesDownloads(kind: WorkspaceKind | undefined, selector: WorkspaceSelector | undefined): boolean {
-  if (kind === 'partial') return selector?.kind === 'branch' || selector?.kind === 'changeset';
-  return kind === 'standard' && selector?.kind === 'branch';
+  return (kind === 'partial' || kind === 'standard') && selector?.kind === 'branch';
 }
 
 /**
