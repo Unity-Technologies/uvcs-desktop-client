@@ -36,7 +36,8 @@ function shotOf(buffer, box, name) {
 async function main() {
   const args = beforeAfterArguments(process.argv.slice(2));
   if (typeof args === 'string') throw new Error(args);
-  const [before, after] = await Promise.all([readFile(args.before), readFile(args.after)]).then(([b, a]) => [shotOf(b, args.crop, 'Before'), shotOf(a, args.crop, 'After')]);
+  const before = shotOf(await readFile(args.before), args.crop, 'Before');
+  const after = shotOf(await readFile(args.after), args.crop, 'After');
   const size = before.getSize();
   const sizeError = beforeAfterSizeError(size, after.getSize());
   if (sizeError) throw new Error(sizeError);
