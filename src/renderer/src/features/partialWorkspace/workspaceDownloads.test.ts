@@ -5,13 +5,15 @@ import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote } from './wo
 const onBranch: WorkspaceSelector = { kind: 'branch', name: '/main' };
 
 describe('choosesDownloads', () => {
-  it('lets a partial workspace on a branch or a changeset choose what it downloads', () => {
+  it('lets a partial workspace on a branch choose what it downloads', () => {
     expect(choosesDownloads('partial', onBranch)).toBe(true);
-    expect(choosesDownloads('partial', { kind: 'changeset', name: '12' })).toBe(true);
   });
 
-  it("doesn't offer it to a partial workspace on a label, whose changeset cm doesn't print: there is no tree to show", () => {
-    expect(choosesDownloads('partial', { kind: 'label', name: 'v1' })).toBe(false);
+  it("doesn't offer it to a partial workspace off a branch, nor while its selector is unknown", () => {
+    for (const kind of ['changeset', 'label'] as const) {
+      expect(choosesDownloads('partial', { kind, name: '12' })).toBe(false);
+    }
+    expect(choosesDownloads('partial', undefined)).toBe(false);
   });
 
   it('lets a standard workspace on a branch choose too: the first choice makes it partial', () => {
