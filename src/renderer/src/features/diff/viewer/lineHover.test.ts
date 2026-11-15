@@ -60,6 +60,33 @@ describe('lineHover', () => {
     expect(shown).toEqual([3]);
   });
 
+  it('keeps the line when the button says it was entered after the diff said the line was left', () => {
+    const shown: (number | null)[] = [];
+    const { frames, passFrame } = testFrames();
+    const hover = lineHover<number>((line) => shown.push(line), frames);
+
+    hover.enter(3);
+    hover.leave();
+    hover.hold();
+    passFrame();
+
+    expect(shown).toEqual([3]);
+  });
+
+  it('lets go of a hold once another line is entered, so leaving the lines clears it', () => {
+    const shown: (number | null)[] = [];
+    const { frames, passFrame } = testFrames();
+    const hover = lineHover<number>((line) => shown.push(line), frames);
+
+    hover.enter(3);
+    hover.hold();
+    hover.enter(4);
+    hover.leave();
+    passFrame();
+
+    expect(shown).toEqual([3, 4, null]);
+  });
+
   it('clears it a frame after the pointer leaves the button for somewhere off the lines', () => {
     const shown: (number | null)[] = [];
     const { frames, passFrame } = testFrames();
