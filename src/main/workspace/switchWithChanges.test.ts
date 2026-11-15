@@ -102,9 +102,13 @@ describe('switching a partial workspace', () => {
     expect(pending()).toEqual(before);
   };
 
-  it.each(['cs:12', 'lb:v1', 'sh:4'])('refuses %s, touching nothing: cm partial switch takes only a branch', (target) => refuses(target, 'A partial workspace can only switch to a branch.'));
+  it.each([
+    ['cs:12', "A partial workspace can't switch to a changeset yet."],
+    ['lb:v1', "A partial workspace can't switch to a label."],
+    ['sh:4', "A partial workspace can't switch to a shelve."],
+  ])('refuses %s, touching nothing: cm partial switch takes only a branch', (target, message) => refuses(target, message));
 
-  it('refuses a branch of another repository, touching nothing', () => refuses('br:/main@other@local', 'A partial workspace can only switch to a branch of its own repository.'));
+  it('refuses a branch of another repository, touching nothing', () => refuses('br:/main@other@local', "A partial workspace can't switch to a branch of another repository."));
 });
 
 describe('switching with changes refuses, touching nothing,', () => {

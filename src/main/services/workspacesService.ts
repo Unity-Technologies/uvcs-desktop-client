@@ -58,13 +58,9 @@ export function createWorkspacesService(
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
     const [status, { name, kind }] = await Promise.all([headers.status(workspacePath), headers.names(workspacePath)]);
 
-    return {
-      name,
-      path: workspacePath,
-      repository: `${status.repositoryName}@${status.server}`,
-      ...status,
-      kind,
-    };
+    // `kind` already says whether it's partial; the window gets it from there, not from the status's `partial`.
+    const { repositoryName, server, selector, loadedChangeset } = status;
+    return { name, path: workspacePath, repository: `${repositoryName}@${server}`, repositoryName, server, selector, loadedChangeset, kind };
   }
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {

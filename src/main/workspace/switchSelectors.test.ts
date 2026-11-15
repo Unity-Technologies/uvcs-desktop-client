@@ -55,10 +55,10 @@ describe('partialSwitchDisabledReason', () => {
     expect(partialSwitchDisabledReason('/main/t3', 'game')).toBeUndefined();
   });
 
-  it('refuses a changeset, a label and a shelve', () => {
-    expect(partialSwitchDisabledReason('cs:12', 'game')).toBe('notBranch');
-    expect(partialSwitchDisabledReason('lb:v1', 'game')).toBe('notBranch');
-    expect(partialSwitchDisabledReason('sh:4', 'game')).toBe('notBranch');
+  it('refuses a changeset, a label and a shelve, each for its own reason', () => {
+    expect(partialSwitchDisabledReason('cs:12', 'game')).toBe('changeset');
+    expect(partialSwitchDisabledReason('lb:v1', 'game')).toBe('label');
+    expect(partialSwitchDisabledReason('sh:4', 'game')).toBe('shelve');
   });
 
   it('refuses a branch of another repository', () => {

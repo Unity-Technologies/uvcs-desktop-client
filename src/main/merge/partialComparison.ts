@@ -1,6 +1,6 @@
 // What the branch head brings a partial workspace: the items it has loaded compared with the same items on the head,
-// by item id. A partial workspace isn't at a changeset (`cm status` prints cs:-1), so there are no changesets to list:
-// its incoming changes are the items an update (`cm partial update`) would change.
+// by item id. A partial workspace on a branch isn't at a changeset (`cm status` prints cs:-1), so there are no
+// changesets to list: its incoming changes are the items an update (`cm partial update`) would change.
 
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { integerValue, recordFormat, type ReadRecord } from '../cm/formatRecords';

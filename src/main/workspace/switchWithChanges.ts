@@ -1,6 +1,6 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceKind } from '@shared/domain/workspace';
-import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PartialSwitchDisabledReason, PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
@@ -26,10 +26,14 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
-const PARTIAL_REFUSED = {
-  notBranch: 'A partial workspace can only switch to a branch.',
-  otherRepository: 'A partial workspace can only switch to a branch of its own repository.',
-} as const;
+// A changeset is "yet": the official Gluon client keeps a partial workspace on one, which `cm partial switch` can't do
+// so far (docs/features/shelves-and-switching.md). It takes neither a label, a shelve nor another repository's branch.
+const PARTIAL_REFUSED: Record<PartialSwitchDisabledReason, string> = {
+  changeset: "A partial workspace can't switch to a changeset yet.",
+  label: "A partial workspace can't switch to a label.",
+  shelve: "A partial workspace can't switch to a shelve.",
+  otherRepository: "A partial workspace can't switch to a branch of another repository.",
+};
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
   /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */

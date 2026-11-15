@@ -93,8 +93,9 @@ function distinctAuthors(owners: string[]): string[] {
 
 /**
  * What updating brings: the newest page of incoming changesets (`readIncomingChangesetPage` reads the older ones), the
- * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace isn't
- * at a changeset: what it gets is the items its branch head changes in the folders it loaded (`readPartialIncomingItems`).
+ * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace on a
+ * branch isn't at a changeset: what it gets is the items its branch head changes in the folders it loaded
+ * (`readPartialIncomingItems`).
  */
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
   const load = await readWorkspaceLoad(cm, workspacePath);
@@ -140,7 +141,8 @@ interface NewestIncoming {
 }
 
 async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string, { selector, loadedChangeset }: WorkspaceLoad): Promise<NewestIncoming> {
-  // Off a branch nothing comes in; a partial workspace has no one changeset to count from (`loadedChangesetOf`).
+  // Off a branch nothing comes in; a partial workspace on a branch has no one changeset to count from
+  // (`loadedChangesetOf`).
   if (selector.kind !== 'branch' || loadedChangeset === null) return { summary: NOTHING_INCOMING, changesets: [], moreChangesets: false };
 
   const branch = selector.name;

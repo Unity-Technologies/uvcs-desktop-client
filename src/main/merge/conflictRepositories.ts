@@ -101,11 +101,12 @@ export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): 
 
 /**
  * The workspace's loaded changeset. A workspace on a shelve takes no merges: `cm` finds no branch to check out on. A
- * partial workspace has no one changeset whose files the conflicts could be listed from (`loadedChangesetOf`).
+ * partial workspace takes none either, even on a changeset: on a branch it has no one changeset whose files the
+ * conflicts could be listed from (`loadedChangesetOf`), and a merge needs the whole tree, which it didn't download.
  */
 async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> {
-  const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
-  if (loadedChangeset === null) throw new Error(noLoadedTreeMessage(selector));
+  const { selector, loadedChangeset, partial } = await readWorkspaceLoad(cm, workspacePath);
+  if (loadedChangeset === null || partial) throw new Error(noLoadedTreeMessage(selector));
   return spec.changeset(loadedChangeset);
 }
 
