@@ -241,8 +241,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     textOf: (side) => (side === 'old' ? original : diffedText),
     lineAction: annotations?.lineAction,
   });
-  // What the place does with a line (a review's comment on it), in the gutter of the line under the pointer.
-  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container);
+  // What the place does with a line (a review's comment on it), a button by the line under the pointer.
+  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container, layout);
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
@@ -357,8 +357,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     fileDiff={fileDiff}
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
-                    // A workspace file's diff discards from its gutter; a committed one (a review's) acts on a line there.
-                    renderGutterUtility={discard.renderGutterUtility ?? lineAction.renderGutterUtility}
+                    // A workspace file's diff discards from its gutter.
+                    renderGutterUtility={discard.renderGutterUtility}
                     lineAnnotations={annotations?.rows}
                     renderAnnotation={annotations?.render}
                     edit={edit}
@@ -377,6 +377,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {annotations?.bands && annotations.bands.length > 0 && <LineBands containerRef={container} bands={annotations.bands} layout={layout} />}
           {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
+          {lineAction.overlay}
         </div>
       </ActionContextMenu>
     </div>

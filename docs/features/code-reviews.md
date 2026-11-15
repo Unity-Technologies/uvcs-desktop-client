@@ -766,7 +766,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
   nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
   xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
-  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" in the gutter of the line under the
+  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" by the line under the
   pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
   the code's menu (on the last of the lines selected: `cm` names one line), "Suggest change on line 42" after it (see
   "Suggested changes"). No key: a review's diff has no caret, so no

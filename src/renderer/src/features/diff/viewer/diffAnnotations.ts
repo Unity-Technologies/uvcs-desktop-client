@@ -36,7 +36,7 @@ export interface DiffAnnotations {
 
 /**
  * What a place does with one line of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the
- * gutter of the one under the pointer (`useLineActionButton`) and in the code's menu (`lineMenuEntries`).
+ * button by the one under the pointer (`useLineActionButton`) and in the code's menu (`lineMenuEntries`).
  */
 export interface LineAction {
   /** The lines it takes: a review comments only on the revisions its diff names. */

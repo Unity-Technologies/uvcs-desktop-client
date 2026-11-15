@@ -978,13 +978,17 @@ docs/features/code-reviews.md "Comments in the code"):
   buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
   whose row is empty, and a buffer under a changed line on the other side may take its tint too.
   Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
-  a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
-  after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
-  does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
-  line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
-  its slot from line to line, which restarts an animation, a flicker on every line. The action is also the first entry
-  of the lines' menu, on the last of the lines selected
-  (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
+  a "+" by the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained after the line numbers'
+  hint), sitting just past the number and over the edge into the code, as a pull request's does (over the number alone
+  it hid it; `lineActionSpot`). It's drawn over the diff in its scrolling container, above the outlines around
+  commented lines (`LineBands`), not in Pierre's gutter slot: Pierre isolates its code (`isolation: isolate`), so
+  nothing in the slot can be drawn above what the container draws over it. It stays as the pointer goes from line to
+  line (`lineHover`: Pierre says a line was left before the next was entered, so a line left clears a frame later) and
+  while the pointer is on it (`hold`, `release`: React says the button was entered before Pierre says the line was
+  left; a line entered lets go). Apart from its line, it's placed again when the code moves under a pointer at rest
+  (`useFollowedLine`: the layout switched, a thread grown), and goes once its line isn't drawn. It has no pop-in: an
+  animation restarted on every line flickered. The action is also the first entry of the lines' menu, on the last of
+  the lines selected (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 
