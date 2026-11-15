@@ -212,6 +212,14 @@ describe('withConflictRepositories when cm printed no contributors', () => {
     );
   });
 
+  it("refuses a merge into a partial workspace on a changeset too, as into any partial workspace", async () => {
+    const { cm } = fakeCmClient({ 'status --header --xml': statusHeader('12', { type: 'Changeset', changeset: -1 }) });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'cs:5' }, { ...plan([OWN]), contributors: undefined })).rejects.toThrow(
+      "partial workspace can't take a merge",
+    );
+  });
+
   it("refuses a merge into a workspace on a shelve, whose tree can't be listed", async () => {
     const { cm } = fakeCmClient({ 'status --header --xml': statusHeader('7', { type: 'Shelve', changeset: -7 }) });
 

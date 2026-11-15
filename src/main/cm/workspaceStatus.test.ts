@@ -29,6 +29,7 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/TASK1008897' },
       loadedChangeset: 278638,
+      partial: false,
     });
   });
 
@@ -52,6 +53,7 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'local',
       selector: { kind: 'changeset', name: '3' },
       loadedChangeset: 3,
+      partial: true,
     });
   });
 
@@ -89,6 +91,7 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'local',
       selector: { kind: 'shelve', name: '3' },
       loadedChangeset: null,
+      partial: false,
     });
   });
 
@@ -120,14 +123,15 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'local',
       selector: { kind: 'branch', name: '/main' },
       loadedChangeset: null,
+      partial: true,
     });
   });
 
-  it('reads changeset -1 on a label or a changeset as a partial workspace there, as Gluon leaves one', () => {
+  it('reads changeset -1 on a label or a changeset as a partial workspace there', () => {
     const onLabel = partial.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
     const onChangeset = partial.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
-    expect(parseWorkspaceStatus(onLabel)).toMatchObject({ selector: { kind: 'label', name: 'v1' }, loadedChangeset: null });
-    expect(parseWorkspaceStatus(onChangeset)).toMatchObject({ selector: { kind: 'changeset', name: '12' }, loadedChangeset: 12 });
+    expect(parseWorkspaceStatus(onLabel)).toMatchObject({ selector: { kind: 'label', name: 'v1' }, loadedChangeset: null, partial: true });
+    expect(parseWorkspaceStatus(onChangeset)).toMatchObject({ selector: { kind: 'changeset', name: '12' }, loadedChangeset: 12, partial: true });
   });
 
   it('fails on output without a status, instead of returning an empty branch and changeset -1', () => {
