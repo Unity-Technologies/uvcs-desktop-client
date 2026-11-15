@@ -123,11 +123,11 @@ describe('parseWorkspaceStatus', () => {
     });
   });
 
-  it('fails on changeset -1 on a label or a changeset, which loads one changeset', () => {
+  it('reads changeset -1 on a label or a changeset as a partial workspace there, as Gluon leaves one', () => {
     const onLabel = partial.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
     const onChangeset = partial.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
-    expect(() => parseWorkspaceStatus(onLabel)).toThrow(/cm status/);
-    expect(() => parseWorkspaceStatus(onChangeset)).toThrow(/cm status/);
+    expect(parseWorkspaceStatus(onLabel)).toMatchObject({ selector: { kind: 'label', name: 'v1' }, loadedChangeset: null });
+    expect(parseWorkspaceStatus(onChangeset)).toMatchObject({ selector: { kind: 'changeset', name: '12' }, loadedChangeset: 12 });
   });
 
   it('fails on output without a status, instead of returning an empty branch and changeset -1', () => {
