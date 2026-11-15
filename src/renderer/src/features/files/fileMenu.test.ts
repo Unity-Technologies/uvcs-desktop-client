@@ -37,10 +37,10 @@ const seed = (workspace: Partial<WorkspaceInfo>) => queryClient.setQueryData(que
 describe('fileMenu: Choose what to download', () => {
   beforeEach(() => {
     opened.splice(0);
-    seed({});
+    seed({ kind: 'partial' });
   });
 
-  it('opens the dialog on a file of a standard workspace on a branch', () => {
+  it('opens the dialog on a file of a partial workspace', () => {
     const entry = chooseDownloadsIn(menuOf([item('src/main.c')]));
     expect(entry).toBeDefined();
     entry!.run();
@@ -48,7 +48,6 @@ describe('fileMenu: Choose what to download', () => {
   });
 
   it('opens the dialog on a folder of a partial workspace', () => {
-    seed({ kind: 'partial' });
     const entry = chooseDownloadsIn(menuOf([item('src', 'directory')]));
     entry!.run();
     expect(opened).toEqual([[ws, 'src']]);
@@ -72,9 +71,8 @@ describe('fileMenu: Choose what to download', () => {
   });
 
   it.each([
+    ['a standard workspace, where it would make it partial: that stays in its menu and the palette', { kind: 'standard' }],
     ['a dynamic workspace', { kind: 'dynamic' }],
-    ['a standard workspace on a label', { selector: { kind: 'label', name: 'v1' } }],
-    ['a standard workspace on a shelve', { selector: { kind: 'shelve', name: '12' } }],
     ['a workspace of unknown kind', { kind: undefined }],
   ] as [string, Partial<WorkspaceInfo>][])('is not offered on %s', (_, workspace) => {
     seed(workspace);

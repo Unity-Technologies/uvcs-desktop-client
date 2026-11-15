@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { switchToast } from './switchToast';
+import { switchToast, wholeBranchToast } from './switchToast';
 
 const words = (toast: ReturnType<typeof switchToast>) => ({ kind: toast.kind, title: toast.title, detail: toast.detail, action: toast.action?.label });
 
@@ -69,5 +69,13 @@ describe('switchToast', () => {
     const ending = switchToast({ kind: 'bringPending', shelveId: 7, conflictCount: 1, mergesHere: true, renamedPrivates }, '/main/t1');
 
     expect(ending.detail).toBe('1 file needs your decision to bring your changes. They’re safe in shelve 7. 2 private files were in the way: they’re kept renamed, as name.private.0.');
+  });
+});
+
+describe('wholeBranchToast', () => {
+  it('says the whole branch is now on disk, with what happened to the changes below', () => {
+    expect(words(wholeBranchToast({ kind: 'switched' }, '/main/task'))).toEqual({ kind: 'success', title: 'Downloaded all of task', detail: undefined, action: undefined });
+    expect(words(wholeBranchToast({ kind: 'brought' }, '/main'))).toEqual({ kind: 'success', title: 'Downloaded all of main', detail: 'Your changes came along.', action: 'View' });
+    expect(wholeBranchToast({ kind: 'discarded', count: 2 }, '/main').detail).toBe('Undid 2 changes.');
   });
 });

@@ -56,6 +56,8 @@ changeset yet."), a label, a shelve, or a branch of another repository. A change
 partial workspace on a changeset by setting its selector and updating only what it loads, which no `cm` command does
 so far. `cm switch` and `cm setselector` to a changeset download everything and make the workspace standard, and
 `cm partial update --changeset` moves the files but leaves the workspace on its branch, so the next update undoes it.
+Each refusal ends with the way out: download the whole branch first, which makes the workspace standard
+(partial-workspaces.md, "Making a partial workspace standard").
 
 A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
 (Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`

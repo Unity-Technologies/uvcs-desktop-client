@@ -12,6 +12,15 @@ export function choosesDownloads(kind: WorkspaceKind | undefined, selector: Work
 }
 
 /**
+ * Whether Files' header has a Choose what to download button: only in a partial workspace, where choosing folders is
+ * everyday work. In a standard one, choosing makes it partial, a rare step kept in the workspace card's menu and the
+ * palette, as Download the whole branch is in a partial one.
+ */
+export function showsChooseDownloadsButton(kind: WorkspaceKind | undefined): boolean {
+  return kind === 'partial';
+}
+
+/**
  * What choosing changes for a standard workspace, in the words of the new workspace's "What to download" cards
  * (`downloadCards`); null when the workspace is already partial.
  */
@@ -30,17 +39,23 @@ export interface DownloadsItem {
 }
 
 /**
- * Whether Files' menu offers Choose what to download on an item: one of the workspace's own repository that the
- * server's tree holds, in a workspace that may choose (`choosesDownloads`). Not a private or added item, which the
- * dialog's tree doesn't show, nor one under an xlink: an xlink downloads whole, and its folders aren't chosen.
+ * Whether Files' menu offers Choose what to download on an item: only in a partial workspace, as Files' header button
+ * (`showsChooseDownloadsButton`): in a standard one it would make the workspace partial, a rare step kept in the
+ * workspace card's menu and the palette. Only on an item of the workspace's own repository that the server's tree
+ * holds: not a private or added item, which the dialog's tree doesn't show, nor one under an xlink: an xlink downloads
+ * whole, and its folders aren't chosen.
  */
 export function choosesDownloadsFor(
   item: DownloadsItem,
   where: { underXlink: boolean; workspaceRepository: string | undefined },
   kind: WorkspaceKind | undefined,
-  selector: WorkspaceSelector | undefined,
 ): boolean {
-  if (!choosesDownloads(kind, selector)) return false;
+  if (kind !== 'partial') return false;
   if (item.isPrivate || item.added || where.underXlink) return false;
   return !(where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository);
+}
+
+/** Whether a workspace may download its whole branch, which makes it standard: a partial one, once its branch is known. */
+export function downloadsWholeBranch(kind: WorkspaceKind | undefined, selector: WorkspaceSelector | undefined): boolean {
+  return kind === 'partial' && selector?.kind === 'branch';
 }

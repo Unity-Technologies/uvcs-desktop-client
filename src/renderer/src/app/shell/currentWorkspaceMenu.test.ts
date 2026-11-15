@@ -19,4 +19,11 @@ describe('currentWorkspaceMenu', () => {
     expect(ids(currentWorkspaceMenu('/w/game', { name: 'game', selector: onBranch }))).not.toContain('chooseDownloads');
     expect(ids(currentWorkspaceMenu('/w/game', { name: 'game', kind: 'standard', selector: { kind: 'label', name: 'v1' } }))).not.toContain('chooseDownloads');
   });
+
+  it('offers downloading the whole branch in a partial workspace only', () => {
+    expect(ids(currentWorkspaceMenu('/w/game', { name: 'game', kind: 'partial', selector: onBranch }))).toContain('downloadWholeBranch');
+    for (const kind of ['standard', 'dynamic', undefined] as const) {
+      expect(ids(currentWorkspaceMenu('/w/game', { name: 'game', kind, selector: onBranch }))).not.toContain('downloadWholeBranch');
+    }
+  });
 });

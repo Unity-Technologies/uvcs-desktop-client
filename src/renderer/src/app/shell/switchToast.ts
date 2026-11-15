@@ -12,7 +12,20 @@ import { navigation } from '../navigation/navigationStore';
  * takes that line.
  */
 export function switchToast(result: SwitchResult, targetName: string): OperationSuccess {
-  const ending = changesEnding(result, `Switched to ${targetName}`);
+  return endingOf(result, `Switched to ${targetName}`);
+}
+
+/**
+ * What to tell the user once a partial workspace downloaded its whole branch (`branchName`, its full name): the title
+ * says all of it is there now, and below it what happened to their changes, as after a switch.
+ */
+export function wholeBranchToast(result: SwitchResult, branchName: string): OperationSuccess {
+  return endingOf(result, `Downloaded all of ${branchLabel(branchName)}`);
+}
+
+/** `title`, what happened to the changes and the private files in the way. */
+function endingOf(result: SwitchResult, title: string): OperationSuccess {
+  const ending = changesEnding(result, title);
   const renamed = renamedPrivatesNote(result.renamedPrivates);
   return renamed ? { ...ending, detail: sentences(ending.detail, renamed) } : ending;
 }

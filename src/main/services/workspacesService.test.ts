@@ -10,6 +10,7 @@ import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statu
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { updateCommand } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
+import { memorySettings } from '../settings/testing/memorySettings';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -26,7 +27,7 @@ const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: '
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>) {
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
+  const context = serviceContext(fake.cm, { headers, settings: memorySettings(), watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
   /** The workspaces the service said changed kind (`tellKindChanged`). */
   const kindChanges: string[] = [];
   const service = createWorkspacesService(context, {} as SwitchContext, (workspacePath) => kindChanges.push(workspacePath));
@@ -357,6 +358,16 @@ describe('a standard workspace choosing what to download', () => {
     expect(kindChanges).toEqual([WORKSPACE]);
   });
 
+  it('reads its kind again afterwards, since the one read before is now wrong', async () => {
+    const { service, lines } = workspaces({ 'partial configure': '', ...WORKSPACE_NAMES });
+
+    const kindReads = () => lines().filter((line) => line.startsWith('getworkspacefrompath')).length;
+    await service.configurePartial(WORKSPACE, [{ path: 'Assets', load: true }], 'op-1');
+    await service.configurePartial(WORKSPACE, [{ path: 'Docs', load: true }], 'op-2');
+
+    expect(kindReads()).toBe(2);
+  });
+
   it("tells what a folder has loaded with one local cm ls of the folder, read as it arrives, its private files left out", async () => {
     // `cm ls <folder>` lists the folder itself first, then the children the workspace has loaded, with the OS's separator.
     const { service, commands } = workspaces({
@@ -372,6 +383,55 @@ describe('a standard workspace choosing what to download', () => {
 
     expect(await service.loadedIn(WORKSPACE, '')).toEqual([]);
     expect(commands).toMatchObject([{ args: loadedItemsArgs([WORKSPACE]) }]);
+  });
+});
+
+describe('a partial workspace downloading its whole branch', () => {
+  const PARTIAL_ON_TASK1 = { 'status --header --xml': STATUS_HEADER, status: pendingStatus(WORKSPACE), ...PARTIAL_WORKSPACE_NAMES };
+
+  it('switches to its own branch with a standard cm switch of its own process, then every window is told its kind changed', async () => {
+    const { service, commands, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, switch: '' });
+
+    expect(await service.downloadWholeBranch(WORKSPACE, 'op-1')).toMatchObject({ kind: 'switched' });
+
+    expect(commands.filter((command) => command.via === 'execute')).toMatchObject([{ args: ['switch', 'br:/main/task1', '--forcedetailedprogress', '--noinput'], options: { cwd: WORKSPACE } }]);
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('reads its kind again afterwards, since the one read before is now wrong', async () => {
+    const { service, lines } = workspaces({ ...PARTIAL_ON_TASK1, switch: '' });
+
+    const kindReads = () => lines().filter((line) => line.startsWith('getworkspacefrompath')).length;
+    await service.downloadWholeBranch(WORKSPACE, 'op-1');
+    const readsBefore = kindReads();
+    await service.info(WORKSPACE);
+
+    expect(kindReads()).toBe(readsBefore + 1);
+  });
+
+  it('tells its kind may have changed when the switch fails, since cm may have converted it before failing', async () => {
+    const { service, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, switch: cmFails('The server is not reachable.') });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow('The server is not reachable.');
+
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('tells its kind may have changed when its kind cannot be read and the switch fails', async () => {
+    const { service, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, getworkspacefrompath: cmFails('The workspace could not be read.') });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow();
+
+    expect(kindChanges).toEqual([WORKSPACE]);
+  });
+
+  it('refuses a standard workspace, switching nothing and telling no window', async () => {
+    const { service, commands, kindChanges } = workspaces({ ...PARTIAL_ON_TASK1, ...WORKSPACE_NAMES });
+
+    await expect(service.downloadWholeBranch(WORKSPACE, 'op-1')).rejects.toThrow('This workspace already has the whole branch.');
+
+    expect(commands.some((command) => command.via === 'execute')).toBe(false);
+    expect(kindChanges).toEqual([]);
   });
 });
 
