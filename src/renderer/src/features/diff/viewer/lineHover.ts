@@ -37,6 +37,8 @@ export function lineHover<Line>(show: (line: Line | null) => void, frames: Frame
   return {
     enter: (line: Line | null): void => {
       keep();
+      // The pointer is on a line, so off the button, even if the button never said it was left (it went away under it).
+      held = false;
       show(line);
     },
     leave,
