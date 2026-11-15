@@ -32,6 +32,29 @@ describe('parseWorkspaceStatus', () => {
     });
   });
 
+  it('reads a partial workspace on a changeset, which cm prints as changeset -1', () => {
+    const partialOnChangeset = `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus>
+    <Status>
+      <RepSpec>
+        <Server>local</Server>
+        <Name>lib</Name>
+      </RepSpec>
+      <Changeset>-1</Changeset>
+    </Status>
+  </WorkspaceStatus>
+  <WkConfigType>Changeset</WkConfigType>
+  <WkConfigName>3@lib@local</WkConfigName>
+</StatusOutput>`;
+    expect(parseWorkspaceStatus(partialOnChangeset)).toEqual({
+      repositoryName: 'lib',
+      printedServer: 'local',
+      selector: { kind: 'changeset', name: '3' },
+      loadedChangeset: 3,
+    });
+  });
+
   it("reads the branch whichever form of a Unity organization's server each field prints", () => {
     const mixed = (repSpecServer: string, configServer: string) => `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
@@ -121,15 +144,23 @@ describe('loadedChangesetOf', () => {
     expect(loadedChangesetOf(-1, { kind: 'shelve', name: '1' })).toBeNull();
     expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
     expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
-    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
     expect(loadedChangesetOf(-5, { kind: 'changeset', name: '-5' })).toBeUndefined();
     expect(loadedChangesetOf(Number.NaN, { kind: 'shelve', name: '3' })).toBeUndefined();
   });
 
-  it("takes -1 on a branch as a partial workspace's, which has no one changeset, but on no other selector", () => {
+  it("takes -1 on a branch as a partial workspace's, which has no one changeset", () => {
     expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
     expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
-    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
+  });
+
+  it('takes -1 on a changeset as a partial workspace on that changeset, which is what everything it loads is at', () => {
+    expect(loadedChangesetOf(-1, { kind: 'changeset', name: '3' })).toBe(3);
     expect(loadedChangesetOf(-1, { kind: 'changeset', name: '-1' })).toBeUndefined();
+    expect(loadedChangesetOf(-2, { kind: 'changeset', name: '3' })).toBeUndefined();
+  });
+
+  it("takes -1 on a label as a partial workspace's, whose changeset the label names but cm doesn't print", () => {
+    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeNull();
+    expect(loadedChangesetOf(-2, { kind: 'label', name: 'v1' })).toBeUndefined();
   });
 });
