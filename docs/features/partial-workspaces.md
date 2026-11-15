@@ -42,8 +42,10 @@ one on a branch (`choosesDownloads`, "Making a standard workspace partial"):
 
 - the current workspace card's menu (`currentWorkspaceMenu`, the `chooseDownloads` action);
 - the command palette (`useWorkspaceCommands`);
-- Files: a button in its header, and its empty state, which says nothing is downloaded yet while the workspace holds
-  nothing (`showsNothingDownloaded`);
+- Files: a button in its header, only in a partial workspace (`showsChooseDownloadsButton`): there choosing folders
+  is everyday work, while in a standard one it makes the workspace partial, a rare step kept in the menu and the
+  palette as **Download the whole branch…** is in a partial one; and its empty state, which says nothing is
+  downloaded yet while the workspace holds nothing (`showsNothingDownloaded`);
 - a file or folder's menu in Files, which opens the dialog with that item selected and the folders above it open
   (`openChooseDownloads`'s `initialPath`, `revealedDownload`). It isn't offered on a private or added item, under an
   xlink, or on an item of another repository (`choosesDownloadsFor`): the dialog lists only what the workspace's own

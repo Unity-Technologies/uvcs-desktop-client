@@ -11,6 +11,15 @@ export function choosesDownloads(kind: WorkspaceKind | undefined, selector: Work
 }
 
 /**
+ * Whether Files' header has a Choose what to download button: only in a partial workspace, where choosing folders is
+ * everyday work. In a standard one, choosing makes it partial, a rare step kept in the workspace card's menu and the
+ * palette, as Download the whole branch is in a partial one.
+ */
+export function showsChooseDownloadsButton(kind: WorkspaceKind | undefined): boolean {
+  return kind === 'partial';
+}
+
+/**
  * What choosing changes for a standard workspace, in the words of the new workspace's "What to download" cards
  * (`downloadCards`); null when the workspace is already partial.
  */

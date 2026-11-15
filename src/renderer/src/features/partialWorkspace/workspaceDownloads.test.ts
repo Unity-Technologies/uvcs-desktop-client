@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
-import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote, downloadsWholeBranch } from './workspaceDownloads';
+import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote, downloadsWholeBranch, showsChooseDownloadsButton } from './workspaceDownloads';
 
 const onBranch: WorkspaceSelector = { kind: 'branch', name: '/main' };
 
@@ -23,6 +23,18 @@ describe('choosesDownloads', () => {
     expect(choosesDownloads('dynamic', onBranch)).toBe(false);
     expect(choosesDownloads(undefined, onBranch)).toBe(false);
     expect(choosesDownloads('standard', undefined)).toBe(false);
+  });
+});
+
+describe('showsChooseDownloadsButton', () => {
+  it('shows the button in a partial workspace, where choosing folders is everyday work', () => {
+    expect(showsChooseDownloadsButton('partial')).toBe(true);
+  });
+
+  it('leaves it out of a standard workspace, where choosing makes it partial: that stays in its menu and the palette', () => {
+    expect(showsChooseDownloadsButton('standard')).toBe(false);
+    expect(showsChooseDownloadsButton('dynamic')).toBe(false);
+    expect(showsChooseDownloadsButton(undefined)).toBe(false);
   });
 });
 
