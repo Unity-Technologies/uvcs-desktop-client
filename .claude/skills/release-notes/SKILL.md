@@ -87,9 +87,11 @@ reader gets the change faster from it than from the sentence; otherwise it's noi
 is never "is this a feature or a fix?" but "what would the user see?". A fix of something drawn wrong is the
 clearest case for a picture there is, and a new feature that lives in a menu everybody knows may need none.
 
-Decide three things, in this order, for every note.
+Decide these, in this order, for every note.
 
-### 1. Picture or not: what the user sees
+### 1. Which picture: what the user sees
+
+The kind of picture a change would get; step 2 decides whether it's worth making.
 
 | What the change gives users | The picture |
 | --- | --- |
@@ -114,21 +116,32 @@ state that shows it, add the before, or drop the picture. Never attach a picture
 
 One picture per note at most; a before and after made into one picture counts as one.
 
-### 2. Plan the shots when the work starts, and only those worth their cost
+### 2. Common sense: the picture matches the change's weight
 
-A picture costs time and tokens: an app to build and start, a sandbox, steps to find, a file to look at. A before and
-after costs the most, so spend on it only where the difference itself is the news:
+The table says what kind of picture a change would get; common sense says whether it's worth making. Pictures cost
+time and tokens, and not all the same:
 
-- **A before and after** when users would not understand the change without seeing both: a drawing error, a restyled
-  part of a view. Never when the sentence already says what was wrong ("the list lost its place") and the after shows
-  the rest: then the after alone.
-- **The before only when it's cheap**: one `scripts/screenshot.mjs` run while you reproduce the problem anyway. If it
-  wasn't taken, build `main` again only for a fix whose whole point is how it looks; otherwise the after alone, the
-  sentence saying what it replaced.
-- **One picture, once**: settle the steps and the crop on the first try, look at the result once, and stop. A second
-  attempt is for a picture that failed the test, not one that could be a little nicer.
-- **When in doubt between a picture and none**, the table decides, not the effort: a change on a "None" row never gets
-  one because it was easy to take.
+- **A single still is cheap**: one shot of the app already running for the visual check. Most notes that get a
+  picture get this one.
+- **A before and after and a GIF are costly**: two builds or a recording, steps that must match, a crop or a
+  conversion to get right. Make them only for a change users will really notice, where the difference or the
+  movement is the news, and that is worth a moment of every reader's attention.
+
+Weigh the change as a user would:
+
+- **A headline change** (a new view, a feature people asked for, a fix of something many saw every day) deserves the
+  picture the table names, made with care.
+- **A secondary one** (a small option, a corner case, a polish few will notice, a fix in a rarely used place) gets a
+  good sentence and no picture, even when something on screen changed. A still at most, if it's already taken and
+  passes the test.
+- **Never step up for its own sake**: no before and after where a still says it, no GIF where a still says it, no
+  picture where the sentence says it. If the before wasn't taken while reproducing the problem, rebuild `main` for it
+  only when the fix is all about how something looks and many will see it; otherwise the after alone, the sentence
+  saying what it replaced.
+- **One try**: settle the steps and the crop once, look at the result once, and stop. A second attempt is for a
+  picture that failed the test, not one that could be a little nicer.
+
+### 3. Plan the shots when the work starts
 
 A "before" can only be taken before the change. When the table says the note will want one, take it as soon as you
 reproduce the problem or open the screen to change: on `main`, in a sandbox, the whole window at the size you'll use
@@ -136,7 +149,7 @@ for the "after", with the theme and state written down, so the "after" can match
 repository (the session's scratch or temp folder) with its path written down: it goes to the reviewer and into the
 pull request, never into a commit. Taken later, it costs a build of `main` in a worktree.
 
-### 3. Frame it: element, region or window
+### 4. Frame it: element, region or window
 
 What's New shows a picture as wide as the text (about 600 pixels) and at most 360 pixels tall, and a click shows it
 larger. Frame the smallest thing that holds the change and tells where it is:
@@ -225,6 +238,7 @@ hand. Keep them for that; a still reads faster everywhere else.
 | **Fixed:** Closing a window no longer stops what it's doing | None | There's nothing to see |
 | **New:** Copy a link to any branch | None | **Copy ▸ Link** in the branch's menu says where it is |
 | **Improved:** Drag a branch onto another to merge it | A GIF of the drag, cropped to the two branches | It's a movement |
+| **Fixed:** The Sort menu's check mark lines up with its entries | None | Visible, but secondary: the sentence is enough |
 
 ## The words
 
