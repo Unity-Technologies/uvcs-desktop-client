@@ -144,19 +144,25 @@ And for all three:
 - **Real-looking content**: a sandbox (`scripts/sandboxes/`) with sensible names, nothing personal or internal on
   screen; the light theme, unless what changed is in the dark one.
 - **Small things at twice the pixels.** What's New never shows a picture larger than its own pixels, so a 300-pixel
-  crop of a button stays 300 pixels wide in a 600-pixel note. `playwright-cli screenshot --hires` takes the shot at
-  twice the pixels (its default is one pixel per point, whatever the screen): the same crop then shows twice as
-  large, sharp. Take every shot whose crop is under about 600 pixels wide that way.
+  crop of a button stays 300 pixels wide in a 600-pixel note. Take every shot whose crop is under about 600 pixels
+  wide at twice the pixels, with `scripts/screenshot.mjs --scale=2` (CLAUDE.md "Seeing the app"): it captures the
+  real window at twice its points on any screen, and its `move:<x>,<y>` step rests the pointer for what shows only on
+  hover. Not `playwright-cli screenshot --hires`: over the app's debugging port it takes the screen's own density,
+  one pixel per point on most screens.
 
 ### Before and after
 
 Two shots of the same place, the same window size, theme, content and state, so the change is the only difference,
-joined into one labeled picture. Take both of the whole window, then let the script crop them with one box, in the
-shots' pixels:
+joined into one labeled picture. Take both of the whole window with the same steps, the before from `main` and the
+after from the branch, then let the script crop them with one box, in the shots' pixels:
 
 ```bash
-npx electron scripts/beforeAfter.mjs --crop=560,288,420,70 before.png after.png before-after.png
-#   --scale=2 for shots taken with --hires, --dark for shots of the dark theme
+steps=(open:uvcs-code-reviews 'click:Code reviews' 'dblclick:Switching with changes keeps them' tab:Changes
+       size:1300x850 move:702,342)                                          # the same steps for both
+node scripts/screenshot.mjs --scale=2 "$TMPDIR/before.png" "${steps[@]}"   # built from main
+node scripts/screenshot.mjs --scale=2 "$TMPDIR/after.png" "${steps[@]}"    # built from the branch
+npx electron scripts/beforeAfter.mjs --scale=2 --crop=1124,580,876,204 "$TMPDIR/before.png" "$TMPDIR/after.png" before-after.png
+#   --dark for shots of the dark theme
 ```
 
 It lays the two side by side, or one above the other when they're wide strips, whichever shows larger in the note

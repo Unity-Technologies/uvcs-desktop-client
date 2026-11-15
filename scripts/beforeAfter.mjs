@@ -2,7 +2,7 @@
 // "Before and after"): side by side, or one above the other when the shots are wide strips (`beforeAfterLayout`).
 // Usage: npx electron scripts/beforeAfter.mjs [--scale=2] [--crop=x,y,width,height] [--dark] <before.png> <after.png> <output.png>
 //   --crop=x,y,w,h  crops both shots (the whole window, taken at the same size) to the same box, in the shots' pixels
-//   --scale=2       the shots were taken at twice the pixels (`playwright-cli screenshot --hires`): labels and spacing follow
+//   --scale=2       the shots were taken at twice the pixels (`scripts/screenshot.mjs --scale=2`): labels and spacing follow
 //   --dark          frames them in the dark theme's page, for shots of the dark theme
 // The two shots must be the same size: the same crop of the same place, so the change is all that differs.
 import { readFile, writeFile } from 'node:fs/promises';
