@@ -359,11 +359,12 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for, how you verified it and its release note with its pictures' paths (written now, with the
-   `release-notes` skill: step 6). A fresh context sees what the author's can't. The reviewer only reads: it runs no
-   tests, builds or app, since step 3 and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch,
-   folder, verification and release note; the agent that started it runs the review, then resumes it (Claude Code:
-   `SendMessage`) to do steps 5 and 6, or does them itself.
+   the change is for, how you verified it, and its release note (written now, with the `release-notes` skill: step 6)
+   with its pictures' paths, or the skill's row that made it none. A fresh context sees what the author's can't. The
+   reviewer only reads: it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't start
+   agents of its own stops after step 3 and reports its branch, folder, verification, release note and pictures' paths;
+   the agent that started it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does
+   them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in

@@ -54,8 +54,8 @@ note (the `release-notes` skill). If any of these is missing, say so in your rep
   truly notice nothing. A note written for reviewers, or a missing one, is a must-fix. Its picture, or its absence,
   follows the skill's "Pictures": the row of its table the change fits (a fix of something drawn wrong is a before and
   after, not "a fix, so none"), framed so the change shows at the note's size. Open the picture the author names and
-  apply the skill's test yourself; a picture that fails it, or a visible change with none and no reason, is a
-  should-fix.
+  apply the skill's test yourself. A change on a row that calls for a picture (a before and after, an after, a GIF)
+  with none is a must-fix; a picture that fails the test, or is framed too small to read, is a should-fix.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
 - **Visual validation**: for anything visible, did the author see it in the app as CLAUDE.md "Seeing the app" asks?
