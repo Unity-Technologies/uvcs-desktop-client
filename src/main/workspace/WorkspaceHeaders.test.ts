@@ -5,7 +5,7 @@ import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { cmHeaderReaders, WorkspaceHeaders, type HeaderReaders } from './WorkspaceHeaders';
 
-const STATUS: WorkspaceStatus = { repositoryName: 'repo', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 3 };
+const STATUS: WorkspaceStatus = { repositoryName: 'repo', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 3, partial: false };
 
 function setUp() {
   let now = 0;
