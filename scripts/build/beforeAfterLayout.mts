@@ -1,7 +1,8 @@
 /**
  * How a release note's before-and-after picture is laid out (`scripts/beforeAfter.mjs`, the `release-notes` skill):
  * the two shots, each under its label, in one picture, side by side or one above the other, whichever keeps the
- * picture closest to the shape What's New shows best.
+ * picture closest to the shape What's New shows best; and what the script is asked. Not the build's, but here, where
+ * the tests and the type check of the scripts' logic look. `.mts`: the script imports it as a module.
  */
 
 export interface ShotSize {
@@ -68,4 +69,59 @@ function aspectDistance({ width, height }: ShotSize): number {
 export function beforeAfterSizeError(before: ShotSize, after: ShotSize): string | null {
   if (before.width === after.width && before.height === after.height) return null;
   return `The before shot is ${before.width}×${before.height} and the after shot ${after.width}×${after.height}: crop both from the same area, at the same window size.`;
+}
+
+/** A box of a shot, in its pixels: what both shots are cropped to, so they show the same place. */
+export interface CropBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Why `box` can't crop a shot of `shot`'s size, or null when it can. */
+export function cropBoxError(box: CropBox, shot: ShotSize): string | null {
+  if (box.x + box.width <= shot.width && box.y + box.height <= shot.height) return null;
+  return `The crop ${box.x},${box.y},${box.width},${box.height} reaches past the ${shot.width}×${shot.height} shot.`;
+}
+
+export interface BeforeAfterArguments {
+  before: string;
+  after: string;
+  output: string;
+  pixelRatio: number;
+  /** One box for both shots, taken whole (the window); null when they're cropped already. */
+  crop: CropBox | null;
+  /** Framed in the dark theme's page, for shots of the dark theme. */
+  dark: boolean;
+}
+
+export const BEFORE_AFTER_USAGE =
+  'Usage: npx electron scripts/beforeAfter.mjs [--scale=2] [--crop=x,y,width,height] [--dark] <before.png> <after.png> <output.png>';
+
+/** What the script is asked (its arguments after its own path), or its usage when they make no sense. */
+export function beforeAfterArguments(args: readonly string[]): BeforeAfterArguments | string {
+  const files = args.filter((argument) => !argument.startsWith('--'));
+  let pixelRatio = 1;
+  let crop: CropBox | null = null;
+  let dark = false;
+  for (const option of args.filter((argument) => argument.startsWith('--'))) {
+    if (option === '--dark') dark = true;
+    else if (option.startsWith('--scale=')) pixelRatio = Number(option.slice('--scale='.length));
+    else if (option.startsWith('--crop=')) crop = cropBoxOf(option.slice('--crop='.length));
+    else return BEFORE_AFTER_USAGE;
+  }
+  const scaleIsValid = Number.isFinite(pixelRatio) && pixelRatio > 0;
+  const cropIsValid = !args.some((argument) => argument.startsWith('--crop=')) || crop !== null;
+  if (files.length !== 3 || !scaleIsValid || !cropIsValid) return BEFORE_AFTER_USAGE;
+  const [before, after, output] = files;
+  return { before, after, output, pixelRatio, crop, dark };
+}
+
+/** `x,y,width,height` in whole pixels, a box with room in it; null otherwise. */
+function cropBoxOf(text: string): CropBox | null {
+  const numbers = text.split(',').map(Number);
+  if (numbers.length !== 4 || numbers.some((value) => !Number.isInteger(value) || value < 0)) return null;
+  const [x, y, width, height] = numbers;
+  return width > 0 && height > 0 ? { x, y, width, height } : null;
 }
