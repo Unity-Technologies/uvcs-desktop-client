@@ -47,6 +47,48 @@ describe('lineHover', () => {
     expect(shown).toEqual([3, null]);
   });
 
+  it('keeps the line while the pointer is on the button, whichever the diff or the button says first', () => {
+    const shown: (number | null)[] = [];
+    const { frames, passFrame } = testFrames();
+    const hover = lineHover<number>((line) => shown.push(line), frames);
+
+    hover.enter(3);
+    hover.hold();
+    hover.leave();
+    passFrame();
+
+    expect(shown).toEqual([3]);
+  });
+
+  it('clears it a frame after the pointer leaves the button for somewhere off the lines', () => {
+    const shown: (number | null)[] = [];
+    const { frames, passFrame } = testFrames();
+    const hover = lineHover<number>((line) => shown.push(line), frames);
+
+    hover.enter(3);
+    hover.hold();
+    hover.leave();
+    hover.release();
+    passFrame();
+
+    expect(shown).toEqual([3, null]);
+  });
+
+  it('shows the line the pointer goes to from the button', () => {
+    const shown: (number | null)[] = [];
+    const { frames, passFrame } = testFrames();
+    const hover = lineHover<number>((line) => shown.push(line), frames);
+
+    hover.enter(3);
+    hover.hold();
+    hover.leave();
+    hover.release();
+    hover.enter(4);
+    passFrame();
+
+    expect(shown).toEqual([3, 4]);
+  });
+
   it('calls off a clear still waiting once disposed', () => {
     const shown: (number | null)[] = [];
     const { frames, waiting } = testFrames();
