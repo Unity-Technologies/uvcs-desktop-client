@@ -10,6 +10,16 @@ the app, and on the GitHub releases page. It is not for reviewers: the pull requ
 are. The two are written apart, for different readers. Write the note for someone who uses version control every day,
 has never seen this change, and will read it once, quickly.
 
+**A release note is part of the product's UX**, held to the same bar as a screen: it's the first a user sees of a
+change, and often the only way they learn it exists. A good one is read in a few seconds, and leaves the reader
+wanting to try it and knowing where:
+
+- **The benefit first**, then how: what the user can now do, or what stopped going wrong, before any detail.
+- **A way to try it now**: the place, the click, the shortcut. One concrete step beats a paragraph of description.
+- **One idea per note**, in the app's own calm voice: no hype, no exclamation marks, nothing that oversells.
+- **Words and picture work as one**: the picture shows what the sentence says, so neither repeats the other, and
+  each note in What's New reads at a glance next to the others.
+
 Every pull request has one: a note, or "None:" and why. The Release note check (`readReleaseNote`,
 `scripts/build/releaseNote.ts`) fails a pull request without either.
 
@@ -223,5 +233,6 @@ changeset, label, shelve, checkin, merge, xlink, code review, pending changes. N
 2. Does the description say where to find it, or what they saw before a fix?
 3. Is every word one the app shows or a UVCS user already says?
 4. Is it as short as it can be and still say all of that?
-5. Does the picture, or its absence, follow "Pictures": the row of the table the change fits, and the test passed on
+5. Would a user reading it once want to try it, and know where to go?
+6. Does the picture, or its absence, follow "Pictures": the row of the table the change fits, and the test passed on
    the file itself?
