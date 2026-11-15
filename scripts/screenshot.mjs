@@ -8,6 +8,8 @@
 //   dblclick:<text>        double-click it
 //   label:<name>           click the first element with that accessible name (icon buttons, e.g. label:Command log)
 //   hover:<text>           hover the first element showing <text> (tooltips)
+//   move:<x>,<y>           rest the pointer at a point of the window, in points (what shows only on hover: a line's "+")
+//   tab:<name>             pick the tab named <name> (a view's tabs, whose names other elements share)
 //   key:<keys>             press keys, e.g. key:Meta+3 (key:ControlOrMeta+3 on any OS)
 //   type:<text>            type text into the focused element
 //   wait:<ms>              wait
@@ -78,6 +80,16 @@ for (const step of steps) {
       break;
     case 'hover':
       await window.getByText(value, { exact: true }).first().hover({ timeout: 10000 });
+      break;
+    case 'move': {
+      const [x, y] = value.split(',').map(Number);
+      // In two moves, as a hand arrives: hover handlers that wait for the pointer to move see it.
+      await window.mouse.move(x - 2, y - 1);
+      await window.mouse.move(x, y);
+      break;
+    }
+    case 'tab':
+      await window.getByRole('tab', { name: value }).first().click({ timeout: 10000 });
       break;
     case 'key':
       await window.keyboard.press(value);
