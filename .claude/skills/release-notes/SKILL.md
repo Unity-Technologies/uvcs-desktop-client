@@ -114,7 +114,21 @@ state that shows it, add the before, or drop the picture. Never attach a picture
 
 One picture per note at most; a before and after made into one picture counts as one.
 
-### 2. Plan the shots when the work starts
+### 2. Plan the shots when the work starts, and only those worth their cost
+
+A picture costs time and tokens: an app to build and start, a sandbox, steps to find, a file to look at. A before and
+after costs the most, so spend on it only where the difference itself is the news:
+
+- **A before and after** when users would not understand the change without seeing both: a drawing error, a restyled
+  part of a view. Never when the sentence already says what was wrong ("the list lost its place") and the after shows
+  the rest: then the after alone.
+- **The before only when it's cheap**: one `scripts/screenshot.mjs` run while you reproduce the problem anyway. If it
+  wasn't taken, build `main` again only for a fix whose whole point is how it looks; otherwise the after alone, the
+  sentence saying what it replaced.
+- **One picture, once**: settle the steps and the crop on the first try, look at the result once, and stop. A second
+  attempt is for a picture that failed the test, not one that could be a little nicer.
+- **When in doubt between a picture and none**, the table decides, not the effort: a change on a "None" row never gets
+  one because it was easy to take.
 
 A "before" can only be taken before the change. When the table says the note will want one, take it as soon as you
 reproduce the problem or open the screen to change: on `main`, in a sandbox, the whole window at the size you'll use
