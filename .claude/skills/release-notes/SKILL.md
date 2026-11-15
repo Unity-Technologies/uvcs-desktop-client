@@ -84,16 +84,18 @@ Decide three things, in this order, for every note.
 | What the change gives users | The picture |
 | --- | --- |
 | Something drawn wrong, now right: overlapping, cut off, misaligned, in the wrong place, the wrong color in a theme | **Before and after**, the same crop |
-| A new look for something that was already there: a denser list, a clearer card, a rearranged panel | **Before and after**, the same crop |
+| A new look for a part of a view that was already there: a denser list, a clearer card, a rearranged panel | **Before and after**, the same crop |
 | Something new to look at: a view, a page, a dialog, a panel, a kind of row | **After**: the new thing, whole |
-| A new arrangement of a whole screen, or a feature spread over the window (a sidebar entry and its view) | **After**: the window |
-| A movement: something that follows the pointer, a drag, an animation, a short flow of two or three steps | **A GIF** |
+| A new arrangement of a whole screen, or a feature spread over the window (a sidebar entry and its view) | **After**: the window, the sentence saying what it replaces (two windows joined show too small to read) |
+| A movement: something that follows the pointer, a drag, an animation, a flow whose news is the sequence itself, not one screen in it | **A GIF** |
 | A movement that went wrong: a flicker, a jump, a list that lost its place, something that should have stayed put | **A GIF** of it now, the sentence saying what it did before |
 | An entry added to a menu, a button to a toolbar, a shortcut | **None**: the sentence names where it is (**Copy ▸ Link** in the branch's menu). A picture only when it's hard to find or its icon is the news |
 | Nothing looks different: faster, a crash or an error gone, the right data where the wrong one showed in the same place, a word changed, a default | **None**: the sentence says it; a picture of an ordinary screen tells nothing |
 
 When two rows seem to fit, take the one closer to what the user noticed before (a bug) or will notice first (a
-feature). When none fits, apply the test below to the picture you would take; if it fails, there is none.
+feature). When none fits, apply the test below to the picture you would take; if it fails, there is none. Write down
+the row you chose: the reviewer gets it with the note (CLAUDE.md "Delivering work", step 4), and a note with no picture
+says there which row made it none.
 
 **The test, on the picture itself.** Open the file you made (the Read tool shows it) and look at it as the note
 shows it, about 600 pixels wide. With only the title beside it, could someone point at the change within two
@@ -105,8 +107,10 @@ One picture per note at most; a before and after made into one picture counts as
 ### 2. Plan the shots when the work starts
 
 A "before" can only be taken before the change. When the table says the note will want one, take it as soon as you
-reproduce the problem or open the screen to change: on `main`, in a sandbox, with the window size, theme and state
-written down, so the "after" can match it exactly. Taken later, it costs a build of `main` in a worktree.
+reproduce the problem or open the screen to change: on `main`, in a sandbox, the whole window at the size you'll use
+for the "after", with the theme and state written down, so the "after" can match it exactly. Keep it outside the
+repository (the session's scratch or temp folder) with its path written down: it goes to the reviewer and into the
+pull request, never into a commit. Taken later, it costs a build of `main` in a worktree.
 
 ### 3. Frame it: element, region or window
 
@@ -117,7 +121,8 @@ larger. Frame the smallest thing that holds the change and tells where it is:
   a toolbar. `playwright-cli screenshot <ref>` takes it already cropped.
 - **A region** when it's part of a view: take the window (`playwright-cli screenshot`) and crop the file, keeping a
   strip of what places it (the panel's header, the line numbers, the file list's edge), so the user knows where to
-  look. If the change is a few pixels in a big crop (a button in a whole diff), crop tighter.
+  look. If the change is a few pixels in a big crop (a button in a whole diff), crop tighter, and take the shot at
+  twice the pixels (below): cropping removes clutter but enlarges nothing.
 - **The window** only when the news is the whole screen: a new layout, a feature spread over it. A sensible size
   (about 1200×760), so its text still reads when shrunk to 600 pixels.
 
@@ -126,22 +131,28 @@ And for all three:
 - **The state that shows it**: the menu open, the row hovered, the conflict selected, the comment written. Something
   shown only on hover is shot while hovered (Playwright's screenshots leave the pointer out).
 - **Wider than tall**, or about square: a tall crop is shrunk to 360 pixels high and its text gets hard to read.
-- **Real-looking content**: a sandbox (`scripts/sandboxes/`) with sensible names, the light theme, nothing personal
-  or internal on screen.
-- **High-density screens**: on a Retina Mac the file has twice the pixels; that's fine, What's New fits it to the
-  note and shows it larger on a click.
+- **Real-looking content**: a sandbox (`scripts/sandboxes/`) with sensible names, nothing personal or internal on
+  screen; the light theme, unless what changed is in the dark one.
+- **Small things at twice the pixels.** What's New never shows a picture larger than its own pixels, so a 300-pixel
+  crop of a button stays 300 pixels wide in a 600-pixel note. `playwright-cli screenshot --hires` takes the shot at
+  twice the pixels (its default is one pixel per point, whatever the screen): the same crop then shows twice as
+  large, sharp. Take every shot whose crop is under about 600 pixels wide that way.
 
 ### Before and after
 
-Two shots of the same place, the same crop, window size, theme, content and state, so the change is the only
-difference, joined into one labeled picture:
+Two shots of the same place, the same window size, theme, content and state, so the change is the only difference,
+joined into one labeled picture. Take both of the whole window, then let the script crop them with one box, in the
+shots' pixels:
 
 ```bash
-npx electron scripts/beforeAfter.mjs before.png after.png before-after.png   # --scale=2 for Retina shots
+npx electron scripts/beforeAfter.mjs --crop=560,288,420,70 before.png after.png before-after.png
+#   --scale=2 for shots taken with --hires, --dark for shots of the dark theme
 ```
 
 It lays the two side by side, or one above the other when they're wide strips, whichever shows larger in the note
-(`beforeAfterLayout`), and refuses two shots of different sizes. Crop both with the same box. The alt text says what
+(`beforeAfterLayout`), and refuses a box past the shots or two shots of different sizes. Joined, each shot shows at
+about half the note's size (under 300 pixels wide side by side, under 160 tall stacked), so a before and after is
+for an element or a region, never two windows: take its shots at twice the pixels. The alt text says what
 changed: `![Before, the outline crossed the + button; after, the button is drawn above it](./before-after.png)`.
 
 ### GIFs
