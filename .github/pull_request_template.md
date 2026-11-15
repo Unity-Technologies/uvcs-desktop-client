@@ -12,8 +12,8 @@ release-notes skill (.claude/skills/release-notes). One note:
 
 <A sentence or two: what it is, where to find it; for a fix, what users saw and what happens now.>
 
-Only when the skill's "Pictures and GIFs" says the note gets a picture (it decides whether, a still or a GIF, and
-which part of the screen), it goes here, attached with `gh pr create --attach ./shot.png`:
+Only when the skill's "Pictures" says the note gets a picture (it decides whether, and which: the element, a region,
+the window, a before and after or a GIF), it goes here, attached with `gh pr create --attach ./shot.png`:
 
 ![What it shows](./shot.png)
 
