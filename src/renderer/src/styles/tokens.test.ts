@@ -25,6 +25,7 @@ const TEXT = [
   '--positive-text',
   '--caution-text',
   '--danger-text',
+  '--comment-kind-text',
   '--syntax-command',
   '--syntax-option',
   '--syntax-variable',

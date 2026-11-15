@@ -21,7 +21,8 @@ import { useReviewConversation } from './useReviewConversation';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CheckinsRow } from '../rounds/CheckinsRow';
 import { RoundMarker } from '../rounds/RoundMarker';
-import { conversationBlocksOf, roundCountOf, roundHolding, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { conversationBlocksOf, roundCountOf, roundHolding, stepGroupsOf, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { useConversationLayout } from '../rounds/useConversationLayout';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
 import { newChangesetsSpan } from '../../diff/branchChangesetRows';
@@ -50,16 +51,21 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const seeInContext = useCommentContext(review);
   // "Applied" shows how the change request was applied, in context, as in the code.
   const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
-    seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
+    seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since', steps }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
   // A branch's changesets place its check-ins and say where each reviewer left off (`conversationBlocksOf`).
   const { changesets, checkpoint, settled: changesetsSettled } = useReviewCheckpoint(review);
   // "See the changes": what was checked in since the user's last review, selected together in Changes as one diff.
   const newSpan = newChangesetsSpan(changesets, checkpoint);
+  // Laid out once while the page is open: what the user (or a refresh) changes updates the cards in place, never moves
+  // a thread or folds a round (`useConversationLayout`).
+  const layout = useConversationLayout(review, user);
   const blocks = useMemo(
-    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date }) : []),
-    [conversation, user, changesets, review.date],
+    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date, layout }) : []),
+    [conversation, user, changesets, review.date, layout],
   );
+  // "How it was applied" steps through the threads where this page shows them, not where a fresh layout would.
+  const steps = useMemo(() => stepGroupsOf(blocks), [blocks]);
   const [toggledRounds, setToggledRounds] = useState<ReadonlySet<number>>(() => new Set());
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 

@@ -1,4 +1,4 @@
-import { Database, Plus, RefreshCw, ServerCog, Trash2 } from 'lucide-react';
+import { Database, DatabasePlus, RefreshCw, ServerCog, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import type { RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { openServerPermissions } from '../../features/permissions/openPermissions';
@@ -64,7 +64,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           <>
             <IconButton icon={<ServerCog size={14} />} label="Server permissions…" onClick={() => openServerPermissions(server)} />
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateRepositoryDialog({ server, project, onWorkspaceCreated: onOpen })}>
+            <Button variant="primary" icon={<DatabasePlus size={14} />} onClick={() => openCreateRepositoryDialog({ server, project, onWorkspaceCreated: onOpen })}>
               New repository
             </Button>
           </>

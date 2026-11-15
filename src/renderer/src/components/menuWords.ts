@@ -9,8 +9,10 @@ import {
   ArrowUpDown,
   ArrowUpFromLine,
   Binary,
+  CheckCheck,
   Cherry,
   CircleCheck,
+  CircleDashed,
   CircleDot,
   ClipboardPaste,
   CodeXml,
@@ -56,7 +58,7 @@ import {
   LockOpen,
   Merge,
   MessageSquare,
-  MessageSquareCode,
+  MessageSquareDiff,
   MessageSquarePlus,
   MessageSquareText,
   Minus,
@@ -77,7 +79,7 @@ import {
   SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
-  Tag,
+  TagPlus,
   Telescope,
   Text,
   TextSelect,
@@ -186,6 +188,9 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // A review's change request marked by hand (`changeRequestMarkOf`): applied in a changeset picked, or open again.
+  markApplied: word('act', CheckCheck, 'Mark as applied…'),
+  markNotApplied: word('act', CircleDashed, 'Mark as not applied'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),
@@ -201,8 +206,8 @@ export const MENU_WORDS = {
 
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
-  newLabel: word('create', Tag, 'New label…'),
-  newCodeReview: word('create', MessageSquareCode, 'New code review…'),
+  newLabel: word('create', TagPlus, 'New label…'),
+  newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),
   // A folder showing another repository (docs/features/xlinks.md).
@@ -212,6 +217,8 @@ export const MENU_WORDS = {
   newWindow: word('create', AppWindow, 'New window'),
   // A place's own action on a line of code (`lineMenu`, `DiffAnnotations.lineAction`): a review's "Comment on line 42".
   lineAction: word('create', MessageSquarePlus),
+  // Its other way (`LineAction.variant`): a review's "Suggest change on line 42".
+  lineActionVariant: word('create', MessageSquareDiff),
 
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),

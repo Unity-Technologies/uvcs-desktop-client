@@ -18,7 +18,10 @@ export const typingAt = StateField.define<number | null>({
   },
 });
 
-/** The focus's mirror (`hasFocus`) going from focused to not, in a field that keeps one. */
-function lostFocus(transaction: Transaction): boolean {
+/**
+ * The focus's mirror (`hasFocus`) going from focused to not, in a field that keeps one: it ends the typing, and the
+ * list the change requests button opened (`changeRequestsOpened`).
+ */
+export function lostFocus(transaction: Transaction): boolean {
   return transaction.startState.field(hasFocus, false) === true && transaction.state.field(hasFocus, false) === false;
 }

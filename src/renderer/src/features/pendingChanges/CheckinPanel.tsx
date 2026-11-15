@@ -1,21 +1,24 @@
-import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { ArrowDownToLine, GitMerge } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { CommentField } from '../../components/commentEditor/CommentField';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
+import { ChangeRequestsContext } from '../../components/commentEditor/changeRequestsContext';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
-import { recentCommentPick, withSummaryText } from '../../lib/comment';
+import { withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { IconButton } from '../../ui/IconButton';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { ResizeHandle } from '../../ui/ResizeHandle';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
+import { DescriptionFooter } from './DescriptionFooter';
+import { descriptionFooterButtons, descriptionHeightWith } from './descriptionFooterButtons';
+import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
+import { changeRequestsBranch, notYetNamed } from '../codeReviews/changeRequests/changeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -91,6 +94,12 @@ export function CheckinPanel({
   // The field a recent comment picked puts the caret in, once its menu closes.
   const caretAfterPick = useRef<'summary' | 'description' | null>(null);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
+  // The change requests a check-in on the workspace's branch can apply, offered in its comment (`[apply`, their button),
+  // read once the pending changes are, so they never hold up the list; the ones the comment names already left out.
+  const branchRequests = useBranchChangeRequests(changeRequestsBranch(workingOn, mode), listedCount !== undefined);
+  const offered = useMemo(() => notYetNamed(branchRequests.requests, `${summary}\n${description}`), [branchRequests.requests, summary, description]);
+  const changeRequests = useMemo(() => ({ ...branchRequests, requests: offered }), [branchRequests, offered]);
+  const footerButtons = descriptionFooterButtons({ recentComments: recentComments.length, changeRequests: offered.length });
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
@@ -134,55 +143,53 @@ export function CheckinPanel({
     <div className={styles.panel}>
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       {/* Focus mode opens the summary and the description together (`focusModeFields('checkin')`). */}
-      <CommentFocusGroup>
-        <div className={styles.summaryField}>
+      <ChangeRequestsContext value={changeRequests}>
+        <CommentFocusGroup>
+          <div className={styles.summaryField}>
+            <CommentField
+              ref={summaryRef}
+              groupField="summary"
+              singleLine
+              className={styles.summary}
+              label={shelving ? 'Shelve summary' : 'Summary'}
+              placeholder={shelving ? 'Shelve summary' : 'Summary'}
+              value={summary}
+              // Pasted lines go on in the description, as the title takes one line.
+              onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
+              onEnter={() => descriptionRef.current?.focus()}
+            />
+          </div>
           <CommentField
-            ref={summaryRef}
-            groupField="summary"
-            singleLine
-            className={styles.summary}
-            label={shelving ? 'Shelve summary' : 'Summary'}
-            placeholder={shelving ? 'Shelve summary' : 'Summary'}
-            value={summary}
-            // Pasted lines go on in the description, as the title takes one line.
-            onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
-            onEnter={() => descriptionRef.current?.focus()}
-          />
-          {recentComments.length > 0 && (
-            <ActionDropdownMenu
-              entries={recentComments.map((recent, index) => ({
-                id: `recent.${index}`,
-                label: recent.split('\n')[0]!,
-                run: () => {
-                  const pick = recentCommentPick(recent);
+            ref={descriptionRef}
+            groupField="description"
+            className={styles.description}
+            label="Description"
+            placeholder={DESCRIPTION_PLACEHOLDER}
+            style={{ height: descriptionHeightWith(descriptionHeight, footerButtons) }}
+            value={description}
+            onChange={(text) => onMessageChange({ description: text })}
+            footer={
+              <DescriptionFooter
+                buttons={footerButtons}
+                recentComments={recentComments}
+                onRecentComment={(pick) => {
                   onMessageChange(pick.parts);
                   caretAfterPick.current = pick.caretIn;
-                },
-              }))}
-              // The caret goes to the text picked, not back to the button.
-              onCloseAutoFocus={(event) => {
-                const field = caretAfterPick.current;
-                caretAfterPick.current = null;
-                if (!field) return;
-                event.preventDefault();
-                (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
-              }}
-            >
-              <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
-            </ActionDropdownMenu>
-          )}
-        </div>
-        <CommentField
-          ref={descriptionRef}
-          groupField="description"
-          className={styles.description}
-          label="Description"
-          placeholder={DESCRIPTION_PLACEHOLDER}
-          style={{ height: descriptionHeight }}
-          value={description}
-          onChange={(text) => onMessageChange({ description: text })}
-        />
-      </CommentFocusGroup>
+                }}
+                // The caret goes to the text picked, not back to the button.
+                onRecentMenuClosed={(event) => {
+                  const field = caretAfterPick.current;
+                  caretAfterPick.current = null;
+                  if (!field) return;
+                  event.preventDefault();
+                  (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
+                }}
+                onChangeRequests={() => descriptionRef.current?.openChangeRequests()}
+              />
+            }
+          />
+        </CommentFocusGroup>
+      </ChangeRequestsContext>
       {shelving && (
         <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
           <Checkbox checked={keepShelved} onChange={setKeepShelved} label="Keep the changes here" />

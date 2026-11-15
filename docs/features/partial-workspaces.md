@@ -97,7 +97,7 @@ thousands of items is still one command, past the command-line limit, rather tha
 
 `cm` has no command to convert a workspace: the first `cm partial configure` run in a standard workspace makes it
 partial. So a standard workspace is offered **Choose what to download…** too, but only on a branch
-(`choosesDownloads`): a partial workspace works only on a branch, and a dynamic one downloads files as they're opened.
+(`choosesDownloads`), the only place the app makes one partial, and a dynamic one downloads files as they're opened.
 The dialog says what applying changes, in the words of the Create workspace dialog's cards (`chooseDownloadsNote`,
 its description): only the folders picked download, each file updates on its own, and merging needs the whole branch.
 Nothing changes until Apply; Cancel leaves the workspace standard. The tree starts with everything checked, since a

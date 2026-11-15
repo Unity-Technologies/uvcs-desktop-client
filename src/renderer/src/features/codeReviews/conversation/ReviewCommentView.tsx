@@ -1,27 +1,31 @@
-import { MoreHorizontal } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
+import { lazyComponent } from '../../../lib/lazyComponent';
 import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
-import { IconButton } from '../../../ui/IconButton';
-import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { RelativeTime } from '../../../ui/RelativeTime';
+import { SuggestedChangeBlock } from '../suggestions/SuggestedChangeBlock';
+import { suggestedChangeOf, type SuggestedChange } from '../suggestions/suggestedChange';
 import { CommentComposer } from './CommentComposer';
-import { reviewCommentCopyTexts } from './commentLink';
-import { commentMenu } from './commentMenu';
-import { deleteReviewComment, editReviewComment } from './reviewCommentOperations';
+import { CommentMenuButton } from './CommentMenuButton';
+import { editReviewComment } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
+import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import styles from './ReviewConversation.module.css';
 
+// Applying a suggestion follows its line into the workspace's file with the diffs' line diff (Pierre's): loaded with the
+// first suggestion shown, never at start-up. Its header keeps its height while it loads.
+const SuggestionApplyButton = lazyComponent(() => import('../suggestions/SuggestionApplyButton').then((module) => module.SuggestionApplyButton));
+
 interface ReviewCommentViewProps {
-  /** The review it's on, whose link its own extends. */
-  review: Pick<CodeReview, 'id'>;
+  /** The review it's on: its link extends the review's; its change requests are marked applied in its changesets (`changesetsToApplyIn`). */
+  review: Pick<CodeReview, 'id' | 'target'>;
   comment: ReviewComment;
   thread: ReviewThread;
   user: string | undefined;
@@ -30,7 +34,11 @@ interface ReviewCommentViewProps {
   /** Whether its author wrote the review: marked Author, as who answers for the changes. */
   byReviewAuthor?: boolean;
   /** What its thread offers from the code, in a first comment's menu (`commentMenu`). */
-  threadActions?: Pick<Parameters<typeof commentMenu>[3], 'showInConversation'>;
+  threadActions?: CommentThreadActions;
+  /** Opens in its editor: Edit was picked on its folded card's header, which unfolded it. */
+  startsEditing?: boolean;
+  /** Its editor opened as `startsEditing` asked, which spends the ask (`threadCardFold`'s `editorOpened`). */
+  onEditorOpened?: () => void;
   /**
    * Gone to, the how-many-th time: lit for a moment, and scrolled to when it `scrolls` (the reply an Answered pill leads
    * to; a reply a link goes to is scrolled to by the conversation, `pickedElementId`).
@@ -41,7 +49,7 @@ interface ReviewCommentViewProps {
 }
 
 /** One comment: who wrote it and when, its Markdown, and its menu; its author edits it in place. */
-export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, lit, elementId }: ReviewCommentViewProps) {
+export function ReviewCommentView({ review, comment, thread, user, action, byReviewAuthor = false, threadActions, startsEditing = false, onEditorOpened, lit, elementId }: ReviewCommentViewProps) {
   const place = usePlace();
   const element = useRef<HTMLElement>(null);
   const litSeq = lit?.seq;
@@ -49,13 +57,12 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
   useEffect(() => {
     if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [litSeq, scrollsWhenLit]);
-  const [editing, setEditing] = useState(false);
-  const menu = commentMenu(comment, thread, user, {
-    edit: () => setEditing(true),
-    remove: () => void deleteReviewComment(place, comment),
-    copyTexts: reviewCommentCopyTexts(place, review.id, comment),
-    ...threadActions,
-  });
+  const [editing, setEditing] = useState(startsEditing);
+  useEffect(() => {
+    if (startsEditing) onEditorOpened?.();
+  }, [startsEditing, onEditorOpened]);
+  const suggestion = useMemo(() => suggestedChangeOf(comment), [comment]);
+  const menu = useCommentMenu({ review, comment, thread, user, edit: () => setEditing(true), threadActions });
 
   return (
     <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit.seq % 2} aria-label={`${displayName(comment.author)}'s comment`}>
@@ -73,11 +80,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
               </span>
             )}
           </span>
-          <span className={styles.commentMenu}>
-            <ActionDropdownMenu entries={menu}>
-              <IconButton size="small" icon={<MoreHorizontal size={14} />} label="Comment actions" />
-            </ActionDropdownMenu>
-          </span>
+          <CommentMenuButton entries={menu} />
         </header>
         {editing ? (
           <CommentComposer
@@ -96,10 +99,20 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
           />
         ) : (
           <div className={`${styles.markdown} selectable`}>
-            <Markdown text={comment.text} comment />
+            <Markdown text={comment.text} comment suggestion={suggestion ? <CommentSuggestion review={review} comment={comment} thread={thread} change={suggestion} /> : undefined} />
           </div>
         )}
       </div>
     </article>
   );
+}
+
+/** A change request's suggestion, in place of its fence: what it changes, and applying it while the request is open. */
+function CommentSuggestion({ review, comment, thread, change }: { review: Pick<CodeReview, 'target'>; comment: ReviewComment; thread: ReviewThread; change: SuggestedChange }) {
+  const actions = (
+    <Suspense fallback={null}>
+      <SuggestionApplyButton review={review} comment={comment} change={change} open={thread.state.kind === 'open'} />
+    </Suspense>
+  );
+  return <SuggestedChangeBlock change={change} actions={actions} />;
 }

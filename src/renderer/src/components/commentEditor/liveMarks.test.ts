@@ -126,6 +126,10 @@ describe('liveMarksOf', () => {
       expect(marksIn('| Issue |\n| --- |\n| https://jira.acme.com/browse/VCS-12 |\n\n‸').some((mark) => mark.startsWith('reference'))).toBe(false);
     });
 
+    it("draws cm's [apply-change:…] as its chip, never as a link's brackets", () => {
+      expect(marksOf('Shelve first [apply-change:c0d1ce00] ‸')).toEqual(['reference [apply-change:c0d1ce00]']);
+    });
+
     it('draws every reference as its chip', () => {
       expect(marksOf('Fixes cs:12 on br:/main/task for @ana :tada: ‸')).toEqual(['reference cs:12', 'reference br:/main/task', 'reference @ana', 'reference :tada:']);
     });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ownReviewButton } from './ownReview';
+import { ownReviewButton, ownReviewChoice } from './ownReview';
 
 const review = { reviewers: [{ name: 'ana@acme.com', status: 'Rework required' as const }] };
 
@@ -14,6 +14,23 @@ describe('ownReviewButton', () => {
 
   it('reads Review, adding nobody, while who the user is is still read', () => {
     expect(ownReviewButton(review, undefined)).toEqual({ label: 'Review', joining: false, preselected: 'Reviewed' });
+  });
+});
+
+describe('ownReviewChoice', () => {
+  it('opens on the status the user picked and left unsent, not the one they gave', () => {
+    expect(ownReviewChoice(ownReviewButton(review, 'ana@acme.com'), { status: 'Reviewed', over: 'Rework required' })).toBe('Reviewed');
+  });
+
+  it('drops a pick once the status it was picked over changed elsewhere (the menu, another window)', () => {
+    const setElsewhere = { reviewers: [{ name: 'ana@acme.com', status: 'Under review' as const }] };
+
+    expect(ownReviewChoice(ownReviewButton(setElsewhere, 'ana@acme.com'), { status: 'Reviewed', over: 'Rework required' })).toBe('Under review');
+  });
+
+  it('opens on the preselected status when nothing was picked', () => {
+    expect(ownReviewChoice(ownReviewButton(review, 'ana@acme.com'), undefined)).toBe('Rework required');
+    expect(ownReviewChoice(ownReviewButton(review, 'eva@acme.com'), undefined)).toBe('Reviewed');
   });
 });
 

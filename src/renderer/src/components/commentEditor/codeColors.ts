@@ -1,7 +1,8 @@
 import { Facet, StateEffect, type Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
-import { codeColorsAfter, mapMarks, type Colored } from './codeColorDrawing';
+import { codeColorsAfter, colorsRedrawn, mapMarks, type Colored } from './codeColorDrawing';
+import { commentedFileLanguage } from './commentedFileLanguage';
 import { colorArrival, type ColorArrival } from './colorArrival';
 
 /** The diffs' theme the code is colored in (`pierreThemeName`), following the app's. */
@@ -43,11 +44,15 @@ export const codeColors: Extension = ViewPlugin.fromClass(
 
     update(update: ViewUpdate): void {
       if (update.docChanged) this.arrival.typed();
-      const arrived = update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(colorsArrived)));
-      // Another theme's colors would be wrong to keep: the blocks show plain until theirs arrive, as at the first load.
-      const themed = update.startState.facet(codeTheme) !== update.state.facet(codeTheme);
-      if (themed) this.draw([]);
-      else if (update.docChanged || update.viewportChanged || arrived) this.draw(update.docChanged ? mapMarks(this.marks, update.changes) : this.marks);
+      const redrawn = colorsRedrawn({
+        docChanged: update.docChanged,
+        viewportChanged: update.viewportChanged,
+        colorsArrived: update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(colorsArrived))),
+        themeChanged: update.startState.facet(codeTheme) !== update.state.facet(codeTheme),
+        commentedFileChanged: update.startState.facet(commentedFileLanguage) !== update.state.facet(commentedFileLanguage),
+      });
+      if (redrawn === 'anew') this.draw([]);
+      else if (redrawn === 'kept') this.draw(update.docChanged ? mapMarks(this.marks, update.changes) : this.marks);
     }
 
     destroy(): void {

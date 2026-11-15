@@ -5,15 +5,22 @@ import { choosesDownloads, choosesDownloadsFor, chooseDownloadsNote, downloadsWh
 const onBranch: WorkspaceSelector = { kind: 'branch', name: '/main' };
 
 describe('choosesDownloads', () => {
-  it('lets a partial workspace choose what it downloads', () => {
+  it('lets a partial workspace on a branch choose what it downloads', () => {
     expect(choosesDownloads('partial', onBranch)).toBe(true);
+  });
+
+  it("doesn't offer it to a partial workspace off a branch, nor while its selector is unknown", () => {
+    for (const kind of ['changeset', 'label'] as const) {
+      expect(choosesDownloads('partial', { kind, name: '12' })).toBe(false);
+    }
+    expect(choosesDownloads('partial', undefined)).toBe(false);
   });
 
   it('lets a standard workspace on a branch choose too: the first choice makes it partial', () => {
     expect(choosesDownloads('standard', onBranch)).toBe(true);
   });
 
-  it('keeps a standard workspace on a changeset, label or shelve as it is: a partial one only works on a branch', () => {
+  it("keeps a standard workspace on a changeset, label or shelve as it is: it's made partial only on a branch", () => {
     for (const kind of ['changeset', 'label', 'shelve'] as const) {
       expect(choosesDownloads('standard', { kind, name: '12' })).toBe(false);
     }

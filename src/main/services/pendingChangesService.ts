@@ -18,6 +18,9 @@ import { deletedFilesArgs, deletedFilesOf, type DeletedFile } from '../cm/delete
 import { readTreeItem } from '../cm/treeItems';
 import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
+import { changeRequestsNotApplied } from '../cm/changeRequestsNotApplied';
+import { CmError } from '../cm/CmError';
+import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { explainLockedItems } from '../cm/lockedItems';
 import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
@@ -49,16 +52,33 @@ export function createPendingChangesService({ cm, operations, revisionCat, heade
     return operations.run(operationId, async ({ signal, progressOf }) => {
       const kind = await kindOf(workspacePath);
       return withTempFile(request.comment, async (commentsFile) => {
-        const output = await explainLockedItems('checked in', () =>
-          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate, kind), {
-            cwd: workspacePath,
-            signal,
-            onOutputLine: progressOf(readCheckinProgress),
-          }),
-        );
-        return readCheckinOutput(output);
+        try {
+          const output = await explainLockedItems('checked in', () =>
+            cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate, kind), {
+              cwd: workspacePath,
+              signal,
+              onOutputLine: progressOf(readCheckinProgress),
+            }),
+          );
+          return readCheckinOutput(output);
+        } catch (error) {
+          return checkedInApplyingNone(workspacePath, request.comment, error);
+        }
       });
     });
+  }
+
+  /**
+   * A checkin whose comment names a change request no review has pending (`changeRequestsNotApplied`): `cm` made the
+   * changeset, then failed without saying which, so the workspace's own status, a local read, tells it. Any other
+   * failure, or a workspace with no one changeset loaded (partial), is the failure it was.
+   */
+  async function checkedInApplyingNone(workspacePath: string, comment: string, error: unknown): Promise<CheckinResult> {
+    const notApplied = error instanceof CmError ? changeRequestsNotApplied(error.command.output, comment) : null;
+    if (!notApplied) throw error;
+    const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
+    if (loadedChangeset === null || selector.kind !== 'branch') throw error;
+    return { kind: 'created', changesetId: loadedChangeset, branch: selector.name, changeRequestsNotApplied: { requests: notApplied, logEntryId: (error as CmError).command.logEntryId } };
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {

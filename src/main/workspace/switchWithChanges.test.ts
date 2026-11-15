@@ -104,9 +104,13 @@ describe('switching a partial workspace', () => {
     expect(pending()).toEqual(before);
   };
 
-  it.each(['cs:12', 'lb:v1', 'sh:4'])('refuses %s, touching nothing, and says the way out: cm partial switch takes only a branch', (target) => refuses(target, 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.'));
+  it.each([
+    ['cs:12', "A partial workspace can't switch to a changeset yet. To switch to one, download the whole branch first, from the workspace’s menu."],
+    ['lb:v1', "A partial workspace can't switch to a label. To switch to one, download the whole branch first, from the workspace’s menu."],
+    ['sh:4', "A partial workspace can't switch to a shelve. To switch to one, download the whole branch first, from the workspace’s menu."],
+  ])('refuses %s, touching nothing, and says the way out: cm partial switch takes only a branch', (target, message) => refuses(target, message));
 
-  it('refuses a branch of another repository, touching nothing, and says the way out', () => refuses('br:/main@other@local', 'A partial workspace can only switch to a branch of its own repository. To switch to another repository, download the whole branch first, from the workspace’s menu.'));
+  it('refuses a branch of another repository, touching nothing, and says the way out', () => refuses('br:/main@other@local', "A partial workspace can't switch to a branch of another repository. To switch to one, download the whole branch first, from the workspace’s menu."));
 });
 
 describe('downloading the whole branch into a partial workspace', () => {

@@ -15,8 +15,13 @@ export interface WorkspaceStatus {
   /** By name, as `cm` prints it almost everywhere (`AcmeStudio@unity` for a Unity organization). */
   server: string;
   selector: WorkspaceSelector;
-  /** Null on a shelve or in a partial workspace: neither has one changeset loaded (`WorkspaceInfo.loadedChangeset`). */
+  /**
+   * Null on a shelve, or in a partial workspace on a branch or a label: none has one changeset loaded whose number `cm`
+   * prints (`loadedChangesetOf`, `WorkspaceInfo.loadedChangeset`).
+   */
   loadedChangeset: number | null;
+  /** A partial workspace: `cm status` prints changeset -1 for one, whatever it's on (`PARTIAL_WORKSPACE_CHANGESET`). */
+  partial: boolean;
 }
 
 /** The header as `cm status --xml` prints it, its server named only by `readWorkspaceStatus`. */
@@ -35,9 +40,9 @@ export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): 
  * What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. XML,
  * as `cm status` has no `--format`, and its records (`--machinereadable`) don't name the selector.
  */
-export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset'>> {
-  const { selector, loadedChangeset } = await readStatusHeader(cm, workspacePath);
-  return { selector, loadedChangeset };
+export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset' | 'partial'>> {
+  const { selector, loadedChangeset, partial } = await readStatusHeader(cm, workspacePath);
+  return { selector, loadedChangeset, partial };
 }
 
 async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<PrintedWorkspaceStatus> {
@@ -70,9 +75,11 @@ export function parseWorkspaceStatus(xml: string): PrintedWorkspaceStatus {
     kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
     name: configName && selectorName(configName, repositoryName),
   };
-  const loadedChangeset = repositoryName && configName ? loadedChangesetOf(integer(workspaceStatus?.Changeset, Number.NaN), selector) : undefined;
+  const changeset = integer(workspaceStatus?.Changeset, Number.NaN);
+  const loadedChangeset = repositoryName && configName ? loadedChangesetOf(changeset, selector) : undefined;
   if (loadedChangeset === undefined) throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
-  return { repositoryName, printedServer, selector, loadedChangeset };
+  const partial = selector.kind !== 'shelve' && changeset === PARTIAL_WORKSPACE_CHANGESET;
+  return { repositoryName, printedServer, selector, loadedChangeset, partial };
 }
 
 /** What `cm status` reports as the loaded changeset of a partial workspace, which has none (`loadedChangesetOf`). */
@@ -81,14 +88,18 @@ const PARTIAL_WORKSPACE_CHANGESET = -1;
 /**
  * The loaded changeset `cm status` reports, null when the workspace has none, undefined when it makes no sense. `cm`
  * keeps shelves as changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official client
- * reads a shelve as changeset `-id`), so the shelve's own negated id is no changeset. A partial workspace on a branch
- * reports -1: each folder it loads may be at another changeset (`cm partial update` of one path), so it has no single
- * one. Any other number below zero, or a shelve with a changeset, is output to reject, never a changeset to query from.
+ * reads a shelve as changeset `-id`), so the shelve's own negated id is no changeset. A partial workspace reports -1
+ * whatever it's on. On a branch, each folder it loads may be at another changeset (`cm partial update` of one path),
+ * so it has none; on a changeset, everything is at that changeset; on a label, at the label's, which `cm` doesn't
+ * print. Any other number below zero, or a shelve with a changeset, is output to reject, never a changeset to query from.
  */
 export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector): number | null | undefined {
   if (changeset >= 0) return selector.kind === 'shelve' ? undefined : changeset;
-  if (selector.kind === 'branch') return changeset === PARTIAL_WORKSPACE_CHANGESET ? null : undefined;
-  return selector.kind === 'shelve' && changeset === -Number(selector.name) ? null : undefined;
+  if (selector.kind === 'shelve') return changeset === -Number(selector.name) ? null : undefined;
+  if (changeset !== PARTIAL_WORKSPACE_CHANGESET) return undefined;
+  if (selector.kind !== 'changeset') return null;
+  const selected = Number(selector.name);
+  return Number.isInteger(selected) && selected >= 0 ? selected : undefined;
 }
 
 /**

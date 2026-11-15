@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf, type ReviewThread } from './reviewThreads';
-import { hasThreadHeader, threadHeaderOf, type ThreadHeaderInput } from './threadHeader';
+import { foldsByHand, hasThreadHeader, threadHeaderOf, type ThreadHeaderInput } from './threadHeader';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
 
@@ -32,37 +32,41 @@ describe('hasThreadHeader', () => {
   });
 });
 
+describe('foldsByHand', () => {
+  it('folds every card with a header band, open or settled, so they all work the same way', () => {
+    expect([changeRequest, applied, discarded, answered, plainOnLine].map(foldsByHand)).toEqual([true, true, true, true, true]);
+    expect(foldsByHand(threadOf(comment(1, { kind: 'question' })))).toBe(true);
+  });
+
+  it("doesn't fold a comment on the whole review, which has no band to hold the chevron", () => {
+    expect(foldsByHand(general)).toBe(false);
+  });
+});
+
 describe('threadHeaderOf', () => {
   describe('where the card is', () => {
     it('names the file in the conversation as a link to it in Changes, the line apart', () => {
       expect(headerOf(changeRequest).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: 'line 11', linked: true, tip: 'Show in Changes', tipSub: 'Assets/Scripts/SwitchFlow.cs' });
-      expect(headerOf(changeRequest).kindLabel).toBeNull();
     });
 
     it('names the file in the Comments panel as text, its card going to the thread, whole in its tooltip', () => {
       expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: 'line 11', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
     });
 
-    it('names no file under the file\'s name in the Comments panel, with the kind\'s icon even for a plain comment', () => {
-      const header = headerOf(plainOnLine, { place: 'fileGroup' });
-      expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, null, true]);
+    it('names no file under the file\'s name in the Comments panel', () => {
+      expect(headerOf(plainOnLine, { place: 'fileGroup' }).location).toBeNull();
     });
 
-    it('says the line apart under the file\'s name, where the file names no line, and nowhere else', () => {
+    it('says the line apart where the file is named already, under its name or in its code, and nowhere else', () => {
       expect(headerOf(changeRequest, { place: 'fileGroup' }).line).toBe('line 11');
+      // In the code, a thread can sit rows below its line, or away from it once outdated: the line says which.
+      expect(headerOf(changeRequest, { place: 'code' }).line).toBe('line 11');
       expect(headerOf(changeRequest, { place: 'panel' }).line).toBeNull();
-      expect(headerOf(changeRequest, { place: 'code' }).line).toBeNull();
+      expect(headerOf(changeRequest).line).toBeNull();
     });
 
-    it('names its kind in the code instead of the file it is at, with its icon even for a plain comment', () => {
-      const header = headerOf(plainOnLine, { place: 'code' });
-      expect([header.location, header.kindLabel, header.kindIcon]).toEqual([null, 'Comment', true]);
-    });
-
-    it('shows the icon of a change request or a question anywhere, and none on a plain comment outside the code', () => {
-      expect(headerOf(changeRequest).kindIcon).toBe(true);
-      expect(headerOf(plainOnLine).kindIcon).toBe(false);
-      expect(headerOf(plainOnLine, { place: 'panel' }).kindIcon).toBe(false);
+    it('names no file in the code, where the thread is at its line', () => {
+      expect(headerOf(plainOnLine, { place: 'code' }).location).toBeNull();
     });
 
     it('names no file for a comment on the whole review', () => {
@@ -111,41 +115,61 @@ describe('threadHeaderOf', () => {
   });
 
   describe('the pill', () => {
-    it('says an open change request is open, as words', () => {
-      expect(headerOf(changeRequest).pill).toEqual({ label: 'Open', tone: 'open', leadsTo: 'nothing' });
+    const openQuestion = threadOf(comment(1, { kind: 'question', anchor: ON_LINE }));
+    const PLACES = ['conversation', 'code', 'panel', 'fileGroup'] as const;
+
+    it('tells an open change request from an open question by its kind, its words saying only that it is open, everywhere it shows', () => {
+      for (const place of PLACES) {
+        expect(headerOf(changeRequest, { place }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Open', tone: 'open', leadsTo: 'nothing' });
+        expect(headerOf(openQuestion, { place }).pill).toEqual({ kind: 'Question', kindTip: 'Question', label: 'Open', tone: 'open', leadsTo: 'nothing' });
+      }
+    });
+
+    it('says a plain comment on a line is a comment, in a tone no state takes, as it stands nowhere, everywhere it shows', () => {
+      for (const place of PLACES) expect(headerOf(plainOnLine, { place }).pill).toEqual({ kind: 'Comment', kindTip: null, label: 'Comment', tone: 'comment', leadsTo: 'nothing' });
+    });
+
+    it('names the kind in the icon\'s tooltip only where the words don\'t: never "Comment" twice', () => {
+      expect([changeRequest, openQuestion, applied, plainOnLine].map((thread) => headerOf(thread).pill?.kindTip)).toEqual(['Change request', 'Question', 'Change request', null]);
+    });
+
+    it('leads a settled thread\'s pill with its kind', () => {
+      expect([applied, discarded, answered].map((thread) => headerOf(thread, { folded: true }).pill?.kind)).toEqual(['Change request', 'Change request', 'Question']);
     });
 
     it('leads an applied one to how it was applied, or to its changeset', () => {
-      expect(headerOf(applied, { seesHowApplied: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'applied', changesetId: 281, tip: 'Applied in changeset 281: see how it was applied' });
+      expect(headerOf(applied, { seesHowApplied: true }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Applied', tone: 'resolved', leadsTo: 'applied', changesetId: 281, tip: 'Applied in changeset 281: see how it was applied' });
       expect(headerOf(applied).pill).toMatchObject({ leadsTo: 'applied', tip: 'Applied in changeset 281: open it' });
     });
 
     it("names the changeset of an applied one shown in context and leads nowhere: the view is how it was applied, its changeset a button below", () => {
-      expect(headerOf(applied, { place: 'code', inContext: true }).pill).toEqual({ label: 'Applied', tone: 'resolved', leadsTo: 'nothing', tip: 'Applied in changeset 281' });
+      expect(headerOf(applied, { place: 'code', inContext: true }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Applied', tone: 'resolved', leadsTo: 'nothing', tip: 'Applied in changeset 281' });
     });
 
     it('leads a discarded one to it in context, where the card can show it, as an applied one does', () => {
-      expect(headerOf(discarded, { seesHowApplied: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'context', tip: 'Discarded: see it in context' });
+      expect(headerOf(discarded, { seesHowApplied: true }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Discarded', tone: 'discarded', leadsTo: 'context', tip: 'Discarded: see it in context' });
     });
 
     it('says a discarded one was discarded, as words, in context already or where nothing shows it', () => {
-      expect(headerOf(discarded, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
-      expect(headerOf(discarded, { seesHowApplied: false }).pill).toEqual({ label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+      expect(headerOf(discarded, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
+      expect(headerOf(discarded, { seesHowApplied: false }).pill).toEqual({ kind: 'Change request', kindTip: 'Change request', label: 'Discarded', tone: 'discarded', leadsTo: 'nothing' });
     });
 
     it('leads an answered question to its first reply where the card shows replies, and is words in the panel', () => {
-      expect(headerOf(answered).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'answer', tip: 'Answered by Bob: see the answer' });
-      expect(headerOf(answered, { place: 'panel', showsAnswer: false }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'nothing' });
+      expect(headerOf(answered).pill).toEqual({ kind: 'Question', kindTip: 'Question', label: 'Answered', tone: 'resolved', leadsTo: 'answer', tip: 'Answered by Bob: see the answer' });
+      expect(headerOf(answered, { place: 'panel', showsAnswer: false }).pill).toEqual({ kind: 'Question', kindTip: 'Question', label: 'Answered', tone: 'resolved', leadsTo: 'nothing' });
     });
 
     it('leads a question answered in a changeset to how it was answered, where the card can show it', () => {
       const fixed = threadOf(comment(1, { kind: 'question', anchor: ON_LINE }), reply(2, { text: 'Fixed in cs:281301' }));
-      expect(headerOf(fixed, { seesHowApplied: true }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'context', tip: 'Answered in changeset 281301: see how it was answered' });
-      expect(headerOf(fixed, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ label: 'Answered', tone: 'resolved', leadsTo: 'nothing', tip: 'Answered in changeset 281301' });
+      expect(headerOf(fixed, { seesHowApplied: true }).pill).toEqual({ kind: 'Question', kindTip: 'Question', label: 'Answered', tone: 'resolved', leadsTo: 'context', tip: 'Answered in changeset 281301: see how it was answered' });
+      expect(headerOf(fixed, { place: 'code', seesHowApplied: true, inContext: true }).pill).toEqual({ kind: 'Question', kindTip: 'Question', label: 'Answered', tone: 'resolved', leadsTo: 'nothing', tip: 'Answered in changeset 281301' });
     });
 
     it('leads an answered question in context where the card shows no replies but can show it, as Discarded and Applied do', () => {
       expect(headerOf(answered, { place: 'panel', showsAnswer: false, seesHowApplied: true }).pill).toEqual({
+        kind: 'Question',
+        kindTip: 'Question',
         label: 'Answered',
         tone: 'resolved',
         leadsTo: 'context',
@@ -153,8 +177,17 @@ describe('threadHeaderOf', () => {
       });
     });
 
-    it('shows none on a plain comment', () => {
-      expect(headerOf(plainOnLine).pill).toBeNull();
+    it('shows none on a comment on the whole review, which has no header', () => {
+      expect(headerOf(general).pill).toBeNull();
+    });
+
+    it('shows one on every thread with a header band, so the band always holds the kind', () => {
+      for (const thread of [changeRequest, openQuestion, plainOnLine, applied, discarded, answered]) expect(hasThreadHeader(thread) && headerOf(thread).pill !== null).toBe(true);
+    });
+
+    it('names the kind of a change request or a question on the whole review', () => {
+      expect(headerOf(threadOf(comment(1, { kind: 'question' }))).pill).toMatchObject({ kind: 'Question', kindTip: 'Question', label: 'Open' });
+      expect(headerOf(threadOf(comment(1, { kind: 'changeRequest' }))).pill).toMatchObject({ kind: 'Change request', kindTip: 'Change request', label: 'Open' });
     });
   });
 });

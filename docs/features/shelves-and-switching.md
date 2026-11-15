@@ -50,10 +50,14 @@ command by kind, everywhere the app updates, switches or checks in (Incoming, th
 the update that shelves blocking changes, Changes, merges). Standard and dynamic workspaces keep `cm update`,
 `cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
 rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
-`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`): a changeset,
-label or shelve, or a branch of another repository, and the refusal says to download the whole branch first
-(`PARTIAL_REFUSED`), which makes the workspace standard (partial-workspaces.md, "Making a partial workspace
-standard").
+`switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`, one reason per
+kind of target, each with its message in `PARTIAL_REFUSED`): a changeset ("A partial workspace can't switch to a
+changeset yet."), a label, a shelve, or a branch of another repository. A changeset is "yet": the Gluon client keeps a
+partial workspace on a changeset by setting its selector and updating only what it loads, which no `cm` command does
+so far. `cm switch` and `cm setselector` to a changeset download everything and make the workspace standard, and
+`cm partial update --changeset` moves the files but leaves the workspace on its branch, so the next update undoes it.
+Each refusal ends with the way out: download the whole branch first, which makes the workspace standard
+(partial-workspaces.md, "Making a partial workspace standard").
 
 A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
 (Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`
@@ -64,12 +68,22 @@ are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwis
 and a switch's toast says to merge it in a standard workspace instead of offering the merge page (`mergesHere` on
 `bringPending`), which refuses a partial workspace (`conflictRepositories`).
 
-A partial workspace has no one changeset loaded: each folder may be at another changeset of its branch (`cm partial
-update` of one path), and `cm status` reports changeset -1 on the branch. The app reads it as no changeset
-(`loadedChangesetOf`: -1 only on a branch, any other number below zero stays unexpected output), as on a shelve, and
-tells the two apart by the selector's kind, never by `loadedChangeset`. So Incoming lists the items the branch head
-changes rather than changesets (docs/features/incoming.md "A partial workspace"), no branch is made from the
-workspace's changeset, and a merge into it is refused (`noLoadedTreeMessage`).
+`cm status` reports changeset -1 for a partial workspace, whatever it's on (`WorkspaceStatus.partial`), and the
+app reads what it has loaded from the selector (`loadedChangesetOf`; any other number below zero stays unexpected
+output):
+
+- **On a branch**, it has no one changeset: each folder may be at another changeset of the branch (`cm partial
+  update` of one path). Incoming lists the items the branch head changes rather than changesets
+  (docs/features/incoming.md "A partial workspace"), and no branch is made from the workspace's changeset.
+- **On a changeset**, as the official Gluon client leaves one, everything it loads is at that changeset:
+  `loadedChangeset` is its number, which the picker shows and everything keyed on it works from as on a standard
+  workspace's (a new branch from the workspace, the Branch Explorer's starting point, `downloadTreePoint`).
+- **On a label**, the label's changeset holds it, but `cm` doesn't print it: no changeset, as on a branch.
+
+Off a branch, Choose what to download isn't offered (`choosesDownloads`).
+
+Off a branch nothing comes in. Whatever it's on, a merge into a partial workspace is refused (`loadedTree`,
+`noLoadedTreeMessage`).
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and

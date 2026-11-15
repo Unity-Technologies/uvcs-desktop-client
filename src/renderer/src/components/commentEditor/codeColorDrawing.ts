@@ -43,3 +43,24 @@ function marksIn(marks: readonly TokenMark[], block: FencedCode): TokenMark[] {
   const end = block.from + block.text.length;
   return marks.filter((mark) => mark.from >= block.from && mark.to <= end);
 }
+
+/** What changed in the editor, as the code's colors care. */
+export interface EditorChange {
+  docChanged: boolean;
+  viewportChanged: boolean;
+  colorsArrived: boolean;
+  themeChanged: boolean;
+  /** The file the comment is on (`commentedFileLanguage`), whose language a suggestion's code is colored in. */
+  commentedFileChanged: boolean;
+}
+
+/**
+ * Whether the code's colors are drawn again after a change: `anew` when those drawn would be wrong (another theme, or
+ * another language for a suggestion's code), the blocks plain until theirs arrive, as at the first load; `kept` when
+ * the blocks may have changed (the text, those on screen, colors read), keeping what's drawn until theirs replace it
+ * (`codeColorsAfter`); null otherwise.
+ */
+export function colorsRedrawn(change: EditorChange): 'anew' | 'kept' | null {
+  if (change.themeChanged || change.commentedFileChanged) return 'anew';
+  return change.docChanged || change.viewportChanged || change.colorsArrived ? 'kept' : null;
+}

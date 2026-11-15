@@ -133,6 +133,30 @@ describe('writing on a review', () => {
     expect(seen.content).toBe('');
   });
 
+  it('marks a change request applied in the changeset picked, with one quick command', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment apply': '' });
+
+    await service.markApplied(IN_WORKSPACE, 'c1', 12);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'apply', 'c1', '--changeset=cs:12'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('marks a change request as not applied, with one quick command', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment unapply': '' });
+
+    await service.markNotApplied(IN_WORKSPACE, 'c1');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'unapply', 'c1'] }]);
+  });
+
+  it("names the changeset in the review's repository outside a workspace", async () => {
+    const { service, commands } = reviewComments({ 'codereview comment apply': '' });
+
+    await service.markApplied(ON_REPOSITORY, 'c1', 12);
+
+    expect(commands[0]?.args).toEqual(['codereview', 'comment', 'apply', 'c1', '--changeset=cs:12@game@local', '--repository=game@local']);
+  });
+
   it('names the repository in every write outside a workspace', async () => {
     const { service, commands } = reviewComments({ codereview: '' });
 
@@ -142,8 +166,10 @@ describe('writing on a review', () => {
     await service.edit(ON_REPOSITORY, 'c1', 'c');
     await service.remove(ON_REPOSITORY, 'c1');
     await service.setDescription(ON_REPOSITORY, 41, 'd');
+    await service.markApplied(ON_REPOSITORY, 'c1', 12);
+    await service.markNotApplied(ON_REPOSITORY, 'c1');
 
-    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(6).fill('--repository=game@local'));
+    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(8).fill('--repository=game@local'));
     expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
   });
 });

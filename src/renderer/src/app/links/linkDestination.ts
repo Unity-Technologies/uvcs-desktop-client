@@ -1,5 +1,5 @@
-import { sameServer } from '@shared/links/linkSegments';
-import { splitRepositorySpec } from '../../lib/servers';
+import { repositoryKey } from '@shared/domain/repository';
+import { repositorySpec as specOf } from '@shared/domain/specs';
 
 /** A workspace and the repository it works on (`name@server`), null when `cm` couldn't tell. */
 export interface WorkspaceOnRepository {
@@ -39,11 +39,10 @@ export function linkDestination(link: { server: string; repository: string }, { 
 
 /**
  * Whether a repository spec (`game@acme@unity`) is the one a link names: the same name, in any case as `cm` takes it,
- * on the same server, whatever protocol either writes it with (`sameServer`).
+ * on the same server, whatever protocol either writes it with (`repositoryKey`).
  */
 export function isRepository(repositorySpec: string, link: { server: string; repository: string }): boolean {
-  const { name, server } = splitRepositorySpec(repositorySpec);
-  return name.toLowerCase() === link.repository.toLowerCase() && sameServer(server, link.server);
+  return repositoryKey(repositorySpec) === repositoryKey(specOf(link.repository, link.server));
 }
 
 /** The most recently used first, then the others in their own order. */

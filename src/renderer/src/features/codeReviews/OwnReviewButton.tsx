@@ -1,7 +1,7 @@
 import { ChevronDown, Info } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import { placeId } from '@shared/domain/place';
-import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../app/account/accounts';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../components/DetailsHeading';
@@ -9,7 +9,8 @@ import { Button } from '../../ui/Button';
 import { Popover } from '../../ui/Popover';
 import { setOwnReviewStatus } from './codeReviewOperations';
 import { CommentComposer } from './conversation/CommentComposer';
-import { ownReviewButton } from './ownReview';
+import { ownReviewButton, ownReviewChoice } from './ownReview';
+import { useOwnReviewChoiceStore } from './ownReviewChoiceStore';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { REVIEW_STATUS_ICONS } from './reviewStatusIcons';
 import styles from './CodeReviewPage.module.css';
@@ -21,6 +22,7 @@ import styles from './CodeReviewPage.module.css';
 export function OwnReviewButton({ review }: { review: CodeReview }) {
   const user = usePlaceUser();
   const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const button = ownReviewButton(review, user);
   // In the button's own color: a status's color on the button's fill can't be read.
   const StatusIcon = button.status && REVIEW_STATUS_ICONS[button.status];
@@ -31,6 +33,11 @@ export function OwnReviewButton({ review }: { review: CodeReview }) {
       align="end"
       open={open}
       onOpenChange={setOpen}
+      onOpenAutoFocus={(event) => {
+        // On the status picked, not the first: reopened with Reviewed kept, Space there would pick Under review unnoticed.
+        event.preventDefault();
+        formRef.current?.querySelector<HTMLInputElement>('input:checked')?.focus();
+      }}
       trigger={
         <Button variant="primary" icon={StatusIcon && <StatusIcon size={14} aria-hidden />} className={styles.ownReview}>
           {button.label}
@@ -38,23 +45,28 @@ export function OwnReviewButton({ review }: { review: CodeReview }) {
         </Button>
       }
     >
-      {open && <OwnReviewForm review={review} user={user} onDone={() => setOpen(false)} />}
+      {open && <OwnReviewForm ref={formRef} review={review} user={user} onDone={() => setOpen(false)} />}
     </Popover>
   );
 }
 
-function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: string | undefined; onDone: () => void }) {
+function OwnReviewForm({ ref, review, user, onDone }: { ref: Ref<HTMLDivElement>; review: CodeReview; user: string | undefined; onDone: () => void }) {
   const place = usePlace();
   const button = ownReviewButton(review, user);
-  const [status, setStatus] = useState<CodeReviewStatus>(button.preselected);
+  // Kept with the comment, under its key, as the popover closes: reopened, it shows the whole draft (`useOwnReviewChoiceStore`).
+  const draftKey = commentDraftKey(placeId(place), 'reviewStatus', review.id);
+  const picked = useOwnReviewChoiceStore((state) => state.choices[draftKey]);
+  const choose = useOwnReviewChoiceStore((state) => state.choose);
+  const forget = useOwnReviewChoiceStore((state) => state.forget);
+  const status = ownReviewChoice(button, picked);
 
   return (
-    <div className={styles.ownReviewForm}>
+    <div ref={ref} className={styles.ownReviewForm}>
       <fieldset className={styles.statuses}>
         <legend className={styles.formTitle}>Mark your review as</legend>
         {CODE_REVIEW_STATUSES.map((choice) => (
           <label key={choice} className={styles.statusChoice}>
-            <input type="radio" name="own-review-status" checked={choice === status} onChange={() => setStatus(choice)} />
+            <input type="radio" name="own-review-status" checked={choice === status} onChange={() => choose(draftKey, { status: choice, over: button.preselected })} />
             <ReviewStatusIcon status={choice} size={14} />
             {choice}
           </label>
@@ -67,16 +79,20 @@ function OwnReviewForm({ review, user, onDone }: { review: CodeReview; user: str
         </p>
       )}
       <CommentComposer
-        draftKey={commentDraftKey(placeId(place), 'reviewStatus', review.id)}
+        draftKey={draftKey}
         placeholder="Comment (optional)"
         label="What you say about it"
         submitLabel={`Mark as ${status}`}
         optional
         inPopover
         onSubmit={async (comment) => {
-          // Closes once set; a status the server refused keeps the popover and what the user wrote, to try again.
+          // Closes once set, the draft gone (its comment with it: `CommentComposer`); a status the server refused keeps
+          // the popover, the status picked and what the user wrote, to try again.
           const set = await setOwnReviewStatus(place, review, status, { user, comment, joiningAgreed: true });
-          if (set) onDone();
+          if (set) {
+            forget(draftKey);
+            onDone();
+          }
           return set;
         }}
       />

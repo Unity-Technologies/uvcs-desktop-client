@@ -5,7 +5,7 @@ import { displayName } from '../../lib/userName';
 import type { CommentReference, ReferencePoint } from '../../lib/comments/commentReferences';
 import { lastSegment } from '../../lib/paths';
 
-export type ChipIcon = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'file' | 'link';
+export type ChipIcon = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'changeRequest' | 'file' | 'link';
 
 /** What a click on a chip opens: an object (or a page of it) in its repository, the place's when none is named. */
 export interface ChipTarget {
@@ -32,6 +32,8 @@ export type ChipContent =
     }
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; glyph: string; name: string }
+  /** A change request a check-in applies, shown and read by `ChangeRequestChip`. */
+  | { kind: 'changeRequest'; guid: string }
   /** An issue of the place's tracker, shown and read by `IssueChip`. */
   | { kind: 'issue'; key: string; bare: boolean };
 
@@ -78,6 +80,8 @@ function chipOf(reference: CommentReference): ChipContent {
       return { kind: 'emoji', glyph: reference.glyph, name: reference.name };
     case 'issue':
       return { kind: 'issue', key: reference.key, bare: reference.bare };
+    case 'changeRequest':
+      return { kind: 'changeRequest', guid: reference.guid };
     case 'link':
       return linkChip(reference.link);
     case 'file': {

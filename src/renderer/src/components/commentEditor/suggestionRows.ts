@@ -32,6 +32,7 @@ const NOUNS: Record<SuggestionKind, string> = {
   person: 'people',
   emoji: 'emoji',
   issue: 'issues',
+  changeRequest: 'change requests to apply',
 };
 
 /**

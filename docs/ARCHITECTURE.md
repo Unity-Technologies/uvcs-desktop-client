@@ -33,7 +33,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), email notifications, the `cm codereview` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), suggested changes and applying them, email notifications, the `cm codereview` commands |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
@@ -1123,8 +1123,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   changesets').
   The changeset comes first, unless the number is past the newest changeset read
   (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
-  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
-  its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. Under the search, a chip per prefix that works where
+  the palette is open (`offeredPrefixes`, `scopeChipsFor`), each showing its prefix: All and the sections searched most
+  in a row, the rest under More, which takes the name of the one picked. A chip writes its prefix in place of the one
+  typed, the rest as typed (`queryInScope`), so the text stays the only state and a chip teaches what to type;
+  clicking the chip picked goes back to All (`clickedChip`). ⌥⌘← ⌥⌘→ step through them, Alt+← Alt+→ off Mac
+  (`scopeStepOf`, `steppedChip`): arrows any keyboard layout has, as a browser's tabs, never ⌘ or ⌥ alone, which move
+  the caret. The home screen, which searches only commands, has none. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
   suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time
@@ -1284,6 +1289,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+- **Buttons that create something** ("New branch", "New label", "New workspace") show what they create with a plus:
+  Lucide's `GitBranchPlus`, `TagPlus`, `MessageSquarePlus`, `DatabasePlus`, `FolderPlus`, never the bare `Plus`, which
+  only says "add". Where Lucide has no such icon the feature draws one on its grid (`TagsPlus`, `Tags` with a
+  plus). An empty state's "New …" button shows it too, and the menu entry and palette command that make the same
+  thing show the same icon (`newLabel`, `newCodeReview` in `menuWords`). The test reads each `<Button>` with a
+  written "New …" label and wants an icon whose name ends in `Plus` (`newButtonsShowTheirObject.test.ts`).
 - **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton` (`listViewsRefresh.test.ts`). Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
@@ -1485,7 +1496,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
-    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
+    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge). A
+    folder whose Unity `.meta` changed alike stays too, for the meta to ride on its row rather than show alone
+    (`hasMetaAlike`).
   - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
     together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
     Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:

@@ -35,8 +35,16 @@ export interface AppSettings {
   pendingChanges: PendingChangesFilter;
   /** Ask for confirmation before checking in without a comment. */
   warnOnEmptyComment: boolean;
-  /** Recent checkin comments, newest first. */
+  /**
+   * The check-in comments kept before they were per repository, newest first: offered, never written again, to a
+   * repository with no list of its own yet (`recentCommentsFor`).
+   */
   recentComments: string[];
+  /**
+   * Recent check-in comments of each repository, newest first, by `repositoryKey`; the repository checked in to last
+   * comes first (`withRecentComment`).
+   */
+  recentCommentsByRepository: Record<string, string[]>;
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
   /** Folder new workspaces are created in; empty means the home folder. */
@@ -115,6 +123,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pendingChanges: DEFAULT_PENDING_CHANGES_FILTER,
   warnOnEmptyComment: true,
   recentComments: [],
+  recentCommentsByRepository: {},
   autoRefresh: true,
   defaultWorkspaceRoot: '',
   pendingChangesOnSwitch: 'ask',

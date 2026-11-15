@@ -1,4 +1,4 @@
-import { ChevronRight, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, FolderPlus, MoreHorizontal } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
@@ -89,7 +89,7 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
             >
               Explore
             </Button>
-            <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
+            <Button size="small" className={styles.rowCreate} icon={<FolderPlus size={14} />} onClick={() => onCreateWorkspace(repository)}>
               New workspace
             </Button>
           </>

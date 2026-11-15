@@ -52,6 +52,16 @@ describe("a place's own action on a line", () => {
     expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: onNewerSide }))).toEqual(['Copy line']);
   });
 
+  it('offers its other way right after it, on the same lines', () => {
+    const suggest = vi.fn();
+    const withVariant: LineAction = { ...onNewerSide, variant: { label: (line) => `Suggest change on line ${line.lineNumber}`, run: suggest } };
+    const menu = linesMenu({ lines: RANGE, copyLines: vi.fn(), lineAction: withVariant });
+    expect(labels(menu)).toEqual(['Comment on line 52', 'Suggest change on line 52', '—', 'Copy lines']);
+    (menu[1] as Action).run();
+    expect(suggest).toHaveBeenCalledWith({ side: 'additions', lineNumber: 52 });
+    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: withVariant }))).toEqual(['Copy line']);
+  });
+
   it('names the older side as the diff does', () => {
     expect(lineActionTarget({ side: 'old', first: 3, last: 7 })).toEqual({ side: 'deletions', lineNumber: 7 });
   });

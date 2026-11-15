@@ -1,4 +1,4 @@
-import type { CSSProperties, Ref } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import type { GroupField } from './focusGroup';
 
 /** What a comment field's owner can do with it: put the caret in it. */
@@ -12,6 +12,11 @@ export interface CommentFieldHandle {
   selection: () => FieldSelection | null;
   /** The caret and selection back where they were (`selection`), within the text as it is now; false while the field can't take them yet (its editor still being made). */
   focusAtSelection: (selection: FieldSelection) => boolean;
+  /**
+   * Opens the change requests to apply at the caret, or at the text's end when the field has no focus
+   * (`openChangeRequests`). Before the editor loads, it opens as soon as it does. False while the field is disabled.
+   */
+  openChangeRequests: () => boolean;
 }
 
 /** A caret, or a selection from `anchor` to `head`, as offsets in a field's text. */
@@ -46,5 +51,7 @@ export interface CommentFieldProps {
   /** The field's box: its border, background, padding and size, its focus ring on `:focus-within`. */
   className?: string;
   style?: CSSProperties;
+  /** A quiet row at the field's bottom-left, inside its box (the check-in's change requests button); none by default. */
+  footer?: ReactNode;
   ref?: Ref<CommentFieldHandle>;
 }

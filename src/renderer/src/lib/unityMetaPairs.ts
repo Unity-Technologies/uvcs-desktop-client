@@ -56,6 +56,23 @@ export function pairUnityMetas<T>(items: readonly T[], pathOf: (item: T) => stri
   };
 }
 
+/**
+ * Whether an item's `.meta` is listed too, changed the same way (`kindOf`): the pairing `pairUnityMetas` will make.
+ * A list that leaves out folders added or deleted with what they hold keeps such a folder, so its meta rides on the
+ * folder's row instead of showing alone (Unity writes `Assets/Props.meta` beside the folder `Assets/Props`).
+ */
+export function hasMetaAlike<T>(items: readonly T[], pathOf: (item: T) => string, kindOf: (item: T) => string): (item: T) => boolean {
+  const metaKinds = new Map<string, string>();
+  for (const item of items) {
+    const path = pathOf(item);
+    if (assetOfMeta(path) !== null && !metaKinds.has(path)) metaKinds.set(path, kindOf(item));
+  }
+  return (item) => {
+    const path = pathOf(item);
+    return assetOfMeta(path) === null && metaKinds.get(path + META_SUFFIX) === kindOf(item);
+  };
+}
+
 /** The items with each one's meta right after it: what an action that changes data acts on. */
 export function withMetas<T>(items: readonly T[], metaOf: (item: T) => T | undefined): T[] {
   return items.flatMap((item) => {

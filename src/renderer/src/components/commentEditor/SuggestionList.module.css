@@ -91,3 +91,19 @@
   padding: 6px var(--space-2);
   color: var(--text-tertiary);
 }
+
+/* The change requests' list opened by their button: how to write one by hand, muted, under a hairline. */
+.hint {
+  margin-top: 4px;
+  padding: 6px 10px 4px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.hint code {
+  padding: 0 3px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+}

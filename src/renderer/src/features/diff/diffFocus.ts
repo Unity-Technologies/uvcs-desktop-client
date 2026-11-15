@@ -23,11 +23,18 @@ export interface PairedFocus {
 
 /**
  * The row a diff whose Unity `.meta`s joined their assets (`pairDiffMetas`) opens on: a `.meta` that joined its asset
- * opens on the asset's row, showing the meta; anything else as `entryToFocus` finds it.
+ * opens on the asset's row, showing the meta; anything else as `entryToFocus` finds it. With nothing asked for, it
+ * opens on the first file: a Unity folder added with its meta keeps its row (`listedEntries`), and a folder's diff
+ * says little.
  */
 export function pairedFocus(pairs: MetaPairs<DiffEntry>, focusPath?: string): PairedFocus {
   const found = focusPath === undefined ? null : pairedEntryAt(pairs, focusPath);
-  return found ?? { entry: pairs.shown[0], metaShownFor: null };
+  return found ?? { entry: firstFileRow(pairs.shown), metaShownFor: null };
+}
+
+/** The first row that isn't a folder, or the first row when all are. */
+function firstFileRow(rows: readonly DiffEntry[]): DiffEntry | undefined {
+  return rows.find((row) => row.itemType !== 'directory') ?? rows[0];
 }
 
 /**

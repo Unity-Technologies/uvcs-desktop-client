@@ -53,8 +53,11 @@ export function replyAction(reply: Pick<ReviewComment, 'kind'>): string | undefi
   return reply.kind === 'discard' ? 'discarded it' : undefined;
 }
 
+/** What a thread is, named: a change request, a question, or a plain comment. */
+export type ThreadKindName = 'Change request' | 'Question' | 'Comment';
+
 /** What a thread on a line is, named: a change request, a question, or a plain comment. */
-export function threadKindName(root: Pick<ReviewComment, 'kind'>): 'Change request' | 'Question' | 'Comment' {
+export function threadKindName(root: Pick<ReviewComment, 'kind'>): ThreadKindName {
   return root.kind === 'changeRequest' ? 'Change request' : root.kind === 'question' ? 'Question' : 'Comment';
 }
 

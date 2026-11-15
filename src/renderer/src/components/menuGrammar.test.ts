@@ -298,9 +298,21 @@ const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
 };
 /** A review comment's menu (`commentMenu`), its author's: every entry it offers, its Copy submenu as every object's. */
 const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
+/** A change request's, open or applied: marked applied or not applied by hand (`changeRequestMarkOf`). */
+const changeRequest = { ...reviewComment, kind: 'changeRequest' } as const;
+const appliedChangeRequest = { ...changeRequest, appliedInChangeset: 4 } as const;
+const commentActions = (comment: typeof changeRequest | typeof appliedChangeRequest) => ({
+  edit: () => {},
+  remove: () => {},
+  copyTexts: reviewCommentCopyTexts(workspacePlace(ws), 41, comment),
+  showInConversation: () => {},
+  markChangeRequest: () => {},
+});
 const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
   reviewComment: () =>
     commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyTexts: reviewCommentCopyTexts(workspacePlace(ws), 41, reviewComment) }),
+  openChangeRequest: () => commentMenu(changeRequest, threadsOf([changeRequest])[0]!, 'jane@example.com', commentActions(changeRequest)),
+  appliedChangeRequest: () => commentMenu(appliedChangeRequest, threadsOf([appliedChangeRequest])[0]!, 'jane@example.com', commentActions(appliedChangeRequest)),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
@@ -608,9 +620,9 @@ describe('Copy', () => {
     expect(await copiedBy(labelMenu(workspacePlace(ws), [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
-  it("copies a review's comment as its text and its link, which opens the review at it", async () => {
+  it.each(['reviewComment', 'openChangeRequest', 'appliedChangeRequest'])("copies a review's comment as its text and its link, which opens the review at it: %s", async (menu) => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
-    expect(await copiedBy(COMMENT_MENUS.reviewComment!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
+    expect(await copiedBy(COMMENT_MENUS[menu]!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
   });
 
   it('copies a deleted repository as its name alone: its spec names it by an id no link opens', async () => {

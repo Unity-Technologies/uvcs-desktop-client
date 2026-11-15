@@ -2,6 +2,14 @@
   position: relative;
 }
 
+/* CodeMirror's box (`slot`): it takes the field's height, as its editor does inside it. */
+.slot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* Focus mode's button (`useFocusMode`): in the corner, quiet until the field is hovered or focused. */
 .expand {
   position: absolute;

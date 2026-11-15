@@ -263,6 +263,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
 | `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
 | `renderer/src/listViewsRefresh.test.ts`                   | every list view (`ObjectListView`) has the Refresh button in its header (`ViewRefreshButton`) |
+| `renderer/src/newButtonsShowTheirObject.test.ts`          | every "New …" button shows what it creates with a plus (an icon named `…Plus`, like `TagPlus`), never the bare `Plus` |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |

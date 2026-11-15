@@ -46,6 +46,16 @@
   white-space: nowrap;
 }
 
+/* "Changes in cs:15 to cs:17 on": in a narrow header the branch's folders give way first (`PathLabel` shrinks as fast
+   as its folders are wide), then these words are cut, never spilling over the header's buttons. A shrink under 1 would
+   take only that share of the overflow once the branch can't shrink more (CSS flexbox), and spill the rest. */
+.branchLead {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .title code {
   font-family: var(--font-mono);
   font-size: var(--text-md);

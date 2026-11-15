@@ -9,6 +9,7 @@ import {
   INCOMING_CHECK_LIMIT,
   readBranchHead,
   readChangesetIncomingChanges,
+  readIncomingChanges,
   readIncomingChangesetPage,
   readIncomingSummary,
   summarizeIncoming,
@@ -107,6 +108,15 @@ describe('incoming off a branch', () => {
       conflicts: [],
       blockedPaths: [],
     });
+    expect(lines().map((line) => line.split(' ')[0])).toEqual(['status']);
+  });
+
+  it.each([
+    ['a changeset', statusHeader('12', { type: 'Changeset', changeset: -1, repository: 'sandbox' })],
+    ['a label', statusHeader('v1', { type: 'Label', changeset: -1, repository: 'sandbox' })],
+  ])('for a partial workspace on %s reads only the status: nothing comes in off a branch', async (_, header) => {
+    const { cm, lines } = fakeCmClient({ status: header });
+    expect(await readIncomingChanges(cm, '/w')).toMatchObject({ branch: null, changesets: [], files: [] });
     expect(lines().map((line) => line.split(' ')[0])).toEqual(['status']);
   });
 });

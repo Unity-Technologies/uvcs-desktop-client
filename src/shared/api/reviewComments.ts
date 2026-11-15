@@ -12,6 +12,10 @@ export interface ReviewCommentsApi {
   reply(place: Place, commentGuid: string, text: string, options?: { discard?: boolean }): Promise<void>;
   edit(place: Place, commentGuid: string, text: string): Promise<void>;
   remove(place: Place, commentGuid: string): Promise<void>;
+  /** Marks a change request applied in a changeset of the review's repository, by hand. */
+  markApplied(place: Place, changeRequestGuid: string, changesetId: number): Promise<void>;
+  /** Marks an applied change request as not applied: it's open again. */
+  markNotApplied(place: Place, changeRequestGuid: string): Promise<void>;
   /** Writes the review's description, or clears it with an empty text. */
   setDescription(place: Place, reviewId: number, text: string): Promise<void>;
 }

@@ -52,6 +52,11 @@ export function reviewSummariesKey(place: Place, text?: string): readonly unknow
   return queryKeys.inPlace(place, 'codeReviews', 'summaries', { text });
 }
 
+/** The reviews of one branch, for the change requests a check-in can apply (`branchReviewsQuery`). */
+export function branchReviewsKey(place: Place, branch: string): readonly unknown[] {
+  return queryKeys.inPlace(place, 'codeReviews', 'summaries', { targetBranch: branch });
+}
+
 /** The review with one number, as the palette looks up a number typed (`reviewNumberToLookUp`). */
 export function reviewNumberedKey(place: Place, id: number): readonly unknown[] {
   return queryKeys.inPlace(place, 'codeReviews', 'summaries', { id });

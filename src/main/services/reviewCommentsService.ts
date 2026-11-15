@@ -2,7 +2,16 @@ import type { ReviewCommentsApi } from '@shared/api/reviewComments';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
-import { addCommentArgs, addLineCommentArgs, descriptionArgs, editCommentArgs, removeCommentArgs, replyArgs } from '../cm/reviewCommentArgs';
+import {
+  addCommentArgs,
+  addLineCommentArgs,
+  applyChangeRequestArgs,
+  descriptionArgs,
+  editCommentArgs,
+  removeCommentArgs,
+  replyArgs,
+  unapplyChangeRequestArgs,
+} from '../cm/reviewCommentArgs';
 import { conversationOf, FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
@@ -42,6 +51,16 @@ export function createReviewCommentsService({ cm }: ServiceContext): ReviewComme
     async remove(place, commentGuid) {
       const at = cmPlace(place);
       await cm.query(removeCommentArgs(commentGuid, at), at.options);
+    },
+
+    async markApplied(place, changeRequestGuid, changesetId) {
+      const at = cmPlace(place);
+      await cm.query(applyChangeRequestArgs(changeRequestGuid, changesetId, at), at.options);
+    },
+
+    async markNotApplied(place, changeRequestGuid) {
+      const at = cmPlace(place);
+      await cm.query(unapplyChangeRequestArgs(changeRequestGuid, at), at.options);
     },
 
     async setDescription(place, reviewId, text) {

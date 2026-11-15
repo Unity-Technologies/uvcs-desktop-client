@@ -25,6 +25,7 @@ import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
 import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
+import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
 
@@ -96,6 +97,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
       run: (line: ChangedLine) => {
         const at = lineCommentAt(view, file, line);
         if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at));
+      },
+      variant: {
+        label: suggestLineLabel,
+        run: (line: ChangedLine) => {
+          const at = lineCommentAt(view, file, line);
+          if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at), { suggests: true });
+        },
       },
     };
   }, [reviewId, threads !== undefined, fileKey, openSpot]);

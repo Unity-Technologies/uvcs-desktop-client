@@ -77,6 +77,24 @@ export function keepPointerDownToItself(button: HTMLButtonElement | null): (() =
   return () => button.removeEventListener('pointerdown', stop);
 }
 
+/** The pointer events Pierre's diff listens to on its code (`pre`): hovering a row, picking lines, clicking one. */
+const CODE_POINTER_EVENTS = ['pointerdown', 'pointermove', 'click'] as const;
+
+/**
+ * For a diff shown inside a comment on another diff's code (a suggested change in a thread in the code): the events on
+ * its rows would reach the code around it, whose Pierre reads the first row in their path as the line under the
+ * pointer (to hover it, put its gutter button there, pick it), and that row is the comment's diff's own. They stay in
+ * the comment's diff, which handles them first, in its shadow root. Native, as Pierre listens before React sees them.
+ */
+export function keepCodePointerToItself(element: HTMLElement | null): (() => void) | undefined {
+  if (!element) return undefined;
+  const stop = (event: Event): void => event.stopPropagation();
+  for (const type of CODE_POINTER_EVENTS) element.addEventListener(type, stop);
+  return () => {
+    for (const type of CODE_POINTER_EVENTS) element.removeEventListener(type, stop);
+  };
+}
+
 /**
  * Hovers what is under a still pointer anew, as if it had moved: Pierre only follows the pointer, so lines sliding
  * under it (after a discard) would stay unhovered. It's told the pointer left first, as the line it knew may be gone
@@ -142,11 +160,15 @@ export function rowTextRange(row: Element, start: number, end: number): Range | 
 
 /**
  * The row a pointer event is on, as Pierre marks it (`lineUnderPointer` reads it): the line number of its number cell
- * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row.
+ * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row, and over
+ * a row of a diff shown in a comment on the code (a suggested change in a thread): its rows come first in the event's
+ * path, inside a `diffs-container` of its own, but they're its lines, not the code's.
  */
 export function rowUnderPointer(path: readonly EventTarget[]): RowUnderPointer | null {
-  const row = path.find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
-  return row ? rowOf(row) : null;
+  const index = path.findIndex((target) => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
+  if (index === -1) return null;
+  const diffsAround = path.slice(index).filter((target) => target instanceof HTMLElement && target.tagName.toLowerCase() === 'diffs-container').length;
+  return diffsAround > 1 ? null : rowOf(path[index] as HTMLElement);
 }
 
 /** Text selected in the page, in a diff or a file Pierre renders (not typed into: the editor has its own selections). */

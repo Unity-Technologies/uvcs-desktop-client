@@ -65,7 +65,7 @@ stops the update and puts the local versions back. Sandbox: `scripts/sandboxes/i
 
 ## A partial workspace
 
-A partial workspace loads no one changeset (docs/features/shelves-and-switching.md), so Incoming can't list the
+A partial workspace on a branch loads no one changeset (docs/features/shelves-and-switching.md), so Incoming can't list the
 changesets between the loaded one and the head: it lists the items the branch head would change in what the workspace
 loaded, as `cm partial update` would bring them.
 

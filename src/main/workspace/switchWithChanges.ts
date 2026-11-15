@@ -1,6 +1,6 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceKind } from '@shared/domain/workspace';
-import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
+import type { PartialSwitchDisabledReason, PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
@@ -28,11 +28,15 @@ const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 const ALREADY_WHOLE = 'This workspace already has the whole branch.';
 const CANT_LEAVE_ON_WHOLE_BRANCH = "Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.";
-/** Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard. */
-const PARTIAL_REFUSED = {
-  notBranch: 'A partial workspace can only switch to a branch. To switch to a changeset, label or shelve, download the whole branch first, from the workspace’s menu.',
-  otherRepository: 'A partial workspace can only switch to a branch of its own repository. To switch to another repository, download the whole branch first, from the workspace’s menu.',
-} as const;
+// A changeset is "yet": the official Gluon client keeps a partial workspace on one, which `cm partial switch` can't do
+// so far (docs/features/shelves-and-switching.md). It takes neither a label, a shelve nor another repository's branch.
+// Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard.
+const PARTIAL_REFUSED: Record<PartialSwitchDisabledReason, string> = {
+  changeset: "A partial workspace can't switch to a changeset yet. To switch to one, download the whole branch first, from the workspace’s menu.",
+  label: "A partial workspace can't switch to a label. To switch to one, download the whole branch first, from the workspace’s menu.",
+  shelve: "A partial workspace can't switch to a shelve. To switch to one, download the whole branch first, from the workspace’s menu.",
+  otherRepository: "A partial workspace can't switch to a branch of another repository. To switch to one, download the whole branch first, from the workspace’s menu.",
+};
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
   /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */

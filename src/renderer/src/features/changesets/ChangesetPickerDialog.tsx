@@ -1,5 +1,6 @@
 import { CommentLine } from '../../components/comments/CommentLine';
 import type { Place } from '@shared/domain/place';
+import type { QueryFilter } from '@shared/domain/query';
 import { useQuery } from '@tanstack/react-query';
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -10,8 +11,9 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Highlight } from '../../ui/Highlight';
 import { PickList } from '../../ui/PickList';
-import { changesetChoices, type ChangesetChoice } from './changesetFilters';
+import { changesetChoices, changesetChoicesEmptyText, type ChangesetChoice } from './changesetFilters';
 import { RECENT_CHANGESETS, recentChangesetsQuery } from './recentChangesets';
+import { changesetsQuery } from './useChangesets';
 import styles from './ChangesetPickerDialog.module.css';
 
 interface PickChangesetOptions {
@@ -20,21 +22,26 @@ interface PickChangesetOptions {
   exclude?: number;
   /** Another place's changesets than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
   place?: Place;
+  /** The changesets listed, in place of the newest: those this filter reads (a branch's, `changesetsQuery`). */
+  among?: QueryFilter;
 }
 
 /**
- * Asks the user to choose a changeset: one of the newest (the palette's list, `recentChangesetsQuery`), or any other
- * by its number. Resolves to its number, or undefined if dismissed.
+ * Asks the user to choose a changeset: one of the newest (the palette's list, `recentChangesetsQuery`) or of `among`,
+ * the first ready for Enter, or any other by its number. Resolves to its number, or undefined if dismissed.
  */
 export async function pickChangeset(options: PickChangesetOptions): Promise<number | undefined> {
   return (await askDialog<ChangesetChoice>((finish) => <ChangesetPickerDialog {...options} finish={finish} />))?.id;
 }
 
-function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
+function ChangesetPickerDialog({ title, exclude, place, among, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
   const windowPlace = usePlace();
-  const { data: recent, error } = useQuery(recentChangesetsQuery(place ?? windowPlace));
+  const listedPlace = place ?? windowPlace;
+  const { data: recent, error } = useQuery(among ? changesetsQuery(listedPlace, among) : recentChangesetsQuery(listedPlace));
   const [search, setSearch] = useState('');
-  const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
+  // A filter's changesets aren't the newest: they rule out no number typed.
+  const readLimit = among ? undefined : RECENT_CHANGESETS;
+  const choices = useMemo(() => changesetChoices(recent, readLimit, exclude, search), [recent, readLimit, exclude, search]);
   // A number typed is picked without the list: only an empty or text search waits for it.
   const waiting = !recent && !error && typedChangesetNumber(search) === undefined;
 
@@ -51,7 +58,7 @@ function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetO
         isDisabled={(choice) => choice.missing === true}
         loading={waiting}
         rowHeight={30}
-        empty={error ? `Couldn't read the changesets: ${error.message}. Type a number to pick one.` : 'No changesets found. Type a number to pick an older one.'}
+        empty={changesetChoicesEmptyText(error, among ? 'some' : 'newest')}
         renderItem={({ id, changeset, missing }) => (
           <>
             <GitCommitVertical size={13} className={styles.icon} />

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueries';
 import { branchSearchQuery, labelSearchQuery, SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
@@ -12,6 +12,8 @@ import { useMemberNames } from '../../features/permissions/permissionsQueries';
 import { queryKeys } from '../../api/queryKeys';
 import { peopleSeenIn } from '../people/usePeopleSeen';
 import { changesetToLookUp } from './changesetLookup';
+import { changeRequestIndex, changeRequestSuggestions } from './changeRequestSuggestions';
+import { ChangeRequestsContext } from './changeRequestsContext';
 import {
   branchIndex,
   branchSuggestions,
@@ -99,6 +101,9 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
     const users = { every: everyUser.data, searched: searchedPeople, searching: searchingPeople };
     return peopleListedFrom({ items: seen, reading: changesetsListed.reading, failed: changesetsListed.failed }, users);
   }, [kind, changesetsListed, everyBranch.data, everyLabel.data, shelves.data, reviews.data, place, everyUser.data, searchedPeople.data, searchedPeople.isPending, searchedPeople.isError, searchingPeople]);
+  // The change requests the comment's owner read (a check-in's branch's): nothing of their own to read here.
+  const changeRequests = useContext(ChangeRequestsContext);
+  const changeRequestsIndex = useMemo(() => changeRequestIndex(changeRequests?.requests ?? []), [changeRequests?.requests]);
   const peopleIndex = useMemo(() => (peopleListed ? personIndex(peopleListed.items) : null), [peopleListed?.items]);
 
   const listed = useMemo(() => {
@@ -117,10 +122,12 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
         return { suggestions: peopleIndex ? personSuggestions(peopleIndex, typed) : [], reading: peopleListed?.reading ?? false, failed: peopleListed?.failed ?? false };
       case 'emoji':
         return { suggestions: emojiSuggestions(typed), reading: false, failed: false };
+      case 'changeRequest':
+        return { suggestions: changeRequestSuggestions(changeRequestsIndex, typed), reading: changeRequests?.reading ?? false, failed: changeRequests?.failed ?? false };
       default:
         return null;
     }
-  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, placeRepository, changesetsListed, branchesListed, labelsListed, peopleListed, shelves.isPending, shelves.isError, reviews.isPending, reviews.isError]);
+  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, changeRequestsIndex, changeRequests?.reading, changeRequests?.failed, placeRepository, changesetsListed, branchesListed, labelsListed, peopleListed, shelves.isPending, shelves.isError, reviews.isPending, reviews.isError]);
 
   const lookup = useChangesetLookup(kind === 'changeset' && changesets.data !== undefined ? typed : null, listed?.suggestions ?? []);
   const search = useChangesetSearch(place);

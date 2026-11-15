@@ -9,6 +9,12 @@
   border-radius: var(--radius-md);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+  /*
+   * Its own, in whole pixels, never its surroundings' (a comment's 1.55 gave 18.6px): the label then sits a whole number
+   * of pixels inside the border (5, 3 and 8 at each height), so the two round together wherever the button lands. A
+   * fractional gap rounded the text a pixel up or down from one page to another, the button itself the same.
+   */
+  line-height: 16px;
   max-width: 100%;
   white-space: nowrap;
   cursor: default;
@@ -131,6 +137,14 @@
 
 .danger:active:not([aria-disabled='true']) {
   background: color-mix(in srgb, var(--danger-hover) 88%, black);
+}
+
+/*
+ * No drop shadow (`flat`): in a tinted band (a suggested change's header), a button's drop shadow weighs its lower edge,
+ * and it read as sitting low. Its focus ring is a box-shadow too (`:focus-visible`, global.css): it stays.
+ */
+.flat:not(:focus-visible) {
+  box-shadow: none;
 }
 
 .iconOnly {
