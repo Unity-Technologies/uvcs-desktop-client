@@ -71,27 +71,27 @@ describe('choosesDownloadsFor', () => {
   const item = { isPrivate: false, added: false, repository: 'game@local' };
   const inWorkspace = { underXlink: false, workspaceRepository: 'game@local' };
 
-  it('offers it on a checked-in item of a workspace that may choose', () => {
-    expect(choosesDownloadsFor(item, inWorkspace, 'standard', onBranch)).toBe(true);
-    expect(choosesDownloadsFor(item, inWorkspace, 'partial', onBranch)).toBe(true);
+  it('offers it on a checked-in item of a partial workspace', () => {
+    expect(choosesDownloadsFor(item, inWorkspace, 'partial')).toBe(true);
   });
 
-  it('never in a workspace that may not choose', () => {
-    expect(choosesDownloadsFor(item, inWorkspace, 'dynamic', onBranch)).toBe(false);
-    expect(choosesDownloadsFor(item, inWorkspace, 'standard', { kind: 'label', name: 'v1' })).toBe(false);
+  it('never in a standard workspace, where it would make it partial: that stays in its menu and the palette', () => {
+    expect(choosesDownloadsFor(item, inWorkspace, 'standard')).toBe(false);
+    expect(choosesDownloadsFor(item, inWorkspace, 'dynamic')).toBe(false);
+    expect(choosesDownloadsFor(item, inWorkspace, undefined)).toBe(false);
   });
 
   it('not on a private or added item, which the server tree the dialog shows does not hold', () => {
-    expect(choosesDownloadsFor({ ...item, isPrivate: true }, inWorkspace, 'standard', onBranch)).toBe(false);
-    expect(choosesDownloadsFor({ ...item, added: true }, inWorkspace, 'standard', onBranch)).toBe(false);
+    expect(choosesDownloadsFor({ ...item, isPrivate: true }, inWorkspace, 'partial')).toBe(false);
+    expect(choosesDownloadsFor({ ...item, added: true }, inWorkspace, 'partial')).toBe(false);
   });
 
   it('not under an xlink, or on an item of another repository: an xlink downloads whole', () => {
-    expect(choosesDownloadsFor(item, { ...inWorkspace, underXlink: true }, 'standard', onBranch)).toBe(false);
-    expect(choosesDownloadsFor({ ...item, repository: 'engine@local' }, inWorkspace, 'standard', onBranch)).toBe(false);
+    expect(choosesDownloadsFor(item, { ...inWorkspace, underXlink: true }, 'partial')).toBe(false);
+    expect(choosesDownloadsFor({ ...item, repository: 'engine@local' }, inWorkspace, 'partial')).toBe(false);
   });
 
   it('offers it before the repositories are known', () => {
-    expect(choosesDownloadsFor({ isPrivate: false, added: false }, { underXlink: false, workspaceRepository: undefined }, 'partial', onBranch)).toBe(true);
+    expect(choosesDownloadsFor({ isPrivate: false, added: false }, { underXlink: false, workspaceRepository: undefined }, 'partial')).toBe(true);
   });
 });

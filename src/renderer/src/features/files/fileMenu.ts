@@ -100,7 +100,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const unloadedXlink =
     single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
   const choosesDownloads =
-    single && surroundings && choosesDownloadsFor({ ...single, added: isAdded(pendingChanges, single.path) }, surroundings, workspace?.kind, workspace?.selector);
+    single && surroundings && choosesDownloadsFor({ ...single, added: isAdded(pendingChanges, single.path) }, surroundings, workspace?.kind);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 

@@ -38,17 +38,18 @@ export interface DownloadsItem {
 }
 
 /**
- * Whether Files' menu offers Choose what to download on an item: one of the workspace's own repository that the
- * server's tree holds, in a workspace that may choose (`choosesDownloads`). Not a private or added item, which the
- * dialog's tree doesn't show, nor one under an xlink: an xlink downloads whole, and its folders aren't chosen.
+ * Whether Files' menu offers Choose what to download on an item: only in a partial workspace, as Files' header button
+ * (`showsChooseDownloadsButton`): in a standard one it would make the workspace partial, a rare step kept in the
+ * workspace card's menu and the palette. Only on an item of the workspace's own repository that the server's tree
+ * holds: not a private or added item, which the dialog's tree doesn't show, nor one under an xlink: an xlink downloads
+ * whole, and its folders aren't chosen.
  */
 export function choosesDownloadsFor(
   item: DownloadsItem,
   where: { underXlink: boolean; workspaceRepository: string | undefined },
   kind: WorkspaceKind | undefined,
-  selector: WorkspaceSelector | undefined,
 ): boolean {
-  if (!choosesDownloads(kind, selector)) return false;
+  if (kind !== 'partial') return false;
   if (item.isPrivate || item.added || where.underXlink) return false;
   return !(where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository);
 }
