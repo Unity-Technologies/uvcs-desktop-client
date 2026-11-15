@@ -985,7 +985,8 @@ docs/features/code-reviews.md "Comments in the code"):
   nothing in the slot can be drawn above what the container draws over it. It stays as the pointer goes from line to
   line (`lineHover`: Pierre says a line was left before the next was entered, so a line left clears a frame later) and
   while the pointer is on it (`hold`, `release`: React says the button was entered before Pierre says the line was
-  left), and it has no pop-in: an animation restarted on every line flickered. The action is also the first entry
+  left; a line entered lets go). Apart from its line, it's placed again when the code moves under a pointer at rest
+  (`useFollowedLine`: the layout switched, a thread grown), and goes once its line isn't drawn. It has no pop-in: an animation restarted on every line flickered. The action is also the first entry
   of the lines' menu, on the last of the lines selected
   (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's

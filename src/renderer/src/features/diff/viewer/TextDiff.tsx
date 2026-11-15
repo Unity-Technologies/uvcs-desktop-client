@@ -242,7 +242,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     lineAction: annotations?.lineAction,
   });
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
-  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container);
+  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container, layout);
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
