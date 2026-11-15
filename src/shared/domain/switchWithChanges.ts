@@ -1,3 +1,5 @@
+import type { SelectorKind } from './workspace';
+
 /** What happens to pending changes shelved by a switch: they stay behind in the shelve, or come along. */
 export type PendingChangesAction = 'leave' | 'bring';
 
@@ -16,8 +18,11 @@ export type BringDisabledReason = 'label' | 'shelve' | 'otherRepository';
 /** Why the changes can't stay behind. */
 export type LeaveDisabledReason = 'shelveSource';
 
-/** Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch of its own repository. */
-export type PartialSwitchDisabledReason = 'notBranch' | 'otherRepository';
+/**
+ * Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch of its own repository.
+ * The target's kind names what was refused: a changeset, a label or a shelve, or a branch of another repository.
+ */
+export type PartialSwitchDisabledReason = Exclude<SelectorKind, 'branch'> | 'otherRepository';
 
 /** What the app knows about the workspace before switching it, to decide what to offer. */
 export interface SwitchPreflight {
