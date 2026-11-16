@@ -30,9 +30,13 @@ describe('mergeRequestSummaryOf', () => {
     expect(mergeRequestSummaryOf(request('Open', { reviewers: [] })).review).toEqual({ tone: 'pending', title: 'Review required', detail: 'At least 1 approving review is required' });
   });
 
-  it('says how a merged one’s review went, once someone reviewed it', () => {
+  it('says how a merged one’s review went, once it was decided', () => {
     expect(mergeRequestSummaryOf(request('Merged', { status: 'Reviewed', reviewers: [ANA_REVIEWED] })).review?.title).toBe('Changes reviewed');
     expect(mergeRequestSummaryOf(request('Merged', { reviewers: [] })).review).toBeUndefined();
+  });
+
+  it('says nothing of a review still going on a merged one: it merged whatever the review said', () => {
+    expect(mergeRequestSummaryOf(request('Merged', { status: 'Under review', reviewers: [{ name: 'ana', status: 'Under review' }] })).review).toBeUndefined();
   });
 
   it.each(['Draft', 'Closed'] as const)('says nothing of the review of a %s one: it is not up for review', (state) => {

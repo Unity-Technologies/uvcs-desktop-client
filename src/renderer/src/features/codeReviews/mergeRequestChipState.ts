@@ -30,8 +30,8 @@ export interface TopBarRequestChip {
   /** Merged: the workspace is still on finished work, said quietly. */
   muted: boolean;
   /**
-   * What a screen reader says it is, as the chip shows it: "Merge request · Open into /main · Under review: Jump
-   * higher"; no status where the chip shows none ("Merge request · Merged into /main: Jump higher").
+   * What a screen reader says it is, as the chip shows it: "Merge request · Open into /main · Reviewed: Jump higher";
+   * no status where the chip shows none ("Merge request · Open into /main: Jump higher" while under review).
    */
   label: string;
   card: TopBarRequestCard;
@@ -60,12 +60,13 @@ export function asksForBranchReviews(selector: WorkspaceSelector | null | undefi
 export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems, source?: string): TopBarRequestChip {
   const { state } = review.mergeRequest;
   const isOpen = state === 'Open';
-  const shown = ['Merge request', whereItMerges(review.mergeRequest), ...(isOpen ? [review.status] : [])];
+  const status = isOpen && review.status !== 'Under review' ? review.status : undefined;
+  const shown = ['Merge request', whereItMerges(review.mergeRequest), ...(status ? [status] : [])];
   return {
     reviewId: review.id,
     state,
     stateText: state,
-    ...(isOpen && review.status !== 'Under review' && { status: review.status }),
+    ...(status && { status }),
     muted: state === 'Merged',
     label: `${shown.join(' · ')}: ${commentLineText(review.title)}`,
     card: {

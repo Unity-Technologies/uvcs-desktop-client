@@ -55,10 +55,11 @@ describe('mergeRequestChipOf, the chip', () => {
   });
 
   it('names what it is and where it stands for a screen reader, by its title', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more' })).label).toBe('Merge request · Open into /main · Under review: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more', status: 'Reviewed' })).label).toBe('Merge request · Open into /main · Reviewed: Jump higher');
   });
 
   it("says no review status where the chip shows none", () => {
+    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher', status: 'Under review' })).label).toBe('Merge request · Open into /main: Jump higher');
     expect(mergeRequestChipOf(request(12, 'Draft', { title: 'Jump higher' })).label).toBe('Merge request · Draft into /main: Jump higher');
     expect(mergeRequestChipOf(request(12, 'Merged', { title: 'Jump higher' })).label).toBe('Merge request · Merged into /main: Jump higher');
   });

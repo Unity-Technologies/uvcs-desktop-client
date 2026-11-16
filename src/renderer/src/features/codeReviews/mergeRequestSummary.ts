@@ -34,11 +34,12 @@ export function mergeRequestSummaryOf(request: MergeRequestReview): MergeRequest
 }
 
 /**
- * Open: where the review stands. Merged: how it went, once someone reviewed it ("Review required" would be wrong after
- * the fact). A draft isn't up for review, and a closed one is given up.
+ * Open: where the review stands. Merged: how it went, once it was decided (reviewed, or changes required): "Review
+ * required" or "Changes under review" would be wrong on finished work, which merged whatever the review said. A draft
+ * isn't up for review, and a closed one is given up.
  */
-function showsReview({ mergeRequest, reviewers }: MergeRequestReview): boolean {
-  return mergeRequest.state === 'Open' || (mergeRequest.state === 'Merged' && reviewers.length > 0);
+function showsReview({ mergeRequest, status }: MergeRequestReview): boolean {
+  return mergeRequest.state === 'Open' || (mergeRequest.state === 'Merged' && status !== 'Under review');
 }
 
 function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<MergeRequestSummary['review']> {
