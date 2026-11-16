@@ -5,7 +5,7 @@ import { commentLineText } from '../../lib/comments/commentText';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
 import { topBarRequestOf, type MergeRequestReview } from '../codeReviews/mergeRequestChipState';
-import { isActiveMergeRequest, mergeRequestTip } from '../codeReviews/mergeRequestState';
+import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove } from '../codeReviews/mergeRequestState';
 import type { FinishedTask } from './finishedTask';
 import { isTaskBranch } from './mergeTaskSummary';
 
@@ -78,8 +78,21 @@ export function mergedCheckDestinationOf(branch: TaskBranch | undefined, reviews
   return topBarRequestOf(reviewsOfBranch)?.mergeRequest.destination ?? branch.parent;
 }
 
+/**
+ * Whether the step reads its request's conversation, for the change requests still to apply: a request asking for
+ * rework with something open (`openIssueCount`), the conversations a check-in reads too (`reviewsToRead`), so it's
+ * read once for both.
+ */
+export function readsOpenItems(step: TaskNextStep): step is Extract<TaskNextStep, { kind: 'rework' }> {
+  return step.kind === 'rework' && step.request.openIssueCount > 0;
+}
+
 /** A button of the next step; `MergeTaskSuggestion` runs it. */
-export type TaskNextStepAction = { label: string; primary: boolean } & ({ kind: 'create' | 'readyForReview' | 'open' } | { kind: 'merge'; merge: MergeInto });
+export type TaskNextStepAction = { label: string; primary: boolean } & (
+  | { kind: 'create' | 'open' }
+  | { kind: 'readyForReview'; move: MergeRequestMove }
+  | { kind: 'merge'; merge: MergeInto }
+);
 
 /** The request's line: its state's glyph, "#12", its title's first line (cut to fit) and its review in words. */
 export interface TaskNextStepLine {
@@ -134,7 +147,8 @@ function actionsOf(step: RequestStep, number: string, quiet: boolean): TaskNextS
   switch (step.kind) {
     case 'draft': {
       const label = quiet ? `Mark merge request ${number} ready for review` : (MENU_WORDS.readyForReview.label ?? 'Ready for review');
-      return [{ kind: 'readyForReview', label, primary: true }, openIt];
+      // A draft's first move is getting ready for review (`mergeRequestMoves`), as the card's footer offers it.
+      return [{ kind: 'readyForReview', label, primary: true, move: mergeRequestMoves('Draft')[0]! }, openIt];
     }
     case 'reviewed':
       return [{ kind: 'merge', label: step.merge.label, primary: true, merge: step.merge }, openIt];
