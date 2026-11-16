@@ -94,7 +94,10 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
 - **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
   conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
 - **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its
-  branch's changesets, its conversation). A merged one's page also reads its branch (`branchQuery`, two light `cm find
+  branch's changesets, its conversation). Notes that name branches need their names: from what the window already
+  read, at no command (the list named its rows' branches); cold (a link opened first thing, a repository's window)
+  the cache reads every branch's name once, two light `cm find branch`, and keeps them ten minutes
+  (`BranchNamesCache`). Should that read fail, the conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
   branch` by name, visible and hidden), to offer Hide or Unhide: no read the page makes says whether a branch is
   hidden. Nothing polls.
 
@@ -118,11 +121,14 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
   merge request. No Merge button yet.
 - **Merged**: "Merged into /main in cs:6" (the chip opens the changeset; without the note, "Merged into /main"), with
   **Hide branch** or **Unhide branch** once the branch's read says which (`setMergedBranchHidden`: it reads the
-  branches and the reviews again, as the server may note it); footer **Switch to /main** while the workspace is still
-  on the merged branch.
+  branches and the reviews again, as the server may note it); neither for a branch deleted or renamed since. Footer
+  **Switch to /main** while the workspace is still on the merged branch, and then no Hide branch: `cm branch hide`
+  hides the workspace's own branch without a word, which would leave the workspace on a branch the lists don't show;
+  switching away comes first.
 - **Closed**: "Closed" / "Not merged"; footer **Reopen merge request**.
-- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed), so what joins the list
-  later holds a merge back the way an unfinished review does. Nothing blocks a merge: the server's merge rules decide.
+- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed). Nothing follows it yet: it
+  is the rule the card's Merge action will be made primary by, so that what joins the list later holds a merge back
+  the way an unfinished review does. It will never block a merge: the server's merge rules decide.
 - What the card doesn't have: checks, a build status, a merge queue, a conflicts line. No data source has them yet, so
   there is no placeholder, type or stub: each joins the list as a section of its own when its data does (read per
   page, never per row of a list), with no change to the card or its callers.
