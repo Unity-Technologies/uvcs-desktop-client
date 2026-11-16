@@ -1,6 +1,7 @@
 import { Check, CircleDot, MoreHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import type { Branch } from '@shared/domain/branch';
 import type { CodeReview, MergeRequestInfo } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
@@ -37,7 +38,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const source = review.target.kind === 'branch' ? review.target.branch : undefined;
-  const sourceHidden = useSourceHidden(place, mergeRequest.state === 'Merged' ? source : undefined);
+  const sourceBranch = useSourceBranch(place, mergeRequest.state === 'Merged' ? source : undefined);
   const card = mergeCardOf({
     mergeRequest,
     status: review.status,
@@ -45,7 +46,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
     source,
     open,
     mergedChangeset,
-    sourceHidden,
+    sourceBranch,
     workspaceBranch: branchWorkedOn(workspace?.selector),
   });
 
@@ -143,10 +144,11 @@ function SectionDisc({ section }: { section: MergeCardSection }) {
 }
 
 /**
- * Whether a merged request's branch is hidden, for Hide or Unhide: the branch's own read (`branchQuery`, shared with
- * whatever else shows that branch), only for a merged request, rarely read again. None until known.
+ * A merged request's branch, for whether it's hidden (Hide or Unhide): the branch's own read (`branchQuery`, shared
+ * with whatever else shows that branch), only for a merged request, rarely read again. Null when it no longer exists;
+ * none until read.
  */
-function useSourceHidden(place: Place, branch: string | undefined): boolean | undefined {
+function useSourceBranch(place: Place, branch: string | undefined): Branch | null | undefined {
   const { data } = useQuery({ ...branchQuery(place, branch ?? ''), ...SLOW_CHANGING_QUERY, enabled: branch !== undefined });
-  return branch !== undefined && data !== undefined ? data?.isHidden === true : undefined;
+  return branch === undefined ? undefined : data;
 }

@@ -1,3 +1,4 @@
+import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
@@ -54,8 +55,8 @@ export interface MergeCardInput {
   open: OpenItems;
   /** The changeset it was merged in, from its conversation (`mergedChangesetOf`). */
   mergedChangeset?: number;
-  /** Whether its branch is hidden; none until known. */
-  sourceHidden?: boolean;
+  /** Its branch as read, for whether it's hidden: null when it no longer exists (deleted, renamed); none until read. */
+  sourceBranch?: Pick<Branch, 'isHidden'> | null;
   /** The branch the window's workspace is on; none without a workspace, or on no branch. */
   workspaceBranch?: string;
 }
@@ -116,9 +117,9 @@ export function openItemsLine({ changeRequests, questions }: OpenItems): string 
 }
 
 /**
- * Whether the request is ready to merge: every section passed. The one rule that makes Merge the card's primary
- * action, so a section added later (a check failed, a conflict) holds it back as an unfinished review does. Nothing
- * blocks a merge: the server's merge rules decide.
+ * Whether the request is ready to merge: every section passed. Nothing follows it yet: it is the rule the card's Merge
+ * action will be made primary by, so that a section added later (a check failed, a conflict) holds it back as an
+ * unfinished review does. It will never block a merge: the server's merge rules decide.
  */
 export function mergeReadiness(sections: readonly MergeCardSection[]): boolean {
   return sections.length > 0 && sections.every((section) => section.tone === 'passed');
@@ -129,8 +130,8 @@ function openReviewSection(input: MergeCardInput): MergeCardSection {
   return { ...reviewSectionOf(input.reviewers, input.status), ...(open && { rows: [open] }) };
 }
 
-function mergedSection({ mergeRequest, source, mergedChangeset, sourceHidden }: MergeCardInput): MergeCardSection {
-  const hide = source !== undefined && sourceHidden !== undefined ? hideAction(source, !sourceHidden) : undefined;
+function mergedSection({ mergeRequest, source, mergedChangeset, sourceBranch, workspaceBranch }: MergeCardInput): MergeCardSection {
+  const hide = source !== undefined && sourceBranch ? visibilityAction(source, sourceBranch.isHidden === true, workspaceBranch === source) : undefined;
   return {
     id: 'merged',
     tone: 'neutral',
@@ -147,8 +148,13 @@ function switchToDestination({ mergeRequest, source, workspaceBranch }: MergeCar
   return { footer: { kind: 'switchTo', branch: mergeRequest.destination, label: `Switch to ${mergeRequest.destination}` } };
 }
 
-function hideAction(branch: string, hidden: boolean): MergeCardAction {
-  return { kind: 'setBranchHidden', branch, hidden, label: hidden ? 'Hide branch' : 'Unhide branch' };
+/**
+ * Hide a visible branch, show a hidden one again. Not hiding the branch the workspace is on (`cm` would, and the
+ * workspace's own branch would leave the lists): switching away comes first, the card's footer.
+ */
+function visibilityAction(branch: string, isHidden: boolean, workspaceIsOnIt: boolean): MergeCardAction | undefined {
+  if (isHidden) return { kind: 'setBranchHidden', branch, hidden: false, label: 'Unhide branch' };
+  return workspaceIsOnIt ? undefined : { kind: 'setBranchHidden', branch, hidden: true, label: 'Hide branch' };
 }
 
 function moveAction(move: MergeRequestMove): MergeCardAction {
