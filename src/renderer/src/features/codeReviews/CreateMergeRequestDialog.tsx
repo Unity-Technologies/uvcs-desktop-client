@@ -8,6 +8,8 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
 import { oneLineText } from '../../components/commentEditor/commentFieldText';
+import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
+import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import { useSettledValue } from '../../lib/useSettled';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -160,9 +162,26 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           )}
         </p>
       )}
-      {/* A title is one line: Enter creates the request, as in the code review's dialog. */}
-      <CommentArea singleLine label="Title" placeholder="What does it change?" value={title} onChange={(text) => setTyped(oneLineText(text))} autoFocus />
-      <CommentArea label="Description" placeholder="Give an overview, or instructions for the reviewers. Optional." value={description} onChange={setDescription} />
+      {/* One focus mode for both; Enter in the title creates the request, as in the code review's dialog. */}
+      <CommentFocusGroup>
+        <CommentArea
+          singleLine
+          label="Title"
+          groupField="summary"
+          placeholder="What does it change?"
+          value={title}
+          onChange={(text) => setTyped(oneLineText(text))}
+          autoFocus
+        />
+        <CommentArea
+          label="Description"
+          tall
+          groupField="description"
+          placeholder={DESCRIPTION_PLACEHOLDER}
+          value={description}
+          onChange={setDescription}
+        />
+      </CommentFocusGroup>
       <TextField
         label="Reviewers"
         placeholder="jane.doe@example.com, john.doe@example.com"
