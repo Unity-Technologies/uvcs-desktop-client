@@ -183,10 +183,14 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
     title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge
     card's words (`reviewSectionOf`) with the reviewers' stack (none while nobody reviews it), and what's still open
     ("2 change requests and 1 question open", `openItemsLine`); then its actions, **Open** today: an action joins as
-    one more `MergeRequestChipAction` entry.
+    one more `TopBarRequestAction` entry. The card opens on hover only, so a keyboard doesn't reach it: Enter on the
+    chip opens the page, which shows all of it. A screen reader hears what the chip shows ("Merge request 12 · Open
+    into /main · Under review: Dash"), no status where it shows none.
   - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
     the read Changes makes for the change requests a check-in applies, so the two share it. Asked once the
-    workspace's branch is known, never on a changeset, label or shelve (`asksForBranchReviews`); rarely read again
+    workspace's branch is known and the first screen is in (the pending changes read, or failed: the sidebar's count
+    reads them in any view), so it never competes with a window's first reads; never on a changeset, label or shelve
+    (`asksForBranchReviews`); rarely read again
     (`SLOW_CHANGING_QUERY`: a focus reads nothing), again on a write on a review, a check-in, an update or a switch.
     The query is keyed by the workspace's branch (`keyedByWorkspaceInfo('selector')`), so a switch, in the app or in a
     terminal, reads the new branch's reviews once. The conversation, for what's still open, is read only as the card
