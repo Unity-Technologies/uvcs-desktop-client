@@ -41,7 +41,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   list (a server that lists none, a group made since it was read) can't be told from a user, and the page's writes
   must name each one as `cm` takes it. Where that type is read (`CodeReviewer.kind`), it decides: the
   page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
-  groups too. Elsewhere (the list's stack, the picker's offered groups, the new-review dialog) the server's groups
+  groups too. Elsewhere (the list's stack, the picker's offered groups) the server's groups
   (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
   `useReviewerGroups`, `reviewerGroups`) tell a group from a user by name, whatever its case (`isGroup`,
   `reviewerRef`). A group shows the group icon where a user shows their avatar
@@ -70,12 +70,12 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
-  A new review picks its reviewers with the same picker (`ReviewersField`: the reviewers picked as chips, each with
-  its ×, **Add** opening the picker, **Remove all** once there are several, `pickedReviewersOf`), each asked as the
+  **New code review** picks its reviewers with the same picker, never typed names (`ReviewersField`: the reviewers picked as chips, each with
+  its ×, **Add** opening the picker, **Remove all** once there are several, `pickedReviewersOf`; a chip removed leaves the keyboard on the next one or on Add, `focusAfterRemoving`), each asked as the
   kind it was listed with, so a group found by a search stays a group (`reviewersToAsk`), in the command that creates
   it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`). A merge request's dialog has the
-  same field (docs/features/merge-requests.md "Creating one"). Names aren't typed: one the server doesn't know can't
-  be asked for.
+  same field (docs/features/merge-requests.md "Creating one"). Reviewers come from the server's lists or its search, so an unknown
+  name is never asked; if `cm` refuses one anyway, its message shows in the failure toast.
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
 - `cm codereview -e --status` isn't used: it sets the status of the review's first reviewer, and fails on a review
   with more than one.
