@@ -11,7 +11,8 @@ const LOG_FILE = process.env.UVCS_FAKE_CM_LOG;
 
 function run(args) {
   const result = answer(args);
-  if (LOG_FILE) appendFileSync(LOG_FILE, `${result.exitCode === 0 ? 'ok ' : 'ERR'} ${args.join(' ')}\n`);
+  // A command `cm` refuses (a merge its rules don't allow) was answered: only one the fake doesn't know is an ERR.
+  if (LOG_FILE) appendFileSync(LOG_FILE, `${result.exitCode === 0 || result.refused ? 'ok ' : 'ERR'} ${args.join(' ')}\n`);
   return result;
 }
 

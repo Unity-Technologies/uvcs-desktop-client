@@ -7,6 +7,9 @@ const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { matching } = require('./where.cjs');
 
+/** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
+class CmRefusal extends Error {}
+
 /** What `cm find <object>` searches. */
 const FINDABLE = {
   attribute: repository.ATTRIBUTES,
@@ -67,7 +70,23 @@ const COMMANDS = {
   'codereview subscription': reviewSubscription,
   // A merge request's state or destination: `cm` prints nothing.
   'mergerequest edit': () => '',
+  merge: mergeRefusedByRules,
 };
+
+/**
+ * `cm merge <branch> --to=<branch>`, previewed: refused by the server's merge rules, as `cm` words them in English
+ * (docs/features/merge-requests.md "Merging"). task-001, with an open merge request, isn't reviewed yet; task-002 has
+ * none. The fake merges nothing else.
+ */
+function mergeRefusedByRules([source, ...options]) {
+  const to = options.find((option) => option.startsWith('--to='));
+  if (options.includes('--merge') || !to) throw new Error('The fake cm only previews merges to a branch');
+  const [branch, destination] = [source.replace(/^br:/, ''), to.slice('--to=br:'.length)];
+  const rules = 'Cannot perform the merge because of the Merge Rules.';
+  if (branch === '/main/task-001') throw new CmRefusal(`${rules} Review the branch '${branch}' to merge it to '${destination}'.`);
+  if (branch === '/main/task-002') throw new CmRefusal(`${rules} Branch '${branch}' needs an open merge request to '${destination}'.`);
+  throw new Error(`The fake cm doesn't merge ${source}`);
+}
 
 /** The server's groups, as `cm listusers --onlygroups` lists them. */
 const GROUPS = ['Developers', 'Artists'];
@@ -202,6 +221,7 @@ function answer(args) {
     if (!reply) throw new Error("The fake cm doesn't know this command");
     return { output: reply(rest), exitCode: 0 };
   } catch (error) {
+    if (error instanceof CmRefusal) return { output: `${error.message}\n`, exitCode: 1, refused: true };
     return { output: `${error.message}: cm ${args.join(' ')}\n`, exitCode: 1 };
   }
 }
