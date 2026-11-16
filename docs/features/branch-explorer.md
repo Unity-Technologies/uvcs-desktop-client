@@ -221,3 +221,5 @@ well-known GUID, the workspace's recent branches, then the rest newest first. Re
 (`recentBranchesByWorkspace`, by workspace GUID): every switch puts its branch first (`SettingsStore.rememberRecentBranch`:
 five at most, never /main, as the official client keeps them). The first run takes the official client's from its
 `plasticgui.conf`, once (`importLegacySettings`, ARCHITECTURE.md "Own config"); the app never writes that file.
+Each row shows its branch's merge request state, if it has one (docs/features/merge-requests.md "Where a branch's
+merge request shows").

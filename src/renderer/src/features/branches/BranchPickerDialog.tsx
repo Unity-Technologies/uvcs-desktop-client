@@ -1,6 +1,7 @@
 import type { Place } from '@shared/domain/place';
 import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { BranchSearchList } from './BranchSearchList';
@@ -22,12 +23,19 @@ export function pickBranch(options: PickBranchOptions): Promise<Branch | undefin
 }
 
 function BranchPickerDialog({ title, description, exclude, place, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
+  const windowPlace = usePlace();
   const branchesQuery = useBranches({}, place);
   const branches = useMemo(() => (branchesQuery.data ?? []).filter((branch) => branch.name !== exclude), [branchesQuery.data, exclude]);
 
   return (
     <Dialog title={title} description={description} width={520} onClose={() => finish(undefined)}>
-      <BranchSearchList groups={[{ title: 'Branches', branches }]} onPick={finish} read={branchesRead(branchesQuery)} />
+      <BranchSearchList
+        groups={[{ title: 'Branches', branches }]}
+        onPick={finish}
+        read={branchesRead(branchesQuery)}
+        // Another repository's branches (an xlink's) show no merge requests: they don't bear on the pick.
+        mergeRequestsOf={place ? undefined : windowPlace}
+      />
     </Dialog>
   );
 }
