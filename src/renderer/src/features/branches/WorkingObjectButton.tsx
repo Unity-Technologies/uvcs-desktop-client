@@ -12,6 +12,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ringValue } from '../../app/operations/progressBar';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { ToolbarPill } from '../../ui/ToolbarPill';
+import { MergeRequestChip, useWorkspaceMergeRequest } from '../codeReviews/MergeRequestChip';
 import { BranchSwitcher } from './BranchSwitcher';
 import { useReturnFocus } from '../../ui/useReturnFocus';
 import { useBranchCommands } from './useBranchCommands';
@@ -24,6 +25,8 @@ import { hotkey } from '../../lib/shortcutRegistry';
 
 /** The widest the name and its comment get: 360px with the pill's icon, padding and chevron. */
 const TEXT_MAX_WIDTH = 294;
+/** What the name gives up for its merge request's chip after it ("Open" and its verdict). */
+const CHIP_ROOM = 84;
 
 /** Shows what the workspace is loaded from and lets the user switch branches; right-click for that object's menu. */
 export function WorkingObjectButton() {
@@ -45,6 +48,10 @@ export function WorkingObjectButton() {
   const [menuWanted, setMenuWanted] = useState(false);
   const workingObject = useWorkingObject(workspace, menuWanted);
   const wantMenu = (): void => setMenuWanted(true);
+  const mergeRequest = useWorkspaceMergeRequest();
+  const branchName = (
+    <PathLabel path={title} fitContent maxWidth={mergeRequest ? TEXT_MAX_WIDTH - CHIP_ROOM : TEXT_MAX_WIDTH} tooltip={false} />
+  );
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setOpen}>
@@ -62,7 +69,18 @@ export function WorkingObjectButton() {
             className={styles.trigger}
             textMaxWidth={TEXT_MAX_WIDTH}
             icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
-            label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent maxWidth={TEXT_MAX_WIDTH} tooltip={false} /> : title}
+            label={
+              switching ? (
+                `${switching}…`
+              ) : workspace?.selector.kind === 'branch' ? (
+                <span className={styles.nameLine}>
+                  {branchName}
+                  {mergeRequest && <MergeRequestChip {...mergeRequest} />}
+                </span>
+              ) : (
+                title
+              )
+            }
             sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
             data-tip={switching ? undefined : title}
             data-tip-sub={switching ? undefined : comment?.trim() || undefined}

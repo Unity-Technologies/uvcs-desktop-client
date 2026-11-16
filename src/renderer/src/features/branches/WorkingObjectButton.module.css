@@ -3,6 +3,13 @@
   min-width: 140px;
 }
 
+.nameLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
 .noComment {
   opacity: 0.75;
 }

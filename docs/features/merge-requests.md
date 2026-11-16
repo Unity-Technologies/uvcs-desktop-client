@@ -394,7 +394,8 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   none for a draft, a merged or a closed one). A code review's chip shows its
   status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons. Hovering a merge request's chip shows its
   summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
-  `reviewChipOf` decides which (`hover`). No new
+  `reviewChipOf` decides which (`hover`). Every chip, a merge request's or a code review's, is outlined in its color under the pointer, with
+  the hand cursor: a click opens the review. No new
   column and no "+N more": the list filtered by the branch shows the others.
 - **Lists to pick a branch from** (`BranchSearchList`'s `mergeRequests`: the branch switcher, the Files and
   Changesets branch chips, the merge, compare and move pickers, the New merge request dialog's From and Into): each
@@ -407,8 +408,11 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   the date; each read differently from the Branches view, and the glyphs read as branch icons. Read as the views
   read (above), the rows drawn once they stay, so the list opens at once and the chips follow. A list of another
   repository's branches (an xlink's) shows none: its reviews don't bear on the pick.
-- **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
-  workspace's branch has a merge request, its state's compact pill ("Open") and its verdict, as by every branch; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
+- **The top bar** (`MergeRequestChip`, after the branch's name inside its pill, as a branch's chip after its name in
+  the Branches view; `useWorkspaceMergeRequest`): when the workspace's branch has a merge request, its state's compact
+  pill ("Open") and its verdict, as by every branch; inside the pill, itself the switcher's button, it is a span, and
+  no click on it or its card reaches the pill; the name gives it room (`CHIP_ROOM`). A separate segment after the
+  pill was dropped: it read apart from the branch, unlike everywhere else a branch shows its request; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
   counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the
   state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it.
   - **Hovering** shows a card: the request's summary (`MergeRequestSummaryCard`, "A branch's merge request at a
@@ -416,7 +420,7 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
     open", `openItemsLine`); then **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the
     workspace's branch as the source; `mergeRequestChipOf` decides). No Open button: the title is the link, and the
     card never offers the quiet button the merge card does, as it only says where things stand. The card opens on
-    hover only, so a keyboard doesn't reach it: Enter on the chip opens the page, which shows all of it. A screen
+    hover only, so a keyboard doesn't reach it: the page opens from the chip's click or the palette. A screen
     reader hears what the chip shows ("Merge request · Open into /main · Ready to merge: Dash"; "Waiting for review"
     while it waits), no verdict where it shows none.
   - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
