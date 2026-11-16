@@ -21,6 +21,32 @@ export function startingReviewers(you: string | undefined, branchOwner: string |
   return { onOpen: [], picked: [{ name: you, kind: 'user' }] };
 }
 
+/**
+ * The reviewers the user chose in a new merge request's dialog, and whether they changed who is asked: until they do,
+ * opening the picker included, the reviewers follow the branch picked (`startingReviewers`), so a branch whose owner
+ * is read later, or another branch picked, still starts with you when it's someone else's.
+ */
+export interface ChosenReviewers {
+  pick: ReviewerPick;
+  changed: boolean;
+}
+
+/** The reviewers the field shows: the user's once they changed who is asked, else the branch's, in the picker's order. */
+export function reviewersShown(chosen: ChosenReviewers | undefined, starting: ReviewerPick): ReviewerPick {
+  if (!chosen) return starting;
+  return chosen.changed ? chosen.pick : { onOpen: chosen.pick.onOpen, picked: starting.picked };
+}
+
+/** The choice after the field reports `next`: changed for good once it asks someone else than the field showed. */
+export function chooseReviewers(chosen: ChosenReviewers | undefined, starting: ReviewerPick, next: ReviewerPick): ChosenReviewers {
+  const shown = reviewersShown(chosen, starting).picked;
+  return { pick: next, changed: Boolean(chosen?.changed) || !sameMembers(shown, next.picked) };
+}
+
+function sameMembers(a: readonly MemberRef[], b: readonly MemberRef[]): boolean {
+  return a.length === b.length && a.every((member, index) => member.name === b[index].name && member.kind === b[index].kind);
+}
+
 /** A reviewer picked, as its chip shows them; its × takes `member` off. */
 export interface ReviewerChip {
   member: MemberRef;

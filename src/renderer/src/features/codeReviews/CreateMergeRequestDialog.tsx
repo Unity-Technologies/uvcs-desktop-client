@@ -23,8 +23,7 @@ import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
 import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups } from './mergeRequestDraft';
 import { DraftNoteLine } from './DraftNoteLine';
-import { reviewersToAsk, startingReviewers } from './pickedReviewers';
-import type { ReviewerPick } from './reviewerPick';
+import { chooseReviewers, reviewersShown, reviewersToAsk, startingReviewers, type ChosenReviewers } from './pickedReviewers';
 import { ReviewersField } from './ReviewersField';
 import styles from './CreateMergeRequestDialog.module.css';
 
@@ -63,8 +62,8 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const [picked, setPicked] = useState<string>();
   const [typed, setTyped] = useState<string>();
   const [description, setDescription] = useState('');
-  // Untouched, the reviewers follow the branch picked: you, on someone else's (`startingReviewers`).
-  const [chosenReviewers, setReviewers] = useState<ReviewerPick | null>(null);
+  // Until the user changes who is asked, the reviewers follow the branch picked: you, on someone else's.
+  const [chosenReviewers, setChosenReviewers] = useState<ChosenReviewers>();
   const [creating, setCreating] = useState(false);
 
   // A branch named alone (the workspace's) is read for its comment and parent: two light `cm find branch`, often read
@@ -78,7 +77,8 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const reviewsCheck = reviewsCheckOf(source.name, reviewsOfBranch, settledSource === source.name && reviewsRead.isError);
 
   const sourceBranch = source.branch ?? readBranch ?? undefined;
-  const reviewers = chosenReviewers ?? startingReviewers(you, sourceBranch?.owner);
+  const branchReviewers = startingReviewers(you, sourceBranch?.owner);
+  const reviewers = reviewersShown(chosenReviewers, branchReviewers);
   const { destination, title, note, problem, tip } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch, reviewsCheck });
 
   const sourceChoices = useCallback((branches: Branch[]) => sourceGroups(branches), []);
@@ -178,7 +178,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           onChange={setDescription}
         />
       </CommentFocusGroup>
-      <ReviewersField pick={reviewers} onPickChange={setReviewers} />
+      <ReviewersField pick={reviewers} onPickChange={(next) => setChosenReviewers(chooseReviewers(chosenReviewers, branchReviewers, next))} />
     </Dialog>
   );
 }
