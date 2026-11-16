@@ -335,6 +335,14 @@ describe("a code review's page", () => {
     expect(branchReview(key('changesets', {}))).toBe(false);
   });
 
+  it("reads again a merge request's destination branch, whose head keys the check of its conflicts", () => {
+    const request = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' }, '/main');
+    expect(request(key('branches', 'byName', '/main'))).toBe(true);
+    expect(request(key('branches', 'byName', '/main/other'))).toBe(false);
+    expect(request(key('branches', {}))).toBe(false);
+    expect(branchReview(key('branches', 'byName', '/main'))).toBe(false);
+  });
+
   it("leaves a changeset's or shelve's changes alone, and every diff while the review isn't read yet", () => {
     const changesetReview = isShownByCodeReviewPage(7, { kind: 'changeset', changesetId: 40 });
     const unread = isShownByCodeReviewPage(7, undefined);
