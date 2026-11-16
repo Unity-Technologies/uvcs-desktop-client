@@ -414,7 +414,7 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
 - **The top bar** (`MergeRequestChip`, after the branch's name inside its pill, as a branch's chip after its name in
   the Branches view; `useWorkspaceMergeRequest`): when the workspace's branch has a merge request, its state's compact
   pill ("Open") and its verdict, as by every branch; inside the pill, itself the switcher's button, it is a span, and
-  no click on it or its card reaches the pill; the name gives it room (`CHIP_ROOM`). A separate segment after the
+  no click on it or its card reaches the pill; the name gives way to it, fitting what the chip leaves (`.nameLine`). A separate segment after the
   pill was dropped: it read apart from the branch, unlike everywhere else a branch shows its request; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
   counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the
   state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it. The keyboard

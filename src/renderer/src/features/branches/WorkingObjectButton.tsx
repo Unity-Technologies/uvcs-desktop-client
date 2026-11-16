@@ -25,8 +25,6 @@ import { hotkey } from '../../lib/shortcutRegistry';
 
 /** The widest the name and its comment get: 360px with the pill's icon, padding and chevron. */
 const TEXT_MAX_WIDTH = 294;
-/** What the name gives up for its merge request's chip after it ("Open" and its verdict). */
-const CHIP_ROOM = 84;
 
 /** Shows what the workspace is loaded from and lets the user switch branches; right-click for that object's menu. */
 export function WorkingObjectButton() {
@@ -50,7 +48,9 @@ export function WorkingObjectButton() {
   const wantMenu = (): void => setMenuWanted(true);
   const mergeRequest = useWorkspaceMergeRequest();
   const branchName = (
-    <PathLabel path={title} fitContent maxWidth={mergeRequest ? TEXT_MAX_WIDTH - CHIP_ROOM : TEXT_MAX_WIDTH} tooltip={false} />
+    <span className={styles.name}>
+      <PathLabel path={title} fitContent maxWidth={TEXT_MAX_WIDTH} tooltip={false} />
+    </span>
   );
 
   return (

@@ -8,6 +8,18 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
+  min-width: 0;
+}
+
+/* The merge request's chip keeps its width; the name gives way to it and fits what's left (`PathLabel` refits). */
+.nameLine > .name {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.nameLine > :not(.name) {
+  flex: none;
 }
 
 .noComment {
