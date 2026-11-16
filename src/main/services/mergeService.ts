@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
-import type { RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
 import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
@@ -51,7 +51,7 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
 }
 
 /** The shelve a merge applies to the workspace (`sh:12`), or null for any other source or a merge into a branch. */
-function shelveAppliedToWorkspace({ sourceSpec, destinationBranch }: RequestedMerge): number | null {
+function shelveAppliedToWorkspace({ sourceSpec, destinationBranch }: MergeOperation): number | null {
   const shelve = /^sh:(\d+)$/.exec(sourceSpec);
   return shelve && !destinationBranch ? Number(shelve[1]) : null;
 }

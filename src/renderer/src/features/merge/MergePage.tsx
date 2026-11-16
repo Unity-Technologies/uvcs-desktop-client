@@ -1,6 +1,6 @@
 import { CheckCircle2, FileDiff, GitMerge } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -58,8 +58,8 @@ function MergeOfRequest({ page }: PageProps<'merge'>) {
 
 interface MergeNotPossibleProps {
   plan: MergePlan;
-  request: RequestedMerge;
-  onRequestChange: (request: RequestedMerge) => void;
+  request: MergeOperation;
+  onRequestChange: (request: MergeOperation) => void;
 }
 
 function MergeNotPossible({ plan, request, onRequestChange }: MergeNotPossibleProps) {

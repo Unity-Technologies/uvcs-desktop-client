@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import { mergeLabels } from './mergeDescription';
 import {
   ancestorLabel,
@@ -16,8 +16,8 @@ import {
   type ContributorFile,
 } from './mergeOptions';
 
-const merge: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
-const cherryPick: RequestedMerge = { kind: 'cherryPick', sourceSpec: 'cs:12' };
+const merge: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const cherryPick: MergeOperation = { kind: 'cherryPick', sourceSpec: 'cs:12' };
 
 /** A conflicting file as the contributor choice sees it: undecided by the user unless said otherwise. */
 function file(key: string, overrides: Partial<ContributorFile> = {}): ContributorFile {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
-import type { ConflictSide, DirectoryConflict, MergeContributors, RequestedMerge } from '@shared/domain/merge';
+import type { ConflictSide, DirectoryConflict, MergeContributors, MergeOperation } from '@shared/domain/merge';
 import { ONLY_MOVED } from '../../diff/viewer/movedFrom';
 import { mergeLabels } from '../mergeDescription';
 import { comparedVersions, comparisonSegments, comparisonsOf, identicalNoteOf } from './directoryConflictComparison';
@@ -10,7 +10,7 @@ const contributors: MergeContributors = {
   destination: { changesetId: 40, branch: '/main' },
   base: { changesetId: 35, branch: '/main' },
 };
-const merge: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/feature' };
+const merge: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/feature' };
 
 const side = (operation: ConflictSide['operation'], path: string, oldPath?: string): ConflictSide => ({ operation, path, oldPath, description: operation });
 const conflict = (type: DirectoryConflict['type'], source: ConflictSide, destination: ConflictSide, isDirectory = false): DirectoryConflict => ({
