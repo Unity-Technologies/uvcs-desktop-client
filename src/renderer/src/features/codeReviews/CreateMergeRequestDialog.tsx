@@ -109,7 +109,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
             disabled={problem !== undefined}
             tip={problem}
             menuLabel="Other ways to create it"
-            menu={[{ id: 'createDraft', label: 'Create as draft', detail: 'Not ready to review or merge yet', icon: GitPullRequestDraft, run: () => void create(true) }]}
+            menu={[{ id: 'createDraft', label: 'Create as draft', icon: GitPullRequestDraft, run: () => void create(true) }]}
           >
             Create merge request
           </SplitButton>
@@ -146,9 +146,9 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
             <>
               {' '}
               <span className={styles.request}>{note.request}</span>
-              <Button size="small" variant="ghost" className={styles.openIt} onClick={() => openExisting(existing.review)}>
+              <button type="button" className={styles.openIt} onClick={() => openExisting(existing.review)}>
                 Open it
-              </Button>
+              </button>
             </>
           )}
         </p>
