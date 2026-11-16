@@ -7,6 +7,8 @@ interface FilterPopoverProps {
   children: ReactNode;
   /** Pixels. */
   width?: number;
+  /** Which edge of the trigger it lines up with. */
+  align?: 'start' | 'end';
   /** Controlled, for a popover that closes on a pick (the Changesets' branch); left out, it opens and closes itself. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -16,11 +18,12 @@ interface FilterPopoverProps {
  * The popover of a filter that picks from many (branches, people): under its chip, its content rendered only while
  * open. Esc first empties the search typed in it, then closes it.
  */
-export function FilterPopover({ trigger, children, width = 300, open, onOpenChange }: FilterPopoverProps) {
+export function FilterPopover({ trigger, children, width = 300, align, open, onOpenChange }: FilterPopoverProps) {
   return (
     <Popover
       trigger={trigger}
       width={width}
+      align={align}
       open={open}
       onOpenChange={onOpenChange}
       onEscapeKeyDown={(event) => {

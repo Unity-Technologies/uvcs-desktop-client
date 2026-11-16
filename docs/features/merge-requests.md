@@ -44,8 +44,8 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
   cleared stays empty.
 - **Description** (optional; the comment editor, sharing the title's focus mode as the check-in's does) and
   **Reviewers**, picked from the server's users and groups as the code review dialog's are (`ReviewersField`, the
-  review page's `ReviewerPicker`): chips with their ×, **Add**, **Remove all** once there are several. They come
-  from the server's lists or its search, so an unknown name is never asked; if `cm` refuses one anyway, its
+  review page's `ReviewerPicker`): chips with their × in a box, the picker opened from the
+  heading's button or the box, **Remove all** once there are several. They come from the server's lists or its search, so an unknown name is never asked; if `cm` refuses one anyway, its
   message shows in the failure toast.
 - **Create merge request**, or **Create as draft** behind its caret (`--mergerequeststatus=Draft`), its line under
   the label saying what that means: "Can't be merged until it's ready for review" (`Action.description`). The button

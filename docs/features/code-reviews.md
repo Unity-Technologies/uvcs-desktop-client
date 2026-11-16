@@ -70,8 +70,11 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
-  **New code review** picks its reviewers with the same picker, never typed names (`ReviewersField`: the reviewers picked as chips, each with
-  its ×, **Add** opening the picker, **Remove all** once there are several, `pickedReviewersOf`; a chip removed leaves the keyboard on the next one or on Add, `focusAfterRemoving`), each asked as the
+  **New code review** picks its reviewers with the same picker, never typed names (`ReviewersField`: the reviewers picked as chips in a box, each with
+  its × and a user's email under the pointer; the heading's button, or a click on the box, opens the picker from the heading's end, so it stays put as chips
+  are added, those picked as it opened leading its list as on the review page, `pickAsPickerOpens`; **Remove all**
+  once there are several, `pickedReviewersOf`; a chip removed leaves the keyboard on the next one or on the heading's
+  button, `focusAfterRemoving`), each asked as the
   kind it was listed with, so a group found by a search stays a group (`reviewersToAsk`), in the command that creates
   it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`). A merge request's dialog has the
   same field (docs/features/merge-requests.md "Creating one"). Reviewers come from the server's lists or its search, so an unknown
