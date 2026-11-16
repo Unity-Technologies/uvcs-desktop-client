@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
-import { createdAs, defaultDestinationOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
+import { createdAs, defaultDestinationOf, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
 
 function review(id: number, mergeRequest?: MergeRequestInfo): CodeReviewSummary {
   return {
@@ -149,5 +149,16 @@ describe('sourceGroups', () => {
     expect(sourceGroups(branches).map((group) => [group.title, group.branches.map((each) => each.name)])).toEqual([
       ['Branches', ['/main/release/task', '/release', '/main/older']],
     ]);
+  });
+});
+
+describe('prefilledSourceOf', () => {
+  it("starts on the workspace's branch when its name says it can merge somewhere", () => {
+    expect(prefilledSourceOf('/main/task')).toBe('/main/task');
+  });
+
+  it('starts on no branch from a top-level one, or a workspace on no branch', () => {
+    expect(prefilledSourceOf('/main')).toBeUndefined();
+    expect(prefilledSourceOf(undefined)).toBeUndefined();
   });
 });
