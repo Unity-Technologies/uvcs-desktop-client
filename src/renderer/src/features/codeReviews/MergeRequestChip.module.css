@@ -1,0 +1,145 @@
+/* A segment joined to the branch pill (see WorkspaceTopBar), sized as the incoming one: neutral, color on the glyphs. */
+.chip {
+  composes: control from '../../ui/ToolbarControl.module.css';
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2) 0 10px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  animation: segment-in var(--duration-normal) var(--ease-out);
+}
+
+/* Merged: the workspace is still on finished work, said quietly. */
+.chip[data-muted] {
+  color: var(--text-tertiary);
+}
+
+@keyframes segment-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+  }
+}
+
+.state {
+  display: inline-flex;
+  flex: none;
+  color: var(--merge-request-color);
+}
+
+.number {
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Narrow, the glyphs say enough: the number goes before the branch pill gives up its room. */
+@media (max-width: 960px) {
+  .number {
+    display: none;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 900;
+}
+
+.card[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-3) var(--space-3) 2px;
+}
+
+.title {
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardNumber {
+  flex: none;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Under the title, in line with it past the glyph. */
+.where {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + 21px);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.review {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+}
+
+.reviewText {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* The status glyph sits on the first line's middle. */
+.reviewText > :first-child {
+  margin-top: 2px;
+}
+
+.reviewLines {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.detail {
+  color: var(--text-tertiary);
+}
+
+.reviewers {
+  display: flex;
+  flex: none;
+  max-width: 50%;
+  margin-left: auto;
+}
+
+.openItems {
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
