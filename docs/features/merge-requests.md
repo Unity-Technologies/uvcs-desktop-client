@@ -323,8 +323,8 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **Opened by me** (`matchesOpenedByMe`): the user's code reviews not reviewed yet, and their merge requests still to
   merge whatever the review says: a reviewed one is still theirs to merge.
 - The text filter also finds the destination and the state's name ("main", "draft": `reviewFilterTexts`).
-- **The details panel** says "Merge request" (`reviewNoun`), the state's badge and its verdict, as everywhere
-  (`reviewStatusCellOf`; a code review, its status's badge), its number to copy, and the source "into" the destination
+- **The details panel** says "Merge request" (`reviewNoun`) and the state's badge, its verdict left to the Review
+  section under it (`reviewStatusCellOf`; a code review, its status's badge), its number to copy, and the source "into" the destination
   (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
   Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
   (`ReviewStanding`; when the summary says it); **Reviewers**, each with the status they gave

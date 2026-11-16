@@ -18,7 +18,6 @@ import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { reviewedChangesOf, reviewNoun } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
-import { MergeVerdictIcon } from './MergeVerdictIcon';
 import { reviewStatusCellOf } from './reviewStatusCell';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerList } from './ReviewerList';
@@ -53,15 +52,8 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
       ]}
       badges={
-        // Where it stands as everywhere (`reviewStatusCellOf`): a merge request's state and verdict, a code review's status.
-        status.kind === 'mergeRequest' ? (
-          <>
-            <MergeRequestStateBadge state={status.state} />
-            {status.verdict && <MergeVerdictIcon verdict={status.verdict} />}
-          </>
-        ) : (
-          <CodeReviewStatusBadge status={status.status} />
-        )
+        // A merge request's state, its verdict left to the Review section under it; a code review's status (`reviewStatusCellOf`).
+        status.kind === 'mergeRequest' ? <MergeRequestStateBadge state={status.state} /> : <CodeReviewStatusBadge status={status.status} />
       }
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => openReview(review)}>
