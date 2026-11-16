@@ -1,4 +1,7 @@
+import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { BranchGroup } from '../branches/branchSearchRows';
+import { newestBranchesFirst } from '../branches/newestBranchesFirst';
 import { ancestorsOf } from './destinationChoices';
 import { isActiveMergeRequest } from './mergeRequestState';
 
@@ -35,13 +38,23 @@ export function defaultTitleOf(branchName: string, comment: string | undefined):
   return summary ? `${name} - ${summary}` : name;
 }
 
+/** Whether a branch can have a merge request: it has somewhere to merge, an ancestor in its name or a parent. */
+function canMergeSomewhere(branch: Pick<Branch, 'name' | 'parent'>): boolean {
+  return ancestorsOf(branch.name).length > 0 || Boolean(branch.parent);
+}
+
+/** The branches the dialog's From offers, newest first: those that can merge somewhere (`/main` can't). */
+export function sourceGroups(branches: readonly Branch[]): BranchGroup[] {
+  return [{ title: 'Branches', branches: newestBranchesFirst(branches).filter(canMergeSomewhere) }];
+}
+
 /**
  * Why the draft can't be created yet, as the Create button's tooltip says it; none once it can. `cm` checks only that
  * the destination exists: a request from a top-level branch, or into the branch itself, is refused here.
  */
 export function draftProblem({ source, sourceParent, destination, title }: MergeRequestDraft): string | undefined {
   if (!source) return 'Pick a branch to merge';
-  if (ancestorsOf(source).length === 0 && !sourceParent) return 'A top-level branch has no merge request';
+  if (!canMergeSomewhere({ name: source, parent: sourceParent ?? '' })) return 'A top-level branch has no merge request';
   if (!destination) return 'Pick a destination';
   if (source === destination) return "A branch can't merge into itself";
   if (!title.trim()) return 'The title is empty';
@@ -63,16 +76,22 @@ export function existingRequestOf(reviewsOfBranch: readonly CodeReviewSummary[],
   return earlier ? { kind: 'earlier', review: earlier } : undefined;
 }
 
-/** What the dialog says of a request the branch already has; `request` names the one to open, which `blocks` Create. */
+/**
+ * What the dialog says of a request the branch already has: `request` names one still to merge, to open, and `blocks`
+ * says why Create waits meanwhile (its tooltip). An earlier one is only a note.
+ */
 export interface ExistingRequestNote {
   text: string;
   request?: string;
-  blocks: boolean;
+  blocks?: string;
 }
 
 export function existingRequestNote({ kind, review }: ExistingRequest): ExistingRequestNote {
-  if (kind === 'active') return { text: `This branch already has a merge request into ${review.mergeRequest?.destination}:`, request: `#${review.id} ${review.title}`, blocks: true };
-  return { text: `${review.mergeRequest?.state === 'Merged' ? 'Merged' : 'Closed'} before as #${review.id}`, blocks: false };
+  const destination = review.mergeRequest?.destination;
+  if (kind === 'active') {
+    return { text: `This branch already has a merge request into ${destination}:`, request: `#${review.id} ${review.title}`, blocks: `This branch already has a merge request into ${destination}` };
+  }
+  return { text: `${review.mergeRequest?.state === 'Merged' ? 'Merged' : 'Closed'} before as #${review.id}` };
 }
 
 /**
