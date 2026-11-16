@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
-import { createdAs, defaultDestinationOf, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
+import { blocksCreate, createdAs, defaultDestinationOf, mergeRequestForm, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
 
 function review(id: number, mergeRequest?: MergeRequestInfo): CodeReviewSummary {
   return {
@@ -72,9 +72,14 @@ describe('draftProblem', () => {
     expect(draftProblem({ ...ready, destination: '/main/task' })).toBe("A branch can't merge into itself");
   });
 
-  it('refuses a top-level branch, which has nowhere to merge', () => {
-    expect(draftProblem({ ...ready, source: '/main', destination: '/release' })).toBe('A top-level branch has no merge request');
+  it('refuses a top-level branch read to have no parent, which has nowhere to merge', () => {
     expect(draftProblem({ ...ready, source: '/main', sourceParent: '', destination: '/release' })).toBe('A top-level branch has no merge request');
+  });
+
+  // Until the branch is read, a top-level name may still have a parent (`/release` from `/main`): no refusal shows.
+  it('waits, refusing nothing, while a top-level branch is still read', () => {
+    expect(draftProblem({ ...ready, source: '/release', destination: '/main' })).toBe('Reading the branch…');
+    expect(draftProblem({ ...ready, source: '/main/task', destination: '/main' })).toBeUndefined();
   });
 
   it('asks for a title, blanks being none', () => {
@@ -160,5 +165,48 @@ describe('prefilledSourceOf', () => {
   it('starts on no branch from a top-level one, or a workspace on no branch', () => {
     expect(prefilledSourceOf('/main')).toBeUndefined();
     expect(prefilledSourceOf(undefined)).toBeUndefined();
+  });
+});
+
+describe('mergeRequestForm', () => {
+  const task = { comment: 'Add login', parent: '/main' };
+  const open = (id: number, destination = '/main') => review(id, { state: 'Open', destination });
+
+  it('follows the branch: Into its top-level ancestor, the title its name and comment', () => {
+    expect(mergeRequestForm({ source: '/main/release/task', sourceBranch: task })).toMatchObject({ destination: '/main', title: 'task - Add login', problem: undefined });
+  });
+
+  it('keeps a destination picked by hand when the branch changes', () => {
+    expect(mergeRequestForm({ source: '/main/other', sourceBranch: task, picked: '/main/release' }).destination).toBe('/main/release');
+  });
+
+  it('keeps a title typed, even one typed and cleared, rather than the default', () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, typed: 'Login' }).title).toBe('Login');
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, typed: '' })).toMatchObject({ title: '', problem: 'The title is empty' });
+  });
+
+  it("titles a branch not read yet by its name, and a top-level one's Into by its parent once read", () => {
+    expect(mergeRequestForm({ source: '/main/task' }).title).toBe('task');
+    expect(mergeRequestForm({ source: '/release', sourceBranch: { comment: '', parent: '/main' } }).destination).toBe('/main');
+  });
+
+  it('blocks Create on a request still to merge into that destination only once the reviews are read', () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ existing: undefined, note: undefined, problem: undefined });
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [open(12)] })).toMatchObject({
+      existing: { kind: 'active' },
+      problem: 'This branch already has a merge request into /main',
+    });
+  });
+
+  it("names a problem of the draft's own before an existing request", () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, typed: ' ', reviewsOfBranch: [open(12)] }).problem).toBe('The title is empty');
+  });
+});
+
+describe('blocksCreate', () => {
+  it('blocks only on a request still to merge', () => {
+    expect(blocksCreate({ kind: 'active', review: review(12, { state: 'Open', destination: '/main' }) })).toBe(true);
+    expect(blocksCreate({ kind: 'earlier', review: review(9, { state: 'Merged', destination: '/main' }) })).toBe(false);
+    expect(blocksCreate(undefined)).toBe(false);
   });
 });

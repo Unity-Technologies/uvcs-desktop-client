@@ -50,6 +50,13 @@ describe('destinationGroups', () => {
     expect(names(destinationGroups(branches, '/main/other')).flatMap(([, each]) => each)).not.toContain('/main/other');
   });
 
+  it("offers a top-level branch's parent as its ancestor, where its name holds none", () => {
+    expect(names(destinationGroups([...branches, branch('/release', '2026-09-30T10:00:00+02:00')], '/release', '/main'))).toEqual([
+      ['Ancestors', ['/main']],
+      ['Other branches', ['/main/other', '/main/release/task', '/main/release', '/main/older']],
+    ]);
+  });
+
   it("leaves out an ancestor the list doesn't have (deleted, or hidden)", () => {
     expect(names(destinationGroups(branches.filter((each) => each.name !== '/main/release'), '/main/release/task'))[0]).toEqual(['Ancestors', ['/main']]);
   });
