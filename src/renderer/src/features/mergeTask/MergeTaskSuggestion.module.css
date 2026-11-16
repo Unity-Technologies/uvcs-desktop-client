@@ -31,12 +31,6 @@
   font-size: var(--text-sm);
 }
 
-.state {
-  display: inline-flex;
-  flex: none;
-  color: var(--merge-request-color);
-}
-
 .number {
   flex: none;
   color: var(--text-primary);
