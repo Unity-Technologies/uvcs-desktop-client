@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { FinishedTask } from './finishedTask';
-import { mergedCheckDestinationOf, conversationToRead, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
+import { conversationToRead, keepsPreviousMergedCheck, mergedCheckDestinationOf, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
 
 const task = { name: '/main/release/task', parent: '/main/release' };
 
@@ -122,23 +122,35 @@ describe('mergedCheckDestinationOf, where the branch head is looked for as merge
 describe('taskNextStepView, its line and buttons', () => {
   const view = (reviews: CodeReviewSummary[], quiet = false, open?: { changeRequests: number; questions: number }) =>
     taskNextStepView(taskNextStepOf(input(reviews)), { quiet, open });
+  const besideAnother = (reviews: CodeReviewSummary[]) => taskNextStepView(taskNextStepOf(input(reviews)), { quiet: false, besideAnotherAction: true });
 
-  it('with no request: Create merge request first, then the merge into the parent, quiet', () => {
-    expect(view([])).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: true }], mergesTask: true });
+  it('with no request: Create merge request first, then the merge into the parent, a ghost that says it finishes without one', () => {
+    expect(view([])).toEqual({
+      actions: [{ kind: 'create', label: 'Create merge request', primary: true }],
+      taskMerge: { source: 'task', destination: 'release', tip: 'Finish the task without a merge request: merge /main/release/task into /main/release', subdued: true },
+    });
   });
 
-  it("with the reviews unread: today's merge into the parent alone", () => {
-    expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: false })).toEqual({ actions: [], mergesTask: true });
+  it("with the reviews unread: today's merge into the parent alone, a button of its own that claims nothing about requests", () => {
+    expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: false })).toEqual({
+      actions: [],
+      taskMerge: { source: 'task', destination: 'release', tip: 'Finish the task: merge /main/release/task into /main/release', subdued: false },
+    });
   });
 
   it('a draft: its line, Ready for review first, then Open', () => {
     expect(view([request(12, 'Draft', { title: 'Login screen\nwith details' })])).toEqual({
-      line: { reviewId: 12, state: 'Draft', number: '#12', title: 'Login screen', status: 'draft', tip: 'Draft merge request into /main' },
+      line: {
+        mergeRequest: { state: 'Draft', destination: '/main' },
+        number: '#12',
+        title: 'Login screen',
+        status: 'draft',
+        tip: 'Draft merge request into /main: Login screen',
+      },
       actions: [
         { kind: 'readyForReview', label: 'Ready for review', primary: true, move: { to: 'Open', word: 'readyForReview' } },
         { kind: 'open', label: 'Open', primary: false },
       ],
-      mergesTask: false,
     });
   });
 
@@ -152,6 +164,14 @@ describe('taskNextStepView, its line and buttons', () => {
     expect(view([openRequest(12, 'Under review', { reviewers: reviewers.slice(0, 2) })]).line?.status).toBe('waiting for 1 reviewer');
     expect(view([openRequest(12, 'Under review', { reviewers: [] })]).line?.status).toBe('no reviewers yet');
     expect(view([openRequest(12, 'Under review')]).actions).toEqual([{ kind: 'open', label: 'Open', primary: false }]);
+  });
+
+  it('waiting with no reviewer still to review: under review, never "waiting for 0 reviewers"', () => {
+    const reviewers = [
+      { name: 'bob', status: 'Reviewed' as const },
+      { name: 'cat', status: 'Rework required' as const },
+    ];
+    expect(view([openRequest(12, 'Under review', { reviewers })]).line?.status).toBe('under review');
   });
 
   it('rework: the change requests to apply once its conversation is read, else that changes are required', () => {
@@ -170,8 +190,22 @@ describe('taskNextStepView, its line and buttons', () => {
     ]);
   });
 
+  it('beside another action (after a check-in, by Copy link): its line, and its single most useful action', () => {
+    expect(besideAnother([])).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: true }] });
+    const reviewed = besideAnother([openRequest(12, 'Reviewed')]);
+    expect(reviewed.line?.status).toBe('reviewed');
+    expect(reviewed.actions.map(({ label, primary }) => ({ label, primary }))).toEqual([{ label: 'Merge into main…', primary: true }]);
+    expect(besideAnother([request(12, 'Draft')]).actions.map(({ label }) => label)).toEqual(['Ready for review']);
+    expect(besideAnother([openRequest(12, 'Under review')]).actions.map(({ label }) => label)).toEqual(['Open']);
+    expect(besideAnother([openRequest(12, 'Rework required')]).actions.map(({ label }) => label)).toEqual(['Open']);
+  });
+
+  it('beside another action with the reviews unread: the merge into the parent, its one button', () => {
+    expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: false, besideAnotherAction: true }).taskMerge).toMatchObject({ subdued: false });
+  });
+
   it('under a list, the single most useful action, quiet and named whole', () => {
-    expect(view([], true)).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: false }], mergesTask: false });
+    expect(view([], true)).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: false }] });
     expect(view([request(12, 'Draft')], true).actions).toEqual([
       { kind: 'readyForReview', label: 'Mark merge request #12 ready for review', primary: false, move: { to: 'Open', word: 'readyForReview' } },
     ]);
@@ -182,7 +216,27 @@ describe('taskNextStepView, its line and buttons', () => {
   });
 
   it('under a list with the reviews unread: the merge into the parent alone', () => {
-    expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: true })).toEqual({ actions: [], mergesTask: true });
+    expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: true })).toEqual({
+      actions: [],
+      taskMerge: { source: 'task', destination: 'release', tip: 'Finish the task: merge /main/release/task into /main/release', subdued: false },
+    });
+  });
+});
+
+describe('keepsPreviousMergedCheck, while a merged check of the same head asks again', () => {
+  const check = { branch: '/main/release/task', head: 30, destination: '/main/release' };
+
+  it('keeps the answer while only the destination changed: a request created into /main, or one closed', () => {
+    expect(keepsPreviousMergedCheck(check, { ...check, destination: '/main' })).toBe(true);
+  });
+
+  it('keeps nothing once the head moved or the branch is another', () => {
+    expect(keepsPreviousMergedCheck(check, { ...check, head: 31, destination: '/main' })).toBe(false);
+    expect(keepsPreviousMergedCheck(check, { ...check, branch: '/main/other', destination: '/main' })).toBe(false);
+  });
+
+  it('keeps nothing with no answer before', () => {
+    expect(keepsPreviousMergedCheck(undefined, check)).toBe(false);
   });
 });
 
