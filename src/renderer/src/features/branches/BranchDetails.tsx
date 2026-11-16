@@ -20,6 +20,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { asMergeRequest } from '../codeReviews/mergeRequestState';
 import { useBranchReview } from '../codeReviews/useBranchReviews';
+import { useSettled } from '../../lib/useSettled';
 import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
 import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
@@ -40,7 +41,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
   const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
   // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
-  const request = asMergeRequest(useBranchReview(branch.id) ?? undefined);
+  const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
 

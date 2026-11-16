@@ -5,6 +5,7 @@ import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { textMeasurer } from '../../lib/measureText';
 import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
 import { useBranchReview } from '../codeReviews/useBranchReviews';
+import { useSettled } from '../../lib/useSettled';
 import type { BranchTreeRow } from './branchTree';
 import { chipsFit } from './chipsFit';
 import styles from './BranchesView.module.css';
@@ -26,8 +27,8 @@ interface BranchNameCellProps {
  */
 export function BranchNameCell({ row, isCurrent, onToggleCollapsed }: BranchNameCellProps) {
   const { branch } = row;
-  // Asked for as the row is drawn: the list draws the rows in view and a margin, so only those branches are read.
-  const review = useBranchReview(branch.id) ?? undefined;
+  // Asked for once the row stays drawn (the rows in view and a margin): a row a scroll passes over asks nothing.
+  const review = useBranchReview(branch.id, useSettled()) ?? undefined;
   const shownName = row.depth > 0 ? branch.name.slice(branch.name.lastIndexOf('/') + 1) : branch.name;
   const ref = useRef<HTMLSpanElement>(null);
   const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.mergeRequest?.state}:${review?.status}:${branch.isHidden}`);

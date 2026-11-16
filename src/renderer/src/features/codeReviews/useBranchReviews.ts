@@ -3,10 +3,10 @@ import { useCallback } from 'react';
 import { BRANCH_REVIEWS_BLOCK, type CodeReviewSummary } from '@shared/domain/codeReview';
 import { placeId, type Place } from '@shared/domain/place';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { batchLoader } from '../../lib/batchLoader';
+import { branchReviewKey } from './branchReviewKey';
 import { standingReviewsOf } from './branchReviews';
 
 /**
@@ -18,14 +18,18 @@ import { standingReviewsOf } from './branchReviews';
  */
 export function branchReviewQuery(place: Place, branchId: number) {
   return {
-    queryKey: queryKeys.inPlace(place, 'codeReviews', 'ofBranch', branchId),
-    queryFn: () => branchReviewsLoaderOf(place).load(branchId),
+    queryKey: branchReviewKey(place, branchId),
+    // A branch scrolled out of view before its block is read is dropped from it (`batchLoader`'s withdrawn asks).
+    queryFn: ({ signal }: { signal: AbortSignal }) => branchReviewsLoaderOf(place).load(branchId, signal),
     ...SLOW_CHANGING_QUERY,
   };
 }
 
-/** The review that stands for one branch: a row's chip, a branch's details. None while it's read, null with none. */
-export function useBranchReview(branchId: number, enabled = true): CodeReviewSummary | null | undefined {
+/**
+ * The review that stands for one branch: a row's chip, a branch's details. None while it's read, null with none.
+ * `enabled` once the row stays in view (`useSettled`), so a row a scroll passes over asks nothing.
+ */
+export function useBranchReview(branchId: number, enabled: boolean): CodeReviewSummary | null | undefined {
   const { data } = useQuery({ ...branchReviewQuery(usePlace(), branchId), enabled });
   return data;
 }
