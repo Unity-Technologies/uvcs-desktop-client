@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeRuleRefusal } from './mergeRuleRefusal';
+import { mergeRuleNotice, mergeRuleRefusal } from './mergeRuleRefusal';
 
 describe('mergeRuleRefusal', () => {
   it('recognizes a branch that needs an open merge request to its destination', () => {
@@ -38,5 +38,24 @@ describe('mergeRuleRefusal', () => {
 
   it("leaves a translated message to cm's own words", () => {
     expect(mergeRuleRefusal("No se puede realizar el merge debido al sistema de reglas de merge. La rama origen '/main/task1' tiene que estar revisada con éxito antes de que se pueda hacer merge a '/main'.")).toBeUndefined();
+  });
+});
+
+describe('mergeRuleNotice', () => {
+  const refusal = (rule: 'needsMergeRequest' | 'needsReview') => ({ rule, source: '/main/task1', destination: '/main' }) as const;
+
+  it('says a branch needs an open merge request, plainly', () => {
+    expect(mergeRuleNotice(refusal('needsMergeRequest'), undefined)).toEqual({ title: 'This server merges into main only branches with an open merge request' });
+  });
+
+  it("opens the branch's merge request when it must be reviewed first", () => {
+    expect(mergeRuleNotice(refusal('needsReview'), 12)).toEqual({
+      title: 'This server merges into main only reviewed branches',
+      action: { kind: 'openMergeRequest', reviewId: 12, label: 'Open merge request' },
+    });
+  });
+
+  it('offers nothing to open when the branch has no merge request into that destination', () => {
+    expect(mergeRuleNotice(refusal('needsReview'), undefined)).toEqual({ title: 'This server merges into main only reviewed branches' });
   });
 });
