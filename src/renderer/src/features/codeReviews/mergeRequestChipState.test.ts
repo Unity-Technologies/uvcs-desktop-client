@@ -3,10 +3,10 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf } from './mergeRequestChip';
+import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf, type MergeRequestReview } from './mergeRequestChipState';
 
-function request(id: number, state: MergeRequestState, review: Partial<CodeReviewSummary> = {}): CodeReviewSummary {
-  return codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, mergeRequest: { state, destination: '/main' }, ...review });
+function request(id: number, state: MergeRequestState, review: Partial<CodeReviewSummary> = {}): MergeRequestReview {
+  return { ...codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, ...review }), mergeRequest: { state, destination: '/main' } };
 }
 
 const plainReview = (id: number) => codeReviewSummary({ id, targetBranchId: 7 });
