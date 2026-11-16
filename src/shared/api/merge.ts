@@ -1,5 +1,5 @@
 import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
-import type { DecidedMerge, DirectoryDecision, MergePlan, RequestedMerge, MergeResolutions, MergeResult } from '../domain/merge';
+import type { DecidedMerge, DirectoryDecision, MergePlan, MergeResolutions, MergeResult, RequestedMerge } from '../domain/merge';
 
 export interface MergeApi {
   /** What the merge would do, without touching the workspace. */

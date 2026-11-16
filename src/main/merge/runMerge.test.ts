@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { RequestedMerge, MergeResolutions } from '@shared/domain/merge';
+import type { MergeResolutions, RequestedMerge } from '@shared/domain/merge';
 import { changedStatus, mergeOutput, mergePreviewOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { fakeCat, PURGED } from '../cm/testing/fakeCat';

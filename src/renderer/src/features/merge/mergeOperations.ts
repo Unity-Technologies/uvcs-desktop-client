@@ -1,4 +1,4 @@
-import { followUpMerge, type RequestedMerge, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
+import { followUpMerge, type MergeResolutions, type MergeResult, type RequestedMerge } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation, shownMergeId } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';

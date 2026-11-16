@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RequestedMerge, MergeResolutions, MergeResult } from '@shared/domain/merge';
+import type { MergeResolutions, MergeResult, RequestedMerge } from '@shared/domain/merge';
 import { changedStatus, mergePreviewOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, optionValue } from '../cm/testing/fakeCmClient';
 import { runMerge } from '../merge/runMerge';
