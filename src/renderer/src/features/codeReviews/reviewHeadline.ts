@@ -1,4 +1,4 @@
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReview, MergeRequestState } from '@shared/domain/codeReview';
 
 /**
  * The review page's second line after its author: "Ana wants a review of /main/task", or for a merge request "Ana
@@ -17,7 +17,12 @@ export function reviewHeadline({ target, mergeRequest }: Pick<CodeReview, 'targe
   const { state, destination: name } = mergeRequest;
   const stillToMerge = state === 'Draft' || state === 'Open';
   const destination = stillToMerge && target.kind === 'branch' ? { name, editable: true as const, source: target.branch } : { name, editable: false as const };
-  return { verb: VERBS[state], destination };
+  return { verb: mergeVerbOf(state), destination };
 }
 
 const VERBS = { Draft: 'wants to merge', Open: 'wants to merge', Merged: 'asked to merge', Closed: 'wanted to merge' } as const;
+
+/** What the owner did, by the request's state: "wants to merge", "asked to merge" once merged, "wanted to merge" once closed. */
+export function mergeVerbOf(state: MergeRequestState): string {
+  return VERBS[state];
+}
