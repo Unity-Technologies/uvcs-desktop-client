@@ -160,7 +160,8 @@ try {
   }
   await step("A merge request's conversation", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Merge requests( \d+)?$/ }).click();
-    await main.getByText('Review player movement', { exact: true }).dblclick();
+    // The row's title: the details panel names the selected row too.
+    await main.getByRole('row').getByText('Review player movement', { exact: true }).dblclick();
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await main.getByText('Jump only when grounded.').first().waitFor();
     await main.getByText("You get emails because you're a reviewer.").waitFor();
