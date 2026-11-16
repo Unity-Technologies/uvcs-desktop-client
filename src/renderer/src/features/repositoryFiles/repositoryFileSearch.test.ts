@@ -127,6 +127,13 @@ describe('repositoryFileSearchView', () => {
     expect(coming).toMatchObject({ loading: false, note: null, current: true });
   });
 
+  it('lists folders before files, as the tree does, each in the order the search ranked them', () => {
+    const scripts = { path: 'Assets/Scripts', isDirectory: true };
+    const plugins = { path: 'Plugins', isDirectory: true };
+    const view = repositoryFileSearchView({ kind: 'found', results: { query: 's', paths: [player, scripts, readme, plugins] } }, 's', '/main');
+    expect(view.rows.map((row) => row.path)).toEqual(['Assets/Scripts', 'Plugins', 'Assets/Player.cs', 'README.md']);
+  });
+
   it("isn't current while its results answer a query the user typed past", () => {
     const search: RepositoryFileSearch = { kind: 'found', results: { query: 'pla', paths: [player] } };
     expect(repositoryFileSearchView(search, 'plan', '/main').current).toBe(false);
