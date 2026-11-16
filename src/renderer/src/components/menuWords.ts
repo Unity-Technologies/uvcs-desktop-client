@@ -49,6 +49,8 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  GitPullRequestClosed,
+  GitPullRequestDraft,
   HardDriveDownload,
   Hash,
   History,
@@ -92,6 +94,7 @@ import {
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
 import { OPEN_IN_FILE_MANAGER_LABEL, REVEAL_LABEL } from '../lib/platform';
+import { GitPullRequestPlus } from './GitPullRequestPlus';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -188,6 +191,12 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // A merge request's state (`mergeRequestMoves`), each in the glyph of the state it moves to. Closing isn't a danger:
+  // Reopen undoes it.
+  readyForReview: word('act', GitPullRequest, 'Ready for review'),
+  convertToDraft: word('act', GitPullRequestDraft, 'Convert to draft'),
+  closeMergeRequest: word('act', GitPullRequestClosed, 'Close merge request'),
+  reopenMergeRequest: word('act', GitPullRequest, 'Reopen merge request'),
   // A review's change request marked by hand (`changeRequestMarkOf`): applied in a changeset picked, or open again.
   markApplied: word('act', CheckCheck, 'Mark as applied…'),
   markNotApplied: word('act', CircleDashed, 'Mark as not applied'),
@@ -199,6 +208,8 @@ export const MENU_WORDS = {
   merge: word('merge', GitMerge, MERGE_INTO_WORKSPACE),
   mergeTask: word('merge', GitPullRequest),
   mergeTo: word('merge', GitPullRequestArrow, serverMergeLabel()),
+  // An open merge request merged into its destination on the merge page: the words name it ("Merge into main…").
+  mergeInto: word('merge', GitMerge),
   cherryPick: word('merge', Cherry),
   subtractive: word('merge', Minus, 'Subtractive merge (remove its changes)'),
   cherryPickRange: word('merge', Cherry),
@@ -207,6 +218,9 @@ export const MENU_WORDS = {
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
   newLabel: word('create', TagPlus, 'New label…'),
+  // A merge request of a branch that can merge somewhere; a code review of anything (the only kind for a branch with
+  // nowhere to merge, `/main`).
+  newMergeRequest: word('create', GitPullRequestPlus, 'New merge request…'),
   newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),
@@ -329,6 +343,7 @@ export const NEEDS_A_WORKSPACE = [
   'merge',
   'mergeTask',
   'mergeTo',
+  'mergeInto',
   'cherryPick',
   'subtractive',
   'cherryPickRange',

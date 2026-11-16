@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
@@ -46,14 +46,14 @@ import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 
 interface MergeSessionProps {
   workspacePath: string;
-  request: RequestedMerge;
+  request: MergeOperation;
   /** The merge before any directory decision: each one applied makes `cm` calculate it again (`useDirectoryDecisions`). */
   initialPlan: MergePlan;
   /** A task branch merged into a branch on the server, which the merge also finishes. */
   task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
   /** A request with other merge options: the page previews it again (`MergeOptionsMenu`). */
-  onRequestChange: (request: RequestedMerge) => void;
+  onRequestChange: (request: MergeOperation) => void;
 }
 
 const itemKey = (item: MergeItem): string => item.key;
@@ -74,7 +74,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
       else reset(key);
     }
   };
-  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
+  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch, task.mergeRequest) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectedKey = selection.anchor;
@@ -198,7 +198,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               />
             )
           }
-          options={finishing && <TaskMergeOptions review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
+          options={finishing && <TaskMergeOptions mergeRequest={finishing.task.mergeRequest} review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
             conflicting &&

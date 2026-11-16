@@ -15,7 +15,7 @@ export function RepositoryTopBar({ repository }: { repository: string }) {
 
   const end = (
     <>
-      <TopBarSearch tip="Fuzzy search branches, labels, changesets, shelves, code reviews and commands" />
+      <TopBarSearch tip="Fuzzy search branches, labels, changesets, shelves, merge requests and commands" />
       <Button
         variant="primary"
         icon={<FolderPlus size={14} />}

@@ -67,6 +67,13 @@ const SHELVES = [
   { shelveid: 1, id: 70, parent: 4, date: daysAgo(8), comment: 'Half-done menu', guid: 'eeeeeeee-0000-0000-0000-000000000001', ...common },
 ];
 
+/**
+ * A merge request's two fields as `cm find review` prints them (`{mergerequeststatusname}`, `{destination}`); a plain
+ * code review prints `None` and nothing. `mergerequeststatus` is what a query's condition names.
+ */
+const mergeRequest = (state, destination) => ({ mergerequeststatusname: state, mergerequeststatus: state, destination: `br:${destination}` });
+const plainReview = { mergerequeststatusname: 'None', mergerequeststatus: 'None', destination: '' };
+
 const REVIEWS = [
   {
     id: 80,
@@ -79,6 +86,7 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(8),
     modifieddate: daysAgo(2),
+    ...mergeRequest('Open', '/main'),
     ...common,
   },
   {
@@ -92,16 +100,51 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(6),
     modifieddate: daysAgo(1),
+    ...plainReview,
+    ...common,
+  },
+  {
+    id: 82,
+    title: 'Scene lighting',
+    codereviewstatusname: 'Under review',
+    reviewers: '',
+    comments: 0,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(5),
+    modifieddate: daysAgo(5),
+    ...mergeRequest('Draft', '/main'),
+    ...common,
+  },
+  {
+    id: 83,
+    title: 'First playable',
+    codereviewstatusname: 'Reviewed',
+    reviewers: 'ana.diaz@acme.com:Reviewed',
+    comments: 1,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(20),
+    modifieddate: daysAgo(15),
+    ...mergeRequest('Merged', '/main'),
     ...common,
   },
 ];
 
-/** Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its reply, a status. */
+/**
+ * Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its
+ * reply, a merge request's state move and destination change, a status.
+ */
 const REVIEW_COMMENT_FIELDS = { owner: OWNER, parent: -1, revisionid: -1, itemid: '', path: '', line: '', changeset: -1, appliedinchangeset: -1, reviewid: 80 };
 const REVIEW_COMMENTS = [
   { ...REVIEW_COMMENT_FIELDS, id: 90, guid: 'ffffffff-0000-0000-0000-000000000090', date: daysAgo(8), modifieddate: daysAgo(8), type: 'timeline', comment: '[description]Makes the player **jump**.' },
   { ...REVIEW_COMMENT_FIELDS, id: 91, guid: 'ffffffff-0000-0000-0000-000000000091', date: daysAgo(7), modifieddate: daysAgo(7), type: 'change', comment: 'Jump only when grounded.', revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
   { ...REVIEW_COMMENT_FIELDS, id: 92, guid: 'ffffffff-0000-0000-0000-000000000092', date: daysAgo(6), modifieddate: daysAgo(6), type: 'comment', comment: 'On it.', parent: 91, revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  // A merge request's notes: made ready for review, then pointed at /main (from /main/task-002, by branch ids).
+  { ...REVIEW_COMMENT_FIELDS, id: 94, guid: 'ffffffff-0000-0000-0000-000000000094', date: daysAgo(5), modifieddate: daysAgo(5), type: 'timeline', comment: '[mergerequest-status-draft-to-open]' },
+  { ...REVIEW_COMMENT_FIELDS, id: 95, guid: 'ffffffff-0000-0000-0000-000000000095', date: daysAgo(4), modifieddate: daysAgo(4), type: 'timeline', comment: '[changed-mergerequest-destination]30;3' },
   { ...REVIEW_COMMENT_FIELDS, id: 93, guid: 'ffffffff-0000-0000-0000-000000000093', date: daysAgo(2), modifieddate: daysAgo(2), type: 'timeline', comment: '[status-rework-required]One change first.' },
 ];
 

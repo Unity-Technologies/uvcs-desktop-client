@@ -1,18 +1,33 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { whereTheWindowIs } from '../../testing/operationOutcome';
-import { openTaskMerge } from './mergeTaskOperations';
+import { openMergeRequestMerge, openTaskMerge } from './mergeTaskOperations';
 
 describe('finishing a task', () => {
   it('opens the merge page for merging it into its parent on the server, nothing picked yet', () => {
-    openTaskMerge({ id: 7, name: '/main/task001', parent: '/main', comment: 'Task 001' });
+    openTaskMerge({ name: '/main/task001', parent: '/main', comment: 'Task 001' });
 
     expect(whereTheWindowIs().pages).toEqual([
       {
         kind: 'merge',
         request: { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' },
-        task: { branch: { id: 7, name: '/main/task001', parent: '/main', comment: 'Task 001' }, choices: { markReviewed: false, hideBranch: false } },
+        task: { branch: { name: '/main/task001', comment: 'Task 001' }, choices: { markReviewed: false, hideBranch: false } },
+      },
+    ]);
+  });
+
+  it("opens the merge page for a merge request, into the request's destination rather than the parent", () => {
+    const request = { ...codeReviewSummary({ id: 12, title: 'Add login' }), mergeRequest: { state: 'Open', destination: '/main' } } as const;
+
+    openMergeRequestMerge(request, '/main/release/task');
+
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'merge',
+        request: { kind: 'merge', sourceSpec: 'br:/main/release/task', destinationBranch: '/main' },
+        task: { branch: { name: '/main/release/task', comment: '' }, mergeRequest: { id: 12, title: 'Add login' }, choices: { markReviewed: false, hideBranch: false } },
       },
     ]);
   });

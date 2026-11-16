@@ -1,9 +1,14 @@
 import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
-import type { DecidedMerge, DirectoryDecision, MergePlan, MergeResolutions, MergeResult, RequestedMerge } from '../domain/merge';
+import type { DecidedMerge, DirectoryDecision, MergeConflictCounts, MergeOperation, MergePlan, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
   /** What the merge would do, without touching the workspace. */
-  preview(workspacePath: string, request: RequestedMerge): Promise<MergePlan>;
+  preview(workspacePath: string, request: MergeOperation): Promise<MergePlan>;
+  /**
+   * How many files and directory conflicts merging `source` into `destination` on the server would leave to resolve:
+   * one `cm merge --to` preview, in a process of its own (it takes over a second on a big repository). Nothing changes.
+   */
+  conflictCounts(workspacePath: string, source: string, destination: string): Promise<MergeConflictCounts>;
   /**
    * Applies the merge page's directory decisions, in order, as the user makes them, and returns the merge calculated
    * again on them: a decision can move, remove or add file conflicts and changes. Nothing in the workspace changes.
@@ -11,14 +16,14 @@ export interface MergeApi {
    * (`MergeResolutions.directoryDecisionsId`). A decision whose conflict an earlier one took out of the merge, or moved
    * (it's then another conflict, decided again), is dropped.
    */
-  decideDirectoryConflicts(workspacePath: string, request: RequestedMerge, decisionsId: string, decisions: DirectoryDecision[]): Promise<DecidedMerge>;
+  decideDirectoryConflicts(workspacePath: string, request: MergeOperation, decisionsId: string, decisions: DirectoryDecision[]): Promise<DecidedMerge>;
   /** Forgets a merge page's directory decisions: the page closed. */
   discardDirectoryDecisions(decisionsId: string): Promise<void>;
   /**
    * Runs the merge with the user's resolutions. Workspace merges leave pending changes to check in;
    * merges into a server branch create a changeset.
    */
-  run(workspacePath: string, request: RequestedMerge, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
+  run(workspacePath: string, request: MergeOperation, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
   /**
    * The changeset that merged `sourceChangeset` into `destinationBranch` (e.g. a task branch's head into its parent), or
    * null when it wasn't merged there. One `cm find merge` returning a single link.

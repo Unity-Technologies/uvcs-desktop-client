@@ -8,7 +8,8 @@ import { CopyLinkButton } from '../links/CopyLinkButton';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useNavigation } from '../navigation/navigationStore';
 import { placeName } from '../shell/windowTitle';
-import { PageContent, pageTitle } from '../navigation/pageRegistry';
+import { PageContent } from '../navigation/pageRegistry';
+import { usePageTitle } from '../navigation/usePageTitle';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { Breadcrumb } from '../shell/Breadcrumb';
 import { TopBar } from '../shell/TopBar';
@@ -37,10 +38,11 @@ export function PageWindowScreen() {
   usePageWindowTitle();
   useShortcut(hotkey('back'), pageWindowGoBack);
   useBackButtons(pageWindowGoBack);
+  const title = usePageTitle(pages.at(-1));
+  const previousTitle = usePageTitle(pages.at(-2));
 
   const page = pages.at(-1);
   if (!page) return null;
-  const previous = pages.at(-2);
 
   return (
     <div className={styles.screen}>
@@ -54,7 +56,7 @@ export function PageWindowScreen() {
         }
       >
         <div className={styles.title}>
-          <Breadcrumb back={previous && { label: pageTitle(previous), onClick: pageWindowGoBack }} current={pageTitle(page)} />
+          <Breadcrumb back={previousTitle !== undefined ? { label: previousTitle, onClick: pageWindowGoBack } : undefined} current={title ?? ''} />
         </div>
       </TopBar>
       <main className={styles.content}>
@@ -93,7 +95,8 @@ function usePageWindowTitle(): void {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const name = placeName(place, workspace);
+  const title = usePageTitle(page);
   useEffect(() => {
-    if (page) document.title = name ? `${pageTitle(page)} — ${name}` : pageTitle(page);
-  }, [page, name]);
+    if (title !== undefined) document.title = name ? `${title} — ${name}` : title;
+  }, [title, name]);
 }

@@ -120,3 +120,12 @@ export function valueCounts(used: string[]): { value: string; count: number }[] 
 export function suggestedValues(defaults: string[], used: string[]): string[] {
   return [...new Set([...defaults, ...valueCounts(used).map(({ value }) => value)])].slice(0, MAX_SUGGESTIONS);
 }
+
+/**
+ * Whether an object's attribute chips have anything to show: until its values are read (they show loading), any value,
+ * or any attribute type to add. A server with no attribute types and an object with none shows nothing, so a section
+ * titled for them hides (`useAttributesShown`).
+ */
+export function hasAttributesToShow(values: readonly unknown[] | undefined, types: readonly unknown[]): boolean {
+  return values === undefined || values.length > 0 || types.length > 0;
+}

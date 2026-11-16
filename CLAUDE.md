@@ -162,7 +162,10 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks),
   `code-reviews.sh` (a review holding every kind of comment: change requests pending, applied and discarded, questions
   answered and not, comments on a deleted file, under one changeset and on an older revision; a description, a rename
-  and a status change; reviews of a changeset and a shelve), `workspace-kinds.sh` (a standard, a partial and, on Windows,
+  and a status change; reviews of a changeset and a shelve), `merge-requests.sh` (a task branch per merge request
+  case: none, draft, open with and without reviewers, in rework, reviewed and clean, reviewed and conflicting, closed,
+  merged, two of one branch, a nested branch into its parent, a destination changed; plain reviews of a branch, a
+  changeset and a shelve), `workspace-kinds.sh` (a standard, a partial and, on Windows,
   a dynamic workspace of one repository: the chips that tell them apart).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page

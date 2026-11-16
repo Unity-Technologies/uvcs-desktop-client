@@ -3,7 +3,7 @@ import { spec } from './specs';
 export type MergeKind = 'merge' | 'cherryPick' | 'subtractive';
 
 /** What to merge. Everything the merge view needs to preview and run it. */
-export interface RequestedMerge {
+export interface MergeOperation {
   kind: MergeKind;
   /** Branch, changeset, label or shelve spec, e.g. `br:/main/task`. */
   sourceSpec: string;
@@ -128,6 +128,18 @@ export type MergePlanStatus =
   /** The workspace has pending changes; `cm` refuses to merge until they are checked in or shelved. */
   | 'pendingChanges';
 
+/**
+ * What a merge of one branch into another would leave to resolve, counted, without its details: a merge request's card
+ * says it (`MergeApi.conflictCounts`). `status` as the plan's: a merge with nothing left to merge has none.
+ */
+export interface MergeConflictCounts {
+  status: MergePlanStatus;
+  /** The files changed on both sides (the merge page's File conflicts), some of which may merge automatically. */
+  files: number;
+  /** The changes to the tree that collide (the merge page's Directory conflicts): moves, deletes, items added twice. */
+  directories: number;
+}
+
 export interface MergePlan {
   status: MergePlanStatus;
   contributors?: MergeContributors;
@@ -204,7 +216,7 @@ export interface MergeResult {
 }
 
 /** The merge that finishes a server-side merge whose destination moved: its changeset into the branch. */
-export function followUpMerge(result: MergeResult, destinationBranch: string): RequestedMerge {
+export function followUpMerge(result: MergeResult, destinationBranch: string): MergeOperation {
   return { kind: 'merge', sourceSpec: `cs:${result.changesetId}`, destinationBranch };
 }
 
@@ -212,7 +224,7 @@ export function followUpMerge(result: MergeResult, destinationBranch: string): R
  * Where the source contents of a merge live. `cm` reports a shelve's changeset as a negative number,
  * so shelve merges read the source from the shelve itself.
  */
-export function mergeSourcePoint(request: RequestedMerge, sourceChangeset: number): string {
+export function mergeSourcePoint(request: MergeOperation, sourceChangeset: number): string {
   return request.sourceSpec.startsWith('sh:') ? request.sourceSpec : `cs:${sourceChangeset}`;
 }
 
@@ -221,7 +233,7 @@ export function mergeSourcePoint(request: RequestedMerge, sourceChangeset: numbe
 // another item).
 
 /** The incoming version: the item at the source's changeset, or a shelve's in the shelve. */
-export function sourceVersionSpec(request: RequestedMerge, conflict: FileConflict): string {
+export function sourceVersionSpec(request: MergeOperation, conflict: FileConflict): string {
   return spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
 }
 

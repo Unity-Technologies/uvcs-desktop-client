@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGroup, NO_GROUPS, reviewerFilterTexts, reviewerGroups, reviewerLabel, reviewerRef, typedReviewers } from './reviewerGroups';
+import { isGroup, NO_GROUPS, reviewerFilterTexts, reviewerGroups, reviewerLabel, reviewerRef } from './reviewerGroups';
 
 // As `cm listusers <server> --onlygroups` prints them, one per line: names may hold spaces.
 const GROUPS = reviewerGroups(['Developers', 'Web Devs', 'qa-team']);
@@ -25,14 +25,6 @@ describe('reviewer groups', () => {
 
   it('reads a reviewer of no known type as a user where the server lists no groups', () => {
     expect(reviewerRef({ name: 'Developers' }, NO_GROUPS)).toEqual({ name: 'Developers', kind: 'user' });
-  });
-
-  it('splits the reviewers typed at commas, once each, ignoring blanks, a group named as one', () => {
-    expect(typedReviewers(' ana, developers,,ana , ', GROUPS)).toEqual([
-      { name: 'ana', kind: 'user' },
-      { name: 'developers', kind: 'group' },
-    ]);
-    expect(typedReviewers('', GROUPS)).toEqual([]);
   });
 
   it('shows a group by its own name, and a user by the name shown for them', () => {

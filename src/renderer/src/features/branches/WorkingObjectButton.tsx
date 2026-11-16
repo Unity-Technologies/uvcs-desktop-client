@@ -12,6 +12,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ringValue } from '../../app/operations/progressBar';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { ToolbarPill } from '../../ui/ToolbarPill';
+import { MergeRequestChip, useWorkspaceMergeRequest } from '../codeReviews/MergeRequestChip';
 import { BranchSwitcher } from './BranchSwitcher';
 import { useReturnFocus } from '../../ui/useReturnFocus';
 import { useBranchCommands } from './useBranchCommands';
@@ -45,6 +46,12 @@ export function WorkingObjectButton() {
   const [menuWanted, setMenuWanted] = useState(false);
   const workingObject = useWorkingObject(workspace, menuWanted);
   const wantMenu = (): void => setMenuWanted(true);
+  const mergeRequest = useWorkspaceMergeRequest();
+  const branchName = (
+    <span className={styles.name}>
+      <PathLabel path={title} fitContent maxWidth={TEXT_MAX_WIDTH} tooltip={false} />
+    </span>
+  );
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setOpen}>
@@ -62,7 +69,18 @@ export function WorkingObjectButton() {
             className={styles.trigger}
             textMaxWidth={TEXT_MAX_WIDTH}
             icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
-            label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent maxWidth={TEXT_MAX_WIDTH} tooltip={false} /> : title}
+            label={
+              switching ? (
+                `${switching}…`
+              ) : workspace?.selector.kind === 'branch' ? (
+                <span className={styles.nameLine}>
+                  {branchName}
+                  {mergeRequest && <MergeRequestChip {...mergeRequest} />}
+                </span>
+              ) : (
+                title
+              )
+            }
             sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
             data-tip={switching ? undefined : title}
             data-tip-sub={switching ? undefined : comment?.trim() || undefined}

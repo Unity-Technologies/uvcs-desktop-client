@@ -169,7 +169,7 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
     // Reviews are what a branch is waiting on, not what is at hand: the newest show when asked for (`cr:`).
     {
       section: 'codeReviews',
-      heading: 'Code reviews',
+      heading: 'Merge requests',
       results: scope === 'codeReviews' ? firstOnes(lists.codeReviews ?? []).map((review) => codeReviewResult(review, context)) : [],
     },
   ];
@@ -260,7 +260,7 @@ function searchGroups({ scope, context, lists, server, changesetSearch }: Palett
     },
     {
       section: 'codeReviews',
-      heading: 'Code reviews',
+      heading: 'Merge requests',
       results: namedFirst(
         reviewId,
         [...(lists.codeReviews ?? []), ...(answered(server.reviewNumbered) ?? [])],

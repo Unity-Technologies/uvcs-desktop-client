@@ -31,7 +31,7 @@ const SCOPE_LABELS: Record<PrefixedSection, string> = {
   branches: 'Branches',
   labels: 'Labels',
   shelves: 'Shelves',
-  codeReviews: 'Code reviews',
+  codeReviews: 'Merge requests',
   people: 'People',
 };
 

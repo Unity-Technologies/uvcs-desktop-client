@@ -1,6 +1,6 @@
 import { CheckCircle2, FileDiff, GitMerge } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -10,6 +10,8 @@ import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
 import { hasMergeOptions, nothingToMergeAction, withoutMergeOptions } from './mergeOptions';
 import { MergeSession } from './MergeSession';
+import { MergeRuleRefused } from './MergeRuleRefused';
+import { mergePageStateOf } from './mergePageState';
 import { mergeSettled } from './mergeSettled';
 import { useMergePlan } from './useMergePlan';
 
@@ -32,34 +34,44 @@ function MergeOfRequest({ page }: PageProps<'merge'>) {
     if (settled && mergeId !== undefined) navigation.settleMerge(mergeId);
   }, [settled, mergeId]);
 
-  if (completion) return <MergeCompleted request={request} completion={completion} />;
-  if (isLoading) return <MergeCalculating request={request} />;
-  if (error || !plan) {
-    return (
-      <EmptyState
-        icon={<GitMerge size={22} />}
-        title="Couldn't prepare the merge"
-        description={error?.message}
-        action={
-          <>
-            {hasMergeOptions(request) && <Button onClick={() => setRequest(withoutMergeOptions(request))}>Merge without options</Button>}
-            <Button loading={isFetching} onClick={() => void refetch()}>
-              Try again
-            </Button>
-          </>
-        }
-      />
-    );
+  const retry = (
+    <Button loading={isFetching} onClick={() => void refetch()}>
+      Try again
+    </Button>
+  );
+  const state = mergePageStateOf({ completion, isLoading, error, plan });
+  switch (state.kind) {
+    case 'completed':
+      return <MergeCompleted request={request} completion={state.completion} />;
+    case 'calculating':
+      return <MergeCalculating request={request} />;
+    case 'refused':
+      return <MergeRuleRefused refusal={state.refusal} openedFrom={page.task?.mergeRequest} retry={retry} />;
+    case 'failed':
+      return (
+        <EmptyState
+          icon={<GitMerge size={22} />}
+          title="Couldn't prepare the merge"
+          description={error?.message}
+          action={
+            <>
+              {hasMergeOptions(request) && <Button onClick={() => setRequest(withoutMergeOptions(request))}>Merge without options</Button>}
+              {retry}
+            </>
+          }
+        />
+      );
+    case 'notPossible':
+      return <MergeNotPossible plan={state.plan} request={request} onRequestChange={setRequest} />;
+    case 'ready':
+      return <MergeSession key={JSON.stringify(request)} workspacePath={workspacePath} request={request} initialPlan={state.plan} task={page.task} onCompleted={setCompletion} onRequestChange={setRequest} />;
   }
-
-  if (plan.status !== 'ready') return <MergeNotPossible plan={plan} request={request} onRequestChange={setRequest} />;
-  return <MergeSession key={JSON.stringify(request)} workspacePath={workspacePath} request={request} initialPlan={plan} task={page.task} onCompleted={setCompletion} onRequestChange={setRequest} />;
 }
 
 interface MergeNotPossibleProps {
   plan: MergePlan;
-  request: RequestedMerge;
-  onRequestChange: (request: RequestedMerge) => void;
+  request: MergeOperation;
+  onRequestChange: (request: MergeOperation) => void;
 }
 
 function MergeNotPossible({ plan, request, onRequestChange }: MergeNotPossibleProps) {

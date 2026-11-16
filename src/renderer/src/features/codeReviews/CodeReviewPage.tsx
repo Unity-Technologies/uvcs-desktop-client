@@ -1,11 +1,13 @@
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
-import { useIsFetching } from '@tanstack/react-query';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { placeKey } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf, PageProps, ReviewTab } from '../../app/navigation/pages';
+import { refreshedDestinationOf } from '../../app/refresh/pageRefreshScope';
 import { isShownByCodeReviewPage } from '../../app/refresh/refreshScopes';
+import { conflictsCheckedIn } from './mergeConflictsKey';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { MENU_WORDS } from '../../components/menuWords';
 import { PathLabel } from '../../components/PathLabel';
@@ -25,6 +27,9 @@ import { OwnReviewButton } from './OwnReviewButton';
 import { reviewedCodeAction } from './reviewedCode';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { DestinationPicker } from './DestinationPicker';
+import { MergeRequestStateBadge } from './MergeRequestStateBadge';
+import { reviewHeadline } from './reviewHeadline';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
@@ -32,6 +37,7 @@ import { ViewShownContext } from '../../lib/viewShown';
 import { conversationFocus, conversationReplyFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import { ChipOpenerContext, type ChipOpener } from '../../components/comments/chipOpener';
+import { reviewNoun } from './mergeRequestState';
 import { reviewChipPage } from './reviewChipPage';
 import { useReviewChangesets } from './rounds/useReviewChangesets';
 import styles from './CodeReviewPage.module.css';
@@ -59,7 +65,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       </div>
     );
   }
-  if (error || !review) return <EmptyState title="Couldn't open the code review" description={error?.message} />;
+  if (error || !review) return <EmptyState title="Couldn't open the review" description={error?.message} />;
 
   const diffTarget = reviewDiffTarget(review.target);
   return (
@@ -70,7 +76,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           <ReviewHeader review={review} />
           <div className={styles.tabs}>
             <Tabs<ReviewTab>
-              label="Code review"
+              label={reviewNoun(review)}
               idPrefix={TABS_ID}
               value={tab}
               // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
@@ -141,7 +147,8 @@ function ReviewHeaderSkeleton() {
 }
 
 /**
- * Two rows: the title, then what's reviewed, by whom and when, its status first. The actions sit at the title's end:
+ * Two rows: the title, then what's reviewed, by whom and when, its status first; a merge request's state before it,
+ * and where it merges, which changes in place while it's still to merge (`reviewHeadline`, `DestinationPicker`). The actions sit at the title's end:
  * the reviewed code to the workspace, the user's own review, Refresh (others write on the review while it's open), and
  * the page's menu (`reviewPageMenu`), deleting in it.
  */
@@ -152,8 +159,12 @@ function ReviewHeader({ review }: { review: CodeReview }) {
   const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
   // What Refresh reads again here (`pageRefreshScope`): its icon spins while any of it is read.
-  const shownByThePage = isShownByCodeReviewPage(review.id, review.target);
+  const queryClient = useQueryClient();
+  const shownByThePage = isShownByCodeReviewPage(review.id, review.target, refreshedDestinationOf(review, conflictsCheckedIn(queryClient, place)));
   const fetching = useIsFetching({ queryKey: placeKey(place), predicate: ({ queryKey }) => shownByThePage(queryKey) }) > 0;
+  const headline = reviewHeadline(review);
+  // A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip.
+  const target = review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : <span className={styles.targetText}>{describeTarget(review.target)}</span>;
 
   return (
     <header className={styles.header}>
@@ -180,15 +191,33 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         </div>
       </div>
       <div className={styles.meta}>
+        {review.mergeRequest && <MergeRequestStateBadge state={review.mergeRequest.state} />}
         <CodeReviewStatusBadge status={review.status} />
         <UserLabel user={review.owner} />
-        <span>wants a review of</span>
-        <span className={styles.targetAndTime}>
-          {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
-          <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : <span className={styles.targetText}>{describeTarget(review.target)}</span>}</span>
-          <span className={styles.dot}>·</span>
-          <RelativeTime date={review.date} />
-        </span>
+        <span>{headline.verb}</span>
+        {headline.destination ? (
+          <>
+            <span className={styles.target}>{target}</span>
+            <span>into</span>
+            <span className={styles.targetAndTime}>
+              <span className={styles.target}>
+                {headline.destination.editable ? (
+                  <DestinationPicker review={review} source={headline.destination.source} destination={headline.destination.name} />
+                ) : (
+                  <PathLabel path={headline.destination.name} fitContent />
+                )}
+              </span>
+              <span className={styles.dot}>·</span>
+              <RelativeTime date={review.date} />
+            </span>
+          </>
+        ) : (
+          <span className={styles.targetAndTime}>
+            <span className={styles.target}>{target}</span>
+            <span className={styles.dot}>·</span>
+            <RelativeTime date={review.date} />
+          </span>
+        )}
       </div>
     </header>
   );

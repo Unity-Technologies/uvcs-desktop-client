@@ -1,0 +1,85 @@
+/* "Reviewers", then Remove all and the button that opens the picker at its end, where the picker opens from. */
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: -4px 0;
+}
+
+.heading > :first-child {
+  flex: 1;
+}
+
+/* The reviewers picked, framed like a field, wrapping onto more lines as more are picked. */
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  padding: 3px var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  cursor: pointer;
+  transition: border-color var(--duration-fast);
+}
+
+.box:hover {
+  border-color: var(--border-strong);
+}
+
+.placeholder {
+  padding: 0 var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 24px;
+  padding: 0 2px 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  font-size: var(--text-sm);
+  cursor: default;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The small ghost `IconButton`, shrunk to fit the chip's height (over `Button`'s own small size). */
+.chip button.remove {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+}
+
+/* A quiet link: emptying the list is rarely wanted, and never by accident. */
+.removeAll {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.removeAll:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.removeAll:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

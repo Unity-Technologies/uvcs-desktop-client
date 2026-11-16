@@ -190,7 +190,7 @@ function linkObjectWords(object: LinkObject): { icon: ChipIcon; label: string; t
     case 'shelve':
       return { icon: 'shelve', label: String(object.id), title: `Shelve ${object.id}` };
     case 'codeReview':
-      return { icon: 'codeReview', label: String(object.id), title: `Code review ${object.id}` };
+      return { icon: 'codeReview', label: String(object.id), title: `${object.asMergeRequest ? 'Merge request' : 'Code review'} ${object.id}` };
   }
 }
 

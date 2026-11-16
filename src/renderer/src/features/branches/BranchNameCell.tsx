@@ -1,10 +1,11 @@
 import { ChevronRight, EyeOff, GitBranch } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { PathLabel } from '../../components/PathLabel';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { textMeasurer } from '../../lib/measureText';
 import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
+import { useBranchReview } from '../codeReviews/useBranchReviews';
+import { useSettled } from '../../lib/useSettled';
 import type { BranchTreeRow } from './branchTree';
 import { chipsFit } from './chipsFit';
 import styles from './BranchesView.module.css';
@@ -16,8 +17,6 @@ const ICON = 13;
 interface BranchNameCellProps {
   row: BranchTreeRow;
   isCurrent: boolean;
-  /** The branch's newest code review, if it has one. */
-  review: CodeReviewSummary | undefined;
   onToggleCollapsed: (name: string) => void;
 }
 
@@ -26,11 +25,13 @@ interface BranchNameCellProps {
  * leaf under its parent in the tree), then its chips. The name comes first: chips give up their text, keeping their
  * icons, before the name is trimmed, and are never cut.
  */
-export function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: BranchNameCellProps) {
+export function BranchNameCell({ row, isCurrent, onToggleCollapsed }: BranchNameCellProps) {
   const { branch } = row;
+  // Asked for once the row stays drawn (the rows in view and a margin): a row a scroll passes over asks nothing.
+  const review = useBranchReview(branch.id, useSettled()) ?? undefined;
   const shownName = row.depth > 0 ? branch.name.slice(branch.name.lastIndexOf('/') + 1) : branch.name;
   const ref = useRef<HTMLSpanElement>(null);
-  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.status}:${branch.isHidden}`);
+  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.mergeRequest?.state}:${review?.status}:${branch.isHidden}`);
 
   return (
     <span ref={ref} className={styles.name} style={{ paddingLeft: row.depth * INDENT }}>

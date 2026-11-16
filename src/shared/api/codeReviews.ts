@@ -1,6 +1,6 @@
 import type { MemberRef } from '../domain/member';
 import type { Place } from '../domain/place';
-import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, ReviewSubscription } from '../domain/codeReview';
+import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, CreatedMergeRequest, CreateMergeRequestRequest, MergeRequestState, ReviewSubscription } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
   list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
@@ -13,6 +13,11 @@ export interface CodeReviewsApi {
    */
   reviewers(place: Place, reviewId: number): Promise<CodeReviewer[]>;
   create(place: Place, request: CreateCodeReviewRequest): Promise<number>;
+  /**
+   * Asks to merge a branch into another: one quick `cm mergerequest create`. `cm` checks only that the destination
+   * exists; what else makes a request sensible (`draftProblem`) is the window's to check before asking.
+   */
+  createMergeRequest(place: Place, request: CreateMergeRequestRequest): Promise<CreatedMergeRequest>;
   /** Asks these users and groups to review it too; one already asked stays as they are. */
   addReviewers(place: Place, reviewId: number, reviewers: MemberRef[]): Promise<void>;
   /** Takes these users and groups off its reviewers; the others stay. */
@@ -36,4 +41,16 @@ export interface CodeReviewsApi {
    * group they're in) as a reviewer: the server subscribes them again then.
    */
   unsubscribe(place: Place, reviewId: number): Promise<void>;
+  /**
+   * Moves a merge request to another state (`mergeRequestMoves` says which it may take); the server notes the move in
+   * its conversation. Needs the change permission on its branch.
+   */
+  setMergeRequestState(place: Place, reviewId: number, state: MergeRequestState): Promise<void>;
+  /** Makes `branch` (`/main/release`) the branch a merge request merges into; the server notes the change. */
+  setMergeRequestDestination(place: Place, reviewId: number, branch: string): Promise<void>;
+  /**
+   * Records a merge request Merged in changeset `changesetId`, after the app merged it: the server notes it in its
+   * conversation, once (a request already Merged stays as it is).
+   */
+  recordMerged(place: Place, reviewId: number, changesetId: number): Promise<void>;
 }

@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import type { Place } from '@shared/domain/place';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
 import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
@@ -10,6 +11,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ListSkeleton } from '../../ui/Skeleton';
+import { BranchReviewChip } from '../codeReviews/BranchReviewChip';
 import { BranchSearchItem } from './BranchSearchItem';
 import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
@@ -29,12 +31,18 @@ interface BranchSearchListProps {
   menu?: (branch: Branch) => MenuEntry[];
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
+  /**
+   * Each row drawn shows its branch's review chip as the Branches view does (`BranchReviewChip`): whose branches they
+   * are, and how to close what holds the list (a popup, a dialog) before a review opens from its chip or card. Left out
+   * for another repository's branches (an xlink's), whose reviews don't matter to the pick.
+   */
+  reviews?: { place: Place; leave: () => void };
   /** Where the branches stand (`branchesRead`): the list keeps its frame while they're read, and says when they can't be. */
   read?: BranchesRead;
 }
 
 /** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, read = 'read' }: BranchSearchListProps) {
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, reviews, action, read = 'read' }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -131,6 +139,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                   key={row.branch.name}
                   branch={row.branch}
                   current={row.branch.name === currentBranch}
+                  badge={reviews && <BranchReviewChip place={reviews.place} leave={reviews.leave} branchId={row.branch.id} />}
                   highlighted={row.index === highlighted}
                   id={`${listboxId}-${row.index}`}
                   role="option"

@@ -17,6 +17,12 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
+import { openReview } from '../codeReviews/codeReviewOperations';
+import { asMergeRequest } from '../codeReviews/mergeRequestState';
+import { useBranchReview } from '../codeReviews/useBranchReviews';
+import { useSettled } from '../../lib/useSettled';
+import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
+import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
 import { diffBranch, saveBranchComment } from './branchOperations';
 import { editsBranchComments } from './editsBranchComments';
@@ -34,6 +40,8 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
+  // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
+  const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
 
@@ -78,6 +86,12 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
         ...relations,
       ]}
       changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
-    />
+    >
+      {request && (
+        <DetailsSection title="Merge request">
+          <MergeRequestSummaryCard request={request} onOpen={() => openReview(request)} />
+        </DetailsSection>
+      )}
+    </DetailsPanel>
   );
 }

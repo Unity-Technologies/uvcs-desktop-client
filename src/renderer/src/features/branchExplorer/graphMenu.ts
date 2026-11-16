@@ -66,7 +66,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
 /**
  * A review chip sits on its branch's header, so the graph names the reviewed branch from its lanes, with no command.
  * The canvas itself gives the chip's branch menu to a right-click and the context-menu key (`targetAt(..., false)`,
- * `graphKeyboard`); this one reads as the Code reviews view's wherever a chip's menu is asked for.
+ * `graphKeyboard`); this one reads as the Merge requests view's wherever a chip's menu is asked for.
  */
 function graphCodeReviewMenu(review: CodeReviewSummary, { place, layout, currentBranch }: GraphMenuContext): MenuEntry[] {
   const reviewed = [...layout.lanesByBranch.values()].find((lane) => lane.branch.id === review.targetBranchId)?.branch.name;

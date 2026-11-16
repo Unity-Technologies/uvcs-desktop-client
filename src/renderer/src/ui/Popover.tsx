@@ -1,5 +1,6 @@
 import * as RadixPopover from '@radix-ui/react-popover';
 import type { ReactNode } from 'react';
+import { useInsideDialog } from './dialog/insideDialog';
 import styles from './Popover.module.css';
 
 interface PopoverProps {
@@ -20,11 +21,14 @@ interface PopoverProps {
 
 /**
  * A raised panel under its trigger, its content rendered only while open. Above dialogs, so one can open from them.
+ * Opened from a dialog, it is modal itself, so its lists scroll with the wheel (`useInsideDialog`).
  * New popovers use it (a filter's, `FilterPopover`, too) rather than Radix's directly, so they look and behave alike.
  */
 export function Popover({ trigger, children, width = 300, align = 'start', open, onOpenChange, onEscapeKeyDown, onOpenAutoFocus }: PopoverProps) {
+  // A modal dialog takes the wheel from what is drawn outside it, as this content is; a popover modal itself scrolls.
+  const modal = useInsideDialog();
   return (
-    <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
+    <RadixPopover.Root open={open} onOpenChange={onOpenChange} modal={modal}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
       <RadixPopover.Portal>
         <RadixPopover.Content

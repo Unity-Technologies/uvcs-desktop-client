@@ -12,13 +12,13 @@ describe('scopeChipsFor', () => {
   it('shows All and the sections searched most in the row, the rest under More, each with its prefix', () => {
     const chips = workspaceChips();
     expect(labels(chips.row)).toEqual(['All', 'Branches br:', 'Changesets cs:', 'Files /', 'Commands >']);
-    expect(labels(chips.more)).toEqual(['Labels lb:', 'Shelves sh:', 'Code reviews cr:', 'People @']);
+    expect(labels(chips.more)).toEqual(['Labels lb:', 'Shelves sh:', 'Merge requests cr:', 'People @']);
   });
 
   it('leaves Files out of a repository explored without a workspace', () => {
     const chips = scopeChipsFor(repositoryPlace('game@local'))!;
     expect(labels(chips.row)).toEqual(['All', 'Branches br:', 'Changesets cs:', 'Commands >']);
-    expect(labels(chips.more)).toEqual(['Labels lb:', 'Shelves sh:', 'Code reviews cr:', 'People @']);
+    expect(labels(chips.more)).toEqual(['Labels lb:', 'Shelves sh:', 'Merge requests cr:', 'People @']);
   });
 
   it('shows no chips on the home screen, where only commands are searched', () => {

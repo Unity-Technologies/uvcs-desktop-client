@@ -34,6 +34,7 @@ you touch:
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 | `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), suggested changes and applying them, email notifications, the `cm codereview` commands |
+| `features/merge-requests.md`            | Merge requests: what makes a review one, creating one, the four states and who changes them, the page and its destination, the merge card and the conflicts check, merging and recording Merged, merge-rule refusals, the Merge requests view (State chip, who waits), which review stands for a branch: its chips, the top bar's chip and the next step in Changes |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
@@ -253,7 +254,7 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
+  their branch lists already carry, and share one review list with the palette; the Merge requests view and the review's page name it
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
   (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
   `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
@@ -291,8 +292,11 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
-  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. A list
-  reads just the fields it needs, as records (Parsing).
+  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. One
+  exception, measured: the reviews of the branches a view shows, `targetid`s ORed in blocks of `BRANCH_REVIEWS_BLOCK`
+  (`branchTargetsCondition`), which the server matches in one scan, so a block costs what one branch does
+  (docs/features/merge-requests.md "Where a branch's merge request shows"). A list reads just the fields it needs, as
+  records (Parsing).
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
 - **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
@@ -954,7 +958,8 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
-   changes: `appMenuInstaller`).
+   changes: `appMenuInstaller`), the top bar's merge request (one `cm find review` of the workspace's branch, asked
+   once the pending changes are read: `asksForBranchReviews`).
 
 Reopening the last workspace on an M4 Max (Electron 44), started as the Dock does, warm, median of 14 runs, in ms
 after the process starts, interleaved with a build from before the compile cache, the reads before `app.whenReady`,
@@ -1246,13 +1251,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
     (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
-    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
+    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Merge requests)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
-    is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+    (`pickedNames`), History and Attributes filter what they read. Merge requests have two people chips: who created
+    them, and their reviewers (I'm a reviewer is the server's `reviewer = 'me'`; others picked narrow the rows read,
+    code-reviews.md "The list"). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
     over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
@@ -1289,6 +1295,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+  A popover opened inside a dialog goes through `ui/Popover` (or `FilterPopover`), which is modal there
+  (`InsideDialog`, `useInsideDialog`, set by `Dialog` and `CardDialog`): the dialog's scroll lock takes the mouse
+  wheel from anything outside it, a portaled popover included, and only a lock of the popover's own gives its list the
+  wheel back. Modal, the popover's first click outside only closes it. A raw Radix popover in a dialog doesn't scroll.
 - **Buttons that create something** ("New branch", "New label", "New workspace") show what they create with a plus:
   Lucide's `GitBranchPlus`, `TagPlus`, `MessageSquarePlus`, `DatabasePlus`, `FolderPlus`, never the bare `Plus`, which
   only says "add". Where Lucide has no such icon the feature draws one on its grid (`TagsPlus`, `Tags` with a
@@ -1551,6 +1561,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line
   is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
   Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  A long run of one field's ORed conditions (a block of branches' reviews: up to 50 `targetid`s) shows folded to
+  its first and last, behind a "…48 more…" button that shows it whole and folds it back (`foldedCommandLine`,
+  `FoldableCommandLine`); Copy takes the whole line, and the filter searches it.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components

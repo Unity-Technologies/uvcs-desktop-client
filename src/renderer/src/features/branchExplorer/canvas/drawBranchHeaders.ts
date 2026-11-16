@@ -9,7 +9,7 @@ import { HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, H
 import { HEADER_HOVER_TINT, HEADER_TINT, headerColor, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape, roomBeforeNextLane } from './laneShape';
-import { lanesAcross } from './spansInView';
+import { lanesWithHeadersIn } from './headersInView';
 import { drawSearchMarks, redrawMarkedLetters } from './searchMarks';
 
 const PADDING = 8;
@@ -37,11 +37,10 @@ const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
  */
 export function drawBranchHeaders(draw: DrawContext): void {
   const { scene, visible } = draw;
-  for (const lane of lanesAcross(scene.layout, visible.left, visible.right)) {
+  for (const lane of lanesWithHeadersIn(scene.layout, visible)) {
     const shape = laneShape(lane);
     const height = laneHeaderHeight(lane);
     const top = headerTop(shape.y, height);
-    if (shape.right < visible.left || shape.left > visible.right || top > visible.bottom || top + height < visible.top) continue;
 
     const restLeft = shape.left + HEADER_INSET;
     const roomBeforeNext = roomBeforeNextLane(scene.layout, lane, restLeft);

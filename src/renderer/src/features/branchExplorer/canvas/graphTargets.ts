@@ -57,6 +57,14 @@ export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: Dr
   return { kind: 'pointer', target };
 }
 
+/**
+ * Whether a pointer card stays where it opened, rather than following the pointer: a merge request's summary, which
+ * the pointer moves into to open the request by its title, as its card does in the lists.
+ */
+export function pointerCardStays(target: PointerCardTarget): boolean {
+  return target.kind === 'codeReview' && target.review.mergeRequest !== undefined;
+}
+
 /** What the frame lights up under the pointer. */
 export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending'>;
 

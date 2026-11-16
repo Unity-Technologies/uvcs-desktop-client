@@ -4,6 +4,7 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 
 import { queryKeys } from '../../api/queryKeys';
+import { branchReviewsQuery } from '../../features/codeReviews/changeRequests/useChangeRequests';
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
@@ -120,6 +121,19 @@ describe('refreshForChange', () => {
 
     expect(refetches({ keyedBySelector, keyedByChangeset })).toEqual({ keyedBySelector: 0, keyedByChangeset: 0 });
     expect(queryClient.getQueryState(['workspace', ws, 'leftChanges', '/main'])?.isInvalidated).toBe(true);
+  });
+
+  it("reads the branch's reviews once when a switch made elsewhere moves the branch: the top bar read them as the branch changed", async () => {
+    let branch = '/main';
+    await shown(['workspace', ws, 'info'], { read: () => info(branch) });
+    const place = { kind: 'workspace', workspacePath: ws } as const;
+    const { queryKey, meta } = branchReviewsQuery(place, '/main/task');
+    const branchReviews = await shown([...queryKey], { meta });
+    branch = '/main/task';
+
+    await refreshForChange(ws, change({ metadata: true }), true);
+
+    expect(refetches({ branchReviews })).toEqual({ branchReviews: 0 });
   });
 
   it('re-reads views keyed by a part of the workspace info that did not move', async () => {

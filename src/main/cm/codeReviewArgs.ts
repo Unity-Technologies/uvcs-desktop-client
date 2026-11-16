@@ -57,7 +57,7 @@ const STATUS_OPTIONS: Record<CodeReviewStatus, string> = {
  * The reviewers named, users in `--users` and groups in `--groups`, both in one command: `cm` looks a name up among
  * its option's kind only (a group in `--users` fails, "No such user"). An option that would name nobody is left out.
  */
-function reviewersOptions(reviewers: readonly MemberRef[]): string[] {
+export function reviewersOptions(reviewers: readonly MemberRef[]): string[] {
   return [namesOption('--users', reviewers, 'user'), namesOption('--groups', reviewers, 'group')].filter((option) => option !== undefined);
 }
 

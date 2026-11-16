@@ -20,6 +20,8 @@ describe('formatLink and parseLink', () => {
     ['uvcs://acme.unity/projects/Cloud%20Repositories', { kind: 'server', server: 'acme@unity', project: 'Cloud Repositories' }],
     ['uvcs://host:8087', { kind: 'server', server: 'host:8087' }],
     ['uvcs://acme.unity/repos/game/-/locks', { ...game, page: { kind: 'view', view: 'locks' } }],
+    ['uvcs://acme.unity/repos/game/-/merge-requests', { ...game, page: { kind: 'view', view: 'merge-requests' } }],
+    ['uvcs://acme.unity/repos/game/-/code-reviews', { ...game, page: { kind: 'view', view: 'code-reviews' } }],
     ['uvcs://acme.unity/repos/game/-/files/Assets/Player.cs', { ...game, page: { kind: 'view', view: 'files', path: '/Assets/Player.cs' } }],
     ['uvcs://acme.unity/repos/game/-/browse/Assets/Player.cs#L42', { ...game, page: { kind: 'browse', path: '/Assets/Player.cs' }, lines: { side: 'new', first: 42, last: 42 } }],
     ['uvcs://acme.unity/repos/game/changesets/4207', { ...game, object: { kind: 'changeset', id: 4207 } }],
@@ -140,6 +142,7 @@ describe('parseLink', () => {
     // The official client's links (docs/features/deep-links.md, "Older links"), under either scheme.
     it.each<[string, Link]>([
       ['plastic://acme.cloud/repos/game/changesets/4207/diff', { ...game, server: 'acme@cloud', object: { kind: 'changeset', id: 4207 } }],
+      ['plastic://acme.cloud/repos/game/merge-requests/31407383', { ...game, server: 'acme@cloud', object: { kind: 'codeReview', id: 31407383, asMergeRequest: true } }],
       ['uvcs://acme.cloud/repos/game/changesets/4200..4207/diff', { ...game, server: 'acme@cloud', object: { kind: 'changesetRange', from: 4200, to: 4207 } }],
       ['uvcs://acme.cloud/repos/game/branches/main/Mi+rama/MiSuperRama%24%24/diff', { ...game, server: 'acme@cloud', object: { kind: 'branch', name: '/main/Mi rama/MiSuperRama$$' } }],
       ['uvcs://acme.cloud/repos/game/branches/main/diff/diff', { ...game, server: 'acme@cloud', object: { kind: 'branch', name: '/main/diff' } }],

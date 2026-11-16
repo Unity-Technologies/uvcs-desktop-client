@@ -31,7 +31,8 @@ async function pick({ kind, title, repository, point }: PickSource, value: strin
     case 'folder':
       return repository && point ? pickRepositoryFolder({ title, repository, point, current: value }) : undefined;
     case 'branch':
-      return (await pickBranch({ title, place: repository ? repositoryPlace(repository) : undefined }))?.name;
+      // The xlink's dialog can't be closed from here, so its branch picker shows no reviews to leave for.
+      return (await pickBranch({ title, place: repository ? repositoryPlace(repository) : undefined, overDialog: false }))?.name;
     case 'changeset': {
       const changeset = await pickChangeset({ title, place: repository ? repositoryPlace(repository) : undefined });
       return changeset === undefined ? undefined : String(changeset);

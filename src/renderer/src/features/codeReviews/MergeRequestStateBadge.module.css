@@ -1,0 +1,43 @@
+/* A merge request's state as a pill: its glyph and name in the state's color, on its tint; as CodeReviewStatusBadge. */
+.badge {
+  composes: stateColor from './mergeRequestStateColors.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--merge-request-color) 14%, transparent);
+  color: var(--merge-request-color);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Beside a branch's name, sized as a compact review status badge (`CodeReviewStatusBadge`). */
+.badge[data-compact='true'] {
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.badge[data-compact='true'] svg {
+  width: 10px;
+  height: 10px;
+}
+
+.badge[data-icon-only='true'] {
+  padding: 0 4px;
+}
+
+/* The top bar's, narrow: the glyph says enough, before the branch pill gives up its room. */
+@media (max-width: 820px) {
+  .badge[data-narrow-icon-only] {
+    padding: 0 4px;
+  }
+
+  .badge[data-narrow-icon-only] .name {
+    display: none;
+  }
+}

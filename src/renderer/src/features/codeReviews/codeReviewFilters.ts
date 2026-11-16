@@ -2,7 +2,8 @@ import type { CodeReview, CodeReviewFilter, CodeReviewSummary } from '@shared/do
 import { isEveryone, isOnlyMine, pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { sameUser, userFilterTexts } from '../../lib/userName';
-import type { StatusFilter } from './codeReviewsViewStore';
+import type { MergeRequestStateFilter, ReviewKindFilter, StatusFilter } from './codeReviewsViewStore';
+import { isActiveMergeRequest } from './mergeRequestState';
 import { describeTarget } from './reviewTarget';
 import { waitingForMe } from './waitingForMe';
 
@@ -11,6 +12,8 @@ interface CodeReviewsQueryFilters {
   /** Who created them, once picking paused (`PICKING_PAUSE_MS`). */
   people: PeoplePick;
   status: StatusFilter;
+  /** Which merge requests: Merged and Closed are the server's; Active and All read with no state (`matchesState`). */
+  mergeRequestState: MergeRequestStateFilter;
   /** Who is asked to review them: I'm a reviewer, people picked, both. */
   reviewers: PeoplePick;
   /** Only those waiting for the user: of any date, as the official client's "Needs my review" reads them. */
@@ -20,18 +23,52 @@ interface CodeReviewsQueryFilters {
 }
 
 /**
- * What Code reviews asks `cm find review` for: who created them, whether the user is asked to review them, the status
+ * What Merge requests asks `cm find review` for: who created them, whether the user is asked to review them, the status
  * and the time range; the text is matched locally. I'm a reviewer alone is the server's (`where reviewer = 'me'`);
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
  * me is local too (`matchesWaiting`), over reviews of any date: one left waiting for months is still the user's to do.
  * Opened by me reads the user's reviews of any date (`owners: me`, unless people are picked, kept as picked) and keeps
- * those not reviewed yet locally (`matchesOpenedByMe`): the query takes one status, not two.
+ * those not reviewed yet locally (`matchesOpenedByMe`): the query takes one status, not two. Merged and Closed ask the
+ * server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and narrows
+ * locally, as `cm find` takes one state, so it shares All's query key.
  */
-export function codeReviewsQuery({ since, people, status, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
   const sinceDate = waitingForMe || openedByMe ? undefined : sinceDateFor(since, today);
   const owners = openedByMe && isEveryone(people) ? ['me'] : pickedOwners(people);
-  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, sinceDate };
+  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate };
+}
+
+/** The states the server is asked for; the others read every review. */
+const SERVER_STATES: Record<MergeRequestStateFilter, CodeReviewFilter['mergeRequestState']> = { active: undefined, all: undefined, merged: 'Merged', closed: 'Closed' };
+
+/**
+ * The state the list goes by under the Kind chip: the State chip's, except with Code reviews alone, which have no
+ * state: then every review is asked for and kept (`all`), and the State chip hides (`showsStateChip`).
+ */
+export function stateUnderKind(kind: ReviewKindFilter, state: MergeRequestStateFilter): MergeRequestStateFilter {
+  return kind === 'codeReviews' ? 'all' : state;
+}
+
+/** Whether the State chip shows: a merge request's state means nothing to code reviews alone. */
+export function showsStateChip(kind: ReviewKindFilter): boolean {
+  return kind !== 'codeReviews';
+}
+
+/**
+ * Whether a review read shows under the Kind chip: both kinds, merge requests alone, or code reviews alone. Local:
+ * the reviews are read together whatever the kind (one query key), so switching it runs no command.
+ */
+export function matchesKind(review: Pick<CodeReviewSummary, 'mergeRequest'>, kind: ReviewKindFilter): boolean {
+  if (kind === 'any') return true;
+  return (review.mergeRequest !== undefined) === (kind === 'mergeRequests');
+}
+
+/** Whether a review read shows under the State chip: Active keeps the code reviews and the merge requests Open or Draft. */
+export function matchesState(review: Pick<CodeReviewSummary, 'mergeRequest'>, state: MergeRequestStateFilter): boolean {
+  if (state === 'all') return true;
+  if (state === 'active') return !review.mergeRequest || isActiveMergeRequest(review);
+  return review.mergeRequest?.state === SERVER_STATES[state];
 }
 
 /** Whether any reviewer picked is asked on the review (the user under I'm a reviewer, `me`); every review with none picked. */
@@ -45,13 +82,26 @@ export function matchesWaiting(review: Pick<CodeReviewSummary, 'owner' | 'status
   return !on || waitingForMe(review, user) !== undefined;
 }
 
-/** Whether a review read shows under Opened by me: all while it's off; the user's, not reviewed yet, while on. */
-export function matchesOpenedByMe(review: Pick<CodeReviewSummary, 'owner' | 'status'>, on: boolean, user: string | undefined): boolean {
-  return !on || (user !== undefined && sameUser(review.owner, user) && review.status !== 'Reviewed');
+/**
+ * Whether a review read shows under Opened by me: all while it's off; while on, the user's code reviews not reviewed
+ * yet, and their merge requests still to merge whatever the review says (one reviewed is still theirs to merge).
+ */
+export function matchesOpenedByMe(review: Pick<CodeReviewSummary, 'owner' | 'status' | 'mergeRequest'>, on: boolean, user: string | undefined): boolean {
+  if (!on) return true;
+  if (user === undefined || !sameUser(review.owner, user)) return false;
+  return review.mergeRequest ? isActiveMergeRequest(review) : review.status !== 'Reviewed';
+}
+
+/**
+ * Whether the list shows fewer reviews than it read, so an empty one says none match (with Clear filters) rather than
+ * none yet: a filter is on, or the State chip at rest (Active) hides what was read, every review merged or closed.
+ */
+export function isNarrowed(filtering: boolean, read: number, shown: number): boolean {
+  return filtering || shown < read;
 }
 
 /** How many of the reviews read Opened by me keeps. */
-export function openedByMeCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status'>[], user: string | undefined): number {
+export function openedByMeCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status' | 'mergeRequest'>[], user: string | undefined): number {
   return reviews.filter((review) => matchesOpenedByMe(review, true, user)).length;
 }
 
@@ -65,9 +115,13 @@ export function waitingChipLabel(waiting: number): string {
   return waiting > 0 ? `Waiting for me · ${waiting}` : 'Waiting for me';
 }
 
-/** What the row shows, which its filter looks through: its number, title, what it reviews, its author and its reviewers. */
-export function reviewFilterTexts(review: Pick<CodeReview, 'id' | 'title' | 'owner' | 'reviewers'> & { target?: CodeReview['target'] }): string[] {
+/**
+ * What the row shows, which its filter looks through: its number, title, what it reviews, where a merge request merges
+ * and its state, its author and its reviewers.
+ */
+export function reviewFilterTexts(review: Pick<CodeReview, 'id' | 'title' | 'owner' | 'reviewers' | 'mergeRequest'> & { target?: CodeReview['target'] }): string[] {
   const target = review.target ? [describeTarget(review.target)] : [];
+  const merge = review.mergeRequest ? [review.mergeRequest.destination, review.mergeRequest.state] : [];
   const reviewers = review.reviewers.flatMap((reviewer) => userFilterTexts(reviewer.name));
-  return [String(review.id), review.title, ...target, ...userFilterTexts(review.owner), ...reviewers];
+  return [String(review.id), review.title, ...target, ...merge, ...userFilterTexts(review.owner), ...reviewers];
 }

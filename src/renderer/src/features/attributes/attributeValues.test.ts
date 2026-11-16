@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeEditorFor, attributeTone, attributeValueKind, chipHover, chipText, defaultValuesIn, outgrowsQuickField, suggestedValues, valueCounts } from './attributeValues';
+import { attributeEditorFor, hasAttributesToShow, attributeTone, attributeValueKind, chipHover, chipText, defaultValuesIn, outgrowsQuickField, suggestedValues, valueCounts } from './attributeValues';
 
 describe('attributeValueKind', () => {
   it('shows short enumerable values as pills', () => {
@@ -112,5 +112,17 @@ describe('valueCounts', () => {
       { value: 'READY', count: 3 },
       { value: 'FAILED', count: 1 },
     ]);
+  });
+});
+
+describe('hasAttributesToShow', () => {
+  it('shows while the values are read, and with a value or a type to add', () => {
+    expect(hasAttributesToShow(undefined, [])).toBe(true);
+    expect(hasAttributesToShow([{ name: 'status', value: 'open' }], [])).toBe(true);
+    expect(hasAttributesToShow([], [{ name: 'status' }])).toBe(true);
+  });
+
+  it('shows nothing with no value and no attribute type on the server', () => {
+    expect(hasAttributesToShow([], [])).toBe(false);
   });
 });

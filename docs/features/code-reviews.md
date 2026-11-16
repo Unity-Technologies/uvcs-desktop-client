@@ -1,7 +1,8 @@
 # Code reviews
 
 A code review asks people to review a branch, a changeset or a shelve. A merge request is the same object on the
-server, with a destination branch: what this doc says of reviews holds for both.
+server, with a destination branch and a state: what this doc says of reviews holds for both, and what is a merge
+request's alone (its states, the Merge requests view's State chip, its chips) is in docs/features/merge-requests.md.
 
 Reviews need `cm` 11.0.16.10616 or later: the fields `cm find review` reads (`FOUND_REVIEWS`) and the reviewer
 commands are that version's, and with `--format` a field an older `cm` doesn't know fails the whole command, so the
@@ -40,7 +41,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   list (a server that lists none, a group made since it was read) can't be told from a user, and the page's writes
   must name each one as `cm` takes it. Where that type is read (`CodeReviewer.kind`), it decides: the
   page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
-  groups too. Elsewhere (the list's stack, the picker's offered groups, the new-review dialog) the server's groups
+  groups too. Elsewhere (the list's stack, the picker's offered groups) the server's groups
   (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
   `useReviewerGroups`, `reviewerGroups`) tell a group from a user by name, whatever its case (`isGroup`,
   `reviewerRef`). A group shows the group icon where a user shows their avatar
@@ -69,30 +70,42 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   **Author** (`isAuthor`). The list's **Change reviewers** (`chooseReviewers`) opens the same picker in a dialog
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
-  A new review asks the reviewers typed, separated by commas (`typedReviewers`, a group as one), in the command that
-  creates it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`).
+  **New code review** picks its reviewers with the same picker, never typed names (`ReviewersField`: the reviewers picked as chips in a box, each with
+  its × and a user's email under the pointer; the heading's button, or a click on the box, opens the picker from the heading's end, so it stays put as chips
+  are added, those picked as it opened leading its list as on the review page, `pickAsPickerOpens`; **Remove all**
+  once there are several, `pickedReviewersOf`; a chip removed leaves the keyboard on the next one or on the heading's
+  button, `focusAfterRemoving`), each asked as the
+  kind it was listed with, so a group found by a search stays a group (`reviewersToAsk`), in the command that creates
+  it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`). A merge request's dialog has the
+  same field (docs/features/merge-requests.md "Creating one"). Reviewers come from the server's lists or its search, so an unknown
+  name is never asked; if `cm` refuses one anyway, its message shows in the failure toast.
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
 - `cm codereview -e --status` isn't used: it sets the status of the review's first reviewer, and fails on a review
   with more than one.
 
 ## The list
 
+The list is the **Merge requests** view, merge requests and code reviews together (merge-requests.md "One view").
+
 - One `cm find review` reads each review with its reviewers and the status each gave (`{reviewers}`,
   `name:Status` pairs, `parseReviewers`; which are groups, the server's groups say: see "Groups"), the number of comments (`{comments}`: comments, questions, change requests
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
-- Columns: the title, the status, the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
+- Columns: the title, where it stands as an icon (merge-requests.md "One view"), the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
   `ui/AvatarStack`, three then a "+N" disc whose tooltip names the rest; hovered, the stack spreads and each avatar
   shows its reviewer's status as a badge in its corner, the status's icon in its color (`reviewerBadge`,
   `REVIEW_STATUS_ICONS`: an eye, a flag, a thumbs-up), fading in as the avatar settles, and its tooltip names them with
-  it, `reviewerText`; at rest the stack shows only who, the Status column saying where the review stands (the keyboard
+  it, `reviewerText`; at rest the stack shows only who, the icon beside the title saying where the review stands (the keyboard
   never spreads it: a sighted keyboard user reads each reviewer's status on the review's page, beside its conversation,
-  where every reviewer shows their status's icon); the details panel shows the same; the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
+  where every reviewer shows their status's icon); the details panel lists them under **Reviewers**, each with their
+  status's icon (`ReviewerList`, read only), and a review of a branch the branch's attributes under **Branch
+  attributes** (`reviewDetailsSections`; hidden with nothing to show or add, `useAttributesShown`); the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
-  changes, the author, when it was created (the list's order and its period go by it; hidden in a narrower window) and
-  the last activity.
-- **A review waiting for the user** has a small accent dot before its number (`codeReviewColumns`, which takes the
+  changes, the author and the last activity. When it was created has no column, to keep the rows light: the list
+  comes newest first as `cm` reads it, its period goes by it, and the details panel says it. Each row leads with what
+  it is, a merge request's state glyph or the code review glyph, never its number (merge-requests.md "Its number").
+- **A review waiting for the user** has a small accent dot before its glyph (`codeReviewColumns`, which takes the
   user, `usePlaceUser`, and is built again only when the user changes, so the table keeps its columns while it sorts).
   It waits (`waitingForMe`) when the user is a reviewer, by name (`sameUser`), whose own status is Under review
   (tooltip "Waiting for your review"), or wrote it and it's in Rework required with something open,
@@ -113,7 +126,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   own reviews in rework, which `reviewer = 'me'` leaves out, and goes by each reviewer's own status, which the query
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
-  The sidebar counts the same reviews on **Code reviews** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
+  The sidebar counts the same reviews on **Merge requests** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
   view read, by its filters, reading nothing itself: no `cm find` runs for a sidebar, so the count shows once the view
   was opened. It counts Waiting for me only, never with Opened by me: it says the user has something to do.
 - **Opened by me** (a `ToggleChip`, the store's `openedByMe`) keeps the user's reviews not reviewed yet (Under review or
@@ -124,12 +137,14 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   rest. Presets in the sidebar, as the official client lists them, were left out: two more rows for what a count and two
   chips say.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
-  status, I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
+  status, I'm a reviewer alone, and a merge request's state when it is Merged or Closed: merge-requests.md "One
+  view"), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
-  and "No matching code reviews" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
+  and "No matching merge requests" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
-  most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
-  (`reviewSummariesQuery`). The palette finds an older review by its title (`cm find review … like`) or its number,
+  most once (`BranchNamesCache`). The palette reads only the newest `NEWEST_CODE_REVIEWS` (`reviewSummariesQuery`);
+  the branch chips read the reviews of the branches shown, in blocks (merge-requests.md "Reading the branches'
+  reviews"). The palette finds an older review by its title (`cm find review … like`) or its number,
   typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
 
 ## The review's page
@@ -137,8 +152,9 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
 - The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
   server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one
   Apply its page offers: the shelve's diff below drops its own, `pageApplies`), **Your review**, Refresh and the page's menu
-  (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays out
-  of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation, not in
+  (`reviewPageMenu`: a new window, Copy, Delete, and a merge request's moves; what the page shows already has its own
+  control, and deleting stays out of the way); then the status, who wants a review of what and when (a merge request's
+  headline: docs/features/merge-requests.md "The page"). The reviewers are beside the conversation, not in
   the header. In a narrow window the title keeps a readable width (280 px) and the actions wrap to a row of their own
   under it, the switch's words cut first; what's reviewed, the dot and when wrap together (`CodeReviewPage.module.css`).
   Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a
@@ -157,7 +173,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   email subscription (from a `cm` that has it), a fifth on a branch's review for its changesets, which its rounds, its
   chips and Changes share (`useReviewChangesets`, one `cm find changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
-  when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
+  when it was read, and one an operation marked stale is left to its own read), so Back finds the Merge requests view
   with the review's new status and counts, at no `cm` command of its own.
   Nothing remounts, so the tab, the file selected, the scroll and the threads unfolded stay; the icon spins while any
   of it is read. Nothing reads it on a timer.
@@ -201,7 +217,9 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   text: the description is the newest `[description]` one; the others are events (`ReviewEvent`): review requests
   (`[requested-review-from]a;b`; an older server's `[requested-review-from-<id>]` names no one), a reviewer asked
   again or removed, a status with what its reviewer said (`[status-reviewed]…`), a rename (`[renamed-title]a#->#b`).
-  What this version doesn't read yet (a merge request's statuses) shows its text (`other`).
+  A merge request's notes (its state moves, its destination, its branch hidden) are events too: docs/features/merge-requests.md
+  "The page". A note this version doesn't read is left out of the timeline (`other`, `isShownEvent`), never shown as
+  the server wrote it.
 - It reads under the reviews' area (`useReviewConversation`), so every write on a review reads it and the lists again,
   their counts changing with it (`isAffectedByCodeReviews`), and a focus once stale reads it, as others write on it.
 - The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (its band in the
@@ -215,7 +233,9 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   another (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status"), **Open**: the change requests and questions still open
-  (`ReviewSideRail`, `openItemsOf`), and **Notifications** (see "Email notifications").
+  (`ReviewSideRail`, `openItemsOf`), **Notifications** (see "Email notifications") and, for a review of a branch,
+  **Branch attributes**, edited in place (`BranchAttributesSection`, `AttributeChips`; hidden with nothing to show or
+  add, `useAttributesShown`).
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off
@@ -358,7 +378,8 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
   of its reviews with something open (`{unresolvedissues}` above zero, `reviewsToRead`; a branch has one, rarely two),
   under the very key its page reads it by (`reviewConversationQuery`), so the page and the check-in find each other's
   read. A review that couldn't be read hides none of the others' requests. A branch with no review, or none open,
-  costs the one find. Open is what the conversation says (`threadsOf`'s state: not applied, no discarding reply). Read
+  costs the one find, which the top bar's merge request chip shares (merge-requests.md "Where a branch's merge
+  request shows"). Open is what the conversation says (`threadsOf`'s state: not applied, no discarding reply). Read
   again only on an event: the branch switched (another key), a write on a review (`isAffectedByCodeReviews`), a
   check-in, an update or a switch (`isAffectedByCheckinOrUpdate`: what came in may have applied some); never on a
   focus (`SLOW_CHANGING_QUERY`). It isn't checked again right before a check-in: that would add a find to every

@@ -2,17 +2,22 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { Place } from '@shared/domain/place';
 import { api } from '../../../api/client';
-import { SLOW_CHANGING_QUERY } from '../../../app/queryClient';
+import { keyedByWorkspaceInfo, SLOW_CHANGING_QUERY } from '../../../app/queryClient';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { reviewConversationQuery } from '../conversation/useReviewConversation';
 import { branchReviewsKey } from '../useCodeReviews';
 import { branchChangeRequestsOf, reviewsToRead, type BranchChangeRequests } from './changeRequests';
 
-/** The reviews of one branch (`CodeReviewFilter.targetBranch`): under the reviews' area, so every write on a review reads them again. */
+/**
+ * The reviews of one branch (`CodeReviewFilter.targetBranch`): under the reviews' area, so every write on a review reads
+ * them again. Keyed by the workspace's branch where it shows (the top bar, Changes): read under the new branch's key as
+ * the workspace moves, not once more by the refresh that follows the move.
+ */
 export function branchReviewsQuery(place: Place, branch: string) {
   return {
     queryKey: branchReviewsKey(place, branch),
     queryFn: () => api.codeReviews.listSummaries(place, { targetBranch: branch }),
+    meta: keyedByWorkspaceInfo('selector'),
     ...SLOW_CHANGING_QUERY,
   };
 }

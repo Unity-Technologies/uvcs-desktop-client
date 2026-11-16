@@ -335,6 +335,14 @@ describe("a code review's page", () => {
     expect(branchReview(key('changesets', {}))).toBe(false);
   });
 
+  it("reads again a merge request's destination branch, whose head keys the check of its conflicts", () => {
+    const request = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' }, '/main');
+    expect(request(key('branches', 'byName', '/main'))).toBe(true);
+    expect(request(key('branches', 'byName', '/main/other'))).toBe(false);
+    expect(request(key('branches', {}))).toBe(false);
+    expect(branchReview(key('branches', 'byName', '/main'))).toBe(false);
+  });
+
   it("leaves a changeset's or shelve's changes alone, and every diff while the review isn't read yet", () => {
     const changesetReview = isShownByCodeReviewPage(7, { kind: 'changeset', changesetId: 40 });
     const unread = isShownByCodeReviewPage(7, undefined);
@@ -343,5 +351,19 @@ describe("a code review's page", () => {
     expect(isShownByCodeReviewPage(7, { kind: 'shelve', shelveId: 3 })(key('diff', { kind: 'shelve', shelveId: 3 }))).toBe(false);
     expect(unread(key('codeReviews', 'review', 7))).toBe(true);
     expect(unread(key('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(false);
+  });
+});
+
+describe("the review that stands for a branch", () => {
+  // `branchReviewKey`'s shape: a write on a review or a Refresh reads again the branches shown, in blocks.
+  const ofBranch = key('codeReviews', 'ofBranch', 37);
+
+  it('is read again by a write on any review', () => {
+    expect(isAffectedByCodeReviews(ofBranch)).toBe(true);
+  });
+
+  it("isn't read again by one review page's own refresh, nor by a check-in", () => {
+    expect(isShownByCodeReviewPage(12, { kind: 'branch', branch: '/main/task' })(ofBranch)).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(ofBranch)).toBe(false);
   });
 });

@@ -20,14 +20,52 @@
   background: var(--accent);
 }
 
+/* What the row is, before its title: a merge request's state glyph, or the code review glyph; a fixed width, titles in line. */
+.stateSlot {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  margin-right: var(--space-2);
+}
+
 .titleText {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.id {
+.mark {
+  display: inline-flex;
+}
+
+.kindIcon {
+  display: inline-flex;
+  color: var(--text-tertiary);
+}
+
+
+/* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
+   to nothing; the arrow and the destination (usually short) stay whole. */
+.merge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arrow {
   flex: none;
   color: var(--text-tertiary);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
+}
+
+.source {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.destination {
+  display: flex;
+  flex: none;
 }

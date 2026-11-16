@@ -13,7 +13,7 @@ import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
-const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Code reviews', 'Locks', 'Sync'];
+const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Merge requests', 'Locks', 'Sync'];
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
@@ -158,12 +158,31 @@ try {
       await settled();
     });
   }
-  await step("A code review's conversation", async () => {
-    await window.getByRole('navigation').getByRole('button', { name: /^Code reviews( \d+)?$/ }).click();
-    await main.getByText('Review player movement', { exact: true }).dblclick();
+  await step("A merge request's conversation", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Merge requests( \d+)?$/ }).click();
+    // The row's title: the details panel names the selected row too.
+    await main.getByRole('row').getByText('Review player movement', { exact: true }).dblclick();
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await main.getByText('Jump only when grounded.').first().waitFor();
     await main.getByText("You get emails because you're a reviewer.").waitFor();
+    // Its notes as events, its branches named, and its merge card; a move from the card's menu.
+    await main.getByText('marked this as ready for review').waitFor();
+    await main.getByText('changed the destination from /main/task-002 to /main').waitFor();
+    // The card's own: the list's details panel, kept under the page, says where the review stands too.
+    await main.getByRole('region', { name: 'Merge request', exact: true }).getByText('Changes under review').waitFor();
+    await settled();
+  });
+  await step("A merge the server's merge rules refuse", async () => {
+    // The fake's server merges only reviewed branches: the merge page says so and opens the request back.
+    await main.getByRole('button', { name: 'Merge into main…' }).click();
+    await main.getByText('This server merges into main only reviewed branches').waitFor();
+    await main.getByRole('button', { name: 'Open merge request' }).click();
+    await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
+    await settled();
+  });
+  await step("A merge request's moves", async () => {
+    await main.getByRole('button', { name: 'More merge request actions' }).click();
+    await window.getByRole('menuitem', { name: 'Close merge request' }).click();
     await settled();
   });
   await step('Branch Explorer timeline', async () => {

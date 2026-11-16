@@ -61,6 +61,7 @@ export const LINK_VIEWS = [
   'labels',
   'shelves',
   'attributes',
+  'merge-requests',
   'code-reviews',
   'locks',
   'sync',

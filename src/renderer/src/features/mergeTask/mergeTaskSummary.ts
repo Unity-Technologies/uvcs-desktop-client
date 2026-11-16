@@ -3,10 +3,18 @@ import { isReviewer, ownStatus } from '../codeReviews/reviewers';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { firstLine } from '../../lib/text';
 
-/** "Merge /main/t1: Add the login screen", or just "Merge /main/t1" when the branch has no comment. */
-export function defaultMergeComment(branch: Pick<Branch, 'name' | 'comment'>): string {
-  const summary = firstLine(branch.comment);
+/**
+ * "Merge /main/t1: Add the login screen", or just "Merge /main/t1" when the branch has no comment. A merge request's
+ * merge quotes the request's title instead.
+ */
+export function defaultMergeComment(branch: Pick<Branch, 'name' | 'comment'>, mergeRequest?: Pick<CodeReviewSummary, 'title'>): string {
+  const summary = firstLine(mergeRequest ? mergeRequest.title : branch.comment);
   return summary ? `Merge ${branch.name}: ${summary}` : `Merge ${branch.name}`;
+}
+
+/** "Merge request · Add login": how the merge page names the merge request it merges, by its title, never its number. */
+export function mergeRequestName(request: { title: string }): string {
+  return `Merge request · ${firstLine(request.title)}`;
 }
 
 /**

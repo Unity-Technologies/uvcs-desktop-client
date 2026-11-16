@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { placeId } from '@shared/domain/place';
+import { mergedChangesetOf } from '@shared/domain/reviewConversation';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
@@ -15,6 +16,8 @@ import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
 import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
+import { openItemsIn } from '../mergeCard';
+import { MergeRequestCard } from '../MergeRequestCard';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
@@ -31,8 +34,8 @@ import styles from './ReviewConversation.module.css';
 
 /**
  * What was said on a review, oldest first as a conversation reads: its description, then the comments and their
- * replies among what the server noted (requests, statuses, renames), then a field to say something. Beside it, the
- * reviewers and what's still open.
+ * replies among what the server noted (requests, statuses, renames), a merge request's card, then a field to say
+ * something. Beside it, the reviewers and what's still open.
  */
 interface ReviewConversationTabProps {
   review: CodeReview;
@@ -96,9 +99,10 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
     if (opensAtSince(blocks, focusThread)) document.getElementById(SINCE_LINE_ID)?.scrollIntoView({ block: 'start', behavior: 'auto' });
   }, [placed, openedAtSince, blocks, focusThread]);
 
+  const eventContext = { destination: review.mergeRequest?.destination };
   const renderEntry = (entry: ConversationEntry) => (
     <li key={entryKey(entry)}>
-      {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
+      {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} />}
       {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
       {entry.kind === 'checkins' && (
         <CheckinsRow entry={entry} onOpenChangeset={(changesetId) => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangeset: changesetId })} />
@@ -154,6 +158,10 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
           ) : (
             <>
               <ReviewDescriptionCard review={review} description={conversation.description} />
+              {/* Where it stands and what's next, read first after what it is: the history follows. */}
+              {review.mergeRequest && (
+                <MergeRequestCard review={review} mergeRequest={review.mergeRequest} open={openItemsIn(open)} mergedChangeset={mergedChangesetOf(conversation.events)} />
+              )}
               <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
             </>
           )}

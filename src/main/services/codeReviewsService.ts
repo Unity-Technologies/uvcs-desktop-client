@@ -6,6 +6,9 @@ import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
+import { branchTargetsCondition } from '../cm/branchTargetsCondition';
+import { CmError } from '../cm/CmError';
+import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs, recordMergedArgs } from '../cm/mergeRequestArgs';
 import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -26,9 +29,12 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
       // A branch's name can't hold a quote, which `cm find` can't read: its spec is matched exactly.
       ...(filter.targetBranch !== undefined ? [equalsCondition('target', `br:${filter.targetBranch}`)] : []),
+      ...(filter.targetBranchIds !== undefined ? [branchTargetsCondition(filter.targetBranchIds)] : []),
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
+      // `{mergerequeststatusname}`'s English name, as `cm find` takes it; one state per query, as for the status.
+      ...(filter.mergeRequestState ? [equalsCondition('mergerequeststatus', filter.mergeRequestState)] : []),
     ];
     return findReviews(place, conditions, {
       owners: filter.owners,
@@ -125,6 +131,37 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     async unsubscribe(place, reviewId) {
       const at = cmPlace(place);
       await cm.query(setSubscriptionArgs(reviewId, false, at), at.options);
+    },
+
+    async createMergeRequest(place, request) {
+      const at = cmPlace(place);
+      const create = (descriptionFile?: string): Promise<string> => cm.query(createMergeRequestArgs(request, descriptionFile, at), at.options);
+      try {
+        const output = request.description?.trim() ? await withTempFile(request.description, create) : await create();
+        const created = createdMergeRequestOf(output, false);
+        if (!created) throw new Error("The server didn't say which merge request it created.");
+        return created;
+      } catch (error) {
+        // A description that failed after the request was made: `cm` printed its id and exited 1. It exists.
+        const created = error instanceof CmError ? createdMergeRequestOf(error.command.output, true) : undefined;
+        if (!created) throw error;
+        return created;
+      }
+    },
+
+    async setMergeRequestState(place, reviewId, state) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestStateArgs(reviewId, state, at), at.options);
+    },
+
+    async setMergeRequestDestination(place, reviewId, branch) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestDestinationArgs(reviewId, branch, at), at.options);
+    },
+
+    async recordMerged(place, reviewId, changesetId) {
+      const at = cmPlace(place);
+      await cm.query(recordMergedArgs(reviewId, changesetId, at), at.options);
     },
   };
 }

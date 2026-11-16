@@ -84,7 +84,7 @@ const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
-/** The review as the Code reviews view lists it, its branch named. */
+/** The review as the Merge requests view lists it, its branch named. */
 const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
 /** A changeset's review, as every list reads it: its target needs no branch name. */
 const changesetReview: CodeReview = { ...review, target: { kind: 'changeset', changesetId: 5 } };
@@ -199,6 +199,9 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   leftShelve: () => shelveMenu(workspacePlace(ws), [shelve], { left: true }),
   codeReview: () => codeReviewMenu(workspacePlace(ws), [review]),
   codeReviewPage: () => reviewPageMenu(workspacePlace(ws), review),
+  draftMergeRequest: () => codeReviewMenu(workspacePlace(ws), [{ ...review, mergeRequest: { state: 'Draft', destination: '/main' } }]),
+  openMergeRequestPage: () => reviewPageMenu(workspacePlace(ws), { ...review, mergeRequest: { state: 'Open', destination: '/main' } }),
+  closedMergeRequest: () => codeReviewMenu(workspacePlace(ws), [{ ...review, mergeRequest: { state: 'Closed', destination: '/main' } }]),
   branchCodeReview: () => codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector),
   branchCodeReviewOnItsBranch: () => codeReviewMenu(workspacePlace(ws), [branchReview], { kind: 'branch', name: branch.name }),
   changesetCodeReview: () => codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector),
@@ -511,6 +514,21 @@ describe('Compare with another', () => {
   });
 });
 
+describe('new merge requests and code reviews of a branch', () => {
+  const creating = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'create').map((entry) => entry.label);
+
+  it('offers a merge request above a code review on a branch that can merge somewhere', () => {
+    expect(creating(MENUS.branch!())).toEqual(['New branch from here…', 'New merge request…', 'New code review…']);
+    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/release', parent: '/main' }], '/main'))).toContain('New merge request…');
+    expect(creating(REPOSITORY_MENUS.repositoryBranch!())).toContain('New merge request…');
+  });
+
+  it("offers only a code review on a top-level branch, which has nowhere to merge, and on several", () => {
+    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main', parent: '' }], '/main/task'))).toEqual(['New branch from here…', 'New code review…']);
+    expect(creating(MENUS.branches!())).toEqual([]);
+  });
+});
+
 /** What a menu shows, flattened with the "Copy" submenu's entries: the words, icons and order people read. */
 function reading(menu: MenuEntry[]): string[] {
   return topEntries(menu).flatMap((entry) => {
@@ -572,7 +590,7 @@ describe('one menu per object, the same everywhere', () => {
     expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
 
-  it('a code review reads the same in the Code reviews view, the palette and the Branch Explorer', () => {
+  it('a code review reads the same in the Merge requests view, the palette and the Branch Explorer', () => {
     const inView = codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector);
     const { target: _named, ...asSearched } = branchReview;
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);

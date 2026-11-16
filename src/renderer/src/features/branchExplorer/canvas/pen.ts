@@ -1,4 +1,6 @@
-/** The canvas calls that place shapes and text. The context itself is one, drawing where its transform says. */
+import { GLYPH_UNITS, type Glyph } from './lucideGlyphs';
+
+/** The canvas calls that place shapes and text, at world positions (`OriginPen`) or where the transform says (`contextPen`). */
 export interface Pen {
   moveTo(x: number, y: number): void;
   lineTo(x: number, y: number): void;
@@ -9,6 +11,8 @@ export interface Pen {
   roundRect(x: number, y: number, width: number, height: number, radius: number): void;
   fillText(text: string, x: number, y: number): void;
   drawImage(image: CanvasImageSource, x: number, y: number, width: number, height: number): void;
+  /** Strokes an icon's shapes (`lucideGlyphs`) in a `size` box whose top left is (x, y), in the stroke style set. */
+  strokeGlyph(glyph: Glyph, x: number, y: number, size: number): void;
 }
 
 /** Origins move in steps this long (world px): what the canvas gets stays within a few of them, and panning rarely moves it. */
@@ -75,4 +79,51 @@ export class OriginPen implements Pen {
   drawImage(image: CanvasImageSource, x: number, y: number, width: number, height: number): void {
     this.ctx!.drawImage(image, x - this.x, y - this.y, width, height);
   }
+
+  strokeGlyph(glyph: Glyph, x: number, y: number, size: number): void {
+    strokeGlyphOn(this.ctx!, glyph, x - this.x, y - this.y, size);
+  }
+}
+
+/** A pen drawing where the context's transform says, as the context itself would: for the screen's space. */
+export function contextPen(ctx: CanvasRenderingContext2D): Pen {
+  const pen = new OriginPen();
+  pen.aim(ctx, 0, 0);
+  return pen;
+}
+
+const pathsByShape = new WeakMap<object, Path2D>();
+
+/**
+ * Strokes a glyph's shapes as lucide does (2 units wide in its 24, round caps and joins), scaled into a `size` box at
+ * (x, y) of the context's own space: circles and lines with the context's calls, paths through a `Path2D` kept per
+ * shape. Exported for the context itself as a pen.
+ */
+export function strokeGlyphOn(ctx: CanvasRenderingContext2D, glyph: Glyph, x: number, y: number, size: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / GLYPH_UNITS, size / GLYPH_UNITS);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const shape of glyph) {
+    const [kind, at] = shape;
+    if (kind === 'path') {
+      let path = pathsByShape.get(at);
+      if (!path) {
+        path = new Path2D(at.d);
+        pathsByShape.set(at, path);
+      }
+      ctx.stroke(path);
+      continue;
+    }
+    ctx.beginPath();
+    if (kind === 'circle') ctx.arc(at.cx, at.cy, at.r, 0, Math.PI * 2);
+    else {
+      ctx.moveTo(at.x1, at.y1);
+      ctx.lineTo(at.x2, at.y2);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }

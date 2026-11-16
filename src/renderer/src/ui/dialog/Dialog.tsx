@@ -1,4 +1,5 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
+import { InsideDialog } from './insideDialog';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import { MODAL_DIALOG } from '../../lib/modalDialog';
 import styles from './Dialog.module.css';
@@ -32,31 +33,33 @@ export function Dialog({ icon, eyebrow, title, description, headerAction, width,
   };
 
   return (
-    <RadixDialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <RadixDialog.Portal>
-        <RadixDialog.Overlay className={styles.overlay} />
-        <RadixDialog.Content
-          className={styles.content}
-          style={{ '--dialog-width': width && `${width}px` } as CSSProperties}
-          aria-describedby={undefined}
-          {...marks}
-          {...MODAL_DIALOG}
-        >
-          <form onSubmit={submit} style={{ display: 'contents' }}>
-            <div className={styles.header} data-icon={icon ? true : undefined}>
-              {icon}
-              <div className={styles.heading}>
-                {eyebrow && <div className={styles.eyebrow}>{eyebrow}</div>}
-                <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
-                {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}
+    <InsideDialog.Provider value>
+      <RadixDialog.Root open onOpenChange={(open) => !open && onClose()}>
+        <RadixDialog.Portal>
+          <RadixDialog.Overlay className={styles.overlay} />
+          <RadixDialog.Content
+            className={styles.content}
+            style={{ '--dialog-width': width && `${width}px` } as CSSProperties}
+            aria-describedby={undefined}
+            {...marks}
+            {...MODAL_DIALOG}
+          >
+            <form onSubmit={submit} style={{ display: 'contents' }}>
+              <div className={styles.header} data-icon={icon ? true : undefined}>
+                {icon}
+                <div className={styles.heading}>
+                  {eyebrow && <div className={styles.eyebrow}>{eyebrow}</div>}
+                  <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
+                  {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}
+                </div>
+                {headerAction}
               </div>
-              {headerAction}
-            </div>
-            {children && <div className={styles.body}>{children}</div>}
-            {footer && <div className={styles.footer}>{footer}</div>}
-          </form>
-        </RadixDialog.Content>
-      </RadixDialog.Portal>
-    </RadixDialog.Root>
+              {children && <div className={styles.body}>{children}</div>}
+              {footer && <div className={styles.footer}>{footer}</div>}
+            </form>
+          </RadixDialog.Content>
+        </RadixDialog.Portal>
+      </RadixDialog.Root>
+    </InsideDialog.Provider>
   );
 }

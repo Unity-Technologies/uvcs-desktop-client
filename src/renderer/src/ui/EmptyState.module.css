@@ -38,9 +38,11 @@
   color: var(--text-secondary);
 }
 
-/* As wide as the description at most, so a long label never widens the block. */
+/* As wide as the description at most, so a long label never widens the block. Several buttons sit apart. */
 .action {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   justify-content: center;
   width: 100%;
   max-width: 360px;

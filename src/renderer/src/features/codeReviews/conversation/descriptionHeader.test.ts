@@ -22,4 +22,8 @@ describe('descriptionHeader', () => {
   it('says nothing for a description emptied, still offering to edit it', () => {
     expect(descriptionHeader(review, { id: 9, guid: 'd', text: '  \n', author: 'bob', date: review.date })).toEqual({ author: 'bob', action: 'opened the review', date: review.date, editLabel: 'Edit description' });
   });
+
+  it('says a merge request was opened as one', () => {
+    expect(descriptionHeader({ ...review, mergeRequest: { state: 'Open', destination: '/main' } }, undefined).action).toBe('opened the merge request');
+  });
 });

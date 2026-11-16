@@ -100,6 +100,24 @@
   white-space: nowrap;
 }
 
+/* The name, then its review's chip, as in the Branches view; the name gives way to the chip when room is short. */
+.nameLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nameLine > .name {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.nameLine > :not(.name) {
+  flex: none;
+}
+
 .name {
   font-weight: var(--weight-medium);
   line-height: 16px;

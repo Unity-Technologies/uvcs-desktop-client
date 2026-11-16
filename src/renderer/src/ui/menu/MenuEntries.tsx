@@ -58,7 +58,14 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
         onSelect={() => runAfterMenuCloses(entry.run)}
       >
         <span className={styles.icon}>{ActionIcon && <ActionIcon size={14} />}</span>
-        <span className={styles.label}>{entry.label}</span>
+        {entry.description ? (
+          <span className={styles.described}>
+            <span className={styles.label}>{entry.label}</span>
+            <span className={styles.description}>{entry.description}</span>
+          </span>
+        ) : (
+          <span className={styles.label}>{entry.label}</span>
+        )}
         {entry.detail && <span className={styles.detail}>{entry.detail}</span>}
         {entry.shortcut && (
           <span className={styles.trailing}>

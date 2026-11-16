@@ -12,14 +12,22 @@ import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
+import { mergeRequestMoves, reviewNoun } from './mergeRequestState';
+import { setMergeRequestState } from './mergeRequestOperations';
+import { mergeIntoOf } from './mergeInto';
+import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
-/** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
-  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: review.id } }) };
+/**
+ * What a review's Copy menu copies, first what ⌘C copies: its number, then its title and its link, a merge request's
+ * written as one (`merge-requests/12`).
+ */
+export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title' | 'mergeRequest'>): CopyTexts {
+  const object = { kind: 'codeReview', id: review.id, ...(review.mergeRequest ? { asMergeRequest: true } : {}) } as const;
+  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object }) };
 }
 
 /**
- * The menu of the selected code reviews, the same wherever reviews show: the Code reviews view, the Branch Explorer,
+ * The menu of the selected code reviews, the same wherever reviews show: the Merge requests view, the Branch Explorer,
  * the palette and their details. It brings the reviewed code to the workspace (`reviewedCodeAction`) wherever the
  * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
  * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
@@ -50,22 +58,39 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
-    single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    ...(single ? mergeRequestMoveEntries(place, single) : []),
+    single && mergeIntoEntry(place, single),
+    single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }
 
 /**
  * The menu of a review's own page, its header's ⋯: what the page doesn't show already (its status, reviewers and the
- * reviewed code have their own controls), so deleting it stays out of the way.
+ * reviewed code have their own controls), so deleting it stays out of the way. A merge request's moves are here too,
+ * as in its merge card: whoever looks for them in the menu finds them.
  */
 export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEntry[] {
   return groupedMenu([
     menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
-    copySubmenu('Code review', codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    ...mergeRequestMoveEntries(place, review),
+    mergeIntoEntry(place, review),
+    copySubmenu(reviewNoun(review), codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     // Its page has nothing left to show once it's gone: back to where the user came from.
     menuAction('delete', async () => {
       if (await deleteReviews(place, [review])) navigation.goBack();
     }),
   ]);
+}
+
+/** Merge into its destination, for an open merge request whose branch is named, in a window with a workspace (`mergeIntoOf`). */
+function mergeIntoEntry(place: Place, review: CodeReviewSummary) {
+  const merge = mergeIntoOf(place, review);
+  return merge && menuAction('mergeInto', () => openMergeRequestMerge(merge.request, merge.source), { label: merge.label });
+}
+
+/** A merge request's moves (`mergeRequestMoves`), at once: closing asks nothing, as Reopen undoes it. None for a code review. */
+function mergeRequestMoveEntries(place: Place, review: CodeReviewSummary) {
+  if (!review.mergeRequest) return [];
+  return mergeRequestMoves(review.mergeRequest.state).map((move) => menuAction(move.word, () => void setMergeRequestState(place, review, move)));
 }

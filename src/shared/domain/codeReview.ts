@@ -4,6 +4,21 @@ export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework require
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
 
+/** Where a merge request stands, as `cm` names it (`{mergerequeststatusname}`, English whatever the language). */
+export const MERGE_REQUEST_STATES = ['Draft', 'Open', 'Merged', 'Closed'] as const;
+
+export type MergeRequestState = (typeof MERGE_REQUEST_STATES)[number];
+
+/**
+ * What makes a review a merge request: the branch it merges into and where that stands. A merge request is a code
+ * review of a branch on the server, with these two more fields (docs/features/merge-requests.md).
+ */
+export interface MergeRequestInfo {
+  state: MergeRequestState;
+  /** The destination branch's name, `/main`. */
+  destination: string;
+}
+
 /**
  * A user or group asked to review, with the status they gave it (`cm codereview review`). The review's own status
  * follows from theirs (the server's rule): Rework required when anyone asks for it, Reviewed once everyone has.
@@ -47,6 +62,8 @@ export interface CodeReviewSummary {
   targetBranchId?: number;
   /** The reviewed changeset or shelve; a branch only once its name is read (`CodeReview`). */
   target?: CodeReviewTarget;
+  /** Where it merges and where that stands; none for a plain code review. */
+  mergeRequest?: MergeRequestInfo;
 }
 
 /** A review with its target named. */
@@ -62,27 +79,41 @@ export interface CodeReviewFilter {
    * (`useBranchChangeRequests`). `cm` fails for a branch that doesn't exist.
    */
   targetBranch?: string;
+  /**
+   * Only the reviews of these branches, by object id, at most `BRANCH_REVIEWS_BLOCK`: the branches a view shows,
+   * asked for in blocks (`branchReviewsLoaderOf`).
+   */
+  targetBranchIds?: readonly number[];
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
   /** Only reviews the user is one of the reviewers of. */
   reviewerIsMe?: boolean;
   status?: CodeReviewStatus;
+  /** Only merge requests in this state (plain code reviews have none). */
+  mergeRequestState?: MergeRequestState;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;
   /** Only reviews whose title contains it. */
   text?: string;
   /**
-   * The newest ones up to this many; none reads every review the other fields keep, as the Code reviews view does
+   * The newest ones up to this many; none reads every review the other fields keep, as the Merge requests view does
    * (a large repository holds thousands: its time range bounds them).
    */
   limit?: number;
 }
 
 /**
- * The newest reviews the palette and the branch chips read (`reviewSummariesQuery`): enough for the reviews in flight,
- * read rarely; an older one is found by its title or number (`usePaletteServerSearch`).
+ * The newest reviews the palette reads (`reviewSummariesQuery`): enough for the reviews in flight, read rarely; an
+ * older one is found by its title or number (`usePaletteServerSearch`).
  */
 export const NEWEST_CODE_REVIEWS = 300;
+
+/**
+ * The most branches one read of their reviews asks for (`CodeReviewFilter.targetBranchIds`). The server answers their
+ * `targetid` conditions ORed in one scan of the reviews: 50 cost what one does (about 1.2 s with `cm` starting, on a
+ * repository of ~7,000 reviews), so a block is as wide as the rows a view shows and a margin.
+ */
+export const BRANCH_REVIEWS_BLOCK = 50;
 
 /**
  * Why the signed-in user gets a review's emails or doesn't, as `cm codereview subscription` names it: they wrote it
@@ -110,4 +141,29 @@ export interface CreateCodeReviewRequest {
   title: string;
   /** The users and groups asked to review it. */
   reviewers?: MemberRef[];
+}
+
+/**
+ * A new merge request (`CodeReviewsApi.createMergeRequest`): a review of `source` asking to merge it into
+ * `destination`, both branch names (`/main/task`, `/main`).
+ */
+export interface CreateMergeRequestRequest {
+  source: string;
+  destination: string;
+  title: string;
+  /** What it's about, several lines in the comments' markup; none leaves it without one. */
+  description?: string;
+  /** Created as a Draft, not ready to review or merge yet; else Open. */
+  draft: boolean;
+  /** The users and groups asked to review it. */
+  reviewers?: MemberRef[];
+}
+
+/**
+ * The merge request just made. `descriptionSaved` false: it exists, but `cm` couldn't save its description, which is
+ * written after the request is made.
+ */
+export interface CreatedMergeRequest {
+  id: number;
+  descriptionSaved: boolean;
 }

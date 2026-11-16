@@ -118,13 +118,70 @@ describe('conversationOf', () => {
   it("reads an older server's review request, which names no one, and keeps what it doesn't know as text", () => {
     const { events } = conversationIn(
       printed({ id: 1, type: 'timeline', comment: '[requested-review-from-0a1b2c]' }),
-      printed({ id: 2, type: 'timeline', comment: '[mergerequest-status-draft-to-open]' }),
+      printed({ id: 2, type: 'timeline', comment: '[approved-by-the-robot]' }),
     );
 
     expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
       { kind: 'reviewRequested', reviewers: [] },
-      { kind: 'other', text: '[mergerequest-status-draft-to-open]' },
+      { kind: 'other', text: '[approved-by-the-robot]' },
     ]);
+  });
+
+  it("reads each move of a merge request's state, the merge's changeset bare after the merged one", () => {
+    const { events } = conversationIn(
+      printed({ id: 1, type: 'timeline', comment: '[mergerequest-status-draft-to-open]' }),
+      printed({ id: 2, type: 'timeline', comment: '[mergerequest-status-open-to-draft]' }),
+      printed({ id: 3, type: 'timeline', comment: '[mergerequest-status-draft-to-closed]' }),
+      printed({ id: 4, type: 'timeline', comment: '[mergerequest-status-closed-to-open]' }),
+      printed({ id: 5, type: 'timeline', comment: '[mergerequest-status-open-to-closed]' }),
+      printed({ id: 6, type: 'timeline', comment: '[mergerequest-status-open-to-merged]6' }),
+      printed({ id: 7, type: 'timeline', comment: '[mergerequest-status-merged-to-open]' }),
+    );
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
+      { kind: 'mergeRequestState', from: 'Draft', to: 'Open' },
+      { kind: 'mergeRequestState', from: 'Open', to: 'Draft' },
+      { kind: 'mergeRequestState', from: 'Draft', to: 'Closed' },
+      { kind: 'mergeRequestState', from: 'Closed', to: 'Open' },
+      { kind: 'mergeRequestState', from: 'Open', to: 'Closed' },
+      { kind: 'mergeRequestState', from: 'Open', to: 'Merged', changesetId: 6 },
+      { kind: 'mergeRequestState', from: 'Merged', to: 'Open' },
+    ]);
+  });
+
+  it("keeps a state move it doesn't know as text, and reads a merge naming no changeset without one", () => {
+    const { events } = conversationIn(
+      printed({ id: 1, type: 'timeline', comment: '[mergerequest-status-open-to-queued]' }),
+      printed({ id: 2, type: 'timeline', comment: '[mergerequest-status-open-to-merged]' }),
+    );
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
+      { kind: 'other', text: '[mergerequest-status-open-to-queued]' },
+      { kind: 'mergeRequestState', from: 'Open', to: 'Merged' },
+    ]);
+  });
+
+  it('reads a destination changed, and the branch hidden or shown again, by the branch ids the server notes', () => {
+    const { events } = conversationIn(
+      printed({ id: 1, type: 'timeline', comment: '[changed-mergerequest-destination]4;19' }),
+      printed({ id: 2, type: 'timeline', comment: '[hidden-mergerequest-branch]26' }),
+      printed({ id: 3, type: 'timeline', comment: '[unhidden-mergerequest-branch]26' }),
+    );
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
+      { kind: 'destinationChanged', from: { id: 4 }, to: { id: 19 } },
+      { kind: 'branchHidden', branch: { id: 26 } },
+      { kind: 'branchUnhidden', branch: { id: 26 } },
+    ]);
+  });
+
+  it("keeps a branch note whose ids it can't read as text", () => {
+    const { events } = conversationIn(
+      printed({ id: 1, type: 'timeline', comment: '[changed-mergerequest-destination]4' }),
+      printed({ id: 2, type: 'timeline', comment: '[hidden-mergerequest-branch]' }),
+    );
+
+    expect(events.map((event) => event.kind)).toEqual(['other', 'other']);
   });
 
   it('reads nothing from a review nobody said anything on', () => {

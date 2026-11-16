@@ -1,0 +1,99 @@
+import type { MemberRef } from '@shared/domain/member';
+import { sameUser } from '../../lib/userName';
+import { NO_GROUPS, reviewerLabel } from './reviewerGroups';
+import type { ReviewerPick } from './reviewerPick';
+
+/*
+ * The reviewers a new review or merge request asks (`ReviewersField`): picked with the review page's picker
+ * (`ReviewerPicker`), shown as chips, each the kind it was listed with, so a group found by a search stays a group.
+ */
+
+/** Nobody picked yet: a new review has no reviewers to start from. */
+export const NO_REVIEWERS: ReviewerPick = { onOpen: [], picked: [] };
+
+/**
+ * Who a new merge request asks as its dialog opens on a branch: you, when the branch is someone else's, since you are
+ * the one asking to merge their work and look at it before it does; nobody on a branch of your own. Nobody while
+ * either name is still read.
+ */
+export function startingReviewers(you: string | undefined, branchOwner: string | undefined): ReviewerPick {
+  if (!you || !branchOwner || sameUser(you, branchOwner)) return NO_REVIEWERS;
+  return { onOpen: [], picked: [{ name: you, kind: 'user' }] };
+}
+
+/**
+ * The reviewers the user chose in a new merge request's dialog, and whether they changed who is asked: until they do,
+ * opening the picker included, the reviewers follow the branch picked (`startingReviewers`), so a branch whose owner
+ * is read later, or another branch picked, still starts with you when it's someone else's.
+ */
+export interface ChosenReviewers {
+  pick: ReviewerPick;
+  changed: boolean;
+}
+
+/** The reviewers the field shows: the user's once they changed who is asked, else the branch's, in the picker's order. */
+export function reviewersShown(chosen: ChosenReviewers | undefined, starting: ReviewerPick): ReviewerPick {
+  if (!chosen) return starting;
+  return chosen.changed ? chosen.pick : { onOpen: chosen.pick.onOpen, picked: starting.picked };
+}
+
+/** The choice after the field reports `next`: changed for good once it asks someone else than the field showed. */
+export function chooseReviewers(chosen: ChosenReviewers | undefined, starting: ReviewerPick, next: ReviewerPick): ChosenReviewers {
+  const shown = reviewersShown(chosen, starting).picked;
+  return { pick: next, changed: Boolean(chosen?.changed) || !sameMembers(shown, next.picked) };
+}
+
+function sameMembers(a: readonly MemberRef[], b: readonly MemberRef[]): boolean {
+  return a.length === b.length && a.every((member, index) => member.name === b[index].name && member.kind === b[index].kind);
+}
+
+/** A reviewer picked, as its chip shows them; its × takes `member` off. */
+export interface ReviewerChip {
+  member: MemberRef;
+  label: string;
+  group: boolean;
+  /** A user's name as the server knows them (often an email), when the label shows another; none for a group. */
+  tip?: string;
+}
+
+/**
+ * What the field shows: a chip per reviewer, in the order picked, Remove all once there are several, and the hint that
+ * reviewers are optional while there are none.
+ */
+export interface PickedReviewers {
+  chips: ReviewerChip[];
+  removeAll: boolean;
+  hint: boolean;
+}
+
+export function pickedReviewersOf(pick: ReviewerPick): PickedReviewers {
+  const chips = pick.picked.map((member) => chipOf(member));
+  return { chips, removeAll: chips.length > 1, hint: chips.length === 0 };
+}
+
+/**
+ * The pick as the picker opens: those already picked are the reviewers it opened with, so they lead its list, checked,
+ * and stay where they are while the user checks and unchecks, as on the review page (`pickOffered`).
+ */
+export function pickAsPickerOpens(pick: ReviewerPick): ReviewerPick {
+  return { onOpen: pick.picked, picked: pick.picked };
+}
+
+function chipOf(member: MemberRef): ReviewerChip {
+  const label = reviewerLabel(member, NO_GROUPS);
+  const group = member.kind === 'group';
+  return group || sameUser(label, member.name) ? { member, label, group } : { member, label, group, tip: member.name };
+}
+
+/**
+ * Where the keyboard goes once the chip at `index` of `count` is removed: the × of the chip that takes its place, or
+ * the button that opens the picker when it was the last one.
+ */
+export function focusAfterRemoving(index: number, count: number): number | 'picker' {
+  return index < count - 1 ? index : 'picker';
+}
+
+/** The reviewers to ask as the review is created (`--users`, `--groups`). */
+export function reviewersToAsk(pick: ReviewerPick): MemberRef[] {
+  return [...pick.picked];
+}

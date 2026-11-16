@@ -63,11 +63,25 @@ describe('how many reviews wait for the user', () => {
 });
 
 describe('waitingBadge', () => {
-  it("counts on the sidebar's Code reviews the reviews read that wait for the user, and shows nothing when none does or none was read", () => {
+  it("counts on the sidebar's Merge requests the reviews read that wait for the user, and shows nothing when none does or none was read", () => {
     const asked = codeReviewSummary({ id: 1, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Under review' }] });
     const reviewed = codeReviewSummary({ id: 2, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Reviewed' }] });
     expect(waitingBadge([asked, reviewed], 'ana')).toEqual({ count: 1 });
     expect(waitingBadge([reviewed], 'ana')).toBeUndefined();
     expect(waitingBadge(undefined, 'ana')).toBeUndefined();
+  });
+});
+
+describe('whether a merge request waits for the user', () => {
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', fields: Parameters<typeof codeReviewSummary>[0]) => codeReviewSummary({ ...fields, mergeRequest: { state, destination: '/main' } });
+
+  it('waits for a reviewer only once it is Open: a draft, a merged or a closed one has nothing to review', () => {
+    const asked = { id: 1, reviewers: [{ name: 'ana', status: 'Under review' as const }] };
+    expect((['Open', 'Draft', 'Merged', 'Closed'] as const).map((state) => waitingForMe(request(state, asked), 'ana'))).toEqual([{ kind: 'review' }, undefined, undefined, undefined]);
+  });
+
+  it("waits for its author's rework while it is Open or a draft, never once merged or closed", () => {
+    const rework = { id: 2, owner: 'ana', status: 'Rework required' as const, openIssueCount: 2 };
+    expect((['Open', 'Draft', 'Merged', 'Closed'] as const).map((state) => waitingForMe(request(state, rework), 'ana')?.kind)).toEqual(['rework', 'rework', undefined, undefined]);
   });
 });

@@ -6,14 +6,14 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, showsStateChip, stateUnderKind, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
 
-const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
+const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
 
-describe('what Code reviews asks the server for', () => {
+describe('what Merge requests asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
     expect(compactFilter(codeReviewsQuery(ASKED, today))).toEqual({ sinceDate: '2026-06-26' });
   });
@@ -34,12 +34,33 @@ describe('what Code reviews asks the server for', () => {
   });
 
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', mergeRequestState: 'active', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',
       sinceDate: undefined,
     });
+  });
+});
+
+describe('the State chip', () => {
+  const plain = codeReviewSummary({ id: 1 });
+  const of = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', id: number) => codeReviewSummary({ id, mergeRequest: { state, destination: '/main' } });
+  const all = [plain, of('Draft', 2), of('Open', 3), of('Merged', 4), of('Closed', 5)];
+  const kept = (state: Parameters<typeof matchesState>[1]) => all.filter((review) => matchesState(review, state)).map((review) => review.id);
+
+  it('asks the server for Merged and Closed, and for no state under Active and All, which share one query', () => {
+    expect(codeReviewsQuery({ ...ASKED, mergeRequestState: 'merged' }, today).mergeRequestState).toBe('Merged');
+    expect(codeReviewsQuery({ ...ASKED, mergeRequestState: 'closed' }, today).mergeRequestState).toBe('Closed');
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, mergeRequestState: 'all' }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
+  });
+
+  it('keeps the code reviews and the merge requests still to merge under Active', () => {
+    expect(kept('active')).toEqual([1, 2, 3]);
+  });
+
+  it('keeps one state under Merged and Closed, and everything under All', () => {
+    expect([kept('merged'), kept('closed'), kept('all')]).toEqual([[4], [5], [1, 2, 3, 4, 5]]);
   });
 });
 
@@ -57,6 +78,11 @@ describe('the code reviews filter', () => {
 
   it('reads a review nobody was asked to review', () => {
     expect(matches('login', { ...review, reviewers: [] })).toBe(true);
+  });
+
+  it("looks through a merge request's destination and state too", () => {
+    const request: CodeReview = { ...review, mergeRequest: { state: 'Draft', destination: '/main/release' } };
+    expect([matches('release', request), matches('draft', request), matches('draft')]).toEqual([true, true, false]);
   });
 });
 
@@ -109,6 +135,12 @@ describe('Opened by me', () => {
     expect(matchesOpenedByMe(underReview, true, undefined)).toBe(false);
   });
 
+  it("keeps the user's merge requests still to merge, reviewed ones too, and never a merged or closed one", () => {
+    const request = (id: number, state: 'Draft' | 'Open' | 'Merged' | 'Closed', status: 'Reviewed' | 'Under review') => codeReviewSummary({ id, owner: 'ana', status, mergeRequest: { state, destination: '/main' } });
+    const requests = [request(5, 'Open', 'Reviewed'), request(6, 'Draft', 'Under review'), request(7, 'Merged', 'Under review'), request(8, 'Closed', 'Under review')];
+    expect(requests.filter((review) => matchesOpenedByMe(review, true, 'ana')).map((review) => review.id)).toEqual([5, 6]);
+  });
+
   it('counts them on its chip', () => {
     expect(openedByMeCount(all, 'ana')).toBe(2);
     expect([openedChipLabel(0), openedChipLabel(2)]).toEqual(['Opened by me', 'Opened by me · 2']);
@@ -122,17 +154,45 @@ describe('the reviewer filter remembered by an older version', () => {
   });
 });
 
-describe("Code reviews' Clear filters", () => {
-  it('turns the reviewers, Waiting for me and the status off too, keeping the time range', () => {
+describe("Merge requests' Clear filters", () => {
+  it('turns the reviewers, Waiting for me, the status and the state back too, keeping the time range', () => {
     const store = useCodeReviewsViewStore;
     store.getState().update({ text: '', people: EVERYONE, status: 'Reviewed', reviewers: EVERYONE, waitingForMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(true);
 
-    store.getState().update({ people: MINE, reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true, openedByMe: true });
+    store.getState().update({ people: MINE, mergeRequestState: 'merged', reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true, openedByMe: true });
     store.getState().clear();
 
-    const { text, people, status, reviewers, waitingForMe, openedByMe, since } = store.getState();
-    expect({ text, people, status, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
+    const { text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since } = store.getState();
+    expect({ text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(false);
+  });
+});
+
+describe('whether the list is narrowed', () => {
+  it('is when the State chip at rest hides every review read, so it says none match instead of none yet', () => {
+    expect(isNarrowed(false, 3, 0)).toBe(true);
+  });
+
+  it('is while a filter is on, and is not when every review read shows', () => {
+    expect([isNarrowed(true, 3, 3), isNarrowed(false, 3, 3), isNarrowed(false, 0, 0)]).toEqual([true, false, false]);
+  });
+});
+
+describe('the Kind chip', () => {
+  const request = { mergeRequest: { state: 'Open' as const, destination: '/main' } };
+  const review = {};
+
+  it('keeps both kinds by default, and one kind alone when picked, with no read of its own', () => {
+    expect([request, review].map((each) => matchesKind(each, 'any'))).toEqual([true, true]);
+    expect([request, review].map((each) => matchesKind(each, 'mergeRequests'))).toEqual([true, false]);
+    expect([request, review].map((each) => matchesKind(each, 'codeReviews'))).toEqual([false, true]);
+  });
+
+  it("drops the State chip and its state with code reviews alone, which have none, and keeps it otherwise", () => {
+    expect(stateUnderKind('codeReviews', 'merged')).toBe('all');
+    expect(stateUnderKind('mergeRequests', 'merged')).toBe('merged');
+    expect(stateUnderKind('any', 'active')).toBe('active');
+    expect([showsStateChip('any'), showsStateChip('mergeRequests'), showsStateChip('codeReviews')]).toEqual([true, true, false]);
   });
 });

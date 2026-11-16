@@ -26,7 +26,7 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { navigation } from '../../app/navigation/navigationStore';
 import { codeReviewPage } from './codeReviewOperations';
-import { codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
+import { codeReviewCopyTexts, codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
 
 const ws = '/ws';
 const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
@@ -132,5 +132,72 @@ describe("a review's page menu", () => {
       .filter((entry) => entry !== SEPARATOR)
       .map((entry) => entry.id);
     expect(ids).toEqual(['reviewInNewWindow', 'copy', 'delete']);
+  });
+});
+
+describe("a merge request's moves", () => {
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', id = 12) => codeReviewSummary({ id, mergeRequest: { state, destination: '/main' } });
+  const moveIds = (menu: MenuEntry[]) => actions(menu).map((entry) => entry.id).filter((id) => ['readyForReview', 'convertToDraft', 'closeMergeRequest', 'reopenMergeRequest'].includes(id));
+
+  it('offers the moves its state takes, in the row menu and the page menu alike', () => {
+    for (const menuOf of [(review: CodeReviewSummary) => codeReviewMenu(workspacePlace(ws), [review]), (review: CodeReviewSummary) => reviewPageMenu(workspacePlace(ws), review)]) {
+      expect(moveIds(menuOf(request('Draft')))).toEqual(['readyForReview', 'closeMergeRequest']);
+      expect(moveIds(menuOf(request('Open')))).toEqual(['convertToDraft', 'closeMergeRequest']);
+      expect(moveIds(menuOf(request('Closed')))).toEqual(['reopenMergeRequest']);
+      expect(moveIds(menuOf(request('Merged')))).toEqual([]);
+    }
+  });
+
+  it('offers none for a code review, nor for several selected', () => {
+    expect(moveIds(codeReviewMenu(workspacePlace(ws), [summary]))).toEqual([]);
+    expect(moveIds(codeReviewMenu(workspacePlace(ws), [request('Open'), request('Open', 13)]))).toEqual([]);
+  });
+
+  it('closes it at once, asking nothing', async () => {
+    fakeApi.answer('codeReviews.setMergeRequestState', () => undefined);
+
+    await actions(codeReviewMenu(workspacePlace(ws), [request('Open')])).find((entry) => entry.id === 'closeMergeRequest')!.run();
+
+    expect(fakeApi.argsOf('codeReviews.setMergeRequestState')).toEqual([[workspacePlace(ws), 12, 'Closed']]);
+  });
+});
+
+describe('merging a merge request', () => {
+  const onTask = { kind: 'branch', branch: '/main/release/task' } as const;
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed') => codeReviewSummary({ id: 12, title: 'Add login', target: onTask, mergeRequest: { state, destination: '/main' } });
+  const mergeEntry = (menu: MenuEntry[]) => actions(menu).find((entry) => entry.id === 'mergeInto');
+
+  it('offers Merge into its destination for an open one, in the row menu and the page menu alike', () => {
+    for (const menu of [codeReviewMenu(workspacePlace(ws), [request('Open')]), reviewPageMenu(workspacePlace(ws), request('Open'))]) {
+      expect(mergeEntry(menu)?.label).toBe('Merge into main…');
+    }
+  });
+
+  it("offers it for no other state, no code review, several rows, a branch whose name isn't read, nor a window with no workspace", () => {
+    for (const state of ['Draft', 'Merged', 'Closed'] as const) expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request(state)]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [summary]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open'), { ...request('Open'), id: 13 }]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [{ ...request('Open'), target: undefined }]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(repositoryPlace('game@local'), [request('Open')]))).toBeUndefined();
+  });
+
+  it("opens the merge page for its branch into the request's destination, naming the request", () => {
+    mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open')]))!.run();
+
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'merge',
+        request: { kind: 'merge', sourceSpec: 'br:/main/release/task', destinationBranch: '/main' },
+        task: { branch: { name: '/main/release/task', comment: '' }, mergeRequest: { id: 12, title: 'Add login' }, choices: { markReviewed: false, hideBranch: false } },
+      },
+    ]);
+  });
+});
+
+describe("a review's Copy menu", () => {
+  it("copies a merge request's link as a merge request's, and a code review's as a code review's", () => {
+    const place = repositoryPlace('game@local');
+    const request = codeReviewSummary({ id: 12, mergeRequest: { state: 'Draft', destination: '/main' } });
+    expect([codeReviewCopyTexts(place, request).link, codeReviewCopyTexts(place, summary).link]).toEqual(['uvcs://local/repos/game/merge-requests/12', 'uvcs://local/repos/game/code-reviews/9']);
   });
 });

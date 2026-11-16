@@ -1,0 +1,6 @@
+.icon {
+  composes: stateColor from './mergeRequestStateColors.module.css';
+  display: inline-flex;
+  flex: none;
+  color: var(--merge-request-color);
+}

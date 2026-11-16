@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { WorkspaceKind } from '@shared/domain/workspace';
-import type { RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { CmError } from '../cm/CmError';
@@ -25,7 +25,7 @@ export function applyShelveCleanly(cm: CmClient, workspacePath: string, shelveId
 }
 
 async function mergeFromShelve(cm: CmClient, workspacePath: string, shelveId: number, context: OperationContext): Promise<ApplyOutcome> {
-  const request: RequestedMerge = { kind: 'merge', sourceSpec: spec.shelve(shelveId) };
+  const request: MergeOperation = { kind: 'merge', sourceSpec: spec.shelve(shelveId) };
   const plan = await previewMerge(cm, workspacePath, request);
   if (plan.status === 'pendingChanges') return { kind: 'pendingChanges' };
   if (plan.status !== 'ready') return { kind: 'applied', count: 0 };
