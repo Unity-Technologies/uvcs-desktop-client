@@ -15,12 +15,12 @@ describe('defaultMergeComment', () => {
 });
 
 describe('mergeRequestName', () => {
-  it('names the merge request by its number and title', () => {
-    expect(mergeRequestName({ id: 12, title: 'Add login' })).toBe('Merge request 12 · Add login');
+  it('names the merge request by its title, never its number', () => {
+    expect(mergeRequestName({ id: 12, title: 'Add login' })).toBe('Merge request · Add login');
   });
 
   it("keeps only a title's first line", () => {
-    expect(mergeRequestName({ id: 12, title: 'Add login\nwith SSO' })).toBe('Merge request 12 · Add login');
+    expect(mergeRequestName({ id: 12, title: 'Add login\nwith SSO' })).toBe('Merge request · Add login');
   });
 });
 

@@ -262,7 +262,7 @@ describe('completing a merge', () => {
 
       await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', reviewsOfBranch: [openRequest] });
 
-      expect(shownToasts().filter(({ kind }) => kind === 'error').map(({ title }) => title)).toEqual(["Merged, but couldn't mark merge request 12 as merged"]);
+      expect(shownToasts().filter(({ kind }) => kind === 'error').map(({ title }) => title)).toEqual(["Merged, but couldn't mark the merge request as merged"]);
       expect(writes().map(([method]) => method)).toEqual(['merge.run', 'codeReviews.recordMerged', 'codeReviews.listSummaries', 'codeReviews.setOwnStatus', 'branches.setHidden']);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
     });

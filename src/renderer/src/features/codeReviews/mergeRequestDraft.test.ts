@@ -130,16 +130,16 @@ describe('existingRequestNote', () => {
     const active = { ...review(12, { state: 'Open', destination: '/main' }), title: 'Add login' };
     expect(existingRequestNote({ kind: 'active', review: active })).toEqual({
       text: 'This branch already has a merge request into /main:',
-      request: { label: '#12 Add login', review: active },
+      request: { label: 'Add login', review: active },
       blocks: 'This branch already has a merge request into /main',
     });
   });
 
   it('names how an earlier one ended, to open it, without blocking', () => {
     const merged = { ...review(9, { state: 'Merged', destination: '/main' }), title: 'Add login' };
-    expect(existingRequestNote({ kind: 'earlier', review: merged })).toEqual({ text: 'Merged before:', request: { label: '#9 Add login', review: merged } });
+    expect(existingRequestNote({ kind: 'earlier', review: merged })).toEqual({ text: 'Merged before:', request: { label: 'Add login', review: merged } });
     const closed = review(9, { state: 'Closed', destination: '/main' });
-    expect(existingRequestNote({ kind: 'earlier', review: closed })).toEqual({ text: 'Closed before:', request: { label: '#9 Review 9', review: closed } });
+    expect(existingRequestNote({ kind: 'earlier', review: closed })).toEqual({ text: 'Closed before:', request: { label: 'Review 9', review: closed } });
   });
 });
 
@@ -220,7 +220,7 @@ describe('mergeRequestForm', () => {
   it('blocks Create on a request still to merge into that destination only once the reviews are read', () => {
     expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ note: undefined, problem: undefined });
     expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [open(12)] })).toMatchObject({
-      note: { request: { label: '#12 Review 12' } },
+      note: { request: { label: 'Review 12' } },
       problem: 'This branch already has a merge request into /main',
     });
   });
@@ -228,7 +228,7 @@ describe('mergeRequestForm', () => {
   it('notes an earlier request into that destination without blocking Create', () => {
     const merged = review(9, { state: 'Merged', destination: '/main' });
     expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [merged] })).toMatchObject({
-      note: { text: 'Merged before:', request: { label: '#9 Review 9' } },
+      note: { text: 'Merged before:', request: { label: 'Review 9' } },
       problem: undefined,
     });
   });

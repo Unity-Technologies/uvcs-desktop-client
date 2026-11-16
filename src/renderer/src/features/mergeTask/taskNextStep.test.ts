@@ -142,7 +142,6 @@ describe('taskNextStepView, its line and buttons', () => {
     expect(view([request(12, 'Draft', { title: 'Login screen\nwith details' })])).toEqual({
       line: {
         mergeRequest: { state: 'Draft', destination: '/main' },
-        number: '#12',
         title: 'Login screen',
         status: 'draft',
         tip: 'Draft merge request into /main: Login screen',
@@ -208,10 +207,10 @@ describe('taskNextStepView, its line and buttons', () => {
   it('under a list, the single most useful action, quiet and named whole', () => {
     expect(view([], true)).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: false }] });
     expect(view([request(12, 'Draft')], true).actions).toEqual([
-      { kind: 'readyForReview', label: 'Mark merge request #12 ready for review', primary: false, move: { to: 'Open', word: 'readyForReview' } },
+      { kind: 'readyForReview', label: 'Mark merge request ready for review', primary: false, move: { to: 'Open', word: 'readyForReview' } },
     ]);
-    expect(view([openRequest(12, 'Under review')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request #12', primary: false }]);
-    expect(view([openRequest(12, 'Rework required')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request #12', primary: false }]);
+    expect(view([openRequest(12, 'Under review')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request', primary: false }]);
+    expect(view([openRequest(12, 'Rework required')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request', primary: false }]);
     expect(view([openRequest(12, 'Reviewed')], true).actions.map(({ label, primary }) => ({ label, primary }))).toEqual([{ label: 'Merge into main…', primary: false }]);
     expect(view([request(12, 'Draft')], true).line).toBeUndefined();
   });

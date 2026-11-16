@@ -22,8 +22,8 @@ describe('creating a merge request', () => {
 
     expect(fakeApi.argsOf('codeReviews.createMergeRequest')).toEqual([[inWs, REQUEST]]);
     expect(refreshed()).toEqual(['codeReviews']);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request 40', action: 'Open' }]);
-    pressToastAction('Created merge request 40');
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request', action: 'Open' }]);
+    pressToastAction('Created merge request');
     expect(whereTheWindowIs().pages.at(-1)).toEqual({ kind: 'codeReview', reviewId: 40 });
   });
 
@@ -32,7 +32,7 @@ describe('creating a merge request', () => {
 
     await createMergeRequest(inWs, { ...REQUEST, description: 'Why' });
 
-    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Created merge request 41', detail: "Its description couldn't be saved.", action: 'Open' }]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Created merge request', detail: "Its description couldn't be saved.", action: 'Open' }]);
   });
 
   it('says what failed, and made nothing', async () => {
@@ -65,7 +65,7 @@ describe('creating a merge request', () => {
     await createMergeRequest(inWs, { ...REQUEST, source: '/main/new-server' });
     shown.hide();
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request 43', action: 'Open' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request', action: 'Open' }]);
   });
 
   // Created from another branch's menu, no read on screen may hold it: the note may never come, and nothing waits for it.
@@ -75,7 +75,7 @@ describe('creating a merge request', () => {
     await createMergeRequest(inWs, REQUEST);
     queryClient.setQueryData(branchReviewsKey(inWs, '/main/task1'), [codeReviewSummary({ id: 44 })]);
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request 44', action: 'Open' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created merge request', action: 'Open' }]);
   });
 
   it('hands the new id over, for the dialog to close and the list to select it', async () => {
