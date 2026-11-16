@@ -3,14 +3,12 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf } from './mergeRequestChipState';
+import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf } from './mergeRequestChipState';
 import type { MergeRequestReview } from './mergeRequestState';
 
 function request(id: number, state: MergeRequestState, review: Partial<CodeReviewSummary> = {}): MergeRequestReview {
   return { ...codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, ...review }), mergeRequest: { state, destination: '/main' } };
 }
-
-const plainReview = (id: number) => codeReviewSummary({ id, targetBranchId: 7 });
 
 describe('asksForBranchReviews', () => {
   const onTask = { kind: 'branch', name: '/main/task' } as const;
@@ -29,30 +27,6 @@ describe('asksForBranchReviews', () => {
 
   it('waits for the first screen: nothing until the pending changes are read (or failed)', () => {
     expect(asksForBranchReviews(onTask, false)).toBe(false);
-  });
-});
-
-describe('topBarRequestOf, the merge request the top bar shows for the branch (reviews listed newest first)', () => {
-  it('is the newest one still to merge, over a newer merged or closed one', () => {
-    expect(topBarRequestOf([request(9, 'Closed'), request(8, 'Merged'), request(5, 'Open')])?.id).toBe(5);
-    expect(topBarRequestOf([request(8, 'Draft'), request(5, 'Open')])?.id).toBe(8);
-  });
-
-  it('is a merged one when none is still to merge: the workspace is on finished work', () => {
-    expect(topBarRequestOf([request(9, 'Closed'), request(6, 'Merged'), request(4, 'Merged')])?.id).toBe(6);
-  });
-
-  it('is none for a branch whose only requests are closed', () => {
-    expect(topBarRequestOf([request(9, 'Closed'), request(3, 'Closed')])).toBeUndefined();
-  });
-
-  it('is none for a branch with only plain code reviews, or nothing', () => {
-    expect(topBarRequestOf([plainReview(9), plainReview(2)])).toBeUndefined();
-    expect(topBarRequestOf([])).toBeUndefined();
-  });
-
-  it('skips a newer plain code review of the branch', () => {
-    expect(topBarRequestOf([plainReview(9), request(5, 'Open')])?.id).toBe(5);
   });
 });
 

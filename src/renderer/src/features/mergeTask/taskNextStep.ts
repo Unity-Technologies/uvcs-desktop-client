@@ -6,7 +6,7 @@ import { commentLineText } from '../../lib/comments/commentText';
 import { pluralize } from '../../lib/text';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
-import { topBarRequestOf } from '../codeReviews/mergeRequestChipState';
+import { currentRequestOf } from '../codeReviews/reviewsByBranch';
 import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove, type MergeRequestReview } from '../codeReviews/mergeRequestState';
 import type { FinishedTask } from './finishedTask';
 import { isTaskBranch } from './mergeTaskSummary';
@@ -71,13 +71,13 @@ const NONE: TaskNextStep = { kind: 'none' };
 
 /**
  * Where the merged check looks for the branch head (`api.merge.mergedInto`): its merge request's destination, the one
- * still to merge or else the one merged (`topBarRequestOf`), else its parent, as merging the task goes. None until the
+ * still to merge or else the one merged (`currentRequestOf`), else its parent, as merging the task goes. None until the
  * reviews are read; the parent when they couldn't be (`reviewsFailed`). None for a branch that is no task.
  */
 export function mergedCheckDestinationOf(branch: TaskBranch | undefined, reviewsOfBranch: readonly CodeReviewSummary[] | undefined, reviewsFailed: boolean): string | undefined {
   if (!isTaskBranch(branch)) return undefined;
   if (!reviewsOfBranch) return reviewsFailed ? branch.parent : undefined;
-  return topBarRequestOf(reviewsOfBranch)?.mergeRequest.destination ?? branch.parent;
+  return currentRequestOf(reviewsOfBranch)?.mergeRequest.destination ?? branch.parent;
 }
 
 /**

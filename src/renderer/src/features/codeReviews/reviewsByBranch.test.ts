@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { reviewOfEachBranch, reviewStandingFor } from './reviewsByBranch';
+import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
+import type { MergeRequestReview } from './mergeRequestState';
+import { currentRequestOf, reviewOfEachBranch, reviewStandingFor } from './reviewsByBranch';
 
 function review(id: number, targetBranchId?: number): CodeReviewSummary {
   return codeReviewSummary({ id, owner: 'jane', date: '2026-09-01', targetBranchId });
@@ -40,5 +41,32 @@ describe('reviewStandingFor', () => {
 
     expect(reviewStandingFor([review(9, 7), request])?.id).toBe(5);
     expect(reviewStandingFor([])).toBeUndefined();
+  });
+});
+
+describe("currentRequestOf, the merge request that stands for the workspace's branch (reviews listed newest first)", () => {
+  const request = (id: number, state: MergeRequestState): MergeRequestReview => ({ ...review(id, 7), mergeRequest: { state, destination: '/main' } });
+  const plainReview = (id: number) => review(id, 7);
+
+  it('is the newest one still to merge, over a newer merged or closed one', () => {
+    expect(currentRequestOf([request(9, 'Closed'), request(8, 'Merged'), request(5, 'Open')])?.id).toBe(5);
+    expect(currentRequestOf([request(8, 'Draft'), request(5, 'Open')])?.id).toBe(8);
+  });
+
+  it('is a merged one when none is still to merge: the workspace is on finished work', () => {
+    expect(currentRequestOf([request(9, 'Closed'), request(6, 'Merged'), request(4, 'Merged')])?.id).toBe(6);
+  });
+
+  it('is none for a branch whose only requests are closed', () => {
+    expect(currentRequestOf([request(9, 'Closed'), request(3, 'Closed')])).toBeUndefined();
+  });
+
+  it('is none for a branch with only plain code reviews, or nothing', () => {
+    expect(currentRequestOf([plainReview(9), plainReview(2)])).toBeUndefined();
+    expect(currentRequestOf([])).toBeUndefined();
+  });
+
+  it('skips a newer plain code review of the branch', () => {
+    expect(currentRequestOf([plainReview(9), request(5, 'Open')])?.id).toBe(5);
   });
 });

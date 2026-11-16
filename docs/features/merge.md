@@ -516,7 +516,7 @@ reviews fail to read, the merge into the parent alone, as before merge requests 
   closing one, moves where the head is looked for; while that check asks, the previous answer stands for the same head
   (`keepsPreviousMergedCheck`, the query's `placeholderData`), so the step shows the new request at once.
 - **The merged check follows the request's destination** (`mergedCheckDestinationOf`): the one still to merge, else the
-  merged one (`topBarRequestOf`), else the parent. A merged request finishes the task through that same check, its
+  merged one (`currentRequestOf`, merge-requests.md "Which request counts for a branch"), else the parent. A merged request finishes the task through that same check, its
   changeset the merge link's; a request merged at an older head offers Create again, as the branch has new work.
 - **The cost**: one `cm find` of the branch, one changeset (`limit 1`) per head and one merge link (`limit 1`) per head
   and destination. The branch's reviews are the read Changes already makes for the change requests a check-in applies

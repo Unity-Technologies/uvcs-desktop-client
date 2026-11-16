@@ -1,10 +1,10 @@
-import type { CodeReviewStatus, CodeReviewSummary, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
+import type { CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { branchWorkedOn } from '../../components/workingObject';
 import { commentLineText } from '../../lib/comments/commentText';
 import { openItemsLine, reviewSectionOf, type OpenItems } from './mergeCard';
 import { mergeOfRequest, type MergeInto } from './mergeInto';
-import { isActiveMergeRequest, mergeRequestTip, type MergeRequestReview } from './mergeRequestState';
+import { mergeRequestTip, type MergeRequestReview } from './mergeRequestState';
 
 /**
  * What a button of the top bar's hover card does; `MergeRequestChip` runs it: open the request, or, once an Open one
@@ -52,16 +52,6 @@ export interface TopBarRequestCard {
  */
 export function asksForBranchReviews(selector: WorkspaceSelector | null | undefined, firstScreenRead: boolean): boolean {
   return firstScreenRead && branchWorkedOn(selector) !== undefined;
-}
-
-/**
- * The merge request the top bar shows for the workspace's branch, from its reviews listed newest first: the newest
- * still to merge (Open or Draft); else the newest merged one, which tells the user they're on finished work; else none.
- * A closed request or a plain code review shows nothing there.
- */
-export function topBarRequestOf(reviewsOfBranch: readonly CodeReviewSummary[]): MergeRequestReview | undefined {
-  const requests = reviewsOfBranch.filter((review): review is MergeRequestReview => review.mergeRequest !== undefined);
-  return requests.find(isActiveMergeRequest) ?? requests.find((review) => review.mergeRequest.state === 'Merged');
 }
 
 /**
