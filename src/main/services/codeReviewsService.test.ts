@@ -127,6 +127,30 @@ describe('code review list', () => {
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, "where target = 'br:/main/task 1' order by date desc")]);
   });
 
+  it('asks the server for the merge requests in one state, and for no state when none is asked', async () => {
+    const { service, lines } = codeReviews({ 'find review': '' });
+
+    await service.list(IN_WORKSPACE, { mergeRequestState: 'Merged' });
+    await service.list(IN_WORKSPACE, { mergeRequestState: 'Closed', status: 'Reviewed' });
+    await service.list(IN_WORKSPACE, {});
+
+    expect(lines()).toEqual([
+      foundLine(FOUND_REVIEWS, "where mergerequeststatus = 'Merged' order by date desc"),
+      foundLine(FOUND_REVIEWS, "where status = 'Reviewed' and mergerequeststatus = 'Closed' order by date desc"),
+      foundLine(FOUND_REVIEWS, 'order by date desc'),
+    ]);
+  });
+
+  it('carries a merge request’s state and destination in the reviews it lists', async () => {
+    const request = { ...ON_TASK1, mergerequeststatusname: 'Open', destination: 'br:/main' };
+    const { service } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, request, ON_CHANGESET), ...EVERY_BRANCH_NAME });
+
+    const [listed, plain] = await service.list(IN_WORKSPACE, {});
+    const [summary] = await service.listSummaries(IN_WORKSPACE, {});
+
+    expect([listed?.mergeRequest, plain?.mergeRequest, summary?.mergeRequest]).toEqual([{ state: 'Open', destination: '/main' }, undefined, { state: 'Open', destination: '/main' }]);
+  });
+
   it('lists summaries with branch targets by id, never reading branch names', async () => {
     const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET) });
 

@@ -1,4 +1,4 @@
-import { CODE_REVIEW_STATUSES, type CodeReviewer, type CodeReviewStatus, type CodeReviewSummary } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReviewer, type CodeReviewStatus, type CodeReviewSummary, MERGE_REQUEST_STATES, type MergeRequestInfo } from '@shared/domain/codeReview';
 import { foundObjects } from './foundObjects';
 import { integerValue, type RecordLayout } from './formatRecords';
 
@@ -12,10 +12,12 @@ export interface RawCodeReview extends CodeReviewSummary {
 /**
  * `{codereviewstatusname}` prints the status alone and always in English; `{status}` translates it and adds a prefix.
  * `{unresolvedissues}` counts the change requests neither applied nor discarded and the questions with no reply.
+ * `{mergerequeststatusname}` and `{destination}` make it a merge request (`mergeRequestOf`); a plain review prints
+ * `None` and nothing. The records' separators keep a destination's spaces, as a title's.
  */
 export const FOUND_REVIEWS = foundObjects(
   'review',
-  ['id', 'title', 'codereviewstatusname', 'owner', 'reviewers', 'date', 'modifieddate', 'comments', 'unresolvedissues', 'targettype', 'target'],
+  ['id', 'title', 'codereviewstatusname', 'owner', 'reviewers', 'date', 'modifieddate', 'comments', 'unresolvedissues', 'targettype', 'target', 'mergerequeststatusname', 'destination'],
   (value): RawCodeReview => ({
     id: integerValue(value('id')),
     title: value('title').trim(),
@@ -28,6 +30,7 @@ export const FOUND_REVIEWS = foundObjects(
     openIssueCount: integerValue(value('unresolvedissues')),
     targetType: toTargetType(value('targettype')),
     targetId: integerValue(value('target').replace(/^id:/, '')),
+    mergeRequest: mergeRequestOf(value('mergerequeststatusname'), value('destination')),
   }),
 );
 
@@ -53,6 +56,17 @@ export function parseReviewers(value: string): CodeReviewer[] {
       const colon = pair.lastIndexOf(':');
       return colon < 0 ? { name: pair, status: 'Under review' } : { name: pair.slice(0, colon), status: toStatus(pair.slice(colon + 1)) };
     });
+}
+
+/**
+ * A merge request from its two fields: a state other than `None` and a destination, printed as a branch spec
+ * (`br:/main`). Anything else, a state this version doesn't know included, is a plain code review.
+ */
+export function mergeRequestOf(stateName: string, destination: string): MergeRequestInfo | undefined {
+  const name = stateName.trim().toLowerCase();
+  const state = MERGE_REQUEST_STATES.find((known) => known.toLowerCase() === name);
+  const branch = destination.trim().replace(/^br:/, '');
+  return state && branch ? { state, destination: branch } : undefined;
 }
 
 function toStatus(value: string): CodeReviewStatus {
