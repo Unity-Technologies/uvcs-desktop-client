@@ -1,6 +1,6 @@
 import type { MemberRef } from '../domain/member';
 import type { Place } from '../domain/place';
-import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, MergeRequestState, ReviewSubscription } from '../domain/codeReview';
+import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, CreatedMergeRequest, CreateMergeRequestRequest, MergeRequestState, ReviewSubscription } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
   list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
@@ -13,6 +13,11 @@ export interface CodeReviewsApi {
    */
   reviewers(place: Place, reviewId: number): Promise<CodeReviewer[]>;
   create(place: Place, request: CreateCodeReviewRequest): Promise<number>;
+  /**
+   * Asks to merge a branch into another: one quick `cm mergerequest create`. `cm` checks only that the destination
+   * exists; what else makes a request sensible (`draftProblem`) is the window's to check before asking.
+   */
+  createMergeRequest(place: Place, request: CreateMergeRequestRequest): Promise<CreatedMergeRequest>;
   /** Asks these users and groups to review it too; one already asked stays as they are. */
   addReviewers(place: Place, reviewId: number, reviewers: MemberRef[]): Promise<void>;
   /** Takes these users and groups off its reviewers; the others stay. */

@@ -130,3 +130,28 @@ export interface CreateCodeReviewRequest {
   /** The users and groups asked to review it. */
   reviewers?: MemberRef[];
 }
+
+/**
+ * A new merge request (`CodeReviewsApi.createMergeRequest`): a review of `source` asking to merge it into
+ * `destination`, both branch names (`/main/task`, `/main`).
+ */
+export interface CreateMergeRequestRequest {
+  source: string;
+  destination: string;
+  title: string;
+  /** What it's about, several lines in the comments' markup; none leaves it without one. */
+  description?: string;
+  /** Created as a Draft, not ready to review or merge yet; else Open. */
+  draft: boolean;
+  /** The users and groups asked to review it. */
+  reviewers?: MemberRef[];
+}
+
+/**
+ * The merge request just made. `descriptionSaved` false: it exists, but `cm` couldn't save its description, which is
+ * written after the request is made.
+ */
+export interface CreatedMergeRequest {
+  id: number;
+  descriptionSaved: boolean;
+}
