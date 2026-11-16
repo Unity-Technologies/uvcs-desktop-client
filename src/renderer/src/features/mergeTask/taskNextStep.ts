@@ -3,6 +3,7 @@ import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeRev
 import { MENU_WORDS } from '../../components/menuWords';
 import { branchLabels } from '../../lib/branchLabels';
 import { commentLineText } from '../../lib/comments/commentText';
+import { pluralize } from '../../lib/text';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
 import { topBarRequestOf } from '../codeReviews/mergeRequestChipState';
@@ -213,16 +214,12 @@ function statusWords(step: RequestStep, open: OpenItems | undefined): string {
     case 'reviewed':
       return 'reviewed';
     case 'rework':
-      return open && open.changeRequests > 0 ? `${counted(open.changeRequests, 'change request')} to apply` : 'changes required';
+      return open && open.changeRequests > 0 ? `${pluralize(open.changeRequests, 'change request')} to apply` : 'changes required';
     case 'waiting': {
       const { reviewers } = step.request;
       if (reviewers.length === 0) return 'no reviewers yet';
       const waitingFor = reviewers.filter((reviewer) => reviewer.status === 'Under review').length;
-      return waitingFor > 0 ? `waiting for ${counted(waitingFor, 'reviewer')}` : 'under review';
+      return waitingFor > 0 ? `waiting for ${pluralize(waitingFor, 'reviewer')}` : 'under review';
     }
   }
-}
-
-function counted(count: number, noun: string): string {
-  return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
