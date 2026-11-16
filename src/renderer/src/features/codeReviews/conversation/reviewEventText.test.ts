@@ -47,18 +47,18 @@ describe("a merge request's events", () => {
   const move = (from: MergeRequestState, to: MergeRequestState, changesetId?: number) =>
     reviewEventRow({ kind: 'mergeRequestState', from, to, ...(changesetId !== undefined && { changesetId }) }, { destination: '/main' });
 
-  it('says what each move of its state means, in the glyph of the state it moved to', () => {
-    expect(move('Draft', 'Open')).toEqual({ icon: 'Open', text: 'marked this as ready for review' });
-    expect(move('Open', 'Draft')).toEqual({ icon: 'Draft', text: 'converted this to a draft' });
-    expect(move('Open', 'Closed')).toEqual({ icon: 'Closed', text: 'closed this' });
-    expect(move('Draft', 'Closed')).toEqual({ icon: 'Closed', text: 'closed this' });
-    expect(move('Closed', 'Open')).toEqual({ icon: 'Open', text: 'reopened this' });
-    expect(move('Merged', 'Open')).toEqual({ icon: 'Open', text: 'reopened this' });
+  it('says what each move of its state means, in the glyph and color of the state it moved to', () => {
+    expect(move('Draft', 'Open')).toEqual({ icon: 'Open', state: 'Open', text: 'marked this as ready for review' });
+    expect(move('Open', 'Draft')).toEqual({ icon: 'Draft', state: 'Draft', text: 'converted this to a draft' });
+    expect(move('Open', 'Closed')).toEqual({ icon: 'Closed', state: 'Closed', text: 'closed this' });
+    expect(move('Draft', 'Closed')).toEqual({ icon: 'Closed', state: 'Closed', text: 'closed this' });
+    expect(move('Closed', 'Open')).toEqual({ icon: 'Open', state: 'Open', text: 'reopened this' });
+    expect(move('Merged', 'Open')).toEqual({ icon: 'Open', state: 'Open', text: 'reopened this' });
   });
 
   it('says where it was merged, and the changeset when the note names it', () => {
-    expect(move('Open', 'Merged', 6)).toEqual({ icon: 'Merged', text: 'merged this into /main in', changeset: 6 });
-    expect(move('Open', 'Merged')).toEqual({ icon: 'Merged', text: 'merged this into /main' });
+    expect(move('Open', 'Merged', 6)).toEqual({ icon: 'Merged', state: 'Merged', text: 'merged this into /main in', changeset: 6 });
+    expect(move('Open', 'Merged')).toEqual({ icon: 'Merged', state: 'Merged', text: 'merged this into /main' });
     expect(reviewEventRow({ kind: 'mergeRequestState', from: 'Open', to: 'Merged' }).text).toBe('merged this');
   });
 
