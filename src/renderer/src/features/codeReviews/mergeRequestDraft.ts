@@ -13,7 +13,7 @@ import { isActiveMergeRequest } from './mergeRequestState';
 /** A merge request as its dialog holds it: branch names (`/main/task`) and the title typed. */
 export interface MergeRequestDraft {
   source: string;
-  /** The source's parent branch, once the source is read: a top-level branch that has one may merge into it. */
+  /** The source's parent branch once the source is read, none until then: a top-level branch that has one may merge into it. */
   sourceParent?: string;
   destination: string;
   title: string;
@@ -65,6 +65,8 @@ export function sourceGroups(branches: readonly Branch[]): BranchGroup[] {
  */
 export function draftProblem({ source, sourceParent, destination, title }: MergeRequestDraft): string | undefined {
   if (!source) return 'Pick a branch to merge';
+  // A top-level name may still have a parent (`/release` from `/main`): until it's read, Create waits, refusing nothing.
+  if (sourceParent === undefined && ancestorsOf(source).length === 0) return 'Reading the branch…';
   if (!canMergeSomewhere({ name: source, parent: sourceParent ?? '' })) return 'A top-level branch has no merge request';
   if (!destination) return 'Pick a destination';
   if (source === destination) return "A branch can't merge into itself";
@@ -103,6 +105,47 @@ export function existingRequestNote({ kind, review }: ExistingRequest): Existing
     return { text: `This branch already has a merge request into ${destination}:`, request: `#${review.id} ${review.title}`, blocks: `This branch already has a merge request into ${destination}` };
   }
   return { text: `${review.mergeRequest?.state === 'Merged' ? 'Merged' : 'Closed'} before as #${review.id}` };
+}
+
+/** What the dialog holds: the branch picked and, once read, its comment and parent; what the user picked and typed. */
+export interface MergeRequestFormInput {
+  source: string;
+  /** The source as read (a branch list's pick holds it); none until then. */
+  sourceBranch?: Pick<Branch, 'comment' | 'parent'>;
+  /** The destination picked by hand; none follows the source (`defaultDestinationOf`). */
+  picked?: string;
+  /** The title as typed, empty included; none follows the source (`defaultTitleOf`). */
+  typed?: string;
+  /** The source's reviews, once read. */
+  reviewsOfBranch?: readonly CodeReviewSummary[];
+}
+
+/** What the dialog shows from what it holds: its fields, the branch's request into that destination, why Create waits. */
+export interface MergeRequestForm {
+  destination: string;
+  title: string;
+  existing?: ExistingRequest;
+  note?: ExistingRequestNote;
+  /** Why Create can't run yet (its tooltip); none once it can. */
+  problem?: string;
+}
+
+/**
+ * The dialog's fields: Into and the title follow From until the user picks or types one (a title typed and cleared
+ * stays empty); an existing request is known, and blocks Create, only once the branch's reviews are read.
+ */
+export function mergeRequestForm({ source, sourceBranch, picked, typed, reviewsOfBranch }: MergeRequestFormInput): MergeRequestForm {
+  const destination = picked ?? defaultDestinationOf(source, sourceBranch?.parent) ?? '';
+  const title = typed ?? defaultTitleOf(source, sourceBranch?.comment);
+  const existing = reviewsOfBranch && existingRequestOf(reviewsOfBranch, destination);
+  const note = existing && existingRequestNote(existing);
+  const problem = draftProblem({ source, sourceParent: sourceBranch?.parent, destination, title }) ?? note?.blocks;
+  return { destination, title, existing, note, problem };
+}
+
+/** Whether a request the branch has stops another: one still to merge into the same destination. */
+export function blocksCreate(existing: ExistingRequest | undefined): boolean {
+  return existing?.kind === 'active';
 }
 
 /**
