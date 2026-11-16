@@ -35,16 +35,18 @@ export interface FinishingTask {
   review: CodeReviewSummary | undefined;
   /** The user on the place's server, who marks the review as one of its reviewers. */
   user: string | undefined;
-  /** The merge requests the merge finishes (`requestsToRecord`), recorded Merged once it's in. */
-  mergeRequests: number[];
+  /** The branch's reviews, for the merge requests the merge finishes (`requestsToRecord`); none until read. */
+  reviewsOfBranch: readonly CodeReviewSummary[] | undefined;
 }
 
 /** What else finishing a task does once it's merged (`finishMergedTask`). */
 export interface TaskEnding {
   /** The task branch, e.g. `/main/t1`. */
   taskBranch: string;
-  /** Recorded Merged, in the changeset the merge made. */
-  mergeRequests: number[];
+  /** The branch's reviews, whose merge requests into the destination are recorded Merged; none when not read yet. */
+  reviewsOfBranch?: readonly CodeReviewSummary[];
+  /** The merge request the merge was opened from. */
+  openedFrom?: TaskMergeRequest;
   /** Marked as reviewed by the user once merged. */
   review?: CodeReviewSummary;
   hideBranch: boolean;
@@ -72,8 +74,8 @@ export function mergeRequestMergeOf(review: MergeRequestReview, source: string):
 
 /**
  * The merge requests a task's merge finishes: the branch's Open ones into that destination, as a server with merge
- * requests switched on marks them itself (usually one; every one when several). Before the branch's reviews are read,
- * the one the merge was opened from.
+ * requests switched on marks them itself (usually one; every one when several). When the branch's reviews couldn't be
+ * read, the one the merge was opened from.
  */
 export function requestsToRecord(reviewsOfBranch: readonly CodeReviewSummary[] | undefined, destination: string, openedFrom?: TaskMergeRequest): number[] {
   if (!reviewsOfBranch) return openedFrom ? [openedFrom.id] : [];
@@ -81,10 +83,11 @@ export function requestsToRecord(reviewsOfBranch: readonly CodeReviewSummary[] |
 }
 
 /** What finishing the task does once merged: its review is marked only when picked and the user can mark it. */
-export function taskEnding({ task, review, user, mergeRequests }: FinishingTask): TaskEnding {
+export function taskEnding({ task, review, user, reviewsOfBranch }: FinishingTask): TaskEnding {
   return {
     taskBranch: task.branch.name,
-    mergeRequests,
+    ...(reviewsOfBranch && { reviewsOfBranch }),
+    ...(task.mergeRequest && { openedFrom: task.mergeRequest }),
     review: task.choices.markReviewed && canMarkReviewed(review, user) ? review : undefined,
     hideBranch: task.choices.hideBranch,
   };
