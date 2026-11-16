@@ -5,7 +5,8 @@ import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
-import { listedReview, listedReviewIn, showReviewReadInListsIn, withMergeRequestChanged, withReviewRead } from './listedReview';
+import { branchReviewKey } from './branchReviewKey';
+import { listedReview, listedReviewIn, showMergeRequestChangedInListsIn, showReviewReadInListsIn, withMergeRequestChanged, withReviewRead, withStandingReviewUpdated } from './listedReview';
 
 const review = (id: number, title: string): CodeReview => ({ ...codeReviewSummary({ id, title, owner: 'ana', date: '2026-10-01' }), target: { kind: 'branch', branch: '/main/task' } });
 
@@ -114,5 +115,29 @@ describe('withMergeRequestChanged', () => {
     expect(withMergeRequestChanged(rows, 43, { state: 'Closed' })).toBe(rows);
     expect(withMergeRequestChanged(rows, 45, { state: 'Closed' })).toBe(rows);
     expect(withMergeRequestChanged('read', 43, { state: 'Closed' })).toBe('read');
+  });
+});
+
+describe("a branch's standing review, kept on its own", () => {
+  const place = workspacePlace('/wk');
+  const request = { ...codeReviewSummary({ id: 4, title: 'Login', targetBranchId: 37 }), mergeRequest: { state: 'Open' as const, destination: '/main' } };
+
+  it('shows a merge request move at once, as the lists do', () => {
+    const client = createQueryClient();
+    client.setQueryData(branchReviewKey(place, 37), request);
+    showMergeRequestChangedInListsIn(client, place, 4, { state: 'Closed' });
+    expect(client.getQueryData(branchReviewKey(place, 37))).toEqual({ ...request, mergeRequest: { state: 'Closed', destination: '/main' } });
+  });
+
+  it('takes the review just read, keeping its branch id', () => {
+    const client = createQueryClient();
+    client.setQueryData(branchReviewKey(place, 37), request);
+    showReviewReadInListsIn(client, place, { ...review(4, 'Login, renamed'), mergeRequest: request.mergeRequest });
+    expect(client.getQueryData(branchReviewKey(place, 37))).toMatchObject({ title: 'Login, renamed', targetBranchId: 37 });
+  });
+
+  it('leaves another review, and a branch with none, as they were', () => {
+    expect(withStandingReviewUpdated(request, 5, () => [])).toBe(request);
+    expect(withStandingReviewUpdated(null, 4, () => [])).toBeNull();
   });
 });
