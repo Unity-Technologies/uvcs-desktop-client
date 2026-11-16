@@ -1,4 +1,4 @@
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { appliedMergeOptions, offersCommonAncestor, offersIgnoreMergeTracking } from '@shared/domain/mergeOptions';
 import { spec } from '@shared/domain/specs';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
@@ -29,7 +29,7 @@ export interface MergeOptionsOffered {
   any: boolean;
 }
 
-export function mergeOptionsOffered(request: MergeRequest, fileConflictCount: number): MergeOptionsOffered {
+export function mergeOptionsOffered(request: RequestedMerge, fileConflictCount: number): MergeOptionsOffered {
   const contributor = fileConflictCount > 0;
   const ignoreMergeTracking = offersIgnoreMergeTracking(request);
   const commonAncestor = offersCommonAncestor(request);
@@ -37,47 +37,47 @@ export function mergeOptionsOffered(request: MergeRequest, fileConflictCount: nu
 }
 
 /** Whether the request changes how the merge is calculated: the plan read with it may fail where one without wouldn't. */
-export function hasMergeOptions(request: MergeRequest): boolean {
+export function hasMergeOptions(request: RequestedMerge): boolean {
   return Object.keys(appliedMergeOptions(request)).length > 0;
 }
 
 /** Whether a merge with nothing to merge can apply the changes again, ignoring that they were merged before. */
-export function offersMergingAgain(request: MergeRequest): boolean {
+export function offersMergingAgain(request: RequestedMerge): boolean {
   return offersIgnoreMergeTracking(request) && !request.ignoreMergeTracking;
 }
 
 /** A button that previews the merge again with another request. */
-export interface MergeRequestAction {
+export interface RequestedMergeAction {
   label: string;
-  request: MergeRequest;
+  request: RequestedMerge;
 }
 
 /**
  * What a merge with nothing to merge offers: to apply the changes again ignoring merge tracking where `cm` can,
  * or, once options are set, to go back to the merge without them (a chosen ancestor can leave nothing to merge).
  */
-export function nothingToMergeAction(request: MergeRequest): MergeRequestAction | null {
+export function nothingToMergeAction(request: RequestedMerge): RequestedMergeAction | null {
   if (offersMergingAgain(request)) return { label: 'Merge them again', request: withIgnoreMergeTracking(request, true) };
   return hasMergeOptions(request) ? { label: 'Merge without options', request: withoutMergeOptions(request) } : null;
 }
 
-export function withoutMergeOptions(request: MergeRequest): MergeRequest {
+export function withoutMergeOptions(request: RequestedMerge): RequestedMerge {
   const { ignoreMergeTracking: _ignored, ancestorSpec: _ancestor, ...rest } = request;
   return rest;
 }
 
-export function withIgnoreMergeTracking(request: MergeRequest, ignore: boolean): MergeRequest {
+export function withIgnoreMergeTracking(request: RequestedMerge, ignore: boolean): RequestedMerge {
   const { ignoreMergeTracking: _ignored, ...rest } = request;
   return ignore ? { ...rest, ignoreMergeTracking: true } : rest;
 }
 
 /** The request merging from the given changeset as the common ancestor; null goes back to the one calculated. */
-export function withAncestor(request: MergeRequest, changesetId: number | null): MergeRequest {
+export function withAncestor(request: RequestedMerge, changesetId: number | null): RequestedMerge {
   const { ancestorSpec: _ancestor, ...rest } = request;
   return changesetId === null ? rest : { ...rest, ancestorSpec: spec.changeset(changesetId) };
 }
 
-export function ancestorLabel(request: MergeRequest): string {
+export function ancestorLabel(request: RequestedMerge): string {
   const id = request.ancestorSpec?.replace(/^cs:/, '');
   return id ? `Changeset ${id}` : 'Calculated automatically';
 }

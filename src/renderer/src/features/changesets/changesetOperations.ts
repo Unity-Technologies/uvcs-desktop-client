@@ -1,6 +1,6 @@
 import type { Place } from '@shared/domain/place';
 import type { Changeset, ChangesetInfo } from '@shared/domain/changeset';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
@@ -72,7 +72,7 @@ export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>)
   if (other !== undefined) openRangeDiff(changeset, { id: other });
 }
 
-export function openMerge(request: MergeRequest): void {
+export function openMerge(request: RequestedMerge): void {
   navigation.openPage({ kind: 'merge', request });
 }
 

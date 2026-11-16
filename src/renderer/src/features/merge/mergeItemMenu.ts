@@ -1,6 +1,6 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { RepositoryVersion } from '@shared/domain/content';
-import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflict, type DirectoryConflictResolution, type MergePlan, type MergeRequest } from '@shared/domain/merge';
+import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflict, type DirectoryConflictResolution, type MergePlan, type RequestedMerge } from '@shared/domain/merge';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PageOf } from '../../app/navigation/pages';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -16,7 +16,7 @@ import { conflictMenuEntries, withConflictOpening, type ConflictMenuContext } fr
 
 /** What the merge page knows and can do, for the menu of what it lists. */
 export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWorkspace'> {
-  request: MergeRequest;
+  request: RequestedMerge;
   plan: MergePlan;
   progress: MergeProgress;
   /** What a repository path of the merge is (`mergeItemTypes`): a folder has nothing to open. */

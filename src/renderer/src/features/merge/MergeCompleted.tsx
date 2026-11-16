@@ -1,5 +1,5 @@
 import { CheckCircle2 } from 'lucide-react';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
 import { Button } from '../../ui/Button';
 import { completionCounts, completionTitle, mergeTitle, mergeTitleText, type MergeLabels } from './mergeDescription';
@@ -16,7 +16,7 @@ export interface MergeCompletion {
  * The end of a merge into the workspace, stated plainly: the result waits in the pending changes. A merge into a
  * server branch has nothing left to do and goes back instead (`completeMerge`).
  */
-export function MergeCompleted({ request, completion }: { request: MergeRequest; completion: MergeCompletion }) {
+export function MergeCompleted({ request, completion }: { request: RequestedMerge; completion: MergeCompletion }) {
   const { labels, changeCount, conflictCount } = completion;
   const counts = completionCounts(changeCount, conflictCount);
 

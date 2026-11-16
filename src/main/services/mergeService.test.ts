@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MergeRequest, MergeResolutions, MergeResult } from '@shared/domain/merge';
+import type { RequestedMerge, MergeResolutions, MergeResult } from '@shared/domain/merge';
 import { changedStatus, mergePreviewOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, optionValue } from '../cm/testing/fakeCmClient';
 import { runMerge } from '../merge/runMerge';
@@ -21,8 +21,8 @@ function merge(cm = fakeCmClient().cm) {
   const finishAppliedShelve = vi.fn(async () => undefined);
   const leftChanges = { finishAppliedShelve } as unknown as LeftChangesFinder;
   const service = createMergeService(serviceContext(cm), { leftChanges } as SwitchContext);
-  const run = (request: Partial<MergeRequest>, resolutions: Partial<MergeResolutions> = {}) =>
-    service.run(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1', ...request } as MergeRequest, { files: {}, ...resolutions }, 'op-1');
+  const run = (request: Partial<RequestedMerge>, resolutions: Partial<MergeResolutions> = {}) =>
+    service.run(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1', ...request } as RequestedMerge, { files: {}, ...resolutions }, 'op-1');
   return { service, run, finishAppliedShelve };
 }
 

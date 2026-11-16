@@ -1,4 +1,4 @@
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { ListToolbar } from '../../components/ListToolbar';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { ListSkeleton } from '../../ui/Skeleton';
@@ -15,7 +15,7 @@ const nothing = (): void => {};
  * The merge page while its plan is calculated, which can take seconds: its header, filter bar and panes as they will
  * be, the button disabled and placeholder rows where the items go.
  */
-export function MergeCalculating({ request }: { request: MergeRequest }) {
+export function MergeCalculating({ request }: { request: RequestedMerge }) {
   const filter = useChangeFilter(NO_ITEMS, itemPath, mergeItemTones, { isViewFilter: true, reading: true, viewOffer: MERGE_VIEW_OFFER });
   return (
     <MergePanes

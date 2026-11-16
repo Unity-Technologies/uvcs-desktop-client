@@ -1,5 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
-import { mergeSourcePoint, type MergeChange, type MergeContributors, type MergeRequest } from '@shared/domain/merge';
+import { mergeSourcePoint, type MergeChange, type MergeContributors, type RequestedMerge } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 
 /**
@@ -9,13 +9,13 @@ import { spec } from '@shared/domain/specs';
  */
 export type ChangePreview = { kind: 'permissionsOnly' } | { kind: 'noVersions' } | { kind: 'diff'; original: ContentSource; modified: ContentSource };
 
-export function changePreviewOf(change: MergeChange, contributors: MergeContributors | undefined, request: MergeRequest): ChangePreview {
+export function changePreviewOf(change: MergeChange, contributors: MergeContributors | undefined, request: RequestedMerge): ChangePreview {
   if (change.kind === 'permissions') return { kind: 'permissionsOnly' };
   if (!contributors) return { kind: 'noVersions' };
   return { kind: 'diff', ...versionsToCompare(change, contributors, request) };
 }
 
-function versionsToCompare(change: MergeChange, contributors: MergeContributors, request: MergeRequest): { original: ContentSource; modified: ContentSource } {
+function versionsToCompare(change: MergeChange, contributors: MergeContributors, request: RequestedMerge): { original: ContentSource; modified: ContentSource } {
   const source = mergeSourcePoint(request, contributors.source.changesetId);
   const destination = spec.changeset(contributors.destination.changesetId);
   const ancestor = spec.changeset(contributors.base?.changesetId ?? contributors.destination.changesetId);

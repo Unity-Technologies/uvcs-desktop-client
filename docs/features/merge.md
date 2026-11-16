@@ -315,11 +315,11 @@ changes: before it, the button and its open popover would move each time.
   file as its own "Keep" would (`contributorDecisions`, applied through `useFileConflicts`'s `decide` and `reset`), and
   "Merge both" starts the files the user decided over. The segment selected is what the files' decisions amount to
   (`contributorOf`), none when they differ; files open in a merge tool are left out, the tool settles them.
-- **Ignore merge tracking**: applies changes again even if they were merged before (`MergeRequest.ignoreMergeTracking`,
-  `cm merge --forced`). Only cherry picks and subtractive merges, of one changeset or a range, offer it
+- **Ignore merge tracking**: applies changes again even if they were merged before
+  (`RequestedMerge.ignoreMergeTracking`, `cm merge --forced`). Only cherry picks and subtractive merges, of one changeset or a range, offer it
   (`offersIgnoreMergeTracking`): `cm` refuses `--forced` on a regular merge. A cherry pick with nothing to merge offers
   "Merge them again" (`offersMergingAgain`), which turns it on.
-- **Common ancestor**: calculated, or a changeset chosen with the changeset picker (`MergeRequest.ancestorSpec`,
+- **Common ancestor**: calculated, or a changeset chosen with the changeset picker (`RequestedMerge.ancestorSpec`,
   `--strategy=manual --ancestor=cs:N`; `--ancestor` alone would cherry pick the interval from it instead). Only a
   regular merge offers it (`offersCommonAncestor`): a cherry pick, a subtractive merge and a range take theirs from the
   changesets they name, and a shelve's is its base.

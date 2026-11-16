@@ -1,4 +1,4 @@
-import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, RequestedMerge } from '@shared/domain/merge';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -12,7 +12,7 @@ import { droppedDecisions, droppedDecisionsToast, withDecisionAndNext } from './
  */
 export async function applyDirectoryDecision(
   workspacePath: string,
-  request: MergeRequest,
+  request: RequestedMerge,
   decisionsId: string,
   decided: readonly DirectoryDecision[],
   conflict: DirectoryConflict,

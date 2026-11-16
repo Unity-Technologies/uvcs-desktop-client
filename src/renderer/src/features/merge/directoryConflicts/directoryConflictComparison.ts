@@ -1,5 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
-import { mergeSourcePoint, type ConflictSide, type DirectoryConflict, type MergeContributors, type MergeRequest } from '@shared/domain/merge';
+import { mergeSourcePoint, type ConflictSide, type DirectoryConflict, type MergeContributors, type RequestedMerge } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { ONLY_MOVED } from '../../diff/viewer/movedFrom';
 import type { MergeLabels } from '../mergeDescription';
@@ -29,7 +29,7 @@ export interface ComparedVersions {
  * changeset, `cm` takes the changeset undone as the base, and cherry picking, the picked changeset's parent, neither
  * an ancestor both sides share.
  */
-export function comparisonsOf(conflict: DirectoryConflict, contributors: MergeContributors | undefined, request: MergeRequest): DirectoryConflictComparison[] {
+export function comparisonsOf(conflict: DirectoryConflict, contributors: MergeContributors | undefined, request: RequestedMerge): DirectoryConflictComparison[] {
   if (conflict.isDirectory || conflict.type === 'xlink' || !contributors) return [];
   const offersBase = request.kind === 'merge' && contributors.base !== undefined && conflict.source.operation !== 'added';
   return offersBase ? ['destination', 'base'] : ['destination'];
@@ -45,7 +45,7 @@ export function comparedVersions(
   conflict: DirectoryConflict,
   comparison: DirectoryConflictComparison,
   contributors: MergeContributors,
-  request: MergeRequest,
+  request: RequestedMerge,
 ): ComparedVersions {
   const { source, destination } = conflict;
   const modified = sideVersion(source, mergeSourcePoint(request, contributors.source.changesetId));

@@ -5,7 +5,7 @@ import {
   sourceVersionSpec,
   type FileConflictResolution,
   type MergePlan,
-  type MergeRequest,
+  type RequestedMerge,
   type MergeResolutions,
   type MergeResult,
 } from '@shared/domain/merge';
@@ -42,7 +42,7 @@ import { previewMerge } from './previewMerge';
 export async function runMerge(
   cm: CmClient,
   workspacePath: string,
-  request: MergeRequest,
+  request: RequestedMerge,
   resolutions: MergeResolutions,
   context: OperationContext,
   decided?: AppliedDirectoryDecisions,
@@ -132,7 +132,7 @@ async function writeServerFileConflictResolutions(
 async function writeFileConflictResolutions(
   cm: CmClient,
   workspacePath: string,
-  request: MergeRequest,
+  request: RequestedMerge,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
 ): Promise<UnsavedVersions> {
