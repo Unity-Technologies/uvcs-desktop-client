@@ -2,10 +2,10 @@
 # Builds a repository with a task branch per merge request case (docs/features/merge-requests.md): no request; a
 # draft; open with no reviewers; open under review; open in rework with two change requests and a question open; open
 # and reviewed, merging cleanly; open and reviewed, conflicting with /main; closed; merged (merged on the server with
-# `cm merge --to`, then recorded Merged, as the app does where the server doesn't); one closed and one open request of
-# the same branch; a nested branch, /main/release/task-nested, into /main/release; a request whose destination was
-# changed from /main/release to /main. And plain code reviews: of a branch, of a changeset and of a shelve. The
-# workspace ends on /main.
+# `cm merge --to`, then recorded Merged, as the app does where the server doesn't); merged, its branch hidden since;
+# one closed and one open request of the same branch; a nested branch, /main/release/task-nested, into /main/release;
+# a request whose destination was changed from /main/release to /main. And plain code reviews: of a branch, of a
+# changeset and of a shelve. The workspace ends on /main.
 # Usage: scripts/sandboxes/merge-requests.sh [repo-name [workspace-folder]]   → repo merge-requests@local, workspace /tmp/uvcs-merge-requests
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -95,6 +95,14 @@ MERGED=$(request /main/task-merged /main "Run")
 cm merge br:/main/task-merged --to=br:/main --merge -c="Merge /main/task-merged: Run" >/dev/null
 # A server with merge requests switched on marks it Merged by itself; the local one may not: record it as the app does.
 state "$MERGED" Merged --mergechangeset="cs:$(changeset /main)"
+
+# Merged, its branch hidden afterwards: the merge card offers to show it again.
+task /main/task-merged-hidden Assets/Scripts/Kick.cs "public class Kick { }" "Kick"
+MERGED_HIDDEN=$(request /main/task-merged-hidden /main "Kick")
+cm merge br:/main/task-merged-hidden --to=br:/main --merge -c="Merge /main/task-merged-hidden: Kick" >/dev/null
+state "$MERGED_HIDDEN" Merged --mergechangeset="cs:$(changeset /main)"
+cm switch br:/main >/dev/null
+cm branch hide br:/main/task-merged-hidden >/dev/null
 
 task /main/task-twice Assets/Scripts/Roll.cs "public class Roll { }" "Roll"
 state "$(request /main/task-twice /main "Roll, first try")" Closed
