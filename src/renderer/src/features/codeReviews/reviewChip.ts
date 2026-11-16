@@ -24,7 +24,6 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
   const { mergeRequest, status } = review;
   const title = commentLineText(review.title);
   const noun = mergeRequest ? 'merge request' : 'code review';
-  const where = mergeRequest ? ` · ${mergeRequest.state} into ${mergeRequest.destination}` : '';
   const readyToMerge = mergeRequest?.state === 'Open' && status === 'Reviewed';
   const showsState = mergeRequest !== undefined && !(iconOnly && readyToMerge);
   return {
@@ -32,11 +31,12 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
     status: iconOnly && showsState ? undefined : status,
     statusText: !iconOnly,
     tip: iconOnly ? `${status}: ${title}` : title,
-    tipSub: `${capitalized(noun)} ${review.id}${where} · ${status} · click to open`,
+    tipSub: `${reviewLine(review)} · click to open`,
     label: `Open ${noun} ${review.id}: ${title}`,
   };
 }
 
-function capitalized(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+/** What it is and where it stands, in one line: "Merge request 12 · Open into /main · Under review". */
+export function reviewLine({ id, status, mergeRequest }: CodeReviewSummary): string {
+  return mergeRequest ? `Merge request ${id} · ${mergeRequest.state} into ${mergeRequest.destination} · ${status}` : `Code review ${id} · ${status}`;
 }

@@ -14,6 +14,7 @@ import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInsid
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
+import { reviewLine } from '../../codeReviews/reviewChip';
 
 /**
  * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, in the caption's
@@ -134,7 +135,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
     case 'codeReview':
       return {
         title: commentLineText(target.review.title),
-        body: `Code review ${target.review.id} · ${target.review.status}`,
+        body: reviewLine(target.review),
         meta: 'Click to open the review',
       };
     case 'mergeLink':
