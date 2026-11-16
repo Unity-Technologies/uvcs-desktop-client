@@ -24,7 +24,7 @@ import { applyDownloads } from './applyDownloads';
 import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
-  downloadChangeLook,
+  downloadChangeMarker,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -231,7 +231,7 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
           autoFocus
         >
           {rows.map((row, index) => {
-            const look = downloadChangeLook(row.change);
+            const marker = downloadChangeMarker(row.change);
             return (
               <div
                 key={row.path}
@@ -241,7 +241,6 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
                 aria-expanded={row.expandable ? row.expanded : undefined}
                 aria-checked={row.check}
                 className={styles.row}
-                data-tone={look.tone}
                 style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
                 onClick={() => setSelected(row.path)}
                 onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
@@ -266,11 +265,14 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
                   checked={row.check}
                   focusable={false}
                   ariaLabel={row.name}
-                  tone={look.tone}
                   onChange={() => toggleChecked(row.path)}
                 />
                 <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
-                {look.marker && <span className={styles.marker}>{look.marker}</span>}
+                {marker && (
+                  <span className={styles.marker} data-change={row.change}>
+                    {marker}
+                  </span>
+                )}
                 {row.note === 'loading' && <Spinner size={12} />}
                 {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
               </div>
