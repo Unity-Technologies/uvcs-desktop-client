@@ -35,8 +35,6 @@
 
 .mark {
   display: inline-flex;
-  flex: none;
-  align-self: center;
 }
 
 .kindIcon {
