@@ -150,7 +150,6 @@ export interface MergeRequestFormInput {
 export interface MergeRequestForm {
   destination: string;
   title: string;
-  existing?: ExistingRequest;
   note?: DraftNote;
   /** Why Create can't run yet; none once it can. */
   problem?: string;
@@ -169,7 +168,7 @@ export function mergeRequestForm({ source, sourceBranch, picked, typed, reviewsO
   const note = existing ? existingRequestNote(existing) : reviewsCheck === 'failed' ? CHECK_FAILED_NOTE : undefined;
   const problem = draftProblem({ source, sourceParent: sourceBranch?.parent, destination, title }) ?? note?.blocks;
   const tip = problem ?? (reviewsCheck === 'checking' ? CHECKING_TIP : undefined);
-  return { destination, title, existing, note, problem, tip };
+  return { destination, title, note, problem, tip };
 }
 
 /** Whether a request the branch has stops another: one still to merge into the same destination. */

@@ -218,9 +218,9 @@ describe('mergeRequestForm', () => {
   });
 
   it('blocks Create on a request still to merge into that destination only once the reviews are read', () => {
-    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ existing: undefined, note: undefined, problem: undefined });
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ note: undefined, problem: undefined });
     expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [open(12)] })).toMatchObject({
-      existing: { kind: 'active' },
+      note: { request: { label: '#12 Review 12' } },
       problem: 'This branch already has a merge request into /main',
     });
   });
