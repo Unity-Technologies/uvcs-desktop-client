@@ -157,6 +157,9 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   its id only, and the sentence says what it can ("changed the destination to /main", "changed the destination"). A
   move to a state this version doesn't know stays `other`, left out. These events close no round (code-reviews.md
   "Rounds"). The hidden and unhidden notes are written only by a server with merge requests switched on.
+- **Branch attributes**, last in the side rail after Notifications (`BranchAttributesSection`): the reviewed branch's
+  attributes, edited in place (`AttributeChips`), as its details show them; any review of a branch has it. One
+  attribute read as the page opens.
 - **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
   conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
 - **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its

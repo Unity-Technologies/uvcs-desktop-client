@@ -1,6 +1,8 @@
 import { FileDiff } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../../app/navigation/navigationStore';
+import { reviewDetailsSections } from '../reviewDetailsSections';
+import { BranchAttributesSection } from './BranchAttributesSection';
 import { NotificationsSection } from './NotificationsSection';
 import { ReviewersSection } from './ReviewersSection';
 import type { OpenItem } from './threadPick';
@@ -17,10 +19,11 @@ interface ReviewSideRailProps {
 }
 
 /**
- * Beside the conversation: who reviews it and the status each gave, the change requests and questions still open, and
- * whether the user gets its emails.
+ * Beside the conversation: who reviews it and the status each gave, the change requests and questions still open,
+ * whether the user gets its emails, and the reviewed branch's attributes (`reviewDetailsSections`).
  */
 export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
+  const { branchAttributes } = reviewDetailsSections(review);
   return (
     <aside className={styles.rail}>
       <ReviewersSection review={review} />
@@ -42,6 +45,7 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
         </ul>
       </section>
       <NotificationsSection reviewId={review.id} />
+      {branchAttributes && <BranchAttributesSection branchSpec={branchAttributes} />}
     </aside>
   );
 }
