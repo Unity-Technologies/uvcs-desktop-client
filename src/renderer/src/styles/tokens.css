@@ -181,6 +181,13 @@
   --comment-kind-text: #5e4f8a;
   --comment-kind-border: #b9b0d4;
 
+  /* A merge request's state (`MergeRequestStateIcon`, its badge): gray while a draft, green open, violet merged, red
+     closed. The violet is fuller than --comment-kind-text's, so a merged request never reads as a comment. */
+  --merge-request-draft: #59636e;
+  --merge-request-open: #1a7f37;
+  --merge-request-merged: #8250df;
+  --merge-request-closed: #cf222e;
+
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
   --change-changed: #1f6feb;
@@ -327,6 +334,10 @@
   --danger-border: rgba(248, 81, 73, 0.32);
   --comment-kind-text: #a59cc8;
   --comment-kind-border: #474162;
+  --merge-request-draft: #9198a1;
+  --merge-request-open: #3fb950;
+  --merge-request-merged: #a371f7;
+  --merge-request-closed: #ff7b72;
 
   --change-added: #3fb950;
   --change-changed: #58a6ff;
