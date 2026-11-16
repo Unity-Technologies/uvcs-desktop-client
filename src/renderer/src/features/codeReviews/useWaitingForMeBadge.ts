@@ -15,10 +15,10 @@ export function useWaitingForMeBadge(): NavBadge | undefined {
   const since = useCodeReviewsViewStore((state) => state.since);
   const people = useCodeReviewsViewStore((state) => state.people);
   const status = useCodeReviewsViewStore((state) => state.status);
-  const mergeRequestState = useCodeReviewsViewStore((state) => state.state);
+  const mergeRequestState = useCodeReviewsViewStore((state) => state.mergeRequestState);
   const reviewers = useCodeReviewsViewStore((state) => state.reviewers);
   const waitingForMe = useCodeReviewsViewStore((state) => state.waitingForMe);
   const openedByMe = useCodeReviewsViewStore((state) => state.openedByMe);
-  const { data } = useCodeReviews(codeReviewsQuery({ since, people, status, state: mergeRequestState, reviewers, waitingForMe, openedByMe }), { enabled: false });
+  const { data } = useCodeReviews(codeReviewsQuery({ since, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe }), { enabled: false });
   return waitingBadge(data, me);
 }

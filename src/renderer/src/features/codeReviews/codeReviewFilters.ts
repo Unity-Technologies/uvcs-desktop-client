@@ -13,7 +13,7 @@ interface CodeReviewsQueryFilters {
   people: PeoplePick;
   status: StatusFilter;
   /** Which merge requests: Merged and Closed are the server's; Active and All read with no state (`matchesState`). */
-  state: MergeRequestStateFilter;
+  mergeRequestState: MergeRequestStateFilter;
   /** Who is asked to review them: I'm a reviewer, people picked, both. */
   reviewers: PeoplePick;
   /** Only those waiting for the user: of any date, as the official client's "Needs my review" reads them. */
@@ -33,10 +33,10 @@ interface CodeReviewsQueryFilters {
  * server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and narrows
  * locally, as `cm find` takes one state, so it shares All's query key.
  */
-export function codeReviewsQuery({ since, people, status, state, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
   const sinceDate = waitingForMe || openedByMe ? undefined : sinceDateFor(since, today);
   const owners = openedByMe && isEveryone(people) ? ['me'] : pickedOwners(people);
-  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[state], sinceDate };
+  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate };
 }
 
 /** The states the server is asked for; the others read every review. */

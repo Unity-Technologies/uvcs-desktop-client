@@ -11,7 +11,7 @@ import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsVie
 
 const today = new Date(2026, 8, 25);
 
-const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', state: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
+const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
 
 describe('what Merge requests asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
@@ -34,7 +34,7 @@ describe('what Merge requests asks the server for', () => {
   });
 
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', state: 'active', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', mergeRequestState: 'active', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',
@@ -50,9 +50,9 @@ describe('the State chip', () => {
   const kept = (state: Parameters<typeof matchesState>[1]) => all.filter((review) => matchesState(review, state)).map((review) => review.id);
 
   it('asks the server for Merged and Closed, and for no state under Active and All, which share one query', () => {
-    expect(codeReviewsQuery({ ...ASKED, state: 'merged' }, today).mergeRequestState).toBe('Merged');
-    expect(codeReviewsQuery({ ...ASKED, state: 'closed' }, today).mergeRequestState).toBe('Closed');
-    expect(compactFilter(codeReviewsQuery({ ...ASKED, state: 'all' }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
+    expect(codeReviewsQuery({ ...ASKED, mergeRequestState: 'merged' }, today).mergeRequestState).toBe('Merged');
+    expect(codeReviewsQuery({ ...ASKED, mergeRequestState: 'closed' }, today).mergeRequestState).toBe('Closed');
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, mergeRequestState: 'all' }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
   });
 
   it('keeps the code reviews and the merge requests still to merge under Active', () => {
@@ -160,11 +160,11 @@ describe("Merge requests' Clear filters", () => {
     store.getState().update({ text: '', people: EVERYONE, status: 'Reviewed', reviewers: EVERYONE, waitingForMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(true);
 
-    store.getState().update({ people: MINE, state: 'merged', reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true, openedByMe: true });
+    store.getState().update({ people: MINE, mergeRequestState: 'merged', reviewers: { mine: false, others: ['zoe'] }, waitingForMe: true, openedByMe: true });
     store.getState().clear();
 
-    const { text, people, status, state, reviewers, waitingForMe, openedByMe, since } = store.getState();
-    expect({ text, people, status, state, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', state: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
+    const { text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since } = store.getState();
+    expect({ text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(false);
   });
 });
