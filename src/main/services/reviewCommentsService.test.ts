@@ -3,9 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { readBranchNames } from '../cm/branchNames';
 import { findQueryArgs } from '../cm/findQuery';
 import { FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
-import { recordsOutput } from '../cm/testing/cmOutput';
+import { formatOutput, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createReviewCommentsService } from './reviewCommentsService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -15,9 +17,16 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const IN_WORKSPACE = workspacePlace(WORKSPACE);
 const ON_REPOSITORY = repositoryPlace('game@local');
 
+/** Wired as `createServices` wires it: branch ids in the server's notes are named by the cache, which reads every branch only when it must. */
 function reviewComments(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createReviewCommentsService(serviceContext(fake.cm)) };
+  const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
+  return { ...fake, service: createReviewCommentsService(serviceContext(fake.cm), { branchNames }) };
+}
+
+/** A note of the server's, as `cm find changereviewcomment` prints it. */
+function timelineNote(id: number, comment: string) {
+  return { id, guid: `t${id}`, owner: 'ana', date: '2026-11-16T10:00:00+01:00', modifieddate: '2026-11-16T10:00:00+01:00', comment, type: 'timeline', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 };
 }
 
 describe('reading a review conversation', () => {
@@ -46,6 +55,68 @@ describe('reading a review conversation', () => {
 
     expect(commands[0]?.args[2]).toBe("where reviewid = 41 order by date asc on repository 'game@local'");
     expect(commands[0]?.options.outsideWorkspaces).toBe(true);
+  });
+});
+
+describe("naming the branches a merge request's notes name", () => {
+  const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
+    'find branch': ({ line }) => (line.includes("hidden = 'true'") ? formatOutput(['26', '/main/task1']) : formatOutput(['4', '/main/release'], ['19', '/main'])),
+  };
+
+  it('reads no branch when no note names one', async () => {
+    const { service, lines } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[mergerequest-status-draft-to-open]'), timelineNote(2, '[mergerequest-status-open-to-merged]6')),
+    });
+
+    await service.conversation(IN_WORKSPACE, 41);
+
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('names every branch the notes name with one lookup, hidden branches too', async () => {
+    const { service, lines } = reviewComments({
+      'find changereviewcomment': recordsOutput(
+        FOUND_REVIEW_COMMENTS,
+        timelineNote(1, '[changed-mergerequest-destination]4;19'),
+        timelineNote(2, '[hidden-mergerequest-branch]26'),
+        timelineNote(3, '[unhidden-mergerequest-branch]26'),
+      ),
+      ...EVERY_BRANCH_NAME,
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
+      { kind: 'destinationChanged', from: { id: 4, name: '/main/release' }, to: { id: 19, name: '/main' } },
+      { kind: 'branchHidden', branch: { id: 26, name: '/main/task1' } },
+      { kind: 'branchUnhidden', branch: { id: 26, name: '/main/task1' } },
+    ]);
+    // The cache's one read of every branch: the visible ones, then the hidden.
+    expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
+  });
+
+  it("still reads the conversation when the branches' names can't be read, its branches by id alone", async () => {
+    const { service } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]4;19')),
+      'find branch': () => {
+        throw new Error('Connection refused');
+      },
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([{ kind: 'destinationChanged', from: { id: 4 }, to: { id: 19 } }]);
+  });
+
+  it('keeps a branch deleted since by its id alone', async () => {
+    const { service } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]77;19')),
+      ...EVERY_BRANCH_NAME,
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events[0]).toEqual(expect.objectContaining({ kind: 'destinationChanged', from: { id: 77 }, to: { id: 19, name: '/main' } }));
   });
 });
 

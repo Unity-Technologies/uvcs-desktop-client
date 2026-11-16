@@ -5,7 +5,8 @@ review with two more fields: where it merges and where that stands. So it is one
 reviewers, their statuses, comments, change requests, rounds and notifications are the review's, as
 docs/features/code-reviews.md says. This doc holds what is a merge request's alone.
 
-Sandbox: `scripts/sandboxes/merge-requests.sh` builds a task branch per case below.
+Sandbox: `scripts/sandboxes/merge-requests.sh` builds a task branch per case below, a merged one whose branch is hidden
+included.
 
 ## What makes a review a merge request
 
@@ -35,6 +36,104 @@ closed. The glyph differs by state, so color never tells it alone, and a tooltip
 (`mergeRequestTip`: "Open merge request into /main"). The **review status** (Under review, Reviewed, Rework required)
 is another thing: where the review stands, for merge requests and code reviews alike, with its own icons
 (code-reviews.md). A merge request **still to merge** is Open or Draft (`isActiveMergeRequest`).
+
+## States and who may change them
+
+- The moves a user can make (`mergeRequestMoves`): a **Draft** gets **Ready for review** (Open) or is closed; an
+  **Open** one goes back with **Convert to draft** or is closed; a **Closed** one is reopened (**Reopen merge
+  request**). A **Merged** one moves no more: `cm` takes it back to Open, but its branch is merged already. Merged is
+  never a move: merging records it.
+- **Close asks nothing**: Reopen undoes it, so it isn't a danger entry either.
+- Each move is one quick `cm mergerequest edit <id> --mergerequeststatus=<state>` (`mergeRequestStateArgs`,
+  `setMergeRequestState`, `query()`), the state by its English name. Setting the state it already has changes nothing
+  and adds no note. The server needs the change permission on the source branch; its refusal shows as any `cm` error,
+  titled by the move ("Couldn't close the merge request", `moveFailureTitle`).
+- `cm mergerequest` is only for what a code review hasn't: the state and the destination. Everything else on a merge
+  request (reviewers, statuses, comments, title, description, delete) stays `cm codereview`, which takes its id
+  unchanged.
+- The page and the lists show the new state at once (`showMergeRequestAs`, through `showReviewReadInListsIn`), so a
+  badge doesn't flip back while the reviews are read again (`isAffectedByCodeReviews`).
+- The moves are offered alike in the merge card, the page's ⋯ menu (`reviewPageMenu`) and a single row's menu
+  (`codeReviewMenu`), in the menus' `act` group (`readyForReview`, `convertToDraft`, `closeMergeRequest`,
+  `reopenMergeRequest` in `MENU_WORDS`). Several rows selected offer none.
+
+## The page
+
+A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "The review's page"), with where it merges:
+
+- **Its name** in the breadcrumb and a page window's title is "Merge request 72" once its review is read, "Code review
+  72" until then (`pageTitle`, `usePageTitle`, which follows the page's own read and reads nothing).
+- **The headline** (`reviewHeadline`): the state's badge, then the review status's, then "Ana wants to merge
+  /main/task into /main"; "asked to merge … into" once merged (whoever merged it, the Merged badge says it is),
+  "wanted to merge … into" once closed. Both badges stay: they say
+  different things (where the request stands, where its review stands), and side by side they read as two, not noise.
+- **The destination** changes in place while Draft or Open and its source branch is named (`DestinationPicker`;
+  `reviewHeadline` decides): it reads as the headline's other
+  branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
+  source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
+  branches**, newest first, to find by typing (`destinationGroups`), never the source. The branches are read only once
+  it opens (the switcher's read). A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
+  (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
+  as text.
+- **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
+
+  | Note | Reads |
+  | --- | --- |
+  | `[mergerequest-status-draft-to-open]` | marked this as ready for review |
+  | `[mergerequest-status-open-to-draft]` | converted this to a draft |
+  | `[mergerequest-status-<any>-to-closed]` | closed this |
+  | `[mergerequest-status-closed-to-open]`, `…-merged-to-open` | reopened this |
+  | `[mergerequest-status-open-to-merged]6` | merged this into /main in cs:6 (the changeset a chip) |
+  | `[changed-mergerequest-destination]4;19` | changed the destination from /main/release to /main |
+  | `[hidden-mergerequest-branch]26`, `[unhidden-…]26` | hid the branch, unhid the branch |
+
+  Each shows its own icon: a state move the glyph of the state it moved to, in its color; a destination the branch
+  icon; hiding the eye. The notes name branches by object id: every id of a conversation is named with one
+  `BranchNamesCache.resolve` (`reviewCommentsService`), none when no note names a branch. A branch deleted since keeps
+  its id only, and the sentence says what it can ("changed the destination to /main", "changed the destination"). A
+  move to a state this version doesn't know stays `other`, left out. These events close no round (code-reviews.md
+  "Rounds"). The hidden and unhidden notes are written only by a server with merge requests switched on.
+- **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
+  conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
+- **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its
+  branch's changesets, its conversation). Notes that name branches need their names: from what the window already
+  read, at no command (the list named its rows' branches); cold (a link opened first thing, a repository's window)
+  the cache reads every branch's name once, two light `cm find branch`, and keeps them ten minutes
+  (`BranchNamesCache`). Should that read fail, the conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
+  branch` by name, visible and hidden), to offer Hide or Unhide: no read the page makes says whether a branch is
+  hidden. Nothing polls.
+
+## The merge card (a list of sections)
+
+After the timeline, before the comment field, in the conversation's column and not sticky (pinned to the bottom it
+took the conversation's height in a short window), a merge request's card (`MergeRequestCard`) says where it stands
+and what's next. `mergeCardOf` decides every line, label and action; the component renders any list it gets.
+
+- **An ordered list of sections** (`MergeCardSection`: an id, a tone, a title, a detail, optional rows, an optional
+  action at its right), then one footer action and a ⋯ menu (`MergeCard`). Each section leads with a disc: the
+  Reviewed color's check (`passed`), the Rework color's cross (`failed`), a quiet dot (`pending`, `neutral`), or, for
+  a section that is the state itself, the state's glyph in its color. With no footer the ⋯ ends the last section,
+  rather than a footer holding only it.
+- **Draft**: "Draft" / "Not ready to review or merge yet"; footer **Ready for review** (primary); ⋯ Close merge request.
+- **Open**: the review section (`reviewSectionOf`, from the reviewers the review was read with, a group counting as
+  one): no reviewer, "Review required" / "At least 1 approving review is required" with **Add reviewers** (the
+  reviewers dialog, `chooseReviewers`); "Changes under review" / "1 pending review"; "Changes required" / "2 reviews
+  requesting changes"; "Changes reviewed" / "1 approving review". Under it, only when above zero, what's open in the
+  conversation ("2 change requests and 1 question open", `openItemsIn`, `openItemsLine`). ⋯ Convert to draft, Close
+  merge request. No Merge button yet.
+- **Merged**: "Merged into /main in cs:6" (the chip opens the changeset; without the note, "Merged into /main"), with
+  **Hide branch** or **Unhide branch** once the branch's read says which (`setMergedBranchHidden`: it reads the
+  branches and the reviews again, as the server may note it); neither for a branch deleted or renamed since. Footer
+  **Switch to /main** while the workspace is still on the merged branch, and then no Hide branch: `cm branch hide`
+  hides the workspace's own branch without a word, which would leave the workspace on a branch the lists don't show;
+  switching away comes first.
+- **Closed**: "Closed" / "Not merged"; footer **Reopen merge request**.
+- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed). Nothing follows it yet: it
+  is the rule the card's Merge action will be made primary by, so that what joins the list later holds a merge back
+  the way an unfinished review does. It will never block a merge: the server's merge rules decide.
+- What the card doesn't have: checks, a build status, a merge queue, a conflicts line. No data source has them yet, so
+  there is no placeholder, type or stub: each joins the list as a section of its own when its data does (read per
+  page, never per row of a list), with no change to the card or its callers.
 
 ## One view: Merge requests
 

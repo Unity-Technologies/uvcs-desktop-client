@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
-import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 
 /**
@@ -52,6 +52,28 @@ export function showReviewReadInListsIn(client: QueryClient, place: Place, revie
   for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
     if (query.state.isInvalidated) continue;
     const updated = withReviewRead(query.state.data, review);
+    if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
+  }
+}
+
+/**
+ * A list of reviews with one merge request's state or destination changed as a write just left it, the other rows
+ * as they were read: what a move shows at once, its page opened or not (`setMergeRequestState`). Anything else (not a
+ * list, a list without it, a row that isn't a merge request) comes back as it was.
+ */
+export function withMergeRequestChanged(data: unknown, reviewId: number, change: Partial<MergeRequestInfo>): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows = data as (CodeReview | CodeReviewSummary)[];
+  const at = rows.findIndex((row) => row.id === reviewId && row.mergeRequest !== undefined);
+  if (at === -1) return data;
+  return rows.map((row, index) => (index === at && row.mergeRequest ? { ...row, mergeRequest: { ...row.mergeRequest, ...change } } : row));
+}
+
+/** `withMergeRequestChanged` over every list already read and not marked stale, each keeping when it was read. */
+export function showMergeRequestChangedInListsIn(client: QueryClient, place: Place, reviewId: number, change: Partial<MergeRequestInfo>): void {
+  for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
+    if (query.state.isInvalidated) continue;
+    const updated = withMergeRequestChanged(query.state.data, reviewId, change);
     if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
   }
 }

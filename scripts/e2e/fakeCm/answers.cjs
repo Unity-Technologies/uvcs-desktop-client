@@ -65,6 +65,8 @@ const COMMANDS = {
   setowner: () => '',
   'codereview reviewer': reviewerList,
   'codereview subscription': reviewSubscription,
+  // A merge request's state or destination: `cm` prints nothing.
+  'mergerequest edit': () => '',
 };
 
 /** The server's groups, as `cm listusers --onlygroups` lists them. */

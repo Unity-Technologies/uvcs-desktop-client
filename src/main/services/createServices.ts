@@ -65,7 +65,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     branches: createBranchesService(context, naming),
     changesets: createChangesetsService(context),
     codeReviews: createCodeReviewsService(context, naming),
-    reviewComments: createReviewCommentsService(context),
+    reviewComments: createReviewCommentsService(context, naming),
     content: createContentService(context),
     diff: createDiffService(context),
     explorer: createExplorerService(context),

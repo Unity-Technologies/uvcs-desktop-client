@@ -49,6 +49,8 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  GitPullRequestClosed,
+  GitPullRequestDraft,
   HardDriveDownload,
   Hash,
   History,
@@ -188,6 +190,12 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // A merge request's state (`mergeRequestMoves`), each in the glyph of the state it moves to. Closing isn't a danger:
+  // Reopen undoes it.
+  readyForReview: word('act', GitPullRequest, 'Ready for review'),
+  convertToDraft: word('act', GitPullRequestDraft, 'Convert to draft'),
+  closeMergeRequest: word('act', GitPullRequestClosed, 'Close merge request'),
+  reopenMergeRequest: word('act', GitPullRequest, 'Reopen merge request'),
   // A review's change request marked by hand (`changeRequestMarkOf`): applied in a changeset picked, or open again.
   markApplied: word('act', CheckCheck, 'Mark as applied…'),
   markNotApplied: word('act', CircleDashed, 'Mark as not applied'),

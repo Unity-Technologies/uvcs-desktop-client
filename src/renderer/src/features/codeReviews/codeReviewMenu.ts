@@ -12,7 +12,8 @@ import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
-import { reviewNoun } from './mergeRequestState';
+import { mergeRequestMoves, reviewNoun } from './mergeRequestState';
+import { setMergeRequestState } from './mergeRequestOperations';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
 /** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
@@ -53,6 +54,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
+    ...(single ? mergeRequestMoveEntries(place, single) : []),
     single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
@@ -60,15 +62,23 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
 
 /**
  * The menu of a review's own page, its header's ⋯: what the page doesn't show already (its status, reviewers and the
- * reviewed code have their own controls), so deleting it stays out of the way.
+ * reviewed code have their own controls), so deleting it stays out of the way. A merge request's moves are here too,
+ * as in its merge card: whoever looks for them in the menu finds them.
  */
 export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEntry[] {
   return groupedMenu([
     menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
-    copySubmenu('Code review', codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    ...mergeRequestMoveEntries(place, review),
+    copySubmenu(reviewNoun(review), codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     // Its page has nothing left to show once it's gone: back to where the user came from.
     menuAction('delete', async () => {
       if (await deleteReviews(place, [review])) navigation.goBack();
     }),
   ]);
+}
+
+/** A merge request's moves (`mergeRequestMoves`), at once: closing asks nothing, as Reopen undoes it. None for a code review. */
+function mergeRequestMoveEntries(place: Place, review: CodeReviewSummary) {
+  if (!review.mergeRequest) return [];
+  return mergeRequestMoves(review.mergeRequest.state).map((move) => menuAction(move.word, () => void setMergeRequestState(place, review, move)));
 }

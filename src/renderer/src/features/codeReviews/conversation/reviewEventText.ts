@@ -1,8 +1,21 @@
-import type { ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
+import type { CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
+import type { BranchRef, ReviewEvent, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { displayName, sameUser } from '../../../lib/userName';
 
-/** The icon an event shows: what happened, a status in its own color. */
-export type ReviewEventIcon = 'reviewRequested' | 'reviewRequestedAgain' | 'reviewerRemoved' | 'renamed' | 'Under review' | 'Reviewed' | 'Rework required';
+/**
+ * The icon an event shows: what happened, a review status in its own color, a merge request's move in the glyph and
+ * color of the state it moved to.
+ */
+export type ReviewEventIcon =
+  | 'reviewRequested'
+  | 'reviewRequestedAgain'
+  | 'reviewerRemoved'
+  | 'renamed'
+  | 'destinationChanged'
+  | 'branchHidden'
+  | 'branchUnhidden'
+  | CodeReviewStatus
+  | MergeRequestState;
 
 /** How an event reads in the timeline: its icon, what it says after its author's name, and what its reviewer said. */
 export interface ReviewEventRow {
@@ -10,19 +23,30 @@ export interface ReviewEventRow {
   text: string;
   /** A status change's comment, when it says something. */
   comment?: string;
+  /** A merge request's move: the state it moved to, whose color its icon takes (`--merge-request-<state>`). */
+  state?: MergeRequestState;
+  /** The changeset a merge request was merged in, named after the text as a chip ("merged this into /main in cs:6"). */
+  changeset?: number;
+}
+
+/** What an event's text needs from the review it's on: where a merge request merges. */
+export interface ReviewEventContext {
+  destination?: string;
 }
 
 /** A change the timeline shows, and who made it when known: what they did to themselves reads so. */
 type ShownChange = Exclude<ReviewEventChange, { kind: 'other' }> & { author?: string };
 
 /** An event the timeline shows; none for one this version doesn't read (`other`), which `timelineOf` leaves out. */
-export function reviewEventRow(change: ShownChange): ReviewEventRow {
-  const text = reviewEventText(change);
+export function reviewEventRow(change: ShownChange, context: ReviewEventContext = {}): ReviewEventRow {
+  const text = reviewEventText(change, context);
   switch (change.kind) {
     case 'statusChanged':
       return { icon: change.status, text, ...(change.comment.trim() && { comment: change.comment }) };
     case 'titleChanged':
       return { icon: 'renamed', text };
+    case 'mergeRequestState':
+      return { icon: change.to, state: change.to, text, ...(change.to === 'Merged' && change.changesetId !== undefined && { changeset: change.changesetId }) };
     default:
       return { icon: change.kind, text };
   }
@@ -37,7 +61,7 @@ export function isShownEvent(event: ReviewEvent): event is ReviewEvent & Exclude
  * What an event says after its author's name: "requested a review from Ana and QA Team". What the author did to
  * themselves reads so: "added themselves as a reviewer", "left the reviewers".
  */
-function reviewEventText(change: ShownChange): string {
+function reviewEventText(change: ShownChange, { destination }: ReviewEventContext): string {
   const isAuthor = (name: string): boolean => change.author !== undefined && sameUser(name, change.author);
   const named = (name: string): string => (isAuthor(name) ? 'themselves' : displayName(name));
   switch (change.kind) {
@@ -53,7 +77,41 @@ function reviewEventText(change: ShownChange): string {
       return STATUS_WORDS[change.status];
     case 'titleChanged':
       return `renamed it from “${change.from}” to “${change.to}”`;
+    case 'mergeRequestState':
+      return mergeRequestMoveText(change, destination);
+    case 'destinationChanged':
+      return destinationChangeText(change.from, change.to);
+    case 'branchHidden':
+      return 'hid the branch';
+    case 'branchUnhidden':
+      return 'unhid the branch';
   }
+}
+
+/**
+ * A merge request's move, by the state it moved to: back to Open says whether it left a draft or was reopened. Merged
+ * says into where (the destination now, which a merged request keeps), and in which changeset, the row's chip.
+ */
+function mergeRequestMoveText({ from, to, changesetId }: Extract<ShownChange, { kind: 'mergeRequestState' }>, destination: string | undefined): string {
+  switch (to) {
+    case 'Open':
+      return from === 'Draft' ? 'marked this as ready for review' : 'reopened this';
+    case 'Draft':
+      return 'converted this to a draft';
+    case 'Closed':
+      return 'closed this';
+    case 'Merged': {
+      const merged = destination ? `merged this into ${destination}` : 'merged this';
+      return changesetId !== undefined ? `${merged} in` : merged;
+    }
+  }
+}
+
+/** A branch deleted since has no name to show: the sentence says what it can. */
+function destinationChangeText(from: BranchRef, to: BranchRef): string {
+  if (from.name !== undefined && to.name !== undefined) return `changed the destination from ${from.name} to ${to.name}`;
+  if (to.name !== undefined) return `changed the destination to ${to.name}`;
+  return 'changed the destination';
 }
 
 /** What a folded run of reviewer changes says: "Ana and Bob changed the reviewers 5 times". */
