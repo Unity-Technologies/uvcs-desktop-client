@@ -70,6 +70,14 @@ export function matchesOpenedByMe(review: Pick<CodeReviewSummary, 'owner' | 'sta
   return review.mergeRequest ? isActiveMergeRequest(review) : review.status !== 'Reviewed';
 }
 
+/**
+ * Whether the list shows fewer reviews than it read, so an empty one says none match (with Clear filters) rather than
+ * none yet: a filter is on, or the State chip at rest (Active) hides what was read, every review merged or closed.
+ */
+export function isNarrowed(filtering: boolean, read: number, shown: number): boolean {
+  return filtering || shown < read;
+}
+
 /** How many of the reviews read Opened by me keeps. */
 export function openedByMeCount(reviews: readonly Pick<CodeReviewSummary, 'owner' | 'status' | 'mergeRequest'>[], user: string | undefined): number {
   return reviews.filter((review) => matchesOpenedByMe(review, true, user)).length;

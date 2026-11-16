@@ -32,14 +32,16 @@ import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { CLEARED_CODE_REVIEW_FILTERS, type MergeRequestStateFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
+import { reviewNoun } from './mergeRequestState';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
+const itself = (name: string): string => name;
 
 /** The State chip's choices: Active (the code reviews and merge requests still to merge) is where it rests. */
 const STATE_CHOICES: { value: MergeRequestStateFilter; label: string }[] = [
@@ -48,7 +50,6 @@ const STATE_CHOICES: { value: MergeRequestStateFilter; label: string }[] = [
   { value: 'closed', label: 'Closed' },
   { value: 'all', label: 'All' },
 ];
-const itself = (name: string): string => name;
 
 export function CodeReviewsView() {
   const place = usePlace();
@@ -96,7 +97,7 @@ export function CodeReviewsView() {
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
-  useCopyCommand('Merge requests', selected?.mergeRequest ? 'Merge request' : 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
+  useCopyCommand('Merge requests', selected ? reviewNoun(selected) : 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader
@@ -161,12 +162,12 @@ export function CodeReviewsView() {
         loading={isPending}
         error={error}
         errorTitle="Couldn't read the merge requests"
-        filtering={isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)}
+        filtering={isNarrowed(isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS), reviews?.length ?? 0, visible.length)}
         noMatches={<NoMatches icon={<GitPullRequest size={22} />} noun="merge requests" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
         emptyState={
           <EmptyState
             icon={<GitPullRequest size={22} />}
-            title="No merge requests yet"
+            title="No merge requests"
             description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
             action={
               <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
