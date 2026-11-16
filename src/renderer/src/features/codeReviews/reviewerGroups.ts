@@ -30,11 +30,6 @@ export function reviewerRef(reviewer: NamedReviewer, groups: ReviewerGroups): Me
   return { name: reviewer.name, kind: isGroup(reviewer, groups) ? 'group' : 'user' };
 }
 
-/** The reviewers typed into one field, split at commas (`ana, Developers` asks both), once each, groups as groups. */
-export function typedReviewers(typed: string, groups: ReviewerGroups): MemberRef[] {
-  const names = [...new Set(typed.split(',').map((name) => name.trim()).filter(Boolean))];
-  return names.map((name) => reviewerRef({ name }, groups));
-}
 
 /** How a reviewer is named: a user by the name shown for them (`jane.doe@acme.com`, Jane Doe), a group as the server names it. */
 export function reviewerLabel(reviewer: NamedReviewer, groups: ReviewerGroups): string {
