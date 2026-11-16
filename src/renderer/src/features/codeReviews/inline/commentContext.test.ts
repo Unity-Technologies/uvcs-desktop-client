@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { appliedComparison, commentedComparison, comparisonOf, contextMissingText, contextDescription, contextEntryOf, contextTitle, contextViewLabels, entryOfThread, liveThreadOf, sinceComparison, type ShownEntry } from './commentContext';
+import { appliedComparison, commentedComparison, comparisonOf, contextMissingText, contextDescription, contextEntryOf, replacedHistoryOf, contextTitle, contextViewLabels, entryOfThread, liveThreadOf, sinceComparison, type ShownEntry } from './commentContext';
 import type { LineThread } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
@@ -96,10 +96,52 @@ describe('appliedComparison', () => {
     expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 18, revisionId: 20 })).toEqual({ original: revision(18), modified: revision(20), side: 'additions', line: 12, fileName: 'src/Player.cs' });
   });
 
+  // Changeset 15 deleted the file commented on (revision 20) and put another item at its path (25), with the same
+  // contents: "make it a move of Score.cs", so its history follows that file's. The review's whole diff says so.
+  const replaced: ShownEntry = { ...SHOWN, baseRevisionId: 20, revisionId: 25, replaced: true };
+  const movedInReview: ShownEntry = { path: 'src/Player.cs', oldPath: 'src/Score.cs', baseRevisionId: 5, revisionId: 30, repository: REPOSITORY };
+
+  it('shows a file the changeset replaced as the move it made: the file it continues against what the changeset left, the thread on the newer side', () => {
+    expect(appliedComparison(applied, replaced, movedInReview)).toEqual({
+      original: { kind: 'revision', revision: { revisionId: 5, repository: REPOSITORY }, fileName: 'src/Score.cs' },
+      modified: revision(25),
+      side: 'additions',
+      line: 12,
+      fileName: 'src/Player.cs',
+      movedFrom: 'src/Score.cs',
+    });
+    expect(contextDescription(applied, 'since', { movedFrom: 'src/Score.cs' })).toBe('Line 12, after changeset 15 made it a move of Score.cs');
+  });
+
+  it('compares a replaced file as any other when the review shows no move into it, saying why the two read the same', () => {
+    const plain = { original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs', identicalText: 'Changeset 15 replaced it with a file of the same contents, whose history is another' };
+    expect(appliedComparison(applied, replaced, SHOWN)).toEqual(plain);
+    expect(appliedComparison(applied, replaced, null)).toEqual(plain);
+    expect(appliedComparison(applied, replaced, { ...movedInReview, baseRevisionId: -1 })).toEqual(plain);
+  });
+
   it("has nothing to compare when that changeset didn't change the file (marked applied by hand)", () => {
     expect(appliedComparison(applied, null)).toBeNull();
     expect(contextMissingText(applied, 'since')).toBe("Changeset 15 didn't change this file");
     expect(contextMissingText(applied, 'commented')).toBe("Couldn't find the diff it was written on");
+  });
+});
+
+describe('replacedHistoryOf', () => {
+  const applied = threadOn(20, { appliedInChangeset: 15 });
+  const replaced: ShownEntry = { ...SHOWN, baseRevisionId: 20, revisionId: 25, replaced: true };
+  const whole = { view: { kind: 'whole' } } as const;
+
+  it("finds what a replaced file was before the review in the review's whole diff, the one on screen or the Changes tab's", () => {
+    expect(replacedHistoryOf(BRANCH, applied, 'since', null, replaced)).toEqual({ kind: 'read', target: { kind: 'branch', branch: '/main/task' } });
+    expect(replacedHistoryOf(BRANCH, applied, 'since', whole, replaced)).toEqual({ kind: 'onScreen' });
+  });
+
+  it('reads nothing more for a file the changeset changed, a thread not applied, or the view as commented', () => {
+    expect(replacedHistoryOf(BRANCH, applied, 'since', null, { ...replaced, replaced: undefined })).toEqual({ kind: 'none' });
+    expect(replacedHistoryOf(BRANCH, applied, 'since', null, null)).toEqual({ kind: 'none' });
+    expect(replacedHistoryOf(BRANCH, threadOn(20), 'since', null, replaced)).toEqual({ kind: 'none' });
+    expect(replacedHistoryOf(BRANCH, applied, 'commented', null, replaced)).toEqual({ kind: 'none' });
   });
 });
 
