@@ -193,7 +193,7 @@ server, the merge page finishing a task (docs/features/merge.md "Finishing a tas
 
 - **Merge into main…** (the ellipsis as the merge page confirms it) is offered for an **Open** one whose branch is
   named, one rule for the card's footer and the row's and the page's menus (`mergeOfRequest`; the menus'
-  `mergeIntoOf`, the `mergeInto` word in the `merge` group). It opens the merge page into the request's destination, not the branch's parent
+  `mergeIntoOf`, the `mergeInto` word in the `merge` group; the top bar's card once reviewed). It opens the merge page into the request's destination, not the branch's parent
   (`openMergeRequestMerge`), with the request named under the comment and its title starting the comment.
 - **The button never waits for the review.** Primary once ready (`mergeReadiness`), the default quiet button before,
   same place, same words: no warning color, no "anyway". The server's merge rules are the authority; blocking until
@@ -269,8 +269,9 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   - **Hovering** shows a card (`mergeRequestChipOf` decides every line and action; the component maps them): the
     title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge
     card's words (`reviewSectionOf`) with the reviewers' stack (none while nobody reviews it), and what's still open
-    ("2 change requests and 1 question open", `openItemsLine`); then its actions, **Open** today: an action joins as
-    one more `TopBarRequestAction` entry. The card opens on hover only, so a keyboard doesn't reach it: Enter on the
+    ("2 change requests and 1 question open", `openItemsLine`); then its actions (`TopBarRequestAction`): **Open**,
+    and, first, **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the workspace's branch as the
+    source; the card never offers the quiet button the merge card does, as it only says where things stand). The card opens on hover only, so a keyboard doesn't reach it: Enter on the
     chip opens the page, which shows all of it. A screen reader hears what the chip shows ("Merge request 12 · Open
     into /main · Under review: Dash"), no status where it shows none.
   - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
