@@ -177,14 +177,16 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
 
 ## The merge card (a list of sections)
 
-After the timeline, before the comment field, in the conversation's column and not sticky (pinned to the bottom it
+After the description, before the timeline, in the conversation's column and not sticky (pinned to the bottom it
 took the conversation's height in a short window), a merge request's card (`MergeRequestCard`) says where it stands
 and what's next. `mergeCardOf` decides every line, label and action; the component renders any list it gets.
 
 - **An ordered list of sections** (`MergeCardSection`: an id, a tone, a title, a detail, optional rows, an optional
   action at its right), then one footer action and a ⋯ menu (`MergeCard`). Each section leads with a disc: the
-  Reviewed color's check (`passed`), the Rework color's cross (`failed`), a quiet dot (`pending`, `neutral`), or, for
-  a section that is the state itself, the state's glyph in its color. With no footer the ⋯ ends the last section,
+  Reviewed color's check (`passed`), the Rework color's cross (`failed`), a quiet dot (`pending`, `neutral`); for
+  a section that is the state itself, the state's glyph in its color. The disc is the verdict, whether the section
+  holds the merge back; the review's detail leads with the review status's icon ("👍 1 approving review",
+  `MergeCardSection.status`, `ReviewDetailLine`), the icon the branch's chip shows, so the two read as one. With no footer the ⋯ ends the last section,
   rather than a footer holding only it.
 - **Draft**: "Draft" / "Not ready to review or merge yet"; footer **Ready for review** (primary); ⋯ Close merge request.
 - **Open**: the review section (`reviewSectionOf`, from the reviewers the review was read with, a group counting as
@@ -405,3 +407,11 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   The same read of the branch's reviews, no command of its own.
 - **The palette's** `cr:` rows show the state's glyph and "→ /main" (`codeReviewResult`, `codeReviewResultDetail`).
 - **Links** to a merge request are written `…/merge-requests/12` (docs/features/deep-links.md); both words open either.
+
+## Where the merge card sits, and why
+
+At the top of the conversation, after the description: what it is, then where it stands and what's next, then its
+history. The page's header already shows the state and the review's badges; the description says what is asked. At
+the bottom, after the timeline (as pull requests long had it), a long conversation hid where the request stood; above
+the description, it came before the user knew what the request was. A long description pushes it down: folding long
+descriptions is the answer if that bites, not moving the card above them.

@@ -31,6 +31,12 @@ const actionLabels = (card: ReturnType<typeof mergeCardOf>) => ({
 });
 
 describe('reviewSectionOf', () => {
+  it("names the review status once someone reviews it, for its icon before the detail, as the branch's chip shows it", () => {
+    expect(reviewSectionOf([reviewer('ana', 'Reviewed')], 'Reviewed').status).toBe('Reviewed');
+    expect(reviewSectionOf([reviewer('ana', 'Rework required')], 'Rework required').status).toBe('Rework required');
+    expect(reviewSectionOf([], 'Under review').status).toBeUndefined();
+  });
+
   it('asks for a reviewer when there is none', () => {
     expect(reviewSectionOf([], 'Under review')).toEqual({
       id: 'review',

@@ -1,0 +1,6 @@
+/* A section's detail, the review's status icon first, on the text's middle (`ReviewDetailLine`). */
+.line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}

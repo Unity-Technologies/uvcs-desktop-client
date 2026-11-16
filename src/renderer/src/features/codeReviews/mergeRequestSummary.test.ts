@@ -26,7 +26,7 @@ describe('mergeRequestSummaryOf', () => {
   });
 
   it('says where an Open one’s review stands, in the merge card’s words, with nothing to do from a summary', () => {
-    expect(mergeRequestSummaryOf(request('Open', { status: 'Reviewed', reviewers: [ANA_REVIEWED] })).review).toEqual({ tone: 'passed', title: 'Changes reviewed', detail: '1 approving review' });
+    expect(mergeRequestSummaryOf(request('Open', { status: 'Reviewed', reviewers: [ANA_REVIEWED] })).review).toEqual({ tone: 'passed', status: 'Reviewed', title: 'Changes reviewed', detail: '1 approving review' });
     expect(mergeRequestSummaryOf(request('Open', { reviewers: [] })).review).toEqual({ tone: 'pending', title: 'Review required', detail: 'At least 1 approving review is required' });
   });
 

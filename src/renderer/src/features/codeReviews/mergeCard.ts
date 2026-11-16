@@ -36,6 +36,11 @@ export interface MergeCardSection {
   tone: MergeCardTone;
   /** The state's glyph in its color, instead of the tone's disc: a section that is the state itself. */
   state?: MergeRequestState;
+  /**
+   * The review's section: its status's icon in its color before the detail ("👍 1 approving review"), as the branch's
+   * chip shows the review (`REVIEW_STATUS_ICONS`), while the disc says whether it holds the merge back.
+   */
+  status?: CodeReviewStatus;
   title: string;
   detail?: string;
   /** Lines under the detail: what's still open on the review. */
@@ -113,11 +118,11 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
   const count = (each: CodeReviewStatus): number => reviewers.filter((reviewer) => reviewer.status === each).length;
   switch (status) {
     case 'Reviewed':
-      return { id: 'review', tone: 'passed', title: 'Changes reviewed', detail: pluralize(count('Reviewed'), 'approving review') };
+      return { id: 'review', tone: 'passed', status, title: 'Changes reviewed', detail: pluralize(count('Reviewed'), 'approving review') };
     case 'Rework required':
-      return { id: 'review', tone: 'failed', title: 'Changes required', detail: `${pluralize(count('Rework required'), 'review')} requesting changes` };
+      return { id: 'review', tone: 'failed', status, title: 'Changes required', detail: `${pluralize(count('Rework required'), 'review')} requesting changes` };
     case 'Under review':
-      return { id: 'review', tone: 'pending', title: 'Changes under review', detail: pluralize(count('Under review'), 'pending review') };
+      return { id: 'review', tone: 'pending', status, title: 'Changes under review', detail: pluralize(count('Under review'), 'pending review') };
   }
 }
 

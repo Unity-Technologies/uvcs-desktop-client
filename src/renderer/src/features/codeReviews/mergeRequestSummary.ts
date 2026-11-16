@@ -18,7 +18,7 @@ export interface MergeRequestSummary {
   verb: string;
   destination: string;
   /** Where its review stands, in the merge card's words (`reviewSectionOf`), with nothing to do from here. */
-  review?: Pick<MergeCardSection, 'tone' | 'title' | 'detail'>;
+  review?: Pick<MergeCardSection, 'tone' | 'status' | 'title' | 'detail'>;
 }
 
 export function mergeRequestSummaryOf(request: MergeRequestReview): MergeRequestSummary {
@@ -43,6 +43,6 @@ function showsReview({ mergeRequest, status }: MergeRequestReview): boolean {
 }
 
 function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<MergeRequestSummary['review']> {
-  const { tone, title, detail } = reviewSectionOf(reviewers, status);
-  return { tone, title, ...(detail && { detail }) };
+  const section = reviewSectionOf(reviewers, status);
+  return { tone: section.tone, ...(section.status && { status: section.status }), title: section.title, ...(section.detail && { detail: section.detail }) };
 }
