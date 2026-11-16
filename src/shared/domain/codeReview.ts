@@ -79,6 +79,11 @@ export interface CodeReviewFilter {
    * (`useBranchChangeRequests`). `cm` fails for a branch that doesn't exist.
    */
   targetBranch?: string;
+  /**
+   * Only the reviews of these branches, by object id, at most `BRANCH_REVIEWS_BLOCK`: the branches a view shows,
+   * asked for in blocks (`branchReviewsLoader`).
+   */
+  targetBranchIds?: readonly number[];
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */
   owners?: readonly string[];
   /** Only reviews the user is one of the reviewers of. */
@@ -98,10 +103,17 @@ export interface CodeReviewFilter {
 }
 
 /**
- * The newest reviews the palette and the branch chips read (`reviewSummariesQuery`): enough for the reviews in flight,
- * read rarely; an older one is found by its title or number (`usePaletteServerSearch`).
+ * The newest reviews the palette reads (`reviewSummariesQuery`): enough for the reviews in flight, read rarely; an
+ * older one is found by its title or number (`usePaletteServerSearch`).
  */
 export const NEWEST_CODE_REVIEWS = 300;
+
+/**
+ * The most branches one read of their reviews asks for (`CodeReviewFilter.targetBranchIds`). The server answers their
+ * `targetid` conditions ORed in one scan of the reviews: 50 cost what one does (about 1.2 s with `cm` starting, on a
+ * repository of ~7,000 reviews), so a block is as wide as the rows a view shows and a margin.
+ */
+export const BRANCH_REVIEWS_BLOCK = 50;
 
 /**
  * Why the signed-in user gets a review's emails or doesn't, as `cm codereview subscription` names it: they wrote it

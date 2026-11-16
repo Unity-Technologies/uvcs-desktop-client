@@ -17,8 +17,11 @@ const JOINED_WITH_OR = /\.join\(\s*(['"`])\s*or\s*\1\s*\)/i;
 /** A literal comparing an id and ORing another condition, e.g. `where id = ${a} or id = ${b}`. */
 const ORED_ID_LITERAL = /['"`][^'"`\n]*\bid\s*=\s*[^'"`\n]*\bor\b[^'"`\n]*['"`]/i;
 
-/** Owners are names picked by hand, a few at most (`ownersCondition`): ORing them is one bounded scan, not a lookup per id. */
-const OWNERS_CONDITION = /\bowner = |equalsCondition\('owner'/;
+/**
+ * ORs that are one bounded scan, not a lookup per id: owners, names picked by hand, a few at most (`ownersCondition`);
+ * a review's branch targets, a block at most, which the server matches in one scan (`branchTargetsCondition`).
+ */
+const ONE_SCAN_CONDITION = /\bowner = |equalsCondition\('owner'|`targetid = \$\{/;
 
 function oredIdLookups(source: string): string[] {
   // Most sources hold neither: matched whole first, so only the few that do are read line by line.
@@ -28,7 +31,7 @@ function oredIdLookups(source: string): string[] {
     if (ORED_ID_LITERAL.test(line)) return true;
     if (!JOINED_WITH_OR.test(line)) return false;
     // The conditions joined are built on the line itself or the one before.
-    return !OWNERS_CONDITION.test(`${lines[index - 1] ?? ''}\n${line}`);
+    return !ONE_SCAN_CONDITION.test(`${lines[index - 1] ?? ''}\n${line}`);
   });
 }
 
@@ -40,6 +43,7 @@ describe('no ORed id lookups', () => {
     expect(oredIdLookups("const where = `where name = '${name}'`;")).toEqual([]);
     expect(oredIdLookups("const each = owners.map((owner) => `owner = '${owner}'`);\nreturn `(${each.join(' or ')})`;")).toEqual([]);
     expect(oredIdLookups("const each = owners.map((owner) => equalsCondition('owner', owner));\nreturn `(${each.join(' or ')})`;")).toEqual([]);
+    expect(oredIdLookups("const targets = ids.map((id) => `targetid = ${id}`);\nreturn `(${targets.join(' or ')})`;")).toEqual([]);
   });
 
   it('no source builds one', () => {

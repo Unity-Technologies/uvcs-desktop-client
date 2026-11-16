@@ -6,6 +6,7 @@ import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
+import { branchTargetsCondition } from '../cm/branchTargetsCondition';
 import { CmError } from '../cm/CmError';
 import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs, recordMergedArgs } from '../cm/mergeRequestArgs';
 import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
@@ -28,6 +29,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
       // A branch's name can't hold a quote, which `cm find` can't read: its spec is matched exactly.
       ...(filter.targetBranch !== undefined ? [equalsCondition('target', `br:${filter.targetBranch}`)] : []),
+      ...(filter.targetBranchIds !== undefined ? [branchTargetsCondition(filter.targetBranchIds)] : []),
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
