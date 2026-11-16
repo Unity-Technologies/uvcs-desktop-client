@@ -81,7 +81,8 @@ describe('contextComparisonState', () => {
     it('compares it as any other file when that read fails: the move is a detail, never a dead end', () => {
       const state = contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { error: new Error('offline') } } });
 
-      expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'deletions', movedFrom: undefined } });
+      expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'deletions' } });
+      expect(state.kind === 'comparison' && state.comparison.movedFrom).toBeUndefined();
     });
   });
 });

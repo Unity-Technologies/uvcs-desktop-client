@@ -3,6 +3,7 @@ import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
+import { fileNameOf } from '../../../lib/text';
 import { reviewDiffTarget } from '../reviewTarget';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
@@ -21,10 +22,14 @@ export interface ContextComparison {
   line: number;
   /** What the code is highlighted by. */
   fileName: string;
+  /** Where the file was moved from, when the view shows the move a replaced file made (`appliedComparison`). */
+  movedFrom?: string;
+  /** Why both sides read the same, when the view knows: a file replaced by another with its contents. */
+  identicalText?: string;
 }
 
 /** The file as a diff names it: its revisions, its path, its repository. */
-export type ShownEntry = Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId' | 'repository'>;
+export type ShownEntry = Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId' | 'repository' | 'replaced'>;
 
 /** The file's diff the dialog was opened from, and which of the review's diffs it is; none from elsewhere (the conversation). */
 export interface OnScreen {
@@ -51,11 +56,7 @@ export interface ContextRequest {
 export type ContextEntry = { kind: 'onScreen' } | { kind: 'read'; target: DiffTarget } | { kind: 'none' };
 
 export function contextEntryOf(review: CodeReviewTarget, thread: LineThread, view: ContextView, onScreen: Pick<OnScreen, 'view'> | null): ContextEntry {
-  const whole = (): ContextEntry => {
-    if (onScreen?.view.kind === 'whole') return { kind: 'onScreen' };
-    const target = reviewDiffTarget(review);
-    return target ? { kind: 'read', target } : { kind: 'none' };
-  };
+  const whole = (): ContextEntry => wholeReviewEntry(review, onScreen);
   // Applied, what the changeset that applied it did to the file; else what it became in the review's newest version:
   // the whole review's diff's, never a changeset's.
   if (view === 'since') {
@@ -66,6 +67,22 @@ export function contextEntryOf(review: CodeReviewTarget, thread: LineThread, vie
   if (written.kind === 'whole') return whole();
   if (onScreen?.view.kind === 'changeset' && onScreen.view.changesetId === written.changesetId) return { kind: 'onScreen' };
   return { kind: 'read', target: { kind: 'changeset', changesetId: written.changesetId } };
+}
+
+/**
+ * Where "How it was applied" finds what a file the applying changeset replaced (`applied`, its entry there) was before
+ * the review: the review's whole diff, which names the file a move made it continue (`appliedComparison`). Read only
+ * then, and the Changes tab's read, so it costs no command of its own there.
+ */
+export function replacedHistoryOf(review: CodeReviewTarget, thread: LineThread, view: ContextView, onScreen: Pick<OnScreen, 'view'> | null, applied: ShownEntry | null): ContextEntry {
+  if (view !== 'since' || settlingChangeset(thread) === undefined || !applied?.replaced) return { kind: 'none' };
+  return wholeReviewEntry(review, onScreen);
+}
+
+function wholeReviewEntry(review: CodeReviewTarget, onScreen: Pick<OnScreen, 'view'> | null): ContextEntry {
+  if (onScreen?.view.kind === 'whole') return { kind: 'onScreen' };
+  const target = reviewDiffTarget(review);
+  return target ? { kind: 'read', target } : { kind: 'none' };
 }
 
 /** The thread's file among the entries of a diff: by its path then, or the one it moved from. */
@@ -103,22 +120,33 @@ export function sinceComparison(thread: LineThread, repository: string, newest: 
  * the version commented on against what that changeset left, the thread on the older side; that changeset's own diff
  * when the comment is on the version it made, the thread on the newer side. None when it didn't change the file (the
  * request marked applied by hand, `contextMissingText`).
+ *
+ * A file that changeset replaced (`replaced`: "make it a move of the file it replaces", so its history follows that
+ * one's) usually kept its contents: compared with the version commented on, it read "No content changes". When the
+ * review's whole diff (`history`, `replacedHistoryOf`) shows the file moved from another, the view shows that move:
+ * the other file before the review against what the changeset left, the thread on the newer side at its line, which a
+ * replacement keeps. Otherwise it compares as any other file, saying why the two may read the same.
  */
-export function appliedComparison(thread: LineThread, applied: ShownEntry | null): ContextComparison | null {
+export function appliedComparison(thread: LineThread, applied: ShownEntry | null, history: ShownEntry | null = null): ContextComparison | null {
   if (!applied) return null;
   const { revisionId, line } = thread.root.anchor;
   const fileName = applied.path;
-  if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', line, fileName };
-  return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', line, fileName };
+  if (applied.replaced && history?.oldPath !== undefined && history.baseRevisionId !== -1) {
+    return { original: olderSideOf(history), modified: newerSideOf(applied), side: 'additions', line, fileName, movedFrom: history.oldPath };
+  }
+  const identicalText = applied.replaced ? `Changeset ${settlingChangeset(thread)} replaced it with a file of the same contents, whose history is another` : undefined;
+  const why = identicalText === undefined ? {} : { identicalText };
+  if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', line, fileName, ...why };
+  return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', line, fileName, ...why };
 }
 
 /**
  * What a view compares, once its file's entry is found (`contextEntryOf`): none without the diff it needs (the file
  * isn't in it, or the review's target is unknown).
  */
-export function comparisonOf(thread: LineThread, view: ContextView, repository: string, entry: ShownEntry | null): ContextComparison | null {
+export function comparisonOf(thread: LineThread, view: ContextView, repository: string, entry: ShownEntry | null, history: ShownEntry | null = null): ContextComparison | null {
   if (view === 'commented') return entry ? commentedComparison(thread, entry) : null;
-  return settlingChangeset(thread) === undefined ? sinceComparison(thread, repository, entry) : appliedComparison(thread, entry);
+  return settlingChangeset(thread) === undefined ? sinceComparison(thread, repository, entry) : appliedComparison(thread, entry, history);
 }
 
 /** What a view says when it has nothing to compare (`comparisonOf`). */
@@ -141,12 +169,14 @@ export function contextViewLabels(thread: LineThread): Record<ContextView, strin
 /**
  * What a view shows, under the dialog's title: the line and what it's compared with. A request marked applied in a
  * changeset that didn't change its file (`fileInChangeset` false) is said to be marked so: nothing there applied it.
+ * One that changeset applied by making the file a move of another (`movedFrom`) says so.
  */
-export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true }: { fileInChangeset?: boolean } = {}): string {
+export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true, movedFrom }: { fileInChangeset?: boolean; movedFrom?: string } = {}): string {
   const { line } = thread.root.anchor;
   if (view === 'commented') return `Line ${line} in the diff it was written on`;
   const appliedIn = settlingChangeset(thread);
   if (appliedIn === undefined) return `Line ${line} as it was, against the newest version`;
+  if (movedFrom !== undefined) return `Line ${line}, after changeset ${appliedIn} made it a move of ${fileNameOf(movedFrom)}`;
   if (thread.state.kind === 'answered') return `Line ${line} as it was, against changeset ${appliedIn}, which answered it`;
   return fileInChangeset ? `Line ${line} as it was, against changeset ${appliedIn}, which applied it` : `Line ${line}, marked applied in changeset ${appliedIn}`;
 }
