@@ -5,7 +5,8 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../api/queryKeys';
 import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
-import { showQuery, type QueryProbe } from '../../testing/queryProbes';
+import { mergeConflictsKey } from '../../features/codeReviews/mergeConflictsKey';
+import { readQuery, showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { createQueryClient, IMMUTABLE_QUERY } from '../queryClient';
 import { refreshShownIn } from './refreshShown';
 
@@ -82,5 +83,32 @@ describe('refreshShown', () => {
       pendingChanges: 2,
       branches: 2,
     });
+  });
+});
+
+describe("refreshShown with an open merge request's page in front", () => {
+  /** The page, and its destination's branch shown elsewhere too (the top bar's, the workspace being on it). */
+  async function showOpenRequest({ conflictsChecked }: { conflictsChecked: boolean }): Promise<QueryProbe> {
+    const review: CodeReview = { ...reviewOf({ kind: 'branch', branch: '/main/task-12' }), mergeRequest: { state: 'Open', destination: '/main' } };
+    await showQuery(client, codeReviewKey(place, 7), { answer: () => review });
+    const destination = await showQuery(client, key('branches', 'byName', '/main'));
+    if (conflictsChecked) await readQuery(client, mergeConflictsKey(place, '/main/task-12', 3, '/main', 19), { meta: IMMUTABLE_QUERY });
+    return destination;
+  }
+
+  it('reads the destination branch again once its conflicts were checked, so a check-in there checks them again', async () => {
+    const destination = await showOpenRequest({ conflictsChecked: true });
+
+    await refreshShownIn(client, place, reviewPage);
+
+    expect(destination.reads()).toBe(2);
+  });
+
+  it('leaves the destination branch alone when its conflicts were never checked', async () => {
+    const destination = await showOpenRequest({ conflictsChecked: false });
+
+    await refreshShownIn(client, place, reviewPage);
+
+    expect(destination.reads()).toBe(1);
   });
 });
