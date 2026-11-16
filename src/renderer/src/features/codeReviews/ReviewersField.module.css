@@ -24,27 +24,14 @@
   white-space: nowrap;
 }
 
-.remove {
-  display: inline-flex;
+/* The small ghost `IconButton`, shrunk to fit the chip's height (over `Button`'s own small size). */
+.chip button.remove {
   flex: none;
-  align-items: center;
-  justify-content: center;
   width: 18px;
   height: 18px;
-  padding: 0;
-  border: none;
   border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
 }
 
-.remove:hover {
-  background: var(--bg-active);
-  color: var(--text-primary);
-}
-
-.remove:focus-visible,
 .removeAll:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
