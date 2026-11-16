@@ -17,6 +17,6 @@ export function refreshShown(place: Place): Promise<void> {
 
 /** `refreshShown` on a given client, with this page in front. */
 export function refreshShownIn(client: QueryClient, place: Place, frontPage: Page | undefined): Promise<void> {
-  const reviewTargetOf = (reviewId: number) => client.getQueryData<CodeReview>(codeReviewKey(place, reviewId))?.target;
-  return invalidatePlaceIn(client, place, pageRefreshScope(frontPage, reviewTargetOf));
+  const reviewOf = (reviewId: number) => client.getQueryData<CodeReview>(codeReviewKey(place, reviewId));
+  return invalidatePlaceIn(client, place, pageRefreshScope(frontPage, reviewOf));
 }

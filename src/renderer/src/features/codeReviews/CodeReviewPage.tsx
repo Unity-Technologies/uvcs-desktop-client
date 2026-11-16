@@ -156,7 +156,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
   const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
   // What Refresh reads again here (`pageRefreshScope`): its icon spins while any of it is read.
-  const shownByThePage = isShownByCodeReviewPage(review.id, review.target);
+  const shownByThePage = isShownByCodeReviewPage(review.id, review.target, review.mergeRequest?.destination);
   const fetching = useIsFetching({ queryKey: placeKey(place), predicate: ({ queryKey }) => shownByThePage(queryKey) }) > 0;
   const headline = reviewHeadline(review);
   // A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip.
