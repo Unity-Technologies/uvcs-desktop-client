@@ -2,7 +2,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
-import { mergeCardOf, mergeReadiness, openItemsLine, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });
 
@@ -65,6 +65,15 @@ describe('openItemsLine', () => {
     expect(openItemsLine({ changeRequests: 1, questions: 0 })).toBe('1 change request open');
     expect(openItemsLine({ changeRequests: 0, questions: 2 })).toBe('2 questions open');
     expect(openItemsLine({ changeRequests: 0, questions: 0 })).toBeUndefined();
+  });
+});
+
+describe('openItemsIn', () => {
+  const thread = (kind: 'changeRequest' | 'question' | 'comment') => ({ root: { kind } });
+
+  it('counts the change requests and the questions still open among the open threads', () => {
+    expect(openItemsIn([thread('changeRequest'), thread('question'), thread('changeRequest')])).toEqual({ changeRequests: 2, questions: 1 });
+    expect(openItemsIn([])).toEqual({ changeRequests: 0, questions: 0 });
   });
 });
 
