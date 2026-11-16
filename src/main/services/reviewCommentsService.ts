@@ -21,12 +21,13 @@ import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 export function createReviewCommentsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): ReviewCommentsApi {
   /**
    * A merge request's notes name branches by object id (a destination changed, its branch hidden): every id of the
-   * conversation named with one lookup (`BranchNamesCache`), none when no note names a branch.
+   * conversation named with one lookup (`BranchNamesCache`), none when no note names a branch. Names that can't be
+   * read leave the branches by id (the events say what they can): the conversation matters more than the names.
    */
   async function withBranchesNamed(place: Place, conversation: ReviewConversation): Promise<ReviewConversation> {
     const ids = [...new Set(conversation.events.flatMap(branchIdsOf))];
     if (ids.length === 0) return conversation;
-    const names = await branchNames.resolve(place, ids);
+    const names = await branchNames.resolve(place, ids).catch(() => new Map<number, string>());
     return { ...conversation, events: conversation.events.map((event) => withBranchNames(event, names)) };
   }
 
