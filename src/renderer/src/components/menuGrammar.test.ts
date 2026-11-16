@@ -514,6 +514,21 @@ describe('Compare with another', () => {
   });
 });
 
+describe('new merge requests and code reviews of a branch', () => {
+  const creating = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'create').map((entry) => entry.label);
+
+  it('offers a merge request above a code review on a branch that can merge somewhere', () => {
+    expect(creating(MENUS.branch!())).toEqual(['New branch from here…', 'New merge request…', 'New code review…']);
+    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/release', parent: '/main' }], '/main'))).toContain('New merge request…');
+    expect(creating(MENUS.repositoryBranch!())).toContain('New merge request…');
+  });
+
+  it("offers only a code review on a top-level branch, which has nowhere to merge, and on several", () => {
+    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main', parent: '' }], '/main/task'))).toEqual(['New branch from here…', 'New code review…']);
+    expect(creating(MENUS.branches!())).toEqual([]);
+  });
+});
+
 /** What a menu shows, flattened with the "Copy" submenu's entries: the words, icons and order people read. */
 function reading(menu: MenuEntry[]): string[] {
   return topEntries(menu).flatMap((entry) => {
