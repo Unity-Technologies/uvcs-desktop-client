@@ -207,6 +207,7 @@ describe('mergeReadiness', () => {
     const checked = (files: number): ConflictsCheck => ({ kind: 'checked', counts: { status: 'ready', files, directories: 0 } });
 
     expect(mergeCardOf(input('Open', { ...reviewed, conflicts: checked(3) })).footer?.primary).toBe(false);
+    expect(mergeCardOf(input('Open', { ...reviewed, conflicts: { kind: 'checked', counts: { status: 'ready', files: 0, directories: 1 } } })).footer?.primary).toBe(false);
     expect(mergeCardOf(input('Open', { ...reviewed, conflicts: checked(0) })).footer?.primary).toBe(true);
     expect(mergeCardOf(input('Open', { ...reviewed, conflicts: { kind: 'unchecked' } })).footer?.primary).toBe(true);
     expect(mergeCardOf(input('Open', { ...reviewed, conflicts: { kind: 'checking' } })).footer?.primary).toBe(true);
@@ -240,17 +241,20 @@ describe('conflictsSectionOf', () => {
     expect(conflictsSectionOf(checked(0, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'passed', title: 'No conflicts with main', detail: 'Merging can be done automatically' });
   });
 
-  it('counts the file conflicts, failed, with Resolve… opening the merge page', () => {
-    expect(conflictsSectionOf(checked(3, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'failed', title: '3 file conflicts with main', detail: 'Resolve them to merge', action: resolve });
-    expect(conflictsSectionOf(checked(1, 0), '/main', mergeInto())).toMatchObject({ title: '1 file conflict with main', detail: 'Resolve it to merge' });
+  // The preview can't tell a file conflict that will merge automatically from one that needs a decision: the merge page
+  // finds out by merging the three revisions' text. So file conflicts alone are pending, not failed.
+  it('counts the file conflicts, pending as some may merge automatically, with Resolve… opening the merge page', () => {
+    expect(conflictsSectionOf(checked(3, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'pending', title: '3 file conflicts with main', detail: 'Some may merge automatically', action: resolve });
+    expect(conflictsSectionOf(checked(1, 0), '/main', mergeInto())).toMatchObject({ title: '1 file conflict with main', detail: 'It may merge automatically' });
   });
 
-  it('counts the directory conflicts', () => {
-    expect(conflictsSectionOf(checked(0, 2), '/main', mergeInto())).toMatchObject({ tone: 'failed', title: '2 directory conflicts with main', action: resolve });
+  it('counts the directory conflicts, failed: they always need a decision', () => {
+    expect(conflictsSectionOf(checked(0, 2), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'failed', title: '2 directory conflicts with main', detail: 'Resolve them to merge', action: resolve });
+    expect(conflictsSectionOf(checked(0, 1), '/main', mergeInto())?.detail).toBe('Resolve it to merge');
   });
 
-  it('counts both', () => {
-    expect(conflictsSectionOf(checked(3, 1), '/main', mergeInto())?.title).toBe('3 file conflicts and 1 directory conflict with main');
+  it('counts both, failed', () => {
+    expect(conflictsSectionOf(checked(3, 1), '/main', mergeInto())).toMatchObject({ tone: 'failed', title: '3 file conflicts and 1 directory conflict with main', detail: 'Resolve them to merge' });
   });
 
   it('names a nested destination by its own name', () => {
