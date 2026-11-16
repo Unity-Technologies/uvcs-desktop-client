@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { cmPlace } from './cmPlace';
-import { mergeRequestDestinationArgs, mergeRequestStateArgs } from './mergeRequestArgs';
+import { mergeRequestDestinationArgs, mergeRequestStateArgs, recordMergedArgs } from './mergeRequestArgs';
 
 const IN_WORKSPACE = cmPlace(workspacePlace('/wk/game'));
 const ON_REPOSITORY = cmPlace(repositoryPlace('game@local'));
@@ -27,5 +27,15 @@ describe('mergeRequestDestinationArgs', () => {
 
   it('names the repository in the spec and the option outside a workspace', () => {
     expect(mergeRequestDestinationArgs(43, '/main', ON_REPOSITORY)).toEqual(['mergerequest', 'edit', '43', '--destination=br:/main@game@local', '--repository=game@local']);
+  });
+});
+
+describe('recordMergedArgs', () => {
+  it('records the request Merged with the changeset its merge made', () => {
+    expect(recordMergedArgs(43, 6, IN_WORKSPACE)).toEqual(['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6']);
+  });
+
+  it('names the repository in the spec and the option outside a workspace', () => {
+    expect(recordMergedArgs(43, 6, ON_REPOSITORY)).toEqual(['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6@game@local', '--repository=game@local']);
   });
 });
