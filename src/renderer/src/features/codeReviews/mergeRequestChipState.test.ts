@@ -40,7 +40,7 @@ describe('mergeRequestChipOf, the chip', () => {
 
   it('shows whether it can merge while Open, as a branch chip does', () => {
     expect(mergeRequestChipOf(request(12, 'Open', { status: 'Rework required' })).verdict).toBe('blocked');
-    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Under review' })).verdict).toBeUndefined();
+    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Under review' })).verdict).toBe('waiting');
   });
 
   it('shows no review status on a draft: it is not up for review yet', () => {
@@ -60,7 +60,7 @@ describe('mergeRequestChipOf, the chip', () => {
   });
 
   it("says no review status where the chip shows none", () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher', status: 'Under review' })).label).toBe('Merge request · Open into /main: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher', status: 'Under review' })).label).toBe('Merge request · Open into /main · Waiting for review: Jump higher');
     expect(mergeRequestChipOf(request(12, 'Draft', { title: 'Jump higher' })).label).toBe('Merge request · Draft into /main: Jump higher');
     expect(mergeRequestChipOf(request(12, 'Merged', { title: 'Jump higher' })).label).toBe('Merge request · Merged into /main: Jump higher');
   });

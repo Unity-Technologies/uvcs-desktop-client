@@ -10,10 +10,10 @@ const request = (state: MergeRequestState, status: CodeReviewStatus) => ({ ...pl
 
 describe("the icon after a row's title", () => {
   it('shows a merge request as by a branch: whether it can merge, its state leading the row', () => {
-    expect(reviewStatusCellOf(request('Open', 'Reviewed'))).toEqual({ kind: 'mergeRequest', verdict: 'ready' });
-    expect(reviewStatusCellOf(request('Open', 'Rework required'))).toEqual({ kind: 'mergeRequest', verdict: 'blocked' });
-    expect(reviewStatusCellOf(request('Open', 'Under review'))).toEqual({ kind: 'mergeRequest' });
-    expect(reviewStatusCellOf(request('Merged', 'Reviewed'))).toEqual({ kind: 'mergeRequest' });
+    expect(reviewStatusCellOf(request('Open', 'Reviewed'))).toEqual({ kind: 'mergeRequest', state: 'Open', verdict: 'ready' });
+    expect(reviewStatusCellOf(request('Open', 'Rework required'))).toEqual({ kind: 'mergeRequest', state: 'Open', verdict: 'blocked' });
+    expect(reviewStatusCellOf(request('Open', 'Under review'))).toEqual({ kind: 'mergeRequest', state: 'Open', verdict: 'waiting' });
+    expect(reviewStatusCellOf(request('Merged', 'Reviewed'))).toEqual({ kind: 'mergeRequest', state: 'Merged' });
   });
 
   it('shows a code review by its review status', () => {
