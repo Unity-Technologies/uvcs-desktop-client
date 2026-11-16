@@ -1,6 +1,7 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
+import { branchLabel } from '../../lib/branchLabels';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -9,9 +10,10 @@ import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
  */
 export type MergeCardTone = 'passed' | 'failed' | 'pending' | 'neutral';
 
-/** What a button of the card does; `MergeRequestCard` runs it. */
-export type MergeCardAction = { label: string; primary?: boolean } & (
+/** What a button of the card does; `MergeRequestCard` runs it. Disabled when it says why. */
+export type MergeCardAction = { label: string; primary?: boolean; disabledReason?: string } & (
   | { kind: 'move'; move: MergeRequestMove }
+  | { kind: 'merge'; source: string }
   | { kind: 'addReviewers' }
   | { kind: 'setBranchHidden'; branch: string; hidden: boolean }
   | { kind: 'switchTo'; branch: string }
@@ -59,6 +61,8 @@ export interface MergeCardInput {
   sourceBranch?: Pick<Branch, 'isHidden'> | null;
   /** The branch the window's workspace is on; none without a workspace, or on no branch. */
   workspaceBranch?: string;
+  /** Whether the window has a workspace: the merge page runs in one. */
+  inWorkspace: boolean;
 }
 
 export interface OpenItems {
@@ -76,8 +80,10 @@ export function mergeCardOf(input: MergeCardInput): MergeCard {
         footer: { ...moves[0]!, primary: true },
         menu: moves.slice(1),
       };
-    case 'Open':
-      return { sections: [openReviewSection(input)], menu: moves };
+    case 'Open': {
+      const sections = [openReviewSection(input)];
+      return { sections, ...mergeFooter(input, mergeReadiness(sections)), menu: moves };
+    }
     case 'Merged':
       return { sections: [mergedSection(input)], ...switchToDestination(input), menu: [] };
     case 'Closed':
@@ -117,9 +123,9 @@ export function openItemsLine({ changeRequests, questions }: OpenItems): string 
 }
 
 /**
- * Whether the request is ready to merge: every section passed. Nothing follows it yet: it is the rule the card's Merge
- * action will be made primary by, so that a section added later (a check failed, a conflict) holds it back as an
- * unfinished review does. It will never block a merge: the server's merge rules decide.
+ * Whether the request is ready to merge: every section passed. The card's Merge is primary then, and quiet before, so
+ * that a section added later (a check failed, a conflict) holds it back as an unfinished review does. It never blocks
+ * a merge: the server's merge rules decide.
  */
 export function mergeReadiness(sections: readonly MergeCardSection[]): boolean {
   return sections.length > 0 && sections.every((section) => section.tone === 'passed');
@@ -140,6 +146,17 @@ function mergedSection({ mergeRequest, source, mergedChangeset, sourceBranch, wo
     ...(mergedChangeset !== undefined && { changeset: mergedChangeset }),
     ...(hide && { action: hide }),
   };
+}
+
+/**
+ * Merge into the destination, on the merge page: primary once ready, else quiet, never disabled for the review (the
+ * server's merge rules decide). Disabled only where there's no merge page, a window with no workspace. None when the
+ * branch's name couldn't be read.
+ */
+function mergeFooter({ mergeRequest, source, inWorkspace }: MergeCardInput, ready: boolean): Pick<MergeCard, 'footer'> {
+  if (source === undefined) return {};
+  const footer: MergeCardAction = { kind: 'merge', source, label: `Merge into ${branchLabel(mergeRequest.destination)}…`, primary: ready };
+  return { footer: inWorkspace ? footer : { ...footer, disabledReason: 'Open a workspace of this repository to merge' } };
 }
 
 /** The workspace still on the merged branch: the next step is its destination. */
