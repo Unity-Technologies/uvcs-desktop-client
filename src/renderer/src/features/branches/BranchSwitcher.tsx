@@ -17,9 +17,7 @@ import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranchGuids } from './recentBranches';
 import { useBranches } from './useBranches';
 
-/**
- * The branch switcher's list (`branchSwitcherGroups`): picking a branch switches the workspace to it.
- */
+/** The branch switcher's list (`branchSwitcherGroups`): picking a branch switches the workspace to it. */
 export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
   const branchesQuery = useBranches();
   const branches = branchesQuery.data;

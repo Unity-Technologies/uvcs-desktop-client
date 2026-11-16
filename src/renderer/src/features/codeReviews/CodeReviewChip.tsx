@@ -9,11 +9,6 @@ import { MergeVerdictIcon } from './MergeVerdictIcon';
 import styles from './CodeReviewStatusBadge.module.css';
 import chipStyles from './CodeReviewChip.module.css';
 
-/**
- * A small chip for a row whose branch has a code review or a merge request (`reviewChipOf`): a merge request's state,
- * then its review's status; a code review's status. Clicking it opens the review. Hovering a merge request's shows its
- * summary (`MergeRequestSummaryCard`); a code review's, a tooltip. `iconOnly` where room is short.
- */
 interface CodeReviewChipProps {
   review: CodeReviewSummary;
   iconOnly?: boolean;
@@ -23,6 +18,11 @@ interface CodeReviewChipProps {
   insideButton?: boolean;
 }
 
+/**
+ * A small chip for a row whose branch has a code review or a merge request (`reviewChipOf`): a merge request's state,
+ * then its review's status; a code review's status. Clicking it opens the review. Hovering a merge request's shows its
+ * summary (`MergeRequestSummaryCard`); a code review's, a tooltip. `iconOnly` where room is short.
+ */
 export function CodeReviewChip({ review, iconOnly = false, beforeOpen, insideButton = false }: CodeReviewChipProps) {
   const chip = reviewChipOf(review, iconOnly);
   const Element = insideButton ? 'span' : 'button';
