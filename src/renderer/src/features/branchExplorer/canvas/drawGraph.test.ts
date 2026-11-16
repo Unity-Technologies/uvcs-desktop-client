@@ -84,6 +84,7 @@ const palette: GraphPalette = {
   badgeShadow: INK,
   mergeLinks: { interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
   reviewStatus: { 'Under review': INK, Reviewed: INK, 'Rework required': INK },
+  mergeRequestState: { Draft: INK, Open: INK, Merged: INK, Closed: INK },
   avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, INK])) as GraphPalette['avatars'],
   avatarLetter: INK,
   fontUi: 'sans-serif',
@@ -140,7 +141,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     search,
     searchQuery,
     searchPing: 0.3,
-    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane' })]]),
+    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane', mergeRequest: { state: 'Draft', destination: '/main' } })]]),
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),

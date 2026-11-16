@@ -6,8 +6,8 @@ import {
   GitBranch,
   GitCommitVertical,
   GitGraph,
+  GitPullRequest,
   Lock,
-  MessageSquareCode,
   RefreshCcw,
   Tag,
   Tags,
@@ -64,7 +64,7 @@ const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
   { id: 'labels', label: 'Labels', icon: Tag, group: 'History', component: LabelsView },
   { id: 'shelves', label: 'Shelves', icon: Archive, group: 'History', component: ShelvesView },
   { id: 'attributes', label: 'Attributes', icon: Tags, group: 'History', component: AttributesView },
-  { id: 'codeReviews', label: 'Code reviews', icon: MessageSquareCode, group: 'Collaborate', component: CodeReviewsView, useBadge: useWaitingForMeBadge },
+  { id: 'codeReviews', label: 'Merge requests', icon: GitPullRequest, group: 'Collaborate', component: CodeReviewsView, useBadge: useWaitingForMeBadge },
   { id: 'locks', label: 'Locks', icon: Lock, group: 'Collaborate', component: LocksView },
   { id: 'sync', label: 'Sync', icon: RefreshCcw, group: 'Collaborate', component: SyncView },
 ];

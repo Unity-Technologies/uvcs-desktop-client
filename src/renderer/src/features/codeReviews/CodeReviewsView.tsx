@@ -1,4 +1,4 @@
-import { CircleDot, GitPullRequestArrow, Inbox, MessageSquareCode, MessageSquarePlus, UserCheck } from 'lucide-react';
+import { CircleDot, GitPullRequest, GitPullRequestArrow, Inbox, MessageSquarePlus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -30,28 +30,37 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, type MergeRequestStateFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
+import { reviewNoun } from './mergeRequestState';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
 const itself = (name: string): string => name;
 
+/** The State chip's choices: Active (the code reviews and merge requests still to merge) is where it rests. */
+const STATE_CHOICES: { value: MergeRequestStateFilter; label: string }[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'merged', label: 'Merged' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'all', label: 'All' },
+];
+
 export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, reviewers, waitingForMe, openedByMe, update } = filters;
+  const { text: search, people, since, status, mergeRequestState, reviewers, waitingForMe, openedByMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewers: queriedReviewers, waitingForMe, openedByMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, mergeRequestState, reviewers: queriedReviewers, waitingForMe, openedByMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
   const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
   const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
@@ -62,12 +71,13 @@ export function CodeReviewsView() {
       (reviews ?? []).filter(
         (review) =>
           matchesPeople(people, me, review.owner) &&
+          matchesState(review, mergeRequestState) &&
           matchesReviewers(review, reviewers, me) &&
           matchesWaiting(review, waitingForMe, me) &&
           matchesOpenedByMe(review, openedByMe, me) &&
           matchesWordFilter(reviewFilterTexts(review), search),
       ),
-    [reviews, people, me, reviewers, waitingForMe, openedByMe, search],
+    [reviews, people, me, mergeRequestState, reviewers, waitingForMe, openedByMe, search],
   );
   // The reviews read that wait for the user: Waiting for me counts them.
   const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
@@ -83,15 +93,15 @@ export function CodeReviewsView() {
     [place, currentBranch, selectWhenShown],
   );
   useCommands(
-    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquarePlus, run: newReview }], [newReview]),
+    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
+  useCopyCommand('Merge requests', selected ? reviewNoun(selected) : 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader
-      title="Code reviews"
+      title="Merge requests"
       detailsToggle={<DetailsToggleButton detailsKey="codeReviews" />}
       count={reviews && visible.length}
       total={reviews?.length}
@@ -105,7 +115,7 @@ export function CodeReviewsView() {
       }
     >
       <FilterBar
-        text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter code reviews" />}
+        text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter merge requests" />}
         people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Reviews you created" />}
         time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         kinds={
@@ -123,6 +133,13 @@ export function CodeReviewsView() {
               mineTip="Reviews you're asked to review"
               mine={{ label: "I'm a reviewer", icon: <UserCheck size={13} /> }}
               pickLabel="Pick reviewers"
+            />
+            <ChoiceChip<MergeRequestStateFilter>
+              value={mergeRequestState}
+              onChange={(value) => update({ mergeRequestState: value })}
+              icon={<GitPullRequest size={13} />}
+              neutralValue="active"
+              choices={STATE_CHOICES}
             />
             <ChoiceChip<StatusFilter>
               value={status}
@@ -144,13 +161,13 @@ export function CodeReviewsView() {
         detailsKey="codeReviews"
         loading={isPending}
         error={error}
-        errorTitle="Couldn't read the code reviews"
-        filtering={isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)}
-        noMatches={<NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
+        errorTitle="Couldn't read the merge requests"
+        filtering={isNarrowed(isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS), reviews?.length ?? 0, visible.length)}
+        noMatches={<NoMatches icon={<GitPullRequest size={22} />} noun="merge requests" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
         emptyState={
           <EmptyState
-            icon={<MessageSquareCode size={22} />}
-            title="No code reviews"
+            icon={<GitPullRequest size={22} />}
+            title="No merge requests"
             description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
             action={
               <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
@@ -168,7 +185,7 @@ export function CodeReviewsView() {
         onActivate={(review) => openReview(review)}
         contextMenu={(rows) => codeReviewMenu(place, rows, workspace?.selector)}
         initialSort={{ columnId: 'date', descending: true }}
-        noun="code review"
+        noun="merge request"
         details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(place, [selected], workspace?.selector)} />}
       />
     </>

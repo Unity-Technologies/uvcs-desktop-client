@@ -12,14 +12,17 @@ import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
+import { reviewNoun } from './mergeRequestState';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
-  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: review.id } }) };
+/** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
+export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title' | 'mergeRequest'>): CopyTexts {
+  const object = { kind: 'codeReview', id: review.id, ...(review.mergeRequest ? { asMergeRequest: true } : {}) } as const;
+  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object }) };
 }
 
 /**
- * The menu of the selected code reviews, the same wherever reviews show: the Code reviews view, the Branch Explorer,
+ * The menu of the selected code reviews, the same wherever reviews show: the Merge requests view, the Branch Explorer,
  * the palette and their details. It brings the reviewed code to the workspace (`reviewedCodeAction`) wherever the
  * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
  * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
@@ -50,7 +53,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
-    single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

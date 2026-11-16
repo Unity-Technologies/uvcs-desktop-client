@@ -34,7 +34,7 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 | Link | Opens |
 | --- | --- |
 | `…/repos/game` | the repository: a workspace on it (see "Opening a link") |
-| `…/repos/game/-/<view>` | a view of that workspace: `changes`, `incoming`, `files`, `changesets`, `branch-explorer`, `branches`, `labels`, `shelves`, `attributes`, `code-reviews`, `locks`, `sync` |
+| `…/repos/game/-/<view>` | a view of that workspace: `changes`, `incoming`, `files`, `changesets`, `branch-explorer`, `branches`, `labels`, `shelves`, `attributes`, `merge-requests` (written) or `code-reviews` (its older name, still read), `locks`, `sync` |
 | `…/repos/game/-/files/<path>`, `…/-/changes/<path>` | the Files view, the item revealed; Changes, its change selected |
 | `…/repos/game/-/browse[/<path>]` | the repository at the head of /main, the item selected |
 | `…/repos/game/-/history/<path>`, `…/-/annotate/<path>` | the item's history, or the item annotated, as the workspace has it |
@@ -43,7 +43,7 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 | `…/branches/main/task001` | the branch's diff |
 | `…/labels/v1.2`, `…/labels/v1.1..v1.2` | the label's diff, or between two labels |
 | `…/shelves/12` | the shelve's diff |
-| `…/code-reviews/311`, `…/merge-requests/311` | the code review, on its conversation |
+| `…/code-reviews/311`, `…/merge-requests/311` | the code review or merge request, on its conversation: either word opens either; the app writes `merge-requests` for a review it read as a merge request (`codeReviewCopyTexts`; a page's link, from the review its page read: `withReviewKind`), `code-reviews` otherwise |
 | `…/code-reviews/311/-/comments/5702` | the code review at that comment (code-reviews.md "Links to comments") |
 
 A workspace link takes the same views and pages but `browse` (`uvcs:///wk/game/-/history/a.cs`); its item is the

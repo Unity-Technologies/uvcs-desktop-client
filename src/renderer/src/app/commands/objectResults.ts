@@ -39,6 +39,7 @@ import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
 import { annotatedHistory } from '../../features/history/annotatedHistory';
 import type { SearchResult } from './searchResults';
+import { MERGE_REQUEST_STATE_ICONS } from '../../features/codeReviews/mergeRequestState';
 
 /** What the palette's results need to know about the window's place, and the typed search (empty to list without matching). */
 export interface ResultContext {
@@ -234,14 +235,20 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
   const { term } = context;
   return {
     id: `codeReview:${review.id}`,
-    icon: MessageSquareCode,
+    icon: review.mergeRequest ? MERGE_REQUEST_STATE_ICONS[review.mergeRequest.state] : MessageSquareCode,
     label: commentLineText(review.title),
-    detail: `${review.status} · ${displayName(review.owner)}`,
+    detail: codeReviewResultDetail(review),
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),
     menu: () => codeReviewMenu(context.place, [review], context.workspaceOn),
     run: () => openReview(review),
   };
+}
+
+/** A review's row's dimmed text: its status, where a merge request merges, its author ("Under review · → /main · Ana"). */
+export function codeReviewResultDetail(review: Pick<CodeReviewSummary, 'status' | 'owner' | 'mergeRequest'>): string {
+  const into = review.mergeRequest ? [`→ ${review.mergeRequest.destination}`] : [];
+  return [review.status, ...into, displayName(review.owner)].join(' · ');
 }
 
 /** A code review typed by number (`cr:311`) that the reviews read don't hold: opened by its number alone. */

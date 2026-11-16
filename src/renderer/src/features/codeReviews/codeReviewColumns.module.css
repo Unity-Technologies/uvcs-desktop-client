@@ -20,6 +20,14 @@
   background: var(--accent);
 }
 
+/* A merge request's state icon before its number; a fixed width, empty for a code review, so the numbers stay in line. */
+.stateSlot {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  margin-right: var(--space-2);
+}
+
 .titleText {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -30,4 +38,31 @@
   color: var(--text-tertiary);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+}
+
+/* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
+   to nothing; the arrow and the destination (usually short) stay whole. */
+.merge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arrow {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.source {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.destination {
+  display: flex;
+  flex: none;
 }

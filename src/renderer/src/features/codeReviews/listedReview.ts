@@ -4,7 +4,7 @@ import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 
 /**
- * A review as a list already read it (the Code reviews view's), with when that list was read: its page shows it at
+ * A review as a list already read it (the Merge requests view's), with when that list was read: its page shows it at
  * once, as fresh as that list. A summary (the branch chips', the palette's) counts only with its target named: a
  * changeset's or shelve's is, a branch's isn't (`CodeReviewSummary.target`).
  */
@@ -44,7 +44,7 @@ export function withReviewRead(data: unknown, review: CodeReview): unknown {
 }
 
 /**
- * Puts the review just read into the lists already read that hold it (`withReviewRead`), so the Code reviews view under
+ * Puts the review just read into the lists already read that hold it (`withReviewRead`), so the Merge requests view under
  * its page shows what the page does when the user goes back, with no `cm` command of its own. Each list keeps when it
  * was read, so it's read again when it would have been; one an operation marked stale is left to that read.
  */

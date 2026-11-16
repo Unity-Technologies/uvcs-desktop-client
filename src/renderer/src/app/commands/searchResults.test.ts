@@ -90,7 +90,7 @@ describe('moreLabel', () => {
     expect(moreLabel({ heading: 'Commands', more: 1 })).toBe('1 more command');
     expect(moreLabel({ heading: 'Pending changes', more: 1 })).toBe('1 more pending change');
     expect(moreLabel({ heading: 'Shelves', more: 1 })).toBe('1 more shelve');
-    expect(moreLabel({ heading: 'Code reviews', more: 29 })).toBe('29 more code reviews');
+    expect(moreLabel({ heading: 'Merge requests', more: 29 })).toBe('29 more merge requests');
     expect(moreLabel({ heading: 'People', more: 1 })).toBe('1 more person');
     expect(moreLabel({ heading: 'People', more: 4 })).toBe('4 more people');
   });

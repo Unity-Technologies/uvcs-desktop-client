@@ -107,8 +107,9 @@ describe('linkNavigation', () => {
 
 describe('LINK_VIEW_IDS', () => {
   // A view added to the sidebar gets its link name (docs/features/deep-links.md), and every link view opens one.
-  it('names every view of the sidebar, each once', () => {
+  it('names every view of the sidebar, each once but Merge requests, whose older name code-reviews keeps opening it', () => {
     expect(Object.keys(LINK_VIEW_IDS).sort()).toEqual([...LINK_VIEWS].sort());
-    expect(Object.values(LINK_VIEW_IDS).sort()).toEqual([...VIEW_IDS].sort());
+    expect([...new Set(Object.values(LINK_VIEW_IDS))].sort()).toEqual([...VIEW_IDS].sort());
+    expect(Object.keys(LINK_VIEW_IDS).filter((name) => LINK_VIEW_IDS[name as keyof typeof LINK_VIEW_IDS] === 'codeReviews')).toEqual(['merge-requests', 'code-reviews']);
   });
 });

@@ -67,6 +67,13 @@ const SHELVES = [
   { shelveid: 1, id: 70, parent: 4, date: daysAgo(8), comment: 'Half-done menu', guid: 'eeeeeeee-0000-0000-0000-000000000001', ...common },
 ];
 
+/**
+ * A merge request's two fields as `cm find review` prints them (`{mergerequeststatusname}`, `{destination}`); a plain
+ * code review prints `None` and nothing. `mergerequeststatus` is what a query's condition names.
+ */
+const mergeRequest = (state, destination) => ({ mergerequeststatusname: state, mergerequeststatus: state, destination: `br:${destination}` });
+const plainReview = { mergerequeststatusname: 'None', mergerequeststatus: 'None', destination: '' };
+
 const REVIEWS = [
   {
     id: 80,
@@ -79,6 +86,7 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(8),
     modifieddate: daysAgo(2),
+    ...mergeRequest('Open', '/main'),
     ...common,
   },
   {
@@ -92,6 +100,35 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(6),
     modifieddate: daysAgo(1),
+    ...plainReview,
+    ...common,
+  },
+  {
+    id: 82,
+    title: 'Scene lighting',
+    codereviewstatusname: 'Under review',
+    reviewers: '',
+    comments: 0,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(5),
+    modifieddate: daysAgo(5),
+    ...mergeRequest('Draft', '/main'),
+    ...common,
+  },
+  {
+    id: 83,
+    title: 'First playable',
+    codereviewstatusname: 'Reviewed',
+    reviewers: 'ana.diaz@acme.com:Reviewed',
+    comments: 1,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(20),
+    modifieddate: daysAgo(15),
+    ...mergeRequest('Merged', '/main'),
     ...common,
   },
 ];

@@ -1,4 +1,5 @@
 import type { CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import { isActiveMergeRequest } from './mergeRequestState';
 
 /** Short status names for chips next to a branch name. */
 export const SHORT_STATUS: Record<CodeReviewStatus, string> = {
@@ -7,11 +8,17 @@ export const SHORT_STATUS: Record<CodeReviewStatus, string> = {
   'Rework required': 'Rework',
 };
 
-/** The newest review of each branch, by branch object id, from reviews listed newest first. */
-export function latestReviewByBranch(reviews: readonly CodeReviewSummary[]): ReadonlyMap<number, CodeReviewSummary> {
+/**
+ * The review that stands for each branch, by branch object id, from reviews listed newest first: a merge request
+ * still to merge (Open or Draft) over any newer review, else the newest. Every surface that shows one review of a
+ * branch goes by it (the Branches view's and the Branch Explorer's chips, finishing a task).
+ */
+export function reviewOfEachBranch(reviews: readonly CodeReviewSummary[]): ReadonlyMap<number, CodeReviewSummary> {
   const byBranch = new Map<number, CodeReviewSummary>();
   for (const review of reviews) {
-    if (review.targetBranchId !== undefined && !byBranch.has(review.targetBranchId)) byBranch.set(review.targetBranchId, review);
+    if (review.targetBranchId === undefined) continue;
+    const standing = byBranch.get(review.targetBranchId);
+    if (!standing || (isActiveMergeRequest(review) && !isActiveMergeRequest(standing))) byBranch.set(review.targetBranchId, review);
   }
   return byBranch;
 }

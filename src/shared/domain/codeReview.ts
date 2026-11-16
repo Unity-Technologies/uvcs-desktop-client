@@ -4,6 +4,21 @@ export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework require
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
 
+/** Where a merge request stands, as `cm` names it (`{mergerequeststatusname}`, English whatever the language). */
+export const MERGE_REQUEST_STATES = ['Draft', 'Open', 'Merged', 'Closed'] as const;
+
+export type MergeRequestState = (typeof MERGE_REQUEST_STATES)[number];
+
+/**
+ * What makes a review a merge request: the branch it merges into and where that stands. A merge request is a code
+ * review of a branch on the server, with these two more fields (docs/features/merge-requests.md).
+ */
+export interface MergeRequestInfo {
+  state: MergeRequestState;
+  /** The destination branch's name, `/main`. */
+  destination: string;
+}
+
 /**
  * A user or group asked to review, with the status they gave it (`cm codereview review`). The review's own status
  * follows from theirs (the server's rule): Rework required when anyone asks for it, Reviewed once everyone has.
@@ -47,6 +62,8 @@ export interface CodeReviewSummary {
   targetBranchId?: number;
   /** The reviewed changeset or shelve; a branch only once its name is read (`CodeReview`). */
   target?: CodeReviewTarget;
+  /** Where it merges and where that stands; none for a plain code review. */
+  mergeRequest?: MergeRequestInfo;
 }
 
 /** A review with its target named. */
@@ -67,12 +84,14 @@ export interface CodeReviewFilter {
   /** Only reviews the user is one of the reviewers of. */
   reviewerIsMe?: boolean;
   status?: CodeReviewStatus;
+  /** Only merge requests in this state (plain code reviews have none). */
+  mergeRequestState?: MergeRequestState;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;
   /** Only reviews whose title contains it. */
   text?: string;
   /**
-   * The newest ones up to this many; none reads every review the other fields keep, as the Code reviews view does
+   * The newest ones up to this many; none reads every review the other fields keep, as the Merge requests view does
    * (a large repository holds thousands: its time range bounds them).
    */
   limit?: number;

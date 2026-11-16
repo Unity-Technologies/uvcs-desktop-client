@@ -56,7 +56,7 @@ describe('SCOPE_PREFIXES', () => {
   });
 
   it('names each section as its chip does', () => {
-    expect(SCOPE_PREFIXES.map(({ label }) => label)).toEqual(['Commands', 'Files', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Code reviews', 'People']);
+    expect(SCOPE_PREFIXES.map(({ label }) => label)).toEqual(['Commands', 'Files', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Merge requests', 'People']);
   });
 });
 

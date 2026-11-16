@@ -84,7 +84,7 @@ const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
-/** The review as the Code reviews view lists it, its branch named. */
+/** The review as the Merge requests view lists it, its branch named. */
 const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
 /** A changeset's review, as every list reads it: its target needs no branch name. */
 const changesetReview: CodeReview = { ...review, target: { kind: 'changeset', changesetId: 5 } };
@@ -572,7 +572,7 @@ describe('one menu per object, the same everywhere', () => {
     expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
 
-  it('a code review reads the same in the Code reviews view, the palette and the Branch Explorer', () => {
+  it('a code review reads the same in the Merge requests view, the palette and the Branch Explorer', () => {
     const inView = codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector);
     const { target: _named, ...asSearched } = branchReview;
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);
