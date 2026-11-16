@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusAfterRemoving, NO_REVIEWERS, pickAsPickerOpens, pickedReviewersOf, reviewersToAsk } from './pickedReviewers';
+import { focusAfterRemoving, NO_REVIEWERS, pickAsPickerOpens, pickedReviewersOf, reviewersToAsk, startingReviewers } from './pickedReviewers';
 import { pickOffered, togglePicked } from './reviewerPick';
 
 describe('pickedReviewersOf', () => {
@@ -84,3 +84,17 @@ describe('pickAsPickerOpens', () => {
   });
 });
 
+describe('startingReviewers', () => {
+  it("asks you when the branch is someone else's", () => {
+    expect(startingReviewers('ana@acme.com', 'bob@acme.com')).toEqual({ onOpen: [], picked: [{ name: 'ana@acme.com', kind: 'user' }] });
+  });
+
+  it('asks nobody on a branch of your own, whatever the case of the names', () => {
+    expect(startingReviewers('ana@acme.com', 'Ana@Acme.com')).toEqual(NO_REVIEWERS);
+  });
+
+  it('asks nobody while you or the owner are still read', () => {
+    expect(startingReviewers(undefined, 'bob@acme.com')).toEqual(NO_REVIEWERS);
+    expect(startingReviewers('ana@acme.com', undefined)).toEqual(NO_REVIEWERS);
+  });
+});

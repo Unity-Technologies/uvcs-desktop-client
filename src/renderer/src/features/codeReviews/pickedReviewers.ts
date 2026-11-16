@@ -11,6 +11,16 @@ import type { ReviewerPick } from './reviewerPick';
 /** Nobody picked yet: a new review has no reviewers to start from. */
 export const NO_REVIEWERS: ReviewerPick = { onOpen: [], picked: [] };
 
+/**
+ * Who a new merge request asks as its dialog opens on a branch: you, when the branch is someone else's, since you are
+ * the one asking to merge their work and look at it before it does; nobody on a branch of your own. Nobody while
+ * either name is still read.
+ */
+export function startingReviewers(you: string | undefined, branchOwner: string | undefined): ReviewerPick {
+  if (!you || !branchOwner || sameUser(you, branchOwner)) return NO_REVIEWERS;
+  return { onOpen: [], picked: [{ name: you, kind: 'user' }] };
+}
+
 /** A reviewer picked, as its chip shows them; its × takes `member` off. */
 export interface ReviewerChip {
   member: MemberRef;
