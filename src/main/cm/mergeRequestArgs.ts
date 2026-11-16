@@ -4,8 +4,9 @@ import { reviewersOptions } from './codeReviewArgs';
 
 /*
  * `cm mergerequest` only for what a merge request has and a code review hasn't: creating one, its state and its
- * destination. Every other write on one (reviewers, statuses, comments, title, description, delete) is `cm codereview`'s, which takes a
- * merge request's id unchanged (docs/features/merge-requests.md). Both edits print nothing.
+ * destination. Every other write on one (reviewers, statuses, comments, title, description, delete) is
+ * `cm codereview`'s, which takes a merge request's id unchanged (docs/features/merge-requests.md). Both edits print
+ * nothing; a create prints the new id.
  */
 
 /** `cm mergerequest edit --mergerequeststatus`: the state by its English name, as `cm` takes it whatever its language. */
