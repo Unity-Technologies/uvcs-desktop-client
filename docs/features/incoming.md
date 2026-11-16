@@ -22,7 +22,7 @@ The left pane is the incoming changesets above the files, as every list of chang
   the page read, right above (`showMoreLanding`), so ↑ goes on back in time.
 - **"All incoming changes"**, where Incoming opens, lists the whole update: the diff from the loaded changeset to the
   head that Incoming reads anyway. The files that collide with local changes (changed on both sides, or changed
-  locally and deleted or moved on the branch: `collidesWithLocal`) are a group of their own, "Conflicts with your
+  locally and deleted, moved or replaced on the branch, diff.md "A path replaced": `collidesWithLocal`) are a group of their own, "Conflicts with your
   changes", before "Changes to apply" (`incomingFileContent`), in the merge page's words: an update with conflicts is
   a merge. A file whose permissions alone changed on the branch has no content to merge, so it is never a conflict
   (diff.md "Only the permissions changed"). With no conflicts there are no groups. The line under the header says what updating does to the workspace:

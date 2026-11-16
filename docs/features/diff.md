@@ -206,7 +206,9 @@ older file it replaces so its history follows that one's. `cm diff` prints that 
 base revision) and `D` (the deleted one). Every list of files keys its rows by path, so `mergedDiffEntries` reads the
 two as one entry (`replacedEntry`): changed, from the deleted item's last revision to the new one's, marked
 `DiffEntry.replaced`, since its two sides are different items. Reading only the first, the delete was dropped and the
-file showed as added. Such a fix usually keeps the contents, so the diff reads "No content changes"; a review's
+file showed as added. Only two items with contents to compare merge so (two files, two folders: `sameKind`); a folder
+replaced by a file, or anything by an xlink, reads as the added item alone. A replaced file offers no "Revert file to
+before this change…" (`canRevertFromDiff`): its older side is another item. Such a fix usually keeps the contents, so the diff reads "No content changes"; a review's
 "How it was applied" shows it as the move it made instead (docs/features/code-reviews.md, "Comments in the code", See in context).
 
 ## Only the permissions changed
