@@ -12,11 +12,11 @@ interface BranchSearchItemProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   branch: Branch;
   current: boolean;
   highlighted: boolean;
-  /** After the name: its merge request's state (`BranchSearchList`'s `mergeRequestsOf`). */
+  /** Above the date: its merge request's state (`BranchSearchList`'s `mergeRequestsOf`). */
   badge?: ReactNode;
 }
 
-/** A branch in the list: its name, and its merge request where the list shows them, over the first line of its comment, and when it was created. */
+/** A branch in the list: its name over the first line of its comment; at its end, its merge request where the list shows them, over when it was created. */
 export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemProps>(function BranchSearchItem(
   { branch, current, highlighted, badge, ...rest },
   ref,
@@ -29,12 +29,8 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
     <button ref={ref} type="button" className={styles.item} data-highlighted={highlighted} data-current={current} {...rest}>
       <GitBranch size={14} className={styles.icon} />
       <span className={styles.text}>
-        <span className={styles.nameLine}>
-          <span className={styles.name}>
-            {/* Sized by the path, so the pill after it sits at its end. */}
-            <PathLabel path={branch.name} fitContent />
-          </span>
-          {badge}
+        <span className={styles.name}>
+          <PathLabel path={branch.name} />
         </span>
         {firstLine && (
           // A clipped or multi-line comment shows in full on hover.
@@ -44,8 +40,11 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
         )}
       </span>
       {current && <WorkspaceMark on="branch" />}
-      <span className={styles.date} data-tip={`Created ${formatDateTime(branch.date)}`}>
-        {formatRelativeDate(branch.date)}
+      <span className={styles.side}>
+        {badge}
+        <span className={styles.date} data-tip={`Created ${formatDateTime(branch.date)}`}>
+          {formatRelativeDate(branch.date)}
+        </span>
       </span>
     </button>
   );

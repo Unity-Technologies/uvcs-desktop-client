@@ -398,14 +398,15 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   column and no "+N more": the list filtered by the branch shows the others.
 - **Lists to pick a branch from** (`BranchSearchList`'s `mergeRequestsOf`: the branch switcher, the Files and
   Changesets branch chips, the merge, compare and move pickers, the New merge request dialog's From and Into): each
-  row drawn shows its branch's merge request as its state's compact pill after the name ("Merged"), as the top bar and
-  the Branches view show it; hovering the pill shows the summary card ("A branch's merge request at a glance"),
+  row drawn shows its branch's merge request as its state's compact pill ("Merged"), as the top bar and the Branches
+  view show it, at the row's end over the date, so the pills line up in a column and the name keeps its room; hovering the pill shows the summary card ("A branch's merge request at a glance"),
   opening only once the pointer rests on it, so moving down the list never shows it (`BranchMergeRequestMark`,
   `MergeRequestHoverCard`). Its title isn't a link there (`opens`): the popup or dialog holding the list would stay
   over the page it opened, and a click on the card never reaches the row (it would switch). Nothing for a branch
   without one or with a plain review. No verdict: the list is for picking, and the state answers whether the branch
-  is still in play. Two glyphs were tried: between the comment and the date it floated with the date's width and
-  cluttered the row; in the branch icon's place, its colors aside, it read as one more branch icon. Read as the
+  is still in play. Tried and dropped: a glyph between the comment and the date floated with the date's width and
+  cluttered the row; a glyph in the branch icon's place read as one more branch icon; the pill after the name
+  scattered with the names' lengths. Read as the
   views read (above), the rows drawn once they stay, so the list opens at once and the pills follow. A list of
   another repository's branches (an xlink's) shows none: its merge requests don't bear on the pick.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the

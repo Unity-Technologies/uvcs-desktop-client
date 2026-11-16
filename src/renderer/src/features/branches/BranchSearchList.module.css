@@ -100,20 +100,6 @@
   white-space: nowrap;
 }
 
-/* The name, then its merge request's pill; the name gives way to the pill when room is short. */
-.nameLine {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.nameLine > .name {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
 .name {
   font-weight: var(--weight-medium);
   line-height: 16px;
@@ -123,6 +109,16 @@
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   line-height: 15px;
+}
+
+/* The row's end: its merge request's pill, right aligned in a column of its own, over the date. */
+.side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
 }
 
 .date {
