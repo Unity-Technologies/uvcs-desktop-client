@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mergeRuleNotice, mergeRuleRefusal } from './mergeRuleRefusal';
+import type { MergeRequestState } from '@shared/domain/codeReview';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
+import { mergeRequestInto, mergeRuleNotice, mergeRuleRefusal } from './mergeRuleRefusal';
 
 describe('mergeRuleRefusal', () => {
   it('recognizes a branch that needs an open merge request to its destination', () => {
@@ -38,6 +40,20 @@ describe('mergeRuleRefusal', () => {
 
   it("leaves a translated message to cm's own words", () => {
     expect(mergeRuleRefusal("No se puede realizar el merge debido al sistema de reglas de merge. La rama origen '/main/task1' tiene que estar revisada con éxito antes de que se pueda hacer merge a '/main'.")).toBeUndefined();
+  });
+});
+
+describe('mergeRequestInto', () => {
+  const request = (id: number, state: MergeRequestState, destination = '/main') => codeReviewSummary({ id, mergeRequest: { state, destination } });
+
+  it("finds the branch's merge request still to merge into that destination", () => {
+    expect(mergeRequestInto([request(3, 'Merged'), request(12, 'Open')], '/main')).toBe(12);
+    expect(mergeRequestInto([request(8, 'Draft')], '/main')).toBe(8);
+  });
+
+  it('finds none into another destination, closed or merged, or among plain code reviews', () => {
+    expect(mergeRequestInto([request(4, 'Open', '/main/release'), request(2, 'Closed'), request(3, 'Merged'), codeReviewSummary({ id: 5 })], '/main')).toBeUndefined();
+    expect(mergeRequestInto(undefined, '/main')).toBeUndefined();
   });
 });
 
