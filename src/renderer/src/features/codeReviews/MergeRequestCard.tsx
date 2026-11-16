@@ -1,4 +1,4 @@
-import { Check, CircleDot, MoreHorizontal, X, type LucideIcon } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
@@ -17,11 +17,10 @@ import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 import { branchQuery } from '../branches/useBranches';
 import { chooseReviewers } from './codeReviewOperations';
 import { mergeOfRequest } from './mergeInto';
-import { mergeCardOf, type MergeCardAction, type MergeCardSection, type MergeCardTone, type OpenItems } from './mergeCard';
+import { mergeCardOf, type MergeCardAction, type MergeCardSection, type OpenItems } from './mergeCard';
+import { MergeCardDisc } from './MergeCardDisc';
 import { setMergedBranchHidden, setMergeRequestState } from './mergeRequestOperations';
-import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
 import { useMergeRequestConflicts } from './useMergeRequestConflicts';
-import stateColors from './mergeRequestStateColors.module.css';
 import styles from './MergeRequestCard.module.css';
 
 interface MergeRequestCardProps {
@@ -114,7 +113,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
 function CardSection({ section, onAction, trailing }: { section: MergeCardSection; onAction: (action: MergeCardAction) => void; trailing?: ReactNode }) {
   return (
     <div className={styles.section}>
-      <SectionDisc section={section} />
+      <MergeCardDisc section={section} />
       <div className={styles.text}>
         <p className={styles.title}>
           {section.title}
@@ -139,26 +138,6 @@ function CardSection({ section, onAction, trailing }: { section: MergeCardSectio
       )}
       {trailing}
     </div>
-  );
-}
-
-const TONE_ICONS: Record<MergeCardTone, LucideIcon> = { passed: Check, failed: X, pending: CircleDot, neutral: CircleDot };
-
-/** The state's glyph in its color for a section that is the state; else the tone's check, cross or dot. */
-function SectionDisc({ section }: { section: MergeCardSection }) {
-  if (section.state) {
-    const Icon = MERGE_REQUEST_STATE_ICONS[section.state];
-    return (
-      <span className={`${styles.disc} ${stateColors.stateColor}`} data-state={section.state}>
-        <Icon size={16} aria-hidden />
-      </span>
-    );
-  }
-  const Icon = TONE_ICONS[section.tone];
-  return (
-    <span className={styles.disc} data-tone={section.tone}>
-      <Icon size={16} aria-hidden />
-    </span>
   );
 }
 
