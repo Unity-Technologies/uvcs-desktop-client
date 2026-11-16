@@ -74,6 +74,19 @@ export interface BranchRef {
 }
 
 /**
+ * The changeset a merge request was merged in, from its conversation: the newest move to Merged, unless a later move
+ * took it out of Merged (a merge undone). `cm find review` has no field for it: only the server's note names it.
+ */
+export function mergedChangesetOf(events: readonly ReviewEventChange[]): number | undefined {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index]!;
+    if (event.kind !== 'mergeRequestState') continue;
+    return event.to === 'Merged' ? event.changesetId : undefined;
+  }
+  return undefined;
+}
+
+/**
  * The review's description: the text at the top of its conversation, `guid` editing it. `id` is its comment's, which a
  * link to it names (docs/features/deep-links.md).
  */

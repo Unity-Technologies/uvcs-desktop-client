@@ -1,4 +1,4 @@
-import type { CodeReviewStatus } from '@shared/domain/codeReview';
+import { MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
@@ -137,7 +137,47 @@ function eventChangeOf({ text, guid }: RawReviewComment): ReviewEventChange {
   if (text.startsWith('[requested-review-from-')) return { kind: 'reviewRequested', reviewers: [] };
   if (text.startsWith('[re-requested-review-from]')) return { kind: 'reviewRequestedAgain', reviewer: text.slice('[re-requested-review-from]'.length) };
   if (text.startsWith('[removed-requested-review-from]')) return { kind: 'reviewerRemoved', reviewer: text.slice('[removed-requested-review-from]'.length) };
-  return { kind: 'other', text };
+  return mergeRequestChangeOf(text) ?? { kind: 'other', text };
+}
+
+/**
+ * A merge request's notes: a state move, lower case (`[mergerequest-status-open-to-merged]6`, the merge's changeset
+ * bare after the move to Merged); a destination changed, by the old and new branch ids (`…destination]4;19`); its
+ * branch hidden or shown again, by its id. Branch ids are named later, all at once (`reviewCommentsService`). A note
+ * this version can't read stays `other`.
+ */
+function mergeRequestChangeOf(text: string): ReviewEventChange | undefined {
+  const move = /^\[mergerequest-status-([a-z]+)-to-([a-z]+)\](.*)$/s.exec(text);
+  if (move) {
+    const from = STATE_WORDS.get(move[1]!);
+    const to = STATE_WORDS.get(move[2]!);
+    if (!from || !to) return undefined;
+    const changesetId = to === 'Merged' ? integerOrUndefined(move[3]!) : undefined;
+    return { kind: 'mergeRequestState', from, to, ...(changesetId !== undefined && { changesetId }) };
+  }
+  if (text.startsWith(DESTINATION_PREFIX)) {
+    const [from, to, ...rest] = text.slice(DESTINATION_PREFIX.length).split(';').map(integerOrUndefined);
+    return from !== undefined && to !== undefined && rest.length === 0 ? { kind: 'destinationChanged', from: { id: from }, to: { id: to } } : undefined;
+  }
+  for (const [prefix, kind] of BRANCH_VISIBILITY_PREFIXES) {
+    if (!text.startsWith(prefix)) continue;
+    const id = integerOrUndefined(text.slice(prefix.length));
+    return id === undefined ? undefined : { kind, branch: { id } };
+  }
+  return undefined;
+}
+
+const STATE_WORDS = new Map<string, MergeRequestState>(MERGE_REQUEST_STATES.map((state) => [state.toLowerCase(), state]));
+
+const DESTINATION_PREFIX = '[changed-mergerequest-destination]';
+
+const BRANCH_VISIBILITY_PREFIXES: ReadonlyArray<readonly [string, 'branchHidden' | 'branchUnhidden']> = [
+  ['[hidden-mergerequest-branch]', 'branchHidden'],
+  ['[unhidden-mergerequest-branch]', 'branchUnhidden'],
+];
+
+function integerOrUndefined(text: string): number | undefined {
+  return /^\d+$/.test(text.trim()) ? Number.parseInt(text.trim(), 10) : undefined;
 }
 
 const STATUS_PREFIXES: ReadonlyArray<readonly [string, CodeReviewStatus]> = [
