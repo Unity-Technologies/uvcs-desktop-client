@@ -20,7 +20,7 @@
   background: var(--accent);
 }
 
-/* What the row is, before its title: a merge request's state glyph, or a code review's; a fixed width, titles in line. */
+/* What the row is, before its title: a merge request's state glyph, or the code review glyph; a fixed width, titles in line. */
 .stateSlot {
   display: inline-flex;
   flex: none;
@@ -33,10 +33,11 @@
   text-overflow: ellipsis;
 }
 
-.codeReviewIcon {
+.kindIcon {
   display: inline-flex;
   color: var(--text-tertiary);
 }
+
 
 /* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
    to nothing; the arrow and the destination (usually short) stay whole. */
