@@ -1,6 +1,7 @@
 import type { Branch } from '@shared/domain/branch';
-import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
+import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
+import { branchLabels } from '../../lib/branchLabels';
 import { commentLineText } from '../../lib/comments/commentText';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
@@ -28,7 +29,8 @@ export interface TaskNextStepInput {
 }
 
 /**
- * The task's next step, what Changes offers on a clean workspace (docs/features/changes.md "Finishing a task"):
+ * The task's next step, what Changes offers on a clean workspace (docs/features/merge.md "Finishing a task" ›
+ * "The next step, in Changes"):
  * nothing; what to do now it's merged; create its merge request; or where the request stands: a draft to get ready, a
  * review waiting for its reviewers or asking for rework, a reviewed one to merge. `mergeTask` is the merge into the
  * parent with no request, alone when the reviews couldn't be read.
@@ -58,10 +60,9 @@ export function taskNextStepOf({ branch, hasChangesets, mergedInto, reviewsOfBra
       return { kind: 'waiting', request };
     case 'Rework required':
       return { kind: 'rework', request };
-    case 'Reviewed': {
-      const merge = mergeOfRequest({ ...request, target: { kind: 'branch', branch: branch.name } });
-      return merge ? { kind: 'reviewed', request, merge } : { kind: 'waiting', request };
-    }
+    case 'Reviewed':
+      // Always a merge: `mergeOfRequest` asks for an Open request whose branch is named, and this one is both.
+      return { kind: 'reviewed', request, merge: mergeOfRequest({ ...request, target: { kind: 'branch', branch: branch.name } })! };
   }
 }
 
@@ -87,6 +88,25 @@ export function conversationToRead(step: TaskNextStep): number | undefined {
   return step.kind === 'rework' && step.request.openIssueCount > 0 ? step.request.id : undefined;
 }
 
+/**
+ * Which merged check answered (`mergedInto`'s query): the branch, its head and where the head was looked for.
+ * `MergeTaskSuggestion` keys the check by it.
+ */
+export interface MergedCheck {
+  branch: string;
+  head: number;
+  destination: string;
+}
+
+/**
+ * Whether a merged check asking again may show the previous answer meanwhile: only the destination changed, for the
+ * same head (a request created into /main from /main/release/task, or one closed), so the step stays on screen instead
+ * of blinking out until the new check answers. A head that moved, or another branch, starts from nothing.
+ */
+export function keepsPreviousMergedCheck(previous: MergedCheck | undefined, next: MergedCheck): boolean {
+  return previous !== undefined && previous.branch === next.branch && previous.head === next.head;
+}
+
 /** A button of the next step; `MergeTaskSuggestion` runs it. */
 export type TaskNextStepAction = { label: string; primary: boolean } & (
   | { kind: 'create' | 'open' }
@@ -96,48 +116,70 @@ export type TaskNextStepAction = { label: string; primary: boolean } & (
 
 /** The request's line: its state's glyph, "#12", its title's first line (cut to fit) and its review in words. */
 export interface TaskNextStepLine {
-  reviewId: number;
-  state: MergeRequestState;
+  /** For the state's glyph (`MergeRequestStateIcon`), which names it to a screen reader. */
+  mergeRequest: MergeRequestInfo;
   number: string;
   title: string;
   /** "waiting for 2 reviewers", "3 change requests to apply", "reviewed", "draft". */
   status: string;
-  /** "Open merge request into /main". */
+  /** "Open merge request into /main: Login screen", the title whole. */
   tip: string;
 }
 
-/** What the next step shows: the request's line, its buttons, and whether the quiet merge into the parent (`TaskMergeButton`) follows. */
+/** The merge into the parent with no request (`TaskMergeButton`): the branches as briefly as tells them apart, in full in its tooltip. */
+export interface TaskMergeOffer {
+  source: string;
+  destination: string;
+  tip: string;
+  /** After the step's own button (Create merge request): a ghost, the way to finish without a request. */
+  subdued: boolean;
+}
+
+/** What the next step shows: the request's line, its buttons, and the merge into the parent when it's offered. */
 export interface TaskNextStepView {
   line?: TaskNextStepLine;
   actions: TaskNextStepAction[];
-  mergesTask: boolean;
+  taskMerge?: TaskMergeOffer;
 }
 
 interface TaskNextStepViewOptions {
   /** Under a list: the single most useful action, quiet and named whole, with no line. */
   quiet: boolean;
+  /**
+   * Beside another action (after a check-in, by its Copy link): the line, and the single most useful action, so the
+   * screen keeps two buttons at most.
+   */
+  besideAnotherAction?: boolean;
   /** What the request's conversation still has open, once read (the read a check-in makes for the change requests it applies). */
   open?: OpenItems;
 }
 
 /**
  * The line and buttons of a step: as calm as the empty state it sits in, one line and at most two buttons, the next
- * move first. Merging the task with no request stays offered beside Create, quiet.
+ * move first. Merging the task with no request stays offered beside Create, quiet, while there's room for it.
  */
-export function taskNextStepView(step: TaskNextStep, { quiet, open }: TaskNextStepViewOptions): TaskNextStepView {
+export function taskNextStepView(step: TaskNextStep, { quiet, besideAnotherAction = false, open }: TaskNextStepViewOptions): TaskNextStepView {
+  const single = quiet || besideAnotherAction;
   switch (step.kind) {
     case 'none':
     case 'finished':
-      return { actions: [], mergesTask: false };
+      return { actions: [] };
     case 'mergeTask':
-      return { actions: [], mergesTask: true };
-    case 'create':
-      return { actions: [{ kind: 'create', label: 'Create merge request', primary: !quiet }], mergesTask: !quiet };
+      return { actions: [], taskMerge: taskMergeOffer(step.branch, 'Finish the task', false) };
+    case 'create': {
+      const create: TaskNextStepAction = { kind: 'create', label: 'Create merge request', primary: !quiet };
+      return single ? { actions: [create] } : { actions: [create], taskMerge: taskMergeOffer(step.branch, 'Finish the task without a merge request', true) };
+    }
   }
   const number = `#${step.request.id}`;
-  const [first, ...rest] = actionsOf(step, number, quiet);
-  if (quiet) return { actions: [{ ...first!, primary: false }], mergesTask: false };
-  return { line: lineOf(step, number, open), actions: [first!, ...rest], mergesTask: false };
+  const actions = actionsOf(step, number, quiet);
+  if (quiet) return { actions: [{ ...actions[0]!, primary: false }] };
+  return { line: lineOf(step, number, open), actions: besideAnotherAction ? actions.slice(0, 1) : actions };
+}
+
+function taskMergeOffer(branch: TaskBranch, what: string, subdued: boolean): TaskMergeOffer {
+  const [source, destination] = branchLabels(branch.name, branch.parent);
+  return { source, destination, tip: `${what}: merge ${branch.name} into ${branch.parent}`, subdued };
 }
 
 type RequestStep = Extract<TaskNextStep, { request: MergeRequestReview }>;
@@ -160,14 +202,8 @@ function actionsOf(step: RequestStep, number: string, quiet: boolean): TaskNextS
 
 function lineOf(step: RequestStep, number: string, open: OpenItems | undefined): TaskNextStepLine {
   const { request } = step;
-  return {
-    reviewId: request.id,
-    state: request.mergeRequest.state,
-    number,
-    title: commentLineText(request.title),
-    status: statusWords(step, open),
-    tip: mergeRequestTip(request),
-  };
+  const title = commentLineText(request.title);
+  return { mergeRequest: request.mergeRequest, number, title, status: statusWords(step, open), tip: `${mergeRequestTip(request)}: ${title}` };
 }
 
 function statusWords(step: RequestStep, open: OpenItems | undefined): string {
