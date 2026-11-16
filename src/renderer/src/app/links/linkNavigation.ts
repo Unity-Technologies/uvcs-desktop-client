@@ -59,6 +59,7 @@ export const LINK_VIEW_IDS: Record<LinkView, ViewId> = {
   labels: 'labels',
   shelves: 'shelves',
   attributes: 'attributes',
+  'merge-requests': 'codeReviews',
   'code-reviews': 'codeReviews',
   locks: 'locks',
   sync: 'sync',
