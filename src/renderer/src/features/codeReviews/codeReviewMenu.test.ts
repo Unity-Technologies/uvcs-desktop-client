@@ -164,8 +164,7 @@ describe("a merge request's moves", () => {
 
 describe('merging a merge request', () => {
   const onTask = { kind: 'branch', branch: '/main/release/task' } as const;
-  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', target: CodeReviewTarget | undefined = onTask) =>
-    codeReviewSummary({ id: 12, title: 'Add login', target, mergeRequest: { state, destination: '/main' } });
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed') => codeReviewSummary({ id: 12, title: 'Add login', target: onTask, mergeRequest: { state, destination: '/main' } });
   const mergeEntry = (menu: MenuEntry[]) => actions(menu).find((entry) => entry.id === 'mergeInto');
 
   it('offers Merge into its destination for an open one, in the row menu and the page menu alike', () => {
@@ -178,7 +177,7 @@ describe('merging a merge request', () => {
     for (const state of ['Draft', 'Merged', 'Closed'] as const) expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request(state)]))).toBeUndefined();
     expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [summary]))).toBeUndefined();
     expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open'), { ...request('Open'), id: 13 }]))).toBeUndefined();
-    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open', undefined)]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [{ ...request('Open'), target: undefined }]))).toBeUndefined();
     expect(mergeEntry(codeReviewMenu(repositoryPlace('game@local'), [request('Open')]))).toBeUndefined();
   });
 

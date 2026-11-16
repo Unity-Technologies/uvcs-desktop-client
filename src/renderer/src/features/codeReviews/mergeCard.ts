@@ -1,7 +1,7 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
-import { branchLabel } from '../../lib/branchLabels';
+import { mergeIntoLabel } from './mergeInto';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -155,7 +155,7 @@ function mergedSection({ mergeRequest, source, mergedChangeset, sourceBranch, wo
  */
 function mergeFooter({ mergeRequest, source, inWorkspace }: MergeCardInput, ready: boolean): Pick<MergeCard, 'footer'> {
   if (source === undefined) return {};
-  const footer: MergeCardAction = { kind: 'merge', source, label: `Merge into ${branchLabel(mergeRequest.destination)}…`, primary: ready };
+  const footer: MergeCardAction = { kind: 'merge', source, label: mergeIntoLabel(mergeRequest.destination), primary: ready };
   return { footer: inWorkspace ? footer : { ...footer, disabledReason: 'Open a workspace of this repository to merge' } };
 }
 
