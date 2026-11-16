@@ -135,6 +135,33 @@ describe("a review's page menu", () => {
   });
 });
 
+describe("a merge request's moves", () => {
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', id = 12) => codeReviewSummary({ id, mergeRequest: { state, destination: '/main' } });
+  const moveIds = (menu: MenuEntry[]) => actions(menu).map((entry) => entry.id).filter((id) => ['readyForReview', 'convertToDraft', 'closeMergeRequest', 'reopenMergeRequest'].includes(id));
+
+  it('offers the moves its state takes, in the row menu and the page menu alike', () => {
+    for (const menuOf of [(review: CodeReviewSummary) => codeReviewMenu(workspacePlace(ws), [review]), (review: CodeReviewSummary) => reviewPageMenu(workspacePlace(ws), review)]) {
+      expect(moveIds(menuOf(request('Draft')))).toEqual(['readyForReview', 'closeMergeRequest']);
+      expect(moveIds(menuOf(request('Open')))).toEqual(['convertToDraft', 'closeMergeRequest']);
+      expect(moveIds(menuOf(request('Closed')))).toEqual(['reopenMergeRequest']);
+      expect(moveIds(menuOf(request('Merged')))).toEqual([]);
+    }
+  });
+
+  it('offers none for a code review, nor for several selected', () => {
+    expect(moveIds(codeReviewMenu(workspacePlace(ws), [summary]))).toEqual([]);
+    expect(moveIds(codeReviewMenu(workspacePlace(ws), [request('Open'), request('Open', 13)]))).toEqual([]);
+  });
+
+  it('closes it at once, asking nothing', async () => {
+    fakeApi.answer('codeReviews.setMergeRequestState', () => undefined);
+
+    await actions(codeReviewMenu(workspacePlace(ws), [request('Open')])).find((entry) => entry.id === 'closeMergeRequest')!.run();
+
+    expect(fakeApi.argsOf('codeReviews.setMergeRequestState')).toEqual([[workspacePlace(ws), 12, 'Closed']]);
+  });
+});
+
 describe("a review's Copy menu", () => {
   it("copies a merge request's link as a merge request's, and a code review's as a code review's", () => {
     const place = repositoryPlace('game@local');
