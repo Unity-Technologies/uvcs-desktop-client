@@ -8,7 +8,7 @@ describe('linkDescription', () => {
     ['uvcs://acme.unity/repos/game/branches/main/task001', 'Branch task001', 'game · acme · Unity organization'],
     ['uvcs://host:8087/repos/game/code-reviews/311', 'Code review 311', 'game · host:8087'],
     ['uvcs://host:8087/repos/game/merge-requests/311', 'Merge request 311', 'game · host:8087'],
-    ['plastic://codice.cloud/repos/codice/merge-requests/31407383', 'Merge request 31407383', 'codice · codice@cloud'],
+    ['plastic://codice.cloud/repos/codice/merge-requests/31407383', 'Merge request 31407383', 'codice · codice · Cloud organization'],
     ['uvcs://host:8087/repos/game/code-reviews/311/-/comments/5702', 'Code review 311 · Comment', 'game · host:8087'],
     ['uvcs://local/repos/game', 'game', 'game · This computer'],
     ['uvcs:///Users/ana/wk/game/-/changes/a.cs', 'game · a.cs', '/Users/ana/wk/game'],

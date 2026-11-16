@@ -35,7 +35,7 @@ function objectWords(object: LinkObject): string {
     case 'shelve':
       return `Shelve ${object.id}`;
     case 'codeReview':
-      return `Code review ${object.id}`;
+      return `${object.asMergeRequest ? 'Merge request' : 'Code review'} ${object.id}`;
   }
 }
 
