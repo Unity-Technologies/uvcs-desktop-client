@@ -22,10 +22,24 @@ describe('countMergeConflicts', () => {
     expect(await countMergeConflicts(cm, '/work', '/main/task', '/main')).toEqual({ status: 'ready', files: 0, directories: 0 });
   });
 
+  // As `cm` prints a branch merged already, or a branch into itself: a status and the contributors, nothing to merge.
   it('says when everything is already merged', async () => {
-    const { cm } = fakeCmClient({ 'merge br:/main/task': mergePreviewOutput(['STATUS', 'ALREADY_CONNECTED', 'No merges detected'], SOURCE, DESTINATION) });
+    const { cm } = fakeCmClient({
+      'merge br:/main/task': mergePreviewOutput(
+        ['STATUS', 'ALREADY_CONNECTED', 'No merges detected'],
+        ['CONTRIBUTOR', 'SRC', '11', 'cs:11@mr-conflicts@local', '/main/task'],
+        ['CONTRIBUTOR', 'DST', '19', 'cs:19@mr-conflicts@local', '/main'],
+      ),
+    });
 
-    expect((await countMergeConflicts(cm, '/work', '/main/task', '/main')).status).toBe('alreadyMerged');
+    expect(await countMergeConflicts(cm, '/work', '/main/task', '/main')).toEqual({ status: 'alreadyMerged', files: 0, directories: 0 });
+  });
+
+  // `cm` always names the contributors; a preview printing nothing at all is no answer, never "no conflicts".
+  it('fails on a preview that printed nothing', async () => {
+    const { cm } = fakeCmClient({ 'merge br:/main/task': '' });
+
+    await expect(countMergeConflicts(cm, '/work', '/main/task', '/main')).rejects.toThrow();
   });
 
   // Over a second on a big repository: a pooled `cm shell` held that long would stall every read of the window.
