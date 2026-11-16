@@ -19,6 +19,7 @@ interface ComparisonSource {
 export function useContextComparison({ review, thread, view, onScreen, repository }: ComparisonSource): ContextComparisonState {
   const source = contextEntryOf(review.target, thread, view, onScreen);
   const read = useDiffEntries(source.kind === 'read' ? source.target : null);
+  // The applied file's entry is found here too, ahead of the state: whether it was replaced decides the second read.
   const historySource = replacedHistoryOf(review.target, thread, view, onScreen, entryOf(source, onScreen, read, thread));
   const historyRead = useDiffEntries(historySource.kind === 'read' ? historySource.target : null);
   return contextComparisonState({ thread, view, repository, onScreen, source, read, replacedHistory: { source: historySource, read: historyRead } });

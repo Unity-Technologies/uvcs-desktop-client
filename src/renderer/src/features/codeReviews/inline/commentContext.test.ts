@@ -108,13 +108,13 @@ describe('appliedComparison', () => {
       side: 'additions',
       line: 12,
       fileName: 'src/Player.cs',
-      movedFrom: 'src/Score.cs',
+      moved: { from: 'src/Score.cs', status: { tone: 'moved', label: 'Moved', changedLabel: 'Changed' } },
     });
     expect(contextDescription(applied, 'since', { movedFrom: 'src/Score.cs' })).toBe('Line 12, after changeset 15 made it a move of Score.cs');
   });
 
   it('compares a replaced file as any other when the review shows no move into it, saying why the two read the same', () => {
-    const plain = { original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs', identicalText: 'Changeset 15 replaced it with a file of the same contents, whose history is another' };
+    const plain = { original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs', identicalText: 'Changeset 15 replaced it with another file with the same contents' };
     expect(appliedComparison(applied, replaced, SHOWN)).toEqual(plain);
     expect(appliedComparison(applied, replaced, null)).toEqual(plain);
     expect(appliedComparison(applied, replaced, { ...movedInReview, baseRevisionId: -1 })).toEqual(plain);

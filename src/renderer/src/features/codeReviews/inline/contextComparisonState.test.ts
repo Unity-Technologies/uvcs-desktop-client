@@ -75,14 +75,14 @@ describe('contextComparisonState', () => {
 
     it("waits for the review's whole diff, then shows the move it made", () => {
       expect(contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: {} } })).toEqual({ kind: 'reading' });
-      expect(contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { data: [OTHER, moved] } } })).toMatchObject({ kind: 'comparison', comparison: { movedFrom: 'src/Score.cs', side: 'additions' } });
+      expect(contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { data: [OTHER, moved] } } })).toMatchObject({ kind: 'comparison', comparison: { moved: { from: 'src/Score.cs' }, side: 'additions' } });
     });
 
     it('compares it as any other file when that read fails: the move is a detail, never a dead end', () => {
       const state = contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { error: new Error('offline') } } });
 
       expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'deletions' } });
-      expect(state.kind === 'comparison' && state.comparison.movedFrom).toBeUndefined();
+      expect(state.kind === 'comparison' && state.comparison.moved).toBeUndefined();
     });
   });
 });

@@ -11,7 +11,6 @@ import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
-import type { StatusMark } from '../../../components/ItemStatusMark';
 import { ChipOpenerContext, type ChipOpener } from '../../../components/comments/chipOpener';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
@@ -160,7 +159,7 @@ function ThreadDialog(props: ThreadDialogProps) {
     <Dialog
       eyebrow={stepping && <ContextStepper steps={stepping} onStep={onStep} />}
       title={contextTitle(thread)}
-      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset, movedFrom: state.kind === 'comparison' ? state.comparison.movedFrom : undefined }) : appliedFilesDescription(thread, files)}
+      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset, movedFrom: state.kind === 'comparison' ? state.comparison.moved?.from : undefined }) : appliedFilesDescription(thread, files)}
       width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
@@ -266,8 +265,6 @@ function CloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
-const MOVED: StatusMark = { tone: 'moved', label: 'Moved' };
-
 export type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
 
 /** One view of the commented file alone: its two versions, the thread under its line, scrolled to it. */
@@ -286,7 +283,7 @@ function ViewDiff(props: ViewProps) {
         modified={comparison.modified}
         fileName={comparison.fileName}
         // A replaced file shown as the move it made says so in its header, as a diff's moved file does.
-        title={comparison.movedFrom !== undefined && <DiffFileTitle status={MOVED} path={comparison.fileName} oldPath={comparison.movedFrom} />}
+        title={comparison.moved && <DiffFileTitle status={comparison.moved.status} path={comparison.fileName} oldPath={comparison.moved.from} />}
         identicalDescription={comparison.identicalText}
         compareControls={controls}
       />

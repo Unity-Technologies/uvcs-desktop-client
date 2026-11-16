@@ -3,7 +3,9 @@ import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
+import type { StatusMark } from '../../../components/ItemStatusMark';
 import { fileNameOf } from '../../../lib/text';
+import { diffEntryStatus } from '../../diff/diffEntrySources';
 import { reviewDiffTarget } from '../reviewTarget';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
@@ -22,8 +24,11 @@ export interface ContextComparison {
   line: number;
   /** What the code is highlighted by. */
   fileName: string;
-  /** Where the file was moved from, when the view shows the move a replaced file made (`appliedComparison`). */
-  movedFrom?: string;
+  /**
+   * The move a replaced file made, when the view shows it (`appliedComparison`): where it came from, and the header's
+   * status, as a diff's moved file has it (`diffEntryStatus`: changed too when the two sides differ).
+   */
+  moved?: { from: string; status: StatusMark };
   /** Why both sides read the same, when the view knows: a file replaced by another with its contents. */
   identicalText?: string;
 }
@@ -132,9 +137,10 @@ export function appliedComparison(thread: LineThread, applied: ShownEntry | null
   const { revisionId, line } = thread.root.anchor;
   const fileName = applied.path;
   if (applied.replaced && history?.oldPath !== undefined && history.baseRevisionId !== -1) {
-    return { original: olderSideOf(history), modified: newerSideOf(applied), side: 'additions', line, fileName, movedFrom: history.oldPath };
+    const move: DiffEntry = { status: 'moved', path: fileName, oldPath: history.oldPath, itemType: 'file', baseRevisionId: history.baseRevisionId, revisionId: applied.revisionId, repository: applied.repository };
+    return { original: olderSideOf(history), modified: newerSideOf(applied), side: 'additions', line, fileName, moved: { from: history.oldPath, status: diffEntryStatus(move) } };
   }
-  const identicalText = applied.replaced ? `Changeset ${settlingChangeset(thread)} replaced it with a file of the same contents, whose history is another` : undefined;
+  const identicalText = applied.replaced ? `Changeset ${settlingChangeset(thread)} replaced it with another file with the same contents` : undefined;
   const why = identicalText === undefined ? {} : { identicalText };
   if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', line, fileName, ...why };
   return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', line, fileName, ...why };
