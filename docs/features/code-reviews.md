@@ -1,7 +1,8 @@
 # Code reviews
 
 A code review asks people to review a branch, a changeset or a shelve. A merge request is the same object on the
-server, with a destination branch: what this doc says of reviews holds for both.
+server, with a destination branch and a state: what this doc says of reviews holds for both, and what is a merge
+request's alone (its states, the Merge requests view's State chip, its chips) is in docs/features/merge-requests.md.
 
 Reviews need `cm` 11.0.16.10616 or later: the fields `cm find review` reads (`FOUND_REVIEWS`) and the reviewer
 commands are that version's, and with `--format` a field an older `cm` doesn't know fails the whole command, so the
@@ -77,6 +78,8 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
 
 ## The list
 
+The list is the **Merge requests** view, merge requests and code reviews together (merge-requests.md "One view").
+
 - One `cm find review` reads each review with its reviewers and the status each gave (`{reviewers}`,
   `name:Status` pairs, `parseReviewers`; which are groups, the server's groups say: see "Groups"), the number of comments (`{comments}`: comments, questions, change requests
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
@@ -113,7 +116,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   own reviews in rework, which `reviewer = 'me'` leaves out, and goes by each reviewer's own status, which the query
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
-  The sidebar counts the same reviews on **Code reviews** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
+  The sidebar counts the same reviews on **Merge requests** (`useWaitingForMeBadge`, `waitingBadge`) from the list the
   view read, by its filters, reading nothing itself: no `cm find` runs for a sidebar, so the count shows once the view
   was opened. It counts Waiting for me only, never with Opened by me: it says the user has something to do.
 - **Opened by me** (a `ToggleChip`, the store's `openedByMe`) keeps the user's reviews not reviewed yet (Under review or
@@ -126,7 +129,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
   status, I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
-  and "No matching code reviews" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
+  and "No matching merge requests" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
   most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
   (`reviewSummariesQuery`). The palette finds an older review by its title (`cm find review … like`) or its number,
@@ -157,7 +160,7 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   email subscription (from a `cm` that has it), a fifth on a branch's review for its changesets, which its rounds, its
   chips and Changes share (`useReviewChangesets`, one `cm find changeset`), and on Changes one more for what they show (`cm diff` of the branch, of a changeset or of several). The review
   read goes into the lists already read that hold it (`showReviewReadInListsIn`, `withReviewRead`: each list keeps
-  when it was read, and one an operation marked stale is left to its own read), so Back finds the Code reviews view
+  when it was read, and one an operation marked stale is left to its own read), so Back finds the Merge requests view
   with the review's new status and counts, at no `cm` command of its own.
   Nothing remounts, so the tab, the file selected, the scroll and the threads unfolded stay; the icon spins while any
   of it is read. Nothing reads it on a timer.
