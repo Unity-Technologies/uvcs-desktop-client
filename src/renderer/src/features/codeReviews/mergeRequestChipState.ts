@@ -18,8 +18,9 @@ export interface TopBarRequestChip {
   /** The state's glyph in its color, leading. */
   state: MergeRequestState;
   /**
-   * The state's name after its glyph ("Open"); narrow, the chip drops it and keeps the glyph. Never the request's
-   * number: the branch beside it already names the work (merge-requests.md "Its number").
+   * The state's name in its pill ("Open"), as every merge request's state shows (`MergeRequestStateBadge`); narrow,
+   * the pill drops it and keeps the glyph. Never the request's number: the branch beside it already names the work
+   * (merge-requests.md "Its number").
    */
   stateText: string;
   /**
@@ -27,8 +28,6 @@ export interface TopBarRequestChip {
    * a draft isn't up for review, a merged one is done, and "Open" alone says it waits for its review.
    */
   status?: CodeReviewStatus;
-  /** Merged: the workspace is still on finished work, said quietly. */
-  muted: boolean;
   /**
    * What a screen reader says it is, as the chip shows it: "Merge request · Open into /main · Reviewed: Jump higher";
    * no status where the chip shows none ("Merge request · Open into /main: Jump higher" while under review).
@@ -67,7 +66,6 @@ export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems,
     state,
     stateText: state,
     ...(status && { status }),
-    muted: state === 'Merged',
     label: `${shown.join(' · ')}: ${commentLineText(review.title)}`,
     card: {
       ...(isOpen && open && openLine(open)),

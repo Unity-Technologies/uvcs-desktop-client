@@ -11,12 +11,12 @@ import { openReview } from './codeReviewOperations';
 import { reviewConversationQuery } from './conversation/useReviewConversation';
 import { openItemsOfConversation } from './mergeCard';
 import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, type TopBarRequestAction } from './mergeRequestChipState';
-import { MERGE_REQUEST_STATE_ICONS, type MergeRequestReview } from './mergeRequestState';
+import type { MergeRequestReview } from './mergeRequestState';
+import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { MergeRequestSummaryCard } from './MergeRequestSummaryCard';
 import { currentRequestOf } from './reviewsByBranch';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
-import stateColors from './mergeRequestStateColors.module.css';
 import styles from './MergeRequestChip.module.css';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
@@ -43,7 +43,6 @@ function MergeRequestSegment({ request, source }: { request: MergeRequestReview;
   const { data: conversation } = useQuery({ ...reviewConversationQuery(place, request.id), ...SLOW_CHANGING_QUERY, enabled: cardReadsOpenItems(request, card.open) });
   const open = useMemo(() => (conversation ? openItemsOfConversation(conversation.comments) : undefined), [conversation]);
   const chip = mergeRequestChipOf(request, open, source);
-  const StateIcon = MERGE_REQUEST_STATE_ICONS[chip.state];
 
   const openIt = (): void => {
     card.close();
@@ -57,11 +56,8 @@ function MergeRequestSegment({ request, source }: { request: MergeRequestReview;
   return (
     <Popover.Root open={card.open} onOpenChange={(next) => !next && card.close()}>
       <Popover.Trigger asChild>
-        <button type="button" className={styles.chip} data-muted={chip.muted || undefined} aria-label={chip.label} {...card.hoverProps} onClick={openIt}>
-          <span className={`${styles.state} ${stateColors.stateColor}`} data-state={chip.state} aria-hidden>
-            <StateIcon size={14} />
-          </span>
-          <span className={styles.stateText}>{chip.stateText}</span>
+        <button type="button" className={styles.chip} aria-label={chip.label} {...card.hoverProps} onClick={openIt}>
+          <MergeRequestStateBadge state={chip.state} compact nameHidesWhenNarrow />
           {chip.status && <ReviewStatusIcon status={chip.status} size={13} />}
         </button>
       </Popover.Trigger>

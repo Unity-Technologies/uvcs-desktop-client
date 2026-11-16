@@ -30,3 +30,14 @@
 .badge[data-icon-only='true'] {
   padding: 0 4px;
 }
+
+/* The top bar's, narrow: the glyph says enough, before the branch pill gives up its room. */
+@media (max-width: 820px) {
+  .badge[data-narrow-icon-only] {
+    padding: 0 4px;
+  }
+
+  .badge[data-narrow-icon-only] .name {
+    display: none;
+  }
+}
