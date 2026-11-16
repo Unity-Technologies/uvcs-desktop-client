@@ -33,6 +33,12 @@
   text-overflow: ellipsis;
 }
 
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+}
+
 .kindIcon {
   display: inline-flex;
   color: var(--text-tertiary);
