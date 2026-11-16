@@ -35,9 +35,14 @@
   border: none;
   border-radius: var(--radius-full);
   background: none;
+  /* A click opens the review, as a link would. */
+  cursor: pointer;
 }
 
-.chip:hover > .badge {
+/* Hovered, its pill is outlined in its color: a code review's status or a merge request's state (`MergeRequestStateBadge`,
+   marked by its `data-state`), alike. */
+.chip:hover > .badge,
+.chip:hover > [data-state] {
   filter: brightness(0.95);
   box-shadow: inset 0 0 0 1px currentColor;
 }
