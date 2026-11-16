@@ -2,17 +2,32 @@
 const FOLD_FROM = 4;
 
 /** `targetid = 1 or targetid = 2 or …`: one field compared again and again, joined by `or`. */
-const ORED_RUN = /\b([a-z]+) = ('[^']*'|\d+)(?: or \1 = (?:'[^']*'|\d+)){3,}/gi;
+const ORED_RUN = /\b([a-z]+) = ('[^']*'|\d+)(?: or \1 = (?:'[^']*'|\d+)){3,}/i;
 
 /**
- * A command line as the command log shows it: a long run of the same condition ORed (the reviews of a block of
- * branches, `branchTargetsCondition`: up to 50 `targetid`s) folds to its first and last, with how many are between
- * ("targetid = 31215326 or …48 more… or targetid = 31222103"). Copy and the filter still take the whole line.
+ * A command line folded around its long run of one field's ORed conditions (a block of branches' reviews,
+ * `branchTargetsCondition`: up to 50 `targetid`s): the line up to the run's first condition, how many are left out,
+ * and the rest from its last ("targetid = 31215326 or" … 48 … "or targetid = 31222103) and …").
  */
-export function foldedCommandLine(line: string): string {
-  return line.replace(ORED_RUN, (run: string) => {
-    const conditions = run.split(' or ');
-    if (conditions.length < FOLD_FROM) return run;
-    return `${conditions[0]} or …${conditions.length - 2} more… or ${conditions.at(-1)}`;
-  });
+export interface FoldedCommandLine {
+  head: string;
+  hidden: number;
+  tail: string;
+}
+
+/**
+ * How the command log shows a line, collapsed until the user expands it: folded around its first long run of ORed
+ * conditions, or none for a line without one. Copy and the filter still take the whole line.
+ */
+export function foldedCommandLine(line: string): FoldedCommandLine | undefined {
+  const run = ORED_RUN.exec(line);
+  if (!run) return undefined;
+  const conditions = run[0].split(' or ');
+  if (conditions.length < FOLD_FROM) return undefined;
+  const start = run.index;
+  return {
+    head: `${line.slice(0, start)}${conditions[0]} or `,
+    hidden: conditions.length - 2,
+    tail: ` or ${conditions.at(-1)}${line.slice(start + run[0].length)}`,
+  };
 }

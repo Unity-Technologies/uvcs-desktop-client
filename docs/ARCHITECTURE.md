@@ -1558,7 +1558,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
   Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
   A long run of one field's ORed conditions (a block of branches' reviews: up to 50 `targetid`s) shows folded to
-  its first and last, "…48 more…" between (`foldedCommandLine`); Copy takes the whole line, and the filter searches it.
+  its first and last, behind a "…48 more…" button that shows it whole and folds it back (`foldedCommandLine`,
+  `FoldableCommandLine`); Copy takes the whole line, and the filter searches it.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components

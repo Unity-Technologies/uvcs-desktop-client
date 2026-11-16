@@ -172,3 +172,20 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }
+
+/* The fold of a long run of ORed conditions (`FoldableCommandLine`): a quiet pill in the line, as clickable text. */
+.fold {
+  display: inline;
+  margin: 0 2px;
+  padding: 0 5px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fold:hover {
+  color: var(--text-primary);
+}
