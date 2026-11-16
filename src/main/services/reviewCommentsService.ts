@@ -1,4 +1,6 @@
 import type { ReviewCommentsApi } from '@shared/api/reviewComments';
+import type { Place } from '@shared/domain/place';
+import type { BranchRef, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
@@ -14,9 +16,20 @@ import {
 } from '../cm/reviewCommentArgs';
 import { conversationOf, FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
 import { withTempFile } from '../files/tempFile';
-import type { ServiceContext } from './ServiceContext';
+import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createReviewCommentsService({ cm }: ServiceContext): ReviewCommentsApi {
+export function createReviewCommentsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): ReviewCommentsApi {
+  /**
+   * A merge request's notes name branches by object id (a destination changed, its branch hidden): every id of the
+   * conversation named with one lookup (`BranchNamesCache`), none when no note names a branch.
+   */
+  async function withBranchesNamed(place: Place, conversation: ReviewConversation): Promise<ReviewConversation> {
+    const ids = [...new Set(conversation.events.flatMap(branchIdsOf))];
+    if (ids.length === 0) return conversation;
+    const names = await branchNames.resolve(place, ids);
+    return { ...conversation, events: conversation.events.map((event) => withBranchNames(event, names)) };
+  }
+
   return {
     async conversation(place, reviewId) {
       const at = cmPlace(place);
@@ -25,7 +38,7 @@ export function createReviewCommentsService({ cm }: ServiceContext): ReviewComme
         layoutReader(FOUND_REVIEW_COMMENTS),
         at.options,
       );
-      return conversationOf(records);
+      return withBranchesNamed(place, conversationOf(records));
     },
 
     async add(place, reviewId, text) {
@@ -68,4 +81,20 @@ export function createReviewCommentsService({ cm }: ServiceContext): ReviewComme
       await withTempFile(text, (textFile) => cm.query(descriptionArgs(reviewId, textFile, at), at.options));
     },
   };
+}
+
+function branchIdsOf(event: ReviewEvent): number[] {
+  if (event.kind === 'destinationChanged') return [event.from.id, event.to.id];
+  if (event.kind === 'branchHidden' || event.kind === 'branchUnhidden') return [event.branch.id];
+  return [];
+}
+
+function withBranchNames(event: ReviewEvent, names: ReadonlyMap<number, string>): ReviewEvent {
+  const named = (branch: BranchRef): BranchRef => {
+    const name = names.get(branch.id);
+    return name === undefined ? branch : { ...branch, name };
+  };
+  if (event.kind === 'destinationChanged') return { ...event, from: named(event.from), to: named(event.to) };
+  if (event.kind === 'branchHidden' || event.kind === 'branchUnhidden') return { ...event, branch: named(event.branch) };
+  return event;
 }
