@@ -482,6 +482,12 @@ request it was opened from, and the choices. The page then:
   moved carries the choices made. The reviews are read once, at the end: the merge's own refresh leaves them out
   (`mergeRefreshScope`) and the writes on them refresh nothing of their own, so none reads the request back Open.
 
+Its conflicts are resolved on the page, on the server, as any merge's. The header offers the workspace way too, "Resolve
+in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"
+(switches to the task when needed; resolve, check in, and merge the task again, clean) or "Merge on <parent> in this
+workspace" (switches to the parent when needed; checking in finishes the task). Labels name the branches as briefly as
+tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent.
+
 ### The next step, in Changes
 
 On a clean workspace on a task branch with changesets of its own, Changes offers the task's next step
@@ -510,9 +516,3 @@ merge request #12"). Should the reviews fail to read, the merge into the parent 
   and destination. The branch's reviews are the read Changes already makes for the change requests a check-in applies
   (`branchReviewsQuery`, shared with the top bar), and a rework's count reads the conversation the check-in reads too
   (`conversationToRead`): opening Changes adds no command.
-
-Its conflicts are resolved on the page, on the server, as any merge's. The header offers the workspace way too, "Resolve
-in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"
-(switches to the task when needed; resolve, check in, and merge the task again, clean) or "Merge on <parent> in this
-workspace" (switches to the parent when needed; checking in finishes the task). Labels name the branches as briefly as
-tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent.
