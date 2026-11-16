@@ -79,12 +79,12 @@ export function mergedCheckDestinationOf(branch: TaskBranch | undefined, reviews
 }
 
 /**
- * Whether the step reads its request's conversation, for the change requests still to apply: a request asking for
- * rework with something open (`openIssueCount`), the conversations a check-in reads too (`reviewsToRead`), so it's
- * read once for both.
+ * The review whose conversation the step reads, for the change requests still to apply: a request asking for rework
+ * with something open (`openIssueCount`), one of the conversations a check-in reads too (`reviewsToRead`), so it's
+ * read once for both. None for any other step.
  */
-export function readsOpenItems(step: TaskNextStep): step is Extract<TaskNextStep, { kind: 'rework' }> {
-  return step.kind === 'rework' && step.request.openIssueCount > 0;
+export function conversationToRead(step: TaskNextStep): number | undefined {
+  return step.kind === 'rework' && step.request.openIssueCount > 0 ? step.request.id : undefined;
 }
 
 /** A button of the next step; `MergeTaskSuggestion` runs it. */

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { FinishedTask } from './finishedTask';
-import { mergedCheckDestinationOf, readsOpenItems, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
+import { mergedCheckDestinationOf, conversationToRead, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
 
 const task = { name: '/main/release/task', parent: '/main/release' };
 
@@ -186,14 +186,14 @@ describe('taskNextStepView, its line and buttons', () => {
   });
 });
 
-describe('readsOpenItems', () => {
+describe('conversationToRead', () => {
   it('reads the conversation of a request asking for rework with something open: the one a check-in reads too', () => {
-    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Rework required', { openIssueCount: 2 })])))).toBe(true);
+    expect(conversationToRead(taskNextStepOf(input([openRequest(12, 'Rework required', { openIssueCount: 2 })])))).toBe(12);
   });
 
   it('reads nothing otherwise', () => {
-    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Rework required')])))).toBe(false);
-    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Under review', { openIssueCount: 2 })])))).toBe(false);
-    expect(readsOpenItems(taskNextStepOf(input([])))).toBe(false);
+    expect(conversationToRead(taskNextStepOf(input([openRequest(12, 'Rework required')])))).toBeUndefined();
+    expect(conversationToRead(taskNextStepOf(input([openRequest(12, 'Under review', { openIssueCount: 2 })])))).toBeUndefined();
+    expect(conversationToRead(taskNextStepOf(input([])))).toBeUndefined();
   });
 });
