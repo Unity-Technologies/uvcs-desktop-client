@@ -2,13 +2,18 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
+import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });
 
+/** The merge an open request's card offers, by the one rule the menus follow too (`mergeOfRequest`). */
+const mergeInto = (destination = '/main') => mergeOfRequest({ id: 12, title: 'Add login', target: { kind: 'branch', branch: '/main/task1' }, mergeRequest: { state: 'Open', destination } });
+
 function input(state: MergeRequestState, more: Partial<MergeCardInput> = {}): MergeCardInput {
   return {
     mergeRequest: { state, destination: '/main' },
+    merge: state === 'Open' ? mergeInto() : undefined,
     status: 'Under review',
     reviewers: [reviewer('ana', 'Under review')],
     source: '/main/task1',
@@ -97,20 +102,20 @@ describe('mergeCardOf', () => {
   it('makes Merge primary once the request is ready to merge, and leaves it quiet, never disabled, before', () => {
     const reviewed = mergeCardOf(input('Open', { status: 'Reviewed', reviewers: [reviewer('ana', 'Reviewed')] }));
 
-    expect(reviewed.footer).toEqual({ kind: 'merge', source: '/main/task1', label: 'Merge into main…', primary: true });
-    expect(mergeCardOf(input('Open')).footer).toEqual({ kind: 'merge', source: '/main/task1', label: 'Merge into main…', primary: false });
+    expect(reviewed.footer).toEqual({ kind: 'merge', merge: mergeInto(), label: 'Merge into main…', primary: true });
+    expect(mergeCardOf(input('Open')).footer).toEqual({ kind: 'merge', merge: mergeInto(), label: 'Merge into main…', primary: false });
     expect(mergeCardOf(input('Open', { status: 'Rework required', reviewers: [reviewer('ana', 'Rework required')] })).footer?.primary).toBe(false);
     expect(mergeCardOf(input('Open', { reviewers: [] })).footer?.primary).toBe(false);
   });
 
   it('names a nested destination by its own name', () => {
-    expect(mergeCardOf(input('Open', { mergeRequest: { state: 'Open', destination: '/main/release' } })).footer?.label).toBe('Merge into release…');
+    expect(mergeCardOf(input('Open', { mergeRequest: { state: 'Open', destination: '/main/release' }, merge: mergeInto('/main/release') })).footer?.label).toBe('Merge into release…');
   });
 
   it('disables Merge in a window with no workspace, saying why: the merge page runs in one', () => {
     expect(mergeCardOf(input('Open', { inWorkspace: false })).footer).toEqual({
       kind: 'merge',
-      source: '/main/task1',
+      merge: mergeInto(),
       label: 'Merge into main…',
       primary: false,
       disabledReason: 'Open a workspace of this repository to merge',
@@ -118,7 +123,7 @@ describe('mergeCardOf', () => {
   });
 
   it("offers no Merge when its branch's name couldn't be read", () => {
-    expect(mergeCardOf(input('Open', { source: undefined })).footer).toBeUndefined();
+    expect(mergeCardOf(input('Open', { source: undefined, merge: undefined })).footer).toBeUndefined();
   });
 
   it('shows where a merged one went and the changeset when known, and lets its branch be hidden', () => {
