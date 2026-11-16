@@ -482,6 +482,29 @@ button.pill:hover {
   color: var(--status-changed);
 }
 
+/* A merge request's move: the glyph of the state it moved to, in that state's color (`--merge-request-<state>`). */
+.event[data-icon='Open'] .eventIcon {
+  --event-color: var(--merge-request-open);
+}
+
+.event[data-icon='Merged'] .eventIcon {
+  --event-color: var(--merge-request-merged);
+}
+
+.event[data-icon='Closed'] .eventIcon {
+  --event-color: var(--merge-request-closed);
+}
+
+.event:is([data-icon='Open'], [data-icon='Merged'], [data-icon='Closed']) .eventIcon {
+  background: color-mix(in srgb, var(--event-color) 16%, var(--bg-surface));
+  color: var(--event-color);
+}
+
+/* The changeset a merge request was merged in, after the sentence that names it. */
+.eventChangeset {
+  display: inline-flex;
+}
+
 .eventBody {
   min-width: 0;
 }

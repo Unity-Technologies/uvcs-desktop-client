@@ -96,9 +96,10 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
     if (opensAtSince(blocks, focusThread)) document.getElementById(SINCE_LINE_ID)?.scrollIntoView({ block: 'start', behavior: 'auto' });
   }, [placed, openedAtSince, blocks, focusThread]);
 
+  const eventContext = { destination: review.mergeRequest?.destination };
   const renderEntry = (entry: ConversationEntry) => (
     <li key={entryKey(entry)}>
-      {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
+      {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} />}
       {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
       {entry.kind === 'checkins' && (
         <CheckinsRow entry={entry} onOpenChangeset={(changesetId) => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangeset: changesetId })} />
