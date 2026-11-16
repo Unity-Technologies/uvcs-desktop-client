@@ -5,7 +5,7 @@ import { queryClient } from '../../app/queryClient';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList, isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { codeReviewKey } from './codeReviewKey';
-import { showReviewReadInListsIn } from './listedReview';
+import { showMergeRequestChangedInListsIn } from './listedReview';
 import { moveFailureTitle, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -52,13 +52,11 @@ export function setMergedBranchHidden(place: Place, branch: string, hidden: bool
 }
 
 /**
- * The review as the server now has it, on its page and in the lists already read, before the refresh `runVoidAction`
- * makes (which marks them to be read again after this), as `setReviewSubscription` does.
+ * The review as the server now has it, on its page and in the lists already read, page opened or not (a move from a
+ * row's menu), before the refresh `runVoidAction` makes (which marks them to be read again after this), as
+ * `setReviewSubscription` does.
  */
 function showMergeRequestAs(place: Place, reviewId: number, change: Partial<MergeRequestInfo>): void {
-  const shown = queryClient.getQueryData<CodeReview>(codeReviewKey(place, reviewId));
-  if (!shown?.mergeRequest) return;
-  const updated: CodeReview = { ...shown, mergeRequest: { ...shown.mergeRequest, ...change } };
-  queryClient.setQueryData(codeReviewKey(place, reviewId), updated);
-  showReviewReadInListsIn(queryClient, place, updated);
+  queryClient.setQueryData<CodeReview>(codeReviewKey(place, reviewId), (shown) => shown?.mergeRequest && { ...shown, mergeRequest: { ...shown.mergeRequest, ...change } });
+  showMergeRequestChangedInListsIn(queryClient, place, reviewId, change);
 }
