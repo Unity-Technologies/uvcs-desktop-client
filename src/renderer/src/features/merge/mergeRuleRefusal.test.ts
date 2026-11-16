@@ -86,7 +86,7 @@ describe('mergeRuleNotice', () => {
   it("opens the branch's merge request into that destination otherwise", () => {
     const reviews = [codeReviewSummary({ id: 9, mergeRequest: { state: 'Open', destination: '/main' } })];
 
-    expect(mergeRuleNotice(refusal('needsReview'), undefined, reviews).action?.reviewId).toBe(9);
+    expect(mergeRuleNotice(refusal('needsReview'), undefined, reviews).action).toEqual({ kind: 'openMergeRequest', reviewId: 9, label: 'Open merge request' });
   });
 
   it('offers nothing to open when the branch has no merge request into that destination, or its reviews are not read yet', () => {

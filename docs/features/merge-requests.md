@@ -217,7 +217,8 @@ server, the merge page finishing a task (docs/features/merge.md "Finishing a tas
 - **Merge rules.** A server may refuse the merge for its rules, and does so while the merge page calculates the merge,
   so the preview says it (`MergeRuleRefused`): "This server merges into main only reviewed branches" with **Open merge
   request** (the request the merge was opened from, else the branch's still to merge into that destination,
-  `mergeRequestInto`), and "This server merges into main only branches with an open merge request". They're recognized
+  `mergeRequestInto`), and "This server merges into main only branches with an open merge request" with **Create
+  merge request** (the dialog, from the source branch: `openCreateMergeRequestDialog`). They're recognized
   by `cm`'s English text, the branch names taken from their quotes (`mergeRuleRefusal`); a message in another language
   or any other failure shows `cm`'s own words, as before.
 

@@ -39,7 +39,7 @@ export function mergeRequestInto(reviewsOfBranch: readonly CodeReviewSummary[] |
 /** What the merge page says about a refusal, and the one thing to do about it. */
 export interface MergeRuleNotice {
   title: string;
-  action?: { kind: 'openMergeRequest'; reviewId: number; label: string };
+  action?: { kind: 'openMergeRequest'; reviewId: number; label: string } | { kind: 'createMergeRequest'; branch: string; label: string };
 }
 
 /**
@@ -51,16 +51,19 @@ export function needsBranchReviews({ rule }: MergeRuleRefusal, openedFrom: TaskM
 }
 
 /**
- * The refusal in a plain sentence, with its way forward: a request to review needs the merge request opened, the one
+ * The refusal in a plain sentence, with its way forward: a branch with no merge request gets one created from it; a
+ * request to review needs the merge request opened, the one
  * the merge was opened from, else the branch's into that destination (`mergeRequestInto`), once its reviews are read.
  */
 export function mergeRuleNotice(
-  { rule, destination }: MergeRuleRefusal,
+  { rule, source, destination }: MergeRuleRefusal,
   openedFrom: TaskMergeRequest | undefined,
   reviewsOfBranch: readonly CodeReviewSummary[] | undefined,
 ): MergeRuleNotice {
   const into = branchLabel(destination);
-  if (rule === 'needsMergeRequest') return { title: `This server merges into ${into} only branches with an open merge request` };
+  if (rule === 'needsMergeRequest') {
+    return { title: `This server merges into ${into} only branches with an open merge request`, action: { kind: 'createMergeRequest', branch: source, label: 'Create merge request' } };
+  }
   const mergeRequestId = openedFrom?.id ?? mergeRequestInto(reviewsOfBranch, destination);
   return {
     title: `This server merges into ${into} only reviewed branches`,
