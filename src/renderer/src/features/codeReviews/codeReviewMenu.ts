@@ -14,8 +14,10 @@ import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
-  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: review.id } }) };
+/** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
+export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title' | 'mergeRequest'>): CopyTexts {
+  const object = { kind: 'codeReview', id: review.id, ...(review.mergeRequest ? { asMergeRequest: true } : {}) } as const;
+  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object }) };
 }
 
 /**
@@ -50,7 +52,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
-    single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu(single.mergeRequest ? 'Merge request' : 'Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

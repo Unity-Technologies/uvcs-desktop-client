@@ -1,11 +1,14 @@
 import type { Place } from '@shared/domain/place';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import { formatLink, writesAsLink } from '@shared/links/formatLink';
 import type { LinkObject } from '@shared/links/link';
 import { splitRepositorySpec } from '../../lib/servers';
+import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
 import { queryClient } from '../queryClient';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import type { LinkTarget } from './linkNavigation';
+import { withReviewKind } from './reviewLinkKind';
 
 /**
  * The link to what a repository holds (`game@acme@unity`, as `cm` names it): an object, a page in it, lines. The one
@@ -21,9 +24,18 @@ export function workspaceLinkTo(workspacePath: string, target: LinkTarget): () =
   return async () => repositoryLinkTo((await queryClient.fetchQuery(workspaceInfoQuery(workspacePath))).repository, target);
 }
 
-/** The link to a target in the place's repository: a repository's own at once, a workspace's from its info. */
+/**
+ * The link to a target in the place's repository: a repository's own at once, a workspace's from its info. A review
+ * the page read as a merge request is written as one (`withReviewKind`).
+ */
 export function placeLinkTo(place: Place, target: LinkTarget): () => Promise<string> {
-  return place.kind === 'repository' ? async () => repositoryLinkTo(place.repository, target) : workspaceLinkTo(place.workspacePath, target);
+  const named = withReviewKind(target, (reviewId) => readMergeRequest(place, reviewId));
+  return place.kind === 'repository' ? async () => repositoryLinkTo(place.repository, named) : workspaceLinkTo(place.workspacePath, named);
+}
+
+/** Whether the review its page read (`codeReviewKey`) is a merge request: what the cache holds, no read. */
+function readMergeRequest(place: Place, reviewId: number): boolean {
+  return queryClient.getQueryData<CodeReviewSummary>(codeReviewKey(place, reviewId))?.mergeRequest !== undefined;
 }
 
 /**

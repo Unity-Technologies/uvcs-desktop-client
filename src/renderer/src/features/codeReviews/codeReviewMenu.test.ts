@@ -26,7 +26,7 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { navigation } from '../../app/navigation/navigationStore';
 import { codeReviewPage } from './codeReviewOperations';
-import { codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
+import { codeReviewCopyTexts, codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
 
 const ws = '/ws';
 const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
@@ -132,5 +132,13 @@ describe("a review's page menu", () => {
       .filter((entry) => entry !== SEPARATOR)
       .map((entry) => entry.id);
     expect(ids).toEqual(['reviewInNewWindow', 'copy', 'delete']);
+  });
+});
+
+describe("a review's Copy menu", () => {
+  it("copies a merge request's link as a merge request's, and a code review's as a code review's", () => {
+    const place = repositoryPlace('game@local');
+    const request = codeReviewSummary({ id: 12, mergeRequest: { state: 'Draft', destination: '/main' } });
+    expect([codeReviewCopyTexts(place, request).link, codeReviewCopyTexts(place, summary).link]).toEqual(['uvcs://local/repos/game/merge-requests/12', 'uvcs://local/repos/game/code-reviews/9']);
   });
 });
