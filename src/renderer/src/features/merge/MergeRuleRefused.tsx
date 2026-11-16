@@ -6,6 +6,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { branchReviewsQuery } from '../codeReviews/changeRequests/useChangeRequests';
 import { openReview } from '../codeReviews/codeReviewOperations';
+import { openCreateMergeRequestDialog } from '../codeReviews/CreateMergeRequestDialog';
 import type { TaskMergeRequest } from '../mergeTask/taskMerge';
 import { mergeRuleNotice, needsBranchReviews, type MergeRuleRefusal } from './mergeRuleRefusal';
 
@@ -34,7 +35,7 @@ export function MergeRuleRefused({ refusal, openedFrom, retry }: MergeRuleRefuse
       action={
         <>
           {action && (
-            <Button variant="primary" onClick={() => openReview({ id: action.reviewId })}>
+            <Button variant="primary" onClick={() => (action.kind === 'openMergeRequest' ? openReview({ id: action.reviewId }) : openCreateMergeRequestDialog(place, action.branch))}>
               {action.label}
             </Button>
           )}

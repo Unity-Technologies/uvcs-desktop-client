@@ -17,6 +17,7 @@ import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import stateColors from './mergeRequestStateColors.module.css';
 import styles from './MergeRequestChip.module.css';
+import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
 /**
  * A segment of the branch pill when the workspace's branch has a merge request (`topBarRequestOf`): its state, its
@@ -31,16 +32,16 @@ export function MergeRequestChip() {
   const { isPending: firstScreenPending } = usePendingChanges();
   const { data: reviews } = useQuery({ ...branchReviewsQuery(place, branch ?? ''), enabled: asksForBranchReviews(workspace?.selector, !firstScreenPending) });
   const request = branch === undefined || !reviews ? undefined : topBarRequestOf(reviews);
-  if (!request) return null;
-  return <MergeRequestSegment request={request} />;
+  if (!request || branch === undefined) return null;
+  return <MergeRequestSegment request={request} source={branch} />;
 }
 
-function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
+function MergeRequestSegment({ request, source }: { request: MergeRequestReview; source: string }) {
   const place = usePlace();
   const card = useHoverCard();
   const { data: conversation } = useQuery({ ...reviewConversationQuery(place, request.id), ...SLOW_CHANGING_QUERY, enabled: cardReadsOpenItems(request, card.open) });
   const open = useMemo(() => (conversation ? openItemsOfConversation(conversation.comments) : undefined), [conversation]);
-  const chip = mergeRequestChipOf(request, open);
+  const chip = mergeRequestChipOf(request, open, source);
   const StateIcon = MERGE_REQUEST_STATE_ICONS[chip.state];
 
   const openIt = (): void => {
@@ -51,6 +52,10 @@ function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
     switch (action.kind) {
       case 'open':
         openIt();
+        return;
+      case 'merge':
+        card.close();
+        openMergeRequestMerge(action.merge.request, action.merge.source);
         return;
     }
   };

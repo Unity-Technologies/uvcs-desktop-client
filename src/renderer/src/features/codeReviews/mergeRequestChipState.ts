@@ -3,16 +3,17 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { branchWorkedOn } from '../../components/workingObject';
 import { commentLineText } from '../../lib/comments/commentText';
 import { openItemsLine, reviewSectionOf, type OpenItems } from './mergeCard';
+import { mergeOfRequest, type MergeInto } from './mergeInto';
 import { isActiveMergeRequest, mergeRequestTip } from './mergeRequestState';
 
 /** A review that is a merge request. */
 export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeRequestInfo };
 
 /**
- * What a button of the top bar's hover card does; `MergeRequestChip` runs it. One entry per action: what the card
- * offers more (merging it) is one more kind here and one more entry in `cardActionsOf`.
+ * What a button of the top bar's hover card does; `MergeRequestChip` runs it: open the request, or, once an Open one
+ * is reviewed, merge it (`mergeOfRequest`, the rule the card and the menus follow).
  */
-export type TopBarRequestAction = { kind: 'open'; label: string; primary: boolean };
+export type TopBarRequestAction = { kind: 'open'; label: string; primary: boolean } | { kind: 'merge'; label: string; primary: boolean; merge: MergeInto };
 
 /** What the top bar's merge request chip shows (`MergeRequestChip`, the component), and its hover card. */
 export interface TopBarRequestChip {
@@ -66,8 +67,11 @@ export function topBarRequestOf(reviewsOfBranch: readonly CodeReviewSummary[]): 
   return requests.find(isActiveMergeRequest) ?? requests.find((review) => review.mergeRequest.state === 'Merged');
 }
 
-/** The chip and its card for a merge request; `open`, what its conversation still has open, once read. */
-export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems): TopBarRequestChip {
+/**
+ * The chip and its card for a merge request; `open`, what its conversation still has open, once read; `source`, the
+ * workspace's branch, which the request merges (the top bar's lists name branches by id).
+ */
+export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems, source?: string): TopBarRequestChip {
   const { state } = review.mergeRequest;
   const isOpen = state === 'Open';
   const shown = [`Merge request ${review.id}`, whereItMerges(review.mergeRequest, ' '), ...(isOpen ? [review.status] : [])];
@@ -84,7 +88,7 @@ export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems)
       ...(isOpen && { review: reviewOf(review) }),
       showsReviewers: state !== 'Merged' && review.reviewers.length > 0,
       ...(isOpen && open && openLine(open)),
-      actions: cardActionsOf(),
+      actions: cardActionsOf(review, source),
     },
   };
 }
@@ -113,6 +117,11 @@ function openLine(open: OpenItems): Pick<TopBarRequestCard, 'openItems'> {
   return line ? { openItems: line } : {};
 }
 
-function cardActionsOf(): TopBarRequestAction[] {
-  return [{ kind: 'open', label: 'Open', primary: true }];
+function cardActionsOf(review: MergeRequestReview, source: string | undefined): TopBarRequestAction[] {
+  const merge = review.status === 'Reviewed' && source !== undefined ? mergeOfRequest({ ...review, target: { kind: 'branch', branch: source } }) : undefined;
+  if (!merge) return [{ kind: 'open', label: 'Open', primary: true }];
+  return [
+    { kind: 'merge', label: merge.label, primary: true, merge },
+    { kind: 'open', label: 'Open', primary: false },
+  ];
 }
