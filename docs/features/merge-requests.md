@@ -299,10 +299,14 @@ still opens it) lists merge requests and code reviews together: a review of a ch
 with no destination, is the rarer sibling, not another feature. Two lists of the same object (a Merge requests view
 beside Code reviews) were rejected: two badges, and "where is my review of that branch?".
 
-- **The row** leads with the state glyph, in a fixed-width slot a code review leaves empty, then the title; a code
-  review's number before its title, a merge request's never ("Its number"; `codeReviewColumns`). The Status column stays the review's.
+- **The row** leads with what it is, in a fixed-width slot: a merge request's state glyph, or the code review glyph;
+  then the title, never a number ("Its number"; `codeReviewColumns`). The text filter still finds a review by it. The Status column stays the review's.
 - **Changes** says `task → main` for a merge request: the source gives way when narrow, the arrow and the destination
   stay whole (the destination is usually short). Its tooltip: "Merge /main/task into /main".
+- **The Kind chip** (`kind`, `ReviewKindFilter`): **Any kind**, where it rests, or **Merge requests** or **Code
+  reviews** alone (`matchesKind`), narrowed locally from the same read: switching it runs no command. With Code reviews
+  alone the State chip hides and its state is left out of the read (`stateUnderKind`, `showsStateChip`): a code
+  review has no state.
 - **The State chip** (the store's `state`, `MergeRequestStateFilter`): **Active**, where it rests, keeps the code
   reviews and the merge requests still to merge; **Merged** and **Closed** one state; **All** everything.
   Merged and Closed are the server's (`where mergerequeststatus = 'Merged'`, `codeReviewsQuery`); Active and All ask
@@ -333,7 +337,8 @@ A merge request is named by its title and its branch, never by its number, where
 the branch already has a name, and a second id to remember is one too many. So the list's rows, the branch chips, the
 top bar, their cards, the next step in Changes, the new request's dialog and the toasts leave it out. It shows where
 the request itself is the subject: its details panel (to copy), its page's name ("Merge request 72") and its links.
-A plain code review keeps its number everywhere: it has no other name.
+A plain code review keeps its number where it is named alone (a toast, its page, its tooltip); in the list it goes by
+its glyph and title too.
 
 ## A branch's merge request at a glance
 

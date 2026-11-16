@@ -1,6 +1,7 @@
 import { CircleDot, GitPullRequest, RotateCcw } from 'lucide-react';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { Checkbox } from '../../ui/Checkbox';
+import { reviewNoun } from '../codeReviews/mergeRequestState';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { canMarkReviewed, mergeRequestName } from './mergeTaskSummary';
 import type { TaskMergeChoices, TaskMergeRequest } from './taskMerge';
@@ -52,7 +53,7 @@ function MergeRequestLink({ request }: { request: TaskMergeRequest }) {
 function ReviewStatusLink({ review }: { review: CodeReviewSummary }) {
   const rework = review.status === 'Rework required';
   return (
-    <button type="button" className={styles.status} data-rework={rework} data-tip="Open the code review" onClick={() => openReview(review)}>
+    <button type="button" className={styles.status} data-rework={rework} data-tip={`Open the ${reviewNoun(review).toLowerCase()}`} onClick={() => openReview(review)}>
       {rework ? <RotateCcw size={12} /> : <CircleDot size={12} />}
       {review.status}
     </button>

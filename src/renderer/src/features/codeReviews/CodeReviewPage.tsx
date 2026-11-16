@@ -37,6 +37,7 @@ import { ViewShownContext } from '../../lib/viewShown';
 import { conversationFocus, conversationReplyFocus, mountedTabs, openingTab, pageAfterOpenPick, reviewTabShown } from './reviewTab';
 import { ReviewTitle } from './ReviewTitle';
 import { ChipOpenerContext, type ChipOpener } from '../../components/comments/chipOpener';
+import { reviewNoun } from './mergeRequestState';
 import { reviewChipPage } from './reviewChipPage';
 import { useReviewChangesets } from './rounds/useReviewChangesets';
 import styles from './CodeReviewPage.module.css';
@@ -64,7 +65,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       </div>
     );
   }
-  if (error || !review) return <EmptyState title="Couldn't open the code review" description={error?.message} />;
+  if (error || !review) return <EmptyState title="Couldn't open the review" description={error?.message} />;
 
   const diffTarget = reviewDiffTarget(review.target);
   return (
@@ -75,7 +76,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           <ReviewHeader review={review} />
           <div className={styles.tabs}>
             <Tabs<ReviewTab>
-              label="Code review"
+              label={reviewNoun(review)}
               idPrefix={TABS_ID}
               value={tab}
               // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.

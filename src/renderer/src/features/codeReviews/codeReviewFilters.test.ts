@@ -6,7 +6,7 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, isNarrowed, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, showsStateChip, stateUnderKind, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
@@ -176,5 +176,23 @@ describe('whether the list is narrowed', () => {
 
   it('is while a filter is on, and is not when every review read shows', () => {
     expect([isNarrowed(true, 3, 3), isNarrowed(false, 3, 3), isNarrowed(false, 0, 0)]).toEqual([true, false, false]);
+  });
+});
+
+describe('the Kind chip', () => {
+  const request = { mergeRequest: { state: 'Open' as const, destination: '/main' } };
+  const review = {};
+
+  it('keeps both kinds by default, and one kind alone when picked, with no read of its own', () => {
+    expect([request, review].map((each) => matchesKind(each, 'any'))).toEqual([true, true]);
+    expect([request, review].map((each) => matchesKind(each, 'mergeRequests'))).toEqual([true, false]);
+    expect([request, review].map((each) => matchesKind(each, 'codeReviews'))).toEqual([false, true]);
+  });
+
+  it("drops the State chip and its state with code reviews alone, which have none, and keeps it otherwise", () => {
+    expect(stateUnderKind('codeReviews', 'merged')).toBe('all');
+    expect(stateUnderKind('mergeRequests', 'merged')).toBe('merged');
+    expect(stateUnderKind('any', 'active')).toBe('active');
+    expect([showsStateChip('any'), showsStateChip('mergeRequests'), showsStateChip('codeReviews')]).toEqual([true, true, false]);
   });
 });

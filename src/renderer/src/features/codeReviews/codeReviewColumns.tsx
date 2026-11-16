@@ -1,3 +1,4 @@
+import { MessageSquareCode } from 'lucide-react';
 import { CommentLine } from '../../components/comments/CommentLine';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { PathLabel } from '../../components/PathLabel';
@@ -16,11 +17,11 @@ import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the Merge requests table, which lists code reviews too: a merge request's state and title (a code
- * review's number and title),
- * status, who reviews it, its comments and how many are still open, what it reviews (and where a merge request merges
- * it), who wrote it, when (the list's order and its period go by it), and when anyone last did something on it. A
- * review waiting for `user` has a dot before its number (`waitingForMe`).
+ * Columns of the Merge requests table, which lists code reviews too: a glyph for what it is (a merge request's state,
+ * a code review's own) and its title, status, who reviews it, its comments and how many are still open, what it
+ * reviews (and where a merge request merges it), who wrote it, and when anyone last did something on it. When it was
+ * created has no column, to keep the rows light: the list comes newest first as read, its period goes by it, and the
+ * details panel says it. A review waiting for `user` has a dot before its glyph (`waitingForMe`).
  */
 export function codeReviewColumns(user: string | undefined): Column<CodeReview>[] {
   return [
@@ -31,14 +32,18 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       render: (review) => (
         <>
           <WaitingDot review={review} user={user} />
-          <span className={styles.stateSlot}>{review.mergeRequest && <MergeRequestStateIcon mergeRequest={review.mergeRequest} />}</span>
-          <span className={styles.title}>
-            {/* A merge request goes by its title and branch, never its number (merge-requests.md "Its number"). */}
-            {!review.mergeRequest && (
-              <span className={styles.id}>
-                #<Highlight text={String(review.id)} />
+          {/* What it is, by its glyph: a merge request's state, or a code review's own; never its number, which the
+              details panel and the text filter keep (merge-requests.md "Its number"). */}
+          <span className={styles.stateSlot}>
+            {review.mergeRequest ? (
+              <MergeRequestStateIcon mergeRequest={review.mergeRequest} />
+            ) : (
+              <span className={styles.codeReviewIcon} role="img" aria-label="Code review" data-tip="Code review">
+                <MessageSquareCode size={14} aria-hidden />
               </span>
             )}
+          </span>
+          <span className={styles.title}>
             <span className={styles.titleText}>
               <CommentLine comment={review.title} />
             </span>
@@ -74,7 +79,6 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       render: (review) => <ReviewedChanges review={review} />,
     },
     { id: 'owner', header: 'Author', grow: 1, hideBelow: 900, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
-    { id: 'date', header: 'Created', width: 120, secondary: true, hideBelow: 1100, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
     {
       id: 'lastActivity',
       header: 'Last activity',

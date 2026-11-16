@@ -2,7 +2,7 @@ import type { CodeReview, CodeReviewFilter, CodeReviewSummary } from '@shared/do
 import { isEveryone, isOnlyMine, pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { sameUser, userFilterTexts } from '../../lib/userName';
-import type { MergeRequestStateFilter, StatusFilter } from './codeReviewsViewStore';
+import type { MergeRequestStateFilter, ReviewKindFilter, StatusFilter } from './codeReviewsViewStore';
 import { isActiveMergeRequest } from './mergeRequestState';
 import { describeTarget } from './reviewTarget';
 import { waitingForMe } from './waitingForMe';
@@ -41,6 +41,28 @@ export function codeReviewsQuery({ since, people, status, mergeRequestState, rev
 
 /** The states the server is asked for; the others read every review. */
 const SERVER_STATES: Record<MergeRequestStateFilter, CodeReviewFilter['mergeRequestState']> = { active: undefined, all: undefined, merged: 'Merged', closed: 'Closed' };
+
+/**
+ * The state the list goes by under the Kind chip: the State chip's, except with Code reviews alone, which have no
+ * state: then every review is asked for and kept (`all`), and the State chip hides (`showsStateChip`).
+ */
+export function stateUnderKind(kind: ReviewKindFilter, state: MergeRequestStateFilter): MergeRequestStateFilter {
+  return kind === 'codeReviews' ? 'all' : state;
+}
+
+/** Whether the State chip shows: a merge request's state means nothing to code reviews alone. */
+export function showsStateChip(kind: ReviewKindFilter): boolean {
+  return kind !== 'codeReviews';
+}
+
+/**
+ * Whether a review read shows under the Kind chip: both kinds, merge requests alone, or code reviews alone. Local:
+ * the reviews are read together whatever the kind (one query key), so switching it runs no command.
+ */
+export function matchesKind(review: Pick<CodeReviewSummary, 'mergeRequest'>, kind: ReviewKindFilter): boolean {
+  if (kind === 'any') return true;
+  return (review.mergeRequest !== undefined) === (kind === 'mergeRequests');
+}
 
 /** Whether a review read shows under the State chip: Active keeps the code reviews and the merge requests Open or Draft. */
 export function matchesState(review: Pick<CodeReviewSummary, 'mergeRequest'>, state: MergeRequestStateFilter): boolean {

@@ -76,7 +76,7 @@ export function linkLookup({ object, page }: LinkTarget): LinkLookup {
 export function linkNavigation(target: LinkTarget, looked: LinkLooked | null): LinkNavigation {
   const { object, page, lines } = target;
   if (!object) return placeNavigation(page, lines, looked);
-  if (object.kind === 'codeReview' && page?.kind === 'reviewComment') return reviewCommentNavigation(object.id, page.commentId, looked);
+  if (object.kind === 'codeReview' && page?.kind === 'reviewComment') return reviewCommentNavigation(object, page.commentId, looked);
   const revealed = page?.kind === 'view' && revealTargetOf(object, looked);
   if (revealed) return { kind: 'view', view: 'branchExplorer', show: { kind: 'branchExplorer', target: revealed } };
   if (page?.kind === 'browse' || page?.kind === 'history' || page?.kind === 'annotate') return itemPage(page, lines, pointOf(object, looked));
@@ -86,12 +86,12 @@ export function linkNavigation(target: LinkTarget, looked: LinkLooked | null): L
 }
 
 /** A review at a comment (`commentLinkPage`), from its conversation read; the review alone when it couldn't be. */
-function reviewCommentNavigation(reviewId: number, commentId: number, looked: LinkLooked | null): LinkNavigation {
+function reviewCommentNavigation({ id: reviewId, asMergeRequest }: { id: number; asMergeRequest?: boolean }, commentId: number, looked: LinkLooked | null): LinkNavigation {
   if (!looked || !('conversation' in looked)) throw new Error("A link's lookup must be read before it opens.");
   if (!looked.conversation) return { kind: 'page', page: codeReviewPage({ id: reviewId }) };
   const { page, found } = commentLinkPage(reviewId, commentId, looked.conversation);
   if (found) return { kind: 'page', page };
-  return { kind: 'page', page, notice: { title: 'Comment not found', description: `Code review ${reviewId} has no such comment. It may have been deleted.` } };
+  return { kind: 'page', page, notice: { title: 'Comment not found', description: `${asMergeRequest ? 'This merge request' : `Code review ${reviewId}`} has no such comment. It may have been deleted.` } };
 }
 
 /** A repository's or a workspace's own page: a view, an item revealed or selected in it, or an item's page. */

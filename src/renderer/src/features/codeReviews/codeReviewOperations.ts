@@ -133,7 +133,7 @@ export function renameReview(place: Place, reviewId: number, title: string): Pro
 /** Resolves to true when the reviews were deleted. */
 export async function deleteReviews(place: Place, reviews: CodeReviewSummary[]): Promise<boolean> {
   const confirmed = await confirm({
-    ...deleteReviewsQuestion(reviews.map((review) => review.title)),
+    ...deleteReviewsQuestion(reviews),
     confirmLabel: 'Delete',
     danger: true,
   });
