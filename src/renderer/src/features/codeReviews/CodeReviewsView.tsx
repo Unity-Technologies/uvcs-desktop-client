@@ -17,8 +17,7 @@ import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
-import { openCreateMergeRequestDialog } from './CreateMergeRequestDialog';
-import { prefilledSourceOf } from './mergeRequestDraft';
+import { newMergeRequestCommand } from './useMergeRequestCommands';
 import { GitPullRequestPlus } from '../../components/GitPullRequestPlus';
 import { SplitButton } from '../../ui/SplitButton';
 import { useSelectCreated } from './useSelectCreated';
@@ -90,23 +89,16 @@ export function CodeReviewsView() {
   const columns = useMemo(() => codeReviewColumns(me), [me]);
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
-  const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
-  // On the workspace's branch, and selected once the refreshed list shows it.
-  const newMergeRequest = useCallback(
-    () => openCreateMergeRequestDialog(place, prefilledSourceOf(currentBranch), (reviewId) => selectWhenShown(String(reviewId))),
-    [place, currentBranch, selectWhenShown],
-  );
-  const newReview = useCallback(
-    () => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
-    [place, currentBranch, selectWhenShown],
-  );
+  const currentBranch = branchWorkedOn(workspace?.selector);
+  // What the view creates starts on the workspace's branch, and is selected once the refreshed list shows it. Its New
+  // merge request… replaces the window's (`useMergeRequestCommands`) while the view shows, for that.
+  const selectCreated = useCallback((reviewId: number) => selectWhenShown(String(reviewId)), [selectWhenShown]);
+  const mergeRequestCommand = useMemo(() => newMergeRequestCommand(place, currentBranch, selectCreated), [place, currentBranch, selectCreated]);
+  const newReview = useCallback(() => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch ?? '' }, selectCreated), [place, currentBranch, selectCreated]);
   useCommands(
     useMemo<Command[]>(
-      () => [
-        { id: 'codeReviews.newMergeRequest', group: 'Merge requests', label: 'New merge request…', icon: GitPullRequestPlus, run: newMergeRequest },
-        { id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview },
-      ],
-      [newMergeRequest, newReview],
+      () => [mergeRequestCommand, { id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview }],
+      [mergeRequestCommand, newReview],
     ),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
@@ -125,7 +117,7 @@ export function CodeReviewsView() {
           <SplitButton
             variant="primary"
             icon={<GitPullRequestPlus size={14} />}
-            onClick={newMergeRequest}
+            onClick={mergeRequestCommand.run}
             menuLabel="More to create"
             menu={[{ id: 'newCodeReview', label: 'New code review…', icon: MessageSquarePlus, run: newReview }]}
           >
@@ -190,7 +182,7 @@ export function CodeReviewsView() {
             title="No merge requests"
             description={since === 'anyTime' ? 'Ask to merge a branch once a teammate has reviewed it.' : 'None in this time range. Try a longer one, or ask to merge a branch.'}
             action={
-              <Button variant="primary" icon={<GitPullRequestPlus size={14} />} onClick={newMergeRequest}>
+              <Button variant="primary" icon={<GitPullRequestPlus size={14} />} onClick={mergeRequestCommand.run}>
                 New merge request
               </Button>
             }
