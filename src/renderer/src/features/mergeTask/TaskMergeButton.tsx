@@ -13,6 +13,8 @@ interface TaskMergeButtonProps {
   tooltip: string;
   /** Under a list: a ghost button at the start instead of a button centered in an empty state. */
   quiet?: boolean;
+  /** After the step's own buttons (Create merge request): a ghost button, the way to finish without a request. */
+  subdued?: boolean;
   onClick: () => void;
 }
 
@@ -20,7 +22,7 @@ interface TaskMergeButtonProps {
  * "Merge subtask into child_1", never wider than where it sits: the words stay and the branches give way from their
  * middle (`fitMergeTitle`), fitted to the room less the button's own padding and icon.
  */
-export function TaskMergeButton({ source, destination, tooltip, quiet, onClick }: TaskMergeButtonProps) {
+export function TaskMergeButton({ source, destination, tooltip, quiet, subdued, onClick }: TaskMergeButtonProps) {
   const roomRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -46,7 +48,7 @@ export function TaskMergeButton({ source, destination, tooltip, quiet, onClick }
       <Button
         ref={buttonRef}
         className={styles.button}
-        variant={quiet ? 'ghost' : 'secondary'}
+        variant={quiet || subdued ? 'ghost' : 'secondary'}
         size={quiet ? 'small' : 'medium'}
         icon={<GitPullRequest size={13} />}
         onClick={onClick}

@@ -284,5 +284,8 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
     terminal, reads the new branch's reviews once. The conversation, for what's still open, is read only as the card
     shows an Open request the server counts something open on (`cardReadsOpenItems`), under the key the page and the
     check-in read it by. Nothing polls. A repository's window has no branch, so no chip.
+- **Changes**, on a clean workspace on the branch: the task's next step, by its merge request: Create, Ready for
+  review, where its review stands, Merge into main… once reviewed (docs/features/merge.md "The next step, in Changes").
+  The same read of the branch's reviews, no command of its own.
 - **The palette's** `cr:` rows show the state's glyph and "→ /main" (`codeReviewResult`, `codeReviewResultDetail`).
 - **Links** to a merge request are written `…/merge-requests/12` (docs/features/deep-links.md); both words open either.

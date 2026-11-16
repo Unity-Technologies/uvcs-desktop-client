@@ -14,6 +14,16 @@ repository" below), a pick filling the summary and the description (`recentComme
 (`DESCRIPTION_FOOTER_HEIGHT`), so it takes none of the room to type. With neither, there's no footer and the description is
 as it always was.
 
+## Nothing pending: the task's next step
+
+On a clean workspace on a task branch with changesets of its own, the empty state offers the task's next step
+(`MergeTaskSuggestion`, decided by `taskNextStepOf` and `taskNextStepView`): create its merge request, where the request
+stands and its next move, merge it once reviewed, then what to do once merged. One line and at most two buttons, as calm
+as the empty state. After a check-in (`SuccessEmptyState`), under its Copy link, the line and only the step's most
+useful button (`besideAnotherAction`), so that screen keeps two buttons too. Under a list holding only files never
+checked in, the most useful action alone, quiet. What each case shows and what it costs: docs/features/merge.md
+"Finishing a task" › "The next step, in Changes".
+
 ## Changelists and status groups in the list
 
 - **Grouping by changelist** is the view menu's "Group by ▸ Changelist" in Changes alone (`usePendingChangesViewStore`'s

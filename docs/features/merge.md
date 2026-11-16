@@ -461,9 +461,8 @@ here, since a resolved conflict is no longer one.
 ## Finishing a task
 
 A task branch (`isTaskBranch`: one with a parent) is finished by merging it into its parent on the server: Branch ▸
-"Merge to <parent> on the server…", or, on a clean workspace on the task branch, the suggestion in Changes ("Merge
-subtask into child_1", `MergeTaskSuggestion`, which stays cheap: one `cm find` of the branch, one changeset and one merge
-link with `limit 1`). Both open the merge page with the task (`openTaskMerge`, the page's `task`: `TaskMerge`), and so
+"Merge to <parent> on the server…", or, on a clean workspace on the task branch, the next step Changes offers (below).
+Both open the merge page with the task (`openTaskMerge`, the page's `task`: `TaskMerge`), and so
 do "Merge to another branch on the server…" on a task branch and an open merge request's **Merge into main…**
 (`openMergeRequestMerge`, into the request's destination rather than the parent: docs/features/merge-requests.md
 "Merging"). Where the task merges is the merge's own `destinationBranch`; the task carries only its branch, the merge
@@ -488,3 +487,38 @@ in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "M
 (switches to the task when needed; resolve, check in, and merge the task again, clean) or "Merge on <parent> in this
 workspace" (switches to the parent when needed; checking in finishes the task). Labels name the branches as briefly as
 tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent.
+
+### The next step, in Changes
+
+On a clean workspace on a task branch with changesets of its own, Changes offers the task's next step
+(`MergeTaskSuggestion`; `taskNextStepOf` decides which, `taskNextStepView` its line and buttons), by the branch's merge
+request: the newest still to merge (Open or Draft); a closed or merged one doesn't count.
+
+| The branch has | Changes shows |
+| --- | --- |
+| no merge request (or only closed ones) | **Create merge request** (primary), then "Merge subtask into child_1" (a ghost; its tooltip: finishing without a merge request) |
+| a draft | "#12 Title · draft", **Ready for review**, Open |
+| an open one, under review | "#12 Title · waiting for 2 reviewers" ("no reviewers yet"), Open |
+| an open one, rework required | "#12 Title · 3 change requests to apply" ("changes required" until its conversation is read), Open |
+| an open one, reviewed | "#12 Title · reviewed", **Merge into main…** (`mergeOfRequest`), Open |
+| its head merged where it merges | the finished task (`FinishedTaskCard`) |
+
+The line is the request's state glyph, its number, its title's first line (the part that gives way) and its review in
+words; its glyph names the state to a screen reader (`MergeRequestStateIcon`), its tooltip the destination and the title
+whole. After a check-in, beside "Checked in cs:4"'s Copy link, the line and the first button alone (`besideAnotherAction`:
+Create merge request, Ready for review, Open, Merge into main…), so that screen too keeps two buttons. Under a list holding
+only files never checked in, the most useful action alone, quiet and named whole ("Open merge request #12"). Should the
+reviews fail to read, the merge into the parent alone, as before merge requests (its tooltip says nothing of requests).
+
+- **Nothing new shows until the reviews are read**: the merged check waits for them (`mergedCheckDestinationOf`), so
+  Create never shows to turn into a request's line a moment later.
+- **Nothing blinks out when the destination moves**: creating a request into `/main` from `/main/release/task`, or
+  closing one, moves where the head is looked for; while that check asks, the previous answer stands for the same head
+  (`keepsPreviousMergedCheck`, the query's `placeholderData`), so the step shows the new request at once.
+- **The merged check follows the request's destination** (`mergedCheckDestinationOf`): the one still to merge, else the
+  merged one (`topBarRequestOf`), else the parent. A merged request finishes the task through that same check, its
+  changeset the merge link's; a request merged at an older head offers Create again, as the branch has new work.
+- **The cost**: one `cm find` of the branch, one changeset (`limit 1`) per head and one merge link (`limit 1`) per head
+  and destination. The branch's reviews are the read Changes already makes for the change requests a check-in applies
+  (`branchReviewsQuery`, shared with the top bar), and a rework's count reads the conversation the check-in reads too
+  (`conversationToRead`): opening Changes adds no command.
