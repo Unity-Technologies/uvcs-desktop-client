@@ -15,7 +15,9 @@
 
 .section {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-4);

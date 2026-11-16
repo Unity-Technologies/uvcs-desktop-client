@@ -1,5 +1,6 @@
 import { Check, CircleDot, MoreHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import type { CodeReview, MergeRequestInfo } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
@@ -64,32 +65,33 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
         return;
     }
   };
-  const menu = card.menu.map((action): Action => ({ id: action.kind, label: action.label, run: () => run(action) }));
+  // Each move is its own word: the menu keys its entries by id.
+  const menu = card.menu.map((action): Action => ({ id: action.kind === 'move' ? action.move.word : action.kind, label: action.label, run: () => run(action) }));
+  const menuButton = menu.length > 0 && (
+    <ActionDropdownMenu entries={menu}>
+      <IconButton className={styles.menu} icon={<MoreHorizontal size={15} />} label="More merge request actions" />
+    </ActionDropdownMenu>
+  );
 
+  // The ⋯ ends the footer; with no footer it ends the last section, rather than a footer holding only it.
   return (
     <section className={styles.card} aria-label="Merge request">
-      {card.sections.map((section) => (
-        <CardSection key={section.id} section={section} onAction={run} />
+      {card.sections.map((section, index) => (
+        <CardSection key={section.id} section={section} onAction={run} trailing={!card.footer && index === card.sections.length - 1 ? menuButton : undefined} />
       ))}
-      {(card.footer || menu.length > 0) && (
+      {card.footer && (
         <div className={styles.footer}>
-          {card.footer && (
-            <Button variant={card.footer.primary ? 'primary' : 'secondary'} onClick={() => run(card.footer!)}>
-              {card.footer.label}
-            </Button>
-          )}
-          {menu.length > 0 && (
-            <ActionDropdownMenu entries={menu}>
-              <IconButton className={styles.menu} icon={<MoreHorizontal size={15} />} label="More merge request actions" />
-            </ActionDropdownMenu>
-          )}
+          <Button variant={card.footer.primary ? 'primary' : 'secondary'} onClick={() => run(card.footer!)}>
+            {card.footer.label}
+          </Button>
+          {menuButton}
         </div>
       )}
     </section>
   );
 }
 
-function CardSection({ section, onAction }: { section: MergeCardSection; onAction: (action: MergeCardAction) => void }) {
+function CardSection({ section, onAction, trailing }: { section: MergeCardSection; onAction: (action: MergeCardAction) => void; trailing?: ReactNode }) {
   return (
     <div className={styles.section}>
       <SectionDisc section={section} />
@@ -115,6 +117,7 @@ function CardSection({ section, onAction }: { section: MergeCardSection; onActio
           {section.action.label}
         </Button>
       )}
+      {trailing}
     </div>
   );
 }

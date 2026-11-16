@@ -46,7 +46,8 @@ export function DestinationPicker({ review, source, destination }: DestinationPi
       trigger={
         <button type="button" className={styles.trigger} disabled={changingTo !== undefined} data-tip="Change where it merges" aria-label={`Destination: ${destination}. Change where it merges`}>
           <span className={styles.name}>
-            <PathLabel path={changingTo ?? destination} fitContent tooltip={false} />
+            {/* Keyed by the name: a fitted label measures its width once, so a new name starts it afresh. */}
+            <PathLabel key={changingTo ?? destination} path={changingTo ?? destination} fitContent tooltip={false} />
           </span>
           {changingTo !== undefined ? <Spinner size={12} /> : <ChevronDown size={12} className={styles.chevron} aria-hidden />}
         </button>
