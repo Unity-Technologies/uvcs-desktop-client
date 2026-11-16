@@ -292,8 +292,11 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
-  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. A list
-  reads just the fields it needs, as records (Parsing).
+  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. One
+  exception, measured: the reviews of the branches a view shows, `targetid`s ORed in blocks of `BRANCH_REVIEWS_BLOCK`
+  (`branchTargetsCondition`), which the server matches in one scan, so a block costs what one branch does
+  (docs/features/merge-requests.md "Where a branch's merge request shows"). A list reads just the fields it needs, as
+  records (Parsing).
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
 - **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than

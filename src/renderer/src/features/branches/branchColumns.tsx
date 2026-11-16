@@ -1,5 +1,4 @@
 import { CommentLine } from '../../components/comments/CommentLine';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { UserLabel } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/column';
@@ -9,13 +8,13 @@ import type { BranchTreeRow } from './branchTree';
 
 /**
  * Columns of the branches table. A tree keeps its rows in tree order, so only a list sorts by column; `currentBranch`
- * is marked as the one the workspace is on, and each branch shows its newest code review.
+ * is marked as the one the workspace is on, and each branch shows the review that stands for it, read for the rows
+ * drawn (`BranchNameCell`).
  */
 export function branchColumns(
   layout: BranchesLayout,
   currentBranch: string | undefined,
   onToggleCollapsed: (name: string) => void,
-  reviews: ReadonlyMap<number, CodeReviewSummary> | undefined,
 ): Column<BranchTreeRow>[] {
   const sortable = layout === 'list';
   return [
@@ -25,7 +24,7 @@ export function branchColumns(
       grow: 2,
       sortValue: sortable ? (row) => row.branch.name : undefined,
       render: (row) => (
-        <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.id)} onToggleCollapsed={onToggleCollapsed} />
+        <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} onToggleCollapsed={onToggleCollapsed} />
       ),
     },
     // Gives its room to the name in a narrow list: the details panel shows the comment anyway.

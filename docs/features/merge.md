@@ -469,7 +469,7 @@ do "Merge to another branch on the server…" on a task branch and an open merge
 request it was opened from, and the choices. The page then:
 
 - starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`), or from the
-  merge request's title when opened from one, which it names under the comment, a link back to it ("Merge request 12 ·
+  merge request's title when opened from one, which it names under the comment, a link back to it ("Merge request ·
   Add login", `TaskMergeOptions`);
 - offers, under the comment, "Mark your review as reviewed (“<title>”)" when the branch has a review the user is a
   reviewer of and hasn't marked reviewed yet (`canMarkReviewed`; its status beside it, a click opens it; the review
@@ -497,17 +497,17 @@ request: the newest still to merge (Open or Draft); a closed or merged one doesn
 | The branch has | Changes shows |
 | --- | --- |
 | no merge request (or only closed ones) | **Create merge request** (primary), then "Merge subtask into child_1" (a ghost; its tooltip: finishing without a merge request) |
-| a draft | "#12 Title · draft", **Ready for review**, Open |
-| an open one, under review | "#12 Title · waiting for 2 reviewers" ("no reviewers yet"), Open |
-| an open one, rework required | "#12 Title · 3 change requests to apply" ("changes required" until its conversation is read), Open |
-| an open one, reviewed | "#12 Title · reviewed", **Merge into main…** (`mergeOfRequest`), Open |
+| a draft | "Title · draft", **Ready for review**, Open |
+| an open one, under review | "Title · waiting for 2 reviewers" ("no reviewers yet"), Open |
+| an open one, rework required | "Title · 3 change requests to apply" ("changes required" until its conversation is read), Open |
+| an open one, reviewed | "Title · reviewed", **Merge into main…** (`mergeOfRequest`), Open |
 | its head merged where it merges | the finished task (`FinishedTaskCard`) |
 
-The line is the request's state glyph, its number, its title's first line (the part that gives way) and its review in
+The line is the request's state glyph, its title's first line (the part that gives way) and its review in
 words; its glyph names the state to a screen reader (`MergeRequestStateIcon`), its tooltip the destination and the title
 whole. After a check-in, beside "Checked in cs:4"'s Copy link, the line and the first button alone (`besideAnotherAction`:
 Create merge request, Ready for review, Open, Merge into main…), so that screen too keeps two buttons. Under a list holding
-only files never checked in, the most useful action alone, quiet and named whole ("Open merge request #12"). Should the
+only files never checked in, the most useful action alone, quiet and named whole ("Open merge request"; never its number: merge-requests.md "Its number"). Should the
 reviews fail to read, the merge into the parent alone, as before merge requests (its tooltip says nothing of requests).
 
 - **Nothing new shows until the reviews are read**: the merged check waits for them (`mergedCheckDestinationOf`), so

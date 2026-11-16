@@ -1,0 +1,33 @@
+/* The disc leading a merge card's section (`MergeCardDisc`): a check, a cross, a dot, or the state's glyph. */
+.disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+}
+
+.disc[data-tone='passed'] {
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
+  color: var(--status-added);
+}
+
+.disc[data-tone='failed'] {
+  background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
+  color: var(--status-changed);
+}
+
+/* A section that is the state itself (draft, merged, closed): its glyph in the state's color. */
+.disc[data-state] {
+  background: color-mix(in srgb, var(--merge-request-color) 16%, var(--bg-surface));
+  color: var(--merge-request-color);
+}
+
+/* In a hover card, beside a smaller title. */
+.disc[data-size='small'] {
+  width: 22px;
+  height: 22px;
+}

@@ -127,6 +127,15 @@ describe('code review list', () => {
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, "where target = 'br:/main/task 1' order by date desc")]);
   });
 
+  it('finds the reviews of a block of branches by their ids with one cm find, for the branches a view shows', async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
+
+    const found = await service.listSummaries(IN_WORKSPACE, { targetBranchIds: [37, 41] });
+
+    expect(found.map((summary) => summary.targetBranchId)).toEqual([37]);
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, "where (targetid = 37 or targetid = 41) and targettype = 'branch' order by date desc")]);
+  });
+
   it('asks the server for the merge requests in one state, and for no state when none is asked', async () => {
     const { service, lines } = codeReviews({ 'find review': '' });
 

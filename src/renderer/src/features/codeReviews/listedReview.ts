@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
+import { BRANCH_REVIEW_KEY } from './branchReviewKey';
 
 /**
  * A review as a list already read it (the Merge requests view's), with when that list was read: its page shows it at
@@ -51,7 +52,9 @@ export function withReviewRead(data: unknown, review: CodeReview): unknown {
 export function showReviewReadInListsIn(client: QueryClient, place: Place, review: CodeReview): void {
   for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
     if (query.state.isInvalidated) continue;
-    const updated = withReviewRead(query.state.data, review);
+    const updated = isBranchReviewKey(query.queryKey)
+      ? withStandingReviewUpdated(query.state.data, review.id, (rows) => withReviewRead(rows, review))
+      : withReviewRead(query.state.data, review);
     if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
   }
 }
@@ -73,7 +76,25 @@ export function withMergeRequestChanged(data: unknown, reviewId: number, change:
 export function showMergeRequestChangedInListsIn(client: QueryClient, place: Place, reviewId: number, change: Partial<MergeRequestInfo>): void {
   for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
     if (query.state.isInvalidated) continue;
-    const updated = withMergeRequestChanged(query.state.data, reviewId, change);
+    const updated = isBranchReviewKey(query.queryKey)
+      ? withStandingReviewUpdated(query.state.data, reviewId, (rows) => withMergeRequestChanged(rows, reviewId, change))
+      : withMergeRequestChanged(query.state.data, reviewId, change);
     if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
   }
+}
+
+/**
+ * The review that stands for a branch (`branchReviewQuery`, one review or null) with that review read or changed as
+ * the lists take it (`withReviewRead`, `withMergeRequestChanged`), so the branch's chip shows it too; another review,
+ * or none, as it was.
+ */
+export function withStandingReviewUpdated(data: unknown, reviewId: number, update: (rows: [CodeReviewSummary]) => unknown): unknown {
+  if (typeof data !== 'object' || data === null || Array.isArray(data) || (data as { id?: unknown }).id !== reviewId) return data;
+  const [updated] = update([data as CodeReviewSummary]) as [CodeReviewSummary];
+  return updated;
+}
+
+/** Whether a query holds the review that stands for one branch (`branchReviewQuery`), not a list. */
+function isBranchReviewKey(key: readonly unknown[]): boolean {
+  return key.includes(BRANCH_REVIEW_KEY);
 }

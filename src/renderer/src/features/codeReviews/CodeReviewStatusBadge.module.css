@@ -46,10 +46,3 @@
   background: color-mix(in srgb, var(--review-status-color) 14%, transparent);
   color: var(--review-status-color);
 }
-
-/* A merge request's state glyph leading a branch's chip, sized to the compact badge beside it. */
-.chipState {
-  align-items: center;
-  height: 16px;
-  padding: 0 2px;
-}

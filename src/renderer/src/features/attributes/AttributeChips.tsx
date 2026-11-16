@@ -10,7 +10,7 @@ import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { AttributeChip } from './AttributeChip';
 import { AttributeTextEditor } from './AttributeTextEditor';
-import { attributeEditorFor } from './attributeValues';
+import { attributeEditorFor, hasAttributesToShow } from './attributeValues';
 import { AttributeValueEditor } from './AttributeValueEditor';
 import { useAttributeSuggestions, useAttributeTypes, useAttributeValues } from './useAttributes';
 import styles from './AttributeChips.module.css';
@@ -37,7 +37,7 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
 
   const unused = types.filter((type) => !values.some((value) => value.name === type.name));
   const rows: AttributeValue[] = adding ? [...values, { name: adding, value: '' }] : values;
-  if (rows.length === 0 && unused.length === 0) return null;
+  if (!hasAttributesToShow(rows, types)) return null;
 
   const hidden = showAll ? 0 : Math.max(0, rows.length - MAX_CHIPS);
   const visible = hidden > 0 ? rows.slice(0, MAX_CHIPS) : rows;

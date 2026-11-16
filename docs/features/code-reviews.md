@@ -95,7 +95,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   `REVIEW_STATUS_ICONS`: an eye, a flag, a thumbs-up), fading in as the avatar settles, and its tooltip names them with
   it, `reviewerText`; at rest the stack shows only who, the Status column saying where the review stands (the keyboard
   never spreads it: a sighted keyboard user reads each reviewer's status on the review's page, beside its conversation,
-  where every reviewer shows their status's icon); the details panel shows the same; the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
+  where every reviewer shows their status's icon); the details panel lists them under **Reviewers**, each with their
+  status's icon (`ReviewerList`, read only), and a review of a branch the branch's attributes under **Branch
+  attributes** (`reviewDetailsSections`; hidden with nothing to show or add, `useAttributesShown`); the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
   changes, the author, when it was created (the list's order and its period go by it; hidden in a narrower window) and
   the last activity.
@@ -136,8 +138,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
   and "No matching merge requests" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
-  most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
-  (`reviewSummariesQuery`). The palette finds an older review by its title (`cm find review … like`) or its number,
+  most once (`BranchNamesCache`). The palette reads only the newest `NEWEST_CODE_REVIEWS` (`reviewSummariesQuery`);
+  the branch chips read the reviews of the branches shown, in blocks (merge-requests.md "Reading the branches'
+  reviews"). The palette finds an older review by its title (`cm find review … like`) or its number,
   typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
 
 ## The review's page
@@ -226,7 +229,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   another (`foldReviewerChanges`). What its
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status"), **Open**: the change requests and questions still open
-  (`ReviewSideRail`, `openItemsOf`), and **Notifications** (see "Email notifications").
+  (`ReviewSideRail`, `openItemsOf`), **Notifications** (see "Email notifications") and, for a review of a branch,
+  **Branch attributes**, edited in place (`BranchAttributesSection`, `AttributeChips`; hidden with nothing to show or
+  add, `useAttributesShown`).
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off

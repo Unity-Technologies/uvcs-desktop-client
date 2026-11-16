@@ -141,12 +141,11 @@ const ACTION_ICONS: Record<TaskNextStepAction['kind'], ReactNode> = {
   open: undefined,
 };
 
-/** "⟟ #12 Login screen · waiting for 2 reviewers": the title gives way first. */
+/** "⟟ Login screen · waiting for 2 reviewers": the title gives way first. */
 function RequestLine({ line }: { line: TaskNextStepLine }) {
   return (
     <div className={styles.line} data-tip={line.tip}>
       <MergeRequestStateIcon mergeRequest={line.mergeRequest} tip={false} />
-      <span className={styles.number}>{line.number}</span>
       <span className={styles.title}>{line.title}</span>
       <span className={styles.status}>· {line.status}</span>
     </div>

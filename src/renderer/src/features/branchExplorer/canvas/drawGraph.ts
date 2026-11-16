@@ -71,7 +71,8 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawDateRuler(draw);
 }
 
-function visibleArea({ viewport, size }: GraphScene): VisibleArea {
+/** The part of the graph on screen, in world px, with the columns it spans. */
+export function visibleArea({ viewport, size }: Pick<GraphScene, 'viewport' | 'size'>): VisibleArea {
   const topLeft = toWorld(viewport, 0, 0);
   const bottomRight = toWorld(viewport, size.width, size.height);
   return {

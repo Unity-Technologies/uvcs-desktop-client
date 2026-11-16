@@ -31,13 +31,6 @@
   font-size: var(--text-sm);
 }
 
-.number {
-  flex: none;
-  color: var(--text-primary);
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
-
 .title {
   overflow: hidden;
   min-width: 0;

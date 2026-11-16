@@ -5,7 +5,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { useSettled } from '../../lib/useSettled';
-import { defaultValuesIn, suggestedValues } from './attributeValues';
+import { defaultValuesIn, hasAttributesToShow, suggestedValues } from './attributeValues';
 
 export function useAttributeTypes() {
   const place = usePlace();
@@ -29,6 +29,13 @@ export function useAttributeValues(objectSpec: string) {
     enabled: settled,
     ...SLOW_CHANGING_QUERY,
   });
+}
+
+/** Whether an object's attribute chips show anything (`hasAttributesToShow`), from the reads the chips make themselves. */
+export function useAttributesShown(objectSpec: string): boolean {
+  const { data: values } = useAttributeValues(objectSpec);
+  const { data: types = [] } = useAttributeTypes();
+  return hasAttributesToShow(values, types);
 }
 
 /** The values an attribute takes on branches, changesets and labels (a sample of them). Fetched only while `enabled`. */

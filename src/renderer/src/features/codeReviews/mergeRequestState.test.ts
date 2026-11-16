@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
-import { isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { asMergeRequest, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });
+
+describe('asMergeRequest', () => {
+  it('types a merge request as one, and gives none for a plain code review or no review', () => {
+    const review = codeReviewSummary({ id: 1 });
+    expect(asMergeRequest({ ...review, ...request('Open') })?.mergeRequest).toEqual({ state: 'Open', destination: '/main' });
+    expect(asMergeRequest(review)).toBeUndefined();
+    expect(asMergeRequest(undefined)).toBeUndefined();
+  });
+});
 
 describe('merge request state', () => {
   it('is active while Open or Draft, never Merged, Closed or for a plain review', () => {

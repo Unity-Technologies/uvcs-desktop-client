@@ -1,43 +1,62 @@
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
-import { reviewNoun } from './mergeRequestState';
+import { asMergeRequest, type MergeRequestReview } from './mergeRequestState';
 
-/** What a branch's review chip shows (`CodeReviewChip`): the state of a merge request, the review's status, its tooltip. */
+/** What a branch's review chip shows (`CodeReviewChip`, the Branch Explorer's `drawReviewChip`) and how it's named. */
 export interface ReviewChip {
   /** The merge request's state glyph, leading. */
   state?: MergeRequestState;
+  /** Whether the state's name is written beside its glyph ("Open"). */
+  stateText: boolean;
   /** The review status's glyph. */
   status?: CodeReviewStatus;
+  /**
+   * How the status shows: a badge, its name beside its glyph where `statusText` (a code review's), or the bare icon
+   * after a merge request's state.
+   */
+  statusForm: 'badge' | 'icon';
   /** Whether the status is written beside its glyph ("In review"). */
   statusText: boolean;
-  tip: string;
-  tipSub: string;
+  /** What hovering it shows: a merge request's summary card (`MergeRequestSummaryCard`), a code review's tooltip. */
+  hover: { kind: 'summary'; request: MergeRequestReview } | { kind: 'tip'; tip: string; tipSub: string };
   /** What a screen reader says it does. */
   label: string;
 }
 
 /**
- * A branch's review chip. A code review shows its status; a merge request leads it with its state ("⌥ In review").
- * Narrow (`iconOnly`), a merge request shows its state until it is Open and reviewed, then the thumbs-up alone: at a
- * glance, whether it can merge.
+ * A branch's review chip. A merge request names its state ("Open", in its color), then, while Open and once its
+ * review is decided, a check (reviewed) or a cross (changes required): at a glance, where it stands and whether it can
+ * merge; "Open" alone says it waits for its review. Never its number: the branch already
+ * names the work (merge-requests.md "Its number"). A code review shows its status. Narrow (`iconOnly`), the names go
+ * and the glyphs stay.
  */
 export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): ReviewChip {
-  const { mergeRequest, status } = review;
+  const { status } = review;
   const title = commentLineText(review.title);
-  const noun = reviewNoun(review).toLowerCase();
-  const readyToMerge = mergeRequest?.state === 'Open' && status === 'Reviewed';
-  const showsState = mergeRequest !== undefined && !(iconOnly && readyToMerge);
+  const request = asMergeRequest(review);
+  if (request) {
+    const { state } = request.mergeRequest;
+    return {
+      state,
+      stateText: !iconOnly,
+      status: state === 'Open' && status !== 'Under review' ? status : undefined,
+      statusForm: 'icon',
+      statusText: false,
+      hover: { kind: 'summary', request },
+      label: `Open merge request: ${title}`,
+    };
+  }
   return {
-    state: showsState ? mergeRequest.state : undefined,
-    status: iconOnly && showsState ? undefined : status,
+    stateText: false,
+    status,
+    statusForm: 'badge',
     statusText: !iconOnly,
-    tip: iconOnly ? `${status}: ${title}` : title,
-    tipSub: `${reviewLine(review)} · click to open`,
-    label: `Open ${noun} ${review.id}: ${title}`,
+    hover: { kind: 'tip', tip: iconOnly ? `${status}: ${title}` : title, tipSub: `${codeReviewLine(review)} · click to open` },
+    label: `Open code review ${review.id}: ${title}`,
   };
 }
 
-/** What it is and where it stands, in one line: "Merge request 12 · Open into /main · Under review". */
-export function reviewLine({ id, status, mergeRequest }: CodeReviewSummary): string {
-  return mergeRequest ? `Merge request ${id} · ${mergeRequest.state} into ${mergeRequest.destination} · ${status}` : `Code review ${id} · ${status}`;
+/** A code review in one line, what it is and where it stands: "Code review 12 · Reviewed". */
+export function codeReviewLine({ id, status }: Pick<CodeReviewSummary, 'id' | 'status'>): string {
+  return `Code review ${id} · ${status}`;
 }

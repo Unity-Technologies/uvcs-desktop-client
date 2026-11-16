@@ -45,7 +45,7 @@ export function usePaletteLists(shown: Place | null) {
     // Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand.
     changesets: useQuery({ ...cached, ...recentChangesetsQuery(place) }),
     shelves: useQuery({ ...recentShelvesQuery(place), ...cached }),
-    // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
+    // The newest reviews, read rarely; the comment editor's suggestions share them.
     codeReviews: useQuery({ ...reviewSummariesQuery(place), ...cached }),
   };
 }

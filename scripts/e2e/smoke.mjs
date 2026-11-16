@@ -167,7 +167,8 @@ try {
     // Its notes as events, its branches named, and its merge card; a move from the card's menu.
     await main.getByText('marked this as ready for review').waitFor();
     await main.getByText('changed the destination from /main/task-002 to /main').waitFor();
-    await main.getByText('Changes under review').waitFor();
+    // The card's own: the list's details panel, kept under the page, says where the review stands too.
+    await main.getByRole('region', { name: 'Merge request', exact: true }).getByText('Changes under review').waitFor();
     await settled();
   });
   await step("A merge the server's merge rules refuse", async () => {

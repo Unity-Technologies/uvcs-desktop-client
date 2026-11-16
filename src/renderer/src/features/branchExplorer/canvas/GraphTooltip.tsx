@@ -14,7 +14,8 @@ import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInsid
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
-import { reviewLine } from '../../codeReviews/reviewChip';
+import { codeReviewLine, reviewChipOf } from '../../codeReviews/reviewChip';
+import { MergeRequestSummaryCard } from '../../codeReviews/MergeRequestSummaryCard';
 
 /**
  * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, in the caption's
@@ -93,9 +94,20 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
     );
   }
 
+  const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
+  // A merge request's chip shows its summary, as its chip in the lists and the top bar's do.
+  // What hovering a branch's review chip shows, decided as the lists' chips decide it.
+  const hover = target.kind === 'codeReview' ? reviewChipOf(target.review, false).hover : undefined;
+  if (hover?.kind === 'summary') {
+    return (
+      <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
+        <MergeRequestSummaryCard request={hover.request} framed />
+      </div>
+    );
+  }
+
   const content = tooltipContent(target, layout, pendingChangeCount);
   if (!content) return null;
-  const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
       <HoverCard title={content.title} body={content.body} meta={content.meta} />
@@ -135,7 +147,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
     case 'codeReview':
       return {
         title: commentLineText(target.review.title),
-        body: reviewLine(target.review),
+        body: codeReviewLine(target.review),
         meta: 'Click to open the review',
       };
     case 'mergeLink':

@@ -73,7 +73,7 @@ async function recordMerged(place: Place, reviewId: number, changesetId: number)
   try {
     await api.codeReviews.recordMerged(place, reviewId, changesetId);
   } catch (error) {
-    if (!(await isMergedAlready(place, reviewId))) toast.error(`Merged, but couldn't mark merge request ${reviewId} as merged`, error);
+    if (!(await isMergedAlready(place, reviewId))) toast.error("Merged, but couldn't mark the merge request as merged", error);
   }
 }
 

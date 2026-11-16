@@ -115,11 +115,10 @@ export type TaskNextStepAction = { label: string; primary: boolean } & (
   | { kind: 'merge'; merge: MergeInto }
 );
 
-/** The request's line: its state's glyph, "#12", its title's first line (cut to fit) and its review in words. */
+/** The request's line: its state's glyph, its title's first line (cut to fit) and its review in words; never its number. */
 export interface TaskNextStepLine {
   /** For the state's glyph (`MergeRequestStateIcon`), which names it to a screen reader. */
   mergeRequest: MergeRequestInfo;
-  number: string;
   title: string;
   /** "waiting for 2 reviewers", "3 change requests to apply", "reviewed", "draft". */
   status: string;
@@ -172,10 +171,9 @@ export function taskNextStepView(step: TaskNextStep, { quiet, besideAnotherActio
       return single ? { actions: [create] } : { actions: [create], taskMerge: taskMergeOffer(step.branch, 'Finish the task without a merge request', true) };
     }
   }
-  const number = `#${step.request.id}`;
-  const actions = actionsOf(step, number, quiet);
+  const actions = actionsOf(step, quiet);
   if (quiet) return { actions: [{ ...actions[0]!, primary: false }] };
-  return { line: lineOf(step, number, open), actions: besideAnotherAction ? actions.slice(0, 1) : actions };
+  return { line: lineOf(step, open), actions: besideAnotherAction ? actions.slice(0, 1) : actions };
 }
 
 function taskMergeOffer(branch: TaskBranch, what: string, subdued: boolean): TaskMergeOffer {
@@ -185,11 +183,11 @@ function taskMergeOffer(branch: TaskBranch, what: string, subdued: boolean): Tas
 
 type RequestStep = Extract<TaskNextStep, { request: MergeRequestReview }>;
 
-function actionsOf(step: RequestStep, number: string, quiet: boolean): TaskNextStepAction[] {
-  const openIt: TaskNextStepAction = { kind: 'open', label: quiet ? `Open merge request ${number}` : 'Open', primary: false };
+function actionsOf(step: RequestStep, quiet: boolean): TaskNextStepAction[] {
+  const openIt: TaskNextStepAction = { kind: 'open', label: quiet ? 'Open merge request' : 'Open', primary: false };
   switch (step.kind) {
     case 'draft': {
-      const label = quiet ? `Mark merge request ${number} ready for review` : (MENU_WORDS.readyForReview.label ?? 'Ready for review');
+      const label = quiet ? 'Mark merge request ready for review' : (MENU_WORDS.readyForReview.label ?? 'Ready for review');
       // A draft's first move is getting ready for review (`mergeRequestMoves`), as the card's footer offers it.
       return [{ kind: 'readyForReview', label, primary: true, move: mergeRequestMoves('Draft')[0]! }, openIt];
     }
@@ -201,10 +199,10 @@ function actionsOf(step: RequestStep, number: string, quiet: boolean): TaskNextS
   }
 }
 
-function lineOf(step: RequestStep, number: string, open: OpenItems | undefined): TaskNextStepLine {
+function lineOf(step: RequestStep, open: OpenItems | undefined): TaskNextStepLine {
   const { request } = step;
   const title = commentLineText(request.title);
-  return { mergeRequest: request.mergeRequest, number, title, status: statusWords(step, open), tip: `${mergeRequestTip(request)}: ${title}` };
+  return { mergeRequest: request.mergeRequest, title, status: statusWords(step, open), tip: `${mergeRequestTip(request)}: ${title}` };
 }
 
 function statusWords(step: RequestStep, open: OpenItems | undefined): string {

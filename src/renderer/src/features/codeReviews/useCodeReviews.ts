@@ -8,7 +8,6 @@ import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
-import { reviewOfEachBranch } from './reviewsByBranch';
 
 /** `enabled` false reads nothing, only what the list already read (the sidebar's count, `useWaitingForMeBadge`). */
 export function useCodeReviews(filter: CodeReviewFilter, { enabled = true }: { enabled?: boolean } = {}) {
@@ -60,16 +59,6 @@ export function branchReviewsKey(place: Place, branch: string): readonly unknown
 /** The review with one number, as the palette looks up a number typed (`reviewNumberToLookUp`). */
 export function reviewNumberedKey(place: Place, id: number): readonly unknown[] {
   return queryKeys.inPlace(place, 'codeReviews', 'summaries', { id });
-}
-
-/**
- * The newest review of each branch by branch id, for status chips next to branch names (the lists showing them know
- * their branches' ids, so no name is looked up). The command palette lists the same reviews, read rarely;
- * `enabled` lets a view ask only once its own data is in, so the chips never delay it.
- */
-export function useReviewsByBranch(enabled = true) {
-  const place = usePlace();
-  return useQuery({ ...reviewSummariesQuery(place), select: reviewOfEachBranch, enabled });
 }
 
 /**
