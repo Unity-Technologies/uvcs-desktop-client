@@ -34,7 +34,7 @@ describe('what Code reviews asks the server for', () => {
   });
 
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', state: 'active', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',

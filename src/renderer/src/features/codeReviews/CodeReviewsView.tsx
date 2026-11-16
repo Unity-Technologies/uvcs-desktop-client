@@ -36,7 +36,7 @@ import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
@@ -46,12 +46,12 @@ export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, reviewers, waitingForMe, openedByMe, update } = filters;
+  const { text: search, people, since, status, state, reviewers, waitingForMe, openedByMe, update } = filters;
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, reviewers: queriedReviewers, waitingForMe, openedByMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, state, reviewers: queriedReviewers, waitingForMe, openedByMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
   const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
   const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
@@ -62,12 +62,13 @@ export function CodeReviewsView() {
       (reviews ?? []).filter(
         (review) =>
           matchesPeople(people, me, review.owner) &&
+          matchesState(review, state) &&
           matchesReviewers(review, reviewers, me) &&
           matchesWaiting(review, waitingForMe, me) &&
           matchesOpenedByMe(review, openedByMe, me) &&
           matchesWordFilter(reviewFilterTexts(review), search),
       ),
-    [reviews, people, me, reviewers, waitingForMe, openedByMe, search],
+    [reviews, people, me, state, reviewers, waitingForMe, openedByMe, search],
   );
   // The reviews read that wait for the user: Waiting for me counts them.
   const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
