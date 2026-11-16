@@ -20,12 +20,15 @@ import styles from './codeReviewColumns.module.css';
 
 /**
  * Columns of the Merge requests table, which lists code reviews too: its glyph (a merge request's state, a code
- * review's own), its title and, after it, where it stands as an icon (a merge request its verdict, as by a branch; a
- * code review its status: `reviewStatusCellOf`), saving a Status column; who reviews it, its comments and how many are still open, what it
+ * review's own), its title and, in a narrow column after it, where it stands as an icon (a merge request its verdict,
+ * as by a branch; a code review its status: `reviewStatusCellOf`); who reviews it, its comments and how many are still open, what it
  * reviews (and where a merge request merges it), who wrote it, and when anyone last did something on it. When it was
  * created has no column, to keep the rows light: the list comes newest first as read, its period goes by it, and the
  * details panel says it. A review waiting for `user` has a dot before its glyph (`waitingForMe`).
  */
+/** Room for one icon. */
+const STANDING_COLUMN_WIDTH = 32;
+
 export function codeReviewColumns(user: string | undefined): Column<CodeReview>[] {
   return [
     {
@@ -50,12 +53,14 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
             <span className={styles.titleText}>
               <CommentLine comment={review.title} />
             </span>
-            <ReviewStatusMark review={review} />
           </span>
         </>
       ),
       sortValue: (review) => review.title.toLowerCase(),
     },
+    // Where it stands, an icon in a column of its own right after the title, so the marks line up: no header, as the
+    // icon names itself by its tooltip.
+    { id: 'standing', header: '', width: STANDING_COLUMN_WIDTH, render: (review) => <ReviewStatusMark review={review} /> },
     {
       id: 'reviewers',
       header: 'Reviewers',
