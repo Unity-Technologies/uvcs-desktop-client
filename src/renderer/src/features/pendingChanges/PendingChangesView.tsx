@@ -43,13 +43,15 @@ export function PendingChangesView() {
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
   const branchName = branchWorkedOn(workspace?.selector);
-  const suggestion = branchName !== undefined && <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />;
+  // After a check-in, beside its Copy link: the suggestion's one most useful button, so the screen keeps two at most.
+  const suggestion = (besideAnotherAction: boolean) =>
+    branchName !== undefined && <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} besideAnotherAction={besideAnotherAction} />;
   // Beside the empty list, where the diff goes: the layout never changes shape.
   const nothingPending =
     successMoment && workspace ? (
-      <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion} />
+      <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion(true)} />
     ) : (
-      <EmptyState icon={<CheckCircle2 size={24} />} title="No pending changes" description="Changes you make show up here." action={suggestion} />
+      <EmptyState icon={<CheckCircle2 size={24} />} title="No pending changes" description="Changes you make show up here." action={suggestion(false)} />
     );
 
   return (
