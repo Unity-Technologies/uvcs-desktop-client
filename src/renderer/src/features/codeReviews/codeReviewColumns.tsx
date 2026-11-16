@@ -13,12 +13,15 @@ import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
 import { ReviewerStack } from './ReviewerStack';
 import { reviewedChangesOf } from './mergeRequestState';
 import { MergeRequestStateIcon } from './MergeRequestStateIcon';
+import { MergeVerdictIcon } from './MergeVerdictIcon';
+import { reviewStatusCellOf, reviewStatusSortValue } from './reviewStatusCell';
 import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the Merge requests table, which lists code reviews too: a glyph for what it is (a merge request's state,
- * a code review's own) and its title, status, who reviews it, its comments and how many are still open, what it
+ * Columns of the Merge requests table, which lists code reviews too: its glyph (a merge request's state, a code
+ * review's own) and its title, where it stands (a merge request its verdict, as by a branch; a code review its status:
+ * `reviewStatusCellOf`), who reviews it, its comments and how many are still open, what it
  * reviews (and where a merge request merges it), who wrote it, and when anyone last did something on it. When it was
  * created has no column, to keep the rows light: the list comes newest first as read, its period goes by it, and the
  * details panel says it. A review waiting for `user` has a dot before its glyph (`waitingForMe`).
@@ -32,13 +35,13 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       render: (review) => (
         <>
           <WaitingDot review={review} user={user} />
-          {/* What it is, by its glyph: a merge request's state, or a code review's own; never its number, which the
-              details panel and the text filter keep (merge-requests.md "Its number"). */}
+          {/* What it is and, for a merge request, its state, by its glyph before the title, as pull requests read; never
+              its number, which the details panel and the text filter keep (merge-requests.md "Its number"). */}
           <span className={styles.stateSlot}>
             {review.mergeRequest ? (
               <MergeRequestStateIcon mergeRequest={review.mergeRequest} />
             ) : (
-              <span className={styles.codeReviewIcon} role="img" aria-label="Code review" data-tip="Code review">
+              <span className={styles.kindIcon} role="img" aria-label="Code review" data-tip="Code review">
                 <MessageSquareCode size={14} aria-hidden />
               </span>
             )}
@@ -52,7 +55,7 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       ),
       sortValue: (review) => review.title.toLowerCase(),
     },
-    { id: 'status', header: 'Status', width: 150, render: (review) => <CodeReviewStatusBadge status={review.status} />, sortValue: (review) => review.status },
+    { id: 'status', header: 'Status', width: 150, render: (review) => <ReviewStatus review={review} />, sortValue: reviewStatusSortValue },
     {
       id: 'reviewers',
       header: 'Reviewers',
@@ -115,4 +118,11 @@ function ReviewedChanges({ review }: { review: CodeReview }) {
       </span>
     </span>
   );
+}
+
+/** Where it stands: a merge request's verdict, as by a branch (its state leads the row), a code review's status. */
+function ReviewStatus({ review }: { review: CodeReview }) {
+  const cell = reviewStatusCellOf(review);
+  if (cell.kind === 'codeReview') return <CodeReviewStatusBadge status={cell.status} />;
+  return cell.verdict ? <MergeVerdictIcon verdict={cell.verdict} /> : null;
 }
