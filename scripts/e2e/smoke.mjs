@@ -164,6 +164,12 @@ try {
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await main.getByText('Jump only when grounded.').first().waitFor();
     await main.getByText("You get emails because you're a reviewer.").waitFor();
+    // Its notes as events, its branches named, and its merge card; a move from the card's menu.
+    await main.getByText('marked this as ready for review').waitFor();
+    await main.getByText('changed the destination from /main/task-002 to /main').waitFor();
+    await main.getByText('Changes under review').waitFor();
+    await main.getByRole('button', { name: 'More merge request actions' }).click();
+    await window.getByRole('menuitem', { name: 'Close merge request' }).click();
     await settled();
   });
   await step('Branch Explorer timeline', async () => {
