@@ -18,6 +18,7 @@ import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { openCreateMergeRequestDialog } from './CreateMergeRequestDialog';
+import { prefilledSourceOf } from './mergeRequestDraft';
 import { GitPullRequestPlus } from '../../components/GitPullRequestPlus';
 import { SplitButton } from '../../ui/SplitButton';
 import { useSelectCreated } from './useSelectCreated';
@@ -92,7 +93,7 @@ export function CodeReviewsView() {
   const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
   // On the workspace's branch, and selected once the refreshed list shows it.
   const newMergeRequest = useCallback(
-    () => openCreateMergeRequestDialog(place, currentBranch || undefined, (reviewId) => selectWhenShown(String(reviewId))),
+    () => openCreateMergeRequestDialog(place, prefilledSourceOf(currentBranch), (reviewId) => selectWhenShown(String(reviewId))),
     [place, currentBranch, selectWhenShown],
   );
   const newReview = useCallback(

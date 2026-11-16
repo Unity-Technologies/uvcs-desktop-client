@@ -46,6 +46,14 @@ export function canMergeSomewhere(branch: Pick<Branch, 'name' | 'parent'>): bool
   return ancestorsOf(branch.name).length > 0 || Boolean(branch.parent);
 }
 
+/**
+ * The branch the dialog starts on, from the view or the palette: the workspace's, unless its name says it has nowhere
+ * to merge (`/main`, where most workspaces sit), which would open the dialog on a refusal.
+ */
+export function prefilledSourceOf(workspaceBranch: string | undefined): string | undefined {
+  return workspaceBranch && ancestorsOf(workspaceBranch).length > 0 ? workspaceBranch : undefined;
+}
+
 /** The branches the dialog's From offers, newest first: those that can merge somewhere (`/main` can't). */
 export function sourceGroups(branches: readonly Branch[]): BranchGroup[] {
   return [{ title: 'Branches', branches: newestBranchesFirst(branches).filter(canMergeSomewhere) }];
