@@ -92,8 +92,10 @@ describe('mergeRequestChipOf, the hover card', () => {
     expect(card.showsReviewers).toBe(true);
   });
 
-  it('says a review is required when nobody reviews it', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { reviewers: [] })).card.review).toEqual({ status: 'Under review', title: 'Review required', detail: 'At least 1 approving review is required' });
+  it('says a review is required when nobody reviews it, with no empty stack under it', () => {
+    const { card } = mergeRequestChipOf(request(12, 'Open', { reviewers: [] }));
+    expect(card.review).toEqual({ status: 'Under review', title: 'Review required', detail: 'At least 1 approving review is required' });
+    expect(card.showsReviewers).toBe(false);
   });
 
   it('says it is reviewed once everyone approved', () => {
@@ -112,6 +114,10 @@ describe('mergeRequestChipOf, the hover card', () => {
     expect(card.review).toBeUndefined();
     expect(card.showsReviewers).toBe(true);
     expect(card.openItems).toBeUndefined();
+  });
+
+  it('shows nothing of the reviewers of a draft nobody reviews yet', () => {
+    expect(mergeRequestChipOf(request(12, 'Draft', { reviewers: [] })).card.showsReviewers).toBe(false);
   });
 
   it('shows a merged one as merged into its destination, nothing more', () => {
