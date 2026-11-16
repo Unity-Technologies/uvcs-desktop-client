@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { mergeOfRequest } from './mergeInto';
-import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import { conflictsSectionOf, mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import type { ConflictsCheck } from './mergeRequestConflicts';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });
 
@@ -188,15 +189,89 @@ describe('mergeReadiness', () => {
     expect(mergeReadiness([section('passed')])).toBe(true);
     expect(mergeReadiness([section('passed'), section('pending')])).toBe(false);
     expect(mergeReadiness([section('failed')])).toBe(false);
-    expect(mergeReadiness([section('neutral')])).toBe(false);
   });
 
   it('is never ready with nothing to say it is', () => {
     expect(mergeReadiness([])).toBe(false);
+    expect(mergeReadiness([section('neutral')])).toBe(false);
+  });
+
+  // A conflicts check not run yet, or running, says nothing either way: it doesn't hold a reviewed request back.
+  it('leaves out what says nothing yet (neutral), and is held back by a failed or pending section', () => {
+    expect(mergeReadiness([section('passed'), section('neutral')])).toBe(true);
+    expect(mergeReadiness([section('passed'), section('failed')])).toBe(false);
+  });
+
+  it('is held back by conflicts with the destination, and ready once there are none', () => {
+    const reviewed = { status: 'Reviewed', reviewers: [reviewer('ana', 'Reviewed')] } as const;
+    const checked = (files: number): ConflictsCheck => ({ kind: 'checked', counts: { status: 'ready', files, directories: 0 } });
+
+    expect(mergeCardOf(input('Open', { ...reviewed, conflicts: checked(3) })).footer?.primary).toBe(false);
+    expect(mergeCardOf(input('Open', { ...reviewed, conflicts: checked(0) })).footer?.primary).toBe(true);
+    expect(mergeCardOf(input('Open', { ...reviewed, conflicts: { kind: 'unchecked' } })).footer?.primary).toBe(true);
+    expect(mergeCardOf(input('Open', { ...reviewed, conflicts: { kind: 'checking' } })).footer?.primary).toBe(true);
   });
 
   it("is ready for an open request whose review is done, whatever is still open on it (the server's rules decide)", () => {
     expect(mergeReadiness(mergeCardOf(input('Open', { status: 'Reviewed', reviewers: [reviewer('ana', 'Reviewed')] })).sections)).toBe(true);
     expect(mergeReadiness(mergeCardOf(input('Open')).sections)).toBe(false);
+  });
+});
+
+describe('conflictsSectionOf', () => {
+  const checked = (files: number, directories: number, status: 'ready' | 'alreadyMerged' = 'ready'): ConflictsCheck => ({ kind: 'checked', counts: { status, files, directories } });
+  const resolve = { kind: 'merge', merge: mergeInto(), label: 'Resolve…' };
+
+  it('offers to check, quietly, before anything is asked of the server', () => {
+    expect(conflictsSectionOf({ kind: 'unchecked' }, '/main', mergeInto())).toEqual({
+      id: 'conflicts',
+      tone: 'neutral',
+      title: 'Conflicts with main',
+      detail: 'Not checked yet',
+      action: { kind: 'checkConflicts', label: 'Check' },
+    });
+  });
+
+  it('says it is checking while the server calculates the merge', () => {
+    expect(conflictsSectionOf({ kind: 'checking' }, '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'neutral', title: 'Checking for conflicts with main…' });
+  });
+
+  it('passes when the merge has no conflicts', () => {
+    expect(conflictsSectionOf(checked(0, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'passed', title: 'No conflicts with main', detail: 'Merging can be done automatically' });
+  });
+
+  it('counts the file conflicts, failed, with Resolve… opening the merge page', () => {
+    expect(conflictsSectionOf(checked(3, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'failed', title: '3 file conflicts with main', detail: 'Resolve them to merge', action: resolve });
+    expect(conflictsSectionOf(checked(1, 0), '/main', mergeInto())?.title).toBe('1 file conflict with main');
+  });
+
+  it('counts the directory conflicts', () => {
+    expect(conflictsSectionOf(checked(0, 2), '/main', mergeInto())).toMatchObject({ tone: 'failed', title: '2 directory conflicts with main', action: resolve });
+  });
+
+  it('counts both', () => {
+    expect(conflictsSectionOf(checked(3, 1), '/main', mergeInto())?.title).toBe('3 file conflicts and 1 directory conflict with main');
+  });
+
+  it('names a nested destination by its own name', () => {
+    expect(conflictsSectionOf(checked(0, 0), '/main/release', mergeInto('/main/release'))?.title).toBe('No conflicts with release');
+  });
+
+  it("offers no Resolve… when the request can't be merged (its branch's name unread)", () => {
+    expect(conflictsSectionOf(checked(3, 0), '/main', undefined)?.action).toBeUndefined();
+  });
+
+  it('shows nothing when the check failed, or there is nothing left to merge', () => {
+    expect(conflictsSectionOf({ kind: 'failed' }, '/main', mergeInto())).toBeUndefined();
+    expect(conflictsSectionOf(checked(0, 0, 'alreadyMerged'), '/main', mergeInto())).toBeUndefined();
+  });
+
+  it("follows the review section in an open request's card, and no other state has one", () => {
+    const conflicts: ConflictsCheck = { kind: 'unchecked' };
+    expect(mergeCardOf(input('Open', { conflicts })).sections.map((section) => section.id)).toEqual(['review', 'conflicts']);
+    expect(mergeCardOf(input('Open')).sections.map((section) => section.id)).toEqual(['review']);
+    expect(mergeCardOf(input('Draft', { conflicts })).sections.map((section) => section.id)).toEqual(['draft']);
+    expect(mergeCardOf(input('Merged', { conflicts })).sections.map((section) => section.id)).toEqual(['merged']);
+    expect(mergeCardOf(input('Closed', { conflicts })).sections.map((section) => section.id)).toEqual(['closed']);
   });
 });
