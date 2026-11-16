@@ -3,17 +3,23 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });
 
+/** The merge an open request's card offers, by the one rule the menus follow too (`mergeOfRequest`). */
+const mergeInto = (destination = '/main') => mergeOfRequest({ id: 12, title: 'Add login', target: { kind: 'branch', branch: '/main/task1' }, mergeRequest: { state: 'Open', destination } });
+
 function input(state: MergeRequestState, more: Partial<MergeCardInput> = {}): MergeCardInput {
   return {
     mergeRequest: { state, destination: '/main' },
+    merge: state === 'Open' ? mergeInto() : undefined,
     status: 'Under review',
     reviewers: [reviewer('ana', 'Under review')],
     source: '/main/task1',
     open: { changeRequests: 0, questions: 0 },
+    inWorkspace: true,
     ...more,
   };
 }
@@ -96,11 +102,38 @@ describe('mergeCardOf', () => {
     expect(actionLabels(card).menu).toEqual(['Close merge request']);
   });
 
-  it("shows an open one's review, with what's still open under it, and nothing to merge yet", () => {
+  it("shows an open one's review, with what's still open under it, and Merge into its destination", () => {
     const card = mergeCardOf(input('Open', { open: { changeRequests: 2, questions: 1 } }));
 
     expect(card.sections).toEqual([{ ...reviewSectionOf([reviewer('ana', 'Under review')], 'Under review'), rows: ['2 change requests and 1 question open'] }]);
-    expect(actionLabels(card)).toEqual({ footer: undefined, menu: ['Convert to draft', 'Close merge request'] });
+    expect(actionLabels(card)).toEqual({ footer: 'Merge into main…', menu: ['Convert to draft', 'Close merge request'] });
+  });
+
+  it('makes Merge primary once the request is ready to merge, and leaves it quiet, never disabled, before', () => {
+    const reviewed = mergeCardOf(input('Open', { status: 'Reviewed', reviewers: [reviewer('ana', 'Reviewed')] }));
+
+    expect(reviewed.footer).toEqual({ kind: 'merge', merge: mergeInto(), label: 'Merge into main…', primary: true });
+    expect(mergeCardOf(input('Open')).footer).toEqual({ kind: 'merge', merge: mergeInto(), label: 'Merge into main…', primary: false });
+    expect(mergeCardOf(input('Open', { status: 'Rework required', reviewers: [reviewer('ana', 'Rework required')] })).footer?.primary).toBe(false);
+    expect(mergeCardOf(input('Open', { reviewers: [] })).footer?.primary).toBe(false);
+  });
+
+  it('names a nested destination by its own name', () => {
+    expect(mergeCardOf(input('Open', { mergeRequest: { state: 'Open', destination: '/main/release' }, merge: mergeInto('/main/release') })).footer?.label).toBe('Merge into release…');
+  });
+
+  it('disables Merge in a window with no workspace, saying why: the merge page runs in one', () => {
+    expect(mergeCardOf(input('Open', { inWorkspace: false })).footer).toEqual({
+      kind: 'merge',
+      merge: mergeInto(),
+      label: 'Merge into main…',
+      primary: false,
+      disabledReason: 'Open a workspace of this repository to merge',
+    });
+  });
+
+  it("offers no Merge when its branch's name couldn't be read", () => {
+    expect(mergeCardOf(input('Open', { source: undefined, merge: undefined })).footer).toBeUndefined();
   });
 
   it('shows where a merged one went and the changeset when known, and lets its branch be hidden', () => {
@@ -150,7 +183,7 @@ describe('mergeCardOf', () => {
 describe('mergeReadiness', () => {
   const section = (tone: MergeCardSection['tone']): MergeCardSection => ({ id: 'review', tone, title: '' });
 
-  // No action follows it yet: it is the rule the Merge action will (docs/features/merge-requests.md "The merge card").
+  // The rule the Merge action is made primary by (docs/features/merge-requests.md "The merge card").
   it('is ready once every section passed', () => {
     expect(mergeReadiness([section('passed')])).toBe(true);
     expect(mergeReadiness([section('passed'), section('pending')])).toBe(false);

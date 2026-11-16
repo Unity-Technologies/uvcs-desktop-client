@@ -2,7 +2,7 @@ import { followUpMerge, type MergeOperation, type MergeResolutions, type MergeRe
 import { api } from '../../api/client';
 import { navigation, shownMergeId } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
-import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByCodeReviews, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { toast } from '../../ui/toast/toastStore';
@@ -30,7 +30,7 @@ export async function completeMerge(
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
-    affects: mergeRefreshScope(request),
+    affects: mergeRefreshScope(request, finishing !== undefined),
     success: (merged) => mergeSuccess(request, finishing?.task.branch.name, merged),
   });
   if (!result) return null;
@@ -47,8 +47,12 @@ export async function completeMerge(
   return null;
 }
 
-/** What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does. */
-function mergeRefreshScope(request: MergeOperation): (queryKey: readonly unknown[]) => boolean {
+/**
+ * What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does.
+ * A task's merge leaves the reviews to `finishMergedTask`, which reads them once its merge requests are recorded.
+ */
+function mergeRefreshScope(request: MergeOperation, finishesTask: boolean): (queryKey: readonly unknown[]) => boolean {
+  if (request.destinationBranch && finishesTask) return (key) => isAffectedByServerMerge(key) && !isAffectedByCodeReviews(key);
   if (request.destinationBranch) return isAffectedByServerMerge;
   // Merging a shelve applies it, and may finish the left changes that offered it.
   return request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate;

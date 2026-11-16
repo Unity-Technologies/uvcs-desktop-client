@@ -74,7 +74,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
       else reset(key);
     }
   };
-  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
+  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch, task.mergeRequest) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectedKey = selection.anchor;
@@ -198,7 +198,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               />
             )
           }
-          options={finishing && <TaskMergeOptions review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
+          options={finishing && <TaskMergeOptions mergeRequest={finishing.task.mergeRequest} review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
             conflicting &&

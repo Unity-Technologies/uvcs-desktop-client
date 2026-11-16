@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { reviewOfEachBranch } from './reviewsByBranch';
+import { reviewOfEachBranch, reviewStandingFor } from './reviewsByBranch';
 
 function review(id: number, targetBranchId?: number): CodeReviewSummary {
   return codeReviewSummary({ id, owner: 'jane', date: '2026-09-01', targetBranchId });
@@ -31,5 +31,14 @@ describe('the review standing for a branch', () => {
 
   it('is the newest review when none is still to merge', () => {
     expect(standing(request(9, 'Closed'), review(8, 7), request(5, 'Merged'))).toBe(9);
+  });
+});
+
+describe('reviewStandingFor', () => {
+  it("picks the review standing for one branch among that branch's reviews, by the same rule", () => {
+    const request = codeReviewSummary({ id: 5, targetBranchId: 7, mergeRequest: { state: 'Open', destination: '/main' } });
+
+    expect(reviewStandingFor([review(9, 7), request])?.id).toBe(5);
+    expect(reviewStandingFor([])).toBeUndefined();
   });
 });

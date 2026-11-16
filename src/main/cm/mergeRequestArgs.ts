@@ -48,3 +48,12 @@ export function createdMergeRequestOf(output: string, failed: boolean): CreatedM
   const idLine = output.split(/\r?\n/).map((line) => line.trim()).find((line) => /^\d+$/.test(line));
   return idLine === undefined ? undefined : { id: Number(idLine), descriptionSaved: !failed };
 }
+
+/**
+ * `cm mergerequest edit --mergerequeststatus=Merged --mergechangeset`: the request merged, in the changeset the app's
+ * own merge made. A server with merge requests switched on records it by itself on that check-in, one with them off
+ * never does; setting it again changes nothing and adds no note, so the app always records it (merge-requests.md "Merging").
+ */
+export function recordMergedArgs(reviewId: number, changesetId: number, at: CmPlace): string[] {
+  return ['mergerequest', 'edit', String(reviewId), '--mergerequeststatus=Merged', `--mergechangeset=${at.spec(`cs:${changesetId}`)}`, ...at.repositoryOption];
+}

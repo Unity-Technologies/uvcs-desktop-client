@@ -52,7 +52,8 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
   review, an attribute, a lock, the repository's and server's permissions (`showacl`), the workspace's files and the revisions `cm cat` and `cm diff` answer. `status.cjs`
   answers `cm status --header --xml` and the changes as `--machinereadable` records, `tree.cjs` `cm ls --format=…`.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
-  fails listing it. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
+  fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002, which
+  the fake's merge rules refuse) is an answer, not a command it doesn't know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
   objects in `repository.cjs`, output shaped as the app's parser reads it (its tests show real `cm` output).
 - Windows starts only executables (Node refuses a `.cmd` without a shell), so there `executable.mjs` builds `cm.exe`
   with `node --build-sea` (Node 25.5 or later) that loads `cm.cjs`; on macOS and Linux the script runs by its `#!`.

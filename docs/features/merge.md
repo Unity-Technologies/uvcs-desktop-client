@@ -464,16 +464,24 @@ A task branch (`isTaskBranch`: one with a parent) is finished by merging it into
 "Merge to <parent> on the server…", or, on a clean workspace on the task branch, the suggestion in Changes ("Merge
 subtask into child_1", `MergeTaskSuggestion`, which stays cheap: one `cm find` of the branch, one changeset and one merge
 link with `limit 1`). Both open the merge page with the task (`openTaskMerge`, the page's `task`: `TaskMerge`), and so
-does "Merge to another branch on the server…" on a task branch. The page then:
+do "Merge to another branch on the server…" on a task branch and an open merge request's **Merge into main…**
+(`openMergeRequestMerge`, into the request's destination rather than the parent: docs/features/merge-requests.md
+"Merging"). Where the task merges is the merge's own `destinationBranch`; the task carries only its branch, the merge
+request it was opened from, and the choices. The page then:
 
-- starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`);
+- starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`), or from the
+  merge request's title when opened from one, which it names under the comment, a link back to it ("Merge request 12 ·
+  Add login", `TaskMergeOptions`);
 - offers, under the comment, "Mark your review as reviewed (“<title>”)" when the branch has a review the user is a
   reviewer of and hasn't marked reviewed yet (`canMarkReviewed`; its status beside it, a click opens it; the review
-  comes from the list the branch chips share, `useReviewsByBranch`), and "Hide the branch afterwards"
-  (`TaskMergeOptions`). Only a reviewer gives a status (docs/features/code-reviews.md);
-- once merged, does what was picked and remembers where the task landed (`finishMergedTask`), so Changes shows the
-  finished task: where it went, "Switch to <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge
-  that finishes it after its destination moved carries the choices made.
+  stands for the branch among the branch's reviews, `reviewStandingFor`, read once as Changes reads them,
+  `branchReviewsQuery`), and "Hide the branch afterwards" (`TaskMergeOptions`). Only a reviewer gives a status
+  (docs/features/code-reviews.md);
+- once merged, records the branch's merge requests into that destination Merged, then does what was picked, and
+  remembers where the task landed (`finishMergedTask`), so Changes shows the finished task: where it went, "Switch to
+  <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge that finishes it after its destination
+  moved carries the choices made. The reviews are read once, at the end: the merge's own refresh leaves them out
+  (`mergeRefreshScope`) and the writes on them refresh nothing of their own, so none reads the request back Open.
 
 Its conflicts are resolved on the page, on the server, as any merge's. The header offers the workspace way too, "Resolve
 in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"

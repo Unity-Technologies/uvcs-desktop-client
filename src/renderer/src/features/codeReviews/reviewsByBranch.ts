@@ -22,3 +22,8 @@ export function reviewOfEachBranch(reviews: readonly CodeReviewSummary[]): Reado
   }
   return byBranch;
 }
+
+/** The review that stands for one branch, from that branch's reviews listed newest first (`reviewOfEachBranch`'s rule). */
+export function reviewStandingFor(reviewsOfBranch: readonly CodeReviewSummary[]): CodeReviewSummary | undefined {
+  return reviewOfEachBranch(reviewsOfBranch).values().next().value;
+}

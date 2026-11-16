@@ -208,6 +208,8 @@ export const MENU_WORDS = {
   merge: word('merge', GitMerge, MERGE_INTO_WORKSPACE),
   mergeTask: word('merge', GitPullRequest),
   mergeTo: word('merge', GitPullRequestArrow, serverMergeLabel()),
+  // An open merge request merged into its destination on the merge page: the words name it ("Merge into main…").
+  mergeInto: word('merge', GitMerge),
   cherryPick: word('merge', Cherry),
   subtractive: word('merge', Minus, 'Subtractive merge (remove its changes)'),
   cherryPickRange: word('merge', Cherry),
@@ -341,6 +343,7 @@ export const NEEDS_A_WORKSPACE = [
   'merge',
   'mergeTask',
   'mergeTo',
+  'mergeInto',
   'cherryPick',
   'subtractive',
   'cherryPickRange',

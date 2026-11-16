@@ -14,6 +14,8 @@ import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
 import { mergeRequestMoves, reviewNoun } from './mergeRequestState';
 import { setMergeRequestState } from './mergeRequestOperations';
+import { mergeIntoOf } from './mergeInto';
+import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
 /** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
@@ -55,6 +57,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
     ...(single ? mergeRequestMoveEntries(place, single) : []),
+    single && mergeIntoEntry(place, single),
     single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
@@ -69,12 +72,19 @@ export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEnt
   return groupedMenu([
     menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(review))),
     ...mergeRequestMoveEntries(place, review),
+    mergeIntoEntry(place, review),
     copySubmenu(reviewNoun(review), codeReviewCopyTexts(place, review), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     // Its page has nothing left to show once it's gone: back to where the user came from.
     menuAction('delete', async () => {
       if (await deleteReviews(place, [review])) navigation.goBack();
     }),
   ]);
+}
+
+/** Merge into its destination, for an open merge request whose branch is named, in a window with a workspace (`mergeIntoOf`). */
+function mergeIntoEntry(place: Place, review: CodeReviewSummary) {
+  const merge = mergeIntoOf(place, review);
+  return merge && menuAction('mergeInto', () => openMergeRequestMerge(merge.request, merge.source), { label: merge.label });
 }
 
 /** A merge request's moves (`mergeRequestMoves`), at once: closing asks nothing, as Reopen undoes it. None for a code review. */

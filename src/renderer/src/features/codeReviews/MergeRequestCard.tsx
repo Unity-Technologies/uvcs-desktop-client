@@ -13,8 +13,10 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { switchToBranch } from '../branches/branchOperations';
+import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 import { branchQuery } from '../branches/useBranches';
 import { chooseReviewers } from './codeReviewOperations';
+import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, type MergeCardAction, type MergeCardSection, type MergeCardTone, type OpenItems } from './mergeCard';
 import { setMergedBranchHidden, setMergeRequestState } from './mergeRequestOperations';
 import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
@@ -48,12 +50,17 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
     mergedChangeset,
     sourceBranch,
     workspaceBranch: branchWorkedOn(workspace?.selector),
+    merge: mergeOfRequest(review),
+    inWorkspace: place.kind === 'workspace',
   });
 
   const run = (action: MergeCardAction): void => {
     switch (action.kind) {
       case 'move':
         void setMergeRequestState(place, review, action.move);
+        return;
+      case 'merge':
+        openMergeRequestMerge(action.merge.request, action.merge.source);
         return;
       case 'addReviewers':
         void chooseReviewers(place, review);
@@ -82,7 +89,13 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
       ))}
       {card.footer && (
         <div className={styles.footer}>
-          <Button variant={card.footer.primary ? 'primary' : 'secondary'} onClick={() => run(card.footer!)}>
+          {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why. */}
+          <Button
+            variant={card.footer.primary ? 'primary' : 'secondary'}
+            aria-disabled={card.footer.disabledReason !== undefined || undefined}
+            data-tip={card.footer.disabledReason}
+            onClick={() => card.footer!.disabledReason === undefined && run(card.footer!)}
+          >
             {card.footer.label}
           </Button>
           {menuButton}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { cmPlace } from './cmPlace';
 import type { CreateMergeRequestRequest } from '@shared/domain/codeReview';
-import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs } from './mergeRequestArgs';
+import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs, recordMergedArgs } from './mergeRequestArgs';
 
 const IN_WORKSPACE = cmPlace(workspacePlace('/wk/game'));
 const ON_REPOSITORY = cmPlace(repositoryPlace('game@local'));
@@ -109,5 +109,15 @@ describe('createdMergeRequestOf', () => {
   it('finds none when cm printed no id: the request was not made', () => {
     expect(createdMergeRequestOf("The specified branch /main/nope can't be found.\n", true)).toBeUndefined();
     expect(createdMergeRequestOf('', false)).toBeUndefined();
+  });
+});
+
+describe('recordMergedArgs', () => {
+  it('records the request Merged with the changeset its merge made', () => {
+    expect(recordMergedArgs(43, 6, IN_WORKSPACE)).toEqual(['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6']);
+  });
+
+  it('names the repository in the spec and the option outside a workspace', () => {
+    expect(recordMergedArgs(43, 6, ON_REPOSITORY)).toEqual(['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6@game@local', '--repository=game@local']);
   });
 });

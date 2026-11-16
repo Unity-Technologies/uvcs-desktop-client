@@ -371,6 +371,14 @@ describe('merge request writes', () => {
     expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--destination=br:/main/release'] }]);
   });
 
+  it('records a merge request Merged, with the changeset its merge made, with one quick command', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.recordMerged(IN_WORKSPACE, 43, 6);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6'], options: { cwd: WORKSPACE } }]);
+  });
+
   it('names the repository outside a workspace', async () => {
     const { service, lines } = codeReviews({ 'mergerequest edit': '' });
 

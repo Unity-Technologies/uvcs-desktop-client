@@ -168,6 +168,17 @@ try {
     await main.getByText('marked this as ready for review').waitFor();
     await main.getByText('changed the destination from /main/task-002 to /main').waitFor();
     await main.getByText('Changes under review').waitFor();
+    await settled();
+  });
+  await step("A merge the server's merge rules refuse", async () => {
+    // The fake's server merges only reviewed branches: the merge page says so and opens the request back.
+    await main.getByRole('button', { name: 'Merge into main…' }).click();
+    await main.getByText('This server merges into main only reviewed branches').waitFor();
+    await main.getByRole('button', { name: 'Open merge request' }).click();
+    await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
+    await settled();
+  });
+  await step("A merge request's moves", async () => {
     await main.getByRole('button', { name: 'More merge request actions' }).click();
     await window.getByRole('menuitem', { name: 'Close merge request' }).click();
     await settled();

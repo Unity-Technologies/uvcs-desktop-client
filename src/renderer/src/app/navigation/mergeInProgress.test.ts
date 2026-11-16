@@ -25,7 +25,7 @@ describe('mergeAfterLeaving', () => {
 
 describe('isSameMerge', () => {
   it('matches the same task merge whatever the choices it carries', () => {
-    const branch = { id: 7, name: '/main/task', parent: '/main', comment: '' };
+    const branch = { name: '/main/task', comment: '' };
     const task = (markReviewed: boolean): PageOf<'merge'> => ({ ...page, task: { branch, choices: { markReviewed, hideBranch: false } } });
     expect(isSameMerge({ ...merge, page: task(true) }, task(false))).toBe(true);
     expect(isSameMerge({ ...merge, page: task(true) }, page)).toBe(false);
