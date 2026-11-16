@@ -11,7 +11,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ListSkeleton } from '../../ui/Skeleton';
-import { BranchMergeRequestMark } from '../codeReviews/BranchMergeRequestMark';
+import { BranchReviewChip } from '../codeReviews/BranchReviewChip';
 import { BranchSearchItem } from './BranchSearchItem';
 import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
@@ -32,7 +32,7 @@ interface BranchSearchListProps {
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
   /**
-   * Each row drawn shows its branch's merge request (`BranchMergeRequestMark`): whose branches they are, and how to close
+   * Each row drawn shows its branch's review as the Branches view does (`BranchReviewChip`): whose branches they are, and how to close
    * what holds the list (a popup, a dialog) before a request opens from its card. Left out for another repository's
    * branches (an xlink's), whose merge requests don't matter to the pick.
    */
@@ -139,7 +139,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                   key={row.branch.name}
                   branch={row.branch}
                   current={row.branch.name === currentBranch}
-                  badge={mergeRequests && <BranchMergeRequestMark place={mergeRequests.place} leave={mergeRequests.leave} branchId={row.branch.id} />}
+                  badge={mergeRequests && <BranchReviewChip place={mergeRequests.place} leave={mergeRequests.leave} branchId={row.branch.id} />}
                   highlighted={row.index === highlighted}
                   id={`${listboxId}-${row.index}`}
                   role="option"

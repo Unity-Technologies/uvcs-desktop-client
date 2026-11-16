@@ -398,19 +398,15 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   column and no "+N more": the list filtered by the branch shows the others.
 - **Lists to pick a branch from** (`BranchSearchList`'s `mergeRequests`: the branch switcher, the Files and
   Changesets branch chips, the merge, compare and move pickers, the New merge request dialog's From and Into): each
-  row drawn shows its branch's merge request as its state's glyph in its color, at the row's end over the date, so
-  the glyphs line up in a column and the name keeps its room; hovering the glyph shows the summary card ("A branch's merge request at a glance"),
-  opening only once the pointer rests on it, so moving down the list never shows it (`BranchMergeRequestMark`,
-  `MergeRequestHoverCard`). Its title opens the request, as every card's does, once what holds the list closed
-  (`BranchSearchList`'s `mergeRequests.leave`: the popup, and the dialog it sits in), so nothing stays over the page;
-  a click on the card never reaches the row (it would switch). Nothing for a branch
-  without one or with a plain review. No verdict: the list is for picking, and the state answers whether the branch
-  is still in play. Tried and dropped: a glyph between the comment and the date floated with the date's width and
-  cluttered the row; a glyph in the branch icon's place read as one more branch icon; the pill after the name
-  scattered with the names' lengths; the pill over the date ("Open" in its fill) repeated one word down a list of
-  task branches, nearly all Open, and drew the eye from the names. Read as the
-  views read (above), the rows drawn once they stay, so the list opens at once and the glyphs follow. A list of
-  another repository's branches (an xlink's) shows none: its merge requests don't bear on the pick.
+  row drawn shows its branch's chip after the name, the Branches view's own (`BranchReviewChip`, `CodeReviewChip`):
+  the same pill, verdict and hover card, one experience wherever a branch shows its review. The chip's click and its
+  card's title open the review once what holds the list closed (`mergeRequests.leave`: the popup, and the dialog it
+  sits in), so nothing stays over the page; a click on the chip or its card never reaches the row (it would switch).
+  Inside the row, itself a button, the chip is a span (`insideButton`): the row keeps the keyboard. Tried and
+  dropped: a glyph between the comment and the date, a glyph in the branch icon's place, and a pill or a glyph over
+  the date; each read differently from the Branches view, and the glyphs read as branch icons. Read as the views
+  read (above), the rows drawn once they stay, so the list opens at once and the chips follow. A list of another
+  repository's branches (an xlink's) shows none: its reviews don't bear on the pick.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
   workspace's branch has a merge request, its state's compact pill ("Open") and its verdict, as by every branch; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
   counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the

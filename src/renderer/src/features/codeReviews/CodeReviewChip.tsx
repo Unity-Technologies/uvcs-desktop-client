@@ -14,11 +14,25 @@ import chipStyles from './CodeReviewChip.module.css';
  * then its review's status; a code review's status. Clicking it opens the review. Hovering a merge request's shows its
  * summary (`MergeRequestSummaryCard`); a code review's, a tooltip. `iconOnly` where room is short.
  */
-export function CodeReviewChip({ review, iconOnly = false }: { review: CodeReviewSummary; iconOnly?: boolean }) {
+interface CodeReviewChipProps {
+  review: CodeReviewSummary;
+  iconOnly?: boolean;
+  /** Runs before the review opens: a list to pick a branch from closes the popup or dialog holding it. */
+  beforeOpen?: () => void;
+  /** Drawn inside a row that is itself a button (a branch list's), where a button can't nest: the row keeps the keyboard. */
+  insideButton?: boolean;
+}
+
+export function CodeReviewChip({ review, iconOnly = false, beforeOpen, insideButton = false }: CodeReviewChipProps) {
   const chip = reviewChipOf(review, iconOnly);
+  const Element = insideButton ? 'span' : 'button';
+  const open = (): void => {
+    beforeOpen?.();
+    openReview(review);
+  };
   const button = (hoverProps?: object): ReactNode => (
-    <button
-      type="button"
+    <Element
+      type={insideButton ? undefined : 'button'}
       className={styles.chip}
       data-tip={chip.hover.kind === 'tip' ? chip.hover.tip : undefined}
       data-tip-sub={chip.hover.kind === 'tip' ? chip.hover.tipSub : undefined}
@@ -27,18 +41,18 @@ export function CodeReviewChip({ review, iconOnly = false }: { review: CodeRevie
       onDoubleClick={stop}
       onClick={(event) => {
         event.stopPropagation();
-        openReview(review);
+        open();
       }}
       {...hoverProps}
     >
       <ChipGlyphs chip={chip} />
-    </button>
+    </Element>
   );
   switch (chip.hover.kind) {
     case 'tip':
       return button();
     case 'summary':
-      return <MergeRequestHoverCard request={chip.hover.request} trigger={button} />;
+      return <MergeRequestHoverCard request={chip.hover.request} trigger={button} beforeOpen={beforeOpen} />;
   }
 }
 
