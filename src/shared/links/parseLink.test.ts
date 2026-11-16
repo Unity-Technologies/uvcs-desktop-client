@@ -142,6 +142,7 @@ describe('parseLink', () => {
     // The official client's links (docs/features/deep-links.md, "Older links"), under either scheme.
     it.each<[string, Link]>([
       ['plastic://acme.cloud/repos/game/changesets/4207/diff', { ...game, server: 'acme@cloud', object: { kind: 'changeset', id: 4207 } }],
+      ['plastic://acme.cloud/repos/game/merge-requests/31407383', { ...game, server: 'acme@cloud', object: { kind: 'codeReview', id: 31407383, asMergeRequest: true } }],
       ['uvcs://acme.cloud/repos/game/changesets/4200..4207/diff', { ...game, server: 'acme@cloud', object: { kind: 'changesetRange', from: 4200, to: 4207 } }],
       ['uvcs://acme.cloud/repos/game/branches/main/Mi+rama/MiSuperRama%24%24/diff', { ...game, server: 'acme@cloud', object: { kind: 'branch', name: '/main/Mi rama/MiSuperRama$$' } }],
       ['uvcs://acme.cloud/repos/game/branches/main/diff/diff', { ...game, server: 'acme@cloud', object: { kind: 'branch', name: '/main/diff' } }],
