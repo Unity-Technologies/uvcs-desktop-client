@@ -21,7 +21,7 @@ import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { BranchField } from './BranchField';
 import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
-import { blocksCreate, existingRequestOf, mergeRequestForm, sourceGroups } from './mergeRequestDraft';
+import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups, type DraftNote } from './mergeRequestDraft';
 import { typedReviewers } from './reviewerGroups';
 import { useReviewerGroups } from './useReviewerGroups';
 import styles from './CreateMergeRequestDialog.module.css';
@@ -69,10 +69,13 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const { data: readBranch } = useQuery({ ...branchQuery(place, source.name), ...SLOW_CHANGING_QUERY, enabled: source.name !== '' && !source.branch });
   // The branch's reviews, once a pick settles: the read Changes and the top bar share (`branchReviewsKey`).
   const settledSource = useSettledValue(source.name, source.name);
-  const { data: reviewsOfBranch } = useQuery({ ...branchReviewsQuery(place, settledSource), enabled: settledSource !== '' && settledSource === source.name });
+  const reviewsRead = useQuery({ ...branchReviewsQuery(place, settledSource), enabled: settledSource !== '' && settledSource === source.name });
+  // Only the reviews of the branch now picked: while a new pick settles, the query still holds the last one's.
+  const reviewsOfBranch = settledSource === source.name ? reviewsRead.data : undefined;
+  const reviewsCheck = reviewsCheckOf(source.name, reviewsOfBranch, settledSource === source.name && reviewsRead.isError);
 
   const sourceBranch = source.branch ?? readBranch ?? undefined;
-  const { destination, title, existing, note, problem } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch });
+  const { destination, title, note, problem, tip } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch, reviewsCheck });
 
   const sourceChoices = useCallback((branches: Branch[]) => sourceGroups(branches), []);
   const destinationChoices = useCallback((branches: Branch[]) => destinationGroups(branches, source.name, sourceBranch?.parent), [source.name, sourceBranch?.parent]);
@@ -114,7 +117,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
             onClick={() => void create(false)}
             loading={creating}
             disabled={problem !== undefined}
-            tip={problem}
+            tip={tip}
             menuLabel="Other ways to create it"
             menu={[{ id: 'createDraft', label: 'Create as draft', icon: GitPullRequestDraft, run: () => void create(true) }]}
           >
@@ -148,20 +151,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           />
         </div>
       </div>
-      {note && existing && (
-        <p className={note.request ? styles.note : styles.quietNote}>
-          {note.text}
-          {note.request && (
-            <>
-              {' '}
-              <span className={styles.request}>{note.request}</span>
-              <button type="button" className={styles.openIt} onClick={() => openExisting(existing.review)}>
-                Open it
-              </button>
-            </>
-          )}
-        </p>
-      )}
+      {note && <DraftNoteLine note={note} onOpen={openExisting} />}
       {/* One focus mode for both; Enter in the title creates the request, as in the code review's dialog. */}
       <CommentFocusGroup>
         <CommentArea
@@ -190,6 +180,25 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
         onChange={(event) => setReviewers(event.target.value)}
       />
     </Dialog>
+  );
+}
+
+/** The line under the branches (`DraftNote`): a request still to merge stands out; every other note is muted. */
+function DraftNoteLine({ note, onOpen }: { note: DraftNote; onOpen: (review: CodeReviewSummary) => void }) {
+  const { request } = note;
+  return (
+    <p className={note.blocks ? styles.note : styles.quietNote}>
+      {note.text}
+      {request && (
+        <>
+          {' '}
+          <span className={styles.request}>{request.label}</span>
+          <button type="button" className={styles.openIt} onClick={() => onOpen(request.review)}>
+            Open it
+          </button>
+        </>
+      )}
+    </p>
   );
 }
 

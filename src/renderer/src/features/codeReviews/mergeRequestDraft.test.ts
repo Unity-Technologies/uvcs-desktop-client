@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
-import { blocksCreate, createdAs, defaultDestinationOf, mergeRequestForm, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
+import { blocksCreate, createdAs, defaultDestinationOf, mergeRequestForm, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, reviewsCheckOf, type MergeRequestDraft } from './mergeRequestDraft';
 
 function review(id: number, mergeRequest?: MergeRequestInfo): CodeReviewSummary {
   return {
@@ -140,6 +140,19 @@ describe('existingRequestNote', () => {
     expect(existingRequestNote({ kind: 'earlier', review: merged })).toEqual({ text: 'Merged before:', request: { label: '#9 Add login', review: merged } });
     const closed = review(9, { state: 'Closed', destination: '/main' });
     expect(existingRequestNote({ kind: 'earlier', review: closed })).toEqual({ text: 'Closed before:', request: { label: '#9 Review 9', review: closed } });
+  });
+});
+
+describe('reviewsCheckOf', () => {
+  it('is none with no branch, or once its reviews are in hand, even if a refresh of them failed', () => {
+    expect(reviewsCheckOf('', undefined, false)).toBeUndefined();
+    expect(reviewsCheckOf('/main/task', [], false)).toBeUndefined();
+    expect(reviewsCheckOf('/main/task', [], true)).toBeUndefined();
+  });
+
+  it('is running until they come, and failed when the read did', () => {
+    expect(reviewsCheckOf('/main/task', undefined, false)).toBe('checking');
+    expect(reviewsCheckOf('/main/task', undefined, true)).toBe('failed');
   });
 });
 
