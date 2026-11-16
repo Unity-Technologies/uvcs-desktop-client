@@ -6,6 +6,7 @@ import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
+import { mergeRequestDestinationArgs, mergeRequestStateArgs } from '../cm/mergeRequestArgs';
 import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -127,6 +128,16 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     async unsubscribe(place, reviewId) {
       const at = cmPlace(place);
       await cm.query(setSubscriptionArgs(reviewId, false, at), at.options);
+    },
+
+    async setMergeRequestState(place, reviewId, state) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestStateArgs(reviewId, state, at), at.options);
+    },
+
+    async setMergeRequestDestination(place, reviewId, branch) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestDestinationArgs(reviewId, branch, at), at.options);
     },
   };
 }

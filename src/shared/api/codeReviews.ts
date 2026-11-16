@@ -1,6 +1,6 @@
 import type { MemberRef } from '../domain/member';
 import type { Place } from '../domain/place';
-import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, ReviewSubscription } from '../domain/codeReview';
+import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, MergeRequestState, ReviewSubscription } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
   list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
@@ -36,4 +36,11 @@ export interface CodeReviewsApi {
    * group they're in) as a reviewer: the server subscribes them again then.
    */
   unsubscribe(place: Place, reviewId: number): Promise<void>;
+  /**
+   * Moves a merge request to another state (`mergeRequestMoves` says which it may take); the server notes the move in
+   * its conversation. Needs the change permission on its branch.
+   */
+  setMergeRequestState(place: Place, reviewId: number, state: MergeRequestState): Promise<void>;
+  /** Makes `branch` (`/main/release`) the branch a merge request merges into; the server notes the change. */
+  setMergeRequestDestination(place: Place, reviewId: number, branch: string): Promise<void>;
 }

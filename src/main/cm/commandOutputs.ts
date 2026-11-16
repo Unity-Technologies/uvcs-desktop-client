@@ -71,6 +71,8 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
     return args[1] === 'subscription' ? 'answer' : 'operation';
   },
   label: 'operation',
+  // A merge request's state or destination (`mergeRequestArgs`); the app reads merge requests with `cm find review`.
+  mergerequest: 'operation',
   move: 'operation',
   // A partial workspace's update, switch and checkin: `cm partial <command>`.
   partial: 'operation',
