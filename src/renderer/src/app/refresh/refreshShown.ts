@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
+import { conflictsCheckedIn } from '../../features/codeReviews/mergeConflictsKey';
 import type { Page } from '../navigation/pages';
 import { useNavigation } from '../navigation/navigationStore';
 import { invalidatePlaceIn, queryClient } from '../queryClient';
@@ -18,5 +19,5 @@ export function refreshShown(place: Place): Promise<void> {
 /** `refreshShown` on a given client, with this page in front. */
 export function refreshShownIn(client: QueryClient, place: Place, frontPage: Page | undefined): Promise<void> {
   const reviewOf = (reviewId: number) => client.getQueryData<CodeReview>(codeReviewKey(place, reviewId));
-  return invalidatePlaceIn(client, place, pageRefreshScope(frontPage, reviewOf));
+  return invalidatePlaceIn(client, place, pageRefreshScope(frontPage, reviewOf, conflictsCheckedIn(client, place)));
 }

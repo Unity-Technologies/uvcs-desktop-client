@@ -1,11 +1,13 @@
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
-import { useIsFetching } from '@tanstack/react-query';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { placeKey } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf, PageProps, ReviewTab } from '../../app/navigation/pages';
+import { refreshedDestinationOf } from '../../app/refresh/pageRefreshScope';
 import { isShownByCodeReviewPage } from '../../app/refresh/refreshScopes';
+import { conflictsCheckedIn } from './mergeConflictsKey';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { MENU_WORDS } from '../../components/menuWords';
 import { PathLabel } from '../../components/PathLabel';
@@ -156,7 +158,8 @@ function ReviewHeader({ review }: { review: CodeReview }) {
   const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
   // What Refresh reads again here (`pageRefreshScope`): its icon spins while any of it is read.
-  const shownByThePage = isShownByCodeReviewPage(review.id, review.target, review.mergeRequest?.destination);
+  const queryClient = useQueryClient();
+  const shownByThePage = isShownByCodeReviewPage(review.id, review.target, refreshedDestinationOf(review, conflictsCheckedIn(queryClient, place)));
   const fetching = useIsFetching({ queryKey: placeKey(place), predicate: ({ queryKey }) => shownByThePage(queryKey) }) > 0;
   const headline = reviewHeadline(review);
   // A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip.

@@ -208,14 +208,20 @@ merge page's own preview: `cm merge br:<source> --to=br:<destination>` without `
     a directory conflict always needs a decision.
   A check that fails, or a merge with nothing left to merge, shows no section. Conflicts hold Merge back
   (`mergeReadiness`); Check and Checking say nothing (neutral) and don't.
-- **When it runs** (`runsConflictsCheck`, `useMergeRequestConflicts`): an Open request, in a window with a workspace
-  (the preview runs in one; a repository's window shows no section), its Conversation tab shown (`ViewShownContext`),
-  once asked on that page, and both heads known. It is keyed by both heads and kept (`IMMUTABLE_QUERY`): the source's
-  from the changesets the page reads anyway (`useReviewChangesets`), the destination's from its branch read
-  (`branchQuery`, usually cached by the top bar), read only once asked. So it runs again, once, only when a check-in
-  moves either head while the page stays asked; Refresh on the page reads the destination branch again for that
-  (`isShownByCodeReviewPage`). An answer already kept for the same heads shows without asking. Nothing runs on a
-  Draft, Merged or Closed request, nor in a list.
+- **When it runs** (`conflictsCheckRequest`, `useMergeRequestConflicts`): an Open request of a named branch, in a
+  window with a workspace (the preview runs in one; a repository's window shows no section), its Conversation tab
+  shown (`ViewShownContext`), once asked on that page. **Check** first reads the destination's head again (its branch,
+  `branchQuery`: `cm find branch`, visible and hidden), as a kept head may be behind; then the merge is keyed by both
+  heads, the source's from the changesets the page reads anyway (`useReviewChangesets`), and kept (`IMMUTABLE_QUERY`,
+  `mergeConflictsKey`). So Check answers at once from what's kept when neither head moved, and a check-in that moves
+  either checks again, once, while the page stays asked. Nothing runs on a Draft, Merged or Closed request, nor in a
+  list.
+- **Per visit** (`conflictsCheckOf`): until Check is clicked on this page the section says "Not checked yet", even
+  with an answer or a failure kept from an earlier visit (the branches may have moved). A failure (the preview, or the
+  destination unread or gone) hides the section for that visit only; the next Check runs a failed check again.
+- **Refresh** on the page reads the destination's branch again only for an Open request whose conflicts were checked
+  in the window (`refreshedDestinationOf`, `conflictsCheckedIn`), so a check-in there from another client checks them
+  again; a request never checked costs no branch read.
 
 ## Merging
 
