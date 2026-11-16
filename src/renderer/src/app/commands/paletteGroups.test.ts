@@ -83,7 +83,7 @@ function groupsFor({ typed, ...search }: Search): SearchGroup[] {
 }
 
 function groupsForTerm({ term = '', scope = 'all', currentBranch, me, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
-  const context: ResultContext = { place, term, currentBranch, me, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
+  const context: ResultContext = { place, workspaceKind: undefined, term, currentBranch, me, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
   const input: PaletteGroupsInput = {
     scope,
     context,

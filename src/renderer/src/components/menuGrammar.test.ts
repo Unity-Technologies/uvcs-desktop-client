@@ -138,7 +138,7 @@ const graphContext = {
   positions: { pins: [], setPins: () => {} },
 };
 const lane = layout.lanesByBranch.get('/main/a')!;
-const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
+const resultContext: ResultContext = { place: workspacePlace(ws), workspaceKind: undefined, term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
 
 const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
 const mergeConflictState = { file: { key: '7@game@local', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;
@@ -297,6 +297,9 @@ const PARTIAL_MENUS: Record<string, () => MenuEntry[]> = {
   partialGraphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, workspaceKind: 'partial' }),
   partialGraphBranch: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, workspaceKind: 'partial' }),
   partialGraphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, { ...graphContext, workspaceKind: 'partial' }),
+  partialPaletteBranch: () => branchResult({ ...branch, name: '/main/a', parent: '/main' }, { ...resultContext, workspaceKind: 'partial' }).menu!(),
+  partialPaletteChangeset: () => changesetResult(changeset, { ...resultContext, workspaceKind: 'partial' }).menu!(),
+  partialPaletteLabel: () => labelResult(label, { ...resultContext, workspaceKind: 'partial' }).menu!(),
 };
 
 /**

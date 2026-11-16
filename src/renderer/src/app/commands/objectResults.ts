@@ -45,7 +45,7 @@ import { MERGE_REQUEST_STATE_ICONS } from '../../features/codeReviews/mergeReque
 export interface ResultContext {
   place: Place;
   /** The workspace's kind, which decides whether the menus offer merges (`offersMerges`). */
-  workspaceKind?: WorkspaceKind;
+  workspaceKind: WorkspaceKind | undefined;
   term: string;
   currentBranch?: string;
   /**
