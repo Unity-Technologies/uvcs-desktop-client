@@ -20,7 +20,7 @@ place. A workspace on the same repository is another place, with its own window.
 ## What its window shows
 
 The views of the server, each at its usual place in the sidebar and its usual shortcut (`showsView`, `viewsOf`):
-Files, Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Code reviews, Locks; the sidebar groups
+Files, Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Merge requests, Locks; the sidebar groups
 Files as the Repository (`sidebarGroups`). It opens on the Branch Explorer (`firstViewOf`). Not a workspace's own: Changes, Incoming
 and Sync. A view a repository doesn't show, named by a link or by a window reopened after an update, opens the first
 view instead.
