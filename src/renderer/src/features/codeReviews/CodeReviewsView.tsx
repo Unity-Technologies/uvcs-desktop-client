@@ -17,6 +17,9 @@ import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
+import { openCreateMergeRequestDialog } from './CreateMergeRequestDialog';
+import { GitPullRequestPlus } from '../../components/GitPullRequestPlus';
+import { SplitButton } from '../../ui/SplitButton';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
@@ -88,12 +91,22 @@ export function CodeReviewsView() {
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
   const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
   // On the workspace's branch, and selected once the refreshed list shows it.
+  const newMergeRequest = useCallback(
+    () => openCreateMergeRequestDialog(place, currentBranch || undefined, (reviewId) => selectWhenShown(String(reviewId))),
+    [place, currentBranch, selectWhenShown],
+  );
   const newReview = useCallback(
     () => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
     [place, currentBranch, selectWhenShown],
   );
   useCommands(
-    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview }], [newReview]),
+    useMemo<Command[]>(
+      () => [
+        { id: 'codeReviews.newMergeRequest', group: 'Merge requests', label: 'New merge request…', icon: GitPullRequestPlus, run: newMergeRequest },
+        { id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview },
+      ],
+      [newMergeRequest, newReview],
+    ),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
@@ -108,9 +121,15 @@ export function CodeReviewsView() {
       actions={
         <>
           <ViewRefreshButton fetching={isFetching} />
-          <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
-            New review
-          </Button>
+          <SplitButton
+            variant="primary"
+            icon={<GitPullRequestPlus size={14} />}
+            onClick={newMergeRequest}
+            menuLabel="More to create"
+            menu={[{ id: 'newCodeReview', label: 'New code review…', icon: MessageSquarePlus, run: newReview }]}
+          >
+            New merge request
+          </SplitButton>
         </>
       }
     >
@@ -168,10 +187,10 @@ export function CodeReviewsView() {
           <EmptyState
             icon={<GitPullRequest size={22} />}
             title="No merge requests"
-            description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
+            description={since === 'anyTime' ? 'Ask to merge a branch once a teammate has reviewed it.' : 'None in this time range. Try a longer one, or ask to merge a branch.'}
             action={
-              <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
-                New review
+              <Button variant="primary" icon={<GitPullRequestPlus size={14} />} onClick={newMergeRequest}>
+                New merge request
               </Button>
             }
           />
