@@ -50,8 +50,6 @@ export function drawReviewChip(draw: DrawContext, review: CodeReviewSummary, lef
   const stateX = left + PAD_X;
   if (review.mergeRequest) {
     drawStateGlyph(draw, review.mergeRequest.state, stateX, middle);
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
   }
   const glyphX = stateX + (review.mergeRequest ? GLYPH + GLYPH_GAP : 0);
   if (review.status === 'Reviewed') {

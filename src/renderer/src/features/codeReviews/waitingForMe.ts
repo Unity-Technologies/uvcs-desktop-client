@@ -10,9 +10,8 @@ export type WaitingForMe = { kind: 'review' } | { kind: 'rework'; openIssues: nu
 
 /**
  * Whether the review waits for `user`, from the list's own fields: they are a reviewer whose status is still Under
- * review (of a code review, or a merge request that is Open), or they wrote it and it's in Rework required with change requests or questions open (a code review, or a merge
- * request Open or Draft). A reviewer is matched
- * by name only: a group the user belongs to can't be told from `cm find review`'s names (`isReviewer`), and a command
+ * review (of a code review, or a merge request that is Open), or they wrote it and it's in Rework required with change
+ * requests or questions open (a code review, or a merge request Open or Draft). A reviewer is matched by name only: a group the user belongs to can't be told from `cm find review`'s names (`isReviewer`), and a command
  * per row to read its members would cost the server more than the dot is worth. Nor can the list tell a reviewer asked
  * again from one who never looked: both are Under review.
  */
