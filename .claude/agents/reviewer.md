@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, how the author verified it, and its release note. It reads the diff against main, checks it against CLAUDE.md and the docs, and reports ranked findings. It reads only: it never runs the tests or the app, and never edits.
+description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, how the author verified it, and its release note with the paths of its pictures. It reads the diff against main, checks it against CLAUDE.md and the docs, and reports ranked findings. It reads only: it never runs the tests or the app, and never edits.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -51,7 +51,13 @@ note (the `release-notes` skill). If any of these is missing, say so in your rep
 - **Release note**: the note the author gives you follows the `release-notes`
   skill (`.claude/skills/release-notes/SKILL.md`): a kind that fits what users get, a short title and a description
   a user who never saw the change understands, in the app's words, never the code's; or `None:` only where users
-  truly notice nothing. A note written for reviewers, or a missing one, is a must-fix.
+  truly notice nothing. A note written for reviewers, or a missing one, is a must-fix. Its picture, or its absence,
+  follows the skill's "Pictures": the row of its table the change fits (a fix of something drawn wrong is a before and
+  after, not "a fix, so none"), framed so the change shows at the note's size. Open the picture the author names and
+  apply the skill's test yourself. A change users will really notice, on a row that calls for a picture (a before and
+  after, an after, a GIF), with none is a must-fix; a secondary change without one is right (the skill's "Common
+  sense"). A picture that fails the test, is framed too small to read, or costs more than the change weighs (a GIF
+  or a before and after where a still says it) is a should-fix.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
 - **Visual validation**: for anything visible, did the author see it in the app as CLAUDE.md "Seeing the app" asks?

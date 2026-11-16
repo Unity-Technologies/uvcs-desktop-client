@@ -349,7 +349,9 @@ A Claude Code hook refusing local writes to `main` was tried and dropped: GitHub
 them on the server, and reading shell command lines cost more to keep right than it saved.
 
 1. **Branch first.** Before the first edit: `git pull --ff-only` then `git switch -c <kind>/<topic>` in the main
-   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request.
+   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request. A change
+   users will see: decide its release note's picture now (the `release-notes` skill, "Pictures"), since a "before"
+   can only be taken before the change.
 2. **Build it** in small commits (see "Commits"), adjusting every place the change reaches: callers, other views that
    share a component, menus, shortcuts, the e2e fake, the docs.
 3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
@@ -357,11 +359,12 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for, how you verified it and its release note (written now, with the `release-notes` skill: step 6).
-   A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
-   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch,
-   folder, verification and release note; the agent that started it runs the review, then resumes it (Claude Code:
-   `SendMessage`) to do steps 5 and 6, or does them itself.
+   the change is for, how you verified it, and its release note (written now, with the `release-notes` skill: step 6)
+   with its pictures' paths, or the skill's row that made it none. A fresh context sees what the author's can't. The
+   reviewer only reads: it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't start
+   agents of its own stops after step 3 and reports its branch, folder, verification, release note and pictures' paths;
+   the agent that started it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does
+   them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
@@ -375,17 +378,14 @@ them on the server, and reading shell command lines cost more to keep right than
    the releases page, so it is written for them, apart from the title and the rest of the body, which are for
    reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
    without one.
-   **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
-   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the light theme, the pointer
-   out of the way). One is the rule: not every state, theme or window size, only a second shot when the feature can't
-   be understood without it (a before and after, a theme-specific change). When a still can't show it (motion, a
-   flow, something that must *not* move), a short GIF or video instead. Whether the release note gets a picture, a
-   still or a GIF, and which part of the screen, is the `release-notes` skill's call. When it does, that picture sits
-   inside `## Release note` and serves reviewers too; otherwise the reviewers' shot goes under "Behavior with this pull
-   request". Either way, reference it where it goes as `![alt](./shot.png)` and attach it with `gh pr create --attach
-   ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`): an unreferenced
-   attachment lands after the closing line, outside every section, and a reference to a file not attached stays
-   broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
+   **Pictures**: the `release-notes` skill decides whether the note gets one, which kind (the element, a region, the
+   window, a before and after, a GIF) and how it's framed, from what the user would see, a fix of something drawn
+   wrong included; it is also what reviewers look at. A change visible in the app whose note needs none still shows
+   reviewers one screenshot of the outcome under "Behavior with this pull request" (a sandbox, the light theme), or a
+   short GIF when a still can't show it. Reference each where it goes as `![alt](./shot.png)` and attach it with `gh
+   pr create --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`):
+   an unreferenced attachment lands after the closing line, outside every section, and a reference to a file not
+   attached stays broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
