@@ -13,6 +13,8 @@ interface BranchChoiceListProps {
   current: string | undefined;
   placeholder: string;
   onPick: (branch: Branch) => void;
+  /** Closes what holds the list (its popup, and a dialog it sits in) before a merge request opens from a row's card. */
+  onLeave: () => void;
 }
 
 /**
@@ -20,8 +22,8 @@ interface BranchChoiceListProps {
  * while it's open, so the branches are read only then (the read the branch switcher shares). A big repository holds
  * thousands, and showing the one chosen needs none.
  */
-export function BranchChoiceList({ place, groupsOf, current, placeholder, onPick }: BranchChoiceListProps) {
+export function BranchChoiceList({ place, groupsOf, current, placeholder, onPick, onLeave }: BranchChoiceListProps) {
   const branchesQuery = useBranches({}, place);
   const groups = useMemo(() => groupsOf(branchesQuery.data ?? []), [groupsOf, branchesQuery.data]);
-  return <BranchSearchList groups={groups} currentBranch={current} read={branchesRead(branchesQuery)} mergeRequestsOf={place} placeholder={placeholder} onPick={onPick} />;
+  return <BranchSearchList groups={groups} currentBranch={current} read={branchesRead(branchesQuery)} mergeRequests={{ place, leave: onLeave }} placeholder={placeholder} onPick={onPick} />;
 }

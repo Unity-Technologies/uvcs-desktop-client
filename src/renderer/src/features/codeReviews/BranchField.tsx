@@ -23,13 +23,15 @@ interface BranchFieldProps {
   /** The list's filter field's placeholder. */
   searchPlaceholder: string;
   onPick: (branch: Branch) => void;
+  /** Closes the dialog the field sits in, as a merge request opens from the list's card. */
+  onLeave: () => void;
 }
 
 /**
  * A dialog's branch, boxed as its other fields: it shows the branch picked and opens the branch list
  * (`BranchChoiceList`) to pick another, the branches read only once it opens.
  */
-export function BranchField({ place, label, value, placeholder, groupsOf, searchPlaceholder, onPick }: BranchFieldProps) {
+export function BranchField({ place, label, value, placeholder, groupsOf, searchPlaceholder, onPick, onLeave }: BranchFieldProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
   return (
@@ -54,6 +56,10 @@ export function BranchField({ place, label, value, placeholder, groupsOf, search
           onPick={(branch) => {
             setOpen(false);
             onPick(branch);
+          }}
+          onLeave={() => {
+            setOpen(false);
+            onLeave();
           }}
         />
       </Popover>

@@ -55,7 +55,7 @@ export function BranchScopeFilter({ place, scope, currentBranch, onShowAll, onSh
       }
     >
       <FilterOptions label="Branches" kind="radio" options={options} />
-      <BranchList place={place} currentBranch={currentBranch} onPick={(name) => choose(() => onPick(name))()} />
+      <BranchList place={place} currentBranch={currentBranch} onPick={(name) => choose(() => onPick(name))()} onLeave={() => setOpen(false)} />
     </FilterPopover>
   );
 }
@@ -66,9 +66,9 @@ function chipName(scope: BranchScope): string {
   return scope.kind === 'current' ? `Branch: This branch, ${scope.name}` : `Branch: ${scope.name}`;
 }
 
-function BranchList({ place, currentBranch, onPick }: { place: Place; currentBranch: string | undefined; onPick: (name: string) => void }) {
+function BranchList({ place, currentBranch, onPick, onLeave }: { place: Place; currentBranch: string | undefined; onPick: (name: string) => void; onLeave: () => void }) {
   const branchesQuery = useBranches();
   const recentGuids = useRecentBranchGuids(workspacePathOf(place));
   const groups = useMemo(() => branchSwitcherGroups(branchesQuery.data ?? [], recentGuids), [branchesQuery.data, recentGuids]);
-  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} mergeRequestsOf={place} />;
+  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} mergeRequests={{ place, leave: onLeave }} />;
 }

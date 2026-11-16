@@ -52,7 +52,7 @@ export function DestinationPicker({ review, source, destination }: DestinationPi
         </button>
       }
     >
-      <BranchChoiceList place={place} groupsOf={destinationChoices} current={destination} placeholder="Merge into…" onPick={(branch) => void pick(branch)} />
+      <BranchChoiceList place={place} groupsOf={destinationChoices} current={destination} placeholder="Merge into…" onPick={(branch) => void pick(branch)} onLeave={() => setOpen(false)} />
     </Popover>
   );
 }

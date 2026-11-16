@@ -10,17 +10,17 @@ interface MergeRequestHoverCardProps {
   request: MergeRequestReview;
   trigger: (hoverProps: object) => ReactNode;
   /**
-   * Whether its title is a link that opens the request; off in a list to pick a branch from, whose popup or dialog
-   * would stay over the page it opens.
+   * Runs as its title opens the request, before the page shows: a list to pick a branch from closes the popup or
+   * dialog holding it, which would otherwise stay over the page.
    */
-  opens?: boolean;
+  beforeOpen?: () => void;
 }
 
 /**
  * A merge request's summary (`MergeRequestSummaryCard`), shown while `trigger` is hovered, its title a link that opens
  * the request; the trigger's click does what it did.
  */
-export function MergeRequestHoverCard({ request, trigger, opens = true }: MergeRequestHoverCardProps) {
+export function MergeRequestHoverCard({ request, trigger, beforeOpen }: MergeRequestHoverCardProps) {
   const card = useHoverCard();
   return (
     <Popover.Root open={card.open} onOpenChange={(next) => !next && card.close()}>
@@ -42,14 +42,11 @@ export function MergeRequestHoverCard({ request, trigger, opens = true }: MergeR
           <MergeRequestSummaryCard
             request={request}
             framed
-            onOpen={
-              opens
-                ? () => {
-                    card.close();
-                    openReview(request);
-                  }
-                : undefined
-            }
+            onOpen={() => {
+              card.close();
+              beforeOpen?.();
+              openReview(request);
+            }}
           />
         </Popover.Content>
       </Popover.Portal>

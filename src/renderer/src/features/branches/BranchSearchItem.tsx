@@ -12,7 +12,7 @@ interface BranchSearchItemProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   branch: Branch;
   current: boolean;
   highlighted: boolean;
-  /** Above the date: its merge request's state (`BranchSearchList`'s `mergeRequestsOf`). */
+  /** Above the date: its merge request's state (`BranchSearchList`'s `mergeRequests`). */
   badge?: ReactNode;
 }
 

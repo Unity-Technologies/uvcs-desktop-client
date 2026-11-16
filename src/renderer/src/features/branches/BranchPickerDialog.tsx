@@ -34,7 +34,7 @@ function BranchPickerDialog({ title, description, exclude, place, finish }: Pick
         onPick={finish}
         read={branchesRead(branchesQuery)}
         // Another repository's branches (an xlink's) show no merge requests: they don't bear on the pick.
-        mergeRequestsOf={place ? undefined : windowPlace}
+        mergeRequests={place ? undefined : { place: windowPlace, leave: () => finish(undefined) }}
       />
     </Dialog>
   );

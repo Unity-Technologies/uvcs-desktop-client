@@ -38,13 +38,14 @@ export function FilesBranchPicker({ shown, onPick }: { shown: string | null; onP
           setOpen(false);
           onPick(branch);
         }}
+        onLeave={() => setOpen(false)}
       />
     </FilterPopover>
   );
 }
 
 /** Every branch, read only once the chip opens: a big repository holds thousands, and showing one needs only it. */
-function BranchList({ shown, onPick }: { shown: string | null; onPick: (branch: Branch) => void }) {
+function BranchList({ shown, onPick, onLeave }: { shown: string | null; onPick: (branch: Branch) => void; onLeave: () => void }) {
   const place = usePlace();
   const branchesQuery = useBranches();
   const groups = useMemo(() => branchSwitcherGroups(branchesQuery.data ?? [], []), [branchesQuery.data]);
@@ -54,7 +55,7 @@ function BranchList({ shown, onPick }: { shown: string | null; onPick: (branch: 
       currentBranch={shown ?? undefined}
       read={branchesRead(branchesQuery)}
       placeholder="Show the files of a branch…"
-      mergeRequestsOf={place}
+      mergeRequests={{ place, leave: onLeave }}
       onPick={onPick}
     />
   );

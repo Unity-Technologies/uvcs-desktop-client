@@ -39,7 +39,7 @@ export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo
       read={branchesRead(branchesQuery)}
       placeholder="Switch to branch…"
       onPick={pick}
-      mergeRequestsOf={workspacePlace(workspace.path)}
+      mergeRequests={{ place: workspacePlace(workspace.path), leave: onDone }}
       // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
       menu={(branch) => runningFirst(branchMenu(workspacePlace(workspace.path), [branch], currentBranch), onDone, COPY_ENTRY_IDS)}
       action={
