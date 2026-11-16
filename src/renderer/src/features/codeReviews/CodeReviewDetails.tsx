@@ -18,6 +18,8 @@ import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { reviewedChangesOf, reviewNoun } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
+import { MergeVerdictIcon } from './MergeVerdictIcon';
+import { reviewStatusCellOf } from './reviewStatusCell';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerList } from './ReviewerList';
 import { reviewDetailsSections } from './reviewDetailsSections';
@@ -31,6 +33,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
   const noun = reviewNoun(review);
   const changes = reviewedChangesOf(review);
   const sections = reviewDetailsSections(review);
+  const status = reviewStatusCellOf(review);
 
   return (
     <DetailsPanel
@@ -50,13 +53,15 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
       ]}
       badges={
-        <>
-          {mergeRequest && <MergeRequestStateBadge state={mergeRequest.state} />}
-          {/* Beside a merge request's state, the review's status is its icon, named by its tooltip: the header's room is short. */}
-          <span data-tip={mergeRequest ? review.status : undefined}>
-            <CodeReviewStatusBadge status={review.status} iconOnly={mergeRequest !== undefined} />
-          </span>
-        </>
+        // Where it stands as everywhere (`reviewStatusCellOf`): a merge request's state and verdict, a code review's status.
+        status.kind === 'mergeRequest' ? (
+          <>
+            <MergeRequestStateBadge state={status.state} />
+            {status.verdict && <MergeVerdictIcon verdict={status.verdict} />}
+          </>
+        ) : (
+          <CodeReviewStatusBadge status={status.status} />
+        )
       }
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => openReview(review)}>

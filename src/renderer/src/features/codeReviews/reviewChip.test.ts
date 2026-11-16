@@ -18,8 +18,8 @@ describe("a branch's review chip", () => {
     expect(reviewChipOf(request('Open', 'Rework required'), false)).toMatchObject({ state: 'Open', verdict: 'blocked' });
   });
 
-  it('shows an Open request still under review by its state alone: Open says it waits', () => {
-    expect(reviewChipOf(request('Open', 'Under review'), false).verdict).toBeUndefined();
+  it('shows an Open request still under review as waiting', () => {
+    expect(reviewChipOf(request('Open', 'Under review'), false).verdict).toBe('waiting');
   });
 
   it.each(['Draft', 'Merged', 'Closed'] as const)('shows no verdict on a %s request: it is not up for merging', (state) => {

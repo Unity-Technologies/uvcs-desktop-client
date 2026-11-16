@@ -60,8 +60,8 @@ export function drawReviewChip(draw: DrawContext, review: CodeReviewSummary, lef
     pen.fillText(layout.pill.text.value, left + layout.pill.text.x, middle + 0.5);
   }
   if (layout.icon && chip.verdict) {
-    // The verdict's colors are the merge card's discs': the Reviewed status's green, the Rework status's amber.
-    ctx.strokeStyle = scene.palette.reviewStatus[chip.verdict === 'ready' ? 'Reviewed' : 'Rework required'];
+    // The verdict's colors are the merge card's discs': the Reviewed status's green, the Rework status's amber, a quiet ink while it waits.
+    ctx.strokeStyle = { ready: scene.palette.reviewStatus.Reviewed, blocked: scene.palette.reviewStatus['Rework required'], waiting: scene.palette.textTertiary }[chip.verdict];
     pen.strokeGlyph(VERDICT_GLYPHS[chip.verdict], left + layout.icon.x, middle - STATUS_ICON / 2, STATUS_ICON);
   }
   ctx.restore();

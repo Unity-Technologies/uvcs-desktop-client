@@ -58,12 +58,16 @@ export const STATUS_GLYPHS: Record<CodeReviewStatus, Glyph> = {
   ],
 };
 
-/** A merge request's verdict (`MergeVerdictIcon`: lucide's check and x). */
+/** A merge request's verdict (`MergeVerdictIcon`: lucide's check, x and circle-dot). */
 export const VERDICT_GLYPHS: Record<MergeVerdict, Glyph> = {
   ready: [['path', { d: 'M20 6 9 17l-5-5' }]],
   blocked: [
     ['path', { d: 'M18 6 6 18' }],
     ['path', { d: 'm6 6 12 12' }],
+  ],
+  waiting: [
+    ['circle', { cx: 12, cy: 12, r: 1 }],
+    ['circle', { cx: 12, cy: 12, r: 10 }],
   ],
 };
 
