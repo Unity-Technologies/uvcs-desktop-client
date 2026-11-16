@@ -95,6 +95,19 @@ describe("naming the branches a merge request's notes name", () => {
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
   });
 
+  it("still reads the conversation when the branches' names can't be read, its branches by id alone", async () => {
+    const { service } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]4;19')),
+      'find branch': () => {
+        throw new Error('Connection refused');
+      },
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([{ kind: 'destinationChanged', from: { id: 4 }, to: { id: 19 } }]);
+  });
+
   it('keeps a branch deleted since by its id alone', async () => {
     const { service } = reviewComments({
       'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]77;19')),
