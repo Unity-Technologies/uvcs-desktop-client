@@ -3,6 +3,7 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { BranchGroup } from '../branches/branchSearchRows';
 import { newestBranchesFirst } from '../branches/newestBranchesFirst';
 import { ancestorsOf } from './destinationChoices';
+import { commentLineText } from '../../lib/comments/commentText';
 import { isActiveMergeRequest } from './mergeRequestState';
 
 /*
@@ -93,7 +94,7 @@ export function existingRequestOf(reviewsOfBranch: readonly CodeReviewSummary[],
 
 /**
  * A line under the dialog's branches: what the branch already has into that destination, or that it couldn't be
- * checked. `request` names a request to open (`#12 Add login`); `blocks` says why Create waits meanwhile (its
+ * checked. `request` names a request to open by its title (`Add login`); `blocks` says why Create waits meanwhile (its
  * tooltip), only for one still to merge. Every other note only informs.
  */
 export interface DraftNote {
@@ -104,7 +105,7 @@ export interface DraftNote {
 
 export function existingRequestNote({ kind, review }: ExistingRequest): DraftNote {
   const destination = review.mergeRequest?.destination;
-  const request = { label: `#${review.id} ${review.title}`, review };
+  const request = { label: commentLineText(review.title), review };
   if (kind === 'active') {
     return { text: `This branch already has a merge request into ${destination}:`, request, blocks: `This branch already has a merge request into ${destination}` };
   }

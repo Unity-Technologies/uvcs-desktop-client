@@ -61,7 +61,7 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
   - Once From settles (`useSettledValue`), the dialog reads the branch's reviews, the read Changes shares
     (`branchReviewsKey`, one `cm find review where target = 'br:…'`). A request still to merge into the same
     destination (`existingRequestOf`, `existingRequestNote`) is named under the row with **Open it**, and Create waits,
-    its tooltip saying why. A merged or closed one is a muted line that doesn't block ("Merged before: #9 Add login"
+    its tooltip saying why. A merged or closed one is a muted line that doesn't block ("Merged before: Add login"
     and **Open it**). One into another destination is no conflict. While the read runs nothing else moves: Create's
     tooltip says "Checking for an existing merge request…", and Create, if pressed, waits for the answer before
     asking (`reviewsCheckOf`, `mergeRequestForm`'s `tip`).
@@ -69,7 +69,7 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
     Create still runs: a server hiccup shouldn't stop the task, `cm` creates anyway, and a duplicate shows in the list,
     where it can be closed.
   - "Close the existing request" isn't offered there: a destructive side door. Open it and close it on its page.
-- Then the dialog closes, the toast says "Created merge request 12" with **Open**, the view selects the new row
+- Then the dialog closes, the toast says "Created merge request" with **Open**, the view selects the new row
   (`useSelectCreated`), and the reviews are read again (`isAffectedByCodeReviews`). The page doesn't open by itself,
   as a new code review's doesn't: the user may be creating several, and the toast opens it.
 - **A server older than merge requests** makes a plain code review of what `cm mergerequest create` asks, and says
@@ -266,7 +266,7 @@ server, the merge page finishing a task (docs/features/merge.md "Finishing a tas
   request already Merged changes nothing and adds no note, so it's safe on both. It comes first, then the user's
   review and hiding the branch. Should the write fail (a server that marked it may refuse it to someone else than its
   owner), the request is read once (`find review where id`): already Merged, nothing is said; else "Merged, but
-  couldn't mark merge request 12 as merged", and nothing is undone. The reviews are then read once (the page, the
+  couldn't mark the merge request as merged", and nothing is undone. The reviews are then read once (the page, the
   lists, the chips), after every write: the merge's own refresh leaves them out (`mergeRefreshScope`).
 - **The gap**: a branch merged into a workspace and checked in (a merge the app doesn't finish as a task) records
   nothing; on a server with merge requests switched off its request stays Open until someone closes it.
@@ -285,8 +285,8 @@ still opens it) lists merge requests and code reviews together: a review of a ch
 with no destination, is the rarer sibling, not another feature. Two lists of the same object (a Merge requests view
 beside Code reviews) were rejected: two badges, and "where is my review of that branch?".
 
-- **The row** leads with the state glyph before the number, in a fixed-width slot a code review leaves empty, so the
-  numbers stay in line (`codeReviewColumns`). The Status column stays the review's.
+- **The row** leads with the state glyph, in a fixed-width slot a code review leaves empty, then the title; a code
+  review's number before its title, a merge request's never ("Its number"; `codeReviewColumns`). The Status column stays the review's.
 - **Changes** says `task → main` for a merge request: the source gives way when narrow, the arrow and the destination
   stay whole (the destination is usually short). Its tooltip: "Merge /main/task into /main".
 - **The State chip** (the store's `state`, `MergeRequestStateFilter`): **Active**, where it rests, keeps the code

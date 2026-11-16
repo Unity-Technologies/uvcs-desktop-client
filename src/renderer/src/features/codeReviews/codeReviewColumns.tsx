@@ -16,7 +16,8 @@ import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the Merge requests table, which lists code reviews too: a merge request's state, its number and title,
+ * Columns of the Merge requests table, which lists code reviews too: a merge request's state and title (a code
+ * review's number and title),
  * status, who reviews it, its comments and how many are still open, what it reviews (and where a merge request merges
  * it), who wrote it, when (the list's order and its period go by it), and when anyone last did something on it. A
  * review waiting for `user` has a dot before its number (`waitingForMe`).
@@ -32,9 +33,12 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
           <WaitingDot review={review} user={user} />
           <span className={styles.stateSlot}>{review.mergeRequest && <MergeRequestStateIcon mergeRequest={review.mergeRequest} />}</span>
           <span className={styles.title}>
-            <span className={styles.id}>
-              #<Highlight text={String(review.id)} />
-            </span>
+            {/* A merge request goes by its title and branch, never its number (merge-requests.md "Its number"). */}
+            {!review.mergeRequest && (
+              <span className={styles.id}>
+                #<Highlight text={String(review.id)} />
+              </span>
+            )}
             <span className={styles.titleText}>
               <CommentLine comment={review.title} />
             </span>

@@ -36,8 +36,8 @@ export async function createMergeRequest(place: Place, request: CreateMergeReque
 
   onCreated?.(created.id);
   const open = { label: 'Open', run: () => navigation.openPage({ kind: 'codeReview', reviewId: created.id }) };
-  if (created.descriptionSaved) toast.success(`Created merge request ${created.id}`, undefined, open);
-  else toast.info(`Created merge request ${created.id}`, "Its description couldn't be saved.", open);
+  if (created.descriptionSaved) toast.success('Created merge request', undefined, open);
+  else toast.info('Created merge request', "Its description couldn't be saved.", open);
 
   await refreshed.finally(stopWatching);
   return created.id;
