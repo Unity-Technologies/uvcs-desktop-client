@@ -1295,6 +1295,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+  A popover opened inside a dialog goes through `ui/Popover` (or `FilterPopover`), which is modal there
+  (`InsideDialog`, `useInsideDialog`, set by `Dialog` and `CardDialog`): the dialog's scroll lock takes the mouse
+  wheel from anything outside it, a portaled popover included, and only a lock of the popover's own gives its list the
+  wheel back. Modal, the popover's first click outside only closes it. A raw Radix popover in a dialog doesn't scroll.
 - **Buttons that create something** ("New branch", "New label", "New workspace") show what they create with a plus:
   Lucide's `GitBranchPlus`, `TagPlus`, `MessageSquarePlus`, `DatabasePlus`, `FolderPlus`, never the bare `Plus`, which
   only says "add". Where Lucide has no such icon the feature draws one on its grid (`TagsPlus`, `Tags` with a
