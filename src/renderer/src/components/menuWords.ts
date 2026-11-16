@@ -216,7 +216,8 @@ export const MENU_WORDS = {
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
   newLabel: word('create', TagPlus, 'New label…'),
-  // A merge request of a branch that can merge somewhere; a code review of anything (a top-level branch's only kind).
+  // A merge request of a branch that can merge somewhere; a code review of anything (the only kind for a branch with
+  // nowhere to merge, `/main`).
   newMergeRequest: word('create', GitPullRequestPlus, 'New merge request…'),
   newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
