@@ -420,6 +420,12 @@ describe('creating a merge request', () => {
     expect(await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: 'Why' })).toEqual({ id: 40, descriptionSaved: false });
   });
 
+  it('fails, in plain words, when cm answers with no id', async () => {
+    const { service } = codeReviews({ 'mergerequest create': 'Done\n' });
+
+    await expect(service.createMergeRequest(IN_WORKSPACE, REQUEST)).rejects.toThrow("The server didn't say which merge request it created.");
+  });
+
   it("fails as cm does when it made nothing: a destination that doesn't exist", async () => {
     const { service } = codeReviews({ 'mergerequest create': cmFails("The specified branch /main/nope can't be found.\n") });
 
