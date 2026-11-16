@@ -11,7 +11,8 @@ Sandbox: `scripts/sandboxes/merge-requests.sh` builds a task branch per case bel
 
 - `cm find review` prints `{mergerequeststatusname}`, the state in English whatever the client's language (`None`,
   `Draft`, `Open`, `Closed`, `Merged`), and `{destination}`, the destination branch's spec (`br:/main`), empty for a
-  plain review (`FOUND_REVIEWS`). `{mergerequeststatus}` translates the state and adds a prefix: never read.
+  plain review (`FOUND_REVIEWS`). `{mergerequeststatus}` translates the state and adds a prefix: never read. Both
+  fields are in `cm` 11.0.16.10616, the version reviews already need (code-reviews.md), so no read asks for a newer one.
 - A review is a merge request when its state is one of the four **and** it has a destination (`mergeRequestOf`,
   `CodeReviewSummary.mergeRequest`, `MergeRequestInfo`); anything else, a state this version doesn't know included, is
   a plain code review. The destination is kept as a branch name, `br:` stripped.
@@ -57,14 +58,18 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **Opened by me** (`matchesOpenedByMe`): the user's code reviews not reviewed yet, and their merge requests still to
   merge whatever the review says: a reviewed one is still theirs to merge.
 - The text filter also finds the destination and the state's name ("main", "draft": `reviewFilterTexts`).
-- **The details panel** says "Merge request", the state's badge with the review status's icon beside it, and the
-  source "into" the destination.
+- **The details panel** says "Merge request" (`reviewNoun`), the state's badge with the review status's icon beside it
+  (its tooltip names it: the header's room is short), and the source "into" the destination (`reviewedChangesOf`, which
+  the Changes column follows too).
+- **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
+  than none yet (`isNarrowed`).
 
 ## Where a branch's merge request shows
 
 - **Which review stands for a branch** (`reviewOfEachBranch`, every surface showing one review of a branch: the
   Branches view's and the Branch Explorer's chips, finishing a task): a merge request still to merge, over any newer
-  review; else the newest. Two still to merge: the newest.
+  review; else the newest. Two still to merge: the newest. It chooses among the newest `NEWEST_CODE_REVIEWS` the chips
+  read (code-reviews.md "The list"): a request older than those doesn't stand for its branch.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   leads the review status with the state's glyph. Narrow, it shows the state alone until the request is Open and
   reviewed, then the thumbs-up alone: at a glance, whether it can merge. The canvas draws the state as a shape of its

@@ -127,7 +127,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   rest. Presets in the sidebar, as the official client lists them, were left out: two more rows for what a count and two
   chips say.
 - The list reads every review its filters keep (the time range, Last 3 months by default, who created them, the
-  status, I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
+  status, a merge request's state when Merged or Closed: merge-requests.md "One view", I'm a reviewer alone), with no cap (`CodeReviewFilter.limit` unset), as the other lists do: its text filter, which
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
   and "No matching merge requests" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
