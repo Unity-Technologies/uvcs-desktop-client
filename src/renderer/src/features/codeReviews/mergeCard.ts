@@ -1,9 +1,11 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
+import { branchLabel } from '../../lib/branchLabels';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { openThreads, threadsOf } from './conversation/reviewThreads';
 import type { MergeInto } from './mergeInto';
+import type { ConflictsCheck } from './mergeRequestConflicts';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -17,6 +19,7 @@ export type MergeCardAction = { label: string; primary?: boolean; disabledReason
   | { kind: 'move'; move: MergeRequestMove }
   | { kind: 'merge'; merge: MergeInto }
   | { kind: 'addReviewers' }
+  | { kind: 'checkConflicts' }
   | { kind: 'setBranchHidden'; branch: string; hidden: boolean }
   | { kind: 'switchTo'; branch: string }
 );
@@ -28,7 +31,7 @@ export type MergeCardAction = { label: string; primary?: boolean; disabledReason
  * "The merge card").
  */
 export interface MergeCardSection {
-  id: 'draft' | 'review' | 'merged' | 'closed';
+  id: 'draft' | 'review' | 'conflicts' | 'merged' | 'closed';
   tone: MergeCardTone;
   /** The state's glyph in its color, instead of the tone's disc: a section that is the state itself. */
   state?: MergeRequestState;
@@ -67,6 +70,8 @@ export interface MergeCardInput {
   merge?: MergeInto;
   /** Whether the window has a workspace: the merge page runs in one. */
   inWorkspace: boolean;
+  /** Its conflicts with the destination (`useMergeRequestConflicts`); none where they aren't checked. */
+  conflicts?: ConflictsCheck;
 }
 
 export interface OpenItems {
@@ -85,7 +90,8 @@ export function mergeCardOf(input: MergeCardInput): MergeCard {
         menu: moves.slice(1),
       };
     case 'Open': {
-      const sections = [openReviewSection(input)];
+      const conflicts = input.conflicts && conflictsSectionOf(input.conflicts, input.mergeRequest.destination, input.merge);
+      const sections = [openReviewSection(input), ...(conflicts ? [conflicts] : [])];
       return { sections, ...mergeFooter(input, mergeReadiness(sections)), menu: moves };
     }
     case 'Merged':
@@ -114,6 +120,36 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
   }
 }
 
+/**
+ * Whether the request merges cleanly into its destination: Check before it's asked, quiet while the server calculates
+ * the merge, passed with no conflict, failed with the file and directory conflicts counted as the merge page groups them
+ * and **Resolve…**, its merge page. Nothing when the check failed or there's nothing left to merge.
+ */
+export function conflictsSectionOf(check: ConflictsCheck, destination: string, merge: MergeInto | undefined): MergeCardSection | undefined {
+  const into = branchLabel(destination);
+  switch (check.kind) {
+    case 'unchecked':
+      return { id: 'conflicts', tone: 'neutral', title: `Conflicts with ${into}`, detail: 'Not checked yet', action: { kind: 'checkConflicts', label: 'Check' } };
+    case 'checking':
+      return { id: 'conflicts', tone: 'neutral', title: `Checking for conflicts with ${into}…` };
+    case 'failed':
+      return undefined;
+    case 'checked': {
+      const { status, files, directories } = check.counts;
+      if (status !== 'ready') return undefined;
+      if (files === 0 && directories === 0) return { id: 'conflicts', tone: 'passed', title: `No conflicts with ${into}`, detail: 'Merging can be done automatically' };
+      const counts = [files > 0 && counted(files, 'file conflict'), directories > 0 && counted(directories, 'directory conflict')].filter(Boolean).join(' and ');
+      return {
+        id: 'conflicts',
+        tone: 'failed',
+        title: `${counts} with ${into}`,
+        detail: 'Resolve them to merge',
+        ...(merge && { action: { kind: 'merge', merge, label: 'Resolve…' } }),
+      };
+    }
+  }
+}
+
 /** How many of the conversation's open threads (`openThreads`) are change requests, and how many questions. */
 export function openItemsIn(openThreads: readonly { root: { kind: string } }[]): OpenItems {
   const count = (kind: string): number => openThreads.filter((thread) => thread.root.kind === kind).length;
@@ -132,12 +168,12 @@ export function openItemsLine({ changeRequests, questions }: OpenItems): string 
 }
 
 /**
- * Whether the request is ready to merge: every section passed. The card's Merge is primary then, and quiet before, so
- * that a section added later (a check failed, a conflict) holds it back as an unfinished review does. It never blocks
- * a merge: the server's merge rules decide.
+ * Whether the request is ready to merge: a section passed and every other passed too, or says nothing yet (neutral: the
+ * conflicts not checked, or being checked). The card's Merge is primary then, and quiet before, so that a section
+ * (unfinished review, conflicts) holds it back. It never blocks a merge: the server's merge rules decide.
  */
 export function mergeReadiness(sections: readonly MergeCardSection[]): boolean {
-  return sections.length > 0 && sections.every((section) => section.tone === 'passed');
+  return sections.some((section) => section.tone === 'passed') && sections.every((section) => section.tone === 'passed' || section.tone === 'neutral');
 }
 
 function openReviewSection(input: MergeCardInput): MergeCardSection {
