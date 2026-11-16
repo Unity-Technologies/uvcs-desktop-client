@@ -20,7 +20,8 @@ import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { BranchField } from './BranchField';
 import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
-import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups, type DraftNote } from './mergeRequestDraft';
+import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups } from './mergeRequestDraft';
+import { DraftNoteLine } from './DraftNoteLine';
 import { NO_REVIEWERS, reviewersToAsk } from './pickedReviewers';
 import { ReviewersField } from './ReviewersField';
 import styles from './CreateMergeRequestDialog.module.css';
@@ -172,25 +173,6 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
       </CommentFocusGroup>
       <ReviewersField pick={reviewers} onPickChange={setReviewers} />
     </Dialog>
-  );
-}
-
-/** The line under the branches (`DraftNote`): a request still to merge stands out; every other note is muted. */
-function DraftNoteLine({ note, onOpen }: { note: DraftNote; onOpen: (review: CodeReviewSummary) => void }) {
-  const { request } = note;
-  return (
-    <p className={note.blocks ? styles.note : styles.quietNote}>
-      {note.text}
-      {request && (
-        <>
-          {' '}
-          <span className={styles.request}>{request.label}</span>
-          <button type="button" className={styles.openIt} onClick={() => onOpen(request.review)}>
-            Open it
-          </button>
-        </>
-      )}
-    </p>
   );
 }
 
