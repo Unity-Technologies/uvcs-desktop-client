@@ -8,26 +8,28 @@ import { useHoverCard } from '../../lib/useHoverCard';
 import { Button } from '../../ui/Button';
 import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { openReview } from './codeReviewOperations';
-import { openThreads, threadsOf } from './conversation/reviewThreads';
 import { reviewConversationQuery } from './conversation/useReviewConversation';
-import { openItemsIn } from './mergeCard';
-import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf, type MergeRequestChipAction, type MergeRequestReview } from './mergeRequestChipState';
+import { openItemsOfConversation } from './mergeCard';
+import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf, type TopBarRequestAction, type MergeRequestReview } from './mergeRequestChipState';
 import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
 import { ReviewerStack } from './ReviewerStack';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
+import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import stateColors from './mergeRequestStateColors.module.css';
 import styles from './MergeRequestChip.module.css';
 
 /**
  * A segment of the branch pill when the workspace's branch has a merge request (`topBarRequestOf`): its state, its
  * number and, while Open, its review's status. Hovering shows where it stands; a click opens it. The branch's reviews
- * are one `cm find review` (`branchReviewsQuery`), the read Changes makes for the change requests a check-in applies.
+ * are one `cm find review` (`branchReviewsQuery`), the read Changes makes for the change requests a check-in applies,
+ * asked once the first screen is in (the pending changes, which the sidebar's count reads in any view).
  */
 export function MergeRequestChip() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const branch = branchWorkedOn(workspace?.selector);
-  const { data: reviews } = useQuery({ ...branchReviewsQuery(place, branch ?? ''), enabled: asksForBranchReviews(workspace?.selector) });
+  const { isPending: firstScreenPending } = usePendingChanges();
+  const { data: reviews } = useQuery({ ...branchReviewsQuery(place, branch ?? ''), enabled: asksForBranchReviews(workspace?.selector, !firstScreenPending) });
   const request = branch === undefined || !reviews ? undefined : topBarRequestOf(reviews);
   if (!request) return null;
   return <MergeRequestSegment request={request} />;
@@ -37,7 +39,7 @@ function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
   const place = usePlace();
   const card = useHoverCard();
   const { data: conversation } = useQuery({ ...reviewConversationQuery(place, request.id), ...SLOW_CHANGING_QUERY, enabled: cardReadsOpenItems(request, card.open) });
-  const open = useMemo(() => (conversation ? openItemsIn(openThreads(threadsOf(conversation.comments))) : undefined), [conversation]);
+  const open = useMemo(() => (conversation ? openItemsOfConversation(conversation.comments) : undefined), [conversation]);
   const chip = mergeRequestChipOf(request, open);
   const StateIcon = MERGE_REQUEST_STATE_ICONS[chip.state];
 
@@ -45,7 +47,7 @@ function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
     card.close();
     openReview(request);
   };
-  const run = (action: MergeRequestChipAction): void => {
+  const run = (action: TopBarRequestAction): void => {
     switch (action.kind) {
       case 'open':
         openIt();

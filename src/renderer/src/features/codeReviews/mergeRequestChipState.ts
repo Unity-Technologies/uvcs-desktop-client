@@ -3,8 +3,7 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { branchWorkedOn } from '../../components/workingObject';
 import { commentLineText } from '../../lib/comments/commentText';
 import { openItemsLine, reviewSectionOf, type OpenItems } from './mergeCard';
-import { isActiveMergeRequest } from './mergeRequestState';
-import { reviewLine } from './reviewChip';
+import { isActiveMergeRequest, mergeRequestTip } from './mergeRequestState';
 
 /** A review that is a merge request. */
 export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeRequestInfo };
@@ -13,10 +12,10 @@ export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeReques
  * What a button of the top bar's hover card does; `MergeRequestChip` runs it. One entry per action: what the card
  * offers more (merging it) is one more kind here and one more entry in `cardActionsOf`.
  */
-export type MergeRequestChipAction = { kind: 'open'; label: string; primary: boolean };
+export type TopBarRequestAction = { kind: 'open'; label: string; primary: boolean };
 
-/** What the top bar's merge request chip shows (`MergeRequestChip`), and its hover card. */
-export interface MergeRequestChip {
+/** What the top bar's merge request chip shows (`MergeRequestChip`, the component), and its hover card. */
+export interface TopBarRequestChip {
   reviewId: number;
   /** The state's glyph in its color, leading. */
   state: MergeRequestState;
@@ -26,12 +25,15 @@ export interface MergeRequestChip {
   status?: CodeReviewStatus;
   /** Merged: the workspace is still on finished work, said quietly. */
   muted: boolean;
-  /** What a screen reader says it is: "Merge request 12 · Open into /main · Under review: Jump higher". */
+  /**
+   * What a screen reader says it is, as the chip shows it: "Merge request 12 · Open into /main · Under review: Jump
+   * higher"; no status where the chip shows none ("Merge request 12 · Merged into /main: Jump higher").
+   */
   label: string;
-  card: MergeRequestChipCard;
+  card: TopBarRequestCard;
 }
 
-export interface MergeRequestChipCard {
+export interface TopBarRequestCard {
   /** The title's first line. */
   title: string;
   /** "Open · into /main", "Draft · into /main", "Merged into /main". */
@@ -42,15 +44,16 @@ export interface MergeRequestChipCard {
   showsReviewers: boolean;
   /** "3 change requests and 1 question open", while Open and once its conversation is read (`cardReadsOpenItems`). */
   openItems?: string;
-  actions: MergeRequestChipAction[];
+  actions: TopBarRequestAction[];
 }
 
 /**
- * Whether the top bar reads the reviews of the workspace's branch (`branchReviewsQuery`): only on a branch. A workspace
- * on a changeset, a label or a shelve asks nothing.
+ * Whether the top bar reads the reviews of the workspace's branch (`branchReviewsQuery`): only on a branch, and only
+ * once the first screen is in (`firstScreenRead`: the pending changes read, or their read failed), so the read never
+ * competes with the window's first data. A workspace on a changeset, a label or a shelve asks nothing.
  */
-export function asksForBranchReviews(selector: WorkspaceSelector | null | undefined): boolean {
-  return branchWorkedOn(selector) !== undefined;
+export function asksForBranchReviews(selector: WorkspaceSelector | null | undefined, firstScreenRead: boolean): boolean {
+  return firstScreenRead && branchWorkedOn(selector) !== undefined;
 }
 
 /**
@@ -64,19 +67,20 @@ export function topBarRequestOf(reviewsOfBranch: readonly CodeReviewSummary[]): 
 }
 
 /** The chip and its card for a merge request; `open`, what its conversation still has open, once read. */
-export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems): MergeRequestChip {
+export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems): TopBarRequestChip {
   const { state } = review.mergeRequest;
   const isOpen = state === 'Open';
+  const shown = [`Merge request ${review.id}`, whereItMerges(review.mergeRequest, ' '), ...(isOpen ? [review.status] : [])];
   return {
     reviewId: review.id,
     state,
     number: `#${review.id}`,
     ...(isOpen && { status: review.status }),
     muted: state === 'Merged',
-    label: `${reviewLine(review)}: ${commentLineText(review.title)}`,
+    label: `${shown.join(' · ')}: ${commentLineText(review.title)}`,
     card: {
       title: commentLineText(review.title),
-      where: whereItMerges(review.mergeRequest),
+      where: whereItMerges(review.mergeRequest, ' · '),
       ...(isOpen && { review: reviewOf(review) }),
       showsReviewers: state !== 'Merged' && review.reviewers.length > 0,
       ...(isOpen && open && openLine(open)),
@@ -94,20 +98,21 @@ export function cardReadsOpenItems(review: MergeRequestReview, cardOpen: boolean
   return cardOpen && review.mergeRequest.state === 'Open' && review.openIssueCount > 0;
 }
 
-function whereItMerges({ state, destination }: MergeRequestInfo): string {
-  return state === 'Merged' ? `Merged into ${destination}` : `${state} · into ${destination}`;
+/** "Open into /main" (`between` its parts: " · " on the card), "Merged into /main" (`mergeRequestTip`'s words). */
+function whereItMerges(mergeRequest: MergeRequestInfo, between: string): string {
+  return mergeRequest.state === 'Merged' ? mergeRequestTip({ mergeRequest }) : `${mergeRequest.state}${between}into ${mergeRequest.destination}`;
 }
 
-function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<MergeRequestChipCard['review']> {
+function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<TopBarRequestCard['review']> {
   const section = reviewSectionOf(reviewers, status);
   return { status, title: section.title, ...(section.detail && { detail: section.detail }) };
 }
 
-function openLine(open: OpenItems): Pick<MergeRequestChipCard, 'openItems'> {
+function openLine(open: OpenItems): Pick<TopBarRequestCard, 'openItems'> {
   const line = openItemsLine(open);
   return line ? { openItems: line } : {};
 }
 
-function cardActionsOf(): MergeRequestChipAction[] {
+function cardActionsOf(): TopBarRequestAction[] {
   return [{ kind: 'open', label: 'Open', primary: true }];
 }
