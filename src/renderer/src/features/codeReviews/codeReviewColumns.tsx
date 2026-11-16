@@ -99,7 +99,7 @@ function ReviewedChanges({ review }: { review: CodeReview }) {
       <span className={styles.source}>
         <PathLabel path={changes.source} tooltip={false} fitContent />
       </span>
-      <span className={styles.arrow} aria-label="into">
+      <span className={styles.arrow} role="img" aria-label="into">
         →
       </span>
       <span className={styles.destination}>

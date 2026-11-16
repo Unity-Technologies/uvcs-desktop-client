@@ -3,10 +3,11 @@ import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeRev
 import { MENU_WORDS } from '../../components/menuWords';
 import { branchLabels } from '../../lib/branchLabels';
 import { commentLineText } from '../../lib/comments/commentText';
+import { pluralize } from '../../lib/text';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
-import { topBarRequestOf, type MergeRequestReview } from '../codeReviews/mergeRequestChipState';
-import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove } from '../codeReviews/mergeRequestState';
+import { currentRequestOf } from '../codeReviews/reviewsByBranch';
+import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove, type MergeRequestReview } from '../codeReviews/mergeRequestState';
 import type { FinishedTask } from './finishedTask';
 import { isTaskBranch } from './mergeTaskSummary';
 
@@ -70,13 +71,13 @@ const NONE: TaskNextStep = { kind: 'none' };
 
 /**
  * Where the merged check looks for the branch head (`api.merge.mergedInto`): its merge request's destination, the one
- * still to merge or else the one merged (`topBarRequestOf`), else its parent, as merging the task goes. None until the
+ * still to merge or else the one merged (`currentRequestOf`), else its parent, as merging the task goes. None until the
  * reviews are read; the parent when they couldn't be (`reviewsFailed`). None for a branch that is no task.
  */
 export function mergedCheckDestinationOf(branch: TaskBranch | undefined, reviewsOfBranch: readonly CodeReviewSummary[] | undefined, reviewsFailed: boolean): string | undefined {
   if (!isTaskBranch(branch)) return undefined;
   if (!reviewsOfBranch) return reviewsFailed ? branch.parent : undefined;
-  return topBarRequestOf(reviewsOfBranch)?.mergeRequest.destination ?? branch.parent;
+  return currentRequestOf(reviewsOfBranch)?.mergeRequest.destination ?? branch.parent;
 }
 
 /**
@@ -213,16 +214,12 @@ function statusWords(step: RequestStep, open: OpenItems | undefined): string {
     case 'reviewed':
       return 'reviewed';
     case 'rework':
-      return open && open.changeRequests > 0 ? `${counted(open.changeRequests, 'change request')} to apply` : 'changes required';
+      return open && open.changeRequests > 0 ? `${pluralize(open.changeRequests, 'change request')} to apply` : 'changes required';
     case 'waiting': {
       const { reviewers } = step.request;
       if (reviewers.length === 0) return 'no reviewers yet';
       const waitingFor = reviewers.filter((reviewer) => reviewer.status === 'Under review').length;
-      return waitingFor > 0 ? `waiting for ${counted(waitingFor, 'reviewer')}` : 'under review';
+      return waitingFor > 0 ? `waiting for ${pluralize(waitingFor, 'reviewer')}` : 'under review';
     }
   }
-}
-
-function counted(count: number, noun: string): string {
-  return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }

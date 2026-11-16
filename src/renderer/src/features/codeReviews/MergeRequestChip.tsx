@@ -10,8 +10,9 @@ import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { openReview } from './codeReviewOperations';
 import { reviewConversationQuery } from './conversation/useReviewConversation';
 import { openItemsOfConversation } from './mergeCard';
-import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf, type TopBarRequestAction, type MergeRequestReview } from './mergeRequestChipState';
-import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
+import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, type TopBarRequestAction } from './mergeRequestChipState';
+import { MERGE_REQUEST_STATE_ICONS, type MergeRequestReview } from './mergeRequestState';
+import { currentRequestOf } from './reviewsByBranch';
 import { ReviewerStack } from './ReviewerStack';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
@@ -20,7 +21,7 @@ import styles from './MergeRequestChip.module.css';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
 /**
- * A segment of the branch pill when the workspace's branch has a merge request (`topBarRequestOf`): its state, its
+ * A segment of the branch pill when the workspace's branch has a merge request (`currentRequestOf`): its state, its
  * number and, while Open, its review's status. Hovering shows where it stands; a click opens it. The branch's reviews
  * are one `cm find review` (`branchReviewsQuery`), the read Changes makes for the change requests a check-in applies,
  * asked once the first screen is in (the pending changes, which the sidebar's count reads in any view).
@@ -31,7 +32,7 @@ export function MergeRequestChip() {
   const branch = branchWorkedOn(workspace?.selector);
   const { isPending: firstScreenPending } = usePendingChanges();
   const { data: reviews } = useQuery({ ...branchReviewsQuery(place, branch ?? ''), enabled: asksForBranchReviews(workspace?.selector, !firstScreenPending) });
-  const request = branch === undefined || !reviews ? undefined : topBarRequestOf(reviews);
+  const request = branch === undefined || !reviews ? undefined : currentRequestOf(reviews);
   if (!request || branch === undefined) return null;
   return <MergeRequestSegment request={request} source={branch} />;
 }

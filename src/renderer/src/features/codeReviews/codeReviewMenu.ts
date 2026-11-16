@@ -17,8 +17,10 @@ import { setMergeRequestState } from './mergeRequestOperations';
 import { mergeIntoOf } from './mergeInto';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
-/** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-/** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
+/**
+ * What a review's Copy menu copies, first what ⌘C copies: its number, then its title and its link, a merge request's
+ * written as one (`merge-requests/12`).
+ */
 export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title' | 'mergeRequest'>): CopyTexts {
   const object = { kind: 'codeReview', id: review.id, ...(review.mergeRequest ? { asMergeRequest: true } : {}) } as const;
   return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object }) };

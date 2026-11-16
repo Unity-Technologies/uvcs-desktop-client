@@ -2,6 +2,7 @@ import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
 import { branchLabel } from '../../lib/branchLabels';
+import { pluralize } from '../../lib/text';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { openThreads, threadsOf } from './conversation/reviewThreads';
 import type { MergeInto } from './mergeInto';
@@ -112,11 +113,11 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
   const count = (each: CodeReviewStatus): number => reviewers.filter((reviewer) => reviewer.status === each).length;
   switch (status) {
     case 'Reviewed':
-      return { id: 'review', tone: 'passed', title: 'Changes reviewed', detail: counted(count('Reviewed'), 'approving review') };
+      return { id: 'review', tone: 'passed', title: 'Changes reviewed', detail: pluralize(count('Reviewed'), 'approving review') };
     case 'Rework required':
-      return { id: 'review', tone: 'failed', title: 'Changes required', detail: counted(count('Rework required'), 'review', 'requesting changes') };
+      return { id: 'review', tone: 'failed', title: 'Changes required', detail: `${pluralize(count('Rework required'), 'review')} requesting changes` };
     case 'Under review':
-      return { id: 'review', tone: 'pending', title: 'Changes under review', detail: counted(count('Under review'), 'pending review') };
+      return { id: 'review', tone: 'pending', title: 'Changes under review', detail: pluralize(count('Under review'), 'pending review') };
   }
 }
 
@@ -140,7 +141,7 @@ export function conflictsSectionOf(check: ConflictsCheck, destination: string, m
       const { status, files, directories } = check.counts;
       if (status !== 'ready') return undefined;
       if (files === 0 && directories === 0) return { id: 'conflicts', tone: 'passed', title: `No conflicts with ${into}`, detail: 'Merging can be done automatically' };
-      const counts = [files > 0 && counted(files, 'file conflict'), directories > 0 && counted(directories, 'directory conflict')].filter(Boolean).join(' and ');
+      const counts = [files > 0 && pluralize(files, 'file conflict'), directories > 0 && pluralize(directories, 'directory conflict')].filter(Boolean).join(' and ');
       const one = files + directories === 1;
       const onlyFiles = directories === 0;
       return {
@@ -167,7 +168,7 @@ export function openItemsOfConversation(comments: readonly ReviewComment[]): Ope
 
 /** "3 change requests and 1 question open"; none when nothing is. */
 export function openItemsLine({ changeRequests, questions }: OpenItems): string | undefined {
-  const parts = [changeRequests > 0 && counted(changeRequests, 'change request'), questions > 0 && counted(questions, 'question')].filter(Boolean);
+  const parts = [changeRequests > 0 && pluralize(changeRequests, 'change request'), questions > 0 && pluralize(questions, 'question')].filter(Boolean);
   return parts.length > 0 ? `${parts.join(' and ')} open` : undefined;
 }
 
@@ -226,8 +227,4 @@ function visibilityAction(branch: string, isHidden: boolean, workspaceIsOnIt: bo
 function moveAction(move: MergeRequestMove): MergeCardAction {
   // In the menus' words (`menuAction`), so the card and the menus name a move alike.
   return { kind: 'move', move, label: MENU_WORDS[move.word].label ?? move.word };
-}
-
-function counted(count: number, noun: string, after?: string): string {
-  return [count, count === 1 ? noun : `${noun}s`, after].filter((part) => part !== undefined).join(' ');
 }

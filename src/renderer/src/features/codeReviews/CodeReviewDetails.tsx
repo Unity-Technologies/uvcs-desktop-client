@@ -15,7 +15,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
-import { describeMerge, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { reviewedChangesOf, reviewNoun } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerStack } from './ReviewerStack';
@@ -64,7 +64,8 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       properties={[
         { label: 'Reviewers', value: <ReviewerStack reviewers={review.reviewers} /> },
         { label: 'Comments', value: <ReviewCommentCounts review={review} /> },
-        { label: 'Changes', value: describeMerge(describeTarget(target), review) },
+        // The meta above already says where a merge request merges: its source into its destination.
+        { label: 'Changes', value: describeTarget(target) },
         { label: 'Created', value: formatDateTime(review.date) },
         { label: 'Last activity', value: formatDateTime(review.lastActivity) },
       ]}

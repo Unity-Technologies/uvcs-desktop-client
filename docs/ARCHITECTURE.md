@@ -34,7 +34,7 @@ you touch:
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 | `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), suggested changes and applying them, email notifications, the `cm codereview` commands |
-| `features/merge-requests.md`            | Merge requests: what makes a review one, the four states, the Merge requests view (State chip, who waits), which review stands for a branch and its chip |
+| `features/merge-requests.md`            | Merge requests: what makes a review one, creating one, the four states and who changes them, the page and its destination, the merge card and the conflicts check, merging and recording Merged, merge-rule refusals, the Merge requests view (State chip, who waits), which review stands for a branch: its chips, the top bar's chip and the next step in Changes |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
@@ -254,7 +254,7 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
+  their branch lists already carry, and share one review list with the palette; the Merge requests view and the review's page name it
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
   (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
   `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
@@ -1248,13 +1248,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
     (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
-    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
+    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Merge requests)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
-    is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+    (`pickedNames`), History and Attributes filter what they read. Merge requests have two people chips: who created
+    them, and their reviewers (I'm a reviewer is the server's `reviewer = 'me'`; others picked narrow the rows read,
+    code-reviews.md "The list"). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
     over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the

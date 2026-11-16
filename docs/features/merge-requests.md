@@ -123,7 +123,9 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
   source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
   branches**, newest first, to find by typing (`destinationGroups`), never the source. The branches are read only once
-  it opens (the switcher's read). A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
+  it opens (the switcher's read). Unlike the new request's Into, it knows the source only by its name, not its parent:
+  a top-level source (`/release`, branched from `/main`) has no ancestor there, and its parent shows under Other
+  branches. A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
   (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
   as text.
 - **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
@@ -289,16 +291,23 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - The text filter also finds the destination and the state's name ("main", "draft": `reviewFilterTexts`).
 - **The details panel** says "Merge request" (`reviewNoun`), the state's badge with the review status's icon beside it
   (its tooltip names it: the header's room is short), and the source "into" the destination (`reviewedChangesOf`, which
-  the Changes column follows too).
+  the Changes column follows too), said once: its Changes property names the branch alone.
 - **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
 ## Where a branch's merge request shows
 
-- **Which review stands for a branch** (`reviewOfEachBranch`, every surface showing one review of a branch: the
-  Branches view's and the Branch Explorer's chips, finishing a task): a merge request still to merge, over any newer
-  review; else the newest. Two still to merge: the newest. It chooses among the newest `NEWEST_CODE_REVIEWS` the chips
-  read (code-reviews.md "The list"): a request older than those doesn't stand for its branch.
+- **Which request counts for a branch**: two rules, both in `reviewsByBranch.ts`, both over reviews listed newest
+  first, both putting a merge request still to merge (the newest of two) first. They differ in what comes after it, as
+  they answer different questions:
+  - **The review that stands for a branch** (`reviewOfEachBranch`, `reviewStandingFor`), for any branch in a list:
+    the Branches view's and the Branch Explorer's chips, finishing a task. Else the newest review of any kind, plain
+    or closed too: the chip shows where the branch's latest review stands. It chooses among the newest
+    `NEWEST_CODE_REVIEWS` the chips read (code-reviews.md "The list"): a request older than those doesn't stand for
+    its branch.
+  - **The request current on the workspace's branch** (`currentRequestOf`), for the top bar and the next step in
+    Changes. Else the newest merged request, which says the branch is finished work and where it went; never a closed
+    one or a plain code review, which say nothing about where the task merges.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   leads the review status with the state's glyph. Narrow, it shows the state alone until the request is Open and
   reviewed, then the thumbs-up alone: at a glance, whether it can merge. The canvas draws the state as a shape of its
@@ -306,8 +315,8 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   destination (`reviewLine`). No new column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
   workspace's branch has a merge request, its state's glyph, "#12" and, while Open, the review status's icon. Which
-  one (`topBarRequestOf`): the newest still to merge; else the newest merged one, muted, which tells the user they're
-  still on finished work; never a closed one or a plain code review. Below 820px the number goes and the glyphs stay,
+  one: `currentRequestOf` ("Which request counts for a branch"); a merged one shows muted, telling the user they're
+  still on finished work. Below 820px the number goes and the glyphs stay,
   before the branch pill gives up any room. A click opens it.
   - **Hovering** shows a card (`mergeRequestChipOf` decides every line and action; the component maps them): the
     title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge

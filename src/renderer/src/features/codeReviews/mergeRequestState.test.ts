@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
-import { describeMerge, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });
 
@@ -35,11 +35,6 @@ describe('merge request state', () => {
     expect(mergeRequestMoves('Draft').map(moveFailureTitle)).toEqual(["Couldn't mark the merge request ready for review", "Couldn't close the merge request"]);
     expect(mergeRequestMoves('Open').map(moveFailureTitle)).toEqual(["Couldn't convert the merge request to a draft", "Couldn't close the merge request"]);
     expect(mergeRequestMoves('Closed').map(moveFailureTitle)).toEqual(["Couldn't reopen the merge request"]);
-  });
-
-  it('describes a merge as its source into its destination', () => {
-    expect(describeMerge('/main/task', request('Open', '/main'))).toBe('/main/task → /main');
-    expect(describeMerge('/main/task', {})).toBe('/main/task');
   });
 });
 

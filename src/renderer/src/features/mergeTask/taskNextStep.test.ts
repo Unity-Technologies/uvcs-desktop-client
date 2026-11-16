@@ -176,6 +176,7 @@ describe('taskNextStepView, its line and buttons', () => {
 
   it('rework: the change requests to apply once its conversation is read, else that changes are required', () => {
     expect(view([openRequest(12, 'Rework required')], false, { changeRequests: 3, questions: 1 }).line?.status).toBe('3 change requests to apply');
+    expect(view([openRequest(12, 'Rework required')], false, { changeRequests: 1204, questions: 0 }).line?.status).toBe('1,204 change requests to apply');
     expect(view([openRequest(12, 'Rework required')], false, { changeRequests: 1, questions: 0 }).line?.status).toBe('1 change request to apply');
     expect(view([openRequest(12, 'Rework required')], false, { changeRequests: 0, questions: 2 }).line?.status).toBe('changes required');
     expect(view([openRequest(12, 'Rework required')]).line?.status).toBe('changes required');

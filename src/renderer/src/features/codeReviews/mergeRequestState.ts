@@ -1,5 +1,5 @@
 import { GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, type LucideIcon } from 'lucide-react';
-import type { CodeReview, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import type { MenuWordId } from '../../components/menuWords';
 import { describeTarget } from './reviewTarget';
 
@@ -16,6 +16,9 @@ export const MERGE_REQUEST_STATE_ICONS: Record<MergeRequestState, LucideIcon> = 
 };
 
 type WithMergeRequest = Pick<CodeReviewSummary, 'mergeRequest'>;
+
+/** A review that is a merge request. */
+export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeRequestInfo };
 
 /** A merge request still to be merged: Open or Draft. A plain review is no merge request. */
 export function isActiveMergeRequest(review: WithMergeRequest): boolean {
@@ -66,11 +69,6 @@ const FAILURE_TITLES: Record<MergeRequestMove['word'], string> = {
 export function mergeRequestTip({ mergeRequest }: { mergeRequest: NonNullable<CodeReviewSummary['mergeRequest']> }): string {
   if (mergeRequest.state === 'Merged') return `Merged into ${mergeRequest.destination}`;
   return `${mergeRequest.state} merge request into ${mergeRequest.destination}`;
-}
-
-/** A review's source, and where it merges for a merge request: "/main/task → /main". */
-export function describeMerge(source: string, review: WithMergeRequest): string {
-  return review.mergeRequest ? `${source} → ${review.mergeRequest.destination}` : source;
 }
 
 /** What a review is called wherever it's named: "Merge request" or "Code review". */
