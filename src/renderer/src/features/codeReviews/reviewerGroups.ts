@@ -30,7 +30,6 @@ export function reviewerRef(reviewer: NamedReviewer, groups: ReviewerGroups): Me
   return { name: reviewer.name, kind: isGroup(reviewer, groups) ? 'group' : 'user' };
 }
 
-
 /** How a reviewer is named: a user by the name shown for them (`jane.doe@acme.com`, Jane Doe), a group as the server names it. */
 export function reviewerLabel(reviewer: NamedReviewer, groups: ReviewerGroups): string {
   return isGroup(reviewer, groups) ? reviewer.name : displayName(reviewer.name);

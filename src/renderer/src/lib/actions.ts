@@ -10,7 +10,7 @@ export interface Action {
   shortcut?: string;
   /** Muted text after the label, e.g. what a "Copy" entry copies (`br:/main/task`). */
   detail?: string;
-  /** A line under the label on what choosing it means ("Can't be merged until it's ready for review"), where the label can't say it all. */
+  /** A line under the label in menus, on what choosing it means ("Can't be merged until it's ready for review"), where the label can't say it all. */
   description?: string;
   danger?: boolean;
   disabled?: boolean;
