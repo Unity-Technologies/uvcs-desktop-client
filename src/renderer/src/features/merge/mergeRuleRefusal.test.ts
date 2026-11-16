@@ -69,8 +69,11 @@ describe('needsBranchReviews', () => {
 });
 
 describe('mergeRuleNotice', () => {
-  it('says a branch needs an open merge request, plainly', () => {
-    expect(mergeRuleNotice(refusal('needsMergeRequest'), undefined, undefined)).toEqual({ title: 'This server merges into main only branches with an open merge request' });
+  it('says a branch needs an open merge request, plainly, and offers to create it', () => {
+    expect(mergeRuleNotice(refusal('needsMergeRequest'), undefined, undefined)).toEqual({
+      title: 'This server merges into main only branches with an open merge request',
+      action: { kind: 'createMergeRequest', branch: '/main/task1', label: 'Create merge request' },
+    });
   });
 
   it('opens the merge request the merge was opened from when it must be reviewed first', () => {
