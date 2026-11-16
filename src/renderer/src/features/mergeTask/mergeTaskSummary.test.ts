@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { canMarkReviewed, defaultMergeComment } from './mergeTaskSummary';
+import { canMarkReviewed, defaultMergeComment, mergeRequestName } from './mergeTaskSummary';
 
 describe('defaultMergeComment', () => {
   it('quotes the first line of the branch comment', () => {
@@ -11,6 +11,16 @@ describe('defaultMergeComment', () => {
 
   it("quotes a merge request's title over the branch comment", () => {
     expect(defaultMergeComment({ name: '/main/t1', comment: 'Add the login screen' }, { title: 'Add login\nwith SSO' })).toBe('Merge /main/t1: Add login');
+  });
+});
+
+describe('mergeRequestName', () => {
+  it('names the merge request by its number and title', () => {
+    expect(mergeRequestName({ id: 12, title: 'Add login' })).toBe('Merge request 12 · Add login');
+  });
+
+  it("keeps only a title's first line", () => {
+    expect(mergeRequestName({ id: 12, title: 'Add login\nwith SSO' })).toBe('Merge request 12 · Add login');
   });
 });
 

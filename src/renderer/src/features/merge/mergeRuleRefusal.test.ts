@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { mergeRequestInto, mergeRuleNotice, mergeRuleRefusal } from './mergeRuleRefusal';
+import { mergeRequestInto, mergeRuleNotice, mergeRuleRefusal, needsBranchReviews } from './mergeRuleRefusal';
 
 describe('mergeRuleRefusal', () => {
   it('recognizes a branch that needs an open merge request to its destination', () => {
@@ -57,21 +57,37 @@ describe('mergeRequestInto', () => {
   });
 });
 
-describe('mergeRuleNotice', () => {
-  const refusal = (rule: 'needsMergeRequest' | 'needsReview') => ({ rule, source: '/main/task1', destination: '/main' }) as const;
+const refusal = (rule: 'needsMergeRequest' | 'needsReview') => ({ rule, source: '/main/task1', destination: '/main' }) as const;
+const openedFrom = { id: 12, title: 'Add login' };
 
+describe('needsBranchReviews', () => {
+  it("reads the branch's reviews only to find the request a review rule asks to open, when the merge wasn't opened from it", () => {
+    expect(needsBranchReviews(refusal('needsReview'), undefined)).toBe(true);
+    expect(needsBranchReviews(refusal('needsReview'), openedFrom)).toBe(false);
+    expect(needsBranchReviews(refusal('needsMergeRequest'), undefined)).toBe(false);
+  });
+});
+
+describe('mergeRuleNotice', () => {
   it('says a branch needs an open merge request, plainly', () => {
-    expect(mergeRuleNotice(refusal('needsMergeRequest'), undefined)).toEqual({ title: 'This server merges into main only branches with an open merge request' });
+    expect(mergeRuleNotice(refusal('needsMergeRequest'), undefined, undefined)).toEqual({ title: 'This server merges into main only branches with an open merge request' });
   });
 
-  it("opens the branch's merge request when it must be reviewed first", () => {
-    expect(mergeRuleNotice(refusal('needsReview'), 12)).toEqual({
+  it('opens the merge request the merge was opened from when it must be reviewed first', () => {
+    expect(mergeRuleNotice(refusal('needsReview'), openedFrom, undefined)).toEqual({
       title: 'This server merges into main only reviewed branches',
       action: { kind: 'openMergeRequest', reviewId: 12, label: 'Open merge request' },
     });
   });
 
-  it('offers nothing to open when the branch has no merge request into that destination', () => {
-    expect(mergeRuleNotice(refusal('needsReview'), undefined)).toEqual({ title: 'This server merges into main only reviewed branches' });
+  it("opens the branch's merge request into that destination otherwise", () => {
+    const reviews = [codeReviewSummary({ id: 9, mergeRequest: { state: 'Open', destination: '/main' } })];
+
+    expect(mergeRuleNotice(refusal('needsReview'), undefined, reviews).action?.reviewId).toBe(9);
+  });
+
+  it('offers nothing to open when the branch has no merge request into that destination, or its reviews are not read yet', () => {
+    expect(mergeRuleNotice(refusal('needsReview'), undefined, [])).toEqual({ title: 'This server merges into main only reviewed branches' });
+    expect(mergeRuleNotice(refusal('needsReview'), undefined, undefined)).toEqual({ title: 'This server merges into main only reviewed branches' });
   });
 });
