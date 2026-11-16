@@ -94,6 +94,7 @@ import {
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
 import { OPEN_IN_FILE_MANAGER_LABEL, REVEAL_LABEL } from '../lib/platform';
+import { GitPullRequestPlus } from './GitPullRequestPlus';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -215,6 +216,8 @@ export const MENU_WORDS = {
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
   newLabel: word('create', TagPlus, 'New label…'),
+  // A merge request of a branch that can merge somewhere; a code review of anything (a top-level branch's only kind).
+  newMergeRequest: word('create', GitPullRequestPlus, 'New merge request…'),
   newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),

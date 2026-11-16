@@ -14,6 +14,8 @@ import { toolSubject } from '../../components/tools/toolSubjects';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { showBranchChangesets } from '../changesets/showBranchChangesets';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { openCreateMergeRequestDialog } from '../codeReviews/CreateMergeRequestDialog';
+import { canMergeSomewhere } from '../codeReviews/mergeRequestDraft';
 import { openTaskMerge } from '../mergeTask/mergeTaskOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
@@ -71,6 +73,7 @@ export function branchMenu(place: Place, branches: BranchInfo[], currentBranch: 
     single && workspacePath !== null && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
     single && workspacePath !== null && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single && menuAction('newBranch', () => void openCreateBranchDialog(place, branchHeadOrigin(single)).then((name) => name && host.onBranchCreated?.(name))),
+    single && canMergeSomewhere(single) && menuAction('newMergeRequest', () => openCreateMergeRequestDialog(place, single.name)),
     single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'branch', value: single.name })),
     single && menuAction('changesets', () => showBranchChangesets(place, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),

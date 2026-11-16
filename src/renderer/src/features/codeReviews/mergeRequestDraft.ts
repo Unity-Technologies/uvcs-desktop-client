@@ -38,8 +38,11 @@ export function defaultTitleOf(branchName: string, comment: string | undefined):
   return summary ? `${name} - ${summary}` : name;
 }
 
-/** Whether a branch can have a merge request: it has somewhere to merge, an ancestor in its name or a parent. */
-function canMergeSomewhere(branch: Pick<Branch, 'name' | 'parent'>): boolean {
+/**
+ * Whether a branch can have a merge request: it has somewhere to merge, an ancestor in its name or a parent. A top-level
+ * branch with neither (`/main`) has only code reviews, and no New merge request in its menu.
+ */
+export function canMergeSomewhere(branch: Pick<Branch, 'name' | 'parent'>): boolean {
   return ancestorsOf(branch.name).length > 0 || Boolean(branch.parent);
 }
 
