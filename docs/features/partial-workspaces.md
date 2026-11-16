@@ -67,7 +67,8 @@ Its decisions are pure and tested:
   click does (`toggled`), and the fewest rules that make the workspace hold what's chosen (`downloadRules`). A folder
   downloaded or removed whole is one rule; a folder partly loaded is completed item by item, since `cm` refuses to
   load a folder that holds anything already. The root is never removed, only its items.
-- `downloadTree.ts`: the rows shown (`downloadRows`), what Apply does to each (`downloadChangeOf`) and how a row shows
+- `downloadTree.ts`: the rows shown (`downloadRows`; each folder lists folders and xlinks first, then files, by name,
+  as Files does: `downloadTreeOf`, `sortItems`), what Apply does to each (`downloadChangeOf`) and how a row shows
   it (`downloadChangeLook`), the keys (`downloadKey`, a desktop tree's), the body's state (`rootStatus`) and the
   summary beside Apply (`rulesSummary`). Only what Apply changes stands out: an item it downloads has a green check and
   name and the word Download beside it; one it removes, a red-bordered box and name and the word Remove, so the change
