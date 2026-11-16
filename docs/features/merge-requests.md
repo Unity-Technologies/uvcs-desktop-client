@@ -42,11 +42,15 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
 - **Title**: the branch's own name, then " - " and its comment's first line when it has one (`defaultTitleOf`), so a
   tracker key in either survives. Both the title and Into follow From until the user changes them; a title typed and
   cleared stays empty.
-- **Description** (optional; the comment editor, sharing the title's focus mode as the check-in's does) and **Reviewers** (typed as the code review dialog's,
-  `typedReviewers`, a group as one).
-- **Create merge request**, or **Create as draft** behind its caret (`--mergerequeststatus=Draft`). The button says
-  why it can't yet (`draftProblem`: no branch, a top-level one with no parent, no destination, the branch itself, an
-  empty title; a top-level branch whose parent isn't read yet waits, refusing nothing).
+- **Description** (optional; the comment editor, sharing the title's focus mode as the check-in's does) and
+  **Reviewers**, picked from the server's users and groups as the code review dialog's are (`ReviewersField`, the
+  review page's `ReviewerPicker`): chips with their ×, **Add**, **Remove all** once there are several. Names aren't
+  typed, so none the server doesn't know is asked for. (A local server takes any name as a reviewer anyway.)
+- **Create merge request**, or **Create as draft** behind its caret (`--mergerequeststatus=Draft`), its line under
+  the label saying what that means: "Can't be merged until it's ready for review" (`Action.description`). The button
+  says why it can't yet (`draftProblem`: no branch, a top-level one with no parent, no destination, the branch itself,
+  a branch made from it (`/main/task` into `/main/task/sub`), an empty title; a top-level branch whose parent isn't
+  read yet waits, refusing nothing). Any other branch typed into Into is allowed: picking one is deliberate.
 - **One command**: `cm mergerequest create br:<from> <title> --destination=br:<into> [--mergerequeststatus=Draft]
   [--users= --groups=] [--descriptionfile=<file>] --format={id}` (`createMergeRequestArgs`, `query()`), the
   description through a temp file. `cm` makes the request, then writes its description: when that fails it still prints
@@ -56,11 +60,17 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
   - Once From settles (`useSettledValue`), the dialog reads the branch's reviews, the read Changes shares
     (`branchReviewsKey`, one `cm find review where target = 'br:…'`). A request still to merge into the same
     destination (`existingRequestOf`, `existingRequestNote`) is named under the row with **Open it**, and Create waits,
-    its tooltip saying why. A merged or closed one is only a muted line ("Merged before as #9"). One into another
-    destination is no conflict. While the read runs nothing shows; Create waits for its answer before asking.
+    its tooltip saying why. A merged or closed one is a muted line that doesn't block ("Merged before: #9 Add login"
+    and **Open it**). One into another destination is no conflict. While the read runs nothing else moves: Create's
+    tooltip says "Checking for an existing merge request…", and Create, if pressed, waits for the answer before
+    asking (`reviewsCheckOf`, `mergeRequestForm`'s `tip`).
+  - When that read fails, a muted line says "Couldn't check whether this branch already has a merge request", and
+    Create still runs: a server hiccup shouldn't stop the task, `cm` creates anyway, and a duplicate shows in the list,
+    where it can be closed.
   - "Close the existing request" isn't offered there: a destructive side door. Open it and close it on its page.
 - Then the dialog closes, the toast says "Created merge request 12" with **Open**, the view selects the new row
-  (`useSelectCreated`), and the reviews are read again (`isAffectedByCodeReviews`).
+  (`useSelectCreated`), and the reviews are read again (`isAffectedByCodeReviews`). The page doesn't open by itself,
+  as a new code review's doesn't: the user may be creating several, and the toast opens it.
 - **A server older than merge requests** makes a plain code review of what `cm mergerequest create` asks, and says
   nothing. The app never asks a server whether it has them: a read of the new review during that refresh (a list on
   screen, the dialog's own read of the branch's reviews: `onFirstReadOfReview`) tells, and a note says "This server
