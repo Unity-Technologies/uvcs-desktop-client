@@ -140,9 +140,9 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
 There is no "merge this merge request" command: its branch is merged into its destination by an ordinary merge on the
 server, the merge page finishing a task (docs/features/merge.md "Finishing a task").
 
-- **Merge into main…** (`mergeIntoLabel`; the ellipsis as the merge page confirms it) is offered for an **Open** one,
-  in the card's footer and in the row's and the page's menus (`mergeIntoOf`, the `mergeInto` word in the `merge`
-  group). It opens the merge page into the request's destination, not the branch's parent
+- **Merge into main…** (the ellipsis as the merge page confirms it) is offered for an **Open** one whose branch is
+  named, one rule for the card's footer and the row's and the page's menus (`mergeOfRequest`; the menus'
+  `mergeIntoOf`, the `mergeInto` word in the `merge` group). It opens the merge page into the request's destination, not the branch's parent
   (`openMergeRequestMerge`), with the request named under the comment and its title starting the comment.
 - **The button never waits for the review.** Primary once ready (`mergeReadiness`), the default quiet button before,
   same place, same words: no warning color, no "anyway". The server's merge rules are the authority; blocking until
@@ -151,14 +151,18 @@ server, the merge page finishing a task (docs/features/merge.md "Finishing a tas
   button is disabled, its tooltip "Open a workspace of this repository to merge", and the menus don't offer it.
 - **The app records Merged itself.** A server with merge requests switched on marks the Open requests from that
   source into that destination Merged on the merge's check-in; one with them off never does, and `cm` can't ask which
-  it is. So after any merge the app made that made a changeset (from the request, Changes or the branch menu alike),
-  `finishMergedTask` records each Open request of the branch into that destination (`requestsToRecord`, from the
-  branch's reviews, `branchReviewsQuery`; usually one) with one quick `cm mergerequest edit <id>
-  --mergerequeststatus=Merged --mergechangeset=cs:N` (`recordMerged`, `query()`). Setting it again on a request
-  already Merged changes nothing and adds no note, so it's safe on both. It comes first, then the user's review and
-  hiding the branch; a failure says "Merged, but couldn't mark merge request 12 as merged" and undoes nothing. The
-  page, the lists and the chips then read the reviews again (`isAffectedByCodeReviews`): one `cm find review` per view
-  showing it.
+  it is. So after any merge on the server that finishes a task and made a changeset (from the request, Changes or the
+  branch menu alike), `finishMergedTask` records each Open request of the branch into that destination
+  (`requestsToRecord`; usually one) with one quick `cm mergerequest edit <id> --mergerequeststatus=Merged
+  --mergechangeset=cs:N` (`recordMerged`, `query()`; `cm` takes one id per edit). The branch's reviews are the merge
+  page's (`branchReviewsQuery`); a merge clicked before they arrived reads them once then. Setting it again on a
+  request already Merged changes nothing and adds no note, so it's safe on both. It comes first, then the user's
+  review and hiding the branch. Should the write fail (a server that marked it may refuse it to someone else than its
+  owner), the request is read once (`find review where id`): already Merged, nothing is said; else "Merged, but
+  couldn't mark merge request 12 as merged", and nothing is undone. The reviews are then read once (the page, the
+  lists, the chips), after every write: the merge's own refresh leaves them out (`mergeRefreshScope`).
+- **The gap**: a branch merged into a workspace and checked in (a merge the app doesn't finish as a task) records
+  nothing; on a server with merge requests switched off its request stays Open until someone closes it.
 - **Merge rules.** A server may refuse the merge for its rules, and does so while the merge page calculates the merge,
   so the preview says it (`MergeRuleRefused`): "This server merges into main only reviewed branches" with **Open merge
   request** (the request the merge was opened from, else the branch's still to merge into that destination,

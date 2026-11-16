@@ -475,11 +475,13 @@ request it was opened from, and the choices. The page then:
 - offers, under the comment, "Mark your review as reviewed (“<title>”)" when the branch has a review the user is a
   reviewer of and hasn't marked reviewed yet (`canMarkReviewed`; its status beside it, a click opens it; the review
   stands for the branch among the branch's reviews, `reviewStandingFor`, read once as Changes reads them,
-  `branchReviewsQuery`), and "Hide the branch afterwards"
-  (`TaskMergeOptions`). Only a reviewer gives a status (docs/features/code-reviews.md);
+  `branchReviewsQuery`), and "Hide the branch afterwards" (`TaskMergeOptions`). Only a reviewer gives a status
+  (docs/features/code-reviews.md);
 - once merged, records the branch's merge requests into that destination Merged, then does what was picked, and
-  remembers where the task landed (`finishMergedTask`), so Changes shows the finished task: where it went, "Switch to <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge
-  that finishes it after its destination moved carries the choices made.
+  remembers where the task landed (`finishMergedTask`), so Changes shows the finished task: where it went, "Switch to
+  <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge that finishes it after its destination
+  moved carries the choices made. The reviews are read once, at the end: the merge's own refresh leaves them out
+  (`mergeRefreshScope`) and the writes on them refresh nothing of their own, so none reads the request back Open.
 
 Its conflicts are resolved on the page, on the server, as any merge's. The header offers the workspace way too, "Resolve
 in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"
