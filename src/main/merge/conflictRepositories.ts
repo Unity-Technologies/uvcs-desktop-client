@@ -1,4 +1,4 @@
-import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { FileConflict, MergePlan, RequestedMerge } from '@shared/domain/merge';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
@@ -29,7 +29,7 @@ type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
 export async function withConflictRepositories(
   cm: CmClient,
   workspacePath: string,
-  request: MergeRequest,
+  request: RequestedMerge,
   plan: PrintedMergePlan,
   copies?: Pick<WorkspaceCopies, 'remember'>,
   known?: readonly FileConflict[],
@@ -93,7 +93,7 @@ function sameItemKey(conflict: PrintedFileConflict): string {
  * The tree the merge goes into: its destination contributor, else the branch merged into. Null for a workspace merge
  * whose contributors `cm` didn't print: the workspace's loaded changeset is its destination then.
  */
-export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): string | null {
+export function destinationTree(request: RequestedMerge, plan: PrintedMergePlan): string | null {
   const destination = plan.contributors?.destination.changesetId;
   if (destination !== undefined) return spec.changeset(destination);
   return request.destinationBranch ? spec.branch(request.destinationBranch) : null;

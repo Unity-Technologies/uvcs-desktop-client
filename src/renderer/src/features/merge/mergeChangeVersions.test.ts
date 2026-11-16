@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MergeChange, MergeContributors, MergeRequest } from '@shared/domain/merge';
+import type { MergeChange, MergeContributors, RequestedMerge } from '@shared/domain/merge';
 import { changePreviewOf } from './mergeChangeVersions';
 
 const contributors: MergeContributors = {
@@ -7,7 +7,7 @@ const contributors: MergeContributors = {
   destination: { changesetId: 40, branch: '/main' },
   base: { changesetId: 35, branch: '/main' },
 };
-const merge: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const merge: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
 const change = (kind: MergeChange['kind'], path = '/src/app.ts', oldPath?: string): MergeChange => (oldPath ? { kind, path, oldPath } : { kind, path });
 const at = (path: string, point: string) => ({ kind: 'repositoryPath', path, at: point });
 
@@ -35,12 +35,12 @@ describe('changePreviewOf', () => {
   });
 
   it('reads the source of a shelve in the shelve', () => {
-    const shelve: MergeRequest = { kind: 'merge', sourceSpec: 'sh:7' };
+    const shelve: RequestedMerge = { kind: 'merge', sourceSpec: 'sh:7' };
     expect(changePreviewOf(change('added'), contributors, shelve)).toEqual({ kind: 'diff', original: { kind: 'empty' }, modified: at('/src/app.ts', 'sh:7') });
   });
 
   it('takes the destination back to the ancestor when undoing a changeset', () => {
-    const subtractive: MergeRequest = { kind: 'subtractive', sourceSpec: 'cs:42' };
+    const subtractive: RequestedMerge = { kind: 'subtractive', sourceSpec: 'cs:42' };
     expect(changePreviewOf(change('changed'), contributors, subtractive)).toEqual({ kind: 'diff', original: at('/src/app.ts', 'cs:40'), modified: at('/src/app.ts', 'cs:35') });
   });
 

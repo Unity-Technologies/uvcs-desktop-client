@@ -1,6 +1,6 @@
 import { AlertTriangle, ArrowDownToLine, Eye } from 'lucide-react';
 import { useMemo, type ReactNode, type Ref } from 'react';
-import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
 import { usePageShown } from '../../app/navigation/pageShown';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
@@ -19,7 +19,7 @@ import { MergeHeading } from './MergeHeading';
 import styles from './MergeHeader.module.css';
 
 interface MergeHeaderProps {
-  request: MergeRequest;
+  request: RequestedMerge;
   /** Undefined while it's calculated: the header shows what the request names, its button disabled. */
   plan: MergePlan | undefined;
   labels: MergeLabels;

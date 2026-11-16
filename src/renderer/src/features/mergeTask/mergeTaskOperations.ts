@@ -1,5 +1,5 @@
 import { workspacePlace } from '@shared/domain/place';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -10,7 +10,7 @@ import { taskMergeOf, type TaskBranch, type TaskEnding } from './taskMerge';
 
 /** Finishes a task: the merge page for merging it into its parent on the server. */
 export function openTaskMerge(branch: TaskBranch): void {
-  const request: MergeRequest = { kind: 'merge', sourceSpec: spec.branch(branch.name), destinationBranch: branch.parent };
+  const request: RequestedMerge = { kind: 'merge', sourceSpec: spec.branch(branch.name), destinationBranch: branch.parent };
   navigation.openPage({ kind: 'merge', request, task: taskMergeOf(branch) });
 }
 

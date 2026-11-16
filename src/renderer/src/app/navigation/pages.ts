@@ -1,6 +1,6 @@
 import type { DiffTarget } from '@shared/domain/diff';
 import type { LinkLines } from '@shared/links/link';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import type { RevisionRef } from '@shared/domain/revision';
 import type { TaskMerge } from '../../features/mergeTask/taskMerge';
 
@@ -34,7 +34,7 @@ export type Page =
       sideNames?: readonly [DiffSideName, DiffSideName];
     }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
-  | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
+  | { kind: 'merge'; request: RequestedMerge; task?: TaskMerge }
   /**
    * `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show.
    * `focusThread`: a comment thread (its first comment's id) to bring into view and mark, in the tab it opens on.

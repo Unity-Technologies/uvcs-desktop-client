@@ -6,7 +6,7 @@ import type { MergeTool } from '@shared/domain/mergeTools';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { queryClient } from '../../app/queryClient';
 import { externalAppsKey } from '../../components/externalApps/externalApps';
-import type { DirectoryConflict, DirectoryDecision, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryDecision, MergePlan, RequestedMerge } from '@shared/domain/merge';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
 import { fileConflictKey } from './conflictedFiles';
@@ -17,7 +17,7 @@ import type { Merger } from './mergeTools/mergeToolFor';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const labels: MergeLabels = { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES };
-const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const request: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
 const conflictInPlan = { path: '/src/a.ts', sourceChangeset: 11, itemId: 7, repository: 'game@local' };
 const plan = {
   contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } },

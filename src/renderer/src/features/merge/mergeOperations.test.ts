@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
-import type { MergeRequest } from '@shared/domain/merge';
+import type { RequestedMerge } from '@shared/domain/merge';
 import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import { queryClient } from '../../app/queryClient';
 import { showQuery } from '../../testing/queryProbes';
@@ -48,8 +48,8 @@ describe('completeMerge', () => {
 });
 
 describe('completing a merge', () => {
-  const intoWorkspace: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
-  const intoServerBranch: MergeRequest = { ...intoWorkspace, destinationBranch: '/main' };
+  const intoWorkspace: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
+  const intoServerBranch: RequestedMerge = { ...intoWorkspace, destinationBranch: '/main' };
 
   it('stays on the page after merging into the workspace, for the user to review and check in', async () => {
     fakeApi.answer('merge.run', () => ({}));
@@ -162,7 +162,7 @@ describe('completing a merge', () => {
   describe('finishing a task', () => {
     const task: TaskMerge = { branch: { id: 7, name: '/main/task001', parent: '/main', comment: '' }, choices: { markReviewed: true, hideBranch: true } };
     const review = codeReviewSummary({ id: 12, title: 'Task 001', owner: 'ana', reviewers: [{ name: 'bob', status: 'Under review' }] });
-    const finishTask: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
+    const finishTask: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
     const writes = () => fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1, 3)]);
 
     beforeEach(() => {
@@ -230,7 +230,7 @@ describe('completing a merge', () => {
 
     it('names the task in the toast of the merge that finishes it', async () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 43 }));
-      const followUp: MergeRequest = { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' };
+      const followUp: RequestedMerge = { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' };
 
       await completeMerge(ws, followUp, resolutions, { task, review, user: 'bob' });
 
@@ -263,7 +263,7 @@ describe('completing a merge', () => {
 });
 
 describe('closeMergeAsked', () => {
-  const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+  const request: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
 
   it('closes the merge on screen once the user confirms', async () => {
     navigation.openPage({ kind: 'merge', request });
