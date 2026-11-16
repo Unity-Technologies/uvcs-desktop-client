@@ -414,7 +414,10 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   no click on it or its card reaches the pill; the name gives it room (`CHIP_ROOM`). A separate segment after the
   pill was dropped: it read apart from the branch, unlike everywhere else a branch shows its request; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
   counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the
-  state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it.
+  state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it. The keyboard
+  doesn't reach the chip, by choice: Tab and Enter on the pill open the switcher, its job, and the request opens from
+  the palette or the next step in Changes. A tab stop of its own inside the pill was dropped: it came between the
+  user and the switcher for a request the keyboard already reaches.
   - **Hovering** shows a card: the request's summary (`MergeRequestSummaryCard`, "A branch's merge request at a
     glance"), its title a link that opens it; then, while Open, what's still open ("2 change requests and 1 question
     open", `openItemsLine`); then **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the
