@@ -12,16 +12,22 @@ function request(id: number, state: MergeRequestState, review: Partial<CodeRevie
 const plainReview = (id: number) => codeReviewSummary({ id, targetBranchId: 7 });
 
 describe('asksForBranchReviews', () => {
+  const onTask = { kind: 'branch', name: '/main/task' } as const;
+
   it('asks only for a workspace on a branch', () => {
-    expect(asksForBranchReviews({ kind: 'branch', name: '/main/task' })).toBe(true);
-    expect(asksForBranchReviews({ kind: 'changeset', name: '12' })).toBe(false);
-    expect(asksForBranchReviews({ kind: 'label', name: 'v1.0' })).toBe(false);
-    expect(asksForBranchReviews({ kind: 'shelve', name: '3' })).toBe(false);
+    expect(asksForBranchReviews(onTask, true)).toBe(true);
+    expect(asksForBranchReviews({ kind: 'changeset', name: '12' }, true)).toBe(false);
+    expect(asksForBranchReviews({ kind: 'label', name: 'v1.0' }, true)).toBe(false);
+    expect(asksForBranchReviews({ kind: 'shelve', name: '3' }, true)).toBe(false);
   });
 
   it('asks nothing while the workspace is not read yet', () => {
-    expect(asksForBranchReviews(undefined)).toBe(false);
-    expect(asksForBranchReviews(null)).toBe(false);
+    expect(asksForBranchReviews(undefined, true)).toBe(false);
+    expect(asksForBranchReviews(null, true)).toBe(false);
+  });
+
+  it('waits for the first screen: nothing until the pending changes are read (or failed)', () => {
+    expect(asksForBranchReviews(onTask, false)).toBe(false);
   });
 });
 
@@ -73,6 +79,11 @@ describe('mergeRequestChipOf, the chip', () => {
 
   it('names what it is and where it stands for a screen reader', () => {
     expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more' })).label).toBe('Merge request 12 · Open into /main · Under review: Jump higher');
+  });
+
+  it("says no review status where the chip shows none", () => {
+    expect(mergeRequestChipOf(request(12, 'Draft', { title: 'Jump higher' })).label).toBe('Merge request 12 · Draft into /main: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Merged', { title: 'Jump higher' })).label).toBe('Merge request 12 · Merged into /main: Jump higher');
   });
 });
 
