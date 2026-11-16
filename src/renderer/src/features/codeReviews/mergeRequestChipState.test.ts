@@ -3,7 +3,8 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf, type MergeRequestReview } from './mergeRequestChipState';
+import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, topBarRequestOf } from './mergeRequestChipState';
+import type { MergeRequestReview } from './mergeRequestState';
 
 function request(id: number, state: MergeRequestState, review: Partial<CodeReviewSummary> = {}): MergeRequestReview {
   return { ...codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, ...review }), mergeRequest: { state, destination: '/main' } };

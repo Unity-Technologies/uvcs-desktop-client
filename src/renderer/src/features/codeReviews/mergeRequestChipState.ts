@@ -4,10 +4,7 @@ import { branchWorkedOn } from '../../components/workingObject';
 import { commentLineText } from '../../lib/comments/commentText';
 import { openItemsLine, reviewSectionOf, type OpenItems } from './mergeCard';
 import { mergeOfRequest, type MergeInto } from './mergeInto';
-import { isActiveMergeRequest, mergeRequestTip } from './mergeRequestState';
-
-/** A review that is a merge request. */
-export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeRequestInfo };
+import { isActiveMergeRequest, mergeRequestTip, type MergeRequestReview } from './mergeRequestState';
 
 /**
  * What a button of the top bar's hover card does; `MergeRequestChip` runs it: open the request, or, once an Open one

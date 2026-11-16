@@ -1,11 +1,11 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
 import { branchLabel } from '../../lib/branchLabels';
-import type { MergeRequestReview } from '../mergeTask/taskMerge';
+import type { MergeRequestToMerge } from '../mergeTask/taskMerge';
 
 /** A merge request's merge, as Merge into opens it (`openMergeRequestMerge`): the request, its branch, the words. */
 export interface MergeInto {
-  request: MergeRequestReview;
+  request: MergeRequestToMerge;
   source: string;
   /** "Merge into main…": the ellipsis as it opens the merge page, where the merge is confirmed. */
   label: string;

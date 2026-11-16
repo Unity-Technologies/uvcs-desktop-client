@@ -60,10 +60,10 @@ export function taskMergeOf({ name, comment }: TaskBranch): TaskMerge {
 }
 
 /** A review that is a merge request, as merging it needs it. */
-export type MergeRequestReview = Pick<CodeReviewSummary, 'id' | 'title'> & { mergeRequest: MergeRequestInfo };
+export type MergeRequestToMerge = Pick<CodeReviewSummary, 'id' | 'title'> & { mergeRequest: MergeRequestInfo };
 
 /** The task merge a merge request asks for: its branch, `source`, merged into its destination. */
-export function mergeRequestMergeOf(review: MergeRequestReview, source: string): TaskMerge {
+export function mergeRequestMergeOf(review: MergeRequestToMerge, source: string): TaskMerge {
   return {
     // Its title starts the merge's comment, not the branch's: no need to read the branch for it.
     branch: { name: source, comment: '' },

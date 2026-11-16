@@ -5,8 +5,8 @@ import { branchLabels } from '../../lib/branchLabels';
 import { commentLineText } from '../../lib/comments/commentText';
 import type { OpenItems } from '../codeReviews/mergeCard';
 import { mergeOfRequest, type MergeInto } from '../codeReviews/mergeInto';
-import { topBarRequestOf, type MergeRequestReview } from '../codeReviews/mergeRequestChipState';
-import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove } from '../codeReviews/mergeRequestState';
+import { topBarRequestOf } from '../codeReviews/mergeRequestChipState';
+import { isActiveMergeRequest, mergeRequestMoves, mergeRequestTip, type MergeRequestMove, type MergeRequestReview } from '../codeReviews/mergeRequestState';
 import type { FinishedTask } from './finishedTask';
 import { isTaskBranch } from './mergeTaskSummary';
 

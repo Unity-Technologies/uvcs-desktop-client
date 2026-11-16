@@ -11,7 +11,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { branchReviewsQuery } from '../codeReviews/changeRequests/useChangeRequests';
 import { isAffectedByBranchList, isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { useFinishedTasksStore } from './finishedTask';
-import { mergeRequestMergeOf, requestsToRecord, taskMergeOf, type MergeRequestReview, type TaskBranch, type TaskEnding, type TaskMerge } from './taskMerge';
+import { mergeRequestMergeOf, requestsToRecord, taskMergeOf, type MergeRequestToMerge, type TaskBranch, type TaskEnding, type TaskMerge } from './taskMerge';
 
 /** Finishes a task: the merge page for merging it into its parent on the server. */
 export function openTaskMerge(branch: TaskBranch & Pick<Branch, 'parent'>): void {
@@ -19,7 +19,7 @@ export function openTaskMerge(branch: TaskBranch & Pick<Branch, 'parent'>): void
 }
 
 /** Merges a merge request: the merge page for merging its branch, `source`, into its destination on the server. */
-export function openMergeRequestMerge(review: MergeRequestReview, source: string): void {
+export function openMergeRequestMerge(review: MergeRequestToMerge, source: string): void {
   openTaskMergePage(mergeRequestMergeOf(review, source), review.mergeRequest.destination);
 }
 
