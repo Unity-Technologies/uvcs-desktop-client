@@ -1,0 +1,12 @@
+/* A merge request's review status beside its state, in a branch's chip: the icon alone, centered on the badge. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  margin-left: 3px;
+}
+
+/* Holds a merge request's summary on hover (`MergeRequestSummaryCard`, framed), above the rows as the top bar's cards. */
+.popover {
+  z-index: 900;
+}

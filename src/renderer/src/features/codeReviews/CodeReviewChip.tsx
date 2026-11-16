@@ -73,7 +73,7 @@ function MergeRequestHoverCard({ request, trigger }: { request: MergeRequestRevi
       <Popover.Trigger asChild>{trigger(card.hoverProps)}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={cardStyles.card}
+          className={cardStyles.popover}
           align="start"
           sideOffset={6}
           {...card.hoverProps}
@@ -82,6 +82,7 @@ function MergeRequestHoverCard({ request, trigger }: { request: MergeRequestRevi
         >
           <MergeRequestSummaryCard
             request={request}
+            framed
             onOpen={() => {
               card.close();
               openReview(request);

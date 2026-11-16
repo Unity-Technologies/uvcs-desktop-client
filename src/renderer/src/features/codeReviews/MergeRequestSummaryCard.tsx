@@ -10,7 +10,7 @@ interface MergeRequestSummaryCardProps {
   request: MergeRequestReview;
   /** Makes the title a link that opens the request; the Branch Explorer's tooltip, which the pointer can't enter, leaves it as text. */
   onOpen?: () => void;
-  /** Its own frame (`.framed`), where it stands alone: the Branch Explorer's tooltip. */
+  /** Its own frame (`.framed`), where it stands alone: a branch chip's hover card, the Branch Explorer's tooltip. */
   framed?: boolean;
   /** More under the summary, e.g. the top bar's actions. */
   children?: ReactNode;
