@@ -1,4 +1,4 @@
-import { CircleDot, GitPullRequest, GitPullRequestArrow, Inbox, MessageSquarePlus, UserCheck } from 'lucide-react';
+import { CircleDot, GitPullRequest, GitPullRequestArrow, Inbox, Layers, MessageSquarePlus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -33,14 +33,14 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { CLEARED_CODE_REVIEW_FILTERS, type MergeRequestStateFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, type MergeRequestStateFilter, type ReviewKindFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { reviewNoun } from './mergeRequestState';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, isNarrowed, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, showsStateChip, stateUnderKind, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
@@ -54,11 +54,20 @@ const STATE_CHOICES: { value: MergeRequestStateFilter; label: string }[] = [
   { value: 'all', label: 'All' },
 ];
 
+/** The Kind chip's choices: both kinds together is where it rests. */
+const KIND_CHOICES: { value: ReviewKindFilter; label: string }[] = [
+  { value: 'any', label: 'Any kind' },
+  { value: 'mergeRequests', label: 'Merge requests' },
+  { value: 'codeReviews', label: 'Code reviews' },
+];
+
 export function CodeReviewsView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
-  const { text: search, people, since, status, mergeRequestState, reviewers, waitingForMe, openedByMe, update } = filters;
+  const { text: search, people, since, status, kind, reviewers, waitingForMe, openedByMe, update } = filters;
+  // Code reviews alone have no state: the State chip hides and its state is left out (`stateUnderKind`).
+  const mergeRequestState = stateUnderKind(kind, filters.mergeRequestState);
   const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
@@ -74,13 +83,14 @@ export function CodeReviewsView() {
       (reviews ?? []).filter(
         (review) =>
           matchesPeople(people, me, review.owner) &&
+          matchesKind(review, kind) &&
           matchesState(review, mergeRequestState) &&
           matchesReviewers(review, reviewers, me) &&
           matchesWaiting(review, waitingForMe, me) &&
           matchesOpenedByMe(review, openedByMe, me) &&
           matchesWordFilter(reviewFilterTexts(review), search),
       ),
-    [reviews, people, me, mergeRequestState, reviewers, waitingForMe, openedByMe, search],
+    [reviews, people, me, kind, mergeRequestState, reviewers, waitingForMe, openedByMe, search],
   );
   // The reviews read that wait for the user: Waiting for me counts them.
   const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
@@ -146,13 +156,22 @@ export function CodeReviewsView() {
               mine={{ label: "I'm a reviewer", icon: <UserCheck size={13} /> }}
               pickLabel="Pick reviewers"
             />
-            <ChoiceChip<MergeRequestStateFilter>
-              value={mergeRequestState}
-              onChange={(value) => update({ mergeRequestState: value })}
-              icon={<GitPullRequest size={13} />}
-              neutralValue="active"
-              choices={STATE_CHOICES}
+            <ChoiceChip<ReviewKindFilter>
+              value={kind}
+              onChange={(value) => update({ kind: value })}
+              icon={<Layers size={13} />}
+              neutralValue="any"
+              choices={KIND_CHOICES}
             />
+            {showsStateChip(kind) && (
+              <ChoiceChip<MergeRequestStateFilter>
+                value={filters.mergeRequestState}
+                onChange={(value) => update({ mergeRequestState: value })}
+                icon={<GitPullRequest size={13} />}
+                neutralValue="active"
+                choices={STATE_CHOICES}
+              />
+            )}
             <ChoiceChip<StatusFilter>
               value={status}
               onChange={(value) => update({ status: value })}
@@ -196,7 +215,6 @@ export function CodeReviewsView() {
         onSelectionChange={setSelection}
         onActivate={(review) => openReview(review)}
         contextMenu={(rows) => codeReviewMenu(place, rows, workspace?.selector)}
-        initialSort={{ columnId: 'date', descending: true }}
         noun="merge request"
         details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(place, [selected], workspace?.selector)} />}
       />
