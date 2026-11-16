@@ -24,8 +24,9 @@ export async function queryDiffEntries(cm: Pick<CmClient, 'queryRecords'>, specs
 }
 
 /**
- * The entries of `cm diff`, sorted by path. `cm` reports a moved-and-changed item twice (M and C), so entries are
- * merged by path: the result is "moved" but keeps the content change's revisions.
+ * The entries of `cm diff`, sorted by path. `cm` reports some paths twice, so entries are merged by path (one entry a
+ * path, as every list of files keys them): a moved-and-changed item (M and C) is "moved" but keeps the content change's
+ * revisions; an item deleted and another put at its path (D and A) is one replaced entry (`replacedEntry`).
  */
 export function mergedDiffEntries(entries: readonly DiffEntry[]): DiffEntry[] {
   const entriesByPath = new Map<string, DiffEntry>();
@@ -90,10 +91,17 @@ function permissionsChange(before: string, after: string): PermissionsChange {
 }
 
 function mergeEntries(first: DiffEntry, second: DiffEntry): DiffEntry {
-  const moved = [first, second].find((entry) => entry.status === 'moved');
-  const changed = [first, second].find((entry) => entry.status === 'changed');
-  if (!moved || !changed) return first;
-  return { ...moved, baseRevisionId: changed.baseRevisionId, revisionId: changed.revisionId };
+  const withStatus = (status: DiffStatus) => [first, second].find((entry) => entry.status === status);
+  const [moved, changed] = [withStatus('moved'), withStatus('changed')];
+  if (moved && changed) return { ...moved, baseRevisionId: changed.baseRevisionId, revisionId: changed.revisionId };
+  const [deleted, added] = [withStatus('deleted'), withStatus('added')];
+  if (deleted && added) return replacedEntry(deleted, added);
+  return first;
+}
+
+/** The path changed from the deleted item's last revision to the added one's: two items, so it's marked `replaced`. */
+function replacedEntry(deleted: DiffEntry, added: DiffEntry): DiffEntry {
+  return { ...added, status: 'changed', baseRevisionId: deleted.baseRevisionId, replaced: true };
 }
 
 function withoutLeadingSlash(path: string): string {
