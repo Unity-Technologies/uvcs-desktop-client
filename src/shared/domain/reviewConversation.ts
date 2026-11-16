@@ -1,4 +1,4 @@
-import type { CodeReviewStatus } from './codeReview';
+import type { CodeReviewStatus, MergeRequestState } from './codeReview';
 
 /**
  * What a review comment is, as the server types it:
@@ -55,8 +55,23 @@ export type ReviewEventChange =
   /** A reviewer's own status, with what they said about it; `guid` edits that text. */
   | { kind: 'statusChanged'; status: CodeReviewStatus; comment: string; guid: string }
   | { kind: 'titleChanged'; from: string; to: string }
-  /** What this version doesn't read yet (a merge request's statuses and destination, a branch hidden): its text. */
+  /** A merge request moved between states; `changesetId` is the merge's changeset, for one merged. */
+  | { kind: 'mergeRequestState'; from: MergeRequestState; to: MergeRequestState; changesetId?: number }
+  /** A merge request's destination changed. */
+  | { kind: 'destinationChanged'; from: BranchRef; to: BranchRef }
+  /** The server hid a merged request's branch, or someone showed it again. */
+  | { kind: 'branchHidden' | 'branchUnhidden'; branch: BranchRef }
+  /** What this version doesn't read: its text, as the server wrote it. */
   | { kind: 'other'; text: string };
+
+/**
+ * A branch the server names in a note, by its object id: `name` once read (`BranchNamesCache`), none for a branch
+ * deleted since or a name that couldn't be read.
+ */
+export interface BranchRef {
+  id: number;
+  name?: string;
+}
 
 /**
  * The review's description: the text at the top of its conversation, `guid` editing it. `id` is its comment's, which a
