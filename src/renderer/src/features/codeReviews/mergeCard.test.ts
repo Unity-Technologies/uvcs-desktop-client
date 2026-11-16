@@ -242,7 +242,7 @@ describe('conflictsSectionOf', () => {
 
   it('counts the file conflicts, failed, with Resolve… opening the merge page', () => {
     expect(conflictsSectionOf(checked(3, 0), '/main', mergeInto())).toEqual({ id: 'conflicts', tone: 'failed', title: '3 file conflicts with main', detail: 'Resolve them to merge', action: resolve });
-    expect(conflictsSectionOf(checked(1, 0), '/main', mergeInto())?.title).toBe('1 file conflict with main');
+    expect(conflictsSectionOf(checked(1, 0), '/main', mergeInto())).toMatchObject({ title: '1 file conflict with main', detail: 'Resolve it to merge' });
   });
 
   it('counts the directory conflicts', () => {
