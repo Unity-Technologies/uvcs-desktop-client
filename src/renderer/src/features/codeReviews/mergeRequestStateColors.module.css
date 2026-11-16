@@ -1,0 +1,20 @@
+/*
+ * The color of each merge request state, read as --merge-request-color by whatever shows one (MergeRequestStateIcon,
+ * MergeRequestStateBadge): composed into an element that carries the state as data-state. A canvas or an inline style
+ * reads the same tokens from `MERGE_REQUEST_STATE_COLORS`.
+ */
+.stateColor[data-state='Draft'] {
+  --merge-request-color: var(--merge-request-draft);
+}
+
+.stateColor[data-state='Open'] {
+  --merge-request-color: var(--merge-request-open);
+}
+
+.stateColor[data-state='Merged'] {
+  --merge-request-color: var(--merge-request-merged);
+}
+
+.stateColor[data-state='Closed'] {
+  --merge-request-color: var(--merge-request-closed);
+}

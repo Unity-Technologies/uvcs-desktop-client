@@ -1,0 +1,14 @@
+/* A merge request's state as a pill: its glyph and name in the state's color, on its tint; as CodeReviewStatusBadge. */
+.badge {
+  composes: stateColor from './mergeRequestStateColors.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--merge-request-color) 14%, transparent);
+  color: var(--merge-request-color);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}

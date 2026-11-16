@@ -11,12 +11,13 @@ import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
 import { ReviewerStack } from './ReviewerStack';
 import { describeTarget } from './reviewTarget';
+import { MergeRequestStateIcon } from './MergeRequestStateIcon';
 import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the code reviews table: its number and title, status, who reviews it, its comments and how many are
- * still open, what it reviews, who wrote it, when (the list's order and its period go by it), and when anyone last did
+ * Columns of the Merge requests table, which lists code reviews too: a merge request's state, its number and title, status, who reviews it, its comments and how many are
+ * still open, what it reviews (and where a merge request merges it), who wrote it, when (the list's order and its period go by it), and when anyone last did
  * something on it. A review waiting for `user` has a dot before its number (`waitingForMe`).
  */
 export function codeReviewColumns(user: string | undefined): Column<CodeReview>[] {
@@ -28,6 +29,7 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       render: (review) => (
         <>
           <WaitingDot review={review} user={user} />
+          <span className={styles.stateSlot}>{review.mergeRequest && <MergeRequestStateIcon mergeRequest={review.mergeRequest} />}</span>
           <span className={styles.title}>
             <span className={styles.id}>
               #<Highlight text={String(review.id)} />
@@ -63,7 +65,7 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
       grow: 1,
       secondary: true,
       hideBelow: 900,
-      render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
+      render: (review) => <ReviewedChanges review={review} />,
     },
     { id: 'owner', header: 'Author', grow: 1, hideBelow: 900, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
     { id: 'date', header: 'Created', width: 120, secondary: true, hideBelow: 1100, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
@@ -83,4 +85,24 @@ function WaitingDot({ review, user }: { review: CodeReview; user: string | undef
   if (!waiting) return null;
   const tip = waitingForMeTip(waiting);
   return <span className={styles.waiting} role="img" aria-label={tip} data-tip={tip} />;
+}
+
+/** What a review reviews; for a merge request, its branch into its destination, the destination kept when narrow. */
+function ReviewedChanges({ review }: { review: CodeReview }) {
+  const { target, mergeRequest } = review;
+  if (target.kind !== 'branch') return <Highlight text={describeTarget(target)} />;
+  if (!mergeRequest) return <PathLabel path={target.branch} />;
+  return (
+    <span className={styles.merge} data-tip={`Merge ${target.branch} into ${mergeRequest.destination}`}>
+      <span className={styles.source}>
+        <PathLabel path={target.branch} tooltip={false} />
+      </span>
+      <span className={styles.arrow} aria-label="into">
+        →
+      </span>
+      <span className={styles.destination}>
+        <PathLabel path={mergeRequest.destination} tooltip={false} />
+      </span>
+    </span>
+  );
 }
