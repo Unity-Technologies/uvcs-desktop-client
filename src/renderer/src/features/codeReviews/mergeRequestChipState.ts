@@ -38,7 +38,7 @@ export interface MergeRequestChipCard {
   where: string;
   /** Where the review stands while Open, in the merge card's words (`reviewSectionOf`). */
   review?: { status: CodeReviewStatus; title: string; detail?: string };
-  /** Whether the reviewers' stack shows: while it is still to merge. */
+  /** Whether the reviewers' stack shows: while it is still to merge and someone reviews it (the review line says when nobody does). */
   showsReviewers: boolean;
   /** "3 change requests and 1 question open", while Open and once its conversation is read (`cardReadsOpenItems`). */
   openItems?: string;
@@ -78,7 +78,7 @@ export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems)
       title: commentLineText(review.title),
       where: whereItMerges(review.mergeRequest),
       ...(isOpen && { review: reviewOf(review) }),
-      showsReviewers: state !== 'Merged',
+      showsReviewers: state !== 'Merged' && review.reviewers.length > 0,
       ...(isOpen && open && openLine(open)),
       actions: cardActionsOf(),
     },
