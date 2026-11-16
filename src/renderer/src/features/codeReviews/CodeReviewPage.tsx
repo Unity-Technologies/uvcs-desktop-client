@@ -25,6 +25,9 @@ import { OwnReviewButton } from './OwnReviewButton';
 import { reviewedCodeAction } from './reviewedCode';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { DestinationPicker } from './DestinationPicker';
+import { MergeRequestStateBadge } from './MergeRequestStateBadge';
+import { reviewHeadline } from './reviewHeadline';
 import { useCodeReview } from './useCodeReviews';
 import { ReviewConversationTab } from './conversation/ReviewConversationTab';
 import { ReviewChangesTab } from './ReviewChangesTab';
@@ -141,7 +144,8 @@ function ReviewHeaderSkeleton() {
 }
 
 /**
- * Two rows: the title, then what's reviewed, by whom and when, its status first. The actions sit at the title's end:
+ * Two rows: the title, then what's reviewed, by whom and when, its status first; a merge request's state before it,
+ * and where it merges, which changes in place while it's still to merge (`reviewHeadline`, `DestinationPicker`). The actions sit at the title's end:
  * the reviewed code to the workspace, the user's own review, Refresh (others write on the review while it's open), and
  * the page's menu (`reviewPageMenu`), deleting in it.
  */
@@ -154,6 +158,9 @@ function ReviewHeader({ review }: { review: CodeReview }) {
   // What Refresh reads again here (`pageRefreshScope`): its icon spins while any of it is read.
   const shownByThePage = isShownByCodeReviewPage(review.id, review.target);
   const fetching = useIsFetching({ queryKey: placeKey(place), predicate: ({ queryKey }) => shownByThePage(queryKey) }) > 0;
+  const headline = reviewHeadline(review);
+  // A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip.
+  const target = review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : <span className={styles.targetText}>{describeTarget(review.target)}</span>;
 
   return (
     <header className={styles.header}>
@@ -180,15 +187,33 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         </div>
       </div>
       <div className={styles.meta}>
+        {review.mergeRequest && <MergeRequestStateBadge state={review.mergeRequest.state} />}
         <CodeReviewStatusBadge status={review.status} />
         <UserLabel user={review.owner} />
-        <span>wants a review of</span>
-        <span className={styles.targetAndTime}>
-          {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
-          <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : <span className={styles.targetText}>{describeTarget(review.target)}</span>}</span>
-          <span className={styles.dot}>·</span>
-          <RelativeTime date={review.date} />
-        </span>
+        <span>{headline.verb}</span>
+        {headline.destination ? (
+          <>
+            <span className={styles.target}>{target}</span>
+            <span>into</span>
+            <span className={styles.targetAndTime}>
+              <span className={styles.target}>
+                {headline.destination.editable && review.target.kind === 'branch' ? (
+                  <DestinationPicker review={review} source={review.target.branch} destination={headline.destination.name} />
+                ) : (
+                  <PathLabel path={headline.destination.name} fitContent />
+                )}
+              </span>
+              <span className={styles.dot}>·</span>
+              <RelativeTime date={review.date} />
+            </span>
+          </>
+        ) : (
+          <span className={styles.targetAndTime}>
+            <span className={styles.target}>{target}</span>
+            <span className={styles.dot}>·</span>
+            <RelativeTime date={review.date} />
+          </span>
+        )}
       </div>
     </header>
   );
