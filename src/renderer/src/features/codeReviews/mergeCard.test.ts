@@ -94,7 +94,7 @@ describe('mergeCardOf', () => {
   });
 
   it('shows where a merged one went and the changeset when known, and lets its branch be hidden', () => {
-    const card = mergeCardOf(input('Merged', { mergedChangeset: 6, sourceHidden: false }));
+    const card = mergeCardOf(input('Merged', { mergedChangeset: 6, sourceBranch: { isHidden: false } }));
 
     expect(card.sections).toEqual([
       { id: 'merged', tone: 'neutral', state: 'Merged', title: 'Merged into /main', changeset: 6, action: { kind: 'setBranchHidden', branch: '/main/task1', hidden: true, label: 'Hide branch' } },
@@ -103,8 +103,19 @@ describe('mergeCardOf', () => {
   });
 
   it("lets a merged one's hidden branch show again, and offers neither before knowing which it is", () => {
-    expect(mergeCardOf(input('Merged', { sourceHidden: true })).sections[0]!.action).toEqual({ kind: 'setBranchHidden', branch: '/main/task1', hidden: false, label: 'Unhide branch' });
+    expect(mergeCardOf(input('Merged', { sourceBranch: { isHidden: true } })).sections[0]!.action).toEqual({ kind: 'setBranchHidden', branch: '/main/task1', hidden: false, label: 'Unhide branch' });
     expect(mergeCardOf(input('Merged')).sections[0]!.action).toBeUndefined();
+  });
+
+  it('offers neither for a branch that no longer exists (deleted or renamed since)', () => {
+    expect(mergeCardOf(input('Merged', { sourceBranch: null })).sections[0]!.action).toBeUndefined();
+  });
+
+  it("doesn't offer to hide the branch the workspace is on, only to switch away first; showing it again stays", () => {
+    const onIt = mergeCardOf(input('Merged', { sourceBranch: { isHidden: false }, workspaceBranch: '/main/task1' }));
+    expect(onIt.sections[0]!.action).toBeUndefined();
+    expect(onIt.footer?.label).toBe('Switch to /main');
+    expect(mergeCardOf(input('Merged', { sourceBranch: { isHidden: true }, workspaceBranch: '/main/task1' })).sections[0]!.action?.label).toBe('Unhide branch');
   });
 
   it('says merged without a changeset when no note names one', () => {
@@ -129,6 +140,7 @@ describe('mergeCardOf', () => {
 describe('mergeReadiness', () => {
   const section = (tone: MergeCardSection['tone']): MergeCardSection => ({ id: 'review', tone, title: '' });
 
+  // No action follows it yet: it is the rule the Merge action will (docs/features/merge-requests.md "The merge card").
   it('is ready once every section passed', () => {
     expect(mergeReadiness([section('passed')])).toBe(true);
     expect(mergeReadiness([section('passed'), section('pending')])).toBe(false);
