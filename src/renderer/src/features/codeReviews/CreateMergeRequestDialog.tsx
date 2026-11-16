@@ -15,15 +15,14 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SplitButton } from '../../ui/SplitButton';
-import { TextField } from '../../ui/TextField';
 import { branchQuery } from '../branches/useBranches';
 import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { BranchField } from './BranchField';
 import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
 import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups, type DraftNote } from './mergeRequestDraft';
-import { typedReviewers } from './reviewerGroups';
-import { useReviewerGroups } from './useReviewerGroups';
+import { NO_REVIEWERS, reviewersToAsk } from './pickedReviewers';
+import { ReviewersField } from './ReviewersField';
 import styles from './CreateMergeRequestDialog.module.css';
 
 /** A branch as the dialog starts on it: a menu's holds its comment and parent, so the dialog needn't read it. */
@@ -60,9 +59,8 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const [picked, setPicked] = useState<string>();
   const [typed, setTyped] = useState<string>();
   const [description, setDescription] = useState('');
-  const [reviewers, setReviewers] = useState('');
+  const [reviewers, setReviewers] = useState(NO_REVIEWERS);
   const [creating, setCreating] = useState(false);
-  const groups = useReviewerGroups();
 
   // A branch named alone (the workspace's) is read for its comment and parent: two light `cm find branch`, often read
   // already (the top bar's). A pick from a branch list holds them.
@@ -88,7 +86,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
       setCreating(false);
       return;
     }
-    const request = { source: source.name, destination, title: title.trim(), description: description.trim() || undefined, draft, reviewers: typedReviewers(reviewers, groups) };
+    const request = { source: source.name, destination, title: title.trim(), description: description.trim() || undefined, draft, reviewers: reviewersToAsk(reviewers) };
     const reviewId = await createMergeRequest(place, request, (id) => {
       onClose();
       onCreated?.(id);
@@ -172,13 +170,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           onChange={setDescription}
         />
       </CommentFocusGroup>
-      <TextField
-        label="Reviewers"
-        placeholder="jane.doe@example.com, john.doe@example.com"
-        hint="Optional. You can add them later."
-        value={reviewers}
-        onChange={(event) => setReviewers(event.target.value)}
-      />
+      <ReviewersField pick={reviewers} onPickChange={setReviewers} />
     </Dialog>
   );
 }
