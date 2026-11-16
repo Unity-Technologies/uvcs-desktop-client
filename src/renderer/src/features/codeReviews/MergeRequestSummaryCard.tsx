@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { displayName } from '../../lib/userName';
-import { MergeCardDisc } from './MergeCardDisc';
 import { mergeRequestSummaryOf } from './mergeRequestSummary';
 import type { MergeRequestReview } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
+import { ReviewStanding } from './ReviewStanding';
 import styles from './MergeRequestSummaryCard.module.css';
 
 interface MergeRequestSummaryCardProps {
@@ -40,11 +40,7 @@ export function MergeRequestSummaryCard({ request, onOpen, children }: MergeRequ
       </div>
       {summary.review && (
         <div className={styles.review}>
-          <MergeCardDisc section={summary.review} size="small" />
-          <div className={styles.reviewText}>
-            <p className={styles.reviewTitle}>{summary.review.title}</p>
-            {summary.review.detail && <p className={styles.reviewDetail}>{summary.review.detail}</p>}
-          </div>
+          <ReviewStanding standing={summary.review} />
         </div>
       )}
       {children}

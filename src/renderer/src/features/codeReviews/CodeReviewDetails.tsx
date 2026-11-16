@@ -9,7 +9,8 @@ import { Button } from '../../ui/Button';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
-import { DetailsEmpty } from '../../ui/DetailsSection';
+import { DetailsEmpty, DetailsSection } from '../../ui/DetailsSection';
+import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
@@ -18,7 +19,9 @@ import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { reviewedChangesOf, reviewNoun } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
-import { ReviewerStack } from './ReviewerStack';
+import { ReviewerList } from './ReviewerList';
+import { reviewDetailsSections } from './reviewDetailsSections';
+import { ReviewStanding } from './ReviewStanding';
 import { copiedWhat } from '../../components/copyMenu';
 import styles from './CodeReviewDetails.module.css';
 
@@ -27,6 +30,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
   const { target, mergeRequest } = review;
   const noun = reviewNoun(review);
   const changes = reviewedChangesOf(review);
+  const sections = reviewDetailsSections(review);
 
   return (
     <DetailsPanel
@@ -62,7 +66,6 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       menu={menu}
       primaryActionId="openReview"
       properties={[
-        { label: 'Reviewers', value: <ReviewerStack reviewers={review.reviewers} /> },
         { label: 'Comments', value: <ReviewCommentCounts review={review} /> },
         // The meta above already says where a merge request merges: its source into its destination.
         { label: 'Changes', value: describeTarget(target) },
@@ -78,6 +81,20 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
           </DetailsChangesPane>
         )
       }
-    />
+    >
+      {sections.review && (
+        <DetailsSection title="Review">
+          <ReviewStanding standing={sections.review} />
+        </DetailsSection>
+      )}
+      <DetailsSection title="Reviewers">
+        <ReviewerList reviewers={review.reviewers} />
+      </DetailsSection>
+      {sections.branchAttributes && (
+        <DetailsSection title="Branch attributes">
+          <AttributeChips key={sections.branchAttributes} objectSpec={sections.branchAttributes} />
+        </DetailsSection>
+      )}
+    </DetailsPanel>
   );
 }

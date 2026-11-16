@@ -301,8 +301,14 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   merge whatever the review says: a reviewed one is still theirs to merge.
 - The text filter also finds the destination and the state's name ("main", "draft": `reviewFilterTexts`).
 - **The details panel** says "Merge request" (`reviewNoun`), the state's badge with the review status's icon beside it
-  (its tooltip names it: the header's room is short), and the source "into" the destination (`reviewedChangesOf`, which
-  the Changes column follows too), said once: its Changes property names the branch alone.
+  (its tooltip names it: the header's room is short), its number to copy, and the source "into" the destination
+  (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
+  Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
+  (`ReviewStanding`; while Open, and once merged if anyone reviewed it); **Reviewers**, each with the status they gave
+  (`ReviewerList`, read only: the page changes them); **Branch attributes**, the reviewed branch's, edited in place
+  (`AttributeChips`, one attribute read per selection, as a branch's details make). A code review of a branch has the
+  last two; of a changeset or a shelve, its reviewers only. The description stays on the page: reading it is the
+  conversation's read, too much for a selection.
 - **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
