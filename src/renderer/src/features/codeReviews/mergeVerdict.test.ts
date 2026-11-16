@@ -22,9 +22,9 @@ describe('verdictOfSections', () => {
     expect(verdictOfSections([{ tone: 'passed' }, { tone: 'neutral' }])).toBe('ready');
   });
 
-  it('says nothing while a section is pending, or none passed', () => {
-    expect(verdictOfSections([{ tone: 'passed' }, { tone: 'pending' }])).toBeUndefined();
-    expect(verdictOfSections([{ tone: 'neutral' }])).toBeUndefined();
+  it('waits while a section is pending, or none passed', () => {
+    expect(verdictOfSections([{ tone: 'passed' }, { tone: 'pending' }])).toBe('waiting');
+    expect(verdictOfSections([{ tone: 'neutral' }])).toBe('waiting');
   });
 });
 
@@ -34,9 +34,9 @@ describe('listedVerdictOf', () => {
     expect(listedVerdictOf(request('Open', 'Rework required'))).toBe('blocked');
   });
 
-  it('says nothing while the review is under way, or nobody reviews it', () => {
-    expect(listedVerdictOf(request('Open', 'Under review'))).toBeUndefined();
-    expect(listedVerdictOf(request('Open', 'Under review', []))).toBeUndefined();
+  it('waits while the review is under way, or nobody reviews it', () => {
+    expect(listedVerdictOf(request('Open', 'Under review'))).toBe('waiting');
+    expect(listedVerdictOf(request('Open', 'Under review', []))).toBe('waiting');
   });
 
   it.each(['Draft', 'Merged', 'Closed'] as const)('says nothing for a %s request', (state) => {
