@@ -20,6 +20,11 @@ type WithMergeRequest = Pick<CodeReviewSummary, 'mergeRequest'>;
 /** A review that is a merge request. */
 export type MergeRequestReview = CodeReviewSummary & { mergeRequest: MergeRequestInfo };
 
+/** The review as a merge request, typed as one; none for a plain code review (or no review). */
+export function asMergeRequest(review: CodeReviewSummary | undefined): MergeRequestReview | undefined {
+  return review?.mergeRequest ? { ...review, mergeRequest: review.mergeRequest } : undefined;
+}
+
 /** A merge request still to be merged: Open or Draft. A plain review is no merge request. */
 export function isActiveMergeRequest(review: WithMergeRequest): boolean {
   const state = review.mergeRequest?.state;

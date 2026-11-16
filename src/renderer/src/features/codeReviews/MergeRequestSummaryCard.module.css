@@ -6,6 +6,17 @@
   font-size: var(--text-sm);
 }
 
+/*
+ * The card's frame where it stands alone (a hover card, the Branch Explorer's tooltip), as the top bar's segment
+ * cards: one width for every hover of a branch's merge request.
+ */
+.framed {
+  composes: card from '../../ui/ToolbarSegment.module.css';
+
+  width: 320px;
+  padding: var(--space-3);
+}
+
 .head {
   display: flex;
   flex-direction: column;

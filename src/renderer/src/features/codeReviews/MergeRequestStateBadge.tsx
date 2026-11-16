@@ -14,7 +14,7 @@ interface MergeRequestStateBadgeProps {
 export function MergeRequestStateBadge({ state, compact = false, iconOnly = false }: MergeRequestStateBadgeProps) {
   const Icon = MERGE_REQUEST_STATE_ICONS[state];
   return (
-    <span className={styles.badge} data-state={state} data-compact={compact} data-icon-only={iconOnly} aria-label={iconOnly ? state : undefined}>
+    <span className={styles.badge} data-state={state} data-compact={compact} data-icon-only={iconOnly} role={iconOnly ? 'img' : undefined} aria-label={iconOnly ? state : undefined}>
       <Icon size={12} aria-hidden />
       {!iconOnly && state}
     </span>

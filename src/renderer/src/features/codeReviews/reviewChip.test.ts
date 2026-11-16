@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
-import { reviewChipOf, reviewLine } from './reviewChip';
+import { codeReviewLine, reviewChipOf } from './reviewChip';
 
 const plain = (status: CodeReviewStatus) => codeReviewSummary({ id: 12, title: 'Add login', status });
 const request = (state: MergeRequestState, status: CodeReviewStatus) => ({ ...plain(status), mergeRequest: { state, destination: '/main' } });
@@ -31,20 +31,25 @@ describe("a branch's review chip", () => {
     expect(reviewChipOf(request('Merged', 'Reviewed'), true)).toMatchObject({ state: 'Merged', stateText: false, status: undefined });
   });
 
-  it("gives a merge request no text tooltip, as its summary card shows on hover, and never names its number", () => {
+  it("shows a merge request's summary card on hover, its status as a bare icon, and never names its number", () => {
     const chip = reviewChipOf(request('Open', 'Rework required'), false);
-    expect(chip.tip).toBeUndefined();
+    expect(chip.hover).toEqual({ kind: 'summary', request: request('Open', 'Rework required') });
+    expect(chip.statusForm).toBe('icon');
     expect(chip.label).toBe('Open merge request: Add login');
   });
 
   it("names a code review's number and status in its tooltip and for a screen reader", () => {
-    expect(reviewChipOf(plain('Reviewed'), false)).toMatchObject({ tip: 'Add login', tipSub: 'Code review 12 · Reviewed · click to open', label: 'Open code review 12: Add login' });
+    expect(reviewChipOf(plain('Reviewed'), false)).toMatchObject({
+      statusForm: 'badge',
+      hover: { kind: 'tip', tip: 'Add login', tipSub: 'Code review 12 · Reviewed · click to open' },
+      label: 'Open code review 12: Add login',
+    });
+    expect(reviewChipOf(plain('Reviewed'), true).hover).toMatchObject({ tip: 'Reviewed: Add login' });
   });
 });
 
-describe('reviewLine', () => {
-  it('says what it is and where it stands, a merge request by where it merges, never its number', () => {
-    expect(reviewLine(request('Open', 'Under review'))).toBe('Merge request · Open into /main · Under review');
-    expect(reviewLine(plain('Reviewed'))).toBe('Code review 12 · Reviewed');
+describe('codeReviewLine', () => {
+  it('says what it is and where it stands', () => {
+    expect(codeReviewLine(plain('Reviewed'))).toBe('Code review 12 · Reviewed');
   });
 });

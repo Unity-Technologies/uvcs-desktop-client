@@ -158,8 +158,8 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   move to a state this version doesn't know stays `other`, left out. These events close no round (code-reviews.md
   "Rounds"). The hidden and unhidden notes are written only by a server with merge requests switched on.
 - **Branch attributes**, last in the side rail after Notifications (`BranchAttributesSection`): the reviewed branch's
-  attributes, edited in place (`AttributeChips`), as its details show them; any review of a branch has it. One
-  attribute read as the page opens.
+  attributes, edited in place (`AttributeChips`), as its details show them; any review of a branch has it
+  (code-reviews.md "The review's page"), none with nothing to show or add. One attribute read as the page opens.
 - **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
   conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
 - **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its
@@ -307,9 +307,10 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   (its tooltip names it: the header's room is short), its number to copy, and the source "into" the destination
   (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
   Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
-  (`ReviewStanding`; while Open, and once merged if anyone reviewed it); **Reviewers**, each with the status they gave
+  (`ReviewStanding`; when the summary says it); **Reviewers**, each with the status they gave
   (`ReviewerList`, read only: the page changes them); **Branch attributes**, the reviewed branch's, edited in place
-  (`AttributeChips`, one attribute read per selection, as a branch's details make). A code review of a branch has the
+  (`AttributesDetailsSection`, one attribute read per selection, as a branch's details make; hidden with nothing to
+  show or add). A code review of a branch has the
   last two; of a changeset or a shelve, its reviewers only. The description stays on the page: reading it is the
   conversation's read, too much for a selection.
 - **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
@@ -328,10 +329,11 @@ A plain code review keeps its number everywhere: it has no other name.
 One card says where a merge request stands, wherever it shows by its branch (`MergeRequestSummaryCard`;
 `mergeRequestSummaryOf` decides): the top bar's hover card, the hover card of a branch's chip in the Branches view and
 the Branch Explorer, and the **Merge request** section of a branch's details (both views). It holds the title (a link
-that opens the request, where the card isn't the chip's own hover), "Ana wants to merge into /main" (`mergeVerbOf`:
+that opens the request; plain text only in the Branch Explorer's tooltip, which the pointer can't enter), "Ana wants to merge into /main" (`mergeVerbOf`:
 "asked to" once merged, "wanted to" once closed), the state's badge and, under a rule, where the review stands in the
-merge card's words (`reviewSectionOf`): while Open, and once merged if anyone reviewed it; never for a draft or a closed
-one. It reads nothing: it is drawn from the review the branch's chip already holds (`reviewOfEachBranch`).
+merge card's words (`reviewSectionOf`): while Open, and once merged if the review was decided (reviewed, or changes
+required: it merged whatever the review said); never for a draft or a closed one. One frame and width wherever it
+stands alone (`.framed`). It reads nothing: it is drawn from the review the branch's chip already holds (`reviewOfEachBranch`).
 
 ## Where a branch's merge request shows
 
@@ -351,7 +353,8 @@ one. It reads nothing: it is drawn from the review the branch's chip already hol
   decided, a check (reviewed) or a cross (changes required); "Open" alone says it waits for its review. A code review's
   chip shows its status. Narrow, the names go and the glyphs stay. The canvas draws the state as a shape of its own per
   state (a ring, dashed for a draft, a disc once merged, crossed once closed). Hovering a merge request's chip shows its
-  summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`reviewLine`). No new
+  summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
+  `reviewChipOf` decides which (`hover`). No new
   column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
   workspace's branch has a merge request, its state's glyph and name ("Open") and, while Open, the review status's

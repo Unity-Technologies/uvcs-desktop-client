@@ -8,8 +8,10 @@ import styles from './MergeRequestSummaryCard.module.css';
 
 interface MergeRequestSummaryCardProps {
   request: MergeRequestReview;
-  /** Makes the title a link that opens the request; a hover card whose trigger opens it leaves it as text. */
+  /** Makes the title a link that opens the request; the Branch Explorer's tooltip, which the pointer can't enter, leaves it as text. */
   onOpen?: () => void;
+  /** Its own frame (`.framed`), where it stands alone: the Branch Explorer's tooltip. */
+  framed?: boolean;
   /** More under the summary, e.g. the top bar's actions. */
   children?: ReactNode;
 }
@@ -19,10 +21,10 @@ interface MergeRequestSummaryCardProps {
  * its state's badge and, under a rule, where its review stands. The hover cards of a branch's request and a branch's
  * details show it.
  */
-export function MergeRequestSummaryCard({ request, onOpen, children }: MergeRequestSummaryCardProps) {
+export function MergeRequestSummaryCard({ request, onOpen, framed = false, children }: MergeRequestSummaryCardProps) {
   const summary = mergeRequestSummaryOf(request);
   return (
-    <div className={styles.summary}>
+    <div className={framed ? `${styles.summary} ${styles.framed}` : styles.summary}>
       <div className={styles.head}>
         {onOpen ? (
           <button type="button" className={styles.titleLink} onClick={onOpen}>

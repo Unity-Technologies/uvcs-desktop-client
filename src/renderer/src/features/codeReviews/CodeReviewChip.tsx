@@ -23,8 +23,8 @@ export function CodeReviewChip({ review, iconOnly = false }: { review: CodeRevie
     <button
       type="button"
       className={styles.chip}
-      data-tip={chip.tip}
-      data-tip-sub={chip.tipSub}
+      data-tip={chip.hover.kind === 'tip' ? chip.hover.tip : undefined}
+      data-tip-sub={chip.hover.kind === 'tip' ? chip.hover.tipSub : undefined}
       aria-label={chip.label}
       onMouseDown={stop}
       onDoubleClick={stop}
@@ -37,8 +37,12 @@ export function CodeReviewChip({ review, iconOnly = false }: { review: CodeRevie
       <ChipGlyphs chip={chip} />
     </button>
   );
-  if (!review.mergeRequest) return button();
-  return <MergeRequestHoverCard request={review as MergeRequestReview} trigger={button} />;
+  switch (chip.hover.kind) {
+    case 'tip':
+      return button();
+    case 'summary':
+      return <MergeRequestHoverCard request={chip.hover.request} trigger={button} />;
+  }
 }
 
 function stop(event: MouseEvent): void {
@@ -50,7 +54,7 @@ function ChipGlyphs({ chip }: { chip: ReviewChip }) {
     <>
       {chip.state && <MergeRequestStateBadge state={chip.state} compact iconOnly={!chip.stateText} />}
       {chip.status &&
-        (chip.state ? (
+        (chip.statusForm === 'icon' ? (
           <span className={cardStyles.status}>
             <ReviewStatusIcon status={chip.status} size={13} />
           </span>

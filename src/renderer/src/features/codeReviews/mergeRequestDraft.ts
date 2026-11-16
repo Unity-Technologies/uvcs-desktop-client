@@ -1,9 +1,9 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { commentLineText } from '../../lib/comments/commentText';
 import type { BranchGroup } from '../branches/branchSearchRows';
 import { newestBranchesFirst } from '../branches/newestBranchesFirst';
 import { ancestorsOf } from './destinationChoices';
-import { commentLineText } from '../../lib/comments/commentText';
 import { isActiveMergeRequest } from './mergeRequestState';
 
 /*

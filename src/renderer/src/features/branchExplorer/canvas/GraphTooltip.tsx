@@ -14,8 +14,8 @@ import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInsid
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
-import { reviewLine } from '../../codeReviews/reviewChip';
-import type { MergeRequestReview } from '../../codeReviews/mergeRequestState';
+import { codeReviewLine } from '../../codeReviews/reviewChip';
+import { asMergeRequest } from '../../codeReviews/mergeRequestState';
 import { MergeRequestSummaryCard } from '../../codeReviews/MergeRequestSummaryCard';
 
 /**
@@ -97,12 +97,11 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
 
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   // A merge request's chip shows its summary, as its chip in the lists and the top bar's do.
-  if (target.kind === 'codeReview' && target.review.mergeRequest) {
+  const request = target.kind === 'codeReview' ? asMergeRequest(target.review) : undefined;
+  if (request) {
     return (
       <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
-        <div className={styles.requestCard}>
-          <MergeRequestSummaryCard request={target.review as MergeRequestReview} />
-        </div>
+        <MergeRequestSummaryCard request={request} framed />
       </div>
     );
   }
@@ -148,7 +147,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
     case 'codeReview':
       return {
         title: commentLineText(target.review.title),
-        body: reviewLine(target.review),
+        body: codeReviewLine(target.review),
         meta: 'Click to open the review',
       };
     case 'mergeLink':

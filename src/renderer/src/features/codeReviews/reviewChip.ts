@@ -1,5 +1,6 @@
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
+import { asMergeRequest, type MergeRequestReview } from './mergeRequestState';
 
 /** What a branch's review chip shows (`CodeReviewChip`, the Branch Explorer's `drawReviewChip`) and how it's named. */
 export interface ReviewChip {
@@ -9,11 +10,15 @@ export interface ReviewChip {
   stateText: boolean;
   /** The review status's glyph. */
   status?: CodeReviewStatus;
+  /**
+   * How the status shows: a badge, its name beside its glyph where `statusText` (a code review's), or the bare icon
+   * after a merge request's state.
+   */
+  statusForm: 'badge' | 'icon';
   /** Whether the status is written beside its glyph ("In review"). */
   statusText: boolean;
-  /** A code review's tooltip; a merge request shows its summary card on hover instead (`MergeRequestSummaryCard`). */
-  tip?: string;
-  tipSub?: string;
+  /** What hovering it shows: a merge request's summary card (`MergeRequestSummaryCard`), a code review's tooltip. */
+  hover: { kind: 'summary'; request: MergeRequestReview } | { kind: 'tip'; tip: string; tipSub: string };
   /** What a screen reader says it does. */
   label: string;
 }
@@ -26,28 +31,32 @@ export interface ReviewChip {
  * and the glyphs stay.
  */
 export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): ReviewChip {
-  const { mergeRequest, status } = review;
+  const { status } = review;
   const title = commentLineText(review.title);
-  if (mergeRequest) {
+  const request = asMergeRequest(review);
+  if (request) {
+    const { state } = request.mergeRequest;
     return {
-      state: mergeRequest.state,
+      state,
       stateText: !iconOnly,
-      status: mergeRequest.state === 'Open' && status !== 'Under review' ? status : undefined,
+      status: state === 'Open' && status !== 'Under review' ? status : undefined,
+      statusForm: 'icon',
       statusText: false,
+      hover: { kind: 'summary', request },
       label: `Open merge request: ${title}`,
     };
   }
   return {
     stateText: false,
     status,
+    statusForm: 'badge',
     statusText: !iconOnly,
-    tip: iconOnly ? `${status}: ${title}` : title,
-    tipSub: `${reviewLine(review)} · click to open`,
+    hover: { kind: 'tip', tip: iconOnly ? `${status}: ${title}` : title, tipSub: `${codeReviewLine(review)} · click to open` },
     label: `Open code review ${review.id}: ${title}`,
   };
 }
 
-/** What it is and where it stands, in one line: "Merge request · Open into /main · Under review", "Code review 12 · Reviewed". */
-export function reviewLine({ id, status, mergeRequest }: CodeReviewSummary): string {
-  return mergeRequest ? `Merge request · ${mergeRequest.state} into ${mergeRequest.destination} · ${status}` : `Code review ${id} · ${status}`;
+/** A code review in one line, what it is and where it stands: "Code review 12 · Reviewed". */
+export function codeReviewLine({ id, status }: Pick<CodeReviewSummary, 'id' | 'status'>): string {
+  return `Code review ${id} · ${status}`;
 }

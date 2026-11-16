@@ -19,7 +19,7 @@ import type { Property } from '../../ui/PropertyList';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from '../codeReviews/codeReviewOperations';
-import type { MergeRequestReview } from '../codeReviews/mergeRequestState';
+import { asMergeRequest } from '../codeReviews/mergeRequestState';
 import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
 import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
@@ -41,6 +41,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
+  const request = asMergeRequest(review);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
 
@@ -86,9 +87,9 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
       ]}
       changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
     >
-      {review?.mergeRequest && (
+      {request && (
         <DetailsSection title="Merge request">
-          <MergeRequestSummaryCard request={review as MergeRequestReview} onOpen={() => openReview(review)} />
+          <MergeRequestSummaryCard request={request} onOpen={() => openReview(request)} />
         </DetailsSection>
       )}
     </DetailsPanel>
