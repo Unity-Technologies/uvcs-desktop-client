@@ -122,8 +122,10 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
 
 /**
  * Whether the request merges cleanly into its destination: Check before it's asked, quiet while the server calculates
- * the merge, passed with no conflict, failed with the file and directory conflicts counted as the merge page groups them
- * and **Resolve…**, its merge page. Nothing when the check failed or there's nothing left to merge.
+ * the merge, passed with no conflict. Its file and directory conflicts are counted as the merge page groups them, with
+ * **Resolve…**, its merge page: pending when they're only files, as the merge page may merge some automatically (it
+ * finds out by merging their text, which the preview can't tell), failed with a directory conflict, which always needs
+ * a decision. Nothing when the check failed or there's nothing left to merge.
  */
 export function conflictsSectionOf(check: ConflictsCheck, destination: string, merge: MergeInto | undefined): MergeCardSection | undefined {
   const into = branchLabel(destination);
@@ -139,11 +141,13 @@ export function conflictsSectionOf(check: ConflictsCheck, destination: string, m
       if (status !== 'ready') return undefined;
       if (files === 0 && directories === 0) return { id: 'conflicts', tone: 'passed', title: `No conflicts with ${into}`, detail: 'Merging can be done automatically' };
       const counts = [files > 0 && counted(files, 'file conflict'), directories > 0 && counted(directories, 'directory conflict')].filter(Boolean).join(' and ');
+      const one = files + directories === 1;
+      const onlyFiles = directories === 0;
       return {
         id: 'conflicts',
-        tone: 'failed',
+        tone: onlyFiles ? 'pending' : 'failed',
         title: `${counts} with ${into}`,
-        detail: files + directories === 1 ? 'Resolve it to merge' : 'Resolve them to merge',
+        detail: onlyFiles ? (one ? 'It may merge automatically' : 'Some may merge automatically') : one ? 'Resolve it to merge' : 'Resolve them to merge',
         ...(merge && { action: { kind: 'merge', merge, label: 'Resolve…' } }),
       };
     }

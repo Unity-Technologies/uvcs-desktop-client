@@ -198,11 +198,16 @@ merge page's own preview: `cm merge br:<source> --to=br:<destination>` without `
   runs each on two requests' branches, `cm` starting included), too much to run each time a request's page opens. So
   the section starts as "Conflicts with main" / "Not checked yet" with a quiet **Check**; running it by itself was
   rejected for that cost. While it runs: "Checking for conflicts with main…".
-- **What it says.** None: "No conflicts with main" / "Merging can be done automatically" (passed). Some: "3 file
-  conflicts and 1 directory conflict with main" / "Resolve them to merge" (failed), counted as the merge page groups
-  them (File conflicts, Directory conflicts; a file conflict may still merge automatically there), with **Resolve…**,
-  which opens the merge page (`openMergeRequestMerge`). A check that fails, or a merge with nothing left to merge,
-  shows no section. Conflicts hold Merge back (`mergeReadiness`); Check and Checking say nothing (neutral) and don't.
+- **What it says.** None: "No conflicts with main" / "Merging can be done automatically" (passed). Some, counted as
+  the merge page groups them (File conflicts, Directory conflicts), with **Resolve…**, which opens the merge page
+  (`openMergeRequestMerge`):
+  - Only files: "3 file conflicts with main" / "Some may merge automatically" (pending). A file changed on both sides
+    may merge automatically on the merge page, which finds out by merging the three revisions' text
+    (`mergedAutomatically`); the preview's records don't say, and reading every file's text for a card was rejected.
+  - Any directory conflict: "3 file conflicts and 1 directory conflict with main" / "Resolve them to merge" (failed):
+    a directory conflict always needs a decision.
+  A check that fails, or a merge with nothing left to merge, shows no section. Conflicts hold Merge back
+  (`mergeReadiness`); Check and Checking say nothing (neutral) and don't.
 - **When it runs** (`runsConflictsCheck`, `useMergeRequestConflicts`): an Open request, in a window with a workspace
   (the preview runs in one; a repository's window shows no section), its Conversation tab shown (`ViewShownContext`),
   once asked on that page, and both heads known. It is keyed by both heads and kept (`IMMUTABLE_QUERY`): the source's
