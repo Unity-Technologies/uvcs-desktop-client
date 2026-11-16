@@ -55,7 +55,7 @@ function BranchList({ shown, onPick, onLeave }: { shown: string | null; onPick: 
       currentBranch={shown ?? undefined}
       read={branchesRead(branchesQuery)}
       placeholder="Show the files of a branch…"
-      mergeRequests={{ place, leave: onLeave }}
+      reviews={{ place, leave: onLeave }}
       onPick={onPick}
     />
   );

@@ -25,5 +25,5 @@ interface BranchChoiceListProps {
 export function BranchChoiceList({ place, groupsOf, current, placeholder, onPick, onLeave }: BranchChoiceListProps) {
   const branchesQuery = useBranches({}, place);
   const groups = useMemo(() => groupsOf(branchesQuery.data ?? []), [groupsOf, branchesQuery.data]);
-  return <BranchSearchList groups={groups} currentBranch={current} read={branchesRead(branchesQuery)} mergeRequests={{ place, leave: onLeave }} placeholder={placeholder} onPick={onPick} />;
+  return <BranchSearchList groups={groups} currentBranch={current} read={branchesRead(branchesQuery)} reviews={{ place, leave: onLeave }} placeholder={placeholder} onPick={onPick} />;
 }

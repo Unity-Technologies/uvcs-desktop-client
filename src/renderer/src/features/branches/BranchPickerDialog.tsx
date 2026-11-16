@@ -33,8 +33,8 @@ function BranchPickerDialog({ title, description, exclude, place, finish }: Pick
         groups={[{ title: 'Branches', branches }]}
         onPick={finish}
         read={branchesRead(branchesQuery)}
-        // Another repository's branches (an xlink's) show no merge requests: they don't bear on the pick.
-        mergeRequests={place ? undefined : { place: windowPlace, leave: () => finish(undefined) }}
+        // Another repository's branches (an xlink's) show no reviews: they don't bear on the pick.
+        reviews={place ? undefined : { place: windowPlace, leave: () => finish(undefined) }}
       />
     </Dialog>
   );
