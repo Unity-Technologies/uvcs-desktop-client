@@ -1,16 +1,14 @@
+import '../../testing/fakeWindow';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../api/queryKeys';
 import { codeReviewKey } from './codeReviewKey';
 import { onFirstReadOfReview } from './firstReadOfReview';
+import { branchReviewsKey, reviewSummariesKey } from './useCodeReviews';
 
 const PLACE = workspacePlace('/wk/game');
-
-// As `branchReviewsKey` and `reviewSummariesKey` build them: their module starts the app's query client.
-const branchReviewsKey = (place: Place, branch: string) => queryKeys.inPlace(place, 'codeReviews', 'summaries', { targetBranch: branch });
-const reviewSummariesKey = (place: Place) => queryKeys.inPlace(place, 'codeReviews', 'summaries', { text: undefined });
 
 function review(id: number, mergeRequest?: CodeReviewSummary['mergeRequest']): CodeReviewSummary {
   return {
