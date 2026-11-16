@@ -1,17 +1,8 @@
-/* A segment joined to the branch pill (see TopBar): neutral like it, with color only on the icons and the counts. */
+/* A segment joined to the branch pill (`ToolbarSegment`): color only on the icons and the counts. */
 .chip {
-  composes: control from '../../ui/ToolbarControl.module.css';
+  composes: segment from '../../ui/ToolbarSegment.module.css';
 
   --tone: var(--accent-text);
-
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  padding: 0 var(--space-2) 0 10px;
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  animation: segment-in var(--duration-normal) var(--ease-out);
 }
 
 .conflicts {
@@ -27,19 +18,6 @@
 .updating {
   width: 220px;
   color: var(--text-secondary);
-}
-
-@keyframes segment-in {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chip {
-    animation: none;
-  }
 }
 
 .icon {
@@ -73,13 +51,5 @@
 }
 
 .card {
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface-raised);
-  box-shadow: var(--shadow-lg);
-  z-index: 900;
-}
-
-.card[data-state='open'] {
-  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+  composes: card from '../../ui/ToolbarSegment.module.css';
 }

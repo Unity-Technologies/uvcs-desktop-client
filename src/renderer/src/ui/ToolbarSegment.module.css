@@ -1,0 +1,43 @@
+/*
+ * A segment joined to the top bar's branch pill (`WorkspaceTopBar`'s `.branchControls`: the merge request, the incoming
+ * changesets): neutral like the pill, with color only on its glyphs, sliding in as it shows up. Its hover card is
+ * `.card`.
+ */
+.segment {
+  composes: control from './ToolbarControl.module.css';
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2) 0 10px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  animation: segment-in var(--duration-normal) var(--ease-out);
+}
+
+@keyframes segment-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    animation: none;
+  }
+}
+
+/* The card a segment shows while hovered, under it. */
+.card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 900;
+}
+
+.card[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}

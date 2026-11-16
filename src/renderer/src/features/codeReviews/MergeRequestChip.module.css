@@ -1,33 +1,11 @@
-/* A segment joined to the branch pill (see WorkspaceTopBar), sized as the incoming one: neutral, color on the glyphs. */
+/* A segment joined to the branch pill (`ToolbarSegment`), sized as the incoming one: color only on the glyphs. */
 .chip {
-  composes: control from '../../ui/ToolbarControl.module.css';
-
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  padding: 0 var(--space-2) 0 10px;
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  animation: segment-in var(--duration-normal) var(--ease-out);
+  composes: segment from '../../ui/ToolbarSegment.module.css';
 }
 
 /* Merged: the workspace is still on finished work, said quietly. */
 .chip[data-muted] {
   color: var(--text-tertiary);
-}
-
-@keyframes segment-in {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chip {
-    animation: none;
-  }
 }
 
 .state {
@@ -50,18 +28,11 @@
 }
 
 .card {
+  composes: card from '../../ui/ToolbarSegment.module.css';
+
   display: flex;
   flex-direction: column;
   width: 340px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface-raised);
-  box-shadow: var(--shadow-lg);
-  z-index: 900;
-}
-
-.card[data-state='open'] {
-  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
 .header {
