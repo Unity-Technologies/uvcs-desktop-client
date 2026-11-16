@@ -641,7 +641,12 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   applied it did to the file (that changeset's diff, one immutable read, `appliedComparison`: its own diff when the
   comment is on the version it made; for a request applied in a changeset that didn't change its file, that changeset's
   files, below; for one marked applied in a changeset with no file to compare, the thread alone under one line saying
-  so, the subtitle saying it was marked applied there, not applied: `notInChangeset`), or
+  so, the subtitle saying it was marked applied there, not applied: `notInChangeset`; for a file that changeset
+  replaced, `DiffEntry.replaced`, usually to make it a move of the file it replaces with its contents kept, the move:
+  that file before the review, from the review's whole diff, against what the changeset left, the thread on the right,
+  the header naming the move and the subtitle "after changeset N made it a move of X", `replacedHistoryOf`; with no
+  move in the review's diff, or that read failing, the plain comparison, saying why it may read the same: compared with
+  the version commented on, it read "No content changes", as if nothing applied it), or
   the review's newest version (its whole diff's, never a changeset's). A view waits for the diff it reads, says so when
   that read fails, and why it has nothing to compare otherwise (`contextComparisonState`). Every **Applied** pill (the
   code, the Comments panel, the conversation) opens it on How it was applied, and every **Discarded** pill (and **Answered** in the Comments panel, whose cards show no

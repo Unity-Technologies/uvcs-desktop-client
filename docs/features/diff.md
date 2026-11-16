@@ -199,6 +199,16 @@ Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prin
 xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
 reader of the diff needs.
 
+## A path replaced
+
+A changeset can delete a file and put another item at its path: a file added on a branch, then made a move of the
+older file it replaces so its history follows that one's. `cm diff` prints that path twice, `A` (the new item, no
+base revision) and `D` (the deleted one). Every list of files keys its rows by path, so `mergedDiffEntries` reads the
+two as one entry (`replacedEntry`): changed, from the deleted item's last revision to the new one's, marked
+`DiffEntry.replaced`, since its two sides are different items. Reading only the first, the delete was dropped and the
+file showed as added. Such a fix usually keeps the contents, so the diff reads "No content changes"; a review's
+"How it was applied" shows it as the move it made instead (docs/features/code-reviews.md, "Comments in the code", See in context).
+
 ## Only the permissions changed
 
 A file whose file permissions changed and whose content didn't (`chmod +x`, or permissions first set on a file checked
