@@ -6,7 +6,7 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsQuery, isNarrowed, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
@@ -166,5 +166,15 @@ describe("Merge requests' Clear filters", () => {
     const { text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since } = store.getState();
     expect({ text, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe, since }).toEqual({ text: '', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false, since: 'lastYear' });
     expect(isFiltering(store.getState(), CLEARED_CODE_REVIEW_FILTERS)).toBe(false);
+  });
+});
+
+describe('whether the list is narrowed', () => {
+  it('is when the State chip at rest hides every review read, so it says none match instead of none yet', () => {
+    expect(isNarrowed(false, 3, 0)).toBe(true);
+  });
+
+  it('is while a filter is on, and is not when every review read shows', () => {
+    expect([isNarrowed(true, 3, 3), isNarrowed(false, 3, 3), isNarrowed(false, 0, 0)]).toEqual([true, false, false]);
   });
 });
