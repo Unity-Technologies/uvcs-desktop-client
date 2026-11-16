@@ -496,7 +496,7 @@ request: the newest still to merge (Open or Draft); a closed or merged one doesn
 
 | The branch has | Changes shows |
 | --- | --- |
-| no merge request (or only closed ones) | **Create merge request** (primary), then "Merge subtask into child_1" (quiet: finishing with no request) |
+| no merge request (or only closed ones) | **Create merge request** (primary), then "Merge subtask into child_1" (a ghost; its tooltip: finishing without a merge request) |
 | a draft | "#12 Title · draft", **Ready for review**, Open |
 | an open one, under review | "#12 Title · waiting for 2 reviewers" ("no reviewers yet"), Open |
 | an open one, rework required | "#12 Title · 3 change requests to apply" ("changes required" until its conversation is read), Open |
@@ -504,11 +504,17 @@ request: the newest still to merge (Open or Draft); a closed or merged one doesn
 | its head merged where it merges | the finished task (`FinishedTaskCard`) |
 
 The line is the request's state glyph, its number, its title's first line (the part that gives way) and its review in
-words. Under a list holding only files never checked in, the most useful action alone, quiet and named whole ("Open
-merge request #12"). Should the reviews fail to read, the merge into the parent alone, as before merge requests.
+words; its glyph names the state to a screen reader (`MergeRequestStateIcon`), its tooltip the destination and the title
+whole. After a check-in, beside "Checked in cs:4"'s Copy link, the line and the first button alone (`besideAnotherAction`:
+Create merge request, Ready for review, Open, Merge into main…), so that screen too keeps two buttons. Under a list holding
+only files never checked in, the most useful action alone, quiet and named whole ("Open merge request #12"). Should the
+reviews fail to read, the merge into the parent alone, as before merge requests (its tooltip says nothing of requests).
 
 - **Nothing new shows until the reviews are read**: the merged check waits for them (`mergedCheckDestinationOf`), so
   Create never shows to turn into a request's line a moment later.
+- **Nothing blinks out when the destination moves**: creating a request into `/main` from `/main/release/task`, or
+  closing one, moves where the head is looked for; while that check asks, the previous answer stands for the same head
+  (`keepsPreviousMergedCheck`, the query's `placeholderData`), so the step shows the new request at once.
 - **The merged check follows the request's destination** (`mergedCheckDestinationOf`): the one still to merge, else the
   merged one (`topBarRequestOf`), else the parent. A merged request finishes the task through that same check, its
   changeset the merge link's; a request merged at an older head offers Create again, as the branch has new work.

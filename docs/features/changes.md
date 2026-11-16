@@ -16,12 +16,13 @@ as it always was.
 
 ## Nothing pending: the task's next step
 
-On a clean workspace on a task branch with changesets of its own, the empty state (and the "Checked in cs:4" one,
-`SuccessEmptyState`, under its own action) offers the task's next step (`MergeTaskSuggestion`, decided by
-`taskNextStepOf` and `taskNextStepView`): create its merge request, where the request stands and its next move, merge it
-once reviewed, then what to do once merged. One line and at most two buttons, as calm as the empty state. Under a list
-holding only files never checked in, the most useful action alone, quiet. What each case shows and what it costs:
-docs/features/merge.md "Finishing a task".
+On a clean workspace on a task branch with changesets of its own, the empty state offers the task's next step
+(`MergeTaskSuggestion`, decided by `taskNextStepOf` and `taskNextStepView`): create its merge request, where the request
+stands and its next move, merge it once reviewed, then what to do once merged. One line and at most two buttons, as calm
+as the empty state. After a check-in (`SuccessEmptyState`), under its Copy link, the line and only the step's most
+useful button (`besideAnotherAction`), so that screen keeps two buttons too. Under a list holding only files never
+checked in, the most useful action alone, quiet. What each case shows and what it costs: docs/features/merge.md
+"Finishing a task" › "The next step, in Changes".
 
 ## Changelists and status groups in the list
 
