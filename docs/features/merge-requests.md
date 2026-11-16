@@ -119,8 +119,8 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
   one): no reviewer, "Review required" / "At least 1 approving review is required" with **Add reviewers** (the
   reviewers dialog, `chooseReviewers`); "Changes under review" / "1 pending review"; "Changes required" / "2 reviews
   requesting changes"; "Changes reviewed" / "1 approving review". Under it, only when above zero, what's open in the
-  conversation ("2 change requests and 1 question open", `openItemsIn`, `openItemsLine`). ⋯ Convert to draft, Close
-  merge request. No Merge button yet.
+  conversation ("2 change requests and 1 question open", `openItemsIn`, `openItemsLine`). Footer **Merge into main…**
+  ("Merging" below); ⋯ Convert to draft, Close merge request.
 - **Merged**: "Merged into /main in cs:6" (the chip opens the changeset; without the note, "Merged into /main"), with
   **Hide branch** or **Unhide branch** once the branch's read says which (`setMergedBranchHidden`: it reads the
   branches and the reviews again, as the server may note it); neither for a branch deleted or renamed since. Footer
@@ -128,12 +128,43 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
   hides the workspace's own branch without a word, which would leave the workspace on a branch the lists don't show;
   switching away comes first.
 - **Closed**: "Closed" / "Not merged"; footer **Reopen merge request**.
-- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed). Nothing follows it yet: it
-  is the rule the card's Merge action will be made primary by, so that what joins the list later holds a merge back
-  the way an unfinished review does. It will never block a merge: the server's merge rules decide.
+- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed). The card's Merge is
+  primary when it holds and quiet before, so that what joins the list later holds a merge back the way an unfinished
+  review does. It never blocks a merge: the server's merge rules decide.
 - What the card doesn't have: checks, a build status, a merge queue, a conflicts line. No data source has them yet, so
   there is no placeholder, type or stub: each joins the list as a section of its own when its data does (read per
   page, never per row of a list), with no change to the card or its callers.
+
+## Merging
+
+There is no "merge this merge request" command: its branch is merged into its destination by an ordinary merge on the
+server, the merge page finishing a task (docs/features/merge.md "Finishing a task").
+
+- **Merge into main…** (`mergeIntoLabel`; the ellipsis as the merge page confirms it) is offered for an **Open** one,
+  in the card's footer and in the row's and the page's menus (`mergeIntoOf`, the `mergeInto` word in the `merge`
+  group). It opens the merge page into the request's destination, not the branch's parent
+  (`openMergeRequestMerge`), with the request named under the comment and its title starting the comment.
+- **The button never waits for the review.** Primary once ready (`mergeReadiness`), the default quiet button before,
+  same place, same words: no warning color, no "anyway". The server's merge rules are the authority; blocking until
+  Reviewed (with an admin bypass) was rejected, as the app would guess the rules wrong and an unreviewed request
+  could never merge on a server without such a rule. A window with no workspace has no merge page: there the card's
+  button is disabled, its tooltip "Open a workspace of this repository to merge", and the menus don't offer it.
+- **The app records Merged itself.** A server with merge requests switched on marks the Open requests from that
+  source into that destination Merged on the merge's check-in; one with them off never does, and `cm` can't ask which
+  it is. So after any merge the app made that made a changeset (from the request, Changes or the branch menu alike),
+  `finishMergedTask` records each Open request of the branch into that destination (`requestsToRecord`, from the
+  branch's reviews, `branchReviewsQuery`; usually one) with one quick `cm mergerequest edit <id>
+  --mergerequeststatus=Merged --mergechangeset=cs:N` (`recordMerged`, `query()`). Setting it again on a request
+  already Merged changes nothing and adds no note, so it's safe on both. It comes first, then the user's review and
+  hiding the branch; a failure says "Merged, but couldn't mark merge request 12 as merged" and undoes nothing. The
+  page, the lists and the chips then read the reviews again (`isAffectedByCodeReviews`): one `cm find review` per view
+  showing it.
+- **Merge rules.** A server may refuse the merge for its rules, and does so while the merge page calculates the merge,
+  so the preview says it (`MergeRuleRefused`): "This server merges into main only reviewed branches" with **Open merge
+  request** (the request the merge was opened from, else the branch's still to merge into that destination,
+  `mergeRequestInto`), and "This server merges into main only branches with an open merge request". They're recognized
+  by `cm`'s English text, the branch names taken from their quotes (`mergeRuleRefusal`); a message in another language
+  or any other failure shows `cm`'s own words, as before.
 
 ## One view: Merge requests
 
