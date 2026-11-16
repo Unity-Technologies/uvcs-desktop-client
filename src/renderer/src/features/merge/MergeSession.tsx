@@ -198,7 +198,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               />
             )
           }
-          options={finishing && <TaskMergeOptions review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
+          options={finishing && <TaskMergeOptions mergeRequest={finishing.task.mergeRequest} review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
             conflicting &&
