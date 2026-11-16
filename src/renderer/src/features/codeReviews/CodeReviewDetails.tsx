@@ -20,6 +20,7 @@ import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerStack } from './ReviewerStack';
 import { copiedWhat } from '../../components/copyMenu';
+import styles from './CodeReviewDetails.module.css';
 
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
   const diffTarget = reviewDiffTarget(review.target);
@@ -33,16 +34,19 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       author={{ user: review.owner, date: review.date }}
       meta={[
         <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat(mergeRequest ? 'Merge request' : 'Code review', 'number')} />,
-        target.kind === 'branch' && <BranchChip key="target" name={target.branch} />,
-        mergeRequest && <span key="into">into</span>,
-        mergeRequest && <BranchChip key="destination" name={mergeRequest.destination} />,
+        target.kind === 'branch' && !mergeRequest && <BranchChip key="target" name={target.branch} />,
+        target.kind === 'branch' && mergeRequest && (
+          <span key="target" className={styles.merge}>
+            <BranchChip name={target.branch} /> into <BranchChip name={mergeRequest.destination} />
+          </span>
+        ),
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,
         target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
       ]}
       badges={
         <>
           {mergeRequest && <MergeRequestStateBadge state={mergeRequest.state} />}
-          <CodeReviewStatusBadge status={review.status} />
+          <CodeReviewStatusBadge status={review.status} iconOnly={mergeRequest !== undefined} />
         </>
       }
       primaryAction={

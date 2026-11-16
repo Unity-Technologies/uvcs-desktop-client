@@ -62,7 +62,8 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
     {
       id: 'target',
       header: 'Changes',
-      grow: 1,
+      // A merge request shows two branches here.
+      grow: 2,
       secondary: true,
       hideBelow: 900,
       render: (review) => <ReviewedChanges review={review} />,
@@ -95,13 +96,13 @@ function ReviewedChanges({ review }: { review: CodeReview }) {
   return (
     <span className={styles.merge} data-tip={`Merge ${target.branch} into ${mergeRequest.destination}`}>
       <span className={styles.source}>
-        <PathLabel path={target.branch} tooltip={false} />
+        <PathLabel path={target.branch} tooltip={false} fitContent />
       </span>
       <span className={styles.arrow} aria-label="into">
         →
       </span>
       <span className={styles.destination}>
-        <PathLabel path={mergeRequest.destination} tooltip={false} />
+        <PathLabel path={mergeRequest.destination} tooltip={false} fitContent />
       </span>
     </span>
   );

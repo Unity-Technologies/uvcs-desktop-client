@@ -40,18 +40,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A merge request's changes, `task → main`: the source gives way first when narrow, the arrow and destination stay. */
+/* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
+   to nothing; the arrow and the destination (usually short) stay whole. */
 .merge {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
-}
-
-.source {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
+  overflow: hidden;
 }
 
 .arrow {
@@ -59,9 +55,14 @@
   color: var(--text-tertiary);
 }
 
+.source {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .destination {
   display: flex;
-  flex: 0 0 auto;
-  max-width: 50%;
-  min-width: 0;
+  flex: none;
 }

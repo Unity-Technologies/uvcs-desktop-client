@@ -1,0 +1,7 @@
+/* A merge request's branch and destination, one item of the meta row: "/main/task into /main". */
+.merge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
