@@ -1,3 +1,5 @@
+// The menu's words name the moves (`MENU_WORDS`), whose module reads the platform from the window.
+import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
 import { mergeCardOf, mergeReadiness, openItemsLine, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
