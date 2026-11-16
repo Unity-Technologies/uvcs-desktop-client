@@ -20,7 +20,7 @@
   background: var(--accent);
 }
 
-/* A merge request's state icon before its number; a fixed width, empty for a code review, so the numbers stay in line. */
+/* What the row is, before its title: a merge request's state glyph, or a code review's; a fixed width, titles in line. */
 .stateSlot {
   display: inline-flex;
   flex: none;
@@ -33,11 +33,9 @@
   text-overflow: ellipsis;
 }
 
-.id {
-  flex: none;
+.codeReviewIcon {
+  display: inline-flex;
   color: var(--text-tertiary);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
 }
 
 /* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down

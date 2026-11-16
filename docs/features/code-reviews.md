@@ -99,9 +99,10 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   status's icon (`ReviewerList`, read only), and a review of a branch the branch's attributes under **Branch
   attributes** (`reviewDetailsSections`; hidden with nothing to show or add, `useAttributesShown`); the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
-  changes, the author, when it was created (the list's order and its period go by it; hidden in a narrower window) and
-  the last activity.
-- **A review waiting for the user** has a small accent dot before its number (`codeReviewColumns`, which takes the
+  changes, the author and the last activity. When it was created has no column, to keep the rows light: the list
+  comes newest first as `cm` reads it, its period goes by it, and the details panel says it. Each row leads with what
+  it is, a merge request's state glyph or the code review glyph, never its number (merge-requests.md "Its number").
+- **A review waiting for the user** has a small accent dot before its glyph (`codeReviewColumns`, which takes the
   user, `usePlaceUser`, and is built again only when the user changes, so the table keeps its columns while it sorts).
   It waits (`waitingForMe`) when the user is a reviewer, by name (`sameUser`), whose own status is Under review
   (tooltip "Waiting for your review"), or wrote it and it's in Rework required with something open,
