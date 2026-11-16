@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusAfterRemoving, NO_REVIEWERS, pickAsPickerOpens, pickedReviewersOf, reviewersToAsk, startingReviewers } from './pickedReviewers';
+import { chooseReviewers, focusAfterRemoving, NO_REVIEWERS, pickAsPickerOpens, pickedReviewersOf, reviewersShown, reviewersToAsk, startingReviewers } from './pickedReviewers';
 import { pickOffered, togglePicked } from './reviewerPick';
 
 describe('pickedReviewersOf', () => {
@@ -96,5 +96,30 @@ describe('startingReviewers', () => {
   it('asks nobody while you or the owner are still read', () => {
     expect(startingReviewers(undefined, 'bob@acme.com')).toEqual(NO_REVIEWERS);
     expect(startingReviewers('ana@acme.com', undefined)).toEqual(NO_REVIEWERS);
+  });
+});
+
+describe('reviewersShown and chooseReviewers', () => {
+  const you = { name: 'ana@acme.com', kind: 'user' } as const;
+  const jane = { name: 'jane.doe@acme.com', kind: 'user' } as const;
+  const onSomeoneElses = startingReviewers('ana@acme.com', 'bob@acme.com');
+
+  it('follow the branch picked until the user changes who is asked', () => {
+    expect(reviewersShown(undefined, onSomeoneElses)).toEqual(onSomeoneElses);
+    expect(reviewersShown(undefined, NO_REVIEWERS)).toEqual(NO_REVIEWERS);
+  });
+
+  it('keep following the branch when the picker only opened, its order kept, even before the owner was read', () => {
+    const opened = chooseReviewers(undefined, NO_REVIEWERS, pickAsPickerOpens(NO_REVIEWERS));
+    expect(reviewersShown(opened, onSomeoneElses).picked).toEqual([you]);
+    const openedOnYou = chooseReviewers(undefined, onSomeoneElses, pickAsPickerOpens(onSomeoneElses));
+    expect(reviewersShown(openedOnYou, NO_REVIEWERS)).toEqual({ onOpen: [you], picked: [] });
+  });
+
+  it('stop following the branch once someone is checked or unchecked, even when the user puts the same reviewers back later', () => {
+    const checked = chooseReviewers(undefined, NO_REVIEWERS, togglePicked(NO_REVIEWERS, jane));
+    expect(reviewersShown(checked, onSomeoneElses).picked).toEqual([jane]);
+    const back = chooseReviewers(checked, NO_REVIEWERS, NO_REVIEWERS);
+    expect(reviewersShown(back, onSomeoneElses)).toEqual(NO_REVIEWERS);
   });
 });
