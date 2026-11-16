@@ -289,7 +289,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - The text filter also finds the destination and the state's name ("main", "draft": `reviewFilterTexts`).
 - **The details panel** says "Merge request" (`reviewNoun`), the state's badge with the review status's icon beside it
   (its tooltip names it: the header's room is short), and the source "into" the destination (`reviewedChangesOf`, which
-  the Changes column follows too).
+  the Changes column follows too), said once: its Changes property names the branch alone.
 - **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 

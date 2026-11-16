@@ -71,11 +71,6 @@ export function mergeRequestTip({ mergeRequest }: { mergeRequest: NonNullable<Co
   return `${mergeRequest.state} merge request into ${mergeRequest.destination}`;
 }
 
-/** A review's source, and where it merges for a merge request: "/main/task → /main". */
-export function describeMerge(source: string, review: WithMergeRequest): string {
-  return review.mergeRequest ? `${source} → ${review.mergeRequest.destination}` : source;
-}
-
 /** What a review is called wherever it's named: "Merge request" or "Code review". */
 export function reviewNoun(review: WithMergeRequest): 'Merge request' | 'Code review' {
   return review.mergeRequest ? 'Merge request' : 'Code review';
