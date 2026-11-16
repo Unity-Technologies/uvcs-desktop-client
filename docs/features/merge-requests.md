@@ -123,7 +123,9 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
   source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
   branches**, newest first, to find by typing (`destinationGroups`), never the source. The branches are read only once
-  it opens (the switcher's read). A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
+  it opens (the switcher's read). Unlike the new request's Into, it knows the source only by its name, not its parent:
+  a top-level source (`/release`, branched from `/main`) has no ancestor there, and its parent shows under Other
+  branches. A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
   (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
   as text.
 - **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
