@@ -12,7 +12,7 @@ export function WorkspaceTopBar() {
 
   const end = (
     <>
-      <TopBarSearch tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" />
+      <TopBarSearch tip="Fuzzy search files, branches, labels, changesets, shelves, merge requests and commands" />
       <AccountButton />
     </>
   );

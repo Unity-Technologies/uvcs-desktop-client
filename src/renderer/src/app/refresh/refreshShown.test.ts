@@ -29,7 +29,7 @@ afterEach(() => {
   client.clear();
 });
 
-/** The window with a branch's review in front of the Code reviews view: what each shows, read once. */
+/** The window with a branch's review in front of the Merge requests view: what each shows, read once. */
 async function showReviewOfBranch(): Promise<Record<string, QueryProbe>> {
   const review = reviewOf({ kind: 'branch', branch: '/main/task-12' });
   return {
