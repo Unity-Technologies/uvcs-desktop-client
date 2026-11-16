@@ -82,7 +82,6 @@ function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
                   <span className={styles.reviewLines}>
                     <span>{chip.card.review.title}</span>
                     {chip.card.review.detail && <span className={styles.detail}>{chip.card.review.detail}</span>}
-                    {chip.card.openItems && <span className={styles.openItems}>{chip.card.openItems}</span>}
                   </span>
                 </span>
               )}
@@ -93,6 +92,7 @@ function MergeRequestSegment({ request }: { request: MergeRequestReview }) {
               )}
             </div>
           )}
+          {chip.card.openItems && <p className={styles.openItems}>{chip.card.openItems}</p>}
           <footer className={styles.footer}>
             {chip.card.actions.map((action) => (
               <Button key={action.kind} size="small" variant={action.primary ? 'primary' : 'secondary'} onClick={() => run(action)}>

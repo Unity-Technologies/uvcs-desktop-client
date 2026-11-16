@@ -41,8 +41,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Narrow, the glyphs say enough: the number goes before the branch pill gives up its room. */
-@media (max-width: 960px) {
+/* Narrow, the glyphs say enough: the number goes before the branch pill gives up its room (below about 800px, with
+   the incoming segment beside it). */
+@media (max-width: 820px) {
   .number {
     display: none;
   }
@@ -131,9 +132,12 @@
   margin-left: auto;
 }
 
+/* Under the review's lines, the card's whole width past the status glyph. */
 .openItems {
-  margin-top: 2px;
+  margin: -2px 0 0;
+  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + 19px);
   color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .footer {
