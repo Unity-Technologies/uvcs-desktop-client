@@ -95,7 +95,12 @@ rather than one always refused. No shortcut: creating one is rare, and the palet
 Each has its glyph and its color wherever it shows (`MERGE_REQUEST_STATE_ICONS`, `--merge-request-<state>` in
 `styles/tokens.css`, both themes): a pull request's glyph, dashed for a draft, a merge once merged, crossed once
 closed. The glyph differs by state, so color never tells it alone, and a tooltip names it with its destination
-(`mergeRequestTip`: "Open merge request into /main"). The **review status** (Under review, Reviewed, Rework required)
+(`mergeRequestTip`: "Open merge request into /main"). Wherever a state is named it is one look: a pill of its color
+with its glyph and name (`MergeRequestStateBadge`; compact by a branch's name and in the top bar), followed, while
+Open and once decided, by the review's icon alone (a thumbs-up, a flag: `REVIEW_STATUS_ICONS`). The page, the lists'
+chips, the top bar, the summary card and the Branch Explorer's canvas, which strokes the same icons
+(`lucideGlyphs`, `strokeGlyphOn`, `reviewChipLayout`), all show it so. A list row and the palette lead with the glyph
+alone, in a column of their own. The **review status** (Under review, Reviewed, Rework required)
 is another thing: where the review stands, for merge requests and code reviews alike, with its own icons
 (code-reviews.md). A merge request **still to merge** is Open or Draft (`isActiveMergeRequest`).
 
@@ -366,18 +371,17 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   bound by date would leave older branches unread. A Refresh or a write on a review reads again the branches still
   shown, in blocks. Scrolling back to branches read costs nothing.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
-  names a merge request's state ("Open", its glyph and name in its color), then, while Open and once its review is
-  decided, a check (reviewed) or a cross (changes required); "Open" alone says it waits for its review. A code review's
-  chip shows its status. Narrow, the names go and the glyphs stay. The canvas draws the state as a shape of its own per
-  state (a ring, dashed for a draft, a disc once merged, crossed once closed). Hovering a merge request's chip shows its
+  names a merge request's state in its pill ("Open"), then, while Open and once its review is decided, the review's
+  icon (reviewed, changes required); "Open" alone says it waits for its review. A code review's chip shows its
+  status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons. Hovering a merge request's chip shows its
   summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
   `reviewChipOf` decides which (`hover`). No new
   column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
-  workspace's branch has a merge request, its state's glyph and name ("Open") and, while Open, the review status's
-  icon; never its number ("Its number"). Which one: `currentRequestOf` ("Which request counts for a branch"); a merged
-  one shows muted, telling the user they're still on finished work. Below 820px the state's name goes and the glyphs
-  stay, before the branch pill gives up any room. A click opens it.
+  workspace's branch has a merge request, its state's compact pill ("Open") and, while Open and once decided, the
+  review's icon, as by every branch; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
+  counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the
+  state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it.
   - **Hovering** shows a card: the request's summary (`MergeRequestSummaryCard`, "A branch's merge request at a
     glance"), its title a link that opens it; then, while Open, what's still open ("2 change requests and 1 question
     open", `openItemsLine`); then **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the

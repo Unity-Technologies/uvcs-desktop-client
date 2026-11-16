@@ -33,7 +33,7 @@ describe('asksForBranchReviews', () => {
 describe('mergeRequestChipOf, the chip', () => {
   it('shows the state by its glyph and name, never the number, then the review status while Open', () => {
     const chip = mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed' }));
-    expect(chip).toEqual(expect.objectContaining({ reviewId: 12, state: 'Open', stateText: 'Open', status: 'Reviewed', muted: false }));
+    expect(chip).toEqual(expect.objectContaining({ reviewId: 12, state: 'Open', stateText: 'Open', status: 'Reviewed' }));
     expect(chip).not.toHaveProperty('number');
   });
 
@@ -44,13 +44,13 @@ describe('mergeRequestChipOf, the chip', () => {
 
   it('shows no review status on a draft: it is not up for review yet', () => {
     const chip = mergeRequestChipOf(request(12, 'Draft', { status: 'Under review' }));
-    expect(chip).toMatchObject({ state: 'Draft', stateText: 'Draft', muted: false });
+    expect(chip).toMatchObject({ state: 'Draft', stateText: 'Draft' });
     expect(chip.status).toBeUndefined();
   });
 
-  it('is muted, with no review status, once merged', () => {
+  it('shows no review status once merged', () => {
     const chip = mergeRequestChipOf(request(12, 'Merged', { status: 'Reviewed' }));
-    expect(chip).toMatchObject({ state: 'Merged', muted: true });
+    expect(chip).toMatchObject({ state: 'Merged' });
     expect(chip.status).toBeUndefined();
   });
 
