@@ -12,13 +12,15 @@ export function ancestorsOf(branchName: string): string[] {
 }
 
 /**
- * Where a merge request of `source` can merge, for the destination picker (`DestinationPicker`): the source's
- * ancestors first, nearest first, where it usually goes; then every other branch, newest first, to find by typing.
+ * Where a merge request of `source` can merge, for the destination pickers (`DestinationPicker`, the new merge
+ * request's Into): the source's ancestors first, nearest first, where it usually goes; a top-level branch's, whose name
+ * holds none, is its parent (`sourceParent`, where known). Then every other branch, newest first, to find by typing.
  * Never the source itself.
  */
-export function destinationGroups(branches: readonly Branch[], source: string): BranchGroup[] {
+export function destinationGroups(branches: readonly Branch[], source: string, sourceParent?: string): BranchGroup[] {
   const byName = new Map(branches.map((branch) => [branch.name, branch]));
-  const ancestorNames = ancestorsOf(source);
+  const named = ancestorsOf(source);
+  const ancestorNames = named.length === 0 && sourceParent ? [sourceParent] : named;
   const ancestors = ancestorNames.flatMap((name) => byName.get(name) ?? []);
   const shown = new Set([source, ...ancestorNames]);
   const others = newestBranchesFirst(branches).filter((branch) => !shown.has(branch.name));

@@ -15,6 +15,7 @@ import { Sidebar } from './Sidebar';
 import { useDiffExpansion } from './useDiffExpansion';
 import { useMainFocus } from './useMainFocus';
 import { usePlaceCommands } from './usePlaceCommands';
+import { useMergeRequestCommands } from '../../features/codeReviews/useMergeRequestCommands';
 import styles from './PlaceLayout.module.css';
 import { ViewShownContext } from '../../lib/viewShown';
 import { viewLayerShown } from './viewLayer';
@@ -30,8 +31,8 @@ interface PlaceLayoutProps {
 /**
  * The screen of a place, a workspace or a repository explored without one (`WorkspaceScreen`, `RepositoryScreen`):
  * the top bar, the sidebar with the place's views, the view or the page on top of it, the command log under them, the
- * status bar. What every place has runs here: its commands (`usePlaceCommands`), Copy link, its command log and its
- * page windows.
+ * status bar. What every place has runs here: its commands (`usePlaceCommands`, `useMergeRequestCommands`), Copy link,
+ * its command log and its page windows.
  */
 export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps) {
   const { view, pages, merge } = useNavigation();
@@ -40,6 +41,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
   const setCommandLogHeight = useCommandLogStore((state) => state.setHeight);
   useCommandLogHost();
   usePlaceCommands();
+  useMergeRequestCommands();
   useCopyLinkCommand();
   useOwnPageWindows();
   useDiffExpansion();

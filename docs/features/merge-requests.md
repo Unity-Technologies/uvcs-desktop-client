@@ -21,6 +21,57 @@ included.
   reviews carries them: the list, the branch chips, the palette, a review's page.
 - A merge request's source is always a branch: the review's target, named as any review's (`BranchNamesCache`).
 
+## Creating one
+
+**New merge request** (`openCreateMergeRequestDialog`, `CreateMergeRequestDialog`; what it decides is
+`mergeRequestForm`, in `mergeRequestDraft.ts`) is offered by the Merge requests view's header and its empty state, the
+palette in every workspace and repository window (`codeReviews.newMergeRequest`, `useMergeRequestCommands`; while the
+view shows, its own, which selects the new row), and every branch's menu (`branchMenu`: the Branches view, the Branch
+Explorer, the switcher, the top bar), in the `create` group above **New code review…**, which stays: a review of a
+branch with no destination is still asked for, and it is the only kind a branch with nowhere to merge (`/main`) can
+have. Such a branch (no ancestor in its name and no parent, `canMergeSomewhere`) has no New merge request entry,
+rather than one always refused. No shortcut: creating one is rare, and the palette has it.
+
+- **From** and **Into** sit on one row with an arrow between, read as a sentence. Each opens the branch list
+  (`BranchField`, `BranchChoiceList`), the branches read only once it opens: From the branches that can merge
+  somewhere, newest first (`sourceGroups`); Into the source's ancestors, nearest first (a top-level branch's parent),
+  then any branch (`destinationGroups`, the page's picker's). From starts on the menu's branch, else the workspace's unless it has
+  nowhere to merge (`prefilledSourceOf`: most workspaces sit on `/main`), else none.
+- **Into** starts on the source's **top-level ancestor** (`defaultDestinationOf`: `/main` for `/main/release/task`; a
+  top-level branch's parent), where a task usually ends; the user picks another from the list.
+- **Title**: the branch's own name, then " - " and its comment's first line when it has one (`defaultTitleOf`), so a
+  tracker key in either survives. Both the title and Into follow From until the user changes them; a title typed and
+  cleared stays empty.
+- **Description** (optional; the comment editor, sharing the title's focus mode as the check-in's does) and **Reviewers** (typed as the code review dialog's,
+  `typedReviewers`, a group as one).
+- **Create merge request**, or **Create as draft** behind its caret (`--mergerequeststatus=Draft`). The button says
+  why it can't yet (`draftProblem`: no branch, a top-level one with no parent, no destination, the branch itself, an
+  empty title; a top-level branch whose parent isn't read yet waits, refusing nothing).
+- **One command**: `cm mergerequest create br:<from> <title> --destination=br:<into> [--mergerequeststatus=Draft]
+  [--users= --groups=] [--descriptionfile=<file>] --format={id}` (`createMergeRequestArgs`, `query()`), the
+  description through a temp file. `cm` makes the request, then writes its description: when that fails it still prints
+  the id and exits 1, so the request exists (`createdMergeRequestOf`); the toast says the description couldn't be saved.
+- **`cm` checks only that the destination exists**: it makes a second request for the same branches, one from a
+  top-level branch, one into the branch itself. Those are the dialog's to refuse:
+  - Once From settles (`useSettledValue`), the dialog reads the branch's reviews, the read Changes shares
+    (`branchReviewsKey`, one `cm find review where target = 'br:…'`). A request still to merge into the same
+    destination (`existingRequestOf`, `existingRequestNote`) is named under the row with **Open it**, and Create waits,
+    its tooltip saying why. A merged or closed one is only a muted line ("Merged before as #9"). One into another
+    destination is no conflict. While the read runs nothing shows; Create waits for its answer before asking.
+  - "Close the existing request" isn't offered there: a destructive side door. Open it and close it on its page.
+- Then the dialog closes, the toast says "Created merge request 12" with **Open**, the view selects the new row
+  (`useSelectCreated`), and the reviews are read again (`isAffectedByCodeReviews`).
+- **A server older than merge requests** makes a plain code review of what `cm mergerequest create` asks, and says
+  nothing. The app never asks a server whether it has them: a read of the new review during that refresh (a list on
+  screen, the dialog's own read of the branch's reviews: `onFirstReadOfReview`) tells, and a note says "This server
+  doesn't have merge requests yet. It was created as code review 12" (`createdAs`). It runs no read of its own, and
+  stops watching once the refresh is done: created from another branch's menu, with no read on screen holding it, the
+  note may not come (its page, opened, shows a code review).
+- **The cost**: the branch's reviews once From settles, then one create. A branch a menu or a pick from the list gives
+  holds its comment and parent; only a branch named alone (the workspace's, from the view or the palette) is read for
+  them (two light `cm find branch` by name, often read already by the top bar). The branch list only if a field
+  opens.
+
 ## States
 
 | State | Means |

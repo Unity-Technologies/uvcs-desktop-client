@@ -6,7 +6,8 @@ import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { mergeRequestDestinationArgs, mergeRequestStateArgs } from '../cm/mergeRequestArgs';
+import { CmError } from '../cm/CmError';
+import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs } from '../cm/mergeRequestArgs';
 import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -128,6 +129,22 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     async unsubscribe(place, reviewId) {
       const at = cmPlace(place);
       await cm.query(setSubscriptionArgs(reviewId, false, at), at.options);
+    },
+
+    async createMergeRequest(place, request) {
+      const at = cmPlace(place);
+      const create = (descriptionFile?: string): Promise<string> => cm.query(createMergeRequestArgs(request, descriptionFile, at), at.options);
+      try {
+        const output = request.description?.trim() ? await withTempFile(request.description, create) : await create();
+        const created = createdMergeRequestOf(output, false);
+        if (!created) throw new Error("The server didn't say which merge request it created.");
+        return created;
+      } catch (error) {
+        // A description that failed after the request was made: `cm` printed its id and exited 1. It exists.
+        const created = error instanceof CmError ? createdMergeRequestOf(error.command.output, true) : undefined;
+        if (!created) throw error;
+        return created;
+      }
     },
 
     async setMergeRequestState(place, reviewId, state) {

@@ -17,6 +17,9 @@ import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { codeReviewPage, openReview } from './codeReviewOperations';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
+import { newMergeRequestCommand } from './useMergeRequestCommands';
+import { GitPullRequestPlus } from '../../components/GitPullRequestPlus';
+import { SplitButton } from '../../ui/SplitButton';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
@@ -86,14 +89,17 @@ export function CodeReviewsView() {
   const columns = useMemo(() => codeReviewColumns(me), [me]);
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
-  const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
-  // On the workspace's branch, and selected once the refreshed list shows it.
-  const newReview = useCallback(
-    () => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
-    [place, currentBranch, selectWhenShown],
-  );
+  const currentBranch = branchWorkedOn(workspace?.selector);
+  // What the view creates starts on the workspace's branch, and is selected once the refreshed list shows it. Its New
+  // merge request… replaces the window's (`useMergeRequestCommands`) while the view shows, for that.
+  const selectCreated = useCallback((reviewId: number) => selectWhenShown(String(reviewId)), [selectWhenShown]);
+  const mergeRequestCommand = useMemo(() => newMergeRequestCommand(place, currentBranch, selectCreated), [place, currentBranch, selectCreated]);
+  const newReview = useCallback(() => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch ?? '' }, selectCreated), [place, currentBranch, selectCreated]);
   useCommands(
-    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview }], [newReview]),
+    useMemo<Command[]>(
+      () => [mergeRequestCommand, { id: 'codeReviews.new', group: 'Merge requests', label: 'New code review…', icon: MessageSquarePlus, run: newReview }],
+      [mergeRequestCommand, newReview],
+    ),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useShowInFollowingWindow(selected ? codeReviewPage(selected) : null);
@@ -108,9 +114,15 @@ export function CodeReviewsView() {
       actions={
         <>
           <ViewRefreshButton fetching={isFetching} />
-          <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
-            New review
-          </Button>
+          <SplitButton
+            variant="primary"
+            icon={<GitPullRequestPlus size={14} />}
+            onClick={mergeRequestCommand.run}
+            menuLabel="More to create"
+            menu={[{ id: 'newCodeReview', label: 'New code review…', icon: MessageSquarePlus, run: newReview }]}
+          >
+            New merge request
+          </SplitButton>
         </>
       }
     >
@@ -168,10 +180,10 @@ export function CodeReviewsView() {
           <EmptyState
             icon={<GitPullRequest size={22} />}
             title="No merge requests"
-            description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
+            description={since === 'anyTime' ? 'Ask to merge a branch once a teammate has reviewed it.' : 'None in this time range. Try a longer one, or ask to merge a branch.'}
             action={
-              <Button variant="primary" icon={<MessageSquarePlus size={14} />} onClick={newReview}>
-                New review
+              <Button variant="primary" icon={<GitPullRequestPlus size={14} />} onClick={mergeRequestCommand.run}>
+                New merge request
               </Button>
             }
           />

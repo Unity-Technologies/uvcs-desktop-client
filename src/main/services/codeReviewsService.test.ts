@@ -10,7 +10,7 @@ import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../cm/formatRecords';
-import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
@@ -378,6 +378,58 @@ describe('merge request writes', () => {
     await service.setMergeRequestDestination(repositoryPlace('game@local'), 43, '/main');
 
     expect(lines()).toEqual(['mergerequest edit 43 --mergerequeststatus=Open --repository=game@local', 'mergerequest edit 43 --destination=br:/main@game@local --repository=game@local']);
+  });
+});
+
+describe('creating a merge request', () => {
+  const REQUEST = { source: '/main/task1', destination: '/main', title: 'Task one', draft: false };
+
+  it('asks with one quick command, which prints the new id', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest create': '40\n' });
+
+    expect(await service.createMergeRequest(IN_WORKSPACE, REQUEST)).toEqual({ id: 40, descriptionSaved: true });
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['mergerequest', 'create', 'br:/main/task1', 'Task one', '--destination=br:/main', '--format={id}'], options: { cwd: WORKSPACE } },
+    ]);
+  });
+
+  it('passes the description in a temp file, deleted afterwards', async () => {
+    const { seen, answer } = readingFileOption('--descriptionfile=', '40\n');
+    const { service, lines } = codeReviews({ 'mergerequest create': answer });
+
+    await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: 'First line\n\n- "quoted" item' });
+
+    expect(lines()).toHaveLength(1);
+    expect(seen.content).toBe('First line\n\n- "quoted" item');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it('writes no file for a description of blanks', async () => {
+    const { service, lines } = codeReviews({ 'mergerequest create': '40\n' });
+
+    await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: '  \n ' });
+
+    expect(lines()).toEqual(['mergerequest create br:/main/task1 Task one --destination=br:/main --format={id}']);
+  });
+
+  // `cm` makes the request, then writes its description; when that fails it says so, prints the id and exits 1.
+  it('returns a request made whose description failed, rather than failing', async () => {
+    const { answer } = readingFileOption('--descriptionfile=', cmFails('The description of the code review 40 could not be created: Access denied.\n40\n'));
+    const { service } = codeReviews({ 'mergerequest create': answer });
+
+    expect(await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: 'Why' })).toEqual({ id: 40, descriptionSaved: false });
+  });
+
+  it('fails, in plain words, when cm answers with no id', async () => {
+    const { service } = codeReviews({ 'mergerequest create': 'Done\n' });
+
+    await expect(service.createMergeRequest(IN_WORKSPACE, REQUEST)).rejects.toThrow("The server didn't say which merge request it created.");
+  });
+
+  it("fails as cm does when it made nothing: a destination that doesn't exist", async () => {
+    const { service } = codeReviews({ 'mergerequest create': cmFails("The specified branch /main/nope can't be found.\n") });
+
+    await expect(service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, destination: '/main/nope' })).rejects.toThrow("The specified branch /main/nope can't be found.");
   });
 });
 
