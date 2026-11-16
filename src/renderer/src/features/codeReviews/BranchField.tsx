@@ -1,17 +1,19 @@
 import { ChevronDown, GitBranch } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import type { Place } from '@shared/domain/place';
 import { PathLabel } from '../../components/PathLabel';
 import { classNames } from '../../lib/classNames';
 import fieldStyles from '../../ui/Field.module.css';
 import { Popover } from '../../ui/Popover';
 import { FieldFrame } from '../../ui/TextField';
-import { usePlace } from '../../app/workspace/useWorkspace';
 import { BranchChoiceList } from '../branches/BranchChoiceList';
 import type { BranchGroup } from '../branches/branchSearchRows';
 import styles from './BranchField.module.css';
 
 interface BranchFieldProps {
+  /** Whose branches it lists: the dialog's place. */
+  place: Place;
   label: string;
   /** The branch picked; none shows `placeholder`. */
   value: string | undefined;
@@ -27,8 +29,7 @@ interface BranchFieldProps {
  * A dialog's branch, boxed as its other fields: it shows the branch picked and opens the branch list
  * (`BranchChoiceList`) to pick another, the branches read only once it opens.
  */
-export function BranchField({ label, value, placeholder, groupsOf, searchPlaceholder, onPick }: BranchFieldProps) {
-  const place = usePlace();
+export function BranchField({ place, label, value, placeholder, groupsOf, searchPlaceholder, onPick }: BranchFieldProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
   return (

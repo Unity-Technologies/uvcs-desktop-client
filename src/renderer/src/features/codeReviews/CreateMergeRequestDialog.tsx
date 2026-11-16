@@ -119,6 +119,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
       <div className={styles.branches}>
         <div className={styles.branch}>
           <BranchField
+            place={place}
             label="From"
             value={source || undefined}
             placeholder="Pick a branch"
@@ -130,6 +131,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
         <ArrowRight size={14} className={styles.arrow} aria-hidden />
         <div className={styles.branch}>
           <BranchField
+            place={place}
             label="Into"
             value={destination || undefined}
             placeholder="Pick a destination"
