@@ -22,6 +22,14 @@ describe('findUpdateBlockers', () => {
       ]),
     ).toEqual(['src/gone.txt', 'src/old-name.txt']);
   });
+
+  it('reports local changes to a file the branch replaced: the item changed is deleted there, another took its path', () => {
+    // As `mergedDiffEntries` reads `cm diff`'s A and D of one path (a file made a move of an older one on the branch).
+    const replaced: DiffEntry = { ...incoming('src/Score.cs', 'changed'), replaced: true };
+
+    expect(findUpdateBlockers([replaced], [local('src/Score.cs', ['changed'])])).toEqual(['src/Score.cs']);
+    expect(findUpdateConflicts([replaced], [local('src/Score.cs', ['changed'])])).toEqual([]);
+  });
 });
 
 describe('findUpdateConflicts', () => {

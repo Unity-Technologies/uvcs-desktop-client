@@ -79,6 +79,26 @@ describe('reading diff entries', () => {
     ]);
   });
 
+  it('reads a file deleted and another put at its path as one replaced entry: the deleted revision against the new one', () => {
+    // `cm diff cs:282104 --repositorypaths --format=…`: the file added on the branch, deleted, and its path given back to
+    // the item it was moved from, so its history follows that file's. `cm` prints A then D; either order reads the same.
+    const added = formatOutput(['A', '"/src/ShelvesColumnComparers.cs"', '""', '-1', '31408478', 'F', GAME]);
+    const deleted = formatOutput(['D', '"/src/ShelvesColumnComparers.cs"', '""', '-1', '31407468', 'F', GAME]);
+    const replaced = { status: 'changed', path: 'src/ShelvesColumnComparers.cs', oldPath: undefined, itemType: 'file', baseRevisionId: 31407468, revisionId: 31408478, repository: 'game@local', replaced: true };
+
+    expect(diffEntriesIn(added + deleted)).toEqual([replaced]);
+    expect(diffEntriesIn(deleted + added)).toEqual([replaced]);
+  });
+
+  it('reads a path given to an item of another kind as it was read before, the added item: its older side would be no content', () => {
+    // A folder deleted and a file added at its path, and the other way round: nothing to compare between the two.
+    const folderGone = formatOutput(['D', '"/src/Score"', '""', '-1', '40', 'D', GAME]) + formatOutput(['A', '"/src/Score"', '""', '-1', '41', 'F', GAME]);
+    const fileGone = formatOutput(['A', '"/src/Score"', '""', '-1', '41', 'D', GAME]) + formatOutput(['D', '"/src/Score"', '""', '-1', '40', 'F', GAME]);
+
+    expect(diffEntriesIn(folderGone)).toEqual([{ status: 'added', path: 'src/Score', oldPath: undefined, itemType: 'file', baseRevisionId: -1, revisionId: 41, repository: 'game@local' }]);
+    expect(diffEntriesIn(fileGone)).toEqual([{ status: 'added', path: 'src/Score', oldPath: undefined, itemType: 'directory', baseRevisionId: -1, revisionId: 41, repository: 'game@local' }]);
+  });
+
   it('reads an item whose file permissions alone changed as the same revision on both sides, with its permissions', () => {
     // `cm` gives a change without a content change no base revision: `baserevid` is -1, as for an added item.
     const [entry] = diffEntriesIn(formatOutput(['C', '"/tools/build.sh"', '""', '-1', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']));

@@ -17,6 +17,7 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
+import { DiffFileTitle } from '../../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
@@ -158,7 +159,7 @@ function ThreadDialog(props: ThreadDialogProps) {
     <Dialog
       eyebrow={stepping && <ContextStepper steps={stepping} onStep={onStep} />}
       title={contextTitle(thread)}
-      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread, files)}
+      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset, movedFrom: state.kind === 'comparison' ? state.comparison.moved?.from : undefined }) : appliedFilesDescription(thread, files)}
       width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
@@ -276,7 +277,16 @@ function ViewDiff(props: ViewProps) {
   const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
-      <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} compareControls={controls} />
+      <FileDiffViewer
+        place={props.place}
+        original={comparison.original}
+        modified={comparison.modified}
+        fileName={comparison.fileName}
+        // A replaced file shown as the move it made says so in its header, as a diff's moved file does.
+        title={comparison.moved && <DiffFileTitle status={comparison.moved.status} path={comparison.fileName} oldPath={comparison.moved.from} />}
+        identicalDescription={comparison.identicalText}
+        compareControls={controls}
+      />
     </DiffAnnotationsContext.Provider>
   );
 }
