@@ -13,7 +13,7 @@ import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
-const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Code reviews', 'Locks', 'Sync'];
+const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Merge requests', 'Locks', 'Sync'];
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
@@ -158,8 +158,8 @@ try {
       await settled();
     });
   }
-  await step("A code review's conversation", async () => {
-    await window.getByRole('navigation').getByRole('button', { name: /^Code reviews( \d+)?$/ }).click();
+  await step("A merge request's conversation", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Merge requests( \d+)?$/ }).click();
     await main.getByText('Review player movement', { exact: true }).dblclick();
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await main.getByText('Jump only when grounded.').first().waitFor();
