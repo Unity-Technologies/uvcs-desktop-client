@@ -67,7 +67,12 @@ const COMMANDS = {
   'codereview subscription': reviewSubscription,
   // A merge request's state or destination: `cm` prints nothing.
   'mergerequest edit': () => '',
+  // A new merge request: `cm` prints its id alone. The fake keeps no new review: the lists read stay as they are.
+  'mergerequest create': () => `${NEW_MERGE_REQUEST_ID}\n`,
 };
+
+/** The id the fake gives a merge request it is asked to create: after every review `repository.REVIEWS` holds. */
+const NEW_MERGE_REQUEST_ID = 90;
 
 /** The server's groups, as `cm listusers --onlygroups` lists them. */
 const GROUPS = ['Developers', 'Artists'];
