@@ -89,11 +89,11 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
   with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
-- Columns: the title, the status, the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
+- Columns: the title (where it stands as an icon after it: merge-requests.md "One view"), the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
   `ui/AvatarStack`, three then a "+N" disc whose tooltip names the rest; hovered, the stack spreads and each avatar
   shows its reviewer's status as a badge in its corner, the status's icon in its color (`reviewerBadge`,
   `REVIEW_STATUS_ICONS`: an eye, a flag, a thumbs-up), fading in as the avatar settles, and its tooltip names them with
-  it, `reviewerText`; at rest the stack shows only who, the Status column saying where the review stands (the keyboard
+  it, `reviewerText`; at rest the stack shows only who, the icon after the title saying where the review stands (the keyboard
   never spreads it: a sighted keyboard user reads each reviewer's status on the review's page, beside its conversation,
   where every reviewer shows their status's icon); the details panel lists them under **Reviewers**, each with their
   status's icon (`ReviewerList`, read only), and a review of a branch the branch's attributes under **Branch

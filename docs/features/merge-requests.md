@@ -301,10 +301,10 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 
 - **The row** leads with what it is, in a fixed-width slot: a merge request's state glyph, or the code review glyph;
   then the title, never a number ("Its number"; `codeReviewColumns`), as pull requests read. The text filter still
-  finds a review by it. **Status** says where it stands as by a branch: a merge request its verdict alone (a check, a
-  cross, nothing while it waits; its state already leads the row), a code review its review status, all it has
-  (`reviewStatusCellOf`). Sorting by it groups merge requests by state then verdict, then code reviews
-  (`reviewStatusSortValue`). The Status chip still filters by the review's status, for both kinds.
+  finds a review by it. After the title, an icon says where it stands, as by a branch: a merge request its verdict (a
+  check, a cross, nothing while it waits; its state already leads the row), a code review its review status's icon,
+  each named by its tooltip (`reviewStatusCellOf`). No Status column: the row reads as a pull request's, and the room
+  goes to the title. The Status chip still filters by the review's status, for both kinds.
 - **Changes** says `task → main` for a merge request: the source gives way when narrow, the arrow and the destination
   stay whole (the destination is usually short). Its tooltip: "Merge /main/task into /main".
 - **The Kind chip** (`kind`, `ReviewKindFilter`): **Any kind**, where it rests, or **Merge requests** or **Code

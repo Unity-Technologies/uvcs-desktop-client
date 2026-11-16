@@ -6,7 +6,6 @@ import { UserLabel } from '../../ui/Avatar';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/column';
-import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { commentCountsSortValue } from './commentCounts';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
@@ -14,14 +13,15 @@ import { ReviewerStack } from './ReviewerStack';
 import { reviewedChangesOf } from './mergeRequestState';
 import { MergeRequestStateIcon } from './MergeRequestStateIcon';
 import { MergeVerdictIcon } from './MergeVerdictIcon';
-import { reviewStatusCellOf, reviewStatusSortValue } from './reviewStatusCell';
+import { reviewStatusCellOf } from './reviewStatusCell';
+import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
  * Columns of the Merge requests table, which lists code reviews too: its glyph (a merge request's state, a code
- * review's own) and its title, where it stands (a merge request its verdict, as by a branch; a code review its status:
- * `reviewStatusCellOf`), who reviews it, its comments and how many are still open, what it
+ * review's own), its title and, after it, where it stands as an icon (a merge request its verdict, as by a branch; a
+ * code review its status: `reviewStatusCellOf`), saving a Status column; who reviews it, its comments and how many are still open, what it
  * reviews (and where a merge request merges it), who wrote it, and when anyone last did something on it. When it was
  * created has no column, to keep the rows light: the list comes newest first as read, its period goes by it, and the
  * details panel says it. A review waiting for `user` has a dot before its glyph (`waitingForMe`).
@@ -50,12 +50,12 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
             <span className={styles.titleText}>
               <CommentLine comment={review.title} />
             </span>
+            <ReviewStatusMark review={review} />
           </span>
         </>
       ),
       sortValue: (review) => review.title.toLowerCase(),
     },
-    { id: 'status', header: 'Status', width: 150, render: (review) => <ReviewStatus review={review} />, sortValue: reviewStatusSortValue },
     {
       id: 'reviewers',
       header: 'Reviewers',
@@ -120,9 +120,22 @@ function ReviewedChanges({ review }: { review: CodeReview }) {
   );
 }
 
-/** Where it stands: a merge request's verdict, as by a branch (its state leads the row), a code review's status. */
-function ReviewStatus({ review }: { review: CodeReview }) {
+/**
+ * Where it stands, an icon after the title: a merge request's verdict, as by a branch (its state leads the row); a code
+ * review's status. Named by its tooltip.
+ */
+function ReviewStatusMark({ review }: { review: CodeReview }) {
   const cell = reviewStatusCellOf(review);
-  if (cell.kind === 'codeReview') return <CodeReviewStatusBadge status={cell.status} />;
-  return cell.verdict ? <MergeVerdictIcon verdict={cell.verdict} /> : null;
+  if (cell.kind === 'codeReview') {
+    return (
+      <span className={styles.mark}>
+        <ReviewStatusIcon status={cell.status} size={13} label={cell.status} />
+      </span>
+    );
+  }
+  return cell.verdict ? (
+    <span className={styles.mark}>
+      <MergeVerdictIcon verdict={cell.verdict} />
+    </span>
+  ) : null;
 }
