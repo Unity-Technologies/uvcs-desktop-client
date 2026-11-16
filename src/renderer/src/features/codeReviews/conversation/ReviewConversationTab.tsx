@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { placeId } from '@shared/domain/place';
+import { mergedChangesetOf } from '@shared/domain/reviewConversation';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
@@ -15,6 +16,8 @@ import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
 import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
+import { openItemsIn } from '../mergeCard';
+import { MergeRequestCard } from '../MergeRequestCard';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
@@ -31,8 +34,8 @@ import styles from './ReviewConversation.module.css';
 
 /**
  * What was said on a review, oldest first as a conversation reads: its description, then the comments and their
- * replies among what the server noted (requests, statuses, renames), then a field to say something. Beside it, the
- * reviewers and what's still open.
+ * replies among what the server noted (requests, statuses, renames), a merge request's card, then a field to say
+ * something. Beside it, the reviewers and what's still open.
  */
 interface ReviewConversationTabProps {
   review: CodeReview;
@@ -156,6 +159,9 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
             <>
               <ReviewDescriptionCard review={review} description={conversation.description} />
               <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
+              {review.mergeRequest && (
+                <MergeRequestCard review={review} mergeRequest={review.mergeRequest} open={openItemsIn(open)} mergedChangeset={mergedChangesetOf(conversation.events)} />
+              )}
             </>
           )}
           <div className={styles.newComment}>

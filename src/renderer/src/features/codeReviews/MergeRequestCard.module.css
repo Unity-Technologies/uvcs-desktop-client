@@ -1,0 +1,94 @@
+/*
+ * One bordered card, its sections stacked with hairlines, then a tinted footer holding its action: the shape of a
+ * pull request's merge box. In the conversation's column, after the timeline and before the composer, not sticky: a
+ * card pinned to the bottom took the conversation's height in a short window.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-4) 0 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.section {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+}
+
+.section + .section {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+}
+
+.disc[data-tone='passed'] {
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
+  color: var(--status-added);
+}
+
+.disc[data-tone='failed'] {
+  background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
+  color: var(--status-changed);
+}
+
+/* A section that is the state itself (draft, merged, closed): its glyph in the state's color. */
+.disc[data-state] {
+  background: color-mix(in srgb, var(--merge-request-color) 16%, var(--bg-surface));
+  color: var(--merge-request-color);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.detail {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.sectionAction {
+  flex: none;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+/* The ⋯ at the footer's far end, whatever button leads it. */
+.menu {
+  margin-left: auto;
+}
