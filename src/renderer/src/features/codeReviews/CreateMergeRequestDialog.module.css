@@ -1,0 +1,44 @@
+/* From and Into on one row, an arrow between them, read as a sentence: this branch into that one. */
+.branches {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.branch {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Centered on the fields, under their labels. */
+.arrow {
+  flex: none;
+  height: var(--control-height);
+  color: var(--text-tertiary);
+}
+
+/* What the branch already has, under From and Into: a line of text, not a banner. */
+.note,
+.quietNote {
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.note {
+  color: var(--text-secondary);
+}
+
+.quietNote {
+  color: var(--text-tertiary);
+}
+
+.request {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.openIt {
+  margin-left: var(--space-1);
+  vertical-align: baseline;
+}
