@@ -15,6 +15,11 @@ interface PickBranchOptions {
   exclude?: string;
   /** Another place's branches than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
   place?: Place;
+  /**
+   * Opened from another dialog: closes it too when the user leaves for a branch's review from its chip, so it doesn't
+   * stay over the review's page. `false` shows no review chips, for a dialog that can't be closed from here.
+   */
+  overDialog?: { close: () => void } | false;
 }
 
 /** Asks the user to choose a branch. Resolves to it as the branch list read it (its head too), or undefined if dismissed. */
@@ -22,7 +27,7 @@ export function pickBranch(options: PickBranchOptions): Promise<Branch | undefin
   return askDialog<Branch>((finish) => <BranchPickerDialog {...options} finish={finish} />);
 }
 
-function BranchPickerDialog({ title, description, exclude, place, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
+function BranchPickerDialog({ title, description, exclude, place, overDialog, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
   const windowPlace = usePlace();
   const branchesQuery = useBranches({}, place);
   const branches = useMemo(() => (branchesQuery.data ?? []).filter((branch) => branch.name !== exclude), [branchesQuery.data, exclude]);
@@ -34,8 +39,13 @@ function BranchPickerDialog({ title, description, exclude, place, finish }: Pick
         onPick={finish}
         read={branchesRead(branchesQuery)}
         // Another repository's branches (an xlink's) show no reviews: they don't bear on the pick.
-        reviews={place ? undefined : { place: windowPlace, leave: () => finish(undefined) }}
+        reviews={place || overDialog === false ? undefined : { place: windowPlace, leave: () => leave(overDialog, finish) }}
       />
     </Dialog>
   );
+}
+
+function leave(overDialog: { close: () => void } | undefined, finish: (branch: undefined) => void): void {
+  finish(undefined);
+  overDialog?.close();
 }

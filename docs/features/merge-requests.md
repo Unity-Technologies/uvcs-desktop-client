@@ -397,12 +397,15 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   `reviewChipOf` decides which (`hover`). Every chip, a merge request's or a code review's, is outlined in its color under the pointer, with
   the hand cursor: a click opens the review. No new
   column and no "+N more": the list filtered by the branch shows the others.
-- **Lists to pick a branch from** (`BranchSearchList`'s `mergeRequests`: the branch switcher, the Files and
-  Changesets branch chips, the merge, compare and move pickers, the New merge request dialog's From and Into): each
-  row drawn shows its branch's chip after the name, the Branches view's own (`BranchReviewChip`, `CodeReviewChip`):
-  the same pill, verdict and hover card, one experience wherever a branch shows its review. The chip's click and its
-  card's title open the review once what holds the list closed (`mergeRequests.leave`: the popup, and the dialog it
-  sits in), so nothing stays over the page; a click on the chip or its card never reaches the row (it would switch).
+- **Lists to pick a branch from** (`BranchSearchList`'s `reviews`: the branch switcher, the Files and Changesets
+  branch chips, the branch picker (`pickBranch`: merge, compare, move, and Work on a branch in the task workspace
+  dialog), the New merge request dialog's From and Into, the review page's destination): each row drawn shows its
+  branch's review chip after the name, the Branches view's own (`BranchReviewChip`, `CodeReviewChip`): the same pill,
+  verdict and hover card, one experience wherever a branch shows its review. The chip's click and its card's title
+  open the review once what holds the list closed (`reviews.leave`: the popup, and the dialog it sits in; a
+  `pickBranch` opened from another dialog closes that one too, `overDialog`), so nothing stays over the page; a click
+  on the chip or its card never reaches the row (it would switch). The xlink dialog's branch picker, which can't
+  close that dialog, shows no chips (`overDialog: false`).
   Inside the row, itself a button, the chip is a span (`insideButton`): the row keeps the keyboard. Tried and
   dropped: a glyph between the comment and the date, a glyph in the branch icon's place, and a pill or a glyph over
   the date; each read differently from the Branches view, and the glyphs read as branch icons. Read as the views

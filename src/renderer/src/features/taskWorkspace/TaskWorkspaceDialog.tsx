@@ -72,7 +72,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   const plan = taskWorkspacePlan({ repository: workspace?.repository, mode, branch, branchError, folder, workspaceName: name, folderCheck, typedExists, running });
 
   const chooseBranch = async (): Promise<void> => {
-    const picked = await pickBranch({ title: 'Work on a branch', description: 'The new workspace switches to it.' });
+    const picked = await pickBranch({ title: 'Work on a branch', description: 'The new workspace switches to it.', overDialog: { close: onClose } });
     if (picked) setExistingBranch(picked.name);
   };
 
