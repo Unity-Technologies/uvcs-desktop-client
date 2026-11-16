@@ -117,7 +117,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
             disabled={problem !== undefined}
             tip={tip}
             menuLabel="Other ways to create it"
-            menu={[{ id: 'createDraft', label: 'Create as draft', icon: GitPullRequestDraft, run: () => void create(true) }]}
+            menu={[{ id: 'createDraft', label: 'Create as draft', description: "Can't be merged until it's ready for review", icon: GitPullRequestDraft, run: () => void create(true) }]}
           >
             Create merge request
           </SplitButton>
