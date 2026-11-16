@@ -15,15 +15,15 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SplitButton } from '../../ui/SplitButton';
-import { TextField } from '../../ui/TextField';
 import { branchQuery } from '../branches/useBranches';
 import { branchReviewsQuery } from './changeRequests/useChangeRequests';
 import { BranchField } from './BranchField';
 import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
-import { blocksCreate, existingRequestOf, mergeRequestForm, sourceGroups } from './mergeRequestDraft';
-import { typedReviewers } from './reviewerGroups';
-import { useReviewerGroups } from './useReviewerGroups';
+import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups } from './mergeRequestDraft';
+import { DraftNoteLine } from './DraftNoteLine';
+import { NO_REVIEWERS, reviewersToAsk } from './pickedReviewers';
+import { ReviewersField } from './ReviewersField';
 import styles from './CreateMergeRequestDialog.module.css';
 
 /** A branch as the dialog starts on it: a menu's holds its comment and parent, so the dialog needn't read it. */
@@ -60,19 +60,21 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const [picked, setPicked] = useState<string>();
   const [typed, setTyped] = useState<string>();
   const [description, setDescription] = useState('');
-  const [reviewers, setReviewers] = useState('');
+  const [reviewers, setReviewers] = useState(NO_REVIEWERS);
   const [creating, setCreating] = useState(false);
-  const groups = useReviewerGroups();
 
   // A branch named alone (the workspace's) is read for its comment and parent: two light `cm find branch`, often read
   // already (the top bar's). A pick from a branch list holds them.
   const { data: readBranch } = useQuery({ ...branchQuery(place, source.name), ...SLOW_CHANGING_QUERY, enabled: source.name !== '' && !source.branch });
   // The branch's reviews, once a pick settles: the read Changes and the top bar share (`branchReviewsKey`).
   const settledSource = useSettledValue(source.name, source.name);
-  const { data: reviewsOfBranch } = useQuery({ ...branchReviewsQuery(place, settledSource), enabled: settledSource !== '' && settledSource === source.name });
+  const reviewsRead = useQuery({ ...branchReviewsQuery(place, settledSource), enabled: settledSource !== '' && settledSource === source.name });
+  // Only the reviews of the branch now picked: while a new pick settles, the query still holds the last one's.
+  const reviewsOfBranch = settledSource === source.name ? reviewsRead.data : undefined;
+  const reviewsCheck = reviewsCheckOf(source.name, reviewsOfBranch, settledSource === source.name && reviewsRead.isError);
 
   const sourceBranch = source.branch ?? readBranch ?? undefined;
-  const { destination, title, existing, note, problem } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch });
+  const { destination, title, note, problem, tip } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch, reviewsCheck });
 
   const sourceChoices = useCallback((branches: Branch[]) => sourceGroups(branches), []);
   const destinationChoices = useCallback((branches: Branch[]) => destinationGroups(branches, source.name, sourceBranch?.parent), [source.name, sourceBranch?.parent]);
@@ -85,7 +87,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
       setCreating(false);
       return;
     }
-    const request = { source: source.name, destination, title: title.trim(), description: description.trim() || undefined, draft, reviewers: typedReviewers(reviewers, groups) };
+    const request = { source: source.name, destination, title: title.trim(), description: description.trim() || undefined, draft, reviewers: reviewersToAsk(reviewers) };
     const reviewId = await createMergeRequest(place, request, (id) => {
       onClose();
       onCreated?.(id);
@@ -114,9 +116,9 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
             onClick={() => void create(false)}
             loading={creating}
             disabled={problem !== undefined}
-            tip={problem}
+            tip={tip}
             menuLabel="Other ways to create it"
-            menu={[{ id: 'createDraft', label: 'Create as draft', icon: GitPullRequestDraft, run: () => void create(true) }]}
+            menu={[{ id: 'createDraft', label: 'Create as draft', description: "Can't be merged until it's ready for review", icon: GitPullRequestDraft, run: () => void create(true) }]}
           >
             Create merge request
           </SplitButton>
@@ -148,20 +150,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           />
         </div>
       </div>
-      {note && existing && (
-        <p className={note.request ? styles.note : styles.quietNote}>
-          {note.text}
-          {note.request && (
-            <>
-              {' '}
-              <span className={styles.request}>{note.request}</span>
-              <button type="button" className={styles.openIt} onClick={() => openExisting(existing.review)}>
-                Open it
-              </button>
-            </>
-          )}
-        </p>
-      )}
+      {note && <DraftNoteLine note={note} onOpen={openExisting} />}
       {/* One focus mode for both; Enter in the title creates the request, as in the code review's dialog. */}
       <CommentFocusGroup>
         <CommentArea
@@ -182,13 +171,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           onChange={setDescription}
         />
       </CommentFocusGroup>
-      <TextField
-        label="Reviewers"
-        placeholder="jane.doe@example.com, john.doe@example.com"
-        hint="Optional. You can add them later."
-        value={reviewers}
-        onChange={(event) => setReviewers(event.target.value)}
-      />
+      <ReviewersField pick={reviewers} onPickChange={setReviewers} />
     </Dialog>
   );
 }

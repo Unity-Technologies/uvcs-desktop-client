@@ -50,6 +50,14 @@ describe('destinationGroups', () => {
     expect(names(destinationGroups(branches, '/main/other')).flatMap(([, each]) => each)).not.toContain('/main/other');
   });
 
+  it('never offers a branch made from the source, at any depth, but keeps a sibling whose name starts like it', () => {
+    const more = [...branches, branch('/main/release/task/sub', '2026-09-11T10:00:00+02:00'), branch('/main/release-2', '2026-09-12T10:00:00+02:00')];
+    expect(names(destinationGroups(more, '/main/release'))).toEqual([
+      ['Ancestors', ['/main']],
+      ['Other branches', ['/main/other', '/main/release-2', '/main/older']],
+    ]);
+  });
+
   it("offers a top-level branch's parent as its ancestor, where its name holds none", () => {
     expect(names(destinationGroups([...branches, branch('/release', '2026-09-30T10:00:00+02:00')], '/release', '/main'))).toEqual([
       ['Ancestors', ['/main']],

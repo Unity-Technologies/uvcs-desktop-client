@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
-import { blocksCreate, createdAs, defaultDestinationOf, mergeRequestForm, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
+import { blocksCreate, createdAs, defaultDestinationOf, mergeRequestForm, prefilledSourceOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, reviewsCheckOf, type MergeRequestDraft } from './mergeRequestDraft';
 
 function review(id: number, mergeRequest?: MergeRequestInfo): CodeReviewSummary {
   return {
@@ -82,6 +82,17 @@ describe('draftProblem', () => {
     expect(draftProblem({ ...ready, source: '/main/task', destination: '/main' })).toBeUndefined();
   });
 
+  it('refuses a destination made from the branch, at any depth', () => {
+    expect(draftProblem({ ...ready, destination: '/main/task/sub' })).toBe("A branch can't merge into one made from it");
+    expect(draftProblem({ ...ready, destination: '/main/task/sub/deeper' })).toBe("A branch can't merge into one made from it");
+  });
+
+  // Typing any branch is deliberate: only a name under the source's own is refused.
+  it('allows a sibling whose name starts like the branch, and unrelated branches', () => {
+    expect(draftProblem({ ...ready, destination: '/main/task-2' })).toBeUndefined();
+    expect(draftProblem({ ...ready, destination: '/release/other' })).toBeUndefined();
+  });
+
   it('asks for a title, blanks being none', () => {
     expect(draftProblem({ ...ready, title: '  ' })).toBe('The title is empty');
   });
@@ -116,16 +127,32 @@ describe('existingRequestOf', () => {
 
 describe('existingRequestNote', () => {
   it('names the active request, to open it, and why Create waits', () => {
-    expect(existingRequestNote({ kind: 'active', review: { ...review(12, { state: 'Open', destination: '/main' }), title: 'Add login' } })).toEqual({
+    const active = { ...review(12, { state: 'Open', destination: '/main' }), title: 'Add login' };
+    expect(existingRequestNote({ kind: 'active', review: active })).toEqual({
       text: 'This branch already has a merge request into /main:',
-      request: '#12 Add login',
+      request: { label: '#12 Add login', review: active },
       blocks: 'This branch already has a merge request into /main',
     });
   });
 
-  it('says how an earlier one ended, without blocking', () => {
-    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Merged', destination: '/main' }) })).toEqual({ text: 'Merged before as #9' });
-    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Closed', destination: '/main' }) })).toEqual({ text: 'Closed before as #9' });
+  it('names how an earlier one ended, to open it, without blocking', () => {
+    const merged = { ...review(9, { state: 'Merged', destination: '/main' }), title: 'Add login' };
+    expect(existingRequestNote({ kind: 'earlier', review: merged })).toEqual({ text: 'Merged before:', request: { label: '#9 Add login', review: merged } });
+    const closed = review(9, { state: 'Closed', destination: '/main' });
+    expect(existingRequestNote({ kind: 'earlier', review: closed })).toEqual({ text: 'Closed before:', request: { label: '#9 Review 9', review: closed } });
+  });
+});
+
+describe('reviewsCheckOf', () => {
+  it('is none with no branch, or once its reviews are in hand, even if a refresh of them failed', () => {
+    expect(reviewsCheckOf('', undefined, false)).toBeUndefined();
+    expect(reviewsCheckOf('/main/task', [], false)).toBeUndefined();
+    expect(reviewsCheckOf('/main/task', [], true)).toBeUndefined();
+  });
+
+  it('is running until they come, and failed when the read did', () => {
+    expect(reviewsCheckOf('/main/task', undefined, false)).toBe('checking');
+    expect(reviewsCheckOf('/main/task', undefined, true)).toBe('failed');
   });
 });
 
@@ -191,11 +218,41 @@ describe('mergeRequestForm', () => {
   });
 
   it('blocks Create on a request still to merge into that destination only once the reviews are read', () => {
-    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ existing: undefined, note: undefined, problem: undefined });
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task })).toMatchObject({ note: undefined, problem: undefined });
     expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [open(12)] })).toMatchObject({
-      existing: { kind: 'active' },
+      note: { request: { label: '#12 Review 12' } },
       problem: 'This branch already has a merge request into /main',
     });
+  });
+
+  it('notes an earlier request into that destination without blocking Create', () => {
+    const merged = review(9, { state: 'Merged', destination: '/main' });
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [merged] })).toMatchObject({
+      note: { text: 'Merged before:', request: { label: '#9 Review 9' } },
+      problem: undefined,
+    });
+  });
+
+  // A server hiccup shouldn't stop the task: `cm` creates anyway, and a duplicate is visible and closable.
+  it('says when the check for an existing request failed, and lets Create run', () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsCheck: 'failed' })).toMatchObject({
+      note: { text: "Couldn't check whether this branch already has a merge request" },
+      problem: undefined,
+      tip: undefined,
+    });
+  });
+
+  it("says in Create's tooltip that the check runs, and lets it run", () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsCheck: 'checking' })).toMatchObject({
+      note: undefined,
+      problem: undefined,
+      tip: 'Checking for an existing merge request…',
+    });
+  });
+
+  it("gives Create's tooltip the problem first, then the check", () => {
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, typed: '', reviewsCheck: 'checking' }).tip).toBe('The title is empty');
+    expect(mergeRequestForm({ source: '/main/task', sourceBranch: task, reviewsOfBranch: [open(12)] }).tip).toBe('This branch already has a merge request into /main');
   });
 
   it("names a problem of the draft's own before an existing request", () => {

@@ -70,6 +70,8 @@ export function draftProblem({ source, sourceParent, destination, title }: Merge
   if (!canMergeSomewhere({ name: source, parent: sourceParent ?? '' })) return 'A top-level branch has no merge request';
   if (!destination) return 'Pick a destination';
   if (source === destination) return "A branch can't merge into itself";
+  // `cm` would make it: a request into a branch made from the source, which never takes the task's changes back up.
+  if (destination.startsWith(`${source}/`)) return "A branch can't merge into one made from it";
   if (!title.trim()) return 'The title is empty';
   return undefined;
 }
@@ -90,22 +92,44 @@ export function existingRequestOf(reviewsOfBranch: readonly CodeReviewSummary[],
 }
 
 /**
- * What the dialog says of a request the branch already has: `request` names one still to merge, to open, and `blocks`
- * says why Create waits meanwhile (its tooltip). An earlier one is only a note.
+ * A line under the dialog's branches: what the branch already has into that destination, or that it couldn't be
+ * checked. `request` names a request to open (`#12 Add login`); `blocks` says why Create waits meanwhile (its
+ * tooltip), only for one still to merge. Every other note only informs.
  */
-export interface ExistingRequestNote {
+export interface DraftNote {
   text: string;
-  request?: string;
+  request?: { label: string; review: CodeReviewSummary };
   blocks?: string;
 }
 
-export function existingRequestNote({ kind, review }: ExistingRequest): ExistingRequestNote {
+export function existingRequestNote({ kind, review }: ExistingRequest): DraftNote {
   const destination = review.mergeRequest?.destination;
+  const request = { label: `#${review.id} ${review.title}`, review };
   if (kind === 'active') {
-    return { text: `This branch already has a merge request into ${destination}:`, request: `#${review.id} ${review.title}`, blocks: `This branch already has a merge request into ${destination}` };
+    return { text: `This branch already has a merge request into ${destination}:`, request, blocks: `This branch already has a merge request into ${destination}` };
   }
-  return { text: `${review.mergeRequest?.state === 'Merged' ? 'Merged' : 'Closed'} before as #${review.id}` };
+  return { text: `${review.mergeRequest?.state === 'Merged' ? 'Merged' : 'Closed'} before:`, request };
 }
+
+/**
+ * The read of the branch's reviews while they aren't in hand: still running (`checking`), or failed. A failed check
+ * doesn't stop Create: `cm` creates anyway, and a duplicate shows in the list, where it can be closed.
+ */
+export type ReviewsCheck = 'checking' | 'failed';
+
+/**
+ * How the check of a branch's reviews stands: none with no branch, or once they're in hand (a refresh that fails keeps
+ * them); else failed, or still running (a pick that hasn't settled yet waits for it too).
+ */
+export function reviewsCheckOf(source: string, reviewsOfBranch: readonly CodeReviewSummary[] | undefined, failed: boolean): ReviewsCheck | undefined {
+  if (!source || reviewsOfBranch) return undefined;
+  return failed ? 'failed' : 'checking';
+}
+
+const CHECK_FAILED_NOTE: DraftNote = { text: "Couldn't check whether this branch already has a merge request" };
+
+/** Create's tooltip while the branch's reviews are read: Create still runs, and waits for that read before asking. */
+const CHECKING_TIP = 'Checking for an existing merge request…';
 
 /** What the dialog holds: the branch picked and, once read, its comment and parent; what the user picked and typed. */
 export interface MergeRequestFormInput {
@@ -118,29 +142,33 @@ export interface MergeRequestFormInput {
   typed?: string;
   /** The source's reviews, once read. */
   reviewsOfBranch?: readonly CodeReviewSummary[];
+  /** How their read goes while they aren't in hand; none with no branch to read. */
+  reviewsCheck?: ReviewsCheck;
 }
 
 /** What the dialog shows from what it holds: its fields, the branch's request into that destination, why Create waits. */
 export interface MergeRequestForm {
   destination: string;
   title: string;
-  existing?: ExistingRequest;
-  note?: ExistingRequestNote;
-  /** Why Create can't run yet (its tooltip); none once it can. */
+  note?: DraftNote;
+  /** Why Create can't run yet; none once it can. */
   problem?: string;
+  /** Create's tooltip: its problem, else that the check for an existing request runs. */
+  tip?: string;
 }
 
 /**
  * The dialog's fields: Into and the title follow From until the user picks or types one (a title typed and cleared
  * stays empty); an existing request is known, and blocks Create, only once the branch's reviews are read.
  */
-export function mergeRequestForm({ source, sourceBranch, picked, typed, reviewsOfBranch }: MergeRequestFormInput): MergeRequestForm {
+export function mergeRequestForm({ source, sourceBranch, picked, typed, reviewsOfBranch, reviewsCheck }: MergeRequestFormInput): MergeRequestForm {
   const destination = picked ?? defaultDestinationOf(source, sourceBranch?.parent) ?? '';
   const title = typed ?? defaultTitleOf(source, sourceBranch?.comment);
   const existing = reviewsOfBranch && existingRequestOf(reviewsOfBranch, destination);
-  const note = existing && existingRequestNote(existing);
+  const note = existing ? existingRequestNote(existing) : reviewsCheck === 'failed' ? CHECK_FAILED_NOTE : undefined;
   const problem = draftProblem({ source, sourceParent: sourceBranch?.parent, destination, title }) ?? note?.blocks;
-  return { destination, title, existing, note, problem };
+  const tip = problem ?? (reviewsCheck === 'checking' ? CHECKING_TIP : undefined);
+  return { destination, title, note, problem, tip };
 }
 
 /** Whether a request the branch has stops another: one still to merge into the same destination. */

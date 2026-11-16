@@ -41,6 +41,32 @@
   color: var(--accent-contrast);
 }
 
+/* An item that explains itself (`Action.description`): two lines, its icon beside the label's. */
+.item:has(.described) {
+  align-items: flex-start;
+  height: auto;
+  padding-block: 5px;
+}
+
+.item:has(.described) .icon {
+  margin-top: 2px;
+}
+
+.described {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+/* Wraps rather than cuts: it says what choosing the item means. Dimmed in the item's own color, highlighted or not. */
+.description {
+  opacity: 0.7;
+  font-size: var(--text-xs);
+  text-wrap: pretty;
+}
+
 .item[data-disabled] {
   opacity: 0.4;
 }
