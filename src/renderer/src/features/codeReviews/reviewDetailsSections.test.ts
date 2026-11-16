@@ -15,7 +15,7 @@ function review(target: CodeReviewTarget, state?: MergeRequestState): CodeReview
 describe('reviewDetailsSections', () => {
   it("shows an Open merge request's review standing, its reviewers and its branch's attributes", () => {
     expect(reviewDetailsSections(review(ON_TASK, 'Open'))).toEqual({
-      review: { tone: 'passed', status: 'Reviewed', title: 'Changes reviewed', detail: '1 approving review' },
+      review: { tone: 'passed', title: 'Changes reviewed', detail: '1 approving review' },
       branchAttributes: 'br:/main/task',
     });
   });

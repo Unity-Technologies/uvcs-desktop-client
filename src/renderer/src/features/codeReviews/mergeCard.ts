@@ -2,6 +2,8 @@ import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
 import { branchLabel } from '../../lib/branchLabels';
+import { verdictOfSections } from './mergeVerdict';
+import { reviewSectionOf } from './reviewSection';
 import { pluralize } from '../../lib/text';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { openThreads, threadsOf } from './conversation/reviewThreads';
@@ -36,11 +38,6 @@ export interface MergeCardSection {
   tone: MergeCardTone;
   /** The state's glyph in its color, instead of the tone's disc: a section that is the state itself. */
   state?: MergeRequestState;
-  /**
-   * The review's section: its status's icon in its color before the detail ("👍 1 approving review"), as the branch's
-   * chip shows the review (`REVIEW_STATUS_ICONS`), while the disc says whether it holds the merge back.
-   */
-  status?: CodeReviewStatus;
   title: string;
   detail?: string;
   /** Lines under the detail: what's still open on the review. */
@@ -108,25 +105,6 @@ export function mergeCardOf(input: MergeCardInput): MergeCard {
 }
 
 /**
- * Where the review stands, as the official clients word it, from the reviewers the review was read with: each counts
- * once, a group as one reviewer. A request with no reviewer can't be approved, so it asks for one.
- */
-export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: CodeReviewStatus): MergeCardSection {
-  if (reviewers.length === 0) {
-    return { id: 'review', tone: 'pending', title: 'Review required', detail: 'At least 1 approving review is required', action: { kind: 'addReviewers', label: 'Add reviewers' } };
-  }
-  const count = (each: CodeReviewStatus): number => reviewers.filter((reviewer) => reviewer.status === each).length;
-  switch (status) {
-    case 'Reviewed':
-      return { id: 'review', tone: 'passed', status, title: 'Changes reviewed', detail: pluralize(count('Reviewed'), 'approving review') };
-    case 'Rework required':
-      return { id: 'review', tone: 'failed', status, title: 'Changes required', detail: `${pluralize(count('Rework required'), 'review')} requesting changes` };
-    case 'Under review':
-      return { id: 'review', tone: 'pending', status, title: 'Changes under review', detail: pluralize(count('Under review'), 'pending review') };
-  }
-}
-
-/**
  * Whether the request merges cleanly into its destination: Check before it's asked, quiet while the server calculates
  * the merge, passed with no conflict. Its file and directory conflicts are counted as the merge page groups them, with
  * **Resolve…**, its merge page: pending when they're only files, as the merge page may merge some automatically (it
@@ -183,7 +161,7 @@ export function openItemsLine({ changeRequests, questions }: OpenItems): string 
  * (unfinished review, conflicts) holds it back. It never blocks a merge: the server's merge rules decide.
  */
 export function mergeReadiness(sections: readonly MergeCardSection[]): boolean {
-  return sections.some((section) => section.tone === 'passed') && sections.every((section) => section.tone === 'passed' || section.tone === 'neutral');
+  return verdictOfSections(sections) === 'ready';
 }
 
 function openReviewSection(input: MergeCardInput): MergeCardSection {

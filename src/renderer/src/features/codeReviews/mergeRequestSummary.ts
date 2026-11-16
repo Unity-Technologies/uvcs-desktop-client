@@ -1,6 +1,7 @@
 import type { MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
-import { reviewSectionOf, type MergeCardSection } from './mergeCard';
+import type { MergeCardSection } from './mergeCard';
+import { reviewSectionOf } from './reviewSection';
 import type { MergeRequestReview } from './mergeRequestState';
 import { mergeVerbOf } from './reviewHeadline';
 
@@ -18,7 +19,7 @@ export interface MergeRequestSummary {
   verb: string;
   destination: string;
   /** Where its review stands, in the merge card's words (`reviewSectionOf`), with nothing to do from here. */
-  review?: Pick<MergeCardSection, 'tone' | 'status' | 'title' | 'detail'>;
+  review?: Pick<MergeCardSection, 'tone' | 'title' | 'detail'>;
 }
 
 export function mergeRequestSummaryOf(request: MergeRequestReview): MergeRequestSummary {
@@ -44,5 +45,5 @@ function showsReview({ mergeRequest, status }: MergeRequestReview): boolean {
 
 function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<MergeRequestSummary['review']> {
   const section = reviewSectionOf(reviewers, status);
-  return { tone: section.tone, ...(section.status && { status: section.status }), title: section.title, ...(section.detail && { detail: section.detail }) };
+  return { tone: section.tone, title: section.title, ...(section.detail && { detail: section.detail }) };
 }
