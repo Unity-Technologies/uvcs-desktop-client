@@ -10,7 +10,7 @@ import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import { DetailsEmpty, DetailsSection } from '../../ui/DetailsSection';
-import { AttributeChips } from '../attributes/AttributeChips';
+import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
@@ -90,11 +90,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       <DetailsSection title="Reviewers">
         <ReviewerList reviewers={review.reviewers} />
       </DetailsSection>
-      {sections.branchAttributes && (
-        <DetailsSection title="Branch attributes">
-          <AttributeChips key={sections.branchAttributes} objectSpec={sections.branchAttributes} />
-        </DetailsSection>
-      )}
+      {sections.branchAttributes && <AttributesDetailsSection title="Branch attributes" objectSpec={sections.branchAttributes} />}
     </DetailsPanel>
   );
 }
