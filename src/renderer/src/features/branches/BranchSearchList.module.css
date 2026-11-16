@@ -111,6 +111,16 @@
   line-height: 15px;
 }
 
+/* The row's end: its merge request's pill, right aligned in a column of its own, over the date. */
+.side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+}
+
 .date {
   flex: none;
   color: var(--text-tertiary);

@@ -1,16 +1,13 @@
-import * as Popover from '@radix-ui/react-popover';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MouseEvent, ReactNode } from 'react';
-import { useHoverCard } from '../../lib/useHoverCard';
 import { openReview } from './codeReviewOperations';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
-import type { MergeRequestReview } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
-import { MergeRequestSummaryCard } from './MergeRequestSummaryCard';
+import { MergeRequestHoverCard } from './MergeRequestHoverCard';
 import { reviewChipOf, type ReviewChip } from './reviewChip';
 import { MergeVerdictIcon } from './MergeVerdictIcon';
 import styles from './CodeReviewStatusBadge.module.css';
-import cardStyles from './CodeReviewChip.module.css';
+import chipStyles from './CodeReviewChip.module.css';
 
 /**
  * A small chip for a row whose branch has a code review or a merge request (`reviewChipOf`): a merge request's state,
@@ -54,40 +51,11 @@ function ChipGlyphs({ chip }: { chip: ReviewChip }) {
     <>
       {chip.state && <MergeRequestStateBadge state={chip.state} compact iconOnly={!chip.stateText} />}
       {chip.verdict && (
-        <span className={cardStyles.status}>
+        <span className={chipStyles.status}>
           <MergeVerdictIcon verdict={chip.verdict} />
         </span>
       )}
       {chip.status && <CodeReviewStatusBadge status={chip.status} compact iconOnly={!chip.statusText} />}
     </>
-  );
-}
-
-/** A merge request's summary, shown while its chip is hovered; the chip's click still opens the request. */
-function MergeRequestHoverCard({ request, trigger }: { request: MergeRequestReview; trigger: (hoverProps: object) => ReactNode }) {
-  const card = useHoverCard();
-  return (
-    <Popover.Root open={card.open} onOpenChange={(next) => !next && card.close()}>
-      <Popover.Trigger asChild>{trigger(card.hoverProps)}</Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className={cardStyles.popover}
-          align="start"
-          sideOffset={6}
-          {...card.hoverProps}
-          onOpenAutoFocus={(event) => event.preventDefault()}
-          onCloseAutoFocus={(event) => event.preventDefault()}
-        >
-          <MergeRequestSummaryCard
-            request={request}
-            framed
-            onOpen={() => {
-              card.close();
-              openReview(request);
-            }}
-          />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   );
 }

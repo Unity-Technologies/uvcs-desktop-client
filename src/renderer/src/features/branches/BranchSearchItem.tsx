@@ -1,7 +1,7 @@
 import { commentText } from '../../lib/comments/commentText';
 import { CommentLine } from '../../components/comments/CommentLine';
 import { GitBranch } from 'lucide-react';
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { PathLabel } from '../../components/PathLabel';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
@@ -12,11 +12,13 @@ interface BranchSearchItemProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   branch: Branch;
   current: boolean;
   highlighted: boolean;
+  /** Above the date: its merge request's state (`BranchSearchList`'s `mergeRequestsOf`). */
+  badge?: ReactNode;
 }
 
-/** A branch in the list: its name over the first line of its comment, and when it was created. */
+/** A branch in the list: its name over the first line of its comment; at its end, its merge request where the list shows them, over when it was created. */
 export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemProps>(function BranchSearchItem(
-  { branch, current, highlighted, ...rest },
+  { branch, current, highlighted, badge, ...rest },
   ref,
 ) {
   const comment = branch.comment.trim();
@@ -38,8 +40,11 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
         )}
       </span>
       {current && <WorkspaceMark on="branch" />}
-      <span className={styles.date} data-tip={`Created ${formatDateTime(branch.date)}`}>
-        {formatRelativeDate(branch.date)}
+      <span className={styles.side}>
+        {badge}
+        <span className={styles.date} data-tip={`Created ${formatDateTime(branch.date)}`}>
+          {formatRelativeDate(branch.date)}
+        </span>
       </span>
     </button>
   );

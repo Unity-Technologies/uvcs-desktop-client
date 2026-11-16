@@ -70,5 +70,5 @@ function BranchList({ place, currentBranch, onPick }: { place: Place; currentBra
   const branchesQuery = useBranches();
   const recentGuids = useRecentBranchGuids(workspacePathOf(place));
   const groups = useMemo(() => branchSwitcherGroups(branchesQuery.data ?? [], recentGuids), [branchesQuery.data, recentGuids]);
-  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} />;
+  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} mergeRequestsOf={place} />;
 }
