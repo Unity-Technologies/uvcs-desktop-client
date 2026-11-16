@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
-import { createdAs, defaultDestinationOf, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
+import { createdAs, defaultDestinationOf, sourceGroups, defaultTitleOf, draftProblem, existingRequestNote, existingRequestOf, type MergeRequestDraft } from './mergeRequestDraft';
 
 function review(id: number, mergeRequest?: MergeRequestInfo): CodeReviewSummary {
   return {
@@ -109,17 +110,17 @@ describe('existingRequestOf', () => {
 });
 
 describe('existingRequestNote', () => {
-  it('names the active request, to open it', () => {
+  it('names the active request, to open it, and why Create waits', () => {
     expect(existingRequestNote({ kind: 'active', review: { ...review(12, { state: 'Open', destination: '/main' }), title: 'Add login' } })).toEqual({
       text: 'This branch already has a merge request into /main:',
       request: '#12 Add login',
-      blocks: true,
+      blocks: 'This branch already has a merge request into /main',
     });
   });
 
   it('says how an earlier one ended, without blocking', () => {
-    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Merged', destination: '/main' }) })).toEqual({ text: 'Merged before as #9', blocks: false });
-    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Closed', destination: '/main' }) })).toEqual({ text: 'Closed before as #9', blocks: false });
+    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Merged', destination: '/main' }) })).toEqual({ text: 'Merged before as #9' });
+    expect(existingRequestNote({ kind: 'earlier', review: review(9, { state: 'Closed', destination: '/main' }) })).toEqual({ text: 'Closed before as #9' });
   });
 });
 
@@ -131,5 +132,22 @@ describe('createdAs', () => {
   // A server older than merge requests makes a plain code review of what `cm mergerequest create` asks, saying nothing.
   it('is a code review when the server made a plain one', () => {
     expect(createdAs(review(40))).toBe('codeReview');
+  });
+});
+
+describe('sourceGroups', () => {
+  const branch = (name: string, date: string, parent = ''): Branch => ({ id: 1, name, parent, comment: '', owner: 'me', date, headChangeset: 1, guid: name, repository: 'repo@local' });
+
+  it('offers the branches that can merge somewhere, newest first: nested ones, and top-level ones with a parent', () => {
+    const branches = [
+      branch('/main', '2010-01-01T00:00:00+01:00'),
+      branch('/main/older', '2026-08-20T10:00:00+02:00', '/main'),
+      branch('/release', '2026-09-01T10:00:00+02:00', '/main'),
+      branch('/main/release/task', '2026-09-10T10:00:00+02:00', '/main/release'),
+      branch('/orphan', '2026-09-20T10:00:00+02:00'),
+    ];
+    expect(sourceGroups(branches).map((group) => [group.title, group.branches.map((each) => each.name)])).toEqual([
+      ['Branches', ['/main/release/task', '/release', '/main/older']],
+    ]);
   });
 });
