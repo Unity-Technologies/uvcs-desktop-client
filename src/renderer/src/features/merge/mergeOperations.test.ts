@@ -160,7 +160,7 @@ describe('completing a merge', () => {
   });
 
   describe('finishing a task', () => {
-    const task: TaskMerge = { branch: { id: 7, name: '/main/task001', parent: '/main', comment: '' }, choices: { markReviewed: true, hideBranch: true } };
+    const task: TaskMerge = { branch: { name: '/main/task001', comment: '' }, destination: '/main', choices: { markReviewed: true, hideBranch: true } };
     const review = codeReviewSummary({ id: 12, title: 'Task 001', owner: 'ana', reviewers: [{ name: 'bob', status: 'Under review' }] });
     const finishTask: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
     const writes = () => fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1, 3)]);
@@ -168,6 +168,7 @@ describe('completing a merge', () => {
     beforeEach(() => {
       fakeApi.answer('codeReviews.setOwnStatus', () => undefined);
       fakeApi.answer('branches.setHidden', () => undefined);
+      fakeApi.answer('codeReviews.recordMerged', () => undefined);
       useFinishedTasksStore.setState({ merged: {} });
     });
 
@@ -175,7 +176,7 @@ describe('completing a merge', () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
       navigation.openPage({ kind: 'merge', request: finishTask, task });
 
-      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob' });
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [] });
 
       expect(writes()).toEqual([
         ['merge.run', finishTask, resolutions],
@@ -190,7 +191,7 @@ describe('completing a merge', () => {
     it('leaves the review and the branch alone when not picked, still remembering the task', async () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
 
-      await completeMerge(ws, finishTask, resolutions, { task: { ...task, choices: { markReviewed: false, hideBranch: false } }, review, user: 'bob' });
+      await completeMerge(ws, finishTask, resolutions, { task: { ...task, choices: { markReviewed: false, hideBranch: false } }, review, user: 'bob', mergeRequests: [] });
 
       expect(writes().map(([method]) => method)).toEqual(['merge.run']);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: false });
@@ -200,7 +201,7 @@ describe('completing a merge', () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
       const refreshed = watchRefreshes(ws);
 
-      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob' });
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [] });
 
       expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'codeReviews', 'history', 'incoming', 'locks', 'workingObjectComment']);
     });
@@ -211,17 +212,60 @@ describe('completing a merge', () => {
         throw new Error('No permission');
       });
 
-      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob' });
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [] });
 
       expect(shownToasts().filter(({ kind }) => kind === 'error').map(({ title }) => title)).toEqual(["Couldn't mark your review as reviewed"]);
       expect(writes().map(([method]) => method)).toEqual(['merge.run', 'codeReviews.setOwnStatus', 'branches.setHidden']);
+    });
+
+    it('records its merge request Merged in the new changeset first, then marks the review and hides the branch', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [12] });
+
+      expect(writes()).toEqual([
+        ['merge.run', finishTask, resolutions],
+        ['codeReviews.recordMerged', 12, 42],
+        ['codeReviews.setOwnStatus', 12, 'Reviewed'],
+        ['branches.setHidden', ['/main/task001'], true],
+      ]);
+      expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
+    });
+
+    it('records nothing when the merge made no changeset', async () => {
+      fakeApi.answer('merge.run', () => ({}));
+
+      await completeMerge(ws, finishTask, resolutions, { task: { ...task, choices: { markReviewed: false, hideBranch: false } }, review, user: 'bob', mergeRequests: [12] });
+
+      expect(writes().map(([method]) => method)).toEqual(['merge.run']);
+    });
+
+    it("still finishes when recording the merge request fails, undoing nothing and saying which one wasn't marked", async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+      fakeApi.answer('codeReviews.recordMerged', () => {
+        throw new Error('No permission');
+      });
+
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [12] });
+
+      expect(shownToasts().filter(({ kind }) => kind === 'error').map(({ title }) => title)).toEqual(["Merged, but couldn't mark merge request 12 as merged"]);
+      expect(writes().map(([method]) => method)).toEqual(['merge.run', 'codeReviews.recordMerged', 'codeReviews.setOwnStatus', 'branches.setHidden']);
+      expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
+    });
+
+    it('records the merge request only once the merge that finishes it lands, when the destination moved', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42, destinationMoved: true }));
+
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [12] });
+
+      expect(writes().map(([method]) => method)).toEqual(['merge.run']);
     });
 
     it('leaves the task as it is until the merge that finishes it, when the destination moved, which carries the choices', async () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 42, destinationMoved: true }));
       navigation.openPage({ kind: 'merge', request: finishTask, task });
 
-      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob' });
+      await completeMerge(ws, finishTask, resolutions, { task, review, user: 'bob', mergeRequests: [] });
 
       expect(writes().map(([method]) => method)).toEqual(['merge.run']);
       expect(useFinishedTasksStore.getState().merged[ws]).toBeUndefined();
@@ -232,7 +276,7 @@ describe('completing a merge', () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 43 }));
       const followUp: MergeOperation = { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' };
 
-      await completeMerge(ws, followUp, resolutions, { task, review, user: 'bob' });
+      await completeMerge(ws, followUp, resolutions, { task, review, user: 'bob', mergeRequests: [] });
 
       expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task001 into main (cs:43)', action: 'Show in Branch Explorer' }]);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 43, hidden: true });
