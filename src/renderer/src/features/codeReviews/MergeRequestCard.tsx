@@ -16,6 +16,7 @@ import { switchToBranch } from '../branches/branchOperations';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 import { branchQuery } from '../branches/useBranches';
 import { chooseReviewers } from './codeReviewOperations';
+import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, type MergeCardAction, type MergeCardSection, type MergeCardTone, type OpenItems } from './mergeCard';
 import { setMergedBranchHidden, setMergeRequestState } from './mergeRequestOperations';
 import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
@@ -49,6 +50,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
     mergedChangeset,
     sourceBranch,
     workspaceBranch: branchWorkedOn(workspace?.selector),
+    merge: mergeOfRequest(review),
     inWorkspace: place.kind === 'workspace',
   });
 
@@ -58,7 +60,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
         void setMergeRequestState(place, review, action.move);
         return;
       case 'merge':
-        openMergeRequestMerge({ id: review.id, title: review.title, mergeRequest }, action.source);
+        openMergeRequestMerge(action.merge.request, action.merge.source);
         return;
       case 'addReviewers':
         void chooseReviewers(place, review);

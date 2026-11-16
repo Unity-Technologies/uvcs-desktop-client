@@ -1,7 +1,7 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
-import { mergeIntoLabel } from './mergeInto';
+import type { MergeInto } from './mergeInto';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -13,7 +13,7 @@ export type MergeCardTone = 'passed' | 'failed' | 'pending' | 'neutral';
 /** What a button of the card does; `MergeRequestCard` runs it. Disabled when it says why. */
 export type MergeCardAction = { label: string; primary?: boolean; disabledReason?: string } & (
   | { kind: 'move'; move: MergeRequestMove }
-  | { kind: 'merge'; source: string }
+  | { kind: 'merge'; merge: MergeInto }
   | { kind: 'addReviewers' }
   | { kind: 'setBranchHidden'; branch: string; hidden: boolean }
   | { kind: 'switchTo'; branch: string }
@@ -61,6 +61,8 @@ export interface MergeCardInput {
   sourceBranch?: Pick<Branch, 'isHidden'> | null;
   /** The branch the window's workspace is on; none without a workspace, or on no branch. */
   workspaceBranch?: string;
+  /** Its merge, when it can be merged (`mergeOfRequest`, the menus' rule too). */
+  merge?: MergeInto;
   /** Whether the window has a workspace: the merge page runs in one. */
   inWorkspace: boolean;
 }
@@ -150,12 +152,12 @@ function mergedSection({ mergeRequest, source, mergedChangeset, sourceBranch, wo
 
 /**
  * Merge into the destination, on the merge page: primary once ready, else quiet, never disabled for the review (the
- * server's merge rules decide). Disabled only where there's no merge page, a window with no workspace. None when the
- * branch's name couldn't be read.
+ * server's merge rules decide). Disabled only where there's no merge page, a window with no workspace. None when it
+ * can't be merged (`mergeOfRequest`: its branch's name couldn't be read).
  */
-function mergeFooter({ mergeRequest, source, inWorkspace }: MergeCardInput, ready: boolean): Pick<MergeCard, 'footer'> {
-  if (source === undefined) return {};
-  const footer: MergeCardAction = { kind: 'merge', source, label: mergeIntoLabel(mergeRequest.destination), primary: ready };
+function mergeFooter({ merge, inWorkspace }: MergeCardInput, ready: boolean): Pick<MergeCard, 'footer'> {
+  if (!merge) return {};
+  const footer: MergeCardAction = { kind: 'merge', merge, label: merge.label, primary: ready };
   return { footer: inWorkspace ? footer : { ...footer, disabledReason: 'Open a workspace of this repository to merge' } };
 }
 
