@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { FinishedTask } from './finishedTask';
-import { mergedCheckDestinationOf, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
+import { mergedCheckDestinationOf, readsOpenItems, taskNextStepOf, taskNextStepView, type TaskNextStep, type TaskNextStepInput } from './taskNextStep';
 
 const task = { name: '/main/release/task', parent: '/main/release' };
 
@@ -135,7 +135,7 @@ describe('taskNextStepView, its line and buttons', () => {
     expect(view([request(12, 'Draft', { title: 'Login screen\nwith details' })])).toEqual({
       line: { reviewId: 12, state: 'Draft', number: '#12', title: 'Login screen', status: 'draft', tip: 'Draft merge request into /main' },
       actions: [
-        { kind: 'readyForReview', label: 'Ready for review', primary: true },
+        { kind: 'readyForReview', label: 'Ready for review', primary: true, move: { to: 'Open', word: 'readyForReview' } },
         { kind: 'open', label: 'Open', primary: false },
       ],
       mergesTask: false,
@@ -172,7 +172,9 @@ describe('taskNextStepView, its line and buttons', () => {
 
   it('under a list, the single most useful action, quiet and named whole', () => {
     expect(view([], true)).toEqual({ actions: [{ kind: 'create', label: 'Create merge request', primary: false }], mergesTask: false });
-    expect(view([request(12, 'Draft')], true).actions).toEqual([{ kind: 'readyForReview', label: 'Mark merge request #12 ready for review', primary: false }]);
+    expect(view([request(12, 'Draft')], true).actions).toEqual([
+      { kind: 'readyForReview', label: 'Mark merge request #12 ready for review', primary: false, move: { to: 'Open', word: 'readyForReview' } },
+    ]);
     expect(view([openRequest(12, 'Under review')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request #12', primary: false }]);
     expect(view([openRequest(12, 'Rework required')], true).actions).toEqual([{ kind: 'open', label: 'Open merge request #12', primary: false }]);
     expect(view([openRequest(12, 'Reviewed')], true).actions.map(({ label, primary }) => ({ label, primary }))).toEqual([{ label: 'Merge into main…', primary: false }]);
@@ -181,5 +183,17 @@ describe('taskNextStepView, its line and buttons', () => {
 
   it('under a list with the reviews unread: the merge into the parent alone', () => {
     expect(taskNextStepView(taskNextStepOf(input(undefined)), { quiet: true })).toEqual({ actions: [], mergesTask: true });
+  });
+});
+
+describe('readsOpenItems', () => {
+  it('reads the conversation of a request asking for rework with something open: the one a check-in reads too', () => {
+    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Rework required', { openIssueCount: 2 })])))).toBe(true);
+  });
+
+  it('reads nothing otherwise', () => {
+    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Rework required')])))).toBe(false);
+    expect(readsOpenItems(taskNextStepOf(input([openRequest(12, 'Under review', { openIssueCount: 2 })])))).toBe(false);
+    expect(readsOpenItems(taskNextStepOf(input([])))).toBe(false);
   });
 });
