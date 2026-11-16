@@ -23,6 +23,8 @@ export interface ReviewEventRow {
   text: string;
   /** A status change's comment, when it says something. */
   comment?: string;
+  /** A merge request's move: the state it moved to, whose color its icon takes (`--merge-request-<state>`). */
+  state?: MergeRequestState;
   /** The changeset a merge request was merged in, named after the text as a chip ("merged this into /main in cs:6"). */
   changeset?: number;
 }
@@ -44,7 +46,7 @@ export function reviewEventRow(change: ShownChange, context: ReviewEventContext 
     case 'titleChanged':
       return { icon: 'renamed', text };
     case 'mergeRequestState':
-      return { icon: change.to, text, ...(change.to === 'Merged' && change.changesetId !== undefined && { changeset: change.changesetId }) };
+      return { icon: change.to, state: change.to, text, ...(change.to === 'Merged' && change.changesetId !== undefined && { changeset: change.changesetId }) };
     default:
       return { icon: change.kind, text };
   }

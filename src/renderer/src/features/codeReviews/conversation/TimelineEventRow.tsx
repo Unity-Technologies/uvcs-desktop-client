@@ -1,6 +1,7 @@
 import { Eye, EyeOff, GitBranch, Pencil, RotateCcw, UserMinus, UserPlus, type LucideIcon } from 'lucide-react';
 import { FoldedComment } from '../../../components/FoldedComment';
 import { ReferenceChip } from '../../../components/comments/ReferenceChip';
+import { classNames } from '../../../lib/classNames';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
@@ -8,6 +9,7 @@ import { MERGE_REQUEST_STATE_ICONS } from '../mergeRequestState';
 import { REVIEW_STATUS_ICONS } from '../reviewStatusIcons';
 import { reviewEventRow, type ReviewEventContext, type ReviewEventIcon } from './reviewEventText';
 import type { ShownEvent } from './reviewThreads';
+import stateColors from '../mergeRequestStateColors.module.css';
 import styles from './ReviewConversation.module.css';
 
 /** How many lines of what a reviewer said with their status show before "Show more". */
@@ -34,7 +36,7 @@ export function TimelineEventRow({ event, context }: { event: ShownEvent; contex
   const Icon = ICONS[row.icon];
   return (
     <div className={styles.event} data-icon={row.icon}>
-      <span className={styles.eventIcon}>
+      <span className={classNames(styles.eventIcon, row.state && stateColors.stateColor)} data-state={row.state}>
         <Icon size={14} aria-hidden />
       </span>
       <div className={styles.eventBody}>
