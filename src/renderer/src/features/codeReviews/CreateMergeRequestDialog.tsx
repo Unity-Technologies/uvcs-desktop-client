@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
+import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
@@ -22,12 +23,13 @@ import { destinationGroups } from './destinationChoices';
 import { createMergeRequest } from './mergeRequestCreation';
 import { blocksCreate, existingRequestOf, mergeRequestForm, reviewsCheckOf, sourceGroups } from './mergeRequestDraft';
 import { DraftNoteLine } from './DraftNoteLine';
-import { NO_REVIEWERS, reviewersToAsk } from './pickedReviewers';
+import { reviewersToAsk, startingReviewers } from './pickedReviewers';
+import type { ReviewerPick } from './reviewerPick';
 import { ReviewersField } from './ReviewersField';
 import styles from './CreateMergeRequestDialog.module.css';
 
 /** A branch as the dialog starts on it: a menu's holds its comment and parent, so the dialog needn't read it. */
-export type MergeRequestSource = string | Pick<Branch, 'name' | 'comment' | 'parent'>;
+export type MergeRequestSource = string | Pick<Branch, 'name' | 'comment' | 'parent' | 'owner'>;
 
 /**
  * Opens the "new merge request" dialog (docs/features/merge-requests.md "Creating one"), on `source` when one is given
@@ -37,10 +39,10 @@ export function openCreateMergeRequestDialog(place: Place, source?: MergeRequest
   openDialog((close) => <CreateMergeRequestDialog place={place} initialSource={sourceOf(source)} onClose={close} onCreated={onCreated} />);
 }
 
-/** The branch the dialog is on: its name, and its comment and parent where known (a pick from a branch list). */
+/** The branch the dialog is on: its name, and its comment, parent and owner where known (a pick from a branch list). */
 interface PickedSource {
   name: string;
-  branch?: Pick<Branch, 'comment' | 'parent'>;
+  branch?: Pick<Branch, 'comment' | 'parent' | 'owner'>;
 }
 
 function sourceOf(source: MergeRequestSource | undefined): PickedSource {
@@ -56,11 +58,13 @@ interface CreateMergeRequestDialogProps {
 }
 
 function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: CreateMergeRequestDialogProps) {
+  const you = usePlaceUser();
   const [source, setSource] = useState(initialSource);
   const [picked, setPicked] = useState<string>();
   const [typed, setTyped] = useState<string>();
   const [description, setDescription] = useState('');
-  const [reviewers, setReviewers] = useState(NO_REVIEWERS);
+  // Untouched, the reviewers follow the branch picked: you, on someone else's (`startingReviewers`).
+  const [chosenReviewers, setReviewers] = useState<ReviewerPick | null>(null);
   const [creating, setCreating] = useState(false);
 
   // A branch named alone (the workspace's) is read for its comment and parent: two light `cm find branch`, often read
@@ -74,6 +78,7 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
   const reviewsCheck = reviewsCheckOf(source.name, reviewsOfBranch, settledSource === source.name && reviewsRead.isError);
 
   const sourceBranch = source.branch ?? readBranch ?? undefined;
+  const reviewers = chosenReviewers ?? startingReviewers(you, sourceBranch?.owner);
   const { destination, title, note, problem, tip } = mergeRequestForm({ source: source.name, sourceBranch, picked, typed, reviewsOfBranch, reviewsCheck });
 
   const sourceChoices = useCallback((branches: Branch[]) => sourceGroups(branches), []);

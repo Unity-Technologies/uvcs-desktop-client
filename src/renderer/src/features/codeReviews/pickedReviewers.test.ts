@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { focusAfterRemoving, NO_REVIEWERS, pickedReviewersOf, reviewersToAsk } from './pickedReviewers';
-import { togglePicked } from './reviewerPick';
+import { focusAfterRemoving, NO_REVIEWERS, pickAsPickerOpens, pickedReviewersOf, reviewersToAsk, startingReviewers } from './pickedReviewers';
+import { pickOffered, togglePicked } from './reviewerPick';
 
 describe('pickedReviewersOf', () => {
   it('shows nobody, no Remove all, and the hint that reviewers are optional, before anyone is picked', () => {
@@ -12,12 +12,16 @@ describe('pickedReviewersOf', () => {
     const developers = { name: 'Developers', kind: 'group' } as const;
     expect(pickedReviewersOf(togglePicked(togglePicked(NO_REVIEWERS, jane), developers))).toEqual({
       chips: [
-        { member: jane, label: 'Jane Doe', group: false },
+        { member: jane, label: 'Jane Doe', group: false, tip: 'jane.doe@acme.com' },
         { member: developers, label: 'Developers', group: true },
       ],
       removeAll: true,
       hint: false,
     });
+  });
+
+  it("tells a user's email under the pointer only when the chip shows another name", () => {
+    expect(pickedReviewersOf(togglePicked(NO_REVIEWERS, { name: 'ana', kind: 'user' })).chips[0].tip).toBeUndefined();
   });
 
   it('offers Remove all once several are picked', () => {
@@ -34,9 +38,9 @@ describe('focusAfterRemoving', () => {
     expect(focusAfterRemoving(1, 3)).toBe(1);
   });
 
-  it('moves to Add once the last chip, or the only one, is removed', () => {
-    expect(focusAfterRemoving(2, 3)).toBe('add');
-    expect(focusAfterRemoving(0, 1)).toBe('add');
+  it('moves to the button that opens the picker once the last chip, or the only one, is removed', () => {
+    expect(focusAfterRemoving(2, 3)).toBe('picker');
+    expect(focusAfterRemoving(0, 1)).toBe('picker');
   });
 });
 
@@ -53,5 +57,44 @@ describe('reviewersToAsk', () => {
   it('asks nobody once a reviewer picked is taken off again', () => {
     const ana = { name: 'ana', kind: 'user' } as const;
     expect(reviewersToAsk(togglePicked(togglePicked(NO_REVIEWERS, ana), ana))).toEqual([]);
+  });
+});
+
+// The list doesn't move under the pointer: who was picked as it opened leads it, and checking someone else leaves them
+// where they are.
+describe('pickAsPickerOpens', () => {
+  const members = { users: ['ana', 'bob', 'carol'], groups: ['Developers'] };
+
+  it('lists those already picked first, checked', () => {
+    const pick = pickAsPickerOpens(togglePicked(NO_REVIEWERS, { name: 'carol', kind: 'user' }));
+    expect(pickOffered(pick, members)[0]).toBe('carol');
+    expect(pick.picked).toEqual([{ name: 'carol', kind: 'user' }]);
+  });
+
+  it('keeps the order while the user checks and unchecks', () => {
+    const opened = pickAsPickerOpens(togglePicked(NO_REVIEWERS, { name: 'carol', kind: 'user' }));
+    const before = pickOffered(opened, members);
+    const checked = togglePicked(togglePicked(opened, { name: 'ana', kind: 'user' }), { name: 'carol', kind: 'user' });
+    expect(pickOffered(checked, members)).toEqual(before);
+  });
+
+  it('asks the same reviewers it was given', () => {
+    const pick = togglePicked(NO_REVIEWERS, { name: 'QA', kind: 'group' });
+    expect(reviewersToAsk(pickAsPickerOpens(pick))).toEqual(reviewersToAsk(pick));
+  });
+});
+
+describe('startingReviewers', () => {
+  it("asks you when the branch is someone else's", () => {
+    expect(startingReviewers('ana@acme.com', 'bob@acme.com')).toEqual({ onOpen: [], picked: [{ name: 'ana@acme.com', kind: 'user' }] });
+  });
+
+  it('asks nobody on a branch of your own, whatever the case of the names', () => {
+    expect(startingReviewers('ana@acme.com', 'Ana@Acme.com')).toEqual(NO_REVIEWERS);
+  });
+
+  it('asks nobody while you or the owner are still read', () => {
+    expect(startingReviewers(undefined, 'bob@acme.com')).toEqual(NO_REVIEWERS);
+    expect(startingReviewers('ana@acme.com', undefined)).toEqual(NO_REVIEWERS);
   });
 });

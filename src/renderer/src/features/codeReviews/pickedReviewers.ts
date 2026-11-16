@@ -1,4 +1,5 @@
 import type { MemberRef } from '@shared/domain/member';
+import { sameUser } from '../../lib/userName';
 import { NO_GROUPS, reviewerLabel } from './reviewerGroups';
 import type { ReviewerPick } from './reviewerPick';
 
@@ -10,11 +11,23 @@ import type { ReviewerPick } from './reviewerPick';
 /** Nobody picked yet: a new review has no reviewers to start from. */
 export const NO_REVIEWERS: ReviewerPick = { onOpen: [], picked: [] };
 
+/**
+ * Who a new merge request asks as its dialog opens on a branch: you, when the branch is someone else's, since you are
+ * the one asking to merge their work and look at it before it does; nobody on a branch of your own. Nobody while
+ * either name is still read.
+ */
+export function startingReviewers(you: string | undefined, branchOwner: string | undefined): ReviewerPick {
+  if (!you || !branchOwner || sameUser(you, branchOwner)) return NO_REVIEWERS;
+  return { onOpen: [], picked: [{ name: you, kind: 'user' }] };
+}
+
 /** A reviewer picked, as its chip shows them; its × takes `member` off. */
 export interface ReviewerChip {
   member: MemberRef;
   label: string;
   group: boolean;
+  /** A user's name as the server knows them (often an email), when the label shows another; none for a group. */
+  tip?: string;
 }
 
 /**
@@ -28,16 +41,30 @@ export interface PickedReviewers {
 }
 
 export function pickedReviewersOf(pick: ReviewerPick): PickedReviewers {
-  const chips = pick.picked.map((member) => ({ member, label: reviewerLabel(member, NO_GROUPS), group: member.kind === 'group' }));
+  const chips = pick.picked.map((member) => chipOf(member));
   return { chips, removeAll: chips.length > 1, hint: chips.length === 0 };
 }
 
 /**
- * Where the keyboard goes once the chip at `index` of `count` is removed: the × of the chip that takes its place, or
- * Add when it was the last one.
+ * The pick as the picker opens: those already picked are the reviewers it opened with, so they lead its list, checked,
+ * and stay where they are while the user checks and unchecks, as on the review page (`pickOffered`).
  */
-export function focusAfterRemoving(index: number, count: number): number | 'add' {
-  return index < count - 1 ? index : 'add';
+export function pickAsPickerOpens(pick: ReviewerPick): ReviewerPick {
+  return { onOpen: pick.picked, picked: pick.picked };
+}
+
+function chipOf(member: MemberRef): ReviewerChip {
+  const label = reviewerLabel(member, NO_GROUPS);
+  const group = member.kind === 'group';
+  return group || sameUser(label, member.name) ? { member, label, group } : { member, label, group, tip: member.name };
+}
+
+/**
+ * Where the keyboard goes once the chip at `index` of `count` is removed: the × of the chip that takes its place, or
+ * the button that opens the picker when it was the last one.
+ */
+export function focusAfterRemoving(index: number, count: number): number | 'picker' {
+  return index < count - 1 ? index : 'picker';
 }
 
 /** The reviewers to ask as the review is created (`--users`, `--groups`). */
