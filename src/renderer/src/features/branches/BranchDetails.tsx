@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -17,6 +18,10 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
+import { openReview } from '../codeReviews/codeReviewOperations';
+import type { MergeRequestReview } from '../codeReviews/mergeRequestState';
+import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
+import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
 import { diffBranch, saveBranchComment } from './branchOperations';
 import { editsBranchComments } from './editsBranchComments';
@@ -28,9 +33,11 @@ interface BranchDetailsProps {
   links?: ObjectLinks;
   /** What the view knows about how it relates to the rest, e.g. its changesets in the graph. */
   relations?: Property[];
+  /** The review that stands for the branch (`reviewOfEachBranch`), from the view's chips: a merge request gets a section. */
+  review?: CodeReviewSummary;
 }
 
-export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
+export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [], review }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
@@ -78,6 +85,12 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
         ...relations,
       ]}
       changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
-    />
+    >
+      {review?.mergeRequest && (
+        <DetailsSection title="Merge request">
+          <MergeRequestSummaryCard request={review as MergeRequestReview} onOpen={() => openReview(review)} />
+        </DetailsSection>
+      )}
+    </DetailsPanel>
   );
 }

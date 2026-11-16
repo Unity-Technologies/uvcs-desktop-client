@@ -138,7 +138,7 @@ export function BranchesView() {
         onActivate={(row) => diffBranch(row.branch)}
         contextMenu={(selectedRows) => branchMenu(place, selectedRows.map((row) => row.branch), currentBranch)}
         noun="branch"
-        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} />}
+        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} review={reviews?.get(selected.id)} />}
       />
     </>
   );

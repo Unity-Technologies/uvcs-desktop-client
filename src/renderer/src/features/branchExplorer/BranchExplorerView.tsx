@@ -389,6 +389,7 @@ export function BranchExplorerView() {
               menuFor={menuFor}
               goToChangeset={goToChangeset}
               selectBranch={(name) => setSelection({ kind: 'branch', name })}
+              reviews={reviews ?? NO_REVIEWS}
             />
           }
         />
