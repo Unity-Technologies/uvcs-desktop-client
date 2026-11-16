@@ -54,6 +54,19 @@ function summary(rows: readonly DownloadRow[]): string[] {
 }
 
 describe('downloadTreeOf', () => {
+  it('lists each folder as Files does: folders and xlinks first, then files, each by name', () => {
+    const doc = new Map([
+      ['', [item('doc/drawings.vsd', 'binaryFile'), item('doc/guide-gui', 'directory'), item('doc/Lib', 'xlink'), item('doc/extensions', 'directory'), item('doc/a.md', 'file')]],
+    ]);
+    expect(downloadTreeOf(doc, new Map([['', []]])).items.get('')?.map((found) => found.path)).toEqual([
+      'doc/extensions',
+      'doc/guide-gui',
+      'doc/Lib',
+      'doc/a.md',
+      'doc/drawings.vsd',
+    ]);
+  });
+
   it('takes folders as folders and everything else, xlinks included, as items downloaded whole', () => {
     const tree = downloadTreeOf(listings, new Map([['', []]]));
     expect(tree.items.get('')).toEqual([

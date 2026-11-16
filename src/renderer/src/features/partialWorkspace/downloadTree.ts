@@ -4,7 +4,7 @@ import type { PartialRule, WorkspaceInfo } from '@shared/domain/workspace';
 import type { CheckState, CheckboxTone } from '../../ui/Checkbox';
 import { navigationTarget } from '../../lib/listNavigation';
 import { parentOf } from '../../lib/paths';
-import { ancestorsOf } from '../files/fileTreeRows';
+import { ancestorsOf, sortItems } from '../files/fileTreeRows';
 import { iconTypeOf } from '../files/xlinkItem';
 import { checkStateOf, isFolderRead, isLoaded, type DownloadItem, type DownloadTree, type DownloadedChoices } from './downloadSelection';
 
@@ -13,7 +13,8 @@ const ROOT = '';
 /**
  * The tree the dialog decides on, from the repository's listings and what the workspace has loaded, folder by folder.
  * An xlink, which `cm ls` may list as a folder with a target, is downloaded whole, like a file: its own repository's
- * folders aren't chosen here.
+ * folders aren't chosen here. Each folder lists its items as Files does (`sortItems`): folders and xlinks first, then
+ * files, by name.
  */
 export function downloadTreeOf(
   listings: ReadonlyMap<string, readonly TreeItem[]>,
@@ -23,7 +24,7 @@ export function downloadTreeOf(
   for (const [folder, children] of listings) {
     items.set(
       folder,
-      children.map((child) => {
+      sortItems(children).map((child) => {
         const iconType = iconTypeOf(child);
         return { path: child.path, isDirectory: iconType === 'directory', iconType };
       }),
