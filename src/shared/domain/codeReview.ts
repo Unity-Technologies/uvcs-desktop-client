@@ -91,7 +91,7 @@ export interface CodeReviewFilter {
   /** Only reviews whose title contains it. */
   text?: string;
   /**
-   * The newest ones up to this many; none reads every review the other fields keep, as the Code reviews view does
+   * The newest ones up to this many; none reads every review the other fields keep, as the Merge requests view does
    * (a large repository holds thousands: its time range bounds them).
    */
   limit?: number;

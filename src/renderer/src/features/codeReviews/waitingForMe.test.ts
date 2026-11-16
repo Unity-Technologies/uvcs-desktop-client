@@ -63,7 +63,7 @@ describe('how many reviews wait for the user', () => {
 });
 
 describe('waitingBadge', () => {
-  it("counts on the sidebar's Code reviews the reviews read that wait for the user, and shows nothing when none does or none was read", () => {
+  it("counts on the sidebar's Merge requests the reviews read that wait for the user, and shows nothing when none does or none was read", () => {
     const asked = codeReviewSummary({ id: 1, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Under review' }] });
     const reviewed = codeReviewSummary({ id: 2, owner: 'zoe', reviewers: [{ name: 'ana', status: 'Reviewed' }] });
     expect(waitingBadge([asked, reviewed], 'ana')).toEqual({ count: 1 });

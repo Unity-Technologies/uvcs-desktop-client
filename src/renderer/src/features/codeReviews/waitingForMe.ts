@@ -45,7 +45,7 @@ export function waitingForMeTip(waiting: WaitingForMe): string {
   return waiting.kind === 'review' ? 'Waiting for your review' : `Rework: ${formatCount(waiting.openIssues)} open`;
 }
 
-/** The sidebar's count on Code reviews: the reviews read that wait for the user; none when none does, or none was read. */
+/** The sidebar's count on Merge requests: the reviews read that wait for the user; none when none does, or none was read. */
 export function waitingBadge(reviews: readonly WaitingFields[] | undefined, user: string | undefined): NavBadge | undefined {
   const count = reviews ? waitingCount(reviews, user) : 0;
   return count > 0 ? { count } : undefined;

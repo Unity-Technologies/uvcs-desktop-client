@@ -13,7 +13,7 @@ const today = new Date(2026, 8, 25);
 
 const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', state: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
 
-describe('what Code reviews asks the server for', () => {
+describe('what Merge requests asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
     expect(compactFilter(codeReviewsQuery(ASKED, today))).toEqual({ sinceDate: '2026-06-26' });
   });
@@ -154,7 +154,7 @@ describe('the reviewer filter remembered by an older version', () => {
   });
 });
 
-describe("Code reviews' Clear filters", () => {
+describe("Merge requests' Clear filters", () => {
   it('turns the reviewers, Waiting for me, the status and the state back too, keeping the time range', () => {
     const store = useCodeReviewsViewStore;
     store.getState().update({ text: '', people: EVERYONE, status: 'Reviewed', reviewers: EVERYONE, waitingForMe: false, since: 'lastYear' });

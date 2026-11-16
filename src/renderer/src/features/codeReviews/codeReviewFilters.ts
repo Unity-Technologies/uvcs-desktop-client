@@ -23,7 +23,7 @@ interface CodeReviewsQueryFilters {
 }
 
 /**
- * What Code reviews asks `cm find review` for: who created them, whether the user is asked to review them, the status
+ * What Merge requests asks `cm find review` for: who created them, whether the user is asked to review them, the status
  * and the time range; the text is matched locally. I'm a reviewer alone is the server's (`where reviewer = 'me'`);
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
