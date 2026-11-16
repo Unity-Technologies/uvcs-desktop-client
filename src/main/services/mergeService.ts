@@ -5,6 +5,7 @@ import type { MergeOperation } from '@shared/domain/merge';
 import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
 import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
+import { countMergeConflicts } from '../merge/mergeConflictCounts';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
@@ -23,6 +24,7 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
       directoryDecisions.previewed(workspacePath, request, plan);
       return plan;
     },
+    conflictCounts: (workspacePath, source, destination) => countMergeConflicts(cm, workspacePath, source, destination),
     decideDirectoryConflicts: (workspacePath, request, decisionsId, decisions) => directoryDecisions.decide(workspacePath, request, decisionsId, decisions),
     discardDirectoryDecisions: (decisionsId) => directoryDecisions.discard(decisionsId),
     run: (workspacePath, request, resolutions, operationId) =>

@@ -1,9 +1,14 @@
 import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
-import type { DecidedMerge, DirectoryDecision, MergeOperation, MergePlan, MergeResolutions, MergeResult } from '../domain/merge';
+import type { DecidedMerge, DirectoryDecision, MergeConflictCounts, MergeOperation, MergePlan, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
   /** What the merge would do, without touching the workspace. */
   preview(workspacePath: string, request: MergeOperation): Promise<MergePlan>;
+  /**
+   * How many files and directory conflicts merging `source` into `destination` on the server would leave to resolve:
+   * one `cm merge --to` preview, in a process of its own (it takes over a second on a big repository). Nothing changes.
+   */
+  conflictCounts(workspacePath: string, source: string, destination: string): Promise<MergeConflictCounts>;
   /**
    * Applies the merge page's directory decisions, in order, as the user makes them, and returns the merge calculated
    * again on them: a decision can move, remove or add file conflicts and changes. Nothing in the workspace changes.

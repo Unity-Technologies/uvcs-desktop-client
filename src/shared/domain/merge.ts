@@ -128,6 +128,18 @@ export type MergePlanStatus =
   /** The workspace has pending changes; `cm` refuses to merge until they are checked in or shelved. */
   | 'pendingChanges';
 
+/**
+ * What a merge of one branch into another would leave to resolve, counted, without its details: a merge request's card
+ * says it (`MergeApi.conflictCounts`). `status` as the plan's: a merge with nothing left to merge has none.
+ */
+export interface MergeConflictCounts {
+  status: MergePlanStatus;
+  /** The files changed on both sides (the merge page's File conflicts), some of which may merge automatically. */
+  files: number;
+  /** The changes to the tree that collide (the merge page's Directory conflicts): moves, deletes, items added twice. */
+  directories: number;
+}
+
 export interface MergePlan {
   status: MergePlanStatus;
   contributors?: MergeContributors;
