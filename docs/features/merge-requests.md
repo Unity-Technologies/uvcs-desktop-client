@@ -295,10 +295,17 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 
 ## Where a branch's merge request shows
 
-- **Which review stands for a branch** (`reviewOfEachBranch`, every surface showing one review of a branch: the
-  Branches view's and the Branch Explorer's chips, finishing a task): a merge request still to merge, over any newer
-  review; else the newest. Two still to merge: the newest. It chooses among the newest `NEWEST_CODE_REVIEWS` the chips
-  read (code-reviews.md "The list"): a request older than those doesn't stand for its branch.
+- **Which request counts for a branch**: two rules, both in `reviewsByBranch.ts`, both over reviews listed newest
+  first, both putting a merge request still to merge (the newest of two) first. They differ in what comes after it, as
+  they answer different questions:
+  - **The review that stands for a branch** (`reviewOfEachBranch`, `reviewStandingFor`), for any branch in a list:
+    the Branches view's and the Branch Explorer's chips, finishing a task. Else the newest review of any kind, plain
+    or closed too: the chip shows where the branch's latest review stands. It chooses among the newest
+    `NEWEST_CODE_REVIEWS` the chips read (code-reviews.md "The list"): a request older than those doesn't stand for
+    its branch.
+  - **The request current on the workspace's branch** (`currentRequestOf`), for the top bar and the next step in
+    Changes. Else the newest merged request, which says the branch is finished work and where it went; never a closed
+    one or a plain code review, which say nothing about where the task merges.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   leads the review status with the state's glyph. Narrow, it shows the state alone until the request is Open and
   reviewed, then the thumbs-up alone: at a glance, whether it can merge. The canvas draws the state as a shape of its
@@ -306,8 +313,8 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   destination (`reviewLine`). No new column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
   workspace's branch has a merge request, its state's glyph, "#12" and, while Open, the review status's icon. Which
-  one (`topBarRequestOf`): the newest still to merge; else the newest merged one, muted, which tells the user they're
-  still on finished work; never a closed one or a plain code review. Below 820px the number goes and the glyphs stay,
+  one: `currentRequestOf` ("Which request counts for a branch"); a merged one shows muted, telling the user they're
+  still on finished work. Below 820px the number goes and the glyphs stay,
   before the branch pill gives up any room. A click opens it.
   - **Hovering** shows a card (`mergeRequestChipOf` decides every line and action; the component maps them): the
     title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge
